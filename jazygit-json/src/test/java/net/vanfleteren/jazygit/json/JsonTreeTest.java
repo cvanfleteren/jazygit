@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.json;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -113,6 +114,45 @@ class JsonTreeTest {
     @Test
     void textThatStopsEarlyFindsNothingAtItsEnd() {
         assertEquals(Either.left(new NotJson.Broken(2, 8, Option.none())), JsonTree.read("{\"a\":\n  [1, 2"));
+    }
+
+    @Test
+    void textThatStopsEarlyAfterALineBreakStopsAtTheEndOfItsLastLine() {
+        assertEquals(Either.left(new NotJson.Broken(1, 8, Option.none())), JsonTree.read("{\"a\": 1\n"));
+    }
+
+    @Test
+    void aLineBreakInAStringIsFoundWhereTheLineBreaks() {
+        assertEquals(Either.left(new NotJson.Broken(1, 4, Option.of("\n"))), JsonTree.read("[\"a\nb\"]"));
+    }
+
+    @Test
+    void linesBreakOnlyAtALineFeedAsParssonBreaksThem() {
+        assertEquals(
+                Either.left(new NotJson.Broken(2, 7, Option.of("true"))),
+                JsonTree.read("[\"x\u2028y\u0085z\",\n true true]"));
+        assertEquals(Either.left(new NotJson.Broken(2, 7, Option.of("true"))), JsonTree.read("[1,\r\n true true]"));
+    }
+
+    @Test
+    void aByteOrderMarkStartingTheTextIsNoPartOfIt() {
+        assertEquals(
+                Either.right(new JsonObject(
+                        1, 1, List.of(new Field("a", 1, new Scalar(1, Kind.NUMBER, "1"), List.empty())))),
+                JsonTree.read("\uFEFF{\"a\": 1}"));
+    }
+
+    @Test
+    void anObjectOfManyKeysIsReadInTimeLinearInThem() {
+        String many = List.range(0, 20_000).map(at -> "\"k" + at + "\": " + at).mkString("{", ",\n", "}");
+
+        long started = System.nanoTime();
+        JsonObject object = (JsonObject) JsonTree.read(many).get();
+        long millis = (System.nanoTime() - started) / 1_000_000;
+
+        assertEquals(20_000, object.fields().size());
+        // Quadratic, it took eleven seconds.
+        assertTrue(millis < 2_000, millis + " ms");
     }
 
     @Test

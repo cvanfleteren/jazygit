@@ -54,7 +54,6 @@ final class RenderedJson {
             case NotJson.Nothing nothing -> Messages.get("content.json.nothing");
             case NotJson.MoreAfter(int line) -> Messages.get("content.json.moreAfter", String.valueOf(line));
             case NotJson.TooDeep(int depth) -> Messages.get("content.json.tooDeep", String.valueOf(depth));
-            case NotJson.Broken(int line, int column, var found) when line < 1 -> Messages.get("content.json.broken");
             case NotJson.Broken(int line, int column, var found) ->
                 Messages.get(
                         "content.json.unexpected",
@@ -62,7 +61,9 @@ final class RenderedJson {
                         String.valueOf(column),
                         found.map(token -> token.startsWith("\"")
                                         ? Messages.get("content.json.string")
-                                        : "'" + token + "'")
+                                        : token.equals("\n")
+                                                ? Messages.get("content.json.lineBreak")
+                                                : "'" + token + "'")
                                 .getOrElse(() -> Messages.get("content.json.end")));
         };
     }
@@ -303,9 +304,14 @@ final class RenderedJson {
          */
         private List<JsonRow> table(
                 JsonTree.JsonArray array, List<String> columns, String pointer, String prefix, boolean top) {
-            List<List<JsonTree.Scalar>> cells = array.elements()
-                    .map(element ->
-                            ((JsonTree.JsonObject) element).fields().map(field -> (JsonTree.Scalar) field.value()));
+            // A vector, not a list: each row of a table of thousands looks its cells up by its index.
+            Vector<Vector<JsonTree.Scalar>> cells = array.elements()
+                    .map(element -> ((JsonTree.JsonObject) element)
+                            .fields()
+                            .map(field -> (JsonTree.Scalar) field.value())
+                            .toVector())
+                    .toVector();
+            int size = cells.size();
             List<Integer> widths = columns.zipWithIndex(
                     (key, column) -> cells.map(row -> cellText(row.get(column)).length())
                             .append(key.length())
@@ -323,8 +329,9 @@ final class RenderedJson {
                     List.of(array.line()));
             return array.elements()
                     .zipWithIndex((element, at) -> {
-                        boolean last = at == array.elements().size() - 1;
+                        boolean last = at == size - 1;
                         List<Span> row = cells.get(at)
+                                .toList()
                                 .zipWithIndex((cell, column) -> List.of(
                                         cell(cell, widths.get(column)),
                                         Span.raw(column == columns.size() - 1 ? "" : COLUMN_GAP)))
@@ -346,33 +353,46 @@ final class RenderedJson {
          * named by the indices it holds.
          */
         private List<JsonRow> packed(JsonTree.JsonArray array, String pointer, String prefix, boolean top) {
-            List<JsonTree.Scalar> values = array.elements().map(element -> (JsonTree.Scalar) element);
+            Vector<JsonTree.Scalar> values =
+                    array.elements().map(element -> (JsonTree.Scalar) element).toVector();
             int digits = String.valueOf(values.size() - 1).length();
             int label = 2 * digits + 1;
             int room = Math.max(16, width - prefix.length() - GUIDES.branch().length() - label - GAP.length());
-            List<List<Integer>> rows = values.zipWithIndex().foldLeft(List.<List<Integer>>empty(), (done, value) -> {
-                int used = done.lastOption()
-                        .map(row -> row.map(at -> JsonFolds.width(values.get(at)) + 2)
-                                .sum()
-                                .intValue())
-                        .getOrElse(Integer.MAX_VALUE);
-                int needs = JsonFolds.width(value._1) + 2;
-                return done.isEmpty() || used + needs > room
-                        ? done.append(List.of(value._2))
-                        : done.init().append(done.last().append(value._2));
-            });
-            return rows.zipWithIndex((row, at) -> {
-                boolean last = at == rows.size() - 1;
-                String indices = row.size() == 1 ? "" + row.head() : row.head() + "–" + row.last();
-                List<Span> shown = row.zipWithIndex((index, column) ->
-                                List.of(column == 0 ? Span.raw("") : dim(", "), scalar(values.get(index))))
-                        .flatMap(spans -> spans);
-                return new JsonRow(
-                        line(List.of(dim(prefix + connector(last, top)), dim(pad(indices, label)), Span.raw(GAP))
-                                .appendAll(shown)),
-                        Option.of(JsonFolds.child(pointer, String.valueOf(row.head()))),
-                        row.map(index -> values.get(index).line()).distinct());
-            });
+            // In one pass, carrying how wide the row being filled is: an array of thousands is packed in time linear
+            // in it.
+            Vector<Vector<Integer>> rows = Vector.empty();
+            Vector<Integer> filling = Vector.empty();
+            int used = 0;
+            for (int at = 0; at < values.size(); at++) {
+                int needs = JsonFolds.width(values.get(at)) + 2;
+                if (!filling.isEmpty() && used + needs > room) {
+                    rows = rows.append(filling);
+                    filling = Vector.empty();
+                    used = 0;
+                }
+                filling = filling.append(at);
+                used += needs;
+            }
+            Vector<Vector<Integer>> packed = filling.isEmpty() ? rows : rows.append(filling);
+            return packed.zipWithIndex((row, at) -> {
+                        boolean last = at == packed.size() - 1;
+                        String indices = row.size() == 1 ? "" + row.head() : row.head() + "–" + row.last();
+                        List<Span> shown = row.toList()
+                                .zipWithIndex((index, column) ->
+                                        List.of(column == 0 ? Span.raw("") : dim(", "), scalar(values.get(index))))
+                                .flatMap(spans -> spans);
+                        return new JsonRow(
+                                line(List.of(
+                                                dim(prefix + connector(last, top)),
+                                                dim(pad(indices, label)),
+                                                Span.raw(GAP))
+                                        .appendAll(shown)),
+                                Option.of(JsonFolds.child(pointer, String.valueOf(row.head()))),
+                                row.map(index -> values.get(index).line())
+                                        .distinct()
+                                        .toList());
+                    })
+                    .toList();
         }
 
         /**

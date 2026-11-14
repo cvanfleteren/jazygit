@@ -2,8 +2,10 @@ package net.vanfleteren.jazygit.json;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import jakarta.json.JsonException;
@@ -33,6 +35,7 @@ import org.eclipse.parsson.JsonProviderImpl;
 final class JsonReader {
 
     // Made directly, not looked up by JsonProvider.provider() through a ServiceLoader.
+    private static final String BOM = "\uFEFF";
     private static final JsonProvider PROVIDER = new JsonProviderImpl();
 
     // Bounds the recursion of value: deeper JSON is an error, not a StackOverflowError (JsonTest). Parsson's own
@@ -56,7 +59,10 @@ final class JsonReader {
         }
     }
 
-    static Either<NotJson, JsonTree> tree(String text) {
+    // A byte order mark that starts the text is no part of it, as RFC 8259 lets a reader have it; its lines stay as
+    // they are.
+    static Either<NotJson, JsonTree> tree(String given) {
+        String text = given.startsWith(BOM) ? given.substring(1) : given;
         if (text.isBlank()) {
             return Either.left(new NotJson.Nothing());
         }
@@ -70,8 +76,6 @@ final class JsonReader {
             return Either.left(e.why);
         } catch (JsonParsingException e) {
             return Either.left(broken(text, e));
-        } catch (JsonException e) {
-            return Either.left(new NotJson.Broken(0, 0, Option.none()));
         }
     }
 
@@ -136,19 +140,30 @@ final class JsonReader {
         };
     }
 
-    // Of two fields with the same key the last holds, where it is written, with the lines of the keys before it.
+    // Of two fields with the same key the last holds, where it is written, with the lines of the keys before it. Each
+    // key's place among the fields is kept, so an object of many keys is read in time linear in them: a field written
+    // again leaves an empty place where it was.
     private static JsonObject treeObject(JsonParser parser, int line, int depth) {
-        List<Field> fields = List.empty();
+        Vector<Option<Field>> places = Vector.empty();
+        HashMap<String, Integer> at = HashMap.empty();
         for (Event event = parser.next(); event != Event.END_OBJECT; event = parser.next()) {
             String key = parser.getString();
             int keyLine = asInt(parser.getLocation().getLineNumber());
             JsonTree value = node(parser, parser.next(), depth + 1);
-            List<Integer> ignored = fields.filter(field -> field.key().equals(key))
-                    .reverse()
-                    .flatMap(field -> field.ignored().append(field.line()));
-            fields = fields.filter(field -> !field.key().equals(key)).prepend(new Field(key, keyLine, value, ignored));
+            List<Integer> ignored = List.empty();
+            Option<Integer> before = at.get(key);
+            if (before.isDefined()) {
+                Field field = places.get(before.get()).get();
+                ignored = field.ignored().append(field.line());
+                places = places.update(before.get(), Option.none());
+            }
+            places = places.append(Option.of(new Field(key, keyLine, value, ignored)));
+            at = at.put(key, places.size() - 1);
         }
-        return new JsonObject(line, asInt(parser.getLocation().getLineNumber()), fields.reverse());
+        return new JsonObject(
+                line,
+                asInt(parser.getLocation().getLineNumber()),
+                places.flatMap(place -> place).toList());
     }
 
     private static JsonArray treeArray(JsonParser parser, int line, int depth) {
@@ -160,20 +175,33 @@ final class JsonReader {
     }
 
     // Where the token Parsson stopped at starts, and the token as written. Parsson's column is that of the last
-    // character of the token, so it is read back to where the token starts. Past the end of the text, as Parsson puts
-    // a text that stops early, nothing is found, at the end of the text's last line.
+    // character of the token, so it is read back to where the token starts. Just past the end of a line, as for a
+    // line break in a string, the line break is found there. Past the end of the text, as Parsson puts a text that
+    // stops early, nothing is found, at the end of the text's last line, not counting the line breaks it ends in. Lines
+    // are broken where Parsson breaks them: at a line feed, after a carriage return or not.
     private static NotJson.Broken broken(String text, JsonParsingException e) {
-        List<String> lines = List.of(text.split("\\R", -1));
+        Vector<String> lines = Vector.of(text.split("\r?\n", -1));
         int line = asInt(e.getLocation().getLineNumber());
         int column = asInt(e.getLocation().getColumnNumber());
-        return lines.drop(line - 1)
-                .headOption()
-                .filter(written -> line >= 1 && column >= 1 && column <= written.length())
-                .map(written -> {
-                    int start = tokenStart(written, column - 1);
-                    return new NotJson.Broken(line, start + 1, Option.of(written.substring(start, column)));
-                })
-                .getOrElse(() -> new NotJson.Broken(lines.size(), lines.last().length() + 1, Option.none()));
+        Option<String> written = Option.when(line >= 1 && line < lines.size(), () -> lines.get(line - 1))
+                .orElse(() -> Option.when(line == lines.size() && line >= 1, lines::last));
+        return written.filter(on -> column >= 1 && column <= on.length() + 1)
+                .filter(on -> column <= on.length() || line < lines.size())
+                .map(on -> column > on.length()
+                        ? new NotJson.Broken(line, column, Option.of("\n"))
+                        : new NotJson.Broken(
+                                line,
+                                tokenStart(on, column - 1) + 1,
+                                Option.of(on.substring(tokenStart(on, column - 1), column))))
+                .getOrElse(() -> end(lines));
+    }
+
+    // Where a text that stops early stops: at the end of its last line that is not empty.
+    private static NotJson.Broken end(Vector<String> lines) {
+        Vector<String> written = lines.reverse().dropWhile(String::isEmpty).reverse();
+        return written.isEmpty()
+                ? new NotJson.Broken(1, 1, Option.none())
+                : new NotJson.Broken(written.size(), written.last().length() + 1, Option.none());
     }
 
     // Where the token that ends at index last of a line starts: a string at its opening quote, a word or a number at

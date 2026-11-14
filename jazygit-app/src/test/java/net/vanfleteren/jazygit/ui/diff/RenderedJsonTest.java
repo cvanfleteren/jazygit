@@ -192,6 +192,37 @@ class RenderedJsonTest {
     }
 
     @Test
+    void aLineBreakInAStringSaysSo() {
+        assertEquals(
+                Either.left("Not rendered: line 1, column 4, unexpected line break"),
+                RenderedJson.rows(Vector.of("[\"a", "b\"]"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                        .map(rows -> rows.size()));
+    }
+
+    @Test
+    void aFileStartingWithAByteOrderMarkIsRendered() {
+        assertEquals(List.of("a  1"), text("\uFEFF{\n  \"a\": 1\n}"));
+    }
+
+    @Test
+    void aLongArrayOfScalarsIsPackedAndALongTableDrawnInTimeLinearInThem() {
+        String numbers = List.range(0, 20_000).mkString("{\"a\": [", ",\n", "]}");
+        String records = List.range(0, 20_000)
+                .map(at -> "{\"id\": " + at + ", \"x\": \"v\"}")
+                .mkString("{\"b\": [", ",\n", "]}");
+
+        long started = System.nanoTime();
+        List<String> packed = text(numbers, HashMap.of("/a", true), 120);
+        List<String> table = text(records, HashMap.of("/b", true), 120);
+        long millis = (System.nanoTime() - started) / 1_000_000;
+
+        assertEquals("└── 19993–19999  19993, 19994, 19995, 19996, 19997, 19998, 19999", packed.last());
+        assertEquals(20_002, table.size());
+        // Quadratic, the packing took eleven seconds and the table one.
+        assertTrue(millis < 3_000, millis + " ms");
+    }
+
+    @Test
     void aVersionCutShortIsNotRendered() {
         assertEquals(
                 Either.left("Not rendered: the file is too long to render as JSON"),
