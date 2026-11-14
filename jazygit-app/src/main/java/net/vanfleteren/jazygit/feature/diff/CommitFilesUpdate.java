@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.feature.files.all.AllFilesUpdate;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -89,12 +90,13 @@ public final class CommitFilesUpdate {
 
     /**
      * Lists the files {@code branch} changes against its base, the base of ADR 20, at the commits the branches read
-     * last have them at (ADR 61). The main branch has no base to be compared with, nor has a branch without one.
+     * last have them at (ADR 61). The main branch has no base to be compared with: for it, all files of the working
+     * tree are listed instead. A branch without a base has nothing to be compared with.
      */
     public static Next againstBase(Model model, BranchName branch) {
         LoadAhead load = AheadUpdate.of(model, new BranchRef.Local(branch));
         return AheadUpdate.main(model).contains(branch)
-                ? Next.of(model.fail(new BaseBranchError.IsBase(branch)))
+                ? AllFilesUpdate.shown(model)
                 : load.base()
                         .map(base -> load.tip()
                                 .map(tip -> update(

@@ -23,6 +23,20 @@ public final class AllFilesUpdate {
     }
 
     /**
+     * All files of the working tree, asked for from another pane, as Shift+F on the main branch does: the files pane
+     * lists them, in place of the files of a commit if it listed those, and gets the focus. They are read unless they
+     * were listed already.
+     */
+    public static Next shown(Model model) {
+        boolean listed = model.repoView().allFiles();
+        return new Next(
+                model.mapRepoView(view -> view.withAllFiles(true)
+                        .withCommitFiles(Option.none())
+                        .withAllFilesAsked(view.allFilesAsked() + 1)),
+                listed ? List.empty() : List.<Cmd>of(new LoadAllFiles()));
+    }
+
+    /**
      * The other of the two lists. Leaving all files drops the node without changes the content panel showed: the
      * tree of changed files highlights a node with changes.
      */

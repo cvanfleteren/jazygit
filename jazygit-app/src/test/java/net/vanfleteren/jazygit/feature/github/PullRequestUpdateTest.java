@@ -1577,20 +1577,36 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void theMainBranchHasNoBaseToShowItsFilesAgainst() {
+    void shiftFOnTheMainBranchListsAllFilesOfTheWorkingTree() {
         Next opened = Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()));
 
-        assertEquals(
-                Option.of(new BaseBranchError.IsBase(MAIN.name())),
-                opened.model().outcome().error());
+        assertEquals(Option.none(), opened.model().outcome().error());
+        assertTrue(opened.model().repoView().allFiles());
+        assertEquals(1, opened.model().repoView().allFilesAsked());
         assertEquals(Option.none(), opened.model().repoView().commitFiles());
-        assertEquals(List.empty(), opened.cmds());
+        assertEquals(List.of(new LoadAllFiles()), opened.cmds());
+    }
+
+    @Test
+    void shiftFOnTheMainBranchClosesTheFilesOfABranchAndReadsAllFilesListedAlreadyNoMore() {
+        Model listed = Update.update(
+                        Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()))
+                                .model(),
+                        new PullRequestMsg.FilesRequested(UNPUSHED.name()))
+                .model();
+        assertTrue(listed.repoView().commitFiles().isDefined());
+
+        Next again = Update.update(listed, new PullRequestMsg.FilesRequested(MAIN.name()));
+
+        assertTrue(again.model().repoView().allFiles());
+        assertEquals(2, again.model().repoView().allFilesAsked());
+        assertEquals(Option.none(), again.model().repoView().commitFiles());
+        assertEquals(List.empty(), again.cmds());
     }
 
     @Test
     void theFilesOfABranchShownTakeTheErrorBeforeAway() {
-        Model failed = Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()))
-                .model();
+        Model failed = withPr().fail(new BaseBranchError.None(UNPUSHED.name()));
 
         Next opened = Update.update(failed, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
 

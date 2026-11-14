@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.content.ContentPanel;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
 
 /**
  * Where the focus is, which TamboUI keeps, not the model: which pane, content area or popup has it, and where it goes
@@ -34,6 +35,8 @@ final class FocusKeeper {
     private Option<String> lastFocus = Option.none();
     // The files of a commit the last frame listed; when the model opens or closes them, the focus follows.
     private Option<CommitFilesView> shownFiles = Option.none();
+    // How often all files were asked for from another pane, as the last frame knew; once more, the files pane takes it.
+    private int allFilesAsked;
 
     /**
      * @param runner        the runner of the app, once it is started
@@ -88,6 +91,7 @@ final class FocusKeeper {
             moveToPaneOf(model);
         }
         followCommitFiles(model);
+        followAllFiles(model);
         leaveCollapsedColumn(model);
         // An area that no longer shows gives the focus to the one that took its place, not to the first pane.
         Option.of(focusedId()).flatMap(id -> contentPanel.replacing(model, id)).forEach(this::moveTo);
@@ -130,6 +134,18 @@ final class FocusKeeper {
                     })
                     .forEach(view -> moveTo(view.pane().value()));
         }
+    }
+
+    /**
+     * Moves the focus to the files pane once all files of the working tree are asked for from another pane, as Shift+F
+     * on the main branch does. Another repository shown counts from its own start.
+     */
+    private void followAllFiles(Model model) {
+        int asked = model.repoView().allFilesAsked();
+        if (asked > allFilesAsked) {
+            moveTo(FilesPanel.ID);
+        }
+        allFilesAsked = asked;
     }
 
     /**

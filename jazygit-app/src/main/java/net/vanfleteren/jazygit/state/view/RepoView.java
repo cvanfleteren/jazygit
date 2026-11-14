@@ -83,7 +83,8 @@ public record RepoView(
         Map<AreaId, Expansion> expanded,
         Map<AreaId, Version> versions,
         boolean allFiles,
-        Option<UnchangedNode> unchanged) {
+        Option<UnchangedNode> unchanged,
+        int allFilesAsked) {
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
@@ -107,7 +108,8 @@ public record RepoView(
             HashMap.empty(),
             HashMap.empty(),
             false,
-            Option.none());
+            Option.none(),
+            0);
 
     /**
      * The version kept for the area with the id {@code area} while it shows {@code content}, if it holds for that.
