@@ -192,7 +192,9 @@ classDiagram
 - **`Load`** reads part of the repository into the model as a `Loadable` (`Loading`, `Loaded`, `Failed`).
 - **`OperationCmd`** changes the repository. Its outcome is `OperationMsg.Succeeded`, `Stopped` (on conflicts) or
   `Failed`, which `OperationUpdate` handles alike for every operation: log the commands, free the branch, store the
-  error or notice, read the repository again. A `GitOperationCmd` needs only `perform(Git)`.
+  error or notice, read the repository again (`RereadUpdate.refresh`, which a tick reads through too). Its `start`
+  refuses one that waits while the repository is in the middle of something; `PopupUpdate.ask` opens the popup about
+  one, and `PopupUpdate.confirm` starts what was entered in it. A `GitOperationCmd` needs only `perform(Git)`.
 - **Errors are data until the view.** An `AppError` says itself as a `Phrase` (a message key and its arguments);
   `ErrorText` turns it into text. Each feature keeps its own sealed `XxxError`.
 - **Popups, and what is typed in them, are part of the model** (ADR 2, 38). `model.popup()` says which dialog is
