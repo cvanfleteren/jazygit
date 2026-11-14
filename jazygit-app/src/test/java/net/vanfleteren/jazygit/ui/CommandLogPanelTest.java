@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import static net.vanfleteren.jazygit.git.StubGit.executed;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,6 +15,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.operation.LogEntry;
 import net.vanfleteren.jazygit.state.operation.Notice;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -96,5 +98,42 @@ class CommandLogPanelTest {
 
             SettledPilot.of(testRunner).quit();
         }
+    }
+
+    @Test
+    void shrinksToItsBordersWhileTheContentPanelIsMaximized() throws Exception {
+        Model log = TestModels.withLog(
+                TestModels.loaded(SampleData.git()), new LogEntry(PushCmd.PUSH, executed("git push origin main")));
+        Model model = collapsed(log);
+
+        assertEquals(CommandLogPanel.VISIBLE_LINES + 2, CommandLogPanel.height(log));
+        assertEquals(2, CommandLogPanel.height(model));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
+            String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
+            assertTrue(screen.contains("Command log"), screen);
+            assertFalse(screen.contains("git push origin main"), screen);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void keepsTheErrorWhileTheContentPanelIsMaximized() throws Exception {
+        Model model = collapsed(TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom"));
+
+        assertEquals(3, CommandLogPanel.height(model));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
+            String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
+            assertTrue(screen.contains("Checkout of foo failed: boom"), screen);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    /**
+     * {@code model} with the content panel maximized: the left column of the repository screen collapsed.
+     */
+    private static Model collapsed(Model model) {
+        return model.mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
     }
 }

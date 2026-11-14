@@ -49,8 +49,6 @@ import net.vanfleteren.jazygit.ui.widgets.*;
  */
 public class JazygitApp extends ToolkitApp {
 
-    // Rows of the command log panel, borders included.
-    private static final int COMMAND_LOG_HEIGHT = CommandLogPanel.VISIBLE_LINES + 2;
     // How long after a frame of the left column or its panes on their way the next one is drawn (ADR 81, 92).
     private static final Duration SLIDE_FRAME = Duration.ofMillis(16);
 
@@ -310,7 +308,7 @@ public class JazygitApp extends ToolkitApp {
                 left,
                 column(
                                 contentPanel.render(model, focusedId).fill(),
-                                CommandLogPanel.render(model).length(COMMAND_LOG_HEIGHT))
+                                CommandLogPanel.render(model).length(CommandLogPanel.height(model)))
                         .fill());
         // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
         Element layout = column(
