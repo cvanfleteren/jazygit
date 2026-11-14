@@ -14,14 +14,14 @@ public final class CommandLog {
     private CommandLog() {}
 
     /**
-     * The model with an entry for {@code commands} of {@code operation} added; nothing is added when no
-     * command was executed.
+     * The model with an entry for {@code commands} of {@code operation} added, done at the time the model is told;
+     * nothing is added when no command was executed.
      */
     public static Model append(Model model, Operation operation, List<ExecutedCommand> commands) {
         return commands.isEmpty()
                 ? model
                 : model.mapOutcome(outcome -> outcome.withCommandLog(outcome.commandLog()
-                        .append(new LogEntry(operation, commands))
+                        .append(new LogEntry(operation, commands, model.now()))
                         .takeRight(MAX_ENTRIES)));
     }
 }

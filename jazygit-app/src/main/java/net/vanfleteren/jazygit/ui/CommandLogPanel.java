@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.panel;
+import static dev.tamboui.toolkit.Toolkit.richText;
 import static dev.tamboui.toolkit.Toolkit.richTextArea;
 import static dev.tamboui.toolkit.Toolkit.text;
 
@@ -24,6 +25,8 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
@@ -77,7 +80,14 @@ public final class CommandLogPanel {
      */
     private static final int WHEEL_ROWS = 3;
 
+    /**
+     * How the time an operation was done is shown, before its title.
+     */
+    private static final DateTimeFormatter TIME =
+            DateTimeFormatter.ofPattern(Messages.get("panel.commandLog.timePattern"));
+
     private final Theme.SpanStyles styles;
+    private final ZoneId zone;
     private final Consumer<String> focus;
     private final Runnable leave;
     // The text area the log is drawn in while it has the focus, which keeps where it is scrolled to; whether it had
@@ -91,12 +101,14 @@ public final class CommandLogPanel {
     private boolean following = false;
 
     /**
-     * @param styles how the lines are coloured while the log has the focus
+     * @param styles how the lines are coloured
+     * @param zone   the time zone the time an operation was done is shown in
      * @param focus  gives the focus to the element with the id given, for a click on the log
      * @param leave  gives the focus back to where it was before the log had it, for Escape
      */
-    public CommandLogPanel(Theme.SpanStyles styles, Consumer<String> focus, Runnable leave) {
+    public CommandLogPanel(Theme.SpanStyles styles, ZoneId zone, Consumer<String> focus, Runnable leave) {
         this.styles = styles;
+        this.zone = zone;
         this.focus = focus;
         this.leave = leave;
     }
@@ -109,8 +121,7 @@ public final class CommandLogPanel {
      */
     public static int height(Model model, Option<Room> room) {
         int outcome = outcomeRows(model, room);
-        int wanted = BORDERS
-                + Math.max(outcome, Math.min(VISIBLE_LINES, logLines(model).size() + outcome));
+        int wanted = BORDERS + Math.max(outcome, Math.min(VISIBLE_LINES, logLineCount(model) + outcome));
         int spare = room.map(column -> column.rows() - CONTENT_MIN_ROWS).getOrElse(wanted);
         return Math.max(BORDERS + Math.min(1, outcome), Math.min(wanted, spare));
     }
@@ -135,7 +146,7 @@ public final class CommandLogPanel {
     public Element render(Model model, int rows, int shown, Option<Room> room, boolean focused) {
         if (!focused) {
             focusedBefore = false;
-            return fitted(model, rows, room).id(ID).length(shown).onMouseEvent(this::clicked);
+            return fitted(model, rows, room, styles, zone).id(ID).length(shown).onMouseEvent(this::clicked);
         }
         List<Row> all = room.map(column -> rows(model, column)).getOrElse(List.empty());
         RichTextState state = area.state();
@@ -149,8 +160,7 @@ public final class CommandLogPanel {
             state.scrollToBottom();
         }
         focusedBefore = true;
-        area.text(Text.from(all.map(row -> Line.from(Span.styled(row.text(), styles.of(row.cssClass()))))
-                        .toJavaList()))
+        area.text(Text.from(all.map(row -> line(row, styles)).toJavaList()))
                 .title(Messages.get("panel.commandLog.title"))
                 .focusable(true)
                 .onKeyEvent(this::keys)
@@ -162,11 +172,12 @@ public final class CommandLogPanel {
      * The panel {@code rows} tall in {@code room} without the focus: the newest lines that fit in it above the error
      * or notice, which is kept out of the cut, and shows while a line fits.
      */
-    static Panel fitted(Model model, int rows, Option<Room> room) {
+    static Panel fitted(Model model, int rows, Option<Room> room, Theme.SpanStyles styles, ZoneId zone) {
         int lines = Math.max(0, rows - BORDERS);
         Option<Element> outcome = outcome(model).filter(line -> lines > 0);
-        List<Element> shown = logLines(model)
+        List<Element> shown = logLines(model, zone)
                 .takeRight(Math.max(0, lines - outcomeRows(model, room)))
+                .<Element>map(row -> richText(Text.from(line(row, styles))))
                 .appendAll(outcome);
         return panel(Messages.get("panel.commandLog.title"), shown.toJavaArray(Element[]::new));
     }
@@ -245,33 +256,59 @@ public final class CommandLogPanel {
                 .getOrElse(() -> new Wrapped(
                         outcome,
                         width,
-                        outcome.commandLog()
-                                .flatMap(entry -> List.of(new Row(
-                                                Messages.get(entry.operation().logTitleKey()), Theme.Classes.BOLD))
-                                        .appendAll(entry.commands()
-                                                .map(command -> new Row(INDENT + command.line(), Theme.Classes.DIM))))
-                                .appendAll(outcomeText(model).map(text -> new Row(text, outcomeClass(model))))
-                                .flatMap(row -> TextWidth.wrapped(row.text(), width)
-                                        .map(text -> new Row(text, row.cssClass())))));
+                        entryRows(outcome, zone)
+                                .appendAll(outcomeText(model).map(text -> Row.of(text, outcomeClass(model))))
+                                .flatMap(row -> row.time().isDefined()
+                                        ? List.of(row)
+                                        : TextWidth.wrapped(row.text(), width)
+                                                .map(text -> Row.of(text, row.cssClass())))));
         wrapped = Option.of(current);
         return current.rows();
     }
 
     /**
-     * The lines of the commands logged, each under the title of its operation; none while the content panel is
-     * maximized, which collapses the left column of the screen shown (ADR 104).
+     * How many lines {@link #logLines} has.
      */
-    private static List<Element> logLines(Model model) {
-        if (model.preferences().leftCollapsed(model.screen())) {
-            return List.empty();
-        }
-        return model.outcome()
-                .commandLog()
-                .flatMap(entry -> List.<Element>of(
-                                text(Messages.get(entry.operation().logTitleKey()))
-                                        .addClass(Theme.Classes.BOLD))
-                        .appendAll(entry.commands()
-                                .map(command -> text(INDENT + command.line()).addClass(Theme.Classes.DIM))));
+    private static int logLineCount(Model model) {
+        return model.preferences().leftCollapsed(model.screen())
+                ? 0
+                : model.outcome()
+                        .commandLog()
+                        .map(entry -> 1 + entry.commands().size())
+                        .sum()
+                        .intValue();
+    }
+
+    /**
+     * The lines of the commands logged, each under the title of its operation and when it was done; none while the
+     * content panel is maximized, which collapses the left column of the screen shown (ADR 104).
+     */
+    private static List<Row> logLines(Model model, ZoneId zone) {
+        return model.preferences().leftCollapsed(model.screen()) ? List.empty() : entryRows(model.outcome(), zone);
+    }
+
+    /**
+     * The lines of every operation of {@code outcome}: its title after the time it was done, in {@code zone}, and its
+     * commands under it.
+     */
+    private static List<Row> entryRows(Outcome outcome, ZoneId zone) {
+        return outcome.commandLog()
+                .flatMap(entry -> List.of(new Row(
+                                Option.of(TIME.format(entry.at().atZone(zone))),
+                                Messages.get(entry.operation().logTitleKey()),
+                                Theme.Classes.BOLD))
+                        .appendAll(
+                                entry.commands().map(command -> Row.of(INDENT + command.line(), Theme.Classes.DIM))));
+    }
+
+    /**
+     * {@code row} as it is drawn in {@code styles}: in the style of its class, after its time, dimmed, if it has one.
+     */
+    private static Line line(Row row, Theme.SpanStyles styles) {
+        Span text = Span.styled(row.text(), styles.of(row.cssClass()));
+        return row.time()
+                .map(time -> Line.from(Span.styled(time + " ", styles.of(Theme.Classes.DIM)), text))
+                .getOrElse(() -> Line.from(text));
     }
 
     /**
@@ -336,9 +373,15 @@ public final class CommandLogPanel {
     }
 
     /**
-     * A row of the log drawn with the focus, in the style of {@code cssClass}.
+     * A row of the log, in the style of {@code cssClass}, after the time its operation was done when it is the title
+     * of one.
      */
-    private record Row(String text, String cssClass) {}
+    private record Row(Option<String> time, String text, String cssClass) {
+
+        static Row of(String text, String cssClass) {
+            return new Row(Option.none(), text, cssClass);
+        }
+    }
 
     /**
      * The rows all the log takes, {@code outcome} wrapped at {@code width} columns.

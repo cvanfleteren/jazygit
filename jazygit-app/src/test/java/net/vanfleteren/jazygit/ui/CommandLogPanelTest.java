@@ -7,15 +7,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.elements.Panel;
+import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd;
 import net.vanfleteren.jazygit.feature.stage.StageCmd;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.operation.LogEntry;
 import net.vanfleteren.jazygit.state.operation.Notice;
+import net.vanfleteren.jazygit.state.operation.Operation;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
@@ -53,11 +58,12 @@ class CommandLogPanelTest {
     @Test
     void showsExecutedCommandsUnderTheirTitle() throws Exception {
         Model model = TestModels.withLog(
-                TestModels.loaded(SampleData.git()), new LogEntry(PushCmd.PUSH, executed("git push origin main")));
+                TestModels.loaded(SampleData.git()), entry(PushCmd.PUSH, executed("git push origin main")));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> shown(model))) {
             String screen = RenderedText.of(testRunner, () -> shown(model));
-            assertTrue(screen.contains("Push"), screen);
+            // The title after when the operation was done.
+            assertTrue(screen.contains("14:32:05 Push"), screen);
             assertTrue(screen.contains("  git push origin main"), screen);
 
             SettledPilot.of(testRunner).quit();
@@ -68,8 +74,8 @@ class CommandLogPanelTest {
     void keepsTheNewestLinesWhenTheyDoNotAllFit() throws Exception {
         Model model = TestModels.withLog(
                 TestModels.loaded(SampleData.git()),
-                new LogEntry(StageCmd.STAGE, executed("git add -- old.txt")),
-                new LogEntry(
+                entry(StageCmd.STAGE, executed("git add -- old.txt")),
+                entry(
                         CreateCommitCmd.COMMIT,
                         executed(
                                 "git commit -m a",
@@ -106,7 +112,7 @@ class CommandLogPanelTest {
     @Test
     void shrinksToItsBordersWhileTheContentPanelIsMaximized() throws Exception {
         Model log = TestModels.withLog(
-                TestModels.loaded(SampleData.git()), new LogEntry(PushCmd.PUSH, executed("git push origin main")));
+                TestModels.loaded(SampleData.git()), entry(PushCmd.PUSH, executed("git push origin main")));
         Model model = collapsed(log);
 
         assertEquals(4, CommandLogPanel.height(log, Option.none()));
@@ -136,11 +142,11 @@ class CommandLogPanelTest {
     @Test
     void isAsTallAsItsLinesUpToTheMost() {
         Model one = TestModels.withLog(
-                TestModels.loaded(SampleData.git()), new LogEntry(PushCmd.PUSH, executed("git push origin main")));
+                TestModels.loaded(SampleData.git()), entry(PushCmd.PUSH, executed("git push origin main")));
         Model many = TestModels.withLog(
                 TestModels.loaded(SampleData.git()),
-                new LogEntry(StageCmd.STAGE, executed("git add -- a", "git add -- b", "git add -- c")),
-                new LogEntry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")));
+                entry(StageCmd.STAGE, executed("git add -- a", "git add -- b", "git add -- c")),
+                entry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")));
 
         // The title of the operation and its command.
         assertEquals(2 + 2, CommandLogPanel.height(one, Option.none()));
@@ -151,8 +157,8 @@ class CommandLogPanelTest {
     void takesOnlyTheRowsTheContentPanelSpares() {
         Model model = TestModels.withLog(
                 TestModels.loaded(SampleData.git()),
-                new LogEntry(StageCmd.STAGE, executed("git add -- a", "git add -- b", "git add -- c")),
-                new LogEntry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")));
+                entry(StageCmd.STAGE, executed("git add -- a", "git add -- b", "git add -- c")),
+                entry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")));
 
         assertEquals(10, CommandLogPanel.height(model, room(CommandLogPanel.CONTENT_MIN_ROWS + 20)));
         assertEquals(5, CommandLogPanel.height(model, room(CommandLogPanel.CONTENT_MIN_ROWS + 5)));
@@ -166,13 +172,15 @@ class CommandLogPanelTest {
         Model model = TestModels.withCheckoutError(
                 TestModels.withLog(
                         TestModels.loaded(SampleData.git()),
-                        new LogEntry(StageCmd.STAGE, executed("git add -- old.txt", "git add -- new.txt"))),
+                        entry(StageCmd.STAGE, executed("git add -- old.txt", "git add -- new.txt"))),
                 "foo",
                 "boom");
 
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> CommandLogPanel.fitted(model, 4, Option.none()))) {
-            String screen = RenderedText.of(testRunner, () -> CommandLogPanel.fitted(model, 4, Option.none()));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> CommandLogPanel.fitted(model, 4, Option.none(), Theme.SpanStyles.NONE, ZoneOffset.UTC))) {
+            String screen = RenderedText.of(
+                    testRunner,
+                    () -> CommandLogPanel.fitted(model, 4, Option.none(), Theme.SpanStyles.NONE, ZoneOffset.UTC));
             assertFalse(screen.contains("old.txt"), screen);
             assertTrue(screen.contains("git add -- new.txt"), screen);
             assertTrue(screen.contains("Checkout of foo failed: boom"), screen);
@@ -202,8 +210,7 @@ class CommandLogPanelTest {
     void keepsARowForTheErrorWhenTheContentPanelSparesNone() {
         Model model = TestModels.withCheckoutError(
                 TestModels.withLog(
-                        TestModels.loaded(SampleData.git()),
-                        new LogEntry(PushCmd.PUSH, executed("git push origin main"))),
+                        TestModels.loaded(SampleData.git()), entry(PushCmd.PUSH, executed("git push origin main"))),
                 "foo",
                 "boom");
 
@@ -219,10 +226,13 @@ class CommandLogPanelTest {
         Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, columns));
         int rows = CommandLogPanel.height(model, room);
 
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> CommandLogPanel.fitted(model, rows, room))) {
-            String screen =
-                    RenderedText.ofSize(testRunner, () -> CommandLogPanel.fitted(model, rows, room), columns, rows);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> CommandLogPanel.fitted(model, rows, room, Theme.SpanStyles.NONE, ZoneOffset.UTC))) {
+            String screen = RenderedText.ofSize(
+                    testRunner,
+                    () -> CommandLogPanel.fitted(model, rows, room, Theme.SpanStyles.NONE, ZoneOffset.UTC),
+                    columns,
+                    rows);
             assertTrue(screen.contains("END"), screen);
 
             SettledPilot.of(testRunner).quit();
@@ -234,12 +244,12 @@ class CommandLogPanelTest {
      */
     @Test
     void withTheFocusGrowsToHalfTheColumnOrAsTallAsAllItLogged() {
-        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, id -> {}, () -> {});
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
         Model model = TestModels.withLog(
                 TestModels.loaded(SampleData.git()),
-                new LogEntry(StageCmd.STAGE, executed("git add -- a", "git add -- b", "git add -- c")),
-                new LogEntry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")),
-                new LogEntry(StageCmd.STAGE, executed("git add -- g", "git add -- h", "git add -- i")));
+                entry(StageCmd.STAGE, executed("git add -- a", "git add -- b", "git add -- c")),
+                entry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")),
+                entry(StageCmd.STAGE, executed("git add -- g", "git add -- h", "git add -- i")));
 
         // Twelve lines and the borders, which half of 40 rows holds.
         assertEquals(2 + 12, panel.focusedHeight(model, room(40)));
@@ -254,18 +264,19 @@ class CommandLogPanelTest {
 
     @Test
     void withTheFocusShowsAllItLoggedFromTheNewestAndScrolls() throws Exception {
-        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, id -> {}, () -> {});
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
         Model model = TestModels.withLog(
                 TestModels.loaded(SampleData.git()),
-                new LogEntry(StageCmd.STAGE, executed("git add -- oldest.txt", "git add -- b", "git add -- c")),
-                new LogEntry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")),
-                new LogEntry(StageCmd.STAGE, executed("git add -- g", "git add -- h", "git add -- newest.txt")));
+                entry(StageCmd.STAGE, executed("git add -- oldest.txt", "git add -- b", "git add -- c")),
+                entry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")),
+                entry(StageCmd.STAGE, executed("git add -- g", "git add -- h", "git add -- newest.txt")));
         Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 60));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
                 () -> panel.render(model, 6, 6, room, true), new dev.tamboui.layout.Size(60, 6))) {
             String newest = RenderedText.ofSize(testRunner, () -> panel.render(model, 6, 6, room, true), 60, 6);
             assertTrue(newest.contains("newest.txt"), newest);
+            assertTrue(newest.contains("14:32:05 Stage"), newest);
             assertFalse(newest.contains("oldest.txt"), newest);
 
             SettledPilot.focus(testRunner, CommandLogPanel.ID);
@@ -283,12 +294,12 @@ class CommandLogPanelTest {
 
     @Test
     void withTheFocusShowsTheNewestLinesOnItsWayToItsHeight() throws Exception {
-        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, id -> {}, () -> {});
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
         Model model = TestModels.withLog(
                 TestModels.loaded(SampleData.git()),
-                new LogEntry(StageCmd.STAGE, executed("git add -- oldest.txt", "git add -- b", "git add -- c")),
-                new LogEntry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")),
-                new LogEntry(StageCmd.STAGE, executed("git add -- g", "git add -- h", "git add -- newest.txt")));
+                entry(StageCmd.STAGE, executed("git add -- oldest.txt", "git add -- b", "git add -- c")),
+                entry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")),
+                entry(StageCmd.STAGE, executed("git add -- g", "git add -- h", "git add -- newest.txt")));
         Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 60));
 
         // On its way to the 14 rows that show all, it is 6 rows tall.
@@ -304,7 +315,7 @@ class CommandLogPanelTest {
 
     @Test
     void withTheFocusShowsTheWholeErrorWrapped() throws Exception {
-        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, id -> {}, () -> {});
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
         Model model = TestModels.withCheckoutError(
                 TestModels.loaded(SampleData.git()), "foo", "a  b  c  d  e  f  g  h  i  j  k  l  m  n  o  p END");
         Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 16));
@@ -329,7 +340,12 @@ class CommandLogPanelTest {
      * The panel of {@code model} as tall as its lines.
      */
     private static Panel shown(Model model) {
-        return CommandLogPanel.fitted(model, CommandLogPanel.height(model, Option.none()), Option.none());
+        return CommandLogPanel.fitted(
+                model,
+                CommandLogPanel.height(model, Option.none()),
+                Option.none(),
+                Theme.SpanStyles.NONE,
+                ZoneOffset.UTC);
     }
 
     /**
@@ -337,5 +353,17 @@ class CommandLogPanelTest {
      */
     private static Model collapsed(Model model) {
         return model.mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+    }
+
+    /**
+     * When the operations of the log entries of these tests were done: 14:32:05 in UTC.
+     */
+    private static final Instant AT = Instant.parse("2026-11-14T14:32:05Z");
+
+    /**
+     * An entry for {@code commands} of {@code operation}, done {@link #AT}.
+     */
+    private static LogEntry entry(Operation operation, List<ExecutedCommand> commands) {
+        return new LogEntry(operation, commands, AT);
     }
 }

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -161,7 +162,7 @@ class StageUpdateTest {
     void doneLogsTheExecutedCommands() {
         Next staged = Update.update(loaded(), succeeded(new StageCmd.Stage(List.of()), "git add -- a.txt"));
         assertEquals(
-                List.of(new LogEntry(StageCmd.STAGE, executed("git add -- a.txt"))),
+                List.of(new LogEntry(StageCmd.STAGE, executed("git add -- a.txt"), Instant.EPOCH)),
                 staged.model().outcome().commandLog());
 
         Next unstaged = Update.update(

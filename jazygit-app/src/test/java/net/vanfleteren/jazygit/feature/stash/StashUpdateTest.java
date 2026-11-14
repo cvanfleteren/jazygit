@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.feature.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Fixtures;
@@ -89,7 +90,7 @@ class StashUpdateTest {
         Next done =
                 Update.update(loaded(), succeeded(new StashCmd.Stash(Option.of("x")), "git stash push --message x"));
         assertEquals(
-                List.of(new LogEntry(StashCmd.STASH, executed("git stash push --message x"))),
+                List.of(new LogEntry(StashCmd.STASH, executed("git stash push --message x"), Instant.EPOCH)),
                 done.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Stash(Option.of("x")), "boom"));
@@ -149,7 +150,7 @@ class StashUpdateTest {
     void droppedLogsTheCommandsAndFailureIsReported() {
         Next dropped = Update.update(loaded(), succeeded(new StashCmd.Drop(STASH), "git stash drop stash@{0}"));
         assertEquals(
-                List.of(new LogEntry(StashCmd.STASH_DROP, executed("git stash drop stash@{0}"))),
+                List.of(new LogEntry(StashCmd.STASH_DROP, executed("git stash drop stash@{0}"), Instant.EPOCH)),
                 dropped.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Drop(STASH), "no such stash"));
@@ -160,7 +161,7 @@ class StashUpdateTest {
     void poppedLogsTheCommandsAndFailureIsReported() {
         Next popped = Update.update(loaded(), succeeded(new StashCmd.Pop(STASH), "git stash pop --index stash@{0}"));
         assertEquals(
-                List.of(new LogEntry(StashCmd.STASH_POP, executed("git stash pop --index stash@{0}"))),
+                List.of(new LogEntry(StashCmd.STASH_POP, executed("git stash pop --index stash@{0}"), Instant.EPOCH)),
                 popped.model().outcome().commandLog());
 
         Next failed = Update.update(loaded(), failed(new StashCmd.Pop(STASH), "conflict"));

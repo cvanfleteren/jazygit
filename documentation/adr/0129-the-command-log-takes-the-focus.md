@@ -26,6 +26,9 @@ focus back to. A popup has the focus aside from that: it is not reported to the 
 - With the focus, it shows all it logged, the oldest first, from the newest: the commands of every operation, and
   the whole error or notice. Every line is wrapped at words, as the error is without the focus, so a long command or
   error is read whole.
+- With the focus or without, the title of each operation follows the time it was done, as `HH:mm:ss` in the local
+  zone, dimmed: when the model learned how it went (`model.now()`, ADR 124), kept in `LogEntry.at`. A time, not how
+  long ago: it does not change while it shows, so it asks for no frames.
 - It scrolls as the areas of the content panel do: the arrows, `j` and `k`, the pages, Home and End, `g` and `G`,
   and the wheel. How far down it is shows on its right border. Not sideways: it wraps.
 - The focus in the log is aside, as a popup's is: it is not reported to the model. The content panel keeps showing

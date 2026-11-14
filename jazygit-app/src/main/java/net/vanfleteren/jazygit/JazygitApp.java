@@ -20,6 +20,7 @@ import io.vavr.control.Try;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.files.step.FileStepEnded;
@@ -120,7 +121,10 @@ public class JazygitApp extends ToolkitApp {
         this.focus = new FocusKeeper(this::runner, this::model, contentPanel, popups, this::requestRedraw);
         this.leftColumn = new LeftColumn(dispatch, styleEngine, clock, focus::openContent, this::showBranchesTab);
         this.commandLogPanel = new CommandLogPanel(
-                Theme.spanStyles(styleEngine), id -> runner().focusManager().setFocus(id), this::leaveCommandLog);
+                Theme.spanStyles(styleEngine),
+                ZoneId.systemDefault(),
+                id -> runner().focusManager().setFocus(id),
+                this::leaveCommandLog);
         this.session = new RepositorySession(
                 env, terminal, this::runner, clock, this::requestRedraw, this::quit, this::started);
     }
