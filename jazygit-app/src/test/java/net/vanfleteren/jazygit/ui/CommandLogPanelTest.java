@@ -155,7 +155,7 @@ class CommandLogPanelTest {
 
         assertEquals(10, CommandLogPanel.height(model, room(CommandLogPanel.CONTENT_MIN_ROWS + 20)));
         assertEquals(5, CommandLogPanel.height(model, room(CommandLogPanel.CONTENT_MIN_ROWS + 5)));
-        // Never fewer than its borders, which show its title.
+        // Never fewer than its borders, which show its title, without an error to keep a row for.
         assertEquals(2, CommandLogPanel.height(model, room(CommandLogPanel.CONTENT_MIN_ROWS + 1)));
         assertEquals(2, CommandLogPanel.height(model, room(5)));
     }
@@ -182,30 +182,50 @@ class CommandLogPanelTest {
 
     @Test
     void givesTheErrorTheRowsItWrapsOnto() throws Exception {
-        Model model = TestModels.withCheckoutError(
-                TestModels.loaded(SampleData.git()), "foo", "boom boom boom boom boom boom boom boom");
-        // "Checkout of foo failed: boom boom ..." in 22 columns inside the borders.
-        Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 24));
-        int rows = CommandLogPanel.height(model, room);
-
-        assertEquals(2 + 4, rows);
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model, rows, room))) {
-            String screen = RenderedText.of(
-                    testRunner, () -> CommandLogPanel.render(model, rows, room).length(rows));
-            assertTrue(screen.contains("failed: boom"), screen);
-
-            SettledPilot.of(testRunner).quit();
-        }
+        assertShowsTheEndOfTheError("boom boom boom boom boom boom boom boom END", 24);
     }
 
     @Test
-    void wrapsAtWords() {
-        assertEquals(1, CommandLogPanel.wrappedRows("one two", 7));
-        assertEquals(2, CommandLogPanel.wrappedRows("one two", 6));
-        assertEquals(3, CommandLogPanel.wrappedRows("one\ntwo three", 6));
-        // A word wider than a row is cut over the rows it takes.
-        assertEquals(3, CommandLogPanel.wrappedRows("a abcdefghij", 5));
+    void givesAnErrorWithRunsOfSpacesTheRowsItWrapsOnto() throws Exception {
+        // As git reports a rejected push: the spaces are drawn as they are, not as one.
+        assertShowsTheEndOfTheError("a  b  c  d  e  f  g  h  i  j  k  l  m  n  o  p END", 16);
+    }
+
+    @Test
+    void givesAnErrorWithIndentedLinesTheRowsItWrapsOnto() throws Exception {
+        // Each row an indented line wraps onto starts with its indent too.
+        assertShowsTheEndOfTheError("x:\n    indented hint text here that is long END", 20);
+    }
+
+    @Test
+    void keepsARowForTheErrorWhenTheContentPanelSparesNone() {
+        Model model = TestModels.withCheckoutError(
+                TestModels.withLog(
+                        TestModels.loaded(SampleData.git()),
+                        new LogEntry(PushCmd.PUSH, executed("git push origin main"))),
+                "foo",
+                "boom");
+
+        assertEquals(2 + 1, CommandLogPanel.height(model, room(5)));
+    }
+
+    /**
+     * The checkout error with {@code explanation}, which ends in {@code END}, shown whole in a log {@code columns}
+     * wide: as tall as it wraps, and drawn so in that room.
+     */
+    private static void assertShowsTheEndOfTheError(String explanation, int columns) throws Exception {
+        Model model = TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", explanation);
+        Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, columns));
+        int rows = CommandLogPanel.height(model, room);
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model, rows, room))) {
+            String screen =
+                    RenderedText.ofSize(testRunner, () -> CommandLogPanel.render(model, rows, room), columns, rows);
+            assertTrue(screen.contains("END"), screen);
+
+            SettledPilot.of(testRunner).quit();
+        }
     }
 
     /**

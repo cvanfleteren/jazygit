@@ -4,17 +4,15 @@ import static dev.tamboui.toolkit.Toolkit.panel;
 import static dev.tamboui.toolkit.Toolkit.text;
 
 import dev.tamboui.style.Overflow;
-import dev.tamboui.text.CharWidth;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
 import net.vanfleteren.jazygit.ui.text.NoticeText;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
@@ -24,7 +22,8 @@ import net.vanfleteren.jazygit.ui.theme.Theme;
  *
  * <p>It is as tall as its lines, up to {@link #VISIBLE_LINES}, and the error or notice as it wraps: empty, it is its
  * borders and title alone. The content panel above it comes first: the log takes only the rows the content panel can
- * spare above {@link #CONTENT_MIN_ROWS}, and no fewer than its borders. While the content panel is maximized, by
+ * spare above {@link #CONTENT_MIN_ROWS}, and no fewer than its borders and a row of the error or notice, so a failure
+ * always shows. While the content panel is maximized, by
  * collapsing the left column (ADR 104), the log shows the error or notice alone.
  */
 public final class CommandLogPanel {
@@ -50,15 +49,15 @@ public final class CommandLogPanel {
 
     /**
      * How many rows the panel takes in {@code room}, when that is known: its lines and borders, as many lines as the
-     * content panel can spare above {@link #CONTENT_MIN_ROWS}, but at least its borders. The error or notice takes the
-     * rows it wraps onto, even past {@link #VISIBLE_LINES}.
+     * content panel can spare above {@link #CONTENT_MIN_ROWS}, but at least its borders, and a row of the error or
+     * notice when there is one. The error or notice takes the rows it wraps onto, even past {@link #VISIBLE_LINES}.
      */
     public static int height(Model model, Option<Room> room) {
         int outcome = outcomeRows(model, room);
         int wanted = BORDERS
                 + Math.max(outcome, Math.min(VISIBLE_LINES, logLines(model).size() + outcome));
         int spare = room.map(column -> column.rows() - CONTENT_MIN_ROWS).getOrElse(wanted);
-        return Math.max(BORDERS, Math.min(wanted, spare));
+        return Math.max(BORDERS + Math.min(1, outcome), Math.min(wanted, spare));
     }
 
     /**
@@ -109,43 +108,14 @@ public final class CommandLogPanel {
     }
 
     /**
-     * How many rows the error or notice takes, wrapped at words in the panel in {@code room}; one row when the room is
-     * not known, and none without one.
+     * How many rows the error or notice takes, wrapped at words in the panel in {@code room} as it is drawn, counted
+     * no further than the rows of the column; one row when the room is not known, and none without one.
      */
     private static int outcomeRows(Model model, Option<Room> room) {
         return outcomeText(model)
-                .map(text -> room.map(column -> wrappedRows(text, column.columns() - BORDERS))
+                .map(text -> room.map(column -> TextWidth.lines(text, column.columns() - BORDERS, column.rows()))
                         .getOrElse(1))
                 .getOrElse(0);
-    }
-
-    /**
-     * How many rows {@code text} takes wrapped at words, each line of it starting a row, in {@code width} columns: a
-     * word goes on the next row when it does not fit after the one before, and a word wider than a row is cut.
-     */
-    static int wrappedRows(String text, int width) {
-        if (width <= 0) {
-            return 1;
-        }
-        return List.of(text.split("\n", -1))
-                .map(line -> List.of(line.split(" "))
-                        .filter(word -> !word.isEmpty())
-                        .foldLeft(Tuple.of(1, 0), (at, word) -> placed(at, CharWidth.of(word), width))
-                        ._1)
-                .sum()
-                .intValue();
-    }
-
-    /**
-     * The rows taken, and the columns taken on the last of them, {@code at} with a word {@code wide} columns placed
-     * after them in rows {@code width} columns wide.
-     */
-    private static Tuple2<Integer, Integer> placed(Tuple2<Integer, Integer> at, int wide, int width) {
-        if (at._2 > 0 && at._2 + 1 + wide <= width) {
-            return Tuple.of(at._1, at._2 + 1 + wide);
-        }
-        int row = at._2 > 0 ? at._1 + 1 : at._1;
-        return Tuple.of(row + Math.max(0, wide - 1) / width, wide == 0 ? 0 : (wide - 1) % width + 1);
     }
 
     /**
