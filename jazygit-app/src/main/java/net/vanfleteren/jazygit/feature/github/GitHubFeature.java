@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.github;
 
-import io.vavr.collection.List;
-import java.util.function.Consumer;
+import net.vanfleteren.jazygit.feature.Feature;
 import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseAction;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestAction;
@@ -10,12 +9,9 @@ import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestAction;
 import net.vanfleteren.jazygit.feature.github.review.ReviewAction;
 import net.vanfleteren.jazygit.feature.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.feature.github.verdict.VerdictAction;
-import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
-import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**
  * The GitHub operations: showing a pull request and what is done from there, showing the checks of a branch,
@@ -34,7 +30,7 @@ public final class GitHubFeature {
     /**
      * The operations, in the order their keys are listed in a panel.
      */
-    private static final List<FeatureAction> ACTIONS = List.of(
+    public static final Feature FEATURE = Feature.of(
             ShowPullRequestAction.ACTION,
             ShowChecksAction.ACTION,
             CheckoutPullRequestAction.ACTION,
@@ -45,15 +41,4 @@ public final class GitHubFeature {
             VerdictAction.ACTION);
 
     private GitHubFeature() {}
-
-    public static Keymap register(Keymap keys) {
-        return FeatureAction.register(ACTIONS, keys);
-    }
-
-    /**
-     * The popups of the GitHub operations, which send what the user does to {@code dispatch}.
-     */
-    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return FeatureAction.popups(ACTIONS, dispatch);
-    }
 }

@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch;
 
-import io.vavr.collection.List;
-import java.util.function.Consumer;
-import net.vanfleteren.jazygit.feature.FeatureAction;
+import net.vanfleteren.jazygit.feature.Feature;
 import net.vanfleteren.jazygit.feature.ahead.AheadAction;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutAction;
 import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsAction;
@@ -18,9 +16,6 @@ import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchAction;
 import net.vanfleteren.jazygit.feature.branch.stack.StackAction;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabAction;
 import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamAction;
-import net.vanfleteren.jazygit.keys.Keymap;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**
  * The branch operations: checking out, pushing, pulling, creating, moving commits to a new branch, merging, rebasing, renaming, deleting, nuking, the
@@ -32,7 +27,7 @@ public final class BranchFeature {
     /**
      * The operations, in the order their keys are listed in a panel.
      */
-    private static final List<FeatureAction> ACTIONS = List.of(
+    public static final Feature FEATURE = Feature.of(
             CheckoutAction.ACTION,
             PushAction.ACTION,
             PullAction.ACTION,
@@ -50,15 +45,4 @@ public final class BranchFeature {
             BranchesTabAction.ACTION);
 
     private BranchFeature() {}
-
-    public static Keymap register(Keymap keys) {
-        return FeatureAction.register(ACTIONS, keys);
-    }
-
-    /**
-     * The popups of the branch operations, which send what the user does to {@code dispatch}.
-     */
-    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return FeatureAction.popups(ACTIONS, dispatch);
-    }
 }

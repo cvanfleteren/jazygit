@@ -17,8 +17,8 @@ import net.vanfleteren.jazygit.state.PaneId;
 /**
  * The single source of truth for keyboard shortcuts: every key is declared once, with its description, and
  * the panels both react to the keys and the help popup lists them from here. A feature declares the keys it
- * adds to a panel ({@link Scope}) or to the whole app ({@link Global}) in its own {@code *Keys} class; only
- * {@link #standard()} lists those classes.
+ * adds to a panel ({@link Scope}) in its own package, through its {@code Feature}; {@link #standard()} adds those of
+ * every feature, and the keys that work wherever the focus is ({@link Global}).
  */
 public final class Keymap {
 

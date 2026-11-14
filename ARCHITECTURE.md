@@ -86,8 +86,8 @@ graph TD
 The arrows are the dependencies allowed. Inside `jazygit-app`, `ArchitectureTest` fails on any other; it is the
 source of truth when the two disagree.
 
-- **The parts have no cycles**, with one exception: `Keymap.standard()` lists the keys of the features, which
-  declare them with the types of `keys` (dotted).
+- **The parts have no cycles**, with one exception: `Keymap.standard()` adds the keys of the features in
+  `Features.ALL`, which declare them with the types of `keys` (dotted).
 - **Nor have the subpackages of `state`** (`diff`, `view`, `load`, `github`, `operation`, `popup`, `compose`, `index`,
   `preferences`). `state` itself uses them all, and they all use it, as the `Model` holds them.
 - **Nor have the subpackages of `ui`**, which follow the panes: the shell (`ui` itself: `LeftColumn`, the status
@@ -212,10 +212,11 @@ Each feature package follows the same shape:
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
 | `XxxDialogs` | `CommitDialog.reword` | The dialogs, mostly as data (`ConfirmDialog.Spec`, ...), as `PopupSlot`s. |
 | `XxxKeys` / `XxxAction` | `DropAction` | The keys, added to the immutable `Keymap`; an action bundles one operation's keys and popups. |
-| `XxxFeature` | `CommitFeature` | Lists a feature's actions: what `Keymap` and `Popups` know of it. |
+| `XxxFeature` | `CommitFeature` | Its `FEATURE`, a `Feature` of the feature's actions: what `Keymap` and `Popups` know of it. |
 
-The larger features (commit, branch, github, worktree) give each operation a subpackage holding all of the above;
-adding an operation is adding its subpackage and one line in the `XxxFeature`.
+A feature is wired in by one line in `Features.ALL`, whose order is the order of the keys in a panel; nothing else
+outside its package names it (ADR 127). The larger features (commit, branch, github, worktree) give each operation a
+subpackage holding all of the above; adding an operation is adding its subpackage and one line in the `XxxFeature`.
 
 ## The git and GitHub layers
 
