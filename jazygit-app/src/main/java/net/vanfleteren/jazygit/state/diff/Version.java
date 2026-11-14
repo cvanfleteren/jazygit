@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.state.diff;
 
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import lombok.With;
@@ -25,6 +27,8 @@ import net.vanfleteren.jazygit.state.Loadable;
  * @param whole   the file read whole
  * @param rendered whether a version shows rendered rather than as source (ADR 103); while the diff is shown, whether
  *                 the next version shown is
+ * @param nodes    the nodes of a version of JSON rendered the user opened, true, or closed, false, by their paths; the
+ *                 new version and the original share them, and a version read again keeps them (ADR 122)
  */
 @With
 public record Version(
@@ -33,7 +37,21 @@ public record Version(
         Option<FileVersion> shown,
         WholeFile read,
         Loadable<DiffText> whole,
-        boolean rendered) {
+        boolean rendered,
+        Map<String, Boolean> nodes) {
+
+    /**
+     * A version shown rendered if {@code rendered}, none of its nodes opened or closed by the user.
+     */
+    public Version(
+            ScrolledContent content,
+            String path,
+            Option<FileVersion> shown,
+            WholeFile read,
+            Loadable<DiffText> whole,
+            boolean rendered) {
+        this(content, path, shown, read, whole, rendered, HashMap.empty());
+    }
 
     /**
      * A version shown as source.
@@ -89,6 +107,20 @@ public record Version(
     }
 
     /**
+     * The lines of the version shown, once the file is read whole: what a version rendered is rendered from.
+     */
+    public Option<Vector<String>> text() {
+        return showing()
+                .flatMap(version -> file().map(whole -> version.of(whole)
+                        .hunks()
+                        .flatMap(ParsedHunk::lines)
+                        .map(ParsedLine::line)
+                        .filter(line -> line.kind() != DiffLine.Kind.NOTE)
+                        .map(DiffLine::text)
+                        .toVector()));
+    }
+
+    /**
      * {@code folded} with this file as the version shown, if one is, and what is known of it: no line left out,
      * whether its read was cut, and whether it is rendered (ADR 103).
      */
@@ -113,7 +145,8 @@ public record Version(
                                                                 .equals(path))
                                                         .map(Version::digits)
                                                         .getOrElse(1),
-                                                rendered)))))
+                                                rendered,
+                                                nodes)))))
                 .getOrElse(folded);
     }
 

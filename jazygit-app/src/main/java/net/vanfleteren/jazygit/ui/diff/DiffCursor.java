@@ -317,6 +317,7 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
                     case Anchor.File ignored -> lines.update(first, line -> tinted(line, width, tint));
                     case Anchor.Gap ignored -> lines.update(first, line -> tinted(line, width, tint));
                     case Anchor.OnLine ignored -> lines.update(first, line -> tinted(line, width, tint));
+                    case Anchor.Node ignored -> lines.update(first, line -> tinted(line, width, tint));
                 };
     }
 

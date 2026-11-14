@@ -7,14 +7,18 @@ import io.vavr.control.Option;
 import java.util.Locale;
 
 /**
- * A kind of text file a version of can be shown rendered (ADR 103), told by the extension of its path: the one table
+ * A kind of text file a version of can be shown rendered (ADR 103, 122), told by the extension of its path: the one table
  * of which files have a renderer, and which.
  */
 public enum Rendered {
     /**
      * Markdown. Not {@code .mdx}, which holds JSX.
      */
-    MARKDOWN(HashSet.of("md", "markdown", "mdown", "mkd"));
+    MARKDOWN(HashSet.of("md", "markdown", "mdown", "mkd")),
+    /**
+     * JSON (ADR 122). Not {@code .jsonc} and {@code .json5}, which allow comments; not {@code .jsonl}, a value a line.
+     */
+    JSON(HashSet.of("json"));
 
     private final Set<String> extensions;
 

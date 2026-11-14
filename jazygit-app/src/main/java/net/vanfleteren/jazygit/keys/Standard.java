@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitFeature;
 import net.vanfleteren.jazygit.feature.copy.CopyAction;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesAction;
 import net.vanfleteren.jazygit.feature.diff.ExpandAction;
+import net.vanfleteren.jazygit.feature.diff.FoldAction;
 import net.vanfleteren.jazygit.feature.diff.VersionAction;
 import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
 import net.vanfleteren.jazygit.feature.edit.EditKeys;
@@ -38,6 +39,7 @@ final class Standard {
                     FileFilterAction.ACTION.keys(),
                     AllFilesAction.ACTION.keys(),
                     ExpandAction.ACTION.keys(),
+                    FoldAction.ACTION.keys(),
                     VersionAction.ACTION.keys(),
                     CopyAction.ACTION.keys(),
                     FileStepAction.ACTION.keys(),
