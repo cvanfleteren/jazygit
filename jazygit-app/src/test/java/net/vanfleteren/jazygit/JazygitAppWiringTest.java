@@ -33,9 +33,12 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.TimerMsg;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import org.junit.jupiter.api.Test;
@@ -56,6 +59,31 @@ class JazygitAppWiringTest {
             SettledPilot.of(testRunner, app.drawnAt::size).press('p', KeyModifiers.CTRL);
 
             awaitModel(testRunner, app, model -> model.screen() == Screen.PULL_REQUESTS);
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void shiftFOnTheMainBranchListsAllItsFilesAndGivesThemTheFocus() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            awaitModel(testRunner, app, model -> AheadUpdate.main(model).isDefined());
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+
+            // The main branch is the first one listed.
+            SettledPilot.of(testRunner, app.drawnAt::size).press('F');
+
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView()
+                            .commitFiles()
+                            .exists(view -> view.of() instanceof Changes.OfTip && view.allFiles()));
+            await(
+                    () -> FilesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
+                    "the files focused");
         } finally {
             app.onStop();
         }

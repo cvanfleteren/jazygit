@@ -25,9 +25,9 @@ import net.vanfleteren.jazygit.process.Limit;
  */
 final class CliWorkingFiles {
 
-    private static final Duration TIMEOUT = Duration.ofSeconds(10);
     // How many bytes git looks at for a NUL to tell a binary file.
-    private static final int BINARY_PROBE = 8000;
+    static final int BINARY_PROBE = 8000;
+    private static final Duration TIMEOUT = Duration.ofSeconds(10);
     // The tag ls-files -t gives a file with the skip-worktree bit.
     private static final char SKIP_WORKTREE = 'S';
 
@@ -110,8 +110,18 @@ final class CliWorkingFiles {
      * not cut.
      */
     static DiffText asDiff(String path, byte[] bytes, Limit limit) {
-        boolean longer = bytes.length > limit.chars();
-        String text = new String(bytes, 0, Math.min(bytes.length, limit.chars()), StandardCharsets.UTF_8);
+        return asDiff(
+                path,
+                new String(bytes, 0, Math.min(bytes.length, limit.chars()), StandardCharsets.UTF_8),
+                bytes.length > limit.chars(),
+                limit);
+    }
+
+    /**
+     * {@code text}, the start of the file at {@code path}, which is {@code longer}, as a diff of the file against
+     * itself, cut at {@code limit}, as {@link #asDiff(String, byte[], Limit)} makes it.
+     */
+    static DiffText asDiff(String path, String text, boolean longer, Limit limit) {
         boolean endsWithNewline = text.endsWith("\n");
         List<String> all = text.isEmpty()
                 ? List.empty()

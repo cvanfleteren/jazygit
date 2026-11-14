@@ -53,11 +53,12 @@ the object database, whatever is checked out and in whichever worktree.
 ### The content panel
 
 - A changed file shows its diff, as now, with its versions (Ctrl+O, ADR 102).
-- A file the commit did not change shows its content at that commit, `git cat-file blob <sha>:<path>`, read when it is
-  highlighted and dropped when the highlight leaves it, as ADR 108 shows a file of the working tree without changes:
-  lexed whole with one column of line numbers, Ctrl+T rendering it (ADR 103, 122, 123), the cursor of a version, the
-  limit of ADR 79, a binary file as `Binary file · 12 KiB`. The mode `ls-tree` gives tells a symbolic link (`Symbolic
-  link to <target>`) and a submodule (`Submodule at abc1234`) without reading them.
+- A file the commit did not change shows its content at that commit, read when it is highlighted and dropped when the
+  highlight leaves it, as ADR 108 shows a file of the working tree without changes: lexed whole with one column of line
+  numbers, Ctrl+T rendering it (ADR 103, 122, 123), the cursor of a version, the limit of ADR 79, a binary file as
+  `Binary file · 12 KiB`. `git ls-tree <sha> -- <path>` gives its mode and its object, and `git cat-file` reads that:
+  the blob of a file, up to the limit, and the target of a symbolic link (`Symbolic link to <target>`); a submodule is
+  its object (`Submodule at abc1234`), and nothing is read.
 - A directory shows the diff of the changes under it, as now; with none, how many files it holds, as ADR 108 says it.
 
 ### `F` on the main branch
@@ -81,8 +82,10 @@ the object database, whatever is checked out and in whichever worktree.
 - The files of the main branch are a `Changes` of their own, `OfTip(branch, sha)`: what its tip commit changed, titled
   with the branch. Not: `OfCommit` of its tip, whose title is a sha, and which `F` again could not read anew at the new
   tip.
-- Listing a tree and reading a blob are new reads of `jazygit-git`, next to `Diffs.commitFiles`. The content read is
-  kept with the area that shows it, as ADR 108 keeps the content of a file without changes.
+- Listing a tree and reading a blob are new reads of `jazygit-git`, next to `Diffs.commitFiles`. The node without
+  changes highlighted, and the content read for it, are kept in `CommitFilesView`, as ADR 108 keeps those of the
+  working tree in `RepoView`. All files are read with those changed, and merged, in the Cmd that reads them: merging
+  100 000 paths on the UI thread, or on each frame, would cost what ADR 108 measured.
 
 ### What it may cost
 

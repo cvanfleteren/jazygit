@@ -1577,20 +1577,22 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void theMainBranchHasNoBaseToShowItsFilesAgainst() {
+    void shiftFOnTheMainBranchListsAllFilesOfItsTipAsCommitted() {
         Next opened = Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()));
 
+        Changes of = new Changes.OfTip(MAIN.name(), MAIN.tip());
+        assertEquals(Option.none(), opened.model().outcome().error());
         assertEquals(
-                Option.of(new BaseBranchError.IsBase(MAIN.name())),
-                opened.model().outcome().error());
-        assertEquals(Option.none(), opened.model().repoView().commitFiles());
-        assertEquals(List.empty(), opened.cmds());
+                Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))
+                        .withAllFiles(true)
+                        .withTree(Option.of(Loadable.loading()))),
+                opened.model().repoView().commitFiles());
+        assertEquals(List.of(new LoadCommitFiles(of), new LoadCommitTree(of)), opened.cmds());
     }
 
     @Test
     void theFilesOfABranchShownTakeTheErrorBeforeAway() {
-        Model failed = Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()))
-                .model();
+        Model failed = withPr().fail(new BaseBranchError.None(UNPUSHED.name()));
 
         Next opened = Update.update(failed, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
 

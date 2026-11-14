@@ -100,6 +100,8 @@ public record ReadWholeFile(AreaId area, ScrolledContent content, Source source,
                         switch (of) {
                             case Changes.OfCommit(Sha sha) ->
                                 env.git().diffs().commitFileChanges(sha, List.of(file), whole);
+                            case Changes.OfTip(var _, Sha sha) ->
+                                env.git().diffs().commitFileChanges(sha, List.of(file), whole);
                             case Changes.OfStash(Sha sha) -> env.git().stashes().fileChanges(sha, List.of(file), whole);
                             case Changes.OfBranch(var branch, var base, Sha sha) ->
                                 env.git().diffs().rangeFileChanges(base.tip(), sha, List.of(file), whole);
@@ -111,6 +113,13 @@ public record ReadWholeFile(AreaId area, ScrolledContent content, Source source,
                         env.git()
                                 .status()
                                 .content(path)
+                                .map(content -> content instanceof FileContent.Text(DiffText asDiff)
+                                        ? asDiff
+                                        : DiffText.of(""));
+                    case Source.AtCommit(Sha sha, String path) ->
+                        env.git()
+                                .diffs()
+                                .treeContent(sha, path)
                                 .map(content -> content instanceof FileContent.Text(DiffText asDiff)
                                         ? asDiff
                                         : DiffText.of(""));

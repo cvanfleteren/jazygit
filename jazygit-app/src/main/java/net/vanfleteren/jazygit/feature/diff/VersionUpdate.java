@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -95,7 +96,7 @@ public final class VersionUpdate {
         return read.map(how -> {
             // A file without changes is shown whole already, read from disk.
             Option<Loadable<DiffText>> reused = reads
-                    ? content instanceof ScrolledContent.Unchanged(var onDisk, DiffText asDiff)
+                    ? content instanceof ScrolledContent.Unchanged(var onDisk, DiffText asDiff, var commit)
                             ? Option.of(new Loadable.Loaded<>(asDiff))
                             : expanded(model, area, content, path)
                     : Option.none();
@@ -130,16 +131,20 @@ public final class VersionUpdate {
         RepoView view = model.repoView();
         boolean rich = model.preferences().diffLook().style() == DiffStyle.RICH;
         List<Tuple2<AreaId, ScrolledContent>> areas = view.commitFiles()
-                .map(files -> files.diff()
-                        .map(Preview::shown)
-                        .filter(diff -> rich && !diff.key().isEmpty())
-                        .flatMap(diff -> diff.value()
-                                .toOption()
-                                .map(changes -> Tuple.<AreaId, ScrolledContent>of(
-                                        AreaId.COMMIT_FILE,
-                                        new ScrolledContent.FileChanges(files.of(), diff.key(), changes))))
-                        .toList())
-                .orElse(() -> view.unchanged().map(VersionUpdate::unchanged))
+                .map(files -> files.unchanged()
+                        .filter(node -> files.allFiles())
+                        .map(node -> unchanged(
+                                node, AreaId.COMMIT_FILE, Option.of(files.of().sha())))
+                        .getOrElse(() -> files.diff()
+                                .map(Preview::shown)
+                                .filter(diff -> rich && !diff.key().isEmpty())
+                                .flatMap(diff -> diff.value()
+                                        .toOption()
+                                        .map(changes -> Tuple.<AreaId, ScrolledContent>of(
+                                                AreaId.COMMIT_FILE,
+                                                new ScrolledContent.FileChanges(files.of(), diff.key(), changes))))
+                                .toList()))
+                .orElse(() -> view.unchanged().map(node -> unchanged(node, AreaId.FILE_CONTENT, Option.none())))
                 .getOrElse(() -> view.fileDiff()
                         .map(Preview::shown)
                         .filter(ignored -> rich)
@@ -155,9 +160,11 @@ public final class VersionUpdate {
     }
 
     /**
-     * The area a file without changes, {@code node}, shows in once it is read as text; none for a directory.
+     * The area a file without changes, {@code node}, shows in once it is read as text, {@code area}; none for a
+     * directory. It is of the working tree, or of the commit {@code commit} whose files are listed (ADR 128).
      */
-    private static List<Tuple2<AreaId, ScrolledContent>> unchanged(UnchangedNode node) {
+    private static List<Tuple2<AreaId, ScrolledContent>> unchanged(
+            UnchangedNode node, AreaId area, Option<Sha> commit) {
         return switch (node) {
             case UnchangedNode.File(var content) ->
                 content.shown()
@@ -166,8 +173,8 @@ public final class VersionUpdate {
                         .filter(FileContent.Text.class::isInstance)
                         .map(FileContent.Text.class::cast)
                         .map(text -> Tuple.<AreaId, ScrolledContent>of(
-                                AreaId.FILE_CONTENT,
-                                new ScrolledContent.Unchanged(content.shown().key(), text.asDiff())))
+                                area,
+                                new ScrolledContent.Unchanged(content.shown().key(), text.asDiff(), commit)))
                         .toList();
             case UnchangedNode.Directory _ -> List.empty();
         };

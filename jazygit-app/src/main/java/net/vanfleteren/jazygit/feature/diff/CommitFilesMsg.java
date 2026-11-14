@@ -59,6 +59,11 @@ public sealed interface CommitFilesMsg extends Msg {
     record ListedCycled() implements CommitFilesMsg {}
 
     /**
+     * Lists all files of the commit the files end at, or only those changed again (ADR 128).
+     */
+    record AllToggled() implements CommitFilesMsg {}
+
+    /**
      * The user asked to read the review threads of the pull request again.
      */
     record RemarksRefreshed() implements CommitFilesMsg {}

@@ -152,17 +152,17 @@ public final class ContentView {
      * it shows with no line left out, and as Ctrl+T renders it (ADR 108).
      */
     private static Option<Version> asVersion(Model model, ScrolledContent content) {
-        return content instanceof ScrolledContent.Unchanged(String path, DiffText asDiff)
+        return content instanceof ScrolledContent.Unchanged unchanged
                 ? Option.of(new Version(
                         content,
-                        path,
+                        unchanged.path(),
                         Option.of(FileVersion.NEW),
                         new WholeFile(
                                 content,
-                                new WholeFile.Source.OnDisk(path),
-                                path,
+                                unchanged.source(),
+                                unchanged.path(),
                                 model.preferences().diffOptions()),
-                        new Loadable.Loaded<>(asDiff)))
+                        new Loadable.Loaded<>(unchanged.asDiff())))
                 : Option.none();
     }
 
@@ -171,13 +171,20 @@ public final class ContentView {
      * from disk, or how many files a directory holds. The file shown before stays while another is read.
      */
     private static Shown unchanged(Model model, UnchangedNode node) {
-        String title = Messages.get("panel.file.title");
+        return unchanged(model, node, Messages.get("panel.file.title"), Option.none());
+    }
+
+    /**
+     * The node without changes {@code node}, titled {@code title}: of the working tree, or of the commit {@code commit}
+     * whose files are listed, as it is in it (ADR 128).
+     */
+    private static Shown unchanged(Model model, UnchangedNode node, String title, Option<Sha> commit) {
         return switch (node) {
             case UnchangedNode.Directory(String path, int files) ->
                 dim(title, Messages.get("content.directoryFiles", path.isEmpty() ? "/" : path, files));
             case UnchangedNode.File(var content) -> {
                 Preview<String, FileContent> shown = content.shown();
-                yield whenLoaded(title, shown.value(), read -> fileContent(model, shown.key(), read, title));
+                yield whenLoaded(title, shown.value(), read -> fileContent(model, shown.key(), read, title, commit));
             }
         };
     }
@@ -186,22 +193,22 @@ public final class ContentView {
      * What the file at {@code path} holds, {@code content}: text as a diff of itself, drawn in the rich view whatever
      * look diffs have, and anything else as a line that says what it is.
      */
-    private static Shown fileContent(Model model, String path, FileContent content, String title) {
+    private static Shown fileContent(Model model, String path, FileContent content, String title, Option<Sha> commit) {
         return switch (content) {
             case FileContent.Text(DiffText asDiff) -> {
                 DiffLook look = model.preferences().diffLook();
                 yield new Shown.Area(
-                        ContentArea.FILE_CONTENT,
+                        commit.isDefined() ? ContentArea.COMMIT_FILE : ContentArea.FILE_CONTENT,
                         title,
-                        new ScrolledContent.Unchanged(path, asDiff),
+                        new ScrolledContent.Unchanged(path, asDiff, commit),
                         new Body.Diff(shown(asDiff), new DiffLook(DiffStyle.RICH, look.syntax(), look.words())));
             }
             case FileContent.Binary(long size) -> dim(title, Messages.get("content.file.binarySize", size(size)));
             case FileContent.Link(String target) -> dim(title, Messages.get("content.file.link", target));
-            case FileContent.Submodule(var commit) ->
+            case FileContent.Submodule(var at) ->
                 dim(
                         title,
-                        commit.map(sha -> Messages.get("content.file.submodule", sha.shortSha()))
+                        at.map(sha -> Messages.get("content.file.submodule", sha.shortSha()))
                                 .getOrElse(() -> Messages.get("content.file.submoduleUnknown")));
         };
     }
@@ -466,6 +473,22 @@ public final class ContentView {
         DiffOptions options = model.preferences().diffOptions();
         String name = FilesPanel.changesName(model, view.of());
         String title = titled(Messages.get("panel.commitFiles.titleFor", name), options);
+        // A node the commit did not change, among all its files, shows as it is in it (ADR 128).
+        Option<Shown> unchanged = view.unchanged()
+                .filter(node -> view.allFiles())
+                .map(node -> unchanged(
+                        model,
+                        node,
+                        node instanceof UnchangedNode.File(var content)
+                                ? Messages.get(
+                                        "panel.commitFile.titleFor",
+                                        name,
+                                        content.shown().key())
+                                : Messages.get("panel.commitFiles.titleFor", name),
+                        Option.of(view.of().sha())));
+        if (unchanged.isDefined()) {
+            return unchanged.get();
+        }
         // When only the files with review threads are listed and none is, nothing is highlighted (ADR 57).
         Option<Shown> nothingListed = FilesPanel.nothingListed(view.listed())
                 .filter(nothing -> !view.listedFiles().toOption().exists(List::nonEmpty))

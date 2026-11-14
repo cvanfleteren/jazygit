@@ -113,7 +113,7 @@ public final class ExpandUpdate {
                 files.find(file -> file.path().equals(path))
                         .orElse(() -> changed(diff, path))
                         .map(file -> new Source.OfFiles(of, file));
-            case ScrolledContent.Unchanged(String file, var asDiff) -> Option.of(new Source.OnDisk(file));
+            case ScrolledContent.Unchanged unchanged -> Option.of(unchanged.source());
             default -> Option.none();
         };
     }

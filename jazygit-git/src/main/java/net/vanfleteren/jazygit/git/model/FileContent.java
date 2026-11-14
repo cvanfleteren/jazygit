@@ -3,7 +3,8 @@ package net.vanfleteren.jazygit.git.model;
 import io.vavr.control.Option;
 
 /**
- * What a file of the working tree holds on disk, as a file without changes shows it (ADR 108).
+ * What a file holds, as a file without changes shows it: on disk, in the working tree (ADR 108), or in a commit
+ * (ADR 128).
  */
 public sealed interface FileContent {
 
@@ -24,7 +25,7 @@ public sealed interface FileContent {
     record Link(String target) implements FileContent {}
 
     /**
-     * A submodule, at the commit the index has for it, when that can be told.
+     * A submodule, at the commit the index or the commit has for it, when that can be told.
      */
     record Submodule(Option<Sha> commit) implements FileContent {}
 }

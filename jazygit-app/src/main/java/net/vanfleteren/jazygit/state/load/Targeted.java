@@ -23,7 +23,9 @@ public sealed interface Targeted<T> extends Load
                 ReadWholeFile,
                 ReadVersion,
                 LoadAllFiles,
-                ReadFileContent {
+                ReadFileContent,
+                LoadCommitTree,
+                ReadCommitFileContent {
 
     Target<T> target();
 }

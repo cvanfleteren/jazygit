@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.git.branches.Remotes;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -29,6 +30,16 @@ public interface Diffs {
      * The files the commit {@code sha} changed, those of a merge against its first parent.
      */
     Either<GitError, List<CommitFile>> commitFiles(Sha sha);
+
+    /**
+     * The paths of all files of the commit {@code sha}, whether it changed them or not, sorted (ADR 128).
+     */
+    Either<GitError, List<String>> treeFiles(Sha sha);
+
+    /**
+     * What the file at {@code path} holds in the commit {@code sha}, as a file without changes shows it (ADR 128).
+     */
+    Either<GitError, FileContent> treeContent(Sha sha, String path);
 
     /**
      * What the commit {@code sha} changed in {@code files}, like {@code git show -- <paths>}: only the diff, a merge
