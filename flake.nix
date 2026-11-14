@@ -38,7 +38,7 @@
           pname = "jazygit";
           inherit version src;
           # Changes with every dependency in the poms; .github/workflows/nix.yml puts the new one in a pull request.
-          mvnHash = "sha256-ZoLsqFmB6QVxS5UYReaybgMml+d3nznsstkF+pBuHgE=";
+          mvnHash = "sha256-GwuwD6QpqKhJUCYoCi7/dNq0iVHkJLivGqohPnkTGmk=";
           # The tests and checks run in CI; spotless would rewrite the sources it builds.
           mvnParameters = "-T1 -Pnative -DskipTests -Dspotless.skip";
           nativeBuildInputs = [ pkgs.makeWrapper ];
