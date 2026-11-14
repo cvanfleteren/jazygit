@@ -44,15 +44,18 @@ creating, merging or ending a pull request fetch.
    status, nor what `CheckMetadata` guards, nor which worktrees have changes, nor what failed before. While away,
    `Update.handle` keeps it in `Jobs.missed` (`keptWhileAway`) without asking whether it is due, so it is never handled
    on its 15 s. When the focus comes back, `Update.focused` hands each kept message to its `apply` directly instead of
-   to `Update.handle` again: the away check is moot then, as the app is back, and so is the switch, which is about
-   what the timer sends, not about a read that was put off. So the kept tick reads the status once then. The
+   to `Update.handle` again: the away check is moot then, as the app is back, and so is the refresh switch, which is
+   about what the timer sends, not about a read that was put off (the fetch switch is not, decision 6). So the kept tick reads the status once then. The
    repository is still read at the start of a session and after each of jazygit's own commands (`Update.refresh`,
    which also tries again what failed).
 6. **With `git.auto-fetch` off, `Update.handle` drops `FetchMsg.Tick`**, focused or away, so it is not kept either:
    neither the one of the timer, nor the one sent at the start of a session (ADR 17), fetches. A fetch the user asks
    for still runs, as do those `FetchUpdate.requested` starts after the user's own pull request actions. GitHub is
    read as before: the overview of the pull requests and the pull requests of the branches read at the start are not
-   fetches. Turning it off does not stop a fetch that runs, nor the fetch it was asked to run again once done.
+   fetches. A `FetchMsg.Tick` kept while away from before it was turned off (in the settings file, say, saved from a
+   GUI editor while the terminal is away) is dropped too when the focus comes back: `Update.focused` asks the same
+   switch before it replays a kept message. Turning it off does not stop a fetch that runs, nor the fetch it was asked
+   to run again once done.
 7. **A key fetches from the remotes**: `f` in the files and the branches panels, as lazygit, whatever
    `git.auto-fetch` says. It goes through `FetchUpdate.requested`: it fetches now, or once the fetch that runs is done.
    The line at the bottom says how it went, as for the fetches of the timer. `f` is the fixup of the commits panel,
@@ -73,7 +76,8 @@ creating, merging or ending a pull request fetch.
   to be tried every minute, and one of jazygit's own commands tries it again at once anyway. `Jobs.MAX_BACKOFF_SHIFT`
   stays 6; its Javadoc says 3 minutes.
 - Tests: with auto-refresh off, a focused tick asks for no command; losing the focus, a tick, and the focus coming
-  back asks for a `LoadStatus`. With auto-fetch off, a `FetchMsg.Tick` asks for nothing, focused or away.
+  back asks for a `LoadStatus`. With auto-fetch off, a `FetchMsg.Tick` asks for nothing, focused or away; and one kept while away, with auto-fetch
+  turned off before the focus comes back, asks for no fetch then.
 - With `git.auto-fetch` off, the branches show how they compare with the remotes, and their pull requests, as of the
   last fetch: one the user asked for, or the one after their own pull request actions.
 - A terminal that does not report the focus never reads on a timer with `git.auto-refresh` off.
