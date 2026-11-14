@@ -1,54 +1,15 @@
 package net.vanfleteren.jazygit.keys;
 
-import io.vavr.collection.List;
-import java.util.function.UnaryOperator;
-import net.vanfleteren.jazygit.feature.branch.BranchFeature;
-import net.vanfleteren.jazygit.feature.cherrypick.CherryPickKeys;
-import net.vanfleteren.jazygit.feature.commit.CommitFeature;
-import net.vanfleteren.jazygit.feature.copy.CopyAction;
-import net.vanfleteren.jazygit.feature.diff.CommitFilesAction;
-import net.vanfleteren.jazygit.feature.diff.ContentSearchAction;
-import net.vanfleteren.jazygit.feature.diff.ExpandAction;
-import net.vanfleteren.jazygit.feature.diff.FoldAction;
-import net.vanfleteren.jazygit.feature.diff.VersionAction;
-import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
-import net.vanfleteren.jazygit.feature.edit.EditKeys;
-import net.vanfleteren.jazygit.feature.fetch.FetchAction;
-import net.vanfleteren.jazygit.feature.files.all.AllFilesAction;
-import net.vanfleteren.jazygit.feature.files.filter.FileFilterAction;
-import net.vanfleteren.jazygit.feature.files.step.FileStepAction;
-import net.vanfleteren.jazygit.feature.github.GitHubFeature;
-import net.vanfleteren.jazygit.feature.stage.StageKeys;
-import net.vanfleteren.jazygit.feature.stash.StashKeys;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeFeature;
+import net.vanfleteren.jazygit.feature.Features;
 
 /**
- * The features that declare keys. The order is the order in which the keys of a panel are listed.
+ * The keys of the features, in the order of {@link Features#ALL}, which is the order in which the keys of a panel are
+ * listed, and then those that work wherever the focus is.
  */
 final class Standard {
 
-    static final Keymap KEYMAP = List.<UnaryOperator<Keymap>>of(
-                    StageKeys::register,
-                    CommitFeature::register,
-                    CherryPickKeys::register,
-                    DiscardKeys::register,
-                    EditKeys::register,
-                    StashKeys::register,
-                    BranchFeature::register,
-                    GitHubFeature::register,
-                    WorktreeFeature::register,
-                    CommitFilesAction.ACTION.keys(),
-                    FileFilterAction.ACTION.keys(),
-                    AllFilesAction.ACTION.keys(),
-                    FetchAction.ACTION.keys(),
-                    ExpandAction.ACTION.keys(),
-                    FoldAction.ACTION.keys(),
-                    VersionAction.ACTION.keys(),
-                    ContentSearchAction.ACTION.keys(),
-                    CopyAction.ACTION.keys(),
-                    FileStepAction.ACTION.keys(),
-                    GlobalKeys::register)
-            .foldLeft(Keymap.empty(), (keymap, feature) -> feature.apply(keymap));
+    static final Keymap KEYMAP =
+            GlobalKeys.register(Features.ALL.foldLeft(Keymap.empty(), (keymap, feature) -> feature.keys(keymap)));
 
     private Standard() {}
 }

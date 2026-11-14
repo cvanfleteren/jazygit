@@ -10,6 +10,9 @@ The ArchUnit tests (`*ArchitectureTest`) enforce these rules; a build that break
 - An error is a value that says itself as a `Phrase` (a message key and what goes into it), never as text. Each feature
   keeps its errors in a sealed `XxxError extends AppError` of its own; `AppError` keeps only what belongs to no feature,
   so a new error edits neither it nor `ErrorText`.
+- A feature package with keys or popups declares them as `XxxFeature.FEATURE`, a `Feature` of its actions, and is
+  wired in by one line in `Features.ALL`, in the order its keys are to be listed in a panel; neither `Popups` nor
+  `keys/Standard` names a feature (`FeaturesTest`, ADR 127).
 - An `XxxUpdate` is a final class with a private constructor and only static methods and static fields: it is only
   functions.
 - Updates make commands; only `Program` (and `StartApp`, for the start screen) runs them through `Cmd.run` or `perform`.

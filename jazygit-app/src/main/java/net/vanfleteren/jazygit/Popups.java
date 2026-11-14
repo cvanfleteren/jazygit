@@ -4,49 +4,21 @@ import dev.tamboui.toolkit.element.Element;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import net.vanfleteren.jazygit.feature.branch.BranchFeature;
-import net.vanfleteren.jazygit.feature.cherrypick.CherryPickDialogs;
-import net.vanfleteren.jazygit.feature.commit.CommitFeature;
-import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
-import net.vanfleteren.jazygit.feature.error.ErrorDialog;
-import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteDialog;
-import net.vanfleteren.jazygit.feature.github.GitHubFeature;
-import net.vanfleteren.jazygit.feature.help.HelpDialog;
-import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
-import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
-import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
-import net.vanfleteren.jazygit.feature.stash.StashDialogs;
-import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeFeature;
+import net.vanfleteren.jazygit.feature.Features;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**
- * Every popup of the app, with where the focus goes when it closes. At most one is open; errors come last.
+ * Every popup of the app, those of {@link Features#ALL}, with where the focus goes when it closes. At most one is
+ * open, so their order does not matter.
  */
 final class Popups {
 
     private final List<PopupSlot> slots;
 
     Popups(Consumer<Msg> dispatch) {
-        this.slots = List.of(
-                        BranchFeature.popups(dispatch),
-                        WorktreeFeature.popups(dispatch),
-                        ForceDeleteDialog.popups(dispatch),
-                        GitHubFeature.popups(dispatch),
-                        CommitFeature.popups(dispatch),
-                        StashDialogs.popups(dispatch),
-                        CherryPickDialogs.popups(dispatch),
-                        DiscardDialog.popups(dispatch),
-                        ThemeDialog.popups(dispatch),
-                        RecentReposDialog.popups(dispatch),
-                        SettingsPanelDialogs.popups(dispatch),
-                        InProgressDialogs.popups(dispatch),
-                        HelpDialog.popups(dispatch),
-                        ErrorDialog.popups(dispatch))
-                .flatMap(Function.identity());
+        this.slots = Features.ALL.flatMap(feature -> feature.popups(dispatch));
     }
 
     /**
