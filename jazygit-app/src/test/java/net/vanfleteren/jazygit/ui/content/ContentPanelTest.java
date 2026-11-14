@@ -585,6 +585,54 @@ class ContentPanelTest {
     }
 
     @Test
+    void theBottomBorderOfAnAreaWithLinesWiderThanItShowsHowFarItIsScrolledSideways() throws Exception {
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit("+" + "x".repeat(150) + "END"));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        String left;
+        String right;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
+            SettledPilot.focus(testRunner, area);
+            left = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            List.range(0, 80).forEach(i -> SettledPilot.of(testRunner).press(KeyCode.RIGHT));
+            SettledPilot.of(testRunner).pause();
+            right = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+        }
+
+        assertTrue(java.util.regex.Pattern.compile("[╰└]█+─+[╯┘]").matcher(left).find(), left);
+        assertTrue(
+                java.util.regex.Pattern.compile("[╰└]─+█+[╯┘]").matcher(right).find(), right);
+    }
+
+    @Test
+    void theBottomBorderOfAnAreaWithLinesNoWiderThanItIsLeftAsItIs() throws Exception {
+        Model model = showingCommit("+short");
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
+        String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+
+        String screen;
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
+            screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, area));
+        }
+
+        assertTrue(java.util.regex.Pattern.compile("[╰└]─+[╯┘]").matcher(screen).find(), screen);
+        assertFalse(
+                java.util.regex.Pattern.compile("[╰└][─█]*█[─█]*[╯┘]")
+                        .matcher(screen)
+                        .find(),
+                screen);
+    }
+
+    @Test
     void allTheLinesThatShowAreScrolledSidewaysAlsoWhenTheAreaGrowsAtTheBottom() throws Exception {
         // The model takes where the area is scrolled to, as the app's does.
         java.util.concurrent.atomic.AtomicReference<Model> model =

@@ -22,6 +22,8 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
+import dev.tamboui.widgets.scrollbar.Scrollbar;
+import dev.tamboui.widgets.scrollbar.ScrollbarState;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.Vector;
@@ -84,7 +86,8 @@ public final class ScrollArea {
     // Whether it shows the diff of a pull request's files, whose keys comment on it (ADR 60).
     private boolean review = false;
     // How far the area is scrolled sideways, as last drawn, and how far it can be. TamboUI's text area keeps a
-    // column it never draws at, so the area draws its lines with as many columns cut off their start itself.
+    // column it never draws at, so the area draws its lines with as many columns cut off their start itself, and
+    // shows where it is with TamboUI's scrollbar on its bottom border.
     private int column = 0;
     private int columns = 0;
     // The size the area was last drawn in, which its lines are fitted to; none before it is first drawn (ADR 80).
@@ -407,18 +410,38 @@ public final class ScrollArea {
         public void render(Frame frame, Rect at, RenderContext context) {
             if (at.width() == drawnWidth && at.height() == drawnHeight) {
                 fitted.render(frame, at, context);
+            } else {
+                drawnWidth = at.width();
+                drawnHeight = at.height();
+                Buffer buffer = frame.buffer();
+                Rect cells = buffer.area().intersection(at);
+                Vector<Cell> before = Vector.range(cells.top(), cells.bottom())
+                        .flatMap(y -> Vector.range(cells.left(), cells.right()).map(x -> buffer.get(x, y)));
+                fitted.render(frame, at, context);
+                before.forEachWithIndex((cell, index) ->
+                        buffer.set(cells.left() + index % cells.width(), cells.top() + index / cells.width(), cell));
+                again.get().render(frame, at, context);
+            }
+            sideways(frame, at);
+        }
+
+        /**
+         * Draws on the bottom border of the area, drawn in {@code at}, how far it is scrolled sideways, as the bar on
+         * its right shows how far down, while its lines are wider than it. Its track is a line, as the border is,
+         * and it is drawn in the colours of the border.
+         */
+        private void sideways(Frame frame, Rect at) {
+            int width = element.state().viewportWidth();
+            if (columns == 0 || at.width() <= 2 || at.height() < 2) {
                 return;
             }
-            drawnWidth = at.width();
-            drawnHeight = at.height();
-            Buffer buffer = frame.buffer();
-            Rect cells = buffer.area().intersection(at);
-            Vector<Cell> before = Vector.range(cells.top(), cells.bottom())
-                    .flatMap(y -> Vector.range(cells.left(), cells.right()).map(x -> buffer.get(x, y)));
-            fitted.render(frame, at, context);
-            before.forEachWithIndex((cell, index) ->
-                    buffer.set(cells.left() + index % cells.width(), cells.top() + index / cells.width(), cell));
-            again.get().render(frame, at, context);
+            frame.renderStatefulWidget(
+                    Scrollbar.horizontal(),
+                    new Rect(at.x() + 1, at.bottom() - 1, at.width() - 2, 1),
+                    new ScrollbarState()
+                            .contentLength(columns + width)
+                            .viewportContentLength(width)
+                            .position(column));
         }
 
         @Override
