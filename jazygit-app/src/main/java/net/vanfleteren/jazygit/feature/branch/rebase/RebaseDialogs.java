@@ -47,6 +47,6 @@ public final class RebaseDialogs {
     private RebaseDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(REBASE, dispatch)));
+        return List.of(PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(REBASE, dispatch)));
     }
 }

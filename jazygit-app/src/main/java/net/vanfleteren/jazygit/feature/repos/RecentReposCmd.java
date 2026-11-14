@@ -73,7 +73,7 @@ public sealed interface RecentReposCmd extends Cmd {
          * Where another worktree of the repository is shown: on the worktrees, focused, as switching to one is
          * done from there.
          */
-        public static final Landing WORKTREES = new Landing(BranchesTab.WORKTREES, Option.of(Scopes.BRANCHES.id()));
+        public static final Landing WORKTREES = new Landing(BranchesTab.WORKTREES, Option.of(Scopes.BRANCHES.pane()));
 
         /**
          * Opens the worktree at {@code location}, shown on the worktrees.

@@ -102,28 +102,29 @@ class PanePositionTest {
     @Test
     void branchesShowSelectedPositionAndFollowSelection() throws Exception {
         BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
-        assertPositions(() -> panel.render(MODEL, BranchesPanel.ID), BranchesPanel.ID, KeyCode.DOWN, "1/2", "2/2");
+        assertPositions(() -> panel.render(MODEL, BranchesPanel.PANE), BranchesPanel.ID, KeyCode.DOWN, "1/2", "2/2");
     }
 
     @Test
     void commitsShowSelectedPositionAndFollowSelection() throws Exception {
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
-        assertPositions(() -> panel.render(MODEL, CommitsPanel.ID), CommitsPanel.ID, KeyCode.DOWN, "1/3", "2/3");
+        assertPositions(() -> panel.render(MODEL, CommitsPanel.PANE), CommitsPanel.ID, KeyCode.DOWN, "1/3", "2/3");
     }
 
     @Test
     void filesCountOnlyVisibleRows() throws Exception {
         FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
         // The root, the merged directory and its two files; collapsing the directory hides the files.
-        assertPositions(() -> panel.render(MODEL, FilesPanel.ID), FilesPanel.ID, KeyCode.LEFT, "1/4", "1/1");
+        assertPositions(() -> panel.render(MODEL, FilesPanel.PANE), FilesPanel.ID, KeyCode.LEFT, "1/4", "1/1");
     }
 
     @Test
     void showsNoPositionWhileLoading() throws Exception {
         BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
         Model loading = TestModels.loading("repo");
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(loading, BranchesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> panel.render(loading, BranchesPanel.ID));
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(loading, BranchesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(loading, BranchesPanel.PANE));
             assertTrue(screen.contains(Placeholders.loading()), screen);
             assertFalse(screen.contains("1/1"), screen);
 

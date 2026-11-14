@@ -70,12 +70,12 @@ class FilesPanelTest {
                 FileEntry.conflicted("theirs-deleted.txt", Conflict.of('U', 'D')),
                 FileEntry.conflicted("ours-deleted.txt", Conflict.of('D', 'U')))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(updated, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> panel.render(updated, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(updated, FilesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(updated, FilesPanel.PANE));
             assertTrue(screen.contains("UU both.txt"), screen);
             assertTrue(screen.contains("UU added.txt"), screen);
 
-            String other = RenderedText.of(testRunner, () -> panel.render(deleted, FilesPanel.ID));
+            String other = RenderedText.of(testRunner, () -> panel.render(deleted, FilesPanel.PANE));
             assertTrue(other.contains("UD theirs-deleted.txt"), other);
             assertTrue(other.contains("DU ours-deleted.txt"), other);
 
@@ -88,8 +88,8 @@ class FilesPanelTest {
         Model model = TestModels.loaded(fixed(
                 List.range(0, 100).map(i -> Fixtures.fileEntry("file%03d.txt".formatted(i), ChangeType.MODIFIED))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.PANE));
             List<String> rows = List.of(screen.split("\n"));
             // The last column of the rows between the top and the bottom border: the right border.
             String border = rows.subSequence(1, rows.size() - 1)
@@ -106,11 +106,12 @@ class FilesPanelTest {
     void theHighlightedNodeOnlyShowsWhileThePaneIsInUse() throws Exception {
         Model model = TestModels.loaded(fixed(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
-            String active = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            String active = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.PANE));
             assertTrue(active.contains("> "), active);
 
-            String inactive = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.ID, CommitsPanel.ID));
+            String inactive = RenderedText.of(
+                    testRunner, () -> panel.render(model, Option.of(CommitsPanel.PANE), Option.of(CommitsPanel.PANE)));
             assertFalse(inactive.contains(">"), inactive);
             assertTrue(inactive.contains("UU both.txt"), inactive);
 
@@ -126,12 +127,12 @@ class FilesPanelTest {
                 TestModels.loaded(fixed(List.of(FileEntry.renamed("lib/m.txt", "src/m.txt", true, false))));
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> panel.render(sameDirectory, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> panel.render(sameDirectory, FilesPanel.ID));
+                ToolkitTestRunner.runTest(() -> panel.render(sameDirectory, FilesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(sameDirectory, FilesPanel.PANE));
             assertTrue(screen.contains("R  a.txt -> b.txt"), screen);
             assertTrue(screen.contains("RM old.txt -> c.txt"), screen);
 
-            String other = RenderedText.of(testRunner, () -> panel.render(otherDirectory, FilesPanel.ID));
+            String other = RenderedText.of(testRunner, () -> panel.render(otherDirectory, FilesPanel.PANE));
             assertTrue(other.contains("R  src/m.txt -> m.txt"), other);
 
             SettledPilot.of(testRunner).quit();
@@ -144,8 +145,8 @@ class FilesPanelTest {
         Model model = TestModels.loaded(fixed(List.of(
                 Fixtures.fileEntry("gone.txt", ChangeType.DELETED), FileEntry.renamed("b.txt", "a.txt", false, true))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.PANE));
             assertTrue(screen.contains(" D gone.txt"), screen);
             assertTrue(screen.contains(" R a.txt -> b.txt"), screen);
 
@@ -157,8 +158,8 @@ class FilesPanelTest {
     void aPlaceholderRowIsNotASelection() throws Exception {
         Model loading = TestModels.loading("repo");
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(loading, FilesPanel.ID))) {
-            RenderedText.of(testRunner, () -> panel.render(loading, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(loading, FilesPanel.PANE))) {
+            RenderedText.of(testRunner, () -> panel.render(loading, FilesPanel.PANE));
 
             assertTrue(panel.selectionChange(loading).isEmpty());
         }
@@ -169,14 +170,15 @@ class FilesPanelTest {
         Model untracked = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED))));
         Model added = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("a.txt", ChangeType.ADDED))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(untracked, FilesPanel.ID))) {
-            String loading = RenderedText.of(testRunner, () -> panel.render(TestModels.loading("repo"), FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(untracked, FilesPanel.PANE))) {
+            String loading =
+                    RenderedText.of(testRunner, () -> panel.render(TestModels.loading("repo"), FilesPanel.PANE));
             assertTrue(loading.contains(Placeholders.loading()), loading);
 
-            String initial = RenderedText.of(testRunner, () -> panel.render(untracked, FilesPanel.ID));
+            String initial = RenderedText.of(testRunner, () -> panel.render(untracked, FilesPanel.PANE));
             assertTrue(initial.contains("?? a.txt"), initial);
 
-            String screen = RenderedText.of(testRunner, () -> panel.render(added, FilesPanel.ID));
+            String screen = RenderedText.of(testRunner, () -> panel.render(added, FilesPanel.PANE));
             assertTrue(screen.contains("A  a.txt"), screen);
             assertFalse(screen.contains("?? a.txt"), screen);
 
@@ -188,8 +190,8 @@ class FilesPanelTest {
     void rendersEmptyPanelWithoutRootWhenThereAreNoFiles() throws Exception {
         Model empty = TestModels.loaded(fixed(List.of()));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(empty, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> panel.render(empty, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(empty, FilesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(empty, FilesPanel.PANE));
             assertTrue(screen.contains("Files"), screen);
             assertTrue(screen.contains("0/0"), screen);
             // Apart from the position, there is no "/" root row.
@@ -206,14 +208,14 @@ class FilesPanelTest {
         Model before = TestModels.loaded(fixed(List.of(a, b)));
         Model after = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("aaa.txt", ChangeType.ADDED), a, b)));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.PANE));
             assertTrue(screen.contains("net/vanfleteren"), screen);
             assertTrue(screen.contains(" M A.java"), screen);
             assertFalse(screen.contains("net/vanfleteren/A.java"), screen);
 
             RenderedText.of(testRunner, () -> panel.tree().selected(3));
-            RenderedText.of(testRunner, () -> panel.render(after, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(after, FilesPanel.PANE));
             FileTree selected = panel.tree().selectedNode().data();
             assertEquals(b, ((FileTree.File) selected).entry());
 
@@ -229,7 +231,7 @@ class FilesPanelTest {
                 Fixtures.fileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
                 Fixtures.fileEntry("net/vanfleteren/B.java", ChangeType.MODIFIED))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(model, FilesPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(model, FilesPanel.PANE))) {
             SettledPilot.focus(testRunner, FilesPanel.ID);
             RenderedText.of(testRunner, () -> opening.tree().selected(1));
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
@@ -255,9 +257,9 @@ class FilesPanelTest {
         FilesPanel opening = new FilesPanel(msg -> {}, opened::incrementAndGet);
         Model loaded = loaded(opened(TestModels.loaded(fixed(List.of()))), MODEL_AND_TEST);
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(loaded, FilesPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(loaded, FilesPanel.PANE))) {
             SettledPilot.focus(testRunner, FilesPanel.ID);
-            RenderedText.of(testRunner, () -> opening.render(loaded, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> opening.render(loaded, FilesPanel.PANE));
             RenderedText.of(testRunner, () -> opening.commitTree().selected(0));
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
             SettledPilot.of(testRunner).press(KeyCode.RIGHT);
@@ -322,10 +324,10 @@ class FilesPanelTest {
         Model before = TestModels.loaded(fixed(names.map(n -> Fixtures.fileEntry(n, ChangeType.MODIFIED))));
         Model after = TestModels.loaded(fixed(remaining.map(n -> Fixtures.fileEntry(n, ChangeType.MODIFIED))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.ID))) {
-            RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.PANE))) {
+            RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.PANE));
             RenderedText.of(testRunner, () -> panel.tree().selected(row));
-            RenderedText.of(testRunner, () -> panel.render(after, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(after, FilesPanel.PANE));
             String name = panel.tree().selectedNode().data().name();
 
             SettledPilot.of(testRunner).quit();
@@ -339,7 +341,7 @@ class FilesPanelTest {
                 Fixtures.fileEntry("a.txt", ChangeType.MODIFIED), Fixtures.fileEntry("b.txt", ChangeType.MODIFIED))));
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID), new Size(40, 8))) {
+                ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE), new Size(40, 8))) {
             Pilot pilot = SettledPilot.of(testRunner);
             // The border, the root, a.txt, then b.txt.
             pilot.mousePress(MouseButton.LEFT, 5, 3);
@@ -356,7 +358,7 @@ class FilesPanelTest {
                 List.range(0, 20).map(i -> Fixtures.fileEntry("f%02d.txt".formatted(i), ChangeType.MODIFIED))));
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID), new Size(40, 8))) {
+                ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE), new Size(40, 8))) {
             Pilot pilot = SettledPilot.of(testRunner);
             // Six rows fit inside the border; at the last file they show f14.txt to f19.txt.
             SettledPilot.focus(testRunner, FilesPanel.ID);
@@ -381,8 +383,8 @@ class FilesPanelTest {
                         new LoadMsg.CommitFilesLoaded(of, List.of(new CommitFile("b.txt", ChangeType.ADDED))))
                 .model();
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, FilesPanel.ID))) {
-            String files = RenderedText.ofLarge(testRunner, () -> panel.render(open, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, FilesPanel.PANE))) {
+            String files = RenderedText.ofLarge(testRunner, () -> panel.render(open, FilesPanel.PANE));
             assertTrue(files.contains("Files of feature · vs origin/main"), files);
 
             SettledPilot.of(testRunner).quit();
@@ -403,14 +405,14 @@ class FilesPanelTest {
                                         new CommitFile("gone.txt", ChangeType.DELETED))))
                 .model();
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, FilesPanel.ID))) {
-            String commit = RenderedText.ofLarge(testRunner, () -> panel.render(open, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, FilesPanel.PANE))) {
+            String commit = RenderedText.ofLarge(testRunner, () -> panel.render(open, FilesPanel.PANE));
             assertTrue(commit.contains("Files of aaaa"), commit);
             assertTrue(commit.contains("D gone.txt"), commit);
             assertTrue(commit.contains("R old.txt -> new.txt"), commit);
             assertFalse(commit.contains("work.txt"), commit);
 
-            String working = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+            String working = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.PANE));
             assertTrue(working.contains("work.txt"), working);
 
             SettledPilot.of(testRunner).quit();
@@ -447,8 +449,8 @@ class FilesPanelTest {
                                 0))
                 .model();
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, FilesPanel.ID))) {
-            String files = RenderedText.ofLarge(testRunner, () -> panel.render(read, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, FilesPanel.PANE))) {
+            String files = RenderedText.ofLarge(testRunner, () -> panel.render(read, FilesPanel.PANE));
             assertTrue(files.contains("Files of #7 · merged"), files);
             assertTrue(files.contains("R old.txt -> new.txt 💬2"), files);
             assertTrue(files.contains("M b.txt ✓1"), files);
@@ -504,20 +506,21 @@ class FilesPanelTest {
                                 0))
                 .model();
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(unresolved, FilesPanel.ID))) {
-            String files = RenderedText.ofLarge(testRunner, () -> panel.render(unresolved, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(unresolved, FilesPanel.PANE))) {
+            String files = RenderedText.ofLarge(testRunner, () -> panel.render(unresolved, FilesPanel.PANE));
             assertTrue(files.contains("Files of #7 · unresolved remarks"), files);
             assertTrue(files.contains("dir"), files);
             assertTrue(files.contains("open.txt 💬1"), files);
             assertFalse(files.contains("done.txt"), files);
             assertFalse(files.contains("quiet.txt"), files);
 
-            files = RenderedText.ofLarge(testRunner, () -> panel.render(remarked, FilesPanel.ID));
+            files = RenderedText.ofLarge(testRunner, () -> panel.render(remarked, FilesPanel.PANE));
             assertTrue(files.contains("Files of #7 · with remarks"), files);
             assertTrue(files.contains("done.txt ✓1"), files);
             assertFalse(files.contains("quiet.txt"), files);
 
-            files = RenderedText.ofLarge(testRunner, () -> panel.render(none, FilesPanel.ID));
+            files = RenderedText.ofLarge(testRunner, () -> panel.render(none, FilesPanel.PANE));
             assertTrue(files.contains("No file has unresolved remarks"), files);
             assertFalse(files.contains("done.txt"), files);
 
@@ -556,18 +559,18 @@ class FilesPanelTest {
         Model unresolved =
                 Update.update(read, new CommitFilesMsg.ListedCycled()).model();
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
-            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.ID));
-            String files = RenderedText.ofLarge(testRunner, () -> panel.render(reading, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.PANE))) {
+            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.PANE));
+            String files = RenderedText.ofLarge(testRunner, () -> panel.render(reading, FilesPanel.PANE));
             assertTrue(files.contains("Reading the remarks…"), files);
 
-            RenderedText.of(testRunner, () -> panel.render(read, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(read, FilesPanel.PANE));
             // The root, dir, then its files: b.txt, between a.txt and d.txt, which have remarks.
             panel.commitTree().selected(3);
-            RenderedText.of(testRunner, () -> panel.render(read, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(read, FilesPanel.PANE));
             assertEquals("dir/b.txt", highlighted(panel));
 
-            RenderedText.of(testRunner, () -> panel.render(unresolved, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(unresolved, FilesPanel.PANE));
             assertEquals("dir/a.txt", highlighted(panel));
 
             SettledPilot.of(testRunner).quit();
@@ -617,9 +620,9 @@ class FilesPanelTest {
         Model closed = Update.update(loaded, new CommitFilesMsg.Closed()).model();
         Model reopened = opened(closed);
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.PANE))) {
             for (Model model : List.of(opened, loaded, closed, reopened, loaded(reopened, MODEL_AND_TEST))) {
-                RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+                RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.PANE));
             }
             assertEquals(MODEL, highlighted(panel));
             SettledPilot.of(testRunner).quit();
@@ -632,16 +635,16 @@ class FilesPanelTest {
         Model opened = opened(TestModels.loaded(fixed(List.of())));
         Model loaded = loaded(opened, MODEL_AND_TEST);
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
-            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.ID));
-            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.PANE))) {
+            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.PANE));
+            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.PANE));
             panel.commitTree().selected(0);
-            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.PANE));
             RenderedText.of(
                     testRunner,
                     () -> panel.render(
                             loaded(opened, MODEL_AND_TEST.append(new CommitFile("x/y.txt", ChangeType.ADDED))),
-                            FilesPanel.ID));
+                            FilesPanel.PANE));
             assertEquals("", highlighted(panel));
             SettledPilot.of(testRunner).quit();
         }
@@ -658,7 +661,8 @@ class FilesPanelTest {
                 },
                 () -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.ID))) {
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.PANE))) {
             SettledPilot.focus(testRunner, FilesPanel.ID);
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press('/');
@@ -672,7 +676,7 @@ class FilesPanelTest {
                 SettledPilot.of(testRunner).press(KeyCode.BACKSPACE);
                 SettledPilot.of(testRunner).pause();
             }
-            String typing = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            String typing = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE));
             assertTrue(typing.contains("/ Test"), typing);
             assertTrue(typing.contains("ATest.java"), typing);
             assertTrue(typing.contains("BTest.java"), typing);
@@ -689,7 +693,7 @@ class FilesPanelTest {
 
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).pause();
-            String kept = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            String kept = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE));
             assertTrue(kept.contains("Files · /Test"), kept);
             assertFalse(kept.contains("/ Test"), kept);
             // The rows shown: /, src/test and its two files.
@@ -699,7 +703,7 @@ class FilesPanelTest {
 
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
-            String cleared = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            String cleared = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE));
             assertTrue(cleared.contains("README.md"), cleared);
             assertTrue(cleared.contains("Files"), cleared);
             assertFalse(cleared.contains("/Test"), cleared);
@@ -724,14 +728,15 @@ class FilesPanelTest {
                 },
                 () -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.ID))) {
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.PANE))) {
             SettledPilot.focus(testRunner, FilesPanel.ID);
             // Without the filter line, a paste does nothing: its space would stage, its d discard.
             SettledPilot.paste(testRunner, "Test d");
             SettledPilot.of(testRunner).press('/');
             SettledPilot.of(testRunner).pause();
             SettledPilot.paste(testRunner, "Test");
-            String typing = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            String typing = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE));
             assertTrue(typing.contains("/ Test"), typing);
             assertFalse(typing.contains("README.md"), typing);
 
@@ -747,19 +752,20 @@ class FilesPanelTest {
         FilesPanel panel =
                 new FilesPanel(msg -> model.set(Update.update(model.get(), msg).model()), () -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.ID))) {
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.PANE))) {
             SettledPilot.focus(testRunner, FilesPanel.ID);
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press('/');
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press('x');
             SettledPilot.of(testRunner).pause();
-            assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID))
+            assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE))
                     .contains("No files match"));
 
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
-            String back = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            String back = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE));
             assertTrue(back.contains("Files · /README"), back);
             assertTrue(back.contains("README.md"), back);
             SettledPilot.of(testRunner).quit();
@@ -771,8 +777,8 @@ class FilesPanelTest {
         Model model = TestModels.loaded(fixed(FILTERED))
                 .mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("zzz", Option.none()))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
             assertTrue(screen.contains("No files match"), screen);
             assertTrue(screen.contains("0/0"), screen);
             assertTrue(panel.selectionChange(model).isEmpty());
@@ -790,32 +796,32 @@ class FilesPanelTest {
         Model other =
                 all.mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("Test", Option.none()))));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(all, FilesPanel.ID))) {
-            RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(all, FilesPanel.PANE))) {
+            RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.PANE));
             // The root, src, then src/main: directories come before README.md.
             panel.tree().selected(2);
             assertEquals("src/main", panel.tree().selectedNode().data().path());
             panel.tree().selectedNode().expanded(false);
-            assertFalse(RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.ID))
+            assertFalse(RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.PANE))
                     .contains("A.java"));
 
-            assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.ID))
+            assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.PANE))
                     .contains("A.java"));
             // Collapsed by hand while filtered, and opened again by the next filter.
             panel.tree().selected(4);
             assertEquals("src/test", panel.tree().selectedNode().data().path());
             panel.tree().selectedNode().expanded(false);
-            assertFalse(RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.ID))
+            assertFalse(RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.PANE))
                     .contains("ATest.java"));
-            String refiltered = RenderedText.ofLarge(testRunner, () -> panel.render(other, FilesPanel.ID));
+            String refiltered = RenderedText.ofLarge(testRunner, () -> panel.render(other, FilesPanel.PANE));
             assertTrue(refiltered.contains("ATest.java"), refiltered);
 
             // A file highlighted in a directory that was collapsed before the filter.
-            RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.ID));
+            RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.PANE));
             panel.tree().selected(3);
             assertEquals("src/main/A.java", panel.tree().selectedNode().data().path());
 
-            String cleared = RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.ID));
+            String cleared = RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.PANE));
             assertFalse(cleared.contains("A.java"), cleared);
             assertTrue(cleared.contains("ATest.java"), cleared);
             // Hidden again, it gives the highlight to the directory that holds it, not to the first file.
@@ -833,17 +839,18 @@ class FilesPanelTest {
         FilesPanel panel =
                 new FilesPanel(msg -> model.set(Update.update(model.get(), msg).model()), () -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.ID))) {
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.PANE))) {
             SettledPilot.focus(testRunner, FilesPanel.ID);
             SettledPilot.of(testRunner).pause();
-            String filtered = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            String filtered = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE));
             assertTrue(filtered.contains("Files of aaaa · /Test"), filtered);
             assertFalse(filtered.contains("WordDiff.java"), filtered);
 
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
             assertTrue(model.get().repoView().commitFiles().isDefined());
-            assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID))
+            assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE))
                     .contains("WordDiff.java"));
 
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
@@ -874,9 +881,9 @@ class FilesPanelTest {
         Model opened = opened(TestModels.loaded(fixed(List.of())));
         Model loaded = loaded(opened, files);
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
-            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.ID));
-            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.PANE))) {
+            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.PANE));
+            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.PANE));
             String path = highlighted(panel);
             SettledPilot.of(testRunner).quit();
             return path;

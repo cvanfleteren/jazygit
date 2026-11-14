@@ -28,6 +28,6 @@ public final class DropDialogs {
     private DropDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(DROP, dispatch)));
+        return List.of(PopupSlot.returningTo(CommitsPanel.PANE, new ConfirmDialog<>(DROP, dispatch)));
     }
 }

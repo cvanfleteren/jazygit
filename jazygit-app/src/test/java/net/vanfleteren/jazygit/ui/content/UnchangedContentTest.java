@@ -46,8 +46,8 @@ class UnchangedContentTest {
     }
 
     private String screen(Model model) throws Exception {
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(model, FilesPanel.ID))) {
-            return RenderedText.ofLarge(testRunner, () -> content.render(model, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(model, FilesPanel.PANE))) {
+            return RenderedText.ofLarge(testRunner, () -> content.render(model, FilesPanel.PANE));
         }
     }
 

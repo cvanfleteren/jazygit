@@ -29,6 +29,6 @@ public final class ForceDeleteDialog {
      * The popups of this feature, which send what the user does to {@code dispatch}.
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(SPEC, dispatch)));
+        return List.of(PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(SPEC, dispatch)));
     }
 }

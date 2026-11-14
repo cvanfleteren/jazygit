@@ -9,12 +9,12 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * that has the focus; and what it does there once it is read, if anything.
  *
  * @param branchesTab the list the branches pane shows
- * @param focusedPane the id of the pane that has the focus, or of the area of the content panel, as
- *                    {@link RepoView#focusedPane} keeps it; none for the files, where the app starts
+ * @param focusedPane the pane or area of the content panel that has the focus, as {@link RepoView#focusedPane}
+ *                    keeps it; none for the files, where the app starts
  * @param then        the message to handle once the status, the branches and the worktrees of the repository are
  *                    read, as when a checkout asked for in another worktree is to run there (ADR 68)
  */
-public record Landing(BranchesTab branchesTab, Option<String> focusedPane, Option<Msg> then) {
+public record Landing(BranchesTab branchesTab, Option<Focus.OnScreen> focusedPane, Option<Msg> then) {
 
     /**
      * Where the app starts: the local branches, the files focused.
@@ -24,7 +24,7 @@ public record Landing(BranchesTab branchesTab, Option<String> focusedPane, Optio
     /**
      * Showing the list {@code branchesTab}, with the pane {@code focusedPane} focused, and nothing more to do.
      */
-    public Landing(BranchesTab branchesTab, Option<String> focusedPane) {
+    public Landing(BranchesTab branchesTab, Option<Focus.OnScreen> focusedPane) {
         this(branchesTab, focusedPane, Option.none());
     }
 

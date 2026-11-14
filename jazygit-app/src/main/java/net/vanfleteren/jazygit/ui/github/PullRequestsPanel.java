@@ -13,9 +13,11 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Scope;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.state.preferences.Screen;
@@ -38,6 +40,11 @@ public final class PullRequestsPanel {
      * The id of the top pane, the one that gets the focus the first time the screen is shown.
      */
     public static final String FIRST_PANE_ID = Scopes.PR_REPOSITORY.id();
+
+    /**
+     * The first pane, as the focus is on it.
+     */
+    public static final PaneId FIRST_PANE = Scopes.PR_REPOSITORY.pane();
 
     /**
      * What marks a pull request that was opened and not seen yet, in its row and in the name of the screen.
@@ -63,7 +70,7 @@ public final class PullRequestsPanel {
             Function<PrOverview, Loadable<PullRequestList>> pullRequests,
             boolean anyRepository,
             Consumer<Msg> dispatch,
-            Consumer<String> openPullRequest,
+            Consumer<PaneId> openPullRequest,
             Theme.Highlights highlights) {
         this.scope = scope;
         this.pullRequests = pullRequests;
@@ -77,7 +84,7 @@ public final class PullRequestsPanel {
                 highlights);
         list.whenEmpty(Messages.get("prs.empty"));
         list.onKey(event -> event.isConfirm()
-                ? selected().map(pr -> () -> openPullRequest.accept(scope.id()))
+                ? selected().map(pr -> () -> openPullRequest.accept(scope.pane()))
                 : PaneKeys.sending(keymap.handle(scope, event, selected()), dispatch));
     }
 
@@ -99,7 +106,7 @@ public final class PullRequestsPanel {
      * user's review, and the ones they opened.
      */
     public static List<PullRequestsPanel> all(
-            Consumer<Msg> dispatch, Consumer<String> openPullRequest, Theme.Highlights highlights) {
+            Consumer<Msg> dispatch, Consumer<PaneId> openPullRequest, Theme.Highlights highlights) {
         return List.of(
                 new PullRequestsPanel(
                         Scopes.PR_REPOSITORY, PrOverview::repository, false, dispatch, openPullRequest, highlights),
@@ -171,15 +178,18 @@ public final class PullRequestsPanel {
                 .getOrElse(name);
     }
 
-    public String id() {
-        return scope.id();
+    /**
+     * The pane, as the focus is on it.
+     */
+    public PaneId pane() {
+        return scope.pane();
     }
 
     /**
-     * @param focusedId the id of the element that has the focus
-     * @param activeId  the id of the left pane in use, whose highlighted row shows
+     * @param focus what has the focus, if anything
+     * @param inUse the left pane in use, whose highlighted row shows
      */
-    public Panel render(Model model, String focusedId, String activeId) {
+    public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         Loadable<PullRequestList> shown = pullRequests.apply(model.prOverview());
         return list.render(
                 shown,
@@ -196,8 +206,8 @@ public final class PullRequestsPanel {
                                                 () -> model.gitHub().merge(pr.number()))
                                         .flatMap(merge -> merge),
                                 model.prOverview().isUnseen(pr))),
-                id().equals(focusedId),
-                id().equals(activeId),
+                focus.contains(scope.pane()),
+                inUse.contains(scope.pane()),
                 Pane.title(title(Messages.get(scope.titleKey()), shown)));
     }
 

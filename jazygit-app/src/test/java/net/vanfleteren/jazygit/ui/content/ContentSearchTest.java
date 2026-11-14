@@ -11,8 +11,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.diff.Anchor;
@@ -48,7 +50,7 @@ class ContentSearchTest {
     @Test
     void enterGoesToTheFirstMatchFromTheCursorAndNAndShiftNGoOnWrapping() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH));
-        String area = driven.area();
+        String area = driven.area().id();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
             SettledPilot.focus(testRunner, area);
             driven.screen(testRunner);
@@ -89,7 +91,7 @@ class ContentSearchTest {
     void anUppercaseLetterMakesTheSearchMatchCase() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/Foo");
             driven.press(testRunner, KeyCode.ENTER);
@@ -103,7 +105,7 @@ class ContentSearchTest {
     void escapeClearsTheSearchBeforeItLeavesTheArea() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/foo");
             driven.press(testRunner, KeyCode.ENTER);
@@ -119,7 +121,7 @@ class ContentSearchTest {
     void escapeInTheLinePutsBackTheSearchFromBefore() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/foo");
             driven.press(testRunner, KeyCode.ENTER);
@@ -135,7 +137,7 @@ class ContentSearchTest {
     void thePlainDiffIsSearchedWithoutTheMarkersOfItsLinesAndSaysWhenNothingMatches() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.PLAIN));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/+three");
             driven.press(testRunner, KeyCode.ENTER);
@@ -162,7 +164,7 @@ class ContentSearchTest {
     void aKeptSearchCountsTheMatchesOfWhatShowsNextWithoutGoingToOne() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/foo");
             driven.press(testRunner, KeyCode.ENTER);
@@ -183,9 +185,9 @@ class ContentSearchTest {
 
     @Test
     void inTheDiffOfAPullRequestNGoesToTheMatchesWhileASearchIsKeptAndToTheThreadsOnceItIsCleared() throws Exception {
-        Driven driven = new Driven(pullRequest(), FilesPanel.ID);
+        Driven driven = new Driven(pullRequest(), FilesPanel.PANE);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/a");
             driven.press(testRunner, KeyCode.ENTER);
@@ -205,9 +207,9 @@ class ContentSearchTest {
 
     @Test
     void whileARangeIsOpenAMatchOutsideItsHunkIsRefused() throws Exception {
-        Driven driven = new Driven(pullRequest(), FilesPanel.ID);
+        Driven driven = new Driven(pullRequest(), FilesPanel.PANE);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "jv/why");
             driven.press(testRunner, KeyCode.ENTER);
@@ -232,9 +234,9 @@ class ContentSearchTest {
                         @@ -0,0 +1,2 @@
                         +a
                         +zed
-                        """), FilesPanel.ID);
+                        """), FilesPanel.PANE);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/zed");
             driven.press(testRunner, KeyCode.ENTER);
@@ -255,7 +257,7 @@ class ContentSearchTest {
     void whatTheTitleSaidOfTheSearchGoesWhenTheAreaLosesTheFocus() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/Foo");
             driven.press(testRunner, KeyCode.ENTER);
@@ -263,7 +265,7 @@ class ContentSearchTest {
             assertTrue(driven.screen(testRunner).contains("search wrapped"), driven.screen(testRunner));
 
             String elsewhere =
-                    RenderedText.ofLarge(testRunner, () -> driven.panel.render(driven.model.get(), CommitsPanel.ID));
+                    RenderedText.ofLarge(testRunner, () -> driven.panel.render(driven.model.get(), CommitsPanel.PANE));
             assertTrue(elsewhere.contains("/Foo 1/1"), elsewhere);
             assertFalse(elsewhere.contains("search wrapped"), elsewhere);
         }
@@ -274,7 +276,7 @@ class ContentSearchTest {
         Driven driven =
                 new Driven(commit(DiffStyle.RICH, DIFF.replace("+three foo", "+" + "x".repeat(200) + " needle")));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             assertFalse(driven.screen(testRunner).contains("needle"), driven.screen(testRunner));
             driven.type(testRunner, "/needle");
             driven.press(testRunner, KeyCode.ENTER);
@@ -294,7 +296,7 @@ class ContentSearchTest {
                 DiffStyle.PLAIN,
                 "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -0,0 +1,200 @@\n" + lines + "\n"));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/line 150");
             driven.press(testRunner, KeyCode.ENTER);
@@ -314,7 +316,7 @@ class ContentSearchTest {
     void theSecondMatchOfAStopIsFoundAgainInTheNextFrame() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH, DIFF.replace(" one foo", " one foo and foo")));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/foo");
             driven.press(testRunner, KeyCode.ENTER);
@@ -337,10 +339,9 @@ class ContentSearchTest {
                                 "a.txt", net.vanfleteren.jazygit.git.model.ChangeType.MODIFIED, true, false),
                         new net.vanfleteren.jazygit.git.model.FileEntry(
                                 "b.txt", net.vanfleteren.jazygit.git.model.ChangeType.MODIFIED, false, true)));
-        Driven driven =
-                new Driven(selected, FilesPanel.ID, ContentArea.UNSTAGED.id().value());
+        Driven driven = new Driven(selected, FilesPanel.PANE, ContentArea.UNSTAGED.id());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area());
+            SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
             driven.type(testRunner, "/new");
             driven.press(testRunner, KeyCode.ENTER);
@@ -398,22 +399,22 @@ class ContentSearchTest {
         final AtomicReference<Model> model;
         final ContentPanel panel;
 
-        final String pane;
-        final Option<String> focused;
+        final PaneId pane;
+        final Option<AreaId> focused;
 
         Driven(Model start) {
-            this(start, CommitsPanel.ID);
+            this(start, CommitsPanel.PANE);
         }
 
-        Driven(Model start, String pane) {
+        Driven(Model start, PaneId pane) {
             this(start, pane, Option.none());
         }
 
-        Driven(Model start, String pane, String focused) {
+        Driven(Model start, PaneId pane, AreaId focused) {
             this(start, pane, Option.of(focused));
         }
 
-        private Driven(Model start, String pane, Option<String> focused) {
+        private Driven(Model start, PaneId pane, Option<AreaId> focused) {
             this.pane = pane;
             this.focused = focused;
             model = new AtomicReference<>(start);
@@ -423,7 +424,7 @@ class ContentSearchTest {
             });
         }
 
-        String area() {
+        AreaId area() {
             return focused.getOrElse(() -> panel.areaOfPane(model.get(), pane).get());
         }
 

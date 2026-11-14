@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
@@ -104,19 +105,19 @@ class CommitFilesUpdateTest {
     void anotherPaneGettingTheFocusClosesThemButTheirDiffDoesNot() {
         Model open = withFiles(opened());
 
-        assertTrue(Update.update(open, new ViewMsg.Focused(Scopes.FILES.id(), false))
+        assertTrue(Update.update(open, new ViewMsg.Focused(Scopes.FILES.pane()))
                 .model()
                 .repoView()
                 .commitFiles()
                 .isDefined());
-        assertTrue(Update.update(open, new ViewMsg.Focused("commit-file-changes", true))
+        assertTrue(Update.update(open, new ViewMsg.Focused(new AreaId("commit-file-changes")))
                 .model()
                 .repoView()
                 .commitFiles()
                 .isDefined());
         assertEquals(
                 Option.none(),
-                Update.update(open, new ViewMsg.Focused(Scopes.COMMITS.id(), false))
+                Update.update(open, new ViewMsg.Focused(Scopes.COMMITS.pane()))
                         .model()
                         .repoView()
                         .commitFiles());

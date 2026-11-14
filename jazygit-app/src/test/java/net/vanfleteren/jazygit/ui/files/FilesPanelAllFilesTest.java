@@ -41,8 +41,8 @@ class FilesPanelAllFilesTest {
     @Test
     void allFilesAreListedThoseWithoutChangesWithoutAMarkerAndCollapsedUnlessTheyHoldChanges() throws Exception {
         Model model = all(true);
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
 
             assertTrue(screen.contains("Files · all files"), screen);
             assertTrue(screen.contains(" M A.java"), screen);
@@ -58,8 +58,8 @@ class FilesPanelAllFilesTest {
     @Test
     void theChangedFilesKeepTheirOwnTree() throws Exception {
         Model changed = all(false);
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(changed, FilesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(changed, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(changed, FilesPanel.PANE))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(changed, FilesPanel.PANE));
 
             assertFalse(screen.contains("all files"), screen);
             assertFalse(screen.contains("README.md"), screen);
@@ -71,8 +71,8 @@ class FilesPanelAllFilesTest {
     @Test
     void aNodeWithoutChangesIsReadOrCountedAndOneWithChangesShowsItsDiff() throws Exception {
         Model model = all(true);
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
-            RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
 
             panel.allTree().selected(5);
             assertEquals(Option.of(new SelectionMsg.UnchangedFileSelected("README.md")), panel.selectionChange(model));
@@ -97,8 +97,8 @@ class FilesPanelAllFilesTest {
     void theFilterNarrowsAllFiles() throws Exception {
         Model filtered =
                 all(true).mapRepoView(view -> view.withFilesFilter(Option.of(new FileFilter("intro", Option.none()))));
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(filtered, FilesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(filtered, FilesPanel.PANE))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.PANE));
 
             assertTrue(screen.contains("Files · all files · /intro"), screen);
             assertTrue(screen.contains("intro.md"), screen);
@@ -121,8 +121,8 @@ class FilesPanelAllFilesTest {
     @Test
     void untilAllFilesAreReadTheTreeSaysItIsLoading() throws Exception {
         Model reading = all(true).mapRepo(repo -> repo.withAllFiles(Loadable.loading()));
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(reading, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> panel.render(reading, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(reading, FilesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(reading, FilesPanel.PANE));
 
             assertTrue(screen.contains(Placeholders.loading()), screen);
             SettledPilot.of(testRunner).quit();

@@ -41,6 +41,7 @@ import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.operation.CommandLog;
@@ -264,14 +265,16 @@ class SettingsPanelUpdateTest {
     @Test
     void theRepositoryIsShownAgainWhereItWas() {
         Model there = TestModels.loaded()
-                .mapRepoView(view -> view.withBranchesTab(BranchesTab.WORKTREES).withFocusedPane(Option.of("commits")))
+                .mapRepoView(view ->
+                        view.withBranchesTab(BranchesTab.WORKTREES).withFocusedPane(Option.of(new PaneId("commits"))))
                 .mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/opt/gh/bin/gh")));
 
         Next next = Update.update(
                 there, new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
 
         assertEquals(
-                Option.of(new SettingsPanelCmd.Reopen(new Landing(BranchesTab.WORKTREES, Option.of("commits")))),
+                Option.of(new SettingsPanelCmd.Reopen(
+                        new Landing(BranchesTab.WORKTREES, Option.of(new PaneId("commits"))))),
                 next.cmds().find(SettingsPanelCmd.Reopen.class::isInstance));
     }
 

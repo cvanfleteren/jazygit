@@ -28,6 +28,6 @@ public final class RevertDialogs {
     private RevertDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(REVERT, dispatch)));
+        return List.of(PopupSlot.returningTo(CommitsPanel.PANE, new ConfirmDialog<>(REVERT, dispatch)));
     }
 }

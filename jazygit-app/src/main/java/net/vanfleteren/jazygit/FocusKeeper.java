@@ -5,9 +5,10 @@ import dev.tamboui.toolkit.focus.FocusManager;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.control.Option;
-import java.util.Objects;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
@@ -32,7 +33,7 @@ final class FocusKeeper {
     // The screen the last frame showed; when the model shows another one, its pane gets the focus back.
     private Screen shownScreen = Screen.REPOSITORY;
     // The focus the last frame was drawn with that was not empty, which a click on nothing that takes it clears.
-    private Option<String> lastFocus = Option.none();
+    private Option<Focus> lastFocus = Option.none();
     // The files of a commit the last frame listed; when the model opens or closes them, the focus follows.
     private Option<CommitFilesView> shownFiles = Option.none();
 
@@ -55,17 +56,17 @@ final class FocusKeeper {
     }
 
     /**
-     * The element with the focus; none before the first frame.
+     * What has the focus; none before the first frame.
      */
-    String focusedId() {
-        return focus().focusedId();
+    Option<Focus> focus() {
+        return Option.of(manager().focusedId()).map(this::focusOf);
     }
 
     /**
-     * Moves the focus to the element {@code id}.
+     * Moves the focus to {@code focus}.
      */
-    void moveTo(String id) {
-        focus().setFocus(id);
+    void moveTo(Focus focus) {
+        manager().setFocus(focus.id());
     }
 
     /**
@@ -79,9 +80,9 @@ final class FocusKeeper {
      * Gives the focus back to what had it before a frame of {@code model} is drawn, and to the pane of the screen it
      * shows when that is another one; says where the focus is then.
      */
-    String settle(Model model) {
+    Option<Focus> settle(Model model) {
         // A click on nothing that takes the focus cleared it; what had it keeps it.
-        if (focusedId() == null) {
+        if (focus().isEmpty()) {
             lastFocus.forEach(this::moveTo);
         }
         if (model.screen() != shownScreen) {
@@ -91,10 +92,10 @@ final class FocusKeeper {
         followCommitFiles(model);
         leaveCollapsedColumn(model);
         // An area that no longer shows gives the focus to the one that took its place, not to the first pane.
-        Option.of(focusedId()).flatMap(id -> contentPanel.replacing(model, id)).forEach(this::moveTo);
-        String focusedId = focusedId();
-        lastFocus = Option.of(focusedId).orElse(lastFocus);
-        return focusedId;
+        focus().flatMap(focus -> contentPanel.replacing(model, focus)).forEach(this::moveTo);
+        Option<Focus> settled = focus();
+        lastFocus = settled.orElse(lastFocus);
+        return settled;
     }
 
     /**
@@ -103,10 +104,10 @@ final class FocusKeeper {
      */
     private void leaveCollapsedColumn(Model model) {
         if (model.preferences().leftCollapsed(model.screen())) {
-            Option.of(focusedId())
-                    .filter(id -> Scopes.leftPanes(model.screen())
-                            .exists(pane -> pane.value().equals(id)))
-                    .flatMap(pane -> contentPanel.areaOfPane(model, pane))
+            focus().flatMap(focus -> focus instanceof PaneId pane
+                                    && Scopes.leftPanes(model.screen()).contains(pane)
+                            ? contentPanel.areaOfPane(model, pane)
+                            : Option.none())
                     .forEach(this::moveTo);
         }
     }
@@ -122,46 +123,41 @@ final class FocusKeeper {
         }
         Option<CommitFilesView> closed = shownFiles;
         shownFiles = files;
-        files.forEach(opened -> moveTo(opened.listedIn().value()));
+        files.forEach(opened -> moveTo(opened.listedIn()));
         if (files.isEmpty()) {
-            closed.filter(view -> {
-                        String focusedId = focusedId();
-                        return view.listedIn().value().equals(focusedId)
-                                || contentPanel.paneOfArea(model, focusedId).contains(view.listedIn());
-                    })
-                    .forEach(view -> moveTo(view.pane().value()));
+            closed.filter(view -> focus().exists(focus -> focus.equals(view.listedIn())
+                            || contentPanel.paneOfArea(model, focus).contains(view.listedIn())))
+                    .forEach(view -> moveTo(view.pane()));
         }
     }
 
     /**
-     * The left pane in use, whose highlighted row shows: the one with the focus, also while the content it selects
-     * has the focus, or a popup that has it.
+     * The left pane in use, whose highlighted row shows: the one with the focus, {@code focus}, also while the content
+     * it selects has the focus, or a popup that has it.
      */
-    String activePane(Model model, String focusedId) {
-        return Option.of(focusedId)
-                .filter(id -> !aside(id))
-                .orElse(model.shownPane())
-                .map(id -> contentPanel.paneOfArea(model, id).map(PaneId::value).getOrElse(id))
-                .getOrNull();
+    Option<PaneId> activePane(Model model, Option<Focus> focus) {
+        return onScreen(focus).orElse(model.shownPane()).flatMap(onScreen -> switch (onScreen) {
+            case PaneId pane -> Option.of(pane);
+            case AreaId area -> contentPanel.paneOfArea(model, area);
+        });
     }
 
     /**
-     * Tells the model where the focus is, {@code focusedId}, when it is outside the popups and the command log and the
+     * Tells the model where the focus is, {@code focus}, when it is outside the popups and the command log and the
      * model does not know yet: a closing popup gives it back there, as Escape in the log does.
      */
-    Option<Msg> report(Model model, String focusedId) {
+    Option<Msg> report(Model model, Option<Focus> focus) {
         // The framework knows no focus before the first render.
-        return Option.of(focusedId)
-                .filter(id -> !aside(id))
-                .filter(id -> !model.shownPane().contains(id))
-                .map(id -> new ViewMsg.Focused(id, ContentPanel.isArea(id)));
+        return onScreen(focus)
+                .filter(onScreen -> !model.shownPane().contains(onScreen))
+                .map(ViewMsg.Focused::new);
     }
 
     /**
-     * Moves the focus to the content shown for the pane {@code paneId}, so it can be scrolled by key.
+     * Moves the focus to the content shown for the pane {@code pane}, so it can be scrolled by key.
      */
-    void openContent(String paneId) {
-        contentPanel.areaOfPane(model.get(), paneId).forEach(this::moveTo);
+    void openContent(PaneId pane) {
+        contentPanel.areaOfPane(model.get(), pane).forEach(this::moveTo);
     }
 
     /**
@@ -169,7 +165,8 @@ final class FocusKeeper {
      * leaves the key unhandled; says whether there was such content.
      */
     boolean openFocusedContent() {
-        Option<String> area = Option.of(focusedId()).flatMap(id -> contentPanel.areaOfPane(model.get(), id));
+        Option<AreaId> area = focus().flatMap(focus ->
+                focus instanceof PaneId pane ? contentPanel.areaOfPane(model.get(), pane) : Option.none());
         area.forEach(this::moveTo);
         return area.isDefined();
     }
@@ -178,27 +175,33 @@ final class FocusKeeper {
      * Whether the content shown for a pane has the focus, which {@link #leaveScrollArea} gives back to that pane.
      */
     boolean inPaneContent() {
-        return contentPanel.paneOfArea(model.get(), focusedId()).isDefined();
+        return paneOfFocusedArea().isDefined();
     }
 
     /**
-     * Whether the content shown for the pane {@code paneId} has the focus, or had it before a popup took it.
+     * Whether the content shown for the pane {@code pane} has the focus, or had it before a popup took it.
      */
-    boolean inContentOf(Model model, String paneId) {
-        return Option.of(focusedId())
-                .filter(id -> !aside(id))
+    boolean inContentOf(Model model, PaneId pane) {
+        return onScreen(focus())
                 .orElse(model.shownPane())
-                .flatMap(id -> contentPanel.paneOfArea(model, id))
-                .exists(pane -> pane.value().equals(paneId));
+                .flatMap(onScreen -> contentPanel.paneOfArea(model, onScreen))
+                .contains(pane);
     }
 
     /**
      * Gives the focus back to the pane whose content has it, and says whether there was one.
      */
     boolean leaveScrollArea() {
-        Option<PaneId> pane = contentPanel.paneOfArea(model.get(), focusedId());
-        pane.map(PaneId::value).forEach(this::moveTo);
+        Option<PaneId> pane = paneOfFocusedArea();
+        pane.forEach(this::moveTo);
         return pane.isDefined();
+    }
+
+    /**
+     * The pane whose content has the focus, if an area of it has.
+     */
+    private Option<PaneId> paneOfFocusedArea() {
+        return focus().flatMap(focus -> contentPanel.paneOfArea(model.get(), focus));
     }
 
     /**
@@ -207,8 +210,10 @@ final class FocusKeeper {
      * does. An open popup keeps the focus.
      */
     void clicked(MouseEvent event) {
-        if (event.kind() == MouseEventKind.PRESS && event.isLeftButton() && !popups.owns(focusedId())) {
-            focus().focusAt(event.x(), event.y());
+        if (event.kind() == MouseEventKind.PRESS
+                && event.isLeftButton()
+                && !focus().exists(focus -> popups.owns(focus.id()))) {
+            manager().focusAt(event.x(), event.y());
         }
     }
 
@@ -217,40 +222,52 @@ final class FocusKeeper {
      * then: a popup that opens or closes moves it, and TamboUI focuses the first pane after a frame drawn with no
      * focus or with one that is gone. The model does not know the focus, so does not ask for the frame.
      */
-    void redrawIfMoves(String drawnWith) {
+    void redrawIfMoves(Option<Focus> drawnWith) {
         runner.get().tuiRunner().runLater(() -> {
-            if (!Objects.equals(focusedId(), drawnWith)) {
+            if (!focus().equals(drawnWith)) {
                 requestRedraw.run();
             }
         });
     }
 
     /**
-     * Whether the element {@code id} has the focus aside from the panes and the content panel: a popup, or the command
-     * log (ADR 129). The model keeps where the focus was before, which the content panel and the highlighted row of a
-     * pane go by, and which the focus goes back to.
+     * What the element {@code id}, which TamboUI says has the focus, is: an element of a popup or the command log
+     * (ADR 129), aside from the panes and the content panel; an area of the content panel; or else a pane. This is
+     * the one place a TamboUI id is read as a focus.
      */
-    private boolean aside(String id) {
-        return popups.owns(id) || CommandLogPanel.ID.equals(id);
+    private Focus focusOf(String id) {
+        if (popups.owns(id) || CommandLogPanel.ID.equals(id)) {
+            return new Focus.Aside(id);
+        }
+        return ContentPanel.areaWithId(id).<Focus>map(area -> area).getOrElse(() -> new PaneId(id));
+    }
+
+    /**
+     * {@code focus} if it is on the screen, outside the popups and the command log. The model keeps where the focus
+     * was before an element aside took it, which the content panel and the highlighted row of a pane go by, and which
+     * the focus goes back to.
+     */
+    private static Option<Focus.OnScreen> onScreen(Option<Focus> focus) {
+        return focus.flatMap(on -> on instanceof Focus.OnScreen onScreen ? Option.of(onScreen) : Option.none());
     }
 
     /**
      * Gives the focus to the command log (ADR 129).
      */
     void moveToCommandLog() {
-        moveTo(CommandLogPanel.ID);
+        moveTo(new Focus.Aside(CommandLogPanel.ID));
     }
 
     /**
      * Gives the focus back from the command log to where it was before, if the log has it.
      */
     void leaveCommandLog(Model model) {
-        if (CommandLogPanel.ID.equals(focusedId())) {
+        if (focus().exists(focus -> focus.is(CommandLogPanel.ID))) {
             moveToPaneOf(model);
         }
     }
 
-    private FocusManager focus() {
+    private FocusManager manager() {
         return runner.get().focusManager();
     }
 }

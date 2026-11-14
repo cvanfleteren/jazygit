@@ -37,8 +37,9 @@ class StashPanelTest {
                 new Stash("stash@{1}", new Sha("s1"), "older", Option.none(), Instant.EPOCH)));
         StashPanel panel = new StashPanel(msg -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, null))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, null));
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model, Option.none(), Option.none()))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, Option.none(), Option.none()));
             assertTrue(screen.contains("Stash"), screen);
             assertTrue(screen.contains("0 WIP on main abc1234 Add widget"), screen);
             assertTrue(screen.contains("1 older"), screen);
@@ -55,7 +56,7 @@ class StashPanelTest {
         java.util.List<Msg> dispatched = new ArrayList<>();
         StashPanel panel = new StashPanel(dispatched::add);
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.PANE))) {
             SettledPilot.focus(testRunner, StashPanel.ID);
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
@@ -84,7 +85,7 @@ class StashPanelTest {
         int[] opened = {0};
         StashPanel panel = new StashPanel(msg -> {}, () -> opened[0]++, Theme.Highlights.DEFAULT);
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.PANE))) {
             SettledPilot.focus(testRunner, StashPanel.ID);
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
@@ -109,7 +110,7 @@ class StashPanelTest {
         java.util.List<Msg> dispatched = new ArrayList<>();
         StashPanel panel = new StashPanel(dispatched::add);
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.PANE))) {
             SettledPilot.focus(testRunner, StashPanel.ID);
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press('g');
@@ -127,7 +128,7 @@ class StashPanelTest {
                 .map(i -> new Stash("stash@{" + i + "}", new Sha("s" + i), "work " + i, Option.none(), Instant.EPOCH)));
         StashPanel panel = new StashPanel(msg -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.PANE))) {
             SettledPilot.focus(testRunner, StashPanel.ID);
             SettledPilot.of(testRunner).pause();
             for (int i = 0; i < 45; i++) {
@@ -135,7 +136,7 @@ class StashPanelTest {
             }
             SettledPilot.of(testRunner).pause();
 
-            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, StashPanel.ID));
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, StashPanel.PANE));
             assertEquals("work 45", panel.selectedStash().get().message());
             assertTrue(screen.contains("45 work 45"), screen);
             assertFalse(screen.contains("0 work 0"), screen);
@@ -150,20 +151,21 @@ class StashPanelTest {
                 new Stash("stash@{1}", new Sha("s1"), "older", Option.none(), Instant.EPOCH)));
         StashPanel panel = new StashPanel(msg -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.PANE))) {
             SettledPilot.focus(testRunner, StashPanel.ID);
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
 
-            String inactive =
-                    RenderedText.ofLarge(testRunner, () -> panel.render(model, CommitsPanel.ID, CommitsPanel.ID));
+            String inactive = RenderedText.ofLarge(
+                    testRunner, () -> panel.render(model, Option.of(CommitsPanel.PANE), Option.of(CommitsPanel.PANE)));
             assertTrue(inactive.contains("  0 newest"), inactive);
             assertTrue(inactive.contains("  1 older"), inactive);
             assertFalse(inactive.contains(">"), inactive);
 
             // Still in use while, say, a popup opened from it has the focus.
-            String active = RenderedText.ofLarge(testRunner, () -> panel.render(model, null, StashPanel.ID));
+            String active = RenderedText.ofLarge(
+                    testRunner, () -> panel.render(model, Option.none(), Option.of(StashPanel.PANE)));
             assertTrue(active.contains("> 1 older"), active);
             assertEquals("older", panel.selectedStash().get().message());
             SettledPilot.of(testRunner).quit();

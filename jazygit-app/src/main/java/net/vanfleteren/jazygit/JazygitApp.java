@@ -31,6 +31,8 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Focus;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -117,7 +119,7 @@ public class JazygitApp extends ToolkitApp {
         this.contentPanel = new ContentPanel(
                 Theme.spanStyles(styleEngine),
                 this::leaveScrollArea,
-                id -> runner().focusManager().setFocus(id),
+                area -> runner().focusManager().setFocus(area.id()),
                 dispatch);
         this.focus = new FocusKeeper(this::runner, this::model, contentPanel, popups, this::requestRedraw);
         this.leftColumn = new LeftColumn(dispatch, styleEngine, clock, focus::openContent, this::showBranchesTab);
@@ -169,7 +171,7 @@ public class JazygitApp extends ToolkitApp {
      */
     private void stepFile(FileStepMsg.Step step) {
         Model model = model();
-        if (!focus.inContentOf(model, FilesPanel.ID)) {
+        if (!focus.inContentOf(model, FilesPanel.PANE)) {
             return;
         }
         if (leftColumn.stepFile(model, step)) {
@@ -195,7 +197,7 @@ public class JazygitApp extends ToolkitApp {
      * Moves the focus to the branches pane, as a click on it does, and shows the list {@code tab} in it.
      */
     private void showBranchesTab(BranchesTab tab) {
-        focus.moveTo(BranchesPanel.ID);
+        focus.moveTo(BranchesPanel.PANE);
         dispatch.accept(new BranchesTabMsg.Chosen(tab));
     }
 
@@ -313,11 +315,11 @@ public class JazygitApp extends ToolkitApp {
         redrawPending = false;
         Model model = model();
         Theme.activate(styleEngine, model.preferences().theme());
-        String focusedId = focus.settle(model);
-        String activeId = focus.activePane(model, focusedId);
+        Option<Focus> focused = focus.settle(model);
+        Option<PaneId> active = focus.activePane(model, focused);
         // In rows, which the panes slide through, once the height of the screen is known (ADR 92).
         Option<List<Integer>> paneRows = leftHeight().map(column -> paneRows(model, column));
-        LeftColumn.Rendered rendered = leftColumn.render(model, focusedId, activeId, paneRows);
+        LeftColumn.Rendered rendered = leftColumn.render(model, focused, active, paneRows);
         // In columns, which the column slides through, once the width of the screen is known (ADR 81).
         Column left = Try.of(() -> runner().tuiRunner().backend().size().width())
                 .toOption()
@@ -327,7 +329,7 @@ public class JazygitApp extends ToolkitApp {
                         : rendered.column().percent(model.preferences().leftWidth(model.screen())));
         var panes = row(
                 left,
-                column(contentPanel.render(model, focusedId).fill(), commandLog(model, focusedId))
+                column(contentPanel.render(model, focused).fill(), commandLog(model, focused))
                         .fill());
         // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
         Element layout = column(
@@ -335,10 +337,10 @@ public class JazygitApp extends ToolkitApp {
                 FetchLine.render(model, clock.instant(), screenWidth()).length(FetchLine.HEIGHT));
         borderDrag.shown(panes, left, rendered.panes());
         // The framework knows no focus before the first render.
-        Popups.Rendered shown = popups.render(model, Option.of(focusedId));
+        Popups.Rendered shown = popups.render(model, focused);
         report(reports());
         // A popup opening while the log has the focus gives it back to the log once it closes.
-        if (model.popup().isDefined() && CommandLogPanel.ID.equals(focusedId)) {
+        if (model.popup().isDefined() && focused.exists(on -> on.is(CommandLogPanel.ID))) {
             logAfterPopup = true;
         }
         shown.moveTo().forEach(focus::moveTo);
@@ -346,7 +348,7 @@ public class JazygitApp extends ToolkitApp {
             logAfterPopup = false;
             focus.moveToCommandLog();
         }
-        focus.redrawIfMoves(focusedId);
+        focus.redrawIfMoves(focused);
         if (model != clocked) {
             clocked = model;
             shownTimeWake.at(ShownClocks.next(model, model.now()), clock.instant());
@@ -365,10 +367,10 @@ public class JazygitApp extends ToolkitApp {
      */
     List<Msg> reports() {
         Model model = model();
-        String focusedId = focus.focusedId();
+        Option<Focus> focused = focus.focus();
         return leftColumn
-                .selectionChanges(model, focus.activePane(model, focusedId))
-                .appendAll(focus.report(model, focusedId))
+                .selectionChanges(model, focus.activePane(model, focused))
+                .appendAll(focus.report(model, focused))
                 .appendAll(leftHeight()
                         .filter(rows -> !model.preferences().columnRows().contains(rows))
                         .map(LayoutMsg.Measured::new));
@@ -438,7 +440,7 @@ public class JazygitApp extends ToolkitApp {
      * column, which is as tall as the left one, once the height of the screen is known. It is drawn for the height it
      * goes to, in the rows it takes on its way there.
      */
-    private Element commandLog(Model model, String focusedId) {
+    private Element commandLog(Model model, Option<Focus> focus) {
         Option<CommandLogPanel.Room> room = leftHeight()
                 .flatMap(column -> Try.of(
                                 () -> runner().tuiRunner().backend().size().width())
@@ -447,7 +449,7 @@ public class JazygitApp extends ToolkitApp {
         // With the focus, it grows to show more of what it logged (ADR 129).
         // The frame a popup closes in gives the log the focus once it is drawn: it is drawn to take it, as TamboUI
         // only keeps the focus on what a frame drew to take it.
-        boolean focused = CommandLogPanel.ID.equals(focusedId)
+        boolean focused = focus.exists(on -> on.is(CommandLogPanel.ID))
                 || (logAfterPopup && model.popup().isEmpty());
         // A popup opened from the log keeps it open behind it, where it was scrolled to, until it gives it the focus
         // back.

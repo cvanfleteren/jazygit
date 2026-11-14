@@ -51,7 +51,7 @@ public final class PushDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(FORCE_PUSH, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new TextInputDialog<>(SET_UPSTREAM, dispatch)));
+                PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(FORCE_PUSH, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.PANE, new TextInputDialog<>(SET_UPSTREAM, dispatch)));
     }
 }
