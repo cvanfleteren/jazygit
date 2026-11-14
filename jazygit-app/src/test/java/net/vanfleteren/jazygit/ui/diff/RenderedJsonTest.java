@@ -200,6 +200,18 @@ class RenderedJsonTest {
     }
 
     @Test
+    void aCharacterThatDrawsNothingOrBadlyIsNamedByItsCodePoint() {
+        assertEquals(
+                Either.left("Not rendered: line 1, column 4, unexpected character U+0009"),
+                RenderedJson.rows(Vector.of("[\"a\tb\"]"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                        .map(rows -> rows.size()));
+        assertEquals(
+                Either.left("Not rendered: line 1, column 4, unexpected character U+000D"),
+                RenderedJson.rows(Vector.of("[\"a\rb\"]"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                        .map(rows -> rows.size()));
+    }
+
+    @Test
     void aFileStartingWithAByteOrderMarkIsRendered() {
         assertEquals(List.of("a  1"), text("\uFEFF{\n  \"a\": 1\n}"));
     }

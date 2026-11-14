@@ -59,13 +59,35 @@ final class RenderedJson {
                         "content.json.unexpected",
                         String.valueOf(line),
                         String.valueOf(column),
-                        found.map(token -> token.startsWith("\"")
-                                        ? Messages.get("content.json.string")
-                                        : token.equals("\n")
-                                                ? Messages.get("content.json.lineBreak")
-                                                : "'" + token + "'")
-                                .getOrElse(() -> Messages.get("content.json.end")));
+                        found.map(RenderedJson::token).getOrElse(() -> Messages.get("content.json.end")));
         };
+    }
+
+    /**
+     * How the line over JSON that could not be read names the {@code token} found: a string as one, a line break as
+     * one, a character that draws nothing or draws badly, as a tab or a control character, by its code point, and
+     * anything else in quotes as it is written.
+     */
+    private static String token(String token) {
+        if (token.startsWith("\"")) {
+            return Messages.get("content.json.string");
+        }
+        if (token.equals("\n")) {
+            return Messages.get("content.json.lineBreak");
+        }
+        return token.codePoints().anyMatch(RenderedJson::unseen)
+                ? Messages.get("content.json.character", String.format("U+%04X", token.codePointAt(0)))
+                : "'" + token + "'";
+    }
+
+    /**
+     * Whether {@code codePoint} draws nothing a reader sees, or draws badly in a terminal: white space, a control
+     * character or a format character, as a byte order mark.
+     */
+    private static boolean unseen(int codePoint) {
+        return Character.isWhitespace(codePoint)
+                || Character.isISOControl(codePoint)
+                || Character.getType(codePoint) == Character.FORMAT;
     }
 
     private static List<Entry> entries(JsonTree tree, String pointer) {
@@ -360,20 +382,15 @@ final class RenderedJson {
             int room = Math.max(16, width - prefix.length() - GUIDES.branch().length() - label - GAP.length());
             // In one pass, carrying how wide the row being filled is: an array of thousands is packed in time linear
             // in it.
-            Vector<Vector<Integer>> rows = Vector.empty();
-            Vector<Integer> filling = Vector.empty();
-            int used = 0;
-            for (int at = 0; at < values.size(); at++) {
-                int needs = JsonFolds.width(values.get(at)) + 2;
-                if (!filling.isEmpty() && used + needs > room) {
-                    rows = rows.append(filling);
-                    filling = Vector.empty();
-                    used = 0;
-                }
-                filling = filling.append(at);
-                used += needs;
-            }
-            Vector<Vector<Integer>> packed = filling.isEmpty() ? rows : rows.append(filling);
+            Packing done = Vector.range(0, values.size())
+                    .foldLeft(new Packing(Vector.empty(), Vector.empty(), 0), (packing, at) -> {
+                        int needs = JsonFolds.width(values.get(at)) + 2;
+                        return !packing.filling().isEmpty() && packing.used() + needs > room
+                                ? new Packing(packing.rows().append(packing.filling()), Vector.of(at), needs)
+                                : new Packing(packing.rows(), packing.filling().append(at), packing.used() + needs);
+                    });
+            Vector<Vector<Integer>> packed =
+                    done.filling().isEmpty() ? done.rows() : done.rows().append(done.filling());
             return packed.zipWithIndex((row, at) -> {
                         boolean last = at == packed.size() - 1;
                         String indices = row.size() == 1 ? "" + row.head() : row.head() + "–" + row.last();
@@ -429,6 +446,12 @@ final class RenderedJson {
             return Line.from(spans.filter(span -> !span.isEmpty()).toJavaList());
         }
     }
+
+    /**
+     * Values being packed into rows: the {@code rows} filled, the indices on the row being filled, and how many columns
+     * they take.
+     */
+    private record Packing(Vector<Vector<Integer>> rows, Vector<Integer> filling, int used) {}
 
     /**
      * What a node holds, as the rows after it show it: a field with its key, an element without one.
