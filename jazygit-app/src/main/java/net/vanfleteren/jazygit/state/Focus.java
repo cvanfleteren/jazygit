@@ -14,13 +14,6 @@ public sealed interface Focus permits Focus.OnScreen, Focus.Aside {
     String id();
 
     /**
-     * Whether the focus is on the element {@code id}.
-     */
-    default boolean is(String id) {
-        return id().equals(id);
-    }
-
-    /**
      * A focus the screen shown keeps, outside the popups and the command log: a {@link PaneId pane}, or an
      * {@link AreaId area} of the content panel. A closing popup gives the focus back to it, and the screen gets it
      * back when it is shown again.

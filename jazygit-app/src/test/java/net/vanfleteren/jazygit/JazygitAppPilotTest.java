@@ -290,13 +290,6 @@ class JazygitAppPilotTest {
     }
 
     /**
-     * The focus TamboUI knows as {@code id}, with no popup open: an area of the content panel, or else a pane.
-     */
-    private static Focus focusOf(String id) {
-        return ContentPanel.areaWithId(id).<Focus>map(area -> area).getOrElse(() -> new PaneId(id));
-    }
-
-    /**
      * A pane drawn while {@code focus} has the focus, and {@code inUse} is in use.
      */
     @FunctionalInterface
@@ -574,7 +567,7 @@ class JazygitAppPilotTest {
                 FocusManager focusManager = focusManagerRef.get();
                 Option<Focus> focus = focusManager == null
                         ? Option.none()
-                        : Option.of(focusManager.focusedId()).map(JazygitAppPilotTest::focusOf);
+                        : Option.of(focusManager.focusedId()).map(id -> FocusKeeper.focusOf(id, ignored -> false));
                 Option<PaneId> inUse = panes(focus);
                 Panel branchesPane = branches.render(model, focus, inUse);
                 branches.selectionChange(model).forEach(selections::add);

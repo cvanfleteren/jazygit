@@ -5,6 +5,7 @@ import dev.tamboui.toolkit.focus.FocusManager;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.control.Option;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.AreaId;
@@ -59,7 +60,7 @@ final class FocusKeeper {
      * What has the focus; none before the first frame.
      */
     Option<Focus> focus() {
-        return Option.of(manager().focusedId()).map(this::focusOf);
+        return Option.of(manager().focusedId()).map(id -> focusOf(id, popups::owns));
     }
 
     /**
@@ -231,12 +232,12 @@ final class FocusKeeper {
     }
 
     /**
-     * What the element {@code id}, which TamboUI says has the focus, is: an element of a popup or the command log
-     * (ADR 129), aside from the panes and the content panel; an area of the content panel; or else a pane. This is
-     * the one place a TamboUI id is read as a focus.
+     * What the element {@code id}, which TamboUI says has the focus, is: an element of a popup, which
+     * {@code ownedByPopup} tells, or the command log (ADR 129), aside from the panes and the content panel; an area of
+     * the content panel; or else a pane. This is the one place a TamboUI id is read as a focus.
      */
-    private Focus focusOf(String id) {
-        if (popups.owns(id) || CommandLogPanel.ID.equals(id)) {
+    static Focus focusOf(String id, Predicate<String> ownedByPopup) {
+        if (ownedByPopup.test(id) || CommandLogPanel.ID.equals(id)) {
             return new Focus.Aside(id);
         }
         return ContentPanel.areaWithId(id).<Focus>map(area -> area).getOrElse(() -> new PaneId(id));
@@ -255,14 +256,14 @@ final class FocusKeeper {
      * Gives the focus to the command log (ADR 129).
      */
     void moveToCommandLog() {
-        moveTo(new Focus.Aside(CommandLogPanel.ID));
+        moveTo(CommandLogPanel.FOCUS);
     }
 
     /**
      * Gives the focus back from the command log to where it was before, if the log has it.
      */
     void leaveCommandLog(Model model) {
-        if (focus().exists(focus -> focus.is(CommandLogPanel.ID))) {
+        if (focus().contains(CommandLogPanel.FOCUS)) {
             moveToPaneOf(model);
         }
     }

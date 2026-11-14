@@ -39,8 +39,6 @@ public final class PullRequestsPanel {
     /**
      * The id of the top pane, the one that gets the focus the first time the screen is shown.
      */
-    public static final String FIRST_PANE_ID = Scopes.PR_REPOSITORY.id();
-
     /**
      * The first pane, as the focus is on it.
      */

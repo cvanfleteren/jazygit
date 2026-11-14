@@ -340,7 +340,7 @@ public class JazygitApp extends ToolkitApp {
         Popups.Rendered shown = popups.render(model, focused);
         report(reports());
         // A popup opening while the log has the focus gives it back to the log once it closes.
-        if (model.popup().isDefined() && focused.exists(on -> on.is(CommandLogPanel.ID))) {
+        if (model.popup().isDefined() && focused.contains(CommandLogPanel.FOCUS)) {
             logAfterPopup = true;
         }
         shown.moveTo().forEach(focus::moveTo);
@@ -449,7 +449,7 @@ public class JazygitApp extends ToolkitApp {
         // With the focus, it grows to show more of what it logged (ADR 129).
         // The frame a popup closes in gives the log the focus once it is drawn: it is drawn to take it, as TamboUI
         // only keeps the focus on what a frame drew to take it.
-        boolean focused = focus.exists(on -> on.is(CommandLogPanel.ID))
+        boolean focused = focus.contains(CommandLogPanel.FOCUS)
                 || (logAfterPopup && model.popup().isEmpty());
         // A popup opened from the log keeps it open behind it, where it was scrolled to, until it gives it the focus
         // back.
