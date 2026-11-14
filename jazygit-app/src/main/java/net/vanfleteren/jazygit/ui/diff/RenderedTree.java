@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.json.NotJson;
 import net.vanfleteren.jazygit.state.diff.Rendered;
 import net.vanfleteren.jazygit.state.diff.Tree;
 import net.vanfleteren.jazygit.state.diff.TreeFolds;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.yaml.NotYaml;
 
@@ -192,8 +193,8 @@ final class RenderedTree {
         }
         if (tree instanceof Tree.Block block) {
             String first = block.lines().find(line -> !line.isBlank()).getOrElse("");
-            boolean more = first.length() > PREVIEW || block.lines().size() > 1;
-            return (first.length() > PREVIEW ? first.substring(0, PREVIEW) : first) + (more ? " …" : "");
+            boolean more = TextWidth.of(first) > PREVIEW || block.lines().size() > 1;
+            return TextWidth.start(first, PREVIEW) + (more ? " …" : "");
         }
         Tree.Sequence sequence = (Tree.Sequence) tree;
         Option<Tree> first = sequence.elements().headOption();
@@ -215,7 +216,7 @@ final class RenderedTree {
         int shown = 0;
         int used = 0;
         for (String part : parts) {
-            used += part.length() + 2;
+            used += TextWidth.of(part) + 2;
             if (used > PREVIEW) {
                 break;
             }
@@ -271,12 +272,16 @@ final class RenderedTree {
         return List.rangeClosed(from, Math.max(from, to));
     }
 
+    /**
+     * {@code text} with spaces after it to take {@code width} columns: a character of two columns, as 東, counts as
+     * two.
+     */
     private static String pad(String text, int width) {
-        return text.length() >= width ? text : text + " ".repeat(width - text.length());
+        return text + " ".repeat(Math.max(0, width - TextWidth.of(text)));
     }
 
     private static String padLeft(String text, int width) {
-        return text.length() >= width ? text : " ".repeat(width - text.length()) + text;
+        return TextWidth.alignRight(text, width);
     }
 
     /**
@@ -477,9 +482,9 @@ final class RenderedTree {
                             .toVector())
                     .toVector();
             int size = cells.size();
-            List<Integer> widths = columns.zipWithIndex(
-                    (key, column) -> cells.map(row -> cellText(row.get(column)).length())
-                            .append(key.length())
+            List<Integer> widths =
+                    columns.zipWithIndex((key, column) -> cells.map(row -> TextWidth.of(cellText(row.get(column))))
+                            .append(TextWidth.of(key))
                             .max()
                             .getOrElse(0));
             int digits = String.valueOf(sequence.elements().size() - 1).length();
@@ -526,7 +531,7 @@ final class RenderedTree {
             // in it.
             Packing done = Vector.range(0, values.size())
                     .foldLeft(new Packing(Vector.empty(), Vector.empty(), 0), (packing, at) -> {
-                        int needs = TreeFolds.width(values.get(at)) + 2;
+                        int needs = TextWidth.of(text(values.get(at))) + 2;
                         return !packing.filling().isEmpty() && packing.used() + needs > room
                                 ? new Packing(packing.rows().append(packing.filling()), Vector.of(at), needs)
                                 : new Packing(packing.rows(), packing.filling().append(at), packing.used() + needs);

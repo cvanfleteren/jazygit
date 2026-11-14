@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.Rendered;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -168,6 +169,20 @@ class RenderedJsonTest {
     @Test
     void scalarsKeepHowTheyAreWrittenAndNewlinesShowAsArrows() {
         assertEquals(List.of("n  1e3", "s  \"a↵b\"", "z  null"), text("{\"n\": 1e3, \"s\": \"a\\nb\", \"z\": null}"));
+    }
+
+    @Test
+    void theColumnsOfATableAreAsWideAsTheyAreDrawnACharacterOfTwoColumnsCountingTwo() {
+        List<String> rows = text("""
+                {"cities": [
+                  {"name": "東京", "people": 37400068},
+                  {"name": "Zürich", "people": 421878}
+                ]}""").map(String::stripTrailing);
+
+        assertEquals(
+                List.of("cities [2]", "│      name    people", "├── 0  東京    37400068", "└── 1  Zürich    421878"),
+                rows);
+        assertEquals(TextWidth.of(rows.get(2)), TextWidth.of(rows.get(3)));
     }
 
     @Test

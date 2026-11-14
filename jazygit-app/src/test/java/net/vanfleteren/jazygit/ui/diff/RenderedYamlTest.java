@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.Rendered;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -137,6 +138,24 @@ class RenderedYamlTest {
                             ports: ["8080:8080"]
                         loop: &loop [*loop]
                         """));
+    }
+
+    @Test
+    void wideCharactersKeepTheColumnsOfATableInLine() {
+        List<String> table = text("""
+                        - {name: 東京, people: 37400068}
+                        - {name: São Paulo, people: 12325232}
+                        - {name: 🚀 launch, people: 1}
+                        """).map(String::stripTrailing);
+
+        assertEquals(
+                List.of(
+                        "   name       people",
+                        "0  東京       37400068",
+                        "1  São Paulo  12325232",
+                        "2  🚀 launch         1"),
+                table);
+        assertEquals(1, table.tail().map(TextWidth::of).distinct().size());
     }
 
     @Test
