@@ -372,8 +372,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!-- A test JVM lives seconds, mostly warming up: C1 alone compiles its code sooner. -->
-                    <argLine>-Duser.language=en -Duser.country=US -XX:TieredStopAtLevel=1</argLine>
+                    <!-- A test JVM lives seconds, mostly warming up: C1 alone compiles its code sooner. The app's
+                         tests that wait for the timer to read the status again tick every second, not every 3 s. -->
+                    <argLine>-Duser.language=en -Duser.country=US -XX:TieredStopAtLevel=1 -Djazygit.refreshInterval=1000</argLine>
                     <!-- One JVM per core. Not JUnit's in-JVM parallelism by default: while one test's tamboui render
                          loop runs, another test can't draw outside of one. -->
                     <forkCount>1C</forkCount>

@@ -80,6 +80,8 @@ class SettingsPanelDialogsTest {
                 Option.none(),
                 Option.of(setup(Option.of("alice-work"))),
                 true,
+                true,
+                true,
                 AccountBrowsers.NONE,
                 Option.none());
 
@@ -122,6 +124,8 @@ class SettingsPanelDialogsTest {
                 Option.none(),
                 Option.none(),
                 true,
+                true,
+                true,
                 AccountBrowsers.NONE,
                 Option.none());
         Path home = Path.of(System.getProperty("user.home"));
@@ -144,6 +148,8 @@ class SettingsPanelDialogsTest {
                 RepositoryTheme.NONE,
                 Option.none(),
                 Option.none(),
+                true,
+                true,
                 true,
                 AccountBrowsers.NONE,
                 Option.none());
@@ -171,6 +177,8 @@ class SettingsPanelDialogsTest {
                 Option.of("/opt/gh"),
                 Option.none(),
                 true,
+                true,
+                true,
                 AccountBrowsers.NONE,
                 Option.none());
         Element view = stack(
@@ -194,6 +202,8 @@ class SettingsPanelDialogsTest {
                 Option.none(),
                 Option.of(setup(Option.of("alice-work"))),
                 true,
+                true,
+                false,
                 AccountBrowsers.NONE.with("github.com", "alice-work", Option.of("firefox -P work")),
                 Option.none());
         Element view = stack(
@@ -202,6 +212,8 @@ class SettingsPanelDialogsTest {
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view)) {
             String screen = RenderedText.ofLarge(runner, () -> view);
+            assertTrue(screen.contains("(s) Read the repository every 3 s: on"), screen);
+            assertTrue(screen.contains("(f) Fetch from the remotes every minute: off"), screen);
             assertTrue(screen.contains("(g) gh executable: gh on the PATH (2.102.0)"), screen);
             assertTrue(screen.contains("(t) Theme for all repositories: darcula"), screen);
             assertTrue(screen.contains("(r) Theme for this repository: none, the one for all repositories"), screen);
@@ -210,9 +222,22 @@ class SettingsPanelDialogsTest {
             assertTrue(screen.contains("(m) Animations: on"), screen);
             List<String> lines = List.of(screen.split("\n")).map(String::strip);
             assertEquals(
-                    List.of("Appearance", "(t)", "(r)", "(m)", "", "GitHub", "(g)", "(a)", "(b)"),
+                    List.of(
+                            "Appearance",
+                            "(t)",
+                            "(r)",
+                            "(m)",
+                            "",
+                            "Git",
+                            "(s)",
+                            "(f)",
+                            "",
+                            "GitHub",
+                            "(g)",
+                            "(a)",
+                            "(b)"),
                     lines.dropWhile(line -> !line.contains("Appearance"))
-                            .take(9)
+                            .take(13)
                             .map(line -> line.replaceAll("^│", "").strip())
                             .map(line -> line.startsWith("(")
                                     ? line.substring(0, 3)
@@ -231,6 +256,8 @@ class SettingsPanelDialogsTest {
                 Option.none(),
                 Option.of(setup(Option.none())),
                 true,
+                true,
+                true,
                 AccountBrowsers.NONE,
                 Option.none());
         Supplier<Element> view = () -> stack(
@@ -244,7 +271,11 @@ class SettingsPanelDialogsTest {
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).press(KeyCode.UP);
+            SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);
@@ -269,6 +300,8 @@ class SettingsPanelDialogsTest {
                 RepositoryTheme.NONE,
                 Option.none(),
                 Option.of(setup(Option.none())),
+                true,
+                true,
                 true,
                 AccountBrowsers.NONE,
                 Option.none(),

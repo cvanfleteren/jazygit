@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesCmd;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -38,10 +37,7 @@ class ModelDrawnTest {
 
     @Test
     void whatOnlyStartsLoadsIsNotDrawn() {
-        Model loading = model.mapJobs(jobs -> jobs.withFetchAgain(true)
-                .withWorktreeChangesRead(Option.of(Instant.EPOCH))
-                .ticked()
-                .withRead(new LoadStatus(), true));
+        Model loading = model.mapJobs(jobs -> jobs.withFetchAgain(true).ticked().withRead(new LoadStatus(), true));
 
         assertEquals(model.drawn(), loading.drawn());
     }
