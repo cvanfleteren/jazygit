@@ -161,6 +161,13 @@ public final class LoadableList<T> {
     }
 
     /**
+     * The rows the last render showed.
+     */
+    public List<Row> shownRows() {
+        return shownRows;
+    }
+
+    /**
      * The index of the currently highlighted row, never negative.
      */
     public int selectedIndex() {

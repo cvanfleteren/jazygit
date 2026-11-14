@@ -3,6 +3,9 @@ package net.vanfleteren.jazygit.ui.commits;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.PasteEvent;
+import io.vavr.Tuple;
+import io.vavr.Tuple3;
+import io.vavr.Tuple4;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -15,6 +18,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
@@ -25,6 +29,7 @@ import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
+import net.vanfleteren.jazygit.ui.widgets.Memo;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
 
@@ -47,6 +52,12 @@ public class CommitsPanel {
     private boolean searching;
     // What a paste does: while the search line is open, it goes in it.
     private final Consumer<PasteEvent> paste;
+    // The commits listed and their rows, worked out again only when what they are drawn from changes: the list then
+    // keeps what it built from them, and the graph is not laid out on every render.
+    private final Memo<Tuple3<Boolean, Loadable<List<Commit>>, AheadView>, Loadable<List<Commit>>> listed =
+            new Memo<>();
+    private final Memo<Tuple4<List<Commit>, Boolean, Option<Sha>, AheadView>, List<LoadableList.Row>> drawn =
+            new Memo<>();
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread
@@ -212,19 +223,29 @@ public class CommitsPanel {
         typing = model.repoView().searchLine();
         searching = search.isDefined();
         list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));
+        Loadable<List<Commit>> source =
+                search.map(CommitSearch::results).getOrElse(() -> model.repo().commits());
         return list.render(
-                search.map(CommitSearch::results)
-                        .getOrElse(() -> model.repo().commits().map(ahead::shown)),
-                commits -> marked(
-                        search.isDefined() ? foundRows(commits, copied) : rows(CommitGraph.layout(commits), copied),
-                        commits,
-                        ahead),
+                listed.get(Tuple.of(searching, source, ahead), key -> searching ? source : source.map(ahead::shown)),
+                commits -> drawn.get(
+                        Tuple.of(commits, searching, copied, ahead),
+                        key -> marked(
+                                searching ? foundRows(commits, copied) : rows(CommitGraph.layout(commits), copied),
+                                commits,
+                                ahead)),
                 ID.equals(focusedId),
                 ID.equals(activeId),
                 Pane.title(ahead.title(
                         search.map(CommitsPanel::title).getOrElse(() -> Messages.get("panel.commits.title")))),
                 typing.map(searchLine::field),
                 paste);
+    }
+
+    /**
+     * The rows the last render showed.
+     */
+    List<LoadableList.Row> shownRows() {
+        return list.shownRows();
     }
 
     /**

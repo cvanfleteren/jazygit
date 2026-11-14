@@ -10,10 +10,14 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.git.history.History;
+import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -499,5 +503,80 @@ class CommitsPanelTest {
 
             SettledPilot.of(testRunner).quit();
         }
+    }
+
+    // The pane keeps the rows it drew while what they are drawn from stays the same; each of these changes only one
+    // thing they are drawn from, on the same pane, and the rows change with it.
+
+    @Test
+    void aCommitCopiedAfterThePaneWasDrawnStandsOut() {
+        Model model = TestModels.loaded(SampleData.git())
+                .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0")))));
+        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+
+        panel.render(model, CommitsPanel.ID);
+        List<Option<String>> before = shaClasses(panel);
+        panel.render(model.mapRepoView(repoView -> repoView.withCherryPick(Option.of(commit("s0")))), CommitsPanel.ID);
+
+        assertEquals(List.of(Option.none(), Option.none()), before);
+        assertEquals(List.of(Option.none(), Option.of(Theme.Classes.COPIED)), shaClasses(panel));
+    }
+
+    /**
+     * The class of the first piece of each row the pane shows, the one with the sha.
+     */
+    private static List<Option<String>> shaClasses(CommitsPanel panel) {
+        return panel.shownRows().map(row -> row.segs().head().cssClass());
+    }
+
+    @Test
+    void onlyTheCommitsAheadAreListedAndAllAgainAsThatIsToggled() {
+        Commit tip = commit("c2", "c1");
+        Commit middle = commit("c1", "f0");
+        Commit fork = commit("f0", "o0");
+        BranchRef main = new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName("main")));
+        Model all = TestModels.loaded(SampleData.git())
+                .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(tip, middle, fork, commit("o0"))))
+                        .withAhead(new Loadable.Loaded<>(
+                                Option.of(new Ahead(tip.sha(), main, List.of(tip, middle), false, Option.of(fork))))));
+        Model only = all.mapRepoView(repoView -> repoView.withOnlyAhead(true));
+        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+
+        panel.render(all, CommitsPanel.ID);
+        List<String> first = panel.shownRows().map(LoadableList.Row::text);
+        panel.render(only, CommitsPanel.ID);
+        List<String> ahead = panel.shownRows().map(LoadableList.Row::text);
+        panel.render(all, CommitsPanel.ID);
+
+        assertEquals(4, first.size());
+        assertEquals(List.of("msg c2", "msg c1", "⑂ origin/main msg f0"), ahead.map(CommitsPanelTest::afterGraph));
+        assertEquals(first, panel.shownRows().map(LoadableList.Row::text));
+    }
+
+    /**
+     * The text of a row after the sha, the initials and the graph.
+     */
+    private static String afterGraph(String row) {
+        return row.substring(row.indexOf("○ ") + 2);
+    }
+
+    @Test
+    void aSearchThatFindsTheWholeLogListsItWithoutRailsAndClearedWithThem() {
+        Loadable<List<Commit>> log = new Loadable.Loaded<>(
+                List.of(commit("mmmmmmm", "bbbbbbb", "aaaaaaa"), commit("bbbbbbb", "aaaaaaa"), commit("aaaaaaa")));
+        Model listed = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(log));
+        Model found = listed.mapRepoView(repoView -> repoView.withCommitSearch(
+                Option.of(CommitSearch.loading("a", Option.none()).withResults(log))));
+        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+
+        panel.render(listed, CommitsPanel.ID);
+        String first = panel.shownRows().head().text();
+        panel.render(found, CommitsPanel.ID);
+        String searched = panel.shownRows().head().text();
+        panel.render(listed, CommitsPanel.ID);
+
+        assertEquals("mmmmmmm Ad ◎─╮ msg mmmmmmm", first);
+        assertEquals("mmmmmmm Ad ◎ msg mmmmmmm", searched);
+        assertEquals(first, panel.shownRows().head().text());
     }
 }
