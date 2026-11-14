@@ -67,6 +67,9 @@ public final class ScrollArea {
     // The keys that scroll an area sideways besides the arrows, to the end of a long line or a wide code block.
     private static final char LEFT = 'h';
     private static final char RIGHT = 'l';
+    // The keys that scroll an area all the way sideways, besides Shift with the arrows.
+    private static final char ALL_LEFT = 'H';
+    private static final char ALL_RIGHT = 'L';
     private static final Keymap KEYMAP = Keymap.standard();
 
     private final ContentArea area;
@@ -211,7 +214,7 @@ public final class ScrollArea {
      */
     private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
         // Only the arrow leaves: h scrolls, as j and k move, without going to another panel.
-        boolean atLeftEdge = focused && event.matches(Actions.MOVE_LEFT) && column == 0;
+        boolean atLeftEdge = focused && event.matches(Actions.MOVE_LEFT) && !event.hasShift() && column == 0;
         if (atLeftEdge && event.isRepeat()) {
             return EventResult.HANDLED;
         }
@@ -355,6 +358,8 @@ public final class ScrollArea {
                 .orElse(Option.when(event.matches(Actions.PAGE_DOWN), () -> state::pageDown))
                 .orElse(Option.when(event.matches(Actions.HOME), () -> state::scrollToTop))
                 .orElse(Option.when(event.matches(Actions.END), () -> state::scrollToBottom))
+                .orElse(Option.when(allLeft(event), () -> () -> column = 0))
+                .orElse(Option.when(allRight(event), () -> () -> column = columns))
                 .orElse(Option.when(left(event), () -> () -> column = Math.max(0, column - 1)))
                 .orElse(Option.when(right(event), () -> () -> column = Math.min(columns, column + 1)))
                 .peek(Runnable::run)
@@ -367,6 +372,15 @@ public final class ScrollArea {
 
     private static boolean right(KeyEvent event) {
         return event.matches(Actions.MOVE_RIGHT) || event.isChar(RIGHT);
+    }
+
+    // TamboUI's arrow actions also match the arrows with Shift: these are asked first.
+    private static boolean allLeft(KeyEvent event) {
+        return (event.isKey(KeyCode.LEFT) && event.hasShift()) || event.isChar(ALL_LEFT);
+    }
+
+    private static boolean allRight(KeyEvent event) {
+        return (event.isKey(KeyCode.RIGHT) && event.hasShift()) || event.isChar(ALL_RIGHT);
     }
 
     /**
