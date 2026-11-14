@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.ui.branches;
 
 import dev.tamboui.toolkit.elements.Panel;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -11,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
@@ -20,6 +24,7 @@ import net.vanfleteren.jazygit.ui.commits.AheadView;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
+import net.vanfleteren.jazygit.ui.widgets.Memo;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
 
@@ -34,6 +39,10 @@ class BranchCommitsList {
     private final Keymap keymap = Keymap.standard();
     // Which branch was listed at the last render.
     private Option<BranchRef> shown = Option.none();
+    // The commits listed and their rows, worked out again only when what they are drawn from changes, as the commits
+    // pane does.
+    private final Memo<Tuple2<Loadable<List<Commit>>, AheadView>, Loadable<List<Commit>>> listed = new Memo<>();
+    private final Memo<Tuple3<List<Commit>, Option<Sha>, AheadView>, List<LoadableList.Row>> drawn = new Memo<>();
 
     /**
      * @param id         the id of the pane the commits are listed in
@@ -77,9 +86,13 @@ class BranchCommitsList {
                 AheadUpdate.branch(model, view.branch()),
                 AheadUpdate.distance(model, view.branch()),
                 model.repoView().onlyAhead());
+        Loadable<List<Commit>> source = view.commits(model);
         return list.render(
-                view.commits(model).map(ahead::shown),
-                commits -> CommitsPanel.marked(CommitsPanel.rows(CommitGraph.layout(commits), copied), commits, ahead),
+                listed.get(Tuple.of(source, ahead), key -> source.map(ahead::shown)),
+                commits -> drawn.get(
+                        Tuple.of(commits, copied, ahead),
+                        key -> CommitsPanel.marked(
+                                CommitsPanel.rows(CommitGraph.layout(commits), copied), commits, ahead)),
                 focused,
                 active,
                 Pane.title(ahead.title(view.branch().name())));
