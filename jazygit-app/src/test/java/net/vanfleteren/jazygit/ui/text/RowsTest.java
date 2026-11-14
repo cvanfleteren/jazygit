@@ -61,6 +61,52 @@ class RowsTest {
         assertEquals(List.of("a", "b", "c"), rows.all().map(Line::rawContent));
     }
 
+    @Test
+    void aLineDrawnAlreadyIsSearchedInAllOfItsText() {
+        Rows rows = Rows.of(List.of(Line.from("a b")));
+
+        assertEquals(new Rows.Source("a b", 0), rows.source(0));
+    }
+
+    @Test
+    void aLineIsSearchedInWhatItIsDrawnFromWithoutDrawingIt() {
+        AtomicInteger drawn = new AtomicInteger();
+        Rows rows = Rows.drawn(List.of(() -> {
+                    drawn.incrementAndGet();
+                    return Line.from("+x");
+                }))
+                .update(0, line -> line);
+        Rows given = Rows.drawn(List.of(() -> Line.from("+x")), List.of(() -> new Rows.Source("x", 1)));
+
+        assertEquals(new Rows.Source("x", 1), given.after(rows).source(1));
+        assertEquals(0, drawn.get());
+    }
+
+    @Test
+    void theLinesOfAHunkAreSearchedWithoutTheirPrefix() {
+        Vector<Rows.Source> sources = Rows.Source.ofDiff(List.of(
+                "diff --git a/a b/a",
+                "+++ b/a",
+                "@@ -1 +1 @@ heading",
+                "+added",
+                "diff --cc c",
+                "@@@ -1,1 -1,1 +1,1 @@@",
+                "++both",
+                ""));
+
+        assertEquals(
+                List.of(
+                        new Rows.Source("diff --git a/a b/a", 0),
+                        new Rows.Source("+++ b/a", 0),
+                        new Rows.Source("@@ -1 +1 @@ heading", 0),
+                        new Rows.Source("added", 1),
+                        new Rows.Source("diff --cc c", 0),
+                        new Rows.Source("@@@ -1,1 -1,1 +1,1 @@@", 0),
+                        new Rows.Source("both", 2),
+                        new Rows.Source("", 0)),
+                sources.toList());
+    }
+
     private static Rows counted(AtomicInteger drawn, int size) {
         return Rows.drawn(Vector.range(0, size).map(index -> () -> {
             drawn.incrementAndGet();

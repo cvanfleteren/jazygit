@@ -12,6 +12,7 @@ import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.RichTextState;
 import dev.tamboui.terminal.Frame;
+import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
@@ -22,6 +23,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
+import dev.tamboui.tui.event.PasteEvent;
 import dev.tamboui.widgets.scrollbar.Scrollbar;
 import dev.tamboui.widgets.scrollbar.ScrollbarOrientation;
 import dev.tamboui.widgets.scrollbar.ScrollbarState;
@@ -33,6 +35,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.ThemeName;
@@ -41,8 +44,11 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
+import net.vanfleteren.jazygit.state.diff.Found;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.view.ContentSearch;
+import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.FileStepMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.content.ContentView.Body;
@@ -52,6 +58,8 @@ import net.vanfleteren.jazygit.ui.diff.RichDiff;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.BorderBar;
+import net.vanfleteren.jazygit.ui.widgets.FilterLine;
+import net.vanfleteren.jazygit.ui.widgets.PasteTarget;
 
 /**
  * A scrollable area of the content panel. It shows what it is given at the position the model has for that, and tells
@@ -70,6 +78,9 @@ public final class ScrollArea {
     // The keys that scroll an area all the way sideways, besides Shift with the arrows.
     private static final char ALL_LEFT = 'H';
     private static final char ALL_RIGHT = 'L';
+    // The keys that go to the next and the previous match while a search is kept (ADR 126).
+    private static final char NEXT_MATCH = 'n';
+    private static final char PREVIOUS_MATCH = 'N';
     private static final Keymap KEYMAP = Keymap.standard();
 
     private final ContentArea area;
@@ -98,6 +109,13 @@ public final class ScrollArea {
     // The size the area was last drawn in, which its lines are fitted to; none before it is first drawn (ADR 80).
     private int drawnWidth = -1;
     private int drawnHeight = -1;
+    // The search of the content panel as last shown (ADR 126): the text of its line while that is open, and which
+    // of the matches in the body shown the area went to, if one of them.
+    private final FilterLine searchLine = new FilterLine();
+    private Option<String> typing = Option.none();
+    private Option<Integer> currentMatch = Option.none();
+    // What the title says until the next key: that n went past the last match, or could not go to one (ADR 126).
+    private Option<String> notice = Option.none();
 
     public ScrollArea(
             ContentArea area, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
@@ -123,8 +141,17 @@ public final class ScrollArea {
      * fitted to the size it is drawn in (ADR 80).
      */
     public Element show(Model model, String focusedId, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
-        return new Fitted(
+        Element fitted = new Fitted(
                 fit(model, focusedId, shown, style, styles), () -> fit(model, focusedId, shown, style, styles));
+        // The line to type the query of a search in, above the area that has the focus, which keeps it (ADR 126).
+        return typing.filter(ignored -> id.equals(focusedId))
+                .<Element>map(text ->
+                        new PasteTarget(column(searchLine.field(text), fitted).fill(), id, this::pasted))
+                .getOrElse(fitted);
+    }
+
+    private void pasted(PasteEvent event) {
+        typing.forEach(text -> dispatch.accept(new ContentSearchMsg.Edited(searchLine.paste(text, event))));
     }
 
     /**
@@ -154,8 +181,12 @@ public final class ScrollArea {
         int near = cursor.map(DiffCursor::stop).getOrElse(0);
         Option<DiffStops.HunkAt> asGiven = told.mark()
                 .flatMap(mark -> last.map(before -> before.hunk(mark, near)).getOrElse(() -> markedHunk(body, mark)));
+        Option<String> query = ContentSearch.query(model.contentSearch());
+        typing = model.contentSearch().filter(ContentSearch::typing).map(ContentSearch::text);
+        // The matches are found once per body and query, not per frame (ADR 126).
         Styled current = last.filter(before -> before.asGiven().equals(asGiven))
-                .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width));
+                .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width))
+                .searched(query);
         styled = Option.of(current);
         // Shown in another order, or as another version of the file, the line of the cursor stays where it was on
         // the screen: the view moves by as much as it does, which the model learns with the next move (ADR 83,
@@ -171,7 +202,12 @@ public final class ScrollArea {
                 .filter(shift -> shift != 0)
                 .map(shift -> {
                     Scrolled shifted = new Scrolled(
-                            told.content(), Math.max(0, told.row() + shift), told.column(), told.cursor(), told.mark());
+                            told.content(),
+                            Math.max(0, told.row() + shift),
+                            told.column(),
+                            told.cursor(),
+                            told.mark(),
+                            told.found());
                     sent = Option.of(Tuple.of(known, shifted));
                     return shifted;
                 })
@@ -187,6 +223,11 @@ public final class ScrollArea {
                 at.mark());
         review = shown.body() instanceof Body.Diff(var diff, var look, var remarks) && remarks.isDefined();
         boolean focused = id.equals(focusedId);
+        // What the title said of the search lasts until the next key in the area: the area losing the focus, or
+        // showing another body, is past that too (ADR 126).
+        if (!focused || last.isEmpty()) {
+            notice = Option.none();
+        }
         // The size the element was last drawn in, which a frame in another size draws it in first (ADR 80).
         columns = Math.max(0, current.widest() - state.viewportWidth());
         column = Math.clamp(at.column(), 0, columns);
@@ -195,11 +236,21 @@ public final class ScrollArea {
         Tuple2<Integer, Integer> window = window(current.lines().size(), row, state.viewportHeight());
         Rows kept = current.lines().keeping(window._1(), window._2());
         styled = Option.of(current.withLines(kept));
-        Rows lines = cursor.filter(ignored -> focused)
+        Rows tinted = cursor.filter(ignored -> focused)
                 .map(on -> on.tinted(kept, styles.of(Theme.Classes.DIFF_CURSOR)))
                 .getOrElse(kept);
+        currentMatch = current.hits().flatMap(hits -> at.found().flatMap(found -> current.match(hits, found, near)));
+        Rows lines = current.hits()
+                .map(hits -> hits.tinted(
+                        tinted,
+                        window._1(),
+                        window._2(),
+                        currentMatch,
+                        styles.of(Theme.Classes.SEARCH_MATCH),
+                        styles.of(Theme.Classes.SEARCH_CURRENT)))
+                .getOrElse(tinted);
         element.text(windowed(lines, column, row, state.viewportHeight(), state.viewportWidth(), current::filling))
-                .title(shown.title());
+                .title(shown.title() + searchTitle(current.hits()));
         // The state clamps a scroll to the lines it was last drawn with: a longer body, as a version of the file
         // in place of its diff, would show only the blank lines around where it was cut off (ADR 78, 102).
         state.setContentHeight(current.lines().size());
@@ -213,6 +264,12 @@ public final class ScrollArea {
      * its pane moves into it. Left held down stops there: only pressing it again leaves (ADR 118).
      */
     private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
+        if (focused && typing.isDefined()) {
+            return typed(typing.get(), event, content);
+        }
+        if (focused) {
+            notice = Option.none();
+        }
         // Only the arrow leaves: h scrolls, as j and k move, without going to another panel.
         boolean atLeftEdge = focused && event.matches(Actions.MOVE_LEFT) && !event.hasShift() && column == 0;
         if (atLeftEdge && event.isRepeat()) {
@@ -222,9 +279,16 @@ public final class ScrollArea {
         // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
         return cursor.filter(on -> leaving && focused && on.mark().isDefined())
                 .map(ranged -> moved(ranged.marked().get(), content))
+                // Then a search kept, before the area is left (ADR 126).
+                .orElse(() -> Option.when(
+                        focused
+                                && event.isCancel()
+                                && styled.exists(shown -> shown.hits().isDefined()),
+                        () -> sending(new ContentSearchMsg.Cleared())))
                 // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
                 .orElse(() -> Option.when(leaving && leaveScrollArea.getAsBoolean(), EventResult.HANDLED))
                 .orElse(() -> Option.when(!focused, EventResult.UNHANDLED))
+                .orElse(() -> searchStep(event, content))
                 .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(to, content)))
                 .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(
                                 review ? Scopes.PULL_REQUEST_DIFF : Scopes.DIFF, event, Option.of(at(on, content))))
@@ -232,9 +296,135 @@ public final class ScrollArea {
                 // Without a cursor, as in the plain style, only the keys that move to another file act (ADR 117).
                 .orElse(() -> Option.when(cursor.isEmpty(), () -> KEYMAP.handle(Scopes.DIFF, event, Option.none()))
                         .flatMap(msg -> msg)
-                        .filter(FileStepMsg.class::isInstance)
+                        .filter(msg -> msg instanceof FileStepMsg || msg instanceof ContentSearchMsg)
                         .map(this::reviewed))
                 .getOrElse(() -> scroll(event) ? scrolled(content) : EventResult.UNHANDLED);
+    }
+
+    /**
+     * What {@code event} does while the line of the search is open with {@code text} (ADR 126): the keys that edit it
+     * do, Escape closes it, Enter closes it and goes to the first match from the cursor, or from the top of the screen
+     * without one. The other keys do nothing.
+     */
+    private EventResult typed(String text, KeyEvent event, ScrolledContent content) {
+        if (event.isCancel()) {
+            return sending(new ContentSearchMsg.Cancelled());
+        }
+        if (event.isConfirm()) {
+            dispatch.accept(new ContentSearchMsg.Submitted());
+            currentMatch = Option.none();
+            return styled.map(shown -> shown.searched(Option.when(!text.isEmpty(), text)))
+                    .peek(searched -> styled = Option.of(searched))
+                    .flatMap(Styled::hits)
+                    .filter(hits -> !hits.isEmpty())
+                    .map(hits -> goTo(hits, hits.forwardFrom(position()), content))
+                    .getOrElse(EventResult.HANDLED);
+        }
+        searchLine.edit(text, event).map(ContentSearchMsg.Edited::new).forEach(dispatch);
+        return EventResult.HANDLED;
+    }
+
+    private EventResult sending(Msg msg) {
+        dispatch.accept(msg);
+        return EventResult.HANDLED;
+    }
+
+    /**
+     * Where {@code n} and {@code N} go while a search is kept (ADR 126), if {@code event} is one of them: from the
+     * match gone to, else from the cursor, or the top of the screen without one; nowhere when nothing matches.
+     */
+    private Option<EventResult> searchStep(KeyEvent event, ScrolledContent content) {
+        boolean forward = event.isChar(NEXT_MATCH);
+        return styled.flatMap(Styled::hits)
+                .filter(ignored -> forward || event.isChar(PREVIOUS_MATCH))
+                .map(hits -> hits.isEmpty()
+                        ? EventResult.HANDLED
+                        : goTo(
+                                hits,
+                                currentMatch
+                                        .map(at -> hits.from(at, forward))
+                                        .getOrElse(() ->
+                                                forward ? hits.forwardFrom(position()) : hits.backwardFrom(position())),
+                                content));
+    }
+
+    /**
+     * The line a search goes on from when no match is current: the first of the stop of the cursor, else the first
+     * on the screen.
+     */
+    private int position() {
+        return cursor.map(DiffCursor::stopStart).getOrElse(() -> element.state().scrollRow());
+    }
+
+    /**
+     * Goes to the match {@code step} says of {@code hits}: the cursor to its stop, or the view scrolled to it, and
+     * sideways until it shows, telling the model in one message. While a range is open, a match outside its hunk is
+     * refused, and the title says so.
+     */
+    private EventResult goTo(SearchHits hits, SearchHits.Step step, ScrolledContent content) {
+        SearchHits.Hit hit = hits.get(step.index());
+        Option<String> wrapped = Option.when(step.wrapped(), () -> Messages.get("content.search.wrapped"));
+        RichTextState state = element.state();
+        if (cursor.isDefined()) {
+            Option<DiffCursor> to = cursor.get().toLine(hit.row());
+            if (to.isEmpty()) {
+                notice = Option.of(Messages.get("content.search.outsideRange"));
+                return EventResult.HANDLED;
+            }
+            DiffCursor on = to.get();
+            notice = wrapped;
+            currentMatch = Option.of(step.index());
+            column = shownColumn(hits, hit);
+            cursor = Option.of(on);
+            state.scrollToTop();
+            state.scrollDown(on.row());
+            return scrolled(content, Option.of(new Found.InStop(on.anchor(), hits.nth(step.index(), on.stopStart()))));
+        }
+        int top = state.scrollRow();
+        int height = Math.max(1, state.viewportHeight());
+        int row = hit.row() >= top && hit.row() < top + height ? top : Math.max(0, hit.row() - height / 2);
+        notice = wrapped;
+        currentMatch = Option.of(step.index());
+        column = shownColumn(hits, hit);
+        state.scrollToTop();
+        state.scrollDown(row);
+        return scrolled(content, Option.of(new Found.OnLine(hit.row(), hits.nth(step.index(), hit.row()))));
+    }
+
+    /**
+     * How far the area is scrolled sideways to show {@code hit} of {@code hits}: as far as it is, when it shows the
+     * match already; else so the match starts at its left edge, or ends at its right one.
+     */
+    private int shownColumn(SearchHits hits, SearchHits.Hit hit) {
+        return styled.map(shown -> {
+                    String text = shown.lines().get(hit.row()).rawContent();
+                    int from = Math.min(
+                            text.length(), shown.lines().source(hit.row()).from() + hit.start());
+                    int until = Math.min(text.length(), from + hits.query().length());
+                    int start = Span.raw(text.substring(0, from)).width();
+                    int end = Span.raw(text.substring(0, until)).width();
+                    int width = Math.max(1, element.state().viewportWidth());
+                    int shifted = start < column ? start : end > column + width ? end - width : column;
+                    return Math.clamp(shifted, 0, Math.max(0, columns));
+                })
+                .getOrElse(column);
+    }
+
+    /**
+     * What the title of the area says of the search after what it says already (ADR 126): the query and which of the
+     * matches is current, else how many there are, or that there are none; and what {@link #notice} says.
+     */
+    private String searchTitle(Option<SearchHits> hits) {
+        return hits.map(found -> found.isEmpty()
+                                ? Messages.get("content.search.none", found.query())
+                                : currentMatch
+                                        .map(at -> Messages.get(
+                                                "content.search.current", found.query(), at + 1, found.size()))
+                                        .getOrElse(() ->
+                                                Messages.get("content.search.count", found.query(), found.size())))
+                        .getOrElse("")
+                + notice.map(says -> Messages.get("content.search.notice", says))
+                        .getOrElse("");
     }
 
     /**
@@ -387,13 +577,22 @@ public final class ScrollArea {
      * Tells the model where the area showing {@code content} is scrolled to now.
      */
     private EventResult scrolled(ScrolledContent content) {
+        return scrolled(content, Option.none());
+    }
+
+    /**
+     * Tells the model where the area showing {@code content} is scrolled to now, and the match of the search it went
+     * to, if it did (ADR 126): any other move lets go of it.
+     */
+    private EventResult scrolled(ScrolledContent content, Option<Found> found) {
         RichTextState state = element.state();
         Scrolled to = new Scrolled(
                 content,
                 state.scrollRow(),
                 column,
                 cursor.map(DiffCursor::anchor),
-                cursor.flatMap(DiffCursor::markAnchor));
+                cursor.flatMap(DiffCursor::markAnchor),
+                found);
         told(to);
         dispatch.accept(new ViewMsg.ContentScrolled(area.id(), to));
         return EventResult.HANDLED;
@@ -516,6 +715,7 @@ public final class ScrollArea {
      * @param widest  how wide the widest of {@code lines} is, which the tint of the cursor never makes wider
      * @param places  where each line of a version rendered is drawn, in order (ADR 103)
      * @param width   how wide a version rendered was drawn
+     * @param hits    the matches of the search in {@code lines}, while one is kept (ADR 126)
      */
     private record Styled(
             Body body,
@@ -525,7 +725,8 @@ public final class ScrollArea {
             Vector<RichDiff.Stop> stops,
             int widest,
             Vector<RichDiff.Place> places,
-            int width) {
+            int width,
+            Option<SearchHits> hits) {
 
         static Styled of(
                 Body body, ThemeName theme, Option<DiffStops.HunkAt> asGiven, RichDiff.Drawn drawn, int width) {
@@ -541,14 +742,42 @@ public final class ScrollArea {
                     // are not drawn for it.
                     drawn.widest().getAsInt(),
                     drawn.places().toVector(),
-                    width);
+                    width,
+                    Option.none());
         }
 
         /**
          * This body with {@code kept}, its lines with others kept drawn.
          */
         Styled withLines(Rows kept) {
-            return new Styled(body, theme, asGiven, kept, stops, widest, places, width);
+            return new Styled(body, theme, asGiven, kept, stops, widest, places, width, hits);
+        }
+
+        /**
+         * This body with the matches of {@code query} in it, found again only for another query.
+         */
+        Styled searched(Option<String> query) {
+            Option<SearchHits> found = query.map(text ->
+                    hits.filter(those -> those.query().equals(text)).getOrElse(() -> SearchHits.of(lines, text)));
+            return new Styled(body, theme, asGiven, lines, stops, widest, places, width, found);
+        }
+
+        /**
+         * The index among {@code hits} of the match {@code found}, if it is still one of this body: the {@code nth}
+         * of the rows of its stop, whose stop is looked for from the stop at {@code near}, or of its line.
+         */
+        Option<Integer> match(SearchHits hits, Found found, int near) {
+            return switch (found) {
+                case Found.InStop(Anchor stop, int nth) ->
+                    DiffCursor.index(stops, stop, near)
+                            .flatMap(index -> hits.at(
+                                    stops.get(index).row(),
+                                    index + 1 < stops.size()
+                                            ? stops.get(index + 1).row()
+                                            : lines.size(),
+                                    nth));
+                case Found.OnLine(int line, int nth) -> hits.at(line, line + 1, nth);
+            };
         }
 
         /**

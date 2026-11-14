@@ -499,6 +499,9 @@ public final class RichDiff {
         boolean first = index == 0;
         Theme.SpanStyles styles = layout.styles();
         Span rule = rule(layout);
+        // The lines of a hunk whose numbers cannot be read keep their prefix as git printed it, which a search
+        // leaves out (ADR 126).
+        int prefix = hunk.numbered() ? 0 : Rows.Source.prefix(hunk.header());
         // One for the hunk, which each of its lines holds: a long hunk has tens of thousands. The lines of a version
         // have none, so no range is started on them: a range is of the diff (ADR 102).
         Option<DiffStops.HunkAt> at =
@@ -522,7 +525,8 @@ public final class RichDiff {
                             Anchor.of(layout.path(), row.parsed().line())
                                     .map(on -> new Mark(on, 1, layout.fileWidth(), at)),
                             List.empty(),
-                            within))
+                            within,
+                            () -> source(row, prefix, layout)))
                     .appendAll(threaded.zipWithIndex()
                             .flatMap(row -> layout.blocks()
                                     .threads(
@@ -580,10 +584,7 @@ public final class RichDiff {
         DiffLine line = row.parsed().line();
         LineRemarks remarks = row.remarks();
         Theme.SpanStyles styles = layout.styles();
-        String numbers = layout.version()
-                .map(version -> versionNumber(version, line, layout.digits()))
-                .getOrElse(() ->
-                        number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits()));
+        String numbers = numbers(line, layout);
         Style numbered = switch (line.kind()) {
             case ADDED -> styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_ADDED_LINE_NUMBER);
             case REMOVED -> styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_REMOVED_LINE_NUMBER);
@@ -595,6 +596,29 @@ public final class RichDiff {
                         styled(remarks.threads().isEmpty() ? "┃" : "●", Theme.Classes.DIFF_THREAD, styles),
                         Span.styled(" ", numbered))
                 : List.of(Span.styled(numbers + GUTTER_END, numbered));
+    }
+
+    /**
+     * The numbers of {@code line} in its gutter: in the old and the new file, or in the version shown (ADR 102).
+     */
+    private static String numbers(DiffLine line, Layout layout) {
+        return layout.version()
+                .map(version -> versionNumber(version, line, layout.digits()))
+                .getOrElse(() ->
+                        number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits()));
+    }
+
+    /**
+     * What the line of {@code row} is searched in (ADR 126): its text, without the first {@code prefix} characters
+     * of a line kept as git printed it, after its gutter and its marker, which a note has none of. Its gutter is as
+     * long whatever marks are in it ({@link #gutter}).
+     */
+    private static Rows.Source source(Row row, int prefix, Layout layout) {
+        DiffLine line = row.parsed().line();
+        int marker = line.kind() == DiffLine.Kind.NOTE ? 0 : 1 + MARGIN.length();
+        Rows.Source text = Rows.Source.cut(line.text(), prefix);
+        return new Rows.Source(
+                text.text(), numbers(line, layout).length() + GUTTER_END.length() + marker + text.from());
     }
 
     /**
@@ -763,16 +787,22 @@ public final class RichDiff {
     /**
      * What draws a line, the stop of the cursor that starts on it, if one does, and how wide it is at most, when that is
      * known without drawing it: a line of a diff is no wider than its file, so a long diff is measured without drawing
-     * each of its lines only to throw it away.
+     * each of its lines only to throw it away. With what it is searched in (ADR 126): the code of a line of a diff,
+     * without drawing it; all the text of any other line, drawn already.
      */
-    private record Marked(Supplier<Line> line, Option<Mark> mark, List<Anchor> places, Option<Integer> width) {
+    private record Marked(
+            Supplier<Line> line,
+            Option<Mark> mark,
+            List<Anchor> places,
+            Option<Integer> width,
+            Supplier<Rows.Source> source) {
 
         Marked(Supplier<Line> line, Option<Mark> mark) {
             this(line, mark, List.empty());
         }
 
         Marked(Supplier<Line> line, Option<Mark> mark, List<Anchor> places) {
-            this(line, mark, places, Option.none());
+            this(line, mark, places, Option.none(), () -> Rows.Source.of(line.get()));
         }
 
         /**
@@ -831,7 +861,7 @@ public final class RichDiff {
 
         private static Drawn of(List<Marked> marked) {
             return new Drawn(
-                    Rows.drawn(marked.map(Marked::line)),
+                    Rows.drawn(marked.map(Marked::line), marked.map(Marked::source)),
                     marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))),
                     marked.zipWithIndex()
                             .flatMap(line -> line._1().places().map(anchor -> new Place(anchor, line._2()))),

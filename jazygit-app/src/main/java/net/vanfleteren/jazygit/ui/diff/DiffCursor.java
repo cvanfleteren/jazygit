@@ -207,6 +207,28 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
                 .map(index -> at(index, row));
     }
 
+    /**
+     * {@code n} or {@code N} of a search (ADR 126): the stop line {@code line} is part of, the view scrolled so it
+     * shows that line, and as much of the stop as fits besides; while a range is open, only a line of its hunk, which
+     * the range then reaches to, as with a click. None for a line outside that hunk.
+     */
+    public Option<DiffCursor> toLine(int line) {
+        int index = containing(line);
+        return Option.when(mark.isEmpty() || lineOfHunk(index), () -> {
+            DiffCursor moved = at(index, row).shown();
+            return line >= moved.row && line < moved.row + height
+                    ? moved
+                    : at(index, line < moved.row ? line : line - height + 1);
+        });
+    }
+
+    /**
+     * The first line of the stop the cursor is on.
+     */
+    public int stopStart() {
+        return start(stop);
+    }
+
     private Option<DiffCursor> thread(Option<Integer> found) {
         return found.filter(ignored -> mark.isEmpty())
                 .map(index -> at(index, row).shown());

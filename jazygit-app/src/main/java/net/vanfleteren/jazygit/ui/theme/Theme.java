@@ -263,6 +263,9 @@ public final class Theme {
         public static final String DIFF_THREAD_AUTHOR = "diff-thread-author";
         // The cursor of the rich view (ADR 60).
         public static final String DIFF_CURSOR = "diff-cursor";
+        // The matches of the search of the content panel, and the one gone to, over all else (ADR 126).
+        public static final String SEARCH_MATCH = "search-match";
+        public static final String SEARCH_CURRENT = "search-current";
         public static final String DIFF_ADDED_LINE = "diff-added-line";
         public static final String DIFF_ADDED_WORD = "diff-added-word";
         public static final String DIFF_REMOVED_LINE = "diff-removed-line";

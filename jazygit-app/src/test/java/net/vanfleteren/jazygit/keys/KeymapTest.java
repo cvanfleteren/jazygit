@@ -222,6 +222,60 @@ class KeymapTest {
                 msg);
     }
 
+    /**
+     * The order of {@code Features.ALL} is the order of the keys in a panel (ADR 127); these are the scopes that more
+     * than one of the features at its end add to, which moving a line there reorders.
+     */
+    @Test
+    void thePanelsListTheKeysOfTheFeaturesInTheOrderOfTheFeatures() {
+        assertEquals(
+                List.of(
+                        "help.commitFiles.filter",
+                        "help.commitFiles.close",
+                        "help.commitFiles.listed",
+                        "help.commitFiles.refresh",
+                        "help.commitFiles.version",
+                        "help.commitFiles.render"),
+                descriptions(Scopes.COMMIT_FILES));
+        assertEquals(
+                List.of(
+                        "help.diff.nextFile",
+                        "help.diff.previousFile",
+                        "help.diff.expandDown",
+                        "help.diff.expandUp",
+                        "help.diff.expandAll",
+                        "help.diff.foldAll",
+                        "help.diff.version",
+                        "help.diff.render",
+                        "help.diff.search",
+                        "help.diff.nextMatch",
+                        "help.diff.previousMatch",
+                        "help.diff.copy",
+                        "help.diff.range"),
+                descriptions(Scopes.DIFF));
+        assertEquals(
+                List.of(
+                        "help.diff.nextFile",
+                        "help.diff.previousFile",
+                        "help.diff.expandDown",
+                        "help.diff.expandUp",
+                        "help.diff.expandAll",
+                        "help.diff.foldAll",
+                        "help.diff.version",
+                        "help.diff.render",
+                        "help.diff.search",
+                        "help.diff.copy"),
+                descriptions(Scopes.PULL_REQUEST_DIFF).filter(key -> key.startsWith("help.diff.")));
+        assertEquals(
+                List.of("help.files.filter", "help.files.allFiles", "help.files.fetch"),
+                descriptions(Scopes.FILES)
+                        .filter(List.of("help.files.filter", "help.files.allFiles", "help.files.fetch")::contains));
+    }
+
+    private List<String> descriptions(Keymap.Scope<?> scope) {
+        return keymap.bindings(scope.id()).map(Keymap.Binding::descriptionKey);
+    }
+
     @Test
     void aPanelDeclaresEachKeyOnce() {
         for (Keymap.Scope<?> scope : List.of(Scopes.FILES, Scopes.BRANCHES, Scopes.COMMITS, Scopes.STASH)) {

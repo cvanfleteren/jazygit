@@ -1794,10 +1794,41 @@ class ContentPanelTest {
     /**
      * {@link #pullRequestDiff(String)}, of the diff {@code diff}, with the thread on the first line of the new file.
      */
-    private static Model pullRequestDiff(String body, String diff) {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+    static Model pullRequestDiff(String body, String diff) {
+        Changes of = pullRequestChanges();
         CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
+        Model rich = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        Model open = Update.update(
+                        Update.update(
+                                        Update.update(
+                                                        rich,
+                                                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.Opened(
+                                                                of, Scopes.BRANCHES.pane()))
+                                                .model(),
+                                        new LoadMsg.CommitFilesLoaded(of, List.of(file)))
+                                .model(),
+                        remarksLoaded(body))
+                .model();
+        return Update.update(
+                        Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
+                                .model(),
+                        new LoadMsg.CommitFileDiffLoaded(
+                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of(diff)))
+                .model();
+    }
+
+    private static Changes pullRequestChanges() {
+        return new Changes.OfPullRequest(
+                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+    }
+
+    /**
+     * The review threads of the pull request of {@link #pullRequestDiff(String, String)} read: one on the first line of
+     * the new file, its one comment saying {@code body}.
+     */
+    static Msg remarksLoaded(String body) {
         net.vanfleteren.jazygit.gh.model.ReviewThread thread = new net.vanfleteren.jazygit.gh.model.ReviewThread(
                 "a.txt",
                 net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT,
@@ -1819,34 +1850,15 @@ class ContentPanelTest {
                 0,
                 new net.vanfleteren.jazygit.gh.model.ReviewThread.Id("T1"),
                 net.vanfleteren.jazygit.gh.model.ReviewThread.Rights.ALL);
-        Model rich = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
-        Model open = Update.update(
-                        Update.update(
-                                        Update.update(
-                                                        rich,
-                                                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.Opened(
-                                                                of, Scopes.BRANCHES.pane()))
-                                                .model(),
-                                        new LoadMsg.CommitFilesLoaded(of, List.of(file)))
-                                .model(),
-                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.RemarksLoaded(
-                                new PrNumber(7),
-                                new net.vanfleteren.jazygit.gh.model.ReviewRemarks(
-                                        net.vanfleteren.jazygit.gh.model.PullRequestDetails.State.OPEN,
-                                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("a".repeat(40)),
-                                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("b".repeat(40)),
-                                        List.of(thread)),
-                                HashSet.empty(),
-                                0))
-                .model();
-        return Update.update(
-                        Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
-                                .model(),
-                        new LoadMsg.CommitFileDiffLoaded(
-                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of(diff)))
-                .model();
+        return new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.RemarksLoaded(
+                new PrNumber(7),
+                new net.vanfleteren.jazygit.gh.model.ReviewRemarks(
+                        net.vanfleteren.jazygit.gh.model.PullRequestDetails.State.OPEN,
+                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("a".repeat(40)),
+                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("b".repeat(40)),
+                        List.of(thread)),
+                HashSet.empty(),
+                0);
     }
 
     @Test

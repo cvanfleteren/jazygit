@@ -119,9 +119,11 @@ public final class ContentText {
                 .toList();
         RichDiff.Drawn drawn = switch (look.style()) {
             case PLAIN ->
-                RichDiff.Drawn.plain(remarks.filter(shown -> !shown.threads().isEmpty())
+                remarks.filter(shown -> !shown.threads().isEmpty())
                         .map(shown -> counted(diff, shown.threads(), styles))
-                        .getOrElse(() -> changeLines(diff, look, styles)));
+                        .map(lines ->
+                                RichDiff.Drawn.plain(Rows.of(lines, Rows.Source.ofDiff(lines.map(Line::rawContent)))))
+                        .getOrElse(() -> changeDrawn(diff, look, styles, width));
             case RICH -> RichDiff.drawn(diff.folded(), look.syntax(), look.words(), remarks, asGiven, styles, width);
         };
         return drawn.after(failed).withLead();
@@ -427,8 +429,13 @@ public final class ContentText {
      */
     private static RichDiff.Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles, int width) {
         return switch (look.style()) {
-            case PLAIN ->
-                RichDiff.Drawn.plain(Rows.drawn(lines(changes.text()).map(line -> () -> diffLine(line, styles))));
+            case PLAIN -> {
+                List<String> lines = lines(changes.text());
+                // Searched as git printed it, each line of a hunk without its prefix (ADR 126).
+                yield RichDiff.Drawn.plain(Rows.drawn(
+                        lines.map(line -> () -> diffLine(line, styles)),
+                        Rows.Source.ofDiff(lines).map(source -> () -> source)));
+            }
             case RICH ->
                 RichDiff.drawn(
                         changes.folded(), look.syntax(), look.words(), Option.none(), Option.none(), styles, width);
