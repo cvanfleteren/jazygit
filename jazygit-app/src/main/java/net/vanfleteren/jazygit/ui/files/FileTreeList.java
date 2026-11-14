@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.view.FileStepMsg;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.theme.Theme;
+import net.vanfleteren.jazygit.ui.widgets.BorderBar;
 import net.vanfleteren.jazygit.ui.widgets.ListFilter;
 
 /**
@@ -108,6 +109,7 @@ final class FileTreeList<T extends Pathed> {
                 .id(id)
                 .focusable()
                 .scrollbar(ScrollBarPolicy.AS_NEEDED)
+                .scrollbarThumbColor(BorderBar.FOUND)
                 .nodeRenderer(this::drawNode);
         tree.onMouseEvent(this::click);
     }

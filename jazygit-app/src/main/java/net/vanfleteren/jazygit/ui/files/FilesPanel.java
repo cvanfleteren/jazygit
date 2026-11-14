@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.theme.Theme;
+import net.vanfleteren.jazygit.ui.widgets.BorderBar;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
@@ -459,13 +460,15 @@ public class FilesPanel {
     }
 
     /**
-     * {@code tree}, under the line the filter is typed in while it is open.
+     * {@code tree}, its scrollbar on the right border of the pane, under the line the filter is typed in while it is
+     * open, which keeps the width inside the border.
      */
     private Element withLine(Element tree) {
+        Element bordered = BorderBar.of(tree);
         return filter.filter(FileFilter::typing)
                 .<Element>map(
-                        typing -> new PasteTarget(Toolkit.column(filterLine.field(typing.text()), tree), ID, paste))
-                .getOrElse(tree);
+                        typing -> new PasteTarget(Toolkit.column(filterLine.field(typing.text()), bordered), ID, paste))
+                .getOrElse(bordered);
     }
 
     /**

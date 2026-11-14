@@ -62,6 +62,7 @@ public final class LoadableList<T> {
                 .focusable()
                 .autoScroll()
                 .scrollbar(ScrollBarPolicy.AS_NEEDED)
+                .scrollbarThumbColor(BorderBar.FOUND)
                 .fill()
                 .onMouseEvent(this::click);
     }
@@ -124,8 +125,10 @@ public final class LoadableList<T> {
             show(rows);
         }
         shownRows = rows;
-        Element content = above.<Element>map(line -> new PasteTarget(column(line, list), list.id(), paste))
-                .getOrElse(list);
+        // Only the list has its scrollbar on the right border: a line above it keeps the width inside it.
+        Element bordered = BorderBar.of(list);
+        Element content = above.<Element>map(line -> new PasteTarget(column(line, bordered), list.id(), paste))
+                .getOrElse(bordered);
         return Pane.bordered(title, content, focused, selectedIndex(), count);
     }
 
