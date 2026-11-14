@@ -378,7 +378,7 @@ public final class Update {
                 .filter(d -> model.repo()
                         .status()
                         .toOption()
-                        .exists(status -> status.files().containsAll(d.key())))
+                        .exists(status -> status.files().toSet().containsAll(d.key())))
                 .map(d -> new LoadFileDiff(d.key(), model.preferences().diffOptions()));
     }
 

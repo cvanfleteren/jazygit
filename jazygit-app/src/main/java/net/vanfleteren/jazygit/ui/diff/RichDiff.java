@@ -8,6 +8,7 @@ import io.vavr.Tuple2;
 import io.vavr.collection.Array;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -224,9 +225,12 @@ public final class RichDiff {
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
         // A version leaves no line out; the threads on the other version's lines are not shown with it.
-        List<Folding.Gap> gaps = version.isDefined() ? List.empty() : Folding.gaps(file, fold.length());
-        Option<Folding.Gap> trailing =
-                gaps.find(gap -> gap.before() == parsed.hunks().size());
+        // The gap before each hunk, by the index of the hunk; the one after the last is before the hunk there is not.
+        Map<Integer, Folding.Gap> gapBefore = (version.isDefined()
+                        ? List.<Folding.Gap>empty()
+                        : Folding.gaps(file, fold.length()))
+                .toMap(Folding.Gap::before, gap -> gap);
+        Option<Folding.Gap> trailing = gapBefore.get(parsed.hunks().size());
         boolean unplaced =
                 version.isEmpty() && remarks.exists(placed -> !placed.unplaced().isEmpty());
         Option<String> cut = Option.when(
@@ -259,13 +263,14 @@ public final class RichDiff {
                         .<Pending>map(placed -> () -> blocks.threads(
                                 placed.onFile(), Option.none(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(parsed.hunks()
+                        .zip(groups)
                         .zipWithIndex((hunk, at) -> hunk(
-                                hunk.hunk(),
+                                hunk._1().hunk(),
                                 byHunk.get(at),
-                                groups.get(at),
+                                hunk._2(),
                                 at,
                                 afterLast || at < parsed.hunks().size() - 1,
-                                gaps.find(gap -> gap.before() == at),
+                                gapBefore.get(at),
                                 fold,
                                 layout))
                         .flatMap(hunk -> hunk))
@@ -313,9 +318,10 @@ public final class RichDiff {
             return json(path, lines, fold, width, tinted, changed, unchanged, styles)
                     .prepend(header);
         }
-        List<RenderedMarkdown.Block> blocks =
-                RenderedMarkdown.blocks(lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles);
-        List<Marked> body = blocks.zipWithIndex().flatMap(at -> {
+        Vector<RenderedMarkdown.Block> blocks = RenderedMarkdown.blocks(
+                        lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles)
+                .toVector();
+        Vector<Marked> body = blocks.zipWithIndex().flatMap(at -> {
             RenderedMarkdown.Block block = at._1();
             Span gutter = Vector.rangeClosed(block.first(), block.last())
                             .exists(line ->

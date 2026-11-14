@@ -7,6 +7,7 @@ import dev.tamboui.widgets.syntax.SyntaxHighlighter;
 import dev.tamboui.widgets.syntax.SyntaxTheme;
 import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.syntax.Language;
@@ -29,10 +30,10 @@ final class LexedHighlighter implements SyntaxHighlighter {
 
     @Override
     public java.util.List<Line> highlight(String code, String language, Style base, SyntaxTheme theme) {
-        List<String> lines = List.of(code.split("\n", -1));
+        Vector<String> lines = Vector.of(code.split("\n", -1));
         return named(language)
                 .map(known -> lines.foldLeft(
-                                Tuple.<List<Line>, Lexer.State>of(List.empty(), new Lexer.Outside()),
+                                Tuple.<Vector<Line>, Lexer.State>of(Vector.empty(), new Lexer.Outside()),
                                 (done, line) -> Lexer.lexed(known, done._2(), line)
                                         .map(lexed -> Tuple.of(
                                                 done._1().append(coloured(line, lexed.tokens(), base)), lexed.state()))
