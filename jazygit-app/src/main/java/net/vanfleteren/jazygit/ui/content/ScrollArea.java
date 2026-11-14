@@ -10,9 +10,7 @@ import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
-import dev.tamboui.style.Color;
 import dev.tamboui.style.RichTextState;
-import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
@@ -53,17 +51,13 @@ import net.vanfleteren.jazygit.ui.diff.DiffCursor;
 import net.vanfleteren.jazygit.ui.diff.RichDiff;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
+import net.vanfleteren.jazygit.ui.widgets.BorderBar;
 
 /**
  * A scrollable area of the content panel. It shows what it is given at the position the model has for that, and tells
  * where the user scrolled it to; the element only keeps the layout of the text.
  */
 public final class ScrollArea {
-
-    // The thumbs of the bars on the right and the bottom border that show how far the area is scrolled down and
-    // sideways.
-    static final String DOWNWARDS_THUMB = "┃";
-    static final String SIDEWAYS_THUMB = "━";
 
     private static final int WHEEL_LINES = 3;
     // The keys that move the cursor of a rich diff by a stop besides the arrows, as the lists of the panes are
@@ -451,7 +445,7 @@ public final class ScrollArea {
                         frame,
                         new Rect(at.right() - 1, at.y() + 1, 1, at.height() - 2),
                         ScrollbarOrientation.VERTICAL_RIGHT,
-                        DOWNWARDS_THUMB,
+                        BorderBar.DOWNWARDS_THUMB,
                         new ScrollbarState()
                                 .contentLength(state.contentHeight())
                                 .viewportContentLength(height)
@@ -462,7 +456,7 @@ public final class ScrollArea {
                         frame,
                         new Rect(at.x() + 1, at.bottom() - 1, at.width() - 2, 1),
                         ScrollbarOrientation.HORIZONTAL_BOTTOM,
-                        SIDEWAYS_THUMB,
+                        BorderBar.SIDEWAYS_THUMB,
                         new ScrollbarState()
                                 .contentLength(columns + width)
                                 .viewportContentLength(width)
@@ -483,7 +477,7 @@ public final class ScrollArea {
                             .trackSymbol(
                                     frame.buffer().get(border.x(), border.y()).symbol())
                             .thumbSymbol(thumb)
-                            .thumbStyle(Style.EMPTY.fg(Color.RESET))
+                            .thumbStyle(BorderBar.THUMB)
                             .build(),
                     border,
                     scrolled);

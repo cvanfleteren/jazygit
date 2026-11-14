@@ -684,7 +684,11 @@ class ContentPanelTest {
         List<dev.tamboui.buffer.Cell> thumbs = List.of(buffer.get(1, bottom), buffer.get(right, 1));
         List<dev.tamboui.buffer.Cell> tracks = List.of(buffer.get(right - 1, bottom), buffer.get(right, bottom - 1));
         assertEquals(
-                List.of(ScrollArea.SIDEWAYS_THUMB, ScrollArea.DOWNWARDS_THUMB, "─", "│"),
+                List.of(
+                        net.vanfleteren.jazygit.ui.widgets.BorderBar.SIDEWAYS_THUMB,
+                        net.vanfleteren.jazygit.ui.widgets.BorderBar.DOWNWARDS_THUMB,
+                        "─",
+                        "│"),
                 thumbs.appendAll(tracks).map(dev.tamboui.buffer.Cell::symbol));
         assertTrue(
                 thumbs.forAll(
@@ -736,7 +740,7 @@ class ContentPanelTest {
 
         assertTrue(java.util.regex.Pattern.compile("[╰└]─+[╯┘]").matcher(screen).find(), screen);
         // Nor are there more lines than show: the right border is left as it is too.
-        assertFalse(screen.contains(ScrollArea.DOWNWARDS_THUMB), screen);
+        assertFalse(screen.contains(net.vanfleteren.jazygit.ui.widgets.BorderBar.DOWNWARDS_THUMB), screen);
         assertFalse(
                 java.util.regex.Pattern.compile("[╰└][─━]*━[─━]*[╯┘]")
                         .matcher(screen)

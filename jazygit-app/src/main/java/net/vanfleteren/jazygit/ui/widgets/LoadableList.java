@@ -62,6 +62,7 @@ public final class LoadableList<T> {
                 .focusable()
                 .autoScroll()
                 .scrollbar(ScrollBarPolicy.AS_NEEDED)
+                .scrollbarThumbColor(BorderBar.FOUND)
                 .fill()
                 .onMouseEvent(this::click);
     }

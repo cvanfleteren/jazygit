@@ -119,6 +119,82 @@ class LoadableListTest {
         assertEquals(Option.of("c"), following.selected(Function.identity()));
     }
 
+    @Test
+    void theScrollbarOfALongerListIsOnTheRightBorderAndMovesWithTheHighlight() {
+        Loadable<List<String>> items = new Loadable.Loaded<>(List.range(0, 20).map(i -> "item " + i));
+
+        String top = rightBorder(drawn(items));
+        list.select(19);
+        String end = rightBorder(drawn(items));
+
+        assertTrue(top.matches("┃+│+"), top);
+        assertTrue(end.matches("│+┃+"), end);
+    }
+
+    @Test
+    void theRightBorderOfAListThatFitsIsLeftAsItIs() {
+        String border = rightBorder(drawn(new Loadable.Loaded<>(List.of("first", "second"))));
+
+        assertEquals("│".repeat(SCREEN.height() - 2), border);
+    }
+
+    @Test
+    void noColumnInsideTheBorderIsKeptForTheScrollbar() {
+        String wide = "x".repeat(60);
+        for (int count : new int[] {2, 20}) {
+            dev.tamboui.buffer.Buffer buffer =
+                    drawn(new Loadable.Loaded<>(List.range(0, count).map(i -> wide)));
+
+            // The last column inside the border, on the second row, which is not highlighted.
+            assertEquals("x", buffer.get(SCREEN.width() - 2, 2).symbol(), count + " rows");
+        }
+    }
+
+    @Test
+    void theThumbIsInTheTerminalsColourOnATrackInTheColourOfTheBorder() {
+        dev.tamboui.buffer.Buffer buffer =
+                drawn(new Loadable.Loaded<>(List.range(0, 20).map(i -> "item " + i)));
+
+        int right = SCREEN.width() - 1;
+        dev.tamboui.buffer.Cell thumb = buffer.get(right, 1);
+        dev.tamboui.buffer.Cell track = buffer.get(right, SCREEN.height() - 2);
+        dev.tamboui.buffer.Cell corner = buffer.get(right, 0);
+        assertEquals(
+                List.of(BorderBar.DOWNWARDS_THUMB, "│"), List.of(thumb, track).map(dev.tamboui.buffer.Cell::symbol));
+        // Never in the colour it is found by.
+        assertEquals(
+                java.util.Optional.of(dev.tamboui.style.Color.RESET),
+                thumb.style().fg());
+        assertTrue(corner.style().fg().isPresent(), corner.style().toString());
+        assertEquals(corner.style().fg(), track.style().fg());
+    }
+
+    /**
+     * {@code items} drawn in the list, focused, in the dark theme, on the screen of these tests.
+     */
+    private dev.tamboui.buffer.Buffer drawn(Loadable<List<String>> items) {
+        dev.tamboui.toolkit.focus.FocusManager focus = new dev.tamboui.toolkit.focus.FocusManager();
+        focus.setFocus(ID);
+        dev.tamboui.toolkit.element.DefaultRenderContext context = new dev.tamboui.toolkit.element.DefaultRenderContext(
+                focus,
+                new dev.tamboui.toolkit.event.EventRouter(focus, new dev.tamboui.toolkit.element.ElementRegistry()));
+        context.setStyleEngine(Theme.createEngine().get());
+        dev.tamboui.layout.Rect area = new dev.tamboui.layout.Rect(0, 0, SCREEN.width(), SCREEN.height());
+        dev.tamboui.buffer.Buffer buffer = dev.tamboui.buffer.Buffer.empty(area);
+        list.render(items, all -> all.map(LoadableList.Row::of), true, true)
+                .render(dev.tamboui.terminal.Frame.forTesting(buffer), area, context);
+        return buffer;
+    }
+
+    /**
+     * The right border of what {@code buffer} shows, between its corners.
+     */
+    private static String rightBorder(dev.tamboui.buffer.Buffer buffer) {
+        return List.range(1, SCREEN.height() - 1)
+                .map(y -> buffer.get(SCREEN.width() - 1, y).symbol())
+                .mkString();
+    }
+
     private void show(List<String> items) {
         show(list, items);
     }
