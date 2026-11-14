@@ -91,10 +91,12 @@ public final class TreeFolds {
     }
 
     /**
-     * How many columns the leaf {@code tree} is drawn in: its tag and anchor, a quoted string with its quotes, an empty
-     * value as {@code null}, each newline one column.
+     * How many characters the leaf {@code tree} is drawn with, for {@link #oneLine} only: its tag and anchor, a quoted
+     * string with its quotes, an empty value as {@code null}, each newline one. Characters, not columns: the model knows
+     * nothing of the terminal, so a character two columns wide counts one here. What is drawn is measured in columns
+     * where it is drawn.
      */
-    public static int width(Tree tree) {
+    private static int width(Tree tree) {
         return switch (tree) {
             case Tree.Scalar scalar ->
                 scalar.properties().text().length()
