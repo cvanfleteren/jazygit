@@ -229,13 +229,6 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
         return start(stop);
     }
 
-    /**
-     * The line after the last of the stop the cursor is on, and of the lines after it that are no stop.
-     */
-    public int stopEnd() {
-        return after(stop);
-    }
-
     private Option<DiffCursor> thread(Option<Integer> found) {
         return found.filter(ignored -> mark.isEmpty())
                 .map(index -> at(index, row).shown());

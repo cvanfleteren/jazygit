@@ -87,7 +87,6 @@ class DiffCursorTest {
         assertAt(THREAD, 8, on(LEAD, 0).toLine(12).get());
         assertAt(THREE, 15, on(LEAD, 0).toLine(16).get());
         assertEquals(16, on(LEAD, 0).toLine(16).get().stopStart());
-        assertEquals(20, on(LEAD, 0).toLine(16).get().stopEnd());
     }
 
     @Test

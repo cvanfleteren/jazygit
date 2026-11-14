@@ -223,6 +223,134 @@ class ContentSearchTest {
         }
     }
 
+    @Test
+    void aMatchGoneToStaysCurrentWhenTheRowsAboveItMoveAsTheThreadsAreReadAgain() throws Exception {
+        Driven driven = new Driven(ContentPanelTest.pullRequestDiff("Why?", """
+                        diff --git a/a.txt b/a.txt
+                        --- a/a.txt
+                        +++ b/a.txt
+                        @@ -0,0 +1,2 @@
+                        +a
+                        +zed
+                        """), FilesPanel.ID);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
+            SettledPilot.focus(testRunner, driven.area());
+            driven.screen(testRunner);
+            driven.type(testRunner, "/zed");
+            driven.press(testRunner, KeyCode.ENTER);
+            String before = driven.screen(testRunner);
+            assertTrue(before.contains("/zed 1/1"), before);
+
+            // A reply makes the thread above the match longer.
+            driven.model.set(
+                    Update.update(driven.model.get(), ContentPanelTest.remarksLoaded("Why?\n\nOne.\n\nTwo.\n\nThree."))
+                            .model());
+            String after = driven.screen(testRunner);
+            assertTrue(after.contains("Three."), after);
+            assertTrue(after.contains("/zed 1/1"), after);
+        }
+    }
+
+    @Test
+    void whatTheTitleSaidOfTheSearchGoesWhenTheAreaLosesTheFocus() throws Exception {
+        Driven driven = new Driven(commit(DiffStyle.RICH));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
+            SettledPilot.focus(testRunner, driven.area());
+            driven.screen(testRunner);
+            driven.type(testRunner, "/Foo");
+            driven.press(testRunner, KeyCode.ENTER);
+            driven.type(testRunner, "n");
+            assertTrue(driven.screen(testRunner).contains("search wrapped"), driven.screen(testRunner));
+
+            String elsewhere =
+                    RenderedText.ofLarge(testRunner, () -> driven.panel.render(driven.model.get(), CommitsPanel.ID));
+            assertTrue(elsewhere.contains("/Foo 1/1"), elsewhere);
+            assertFalse(elsewhere.contains("search wrapped"), elsewhere);
+        }
+    }
+
+    @Test
+    void aMatchPastTheRightEdgeIsScrolledToSideways() throws Exception {
+        Driven driven =
+                new Driven(commit(DiffStyle.RICH, DIFF.replace("+three foo", "+" + "x".repeat(200) + " needle")));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
+            SettledPilot.focus(testRunner, driven.area());
+            assertFalse(driven.screen(testRunner).contains("needle"), driven.screen(testRunner));
+            driven.type(testRunner, "/needle");
+            driven.press(testRunner, KeyCode.ENTER);
+
+            assertTrue(
+                    driven.lastScrolled().column() > 100,
+                    String.valueOf(driven.lastScrolled().column()));
+            String screen = driven.screen(testRunner);
+            assertTrue(screen.contains("needle"), screen);
+        }
+    }
+
+    @Test
+    void withoutACursorAMatchBelowTheScreenIsScrolledToTheMiddleOfIt() throws Exception {
+        String lines = List.range(0, 200).map(at -> "+line " + at).mkString("\n");
+        Driven driven = new Driven(commit(
+                DiffStyle.PLAIN,
+                "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -0,0 +1,200 @@\n" + lines + "\n"));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
+            SettledPilot.focus(testRunner, driven.area());
+            driven.screen(testRunner);
+            driven.type(testRunner, "/line 150");
+            driven.press(testRunner, KeyCode.ENTER);
+
+            String screen = driven.screen(testRunner);
+            assertTrue(screen.contains("+line 150"), screen);
+            // The line of the match is about the middle of the area, not its edge.
+            int shown = driven.row(screen, "+line 150");
+            assertTrue(shown > 5 && shown < 25, screen);
+            Found.OnLine found = (Found.OnLine) driven.lastScrolled().found().get();
+            assertEquals(0, found.nth());
+            assertEquals(found.line(), driven.lastScrolled().row() + shown);
+        }
+    }
+
+    @Test
+    void theSecondMatchOfAStopIsFoundAgainInTheNextFrame() throws Exception {
+        Driven driven = new Driven(commit(DiffStyle.RICH, DIFF.replace(" one foo", " one foo and foo")));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
+            SettledPilot.focus(testRunner, driven.area());
+            driven.screen(testRunner);
+            driven.type(testRunner, "/foo");
+            driven.press(testRunner, KeyCode.ENTER);
+            driven.type(testRunner, "n");
+
+            assertEquals(
+                    Option.of(new Found.InStop(onNew(1), 1)),
+                    driven.lastScrolled().found());
+            assertTrue(driven.screen(testRunner).contains("/foo 2/4"), driven.screen(testRunner));
+            assertTrue(driven.screen(testRunner).contains("/foo 2/4"), driven.screen(testRunner));
+        }
+    }
+
+    @Test
+    void theStagedAndUnstagedAreasEachCountTheirMatchesAndOnlyTheFocusedOneHasACurrentOne() throws Exception {
+        Model selected = TestModels.withFilesSelected(
+                net.vanfleteren.jazygit.model.SampleData.git(),
+                List.of(
+                        new net.vanfleteren.jazygit.git.model.FileEntry(
+                                "a.txt", net.vanfleteren.jazygit.git.model.ChangeType.MODIFIED, true, false),
+                        new net.vanfleteren.jazygit.git.model.FileEntry(
+                                "b.txt", net.vanfleteren.jazygit.git.model.ChangeType.MODIFIED, false, true)));
+        Driven driven =
+                new Driven(selected, FilesPanel.ID, ContentArea.UNSTAGED.id().value());
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
+            SettledPilot.focus(testRunner, driven.area());
+            driven.screen(testRunner);
+            driven.type(testRunner, "/new");
+            driven.press(testRunner, KeyCode.ENTER);
+
+            String screen = driven.screen(testRunner);
+            assertTrue(screen.contains("Staged changes · /new · 1 match"), screen);
+            assertTrue(screen.contains("Unstaged changes · /new 1/1"), screen);
+        }
+    }
+
     private static final Anchor THREAD = new Anchor.Thread(
             new net.vanfleteren.jazygit.gh.model.ReviewThread.Id("T1"),
             Option.of(new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1)));
@@ -245,6 +373,10 @@ class ContentSearchTest {
     }
 
     private static Model commit(DiffStyle style) {
+        return commit(style, DIFF);
+    }
+
+    private static Model commit(DiffStyle style, String diff) {
         Model model = TestModels.loaded()
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(style)));
@@ -252,7 +384,7 @@ class ContentSearchTest {
                         Update.update(model, new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(
-                                new Sha("aaaa"), model.preferences().diffOptions(), DiffText.of(DIFF)))
+                                new Sha("aaaa"), model.preferences().diffOptions(), DiffText.of(diff)))
                 .model();
     }
 
@@ -267,13 +399,23 @@ class ContentSearchTest {
         final ContentPanel panel;
 
         final String pane;
+        final Option<String> focused;
 
         Driven(Model start) {
             this(start, CommitsPanel.ID);
         }
 
         Driven(Model start, String pane) {
+            this(start, pane, Option.none());
+        }
+
+        Driven(Model start, String pane, String focused) {
+            this(start, pane, Option.of(focused));
+        }
+
+        private Driven(Model start, String pane, Option<String> focused) {
             this.pane = pane;
+            this.focused = focused;
             model = new AtomicReference<>(start);
             panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
                 dispatched.add(msg);
@@ -282,7 +424,7 @@ class ContentSearchTest {
         }
 
         String area() {
-            return panel.areaOfPane(model.get(), pane).get();
+            return focused.getOrElse(() -> panel.areaOfPane(model.get(), pane).get());
         }
 
         dev.tamboui.toolkit.element.StyledElement<?> render() {

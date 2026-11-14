@@ -199,7 +199,12 @@ public final class ScrollArea {
                 .filter(shift -> shift != 0)
                 .map(shift -> {
                     Scrolled shifted = new Scrolled(
-                            told.content(), Math.max(0, told.row() + shift), told.column(), told.cursor(), told.mark());
+                            told.content(),
+                            Math.max(0, told.row() + shift),
+                            told.column(),
+                            told.cursor(),
+                            told.mark(),
+                            told.found());
                     sent = Option.of(Tuple.of(known, shifted));
                     return shifted;
                 })
@@ -215,6 +220,11 @@ public final class ScrollArea {
                 at.mark());
         review = shown.body() instanceof Body.Diff(var diff, var look, var remarks) && remarks.isDefined();
         boolean focused = id.equals(focusedId);
+        // What the title said of the search lasts until the next key in the area: the area losing the focus, or
+        // showing another body, is past that too (ADR 126).
+        if (!focused || last.isEmpty()) {
+            notice = Option.none();
+        }
         // The size the element was last drawn in, which a frame in another size draws it in first (ADR 80).
         columns = Math.max(0, current.widest() - state.viewportWidth());
         column = Math.clamp(at.column(), 0, columns);
