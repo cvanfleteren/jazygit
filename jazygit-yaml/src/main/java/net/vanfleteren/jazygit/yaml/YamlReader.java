@@ -92,14 +92,16 @@ final class YamlReader {
     }
 
     private static List<Document> documents(Events events, Vector<String> lines) {
-        List<Document> documents = List.empty();
+        // Vectors, not lists: a list copies itself on each append, which made a file of thousands of nodes take
+        // seconds to read.
+        Vector<Document> documents = Vector.empty();
         while (events.peek() instanceof DocumentStartEvent start) {
             events.skip();
             YamlTree root = node(events, lines, 1);
             events.skip();
             documents = documents.append(new Document(start.isExplicit() ? line(start) : root.line(), root));
         }
-        return documents;
+        return documents.toList();
     }
 
     private static YamlTree node(Events events, Vector<String> lines, int depth) {
@@ -117,16 +119,17 @@ final class YamlReader {
     }
 
     private static Sequence sequence(SequenceStartEvent start, Events events, Vector<String> lines, int depth) {
-        List<YamlTree> elements = List.empty();
+        Vector<YamlTree> elements = Vector.empty();
         while (!(events.peek() instanceof SequenceEndEvent)) {
             elements = elements.append(node(events, lines, depth + 1));
         }
         Event end = events.next();
-        return new Sequence(line(start), end(start, end, elements.map(YamlTree::end)), properties(start), elements);
+        return new Sequence(
+                line(start), end(start, end, elements.map(YamlTree::end)), properties(start), elements.toList());
     }
 
     private static Mapping mapping(MappingStartEvent start, Events events, Vector<String> lines, int depth) {
-        List<Field> written = List.empty();
+        Vector<Field> written = Vector.empty();
         while (!(events.peek() instanceof MappingEndEvent)) {
             YamlTree key = node(events, lines, depth + 1);
             YamlTree value = node(events, lines, depth + 1);
@@ -144,7 +147,7 @@ final class YamlReader {
      * {@code written} with only the last field of each key, where it is written, holding the lines of the keys of the
      * others: in one pass over it, for a mapping of thousands of keys.
      */
-    private static List<Field> lastHolds(List<Field> written) {
+    private static List<Field> lastHolds(Vector<Field> written) {
         Map<String, List<Integer>> lines = written.foldLeft(
                 HashMap.empty(),
                 (done, field) -> done.put(
@@ -158,14 +161,15 @@ final class YamlReader {
                         at._1.key(),
                         at._1.line(),
                         at._1.value(),
-                        lines.get(at._1.key()).get().init()));
+                        lines.get(at._1.key()).get().init()))
+                .toList();
     }
 
     /**
      * The line a mapping or a sequence ends on: of its closing bracket when it is written in flow style, else of the
      * end of what it holds last. SnakeYAML ends a block at the next token, which may be lines of comments later.
      */
-    private static int end(CollectionStartEvent start, Event end, List<Integer> ends) {
+    private static int end(CollectionStartEvent start, Event end, Vector<Integer> ends) {
         return start.isFlow() ? line(end) : ends.max().getOrElse(line(start));
     }
 
@@ -204,7 +208,8 @@ final class YamlReader {
      * without the blank lines it ends with, and without the indentation they share.
      */
     private static Block block(ScalarEvent event, Properties properties, Vector<String> lines) {
-        int indicator = event.getStartMark().map(Mark::getLine).orElse(0);
+        int indicator =
+                event.getStartMark().map(start -> indicator(start, lines)).orElse(0);
         int last = event.getEndMark()
                 .map(mark -> mark.getColumn() == 0 ? mark.getLine() - 1 : mark.getLine())
                 .orElse(indicator);
@@ -224,6 +229,39 @@ final class YamlReader {
                 properties,
                 event.getScalarStyle() == ScalarStyle.FOLDED,
                 content);
+    }
+
+    /**
+     * The line, counted from 0, of the indicator of a block that starts at {@code start}: SnakeYAML starts it where
+     * its tag or anchor is, which may be a line or more before its {@code |} or {@code >}.
+     */
+    private static int indicator(Mark start, Vector<String> lines) {
+        return Vector.range(start.getLine(), lines.size())
+                .find(at -> opens(
+                        at == start.getLine()
+                                ? lines.get(at)
+                                        .substring(lines.get(at)
+                                                .offsetByCodePoints(
+                                                        0,
+                                                        Math.min(
+                                                                start.getColumn(),
+                                                                lines.get(at)
+                                                                        .codePointCount(
+                                                                                0,
+                                                                                lines.get(at)
+                                                                                        .length()))))
+                                : lines.get(at)))
+                .getOrElse(start.getLine());
+    }
+
+    /**
+     * Whether {@code text} holds the indicator of a block, after any tag or anchor.
+     */
+    private static boolean opens(String text) {
+        return List.of(text.strip().split("\\s+"))
+                .dropWhile(token -> token.startsWith("!") || token.startsWith("&"))
+                .headOption()
+                .exists(token -> token.startsWith("|") || token.startsWith(">"));
     }
 
     private static int indentation(String line) {

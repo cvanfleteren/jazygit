@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.yaml;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -117,6 +118,42 @@ class YamlTreeTest {
                 new Block(8, 10, NONE, true, List.of("folded", "text")),
                 mapping.fields().get(1).value());
         assertEquals(11, mapping.fields().get(2).line());
+    }
+
+    @Test
+    void aBlockWithItsTagOrAnchorOnTheLineBeforeStartsAtItsIndicator() {
+        Mapping mapping = (Mapping) root("""
+                run: !shell
+                  |
+                  a
+                  b
+                script: &s
+                  >
+                  c
+                d: 1
+                """);
+
+        assertEquals(
+                new Block(2, 4, new Properties(Option.of("!shell"), Option.none()), false, List.of("a", "b")),
+                mapping.fields().head().value());
+        assertEquals(
+                new Block(6, 7, new Properties(Option.none(), Option.of("s")), true, List.of("c")),
+                mapping.fields().get(1).value());
+    }
+
+    @Test
+    void aSequenceAndAMappingOfFiftyThousandEntriesAreReadInTimeLinearInThem() {
+        String sequence = List.range(0, 50_000).map(at -> "- " + at).mkString("\n");
+        String mapping = List.range(0, 50_000).map(at -> "k" + at + ": " + at).mkString("\n");
+
+        long started = System.nanoTime();
+        int read = ((Sequence) root(sequence)).elements().size()
+                + ((Mapping) root(mapping)).fields().size();
+        long millis = (System.nanoTime() - started) / 1_000_000;
+
+        assertEquals(100_000, read);
+        // Appending to lists, reading 40 000 entries took forty seconds.
+        assertTrue(millis < 5_000, millis + " ms");
     }
 
     @Test
