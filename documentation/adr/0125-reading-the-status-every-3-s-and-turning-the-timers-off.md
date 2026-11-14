@@ -35,20 +35,24 @@ creating, merging or ending a pull request fetch.
    in `Setting.ALL` through their lens, and in the settings file only when off. They are global, as the other
    settings; not per repository, and no mode that lasts a session: the code would be the same, a boolean in the model.
    Each has a row in the settings panel that turns it on or off and keeps that, as the animations do (ADR 81).
-4. **`Update` decides, not `Timers`.** The timers keep running; their messages are ignored while the setting is off.
-   A setting changed in the panel or in the file (ADR 111) applies at the next message, without scheduling anything
-   again, and a test needs no clock. Turning one back on reads or fetches at the next tick (at most 3 s, or a minute),
-   not at once.
-5. **With `git.auto-refresh` off, a tick reads nothing while the terminal has the focus**: not the status, nor what
-   `CheckMetadata` guards, nor which worktrees have changes, nor what failed before. While away, the tick is kept in
-   `Jobs.missed` and never handled on its 15 s: so when the focus comes back it is handled once, as each kept message
-   is (ADR 67), and the status is read then. The repository is still read at the start of a session and after each of
-   jazygit's own commands (`Update.refresh`, which also tries again what failed).
-6. **With `git.auto-fetch` off, `FetchMsg.Tick` fetches nothing**: neither the one of the timer, nor the one sent at
-   the start of a session (ADR 17). A fetch the user asks for still runs, as do those `FetchUpdate.requested` starts
-   after the user's own pull request actions. GitHub is read as before: the overview of the pull requests and the
-   pull requests of the branches read at the start are not fetches. Turning it off does not stop a fetch that runs,
-   nor the fetch it was asked to run again once done.
+4. **`Update` decides, not `Timers`.** The timers keep running; `Update.handle`, where each message from outside
+   arrives and where the away check of ADR 67 already is, does not pass on what the timer sends while its setting is
+   off. A setting changed in the panel or in the file (ADR 111) applies at the next message, without scheduling
+   anything again, and a test needs no clock. Turning one back on reads or fetches at the next tick (at most 3 s, or a
+   minute), not at once.
+5. **With `git.auto-refresh` off, a tick the timer sends reads nothing while the terminal has the focus**: not the
+   status, nor what `CheckMetadata` guards, nor which worktrees have changes, nor what failed before. While away,
+   `Update.handle` keeps it in `Jobs.missed` (`keptWhileAway`) without asking whether it is due, so it is never handled
+   on its 15 s. When the focus comes back, `Update.focused` hands each kept message to its `apply` directly instead of
+   to `Update.handle` again: the away check is moot then, as the app is back, and so is the switch, which is about
+   what the timer sends, not about a read that was put off. So the kept tick reads the status once then. The
+   repository is still read at the start of a session and after each of jazygit's own commands (`Update.refresh`,
+   which also tries again what failed).
+6. **With `git.auto-fetch` off, `Update.handle` drops `FetchMsg.Tick`**, focused or away, so it is not kept either:
+   neither the one of the timer, nor the one sent at the start of a session (ADR 17), fetches. A fetch the user asks
+   for still runs, as do those `FetchUpdate.requested` starts after the user's own pull request actions. GitHub is
+   read as before: the overview of the pull requests and the pull requests of the branches read at the start are not
+   fetches. Turning it off does not stop a fetch that runs, nor the fetch it was asked to run again once done.
 7. **A key fetches from the remotes**: `f` in the files and the branches panels, as lazygit, whatever
    `git.auto-fetch` says. It goes through `FetchUpdate.requested`: it fetches now, or once the fetch that runs is done.
    The line at the bottom says how it went, as for the fetches of the timer. `f` is the fixup of the commits panel,
@@ -60,9 +64,16 @@ creating, merging or ending a pull request fetch.
 
 - An idle, focused jazygit reads the status 20 times a minute instead of 60. A change made outside it (an editor in a
   split saving a file) shows up to 3 s later; one made while away still shows as the focus comes back.
-- Which worktrees have changes is read with every tick now: both are every 3 s.
+- Which worktrees have changes is read with every tick, and after each of jazygit's own commands:
+  `Update.WORKTREE_CHANGES_INTERVAL` and its guard go. That guard was measured from when the last read finished, so
+  a 3 s guard would skip every other 3 s tick (the read came every 4 s with a 1 s tick, not every 3 s). A read of
+  them that still runs is not started again, as for the other loads.
 - The backoff of a read that failed (ADR 31) counts ticks, and so waits 3 times longer: at most 64 ticks, some 192 s
-  instead of 64 s.
+  instead of 64 s. That is meant: a read that keeps failing, like the preview of a commit that is gone, has no need
+  to be tried every minute, and one of jazygit's own commands tries it again at once anyway. `Jobs.MAX_BACKOFF_SHIFT`
+  stays 6; its Javadoc says 3 minutes.
+- Tests: with auto-refresh off, a focused tick asks for no command; losing the focus, a tick, and the focus coming
+  back asks for a `LoadStatus`. With auto-fetch off, a `FetchMsg.Tick` asks for nothing, focused or away.
 - With `git.auto-fetch` off, the branches show how they compare with the remotes, and their pull requests, as of the
   last fetch: one the user asked for, or the one after their own pull request actions.
 - A terminal that does not report the focus never reads on a timer with `git.auto-refresh` off.
