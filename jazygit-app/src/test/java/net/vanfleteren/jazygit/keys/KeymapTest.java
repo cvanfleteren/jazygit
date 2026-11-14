@@ -247,6 +247,9 @@ class KeymapTest {
                         "help.diff.foldAll",
                         "help.diff.version",
                         "help.diff.render",
+                        "help.diff.search",
+                        "help.diff.nextMatch",
+                        "help.diff.previousMatch",
                         "help.diff.copy",
                         "help.diff.range"),
                 descriptions(Scopes.DIFF));
@@ -260,6 +263,7 @@ class KeymapTest {
                         "help.diff.foldAll",
                         "help.diff.version",
                         "help.diff.render",
+                        "help.diff.search",
                         "help.diff.copy"),
                 descriptions(Scopes.PULL_REQUEST_DIFF).filter(key -> key.startsWith("help.diff.")));
         assertEquals(
