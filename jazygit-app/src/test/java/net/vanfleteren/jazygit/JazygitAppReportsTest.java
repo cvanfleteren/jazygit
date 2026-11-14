@@ -41,6 +41,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
@@ -112,13 +113,60 @@ class JazygitAppReportsTest {
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
 
-            // The command log, which takes no focus.
-            pilot.mousePress(MouseButton.LEFT, 150, SIZE.height() - 3);
+            // The fetch line, which takes no focus.
+            pilot.mousePress(MouseButton.LEFT, 150, SIZE.height() - 1);
             pilot.pause();
 
             assertEquals(CommitsPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
             pilot.press(KeyCode.DOWN);
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(1)));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void atGivesTheCommandLogTheFocusAndItGrows() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            int before = pilot.findElement(CommandLogPanel.ID).height();
+
+            pilot.press('@');
+            pilot.pause();
+
+            assertEquals(CommandLogPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+            // Empty, it is as tall as without the focus: there is nothing more to show.
+            assertEquals(before, pilot.findElement(CommandLogPanel.ID).height());
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void aClickOnTheCommandLogGivesItTheFocusAndEscapeGivesItBack() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+
+            Rect log = pilot.findElement(CommandLogPanel.ID);
+            pilot.mousePress(MouseButton.LEFT, log.left() + 3, log.top() + 1);
+            pilot.pause();
+
+            assertEquals(CommandLogPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+            // The model keeps the pane the focus was in: the content panel still shows its commit.
+            assertTrue(app.model().shownPane().contains(CommitsPanel.ID));
+
+            pilot.press(KeyCode.ESCAPE);
+            pilot.pause();
+
+            assertEquals(CommitsPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
         } finally {
             app.onStop();
         }

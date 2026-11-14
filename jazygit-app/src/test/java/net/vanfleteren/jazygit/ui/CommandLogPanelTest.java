@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.operation.LogEntry;
 import net.vanfleteren.jazygit.state.operation.Notice;
 import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -170,8 +171,8 @@ class CommandLogPanelTest {
                 "boom");
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model, 4, Option.none()))) {
-            String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model, 4, Option.none()));
+                ToolkitTestRunner.runTest(() -> CommandLogPanel.fitted(model, 4, Option.none()))) {
+            String screen = RenderedText.of(testRunner, () -> CommandLogPanel.fitted(model, 4, Option.none()));
             assertFalse(screen.contains("old.txt"), screen);
             assertTrue(screen.contains("git add -- new.txt"), screen);
             assertTrue(screen.contains("Checkout of foo failed: boom"), screen);
@@ -219,9 +220,9 @@ class CommandLogPanelTest {
         int rows = CommandLogPanel.height(model, room);
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model, rows, room))) {
+                ToolkitTestRunner.runTest(() -> CommandLogPanel.fitted(model, rows, room))) {
             String screen =
-                    RenderedText.ofSize(testRunner, () -> CommandLogPanel.render(model, rows, room), columns, rows);
+                    RenderedText.ofSize(testRunner, () -> CommandLogPanel.fitted(model, rows, room), columns, rows);
             assertTrue(screen.contains("END"), screen);
 
             SettledPilot.of(testRunner).quit();
@@ -231,6 +232,74 @@ class CommandLogPanelTest {
     /**
      * Room for the log in a column {@code rows} tall and wide enough for its lines.
      */
+    @Test
+    void withTheFocusGrowsToHalfTheColumnOrAsTallAsAllItLogged() {
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, id -> {}, () -> {});
+        Model model = TestModels.withLog(
+                TestModels.loaded(SampleData.git()),
+                new LogEntry(StageCmd.STAGE, executed("git add -- a", "git add -- b", "git add -- c")),
+                new LogEntry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")),
+                new LogEntry(StageCmd.STAGE, executed("git add -- g", "git add -- h", "git add -- i")));
+
+        // Twelve lines and the borders, which half of 40 rows holds.
+        assertEquals(2 + 12, panel.focusedHeight(model, room(40)));
+        // Half of 24 rows, more than the 10 it has without the focus.
+        assertEquals(12, panel.focusedHeight(model, room(24)));
+        // On a short screen too, where it has 4 rows without the focus.
+        assertEquals(4, CommandLogPanel.height(model, room(16)));
+        assertEquals(8, panel.focusedHeight(model, room(16)));
+        Model empty = TestModels.loaded(SampleData.git());
+        assertEquals(CommandLogPanel.BORDERS, panel.focusedHeight(empty, room(40)));
+    }
+
+    @Test
+    void withTheFocusShowsAllItLoggedFromTheNewestAndScrolls() throws Exception {
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, id -> {}, () -> {});
+        Model model = TestModels.withLog(
+                TestModels.loaded(SampleData.git()),
+                new LogEntry(StageCmd.STAGE, executed("git add -- oldest.txt", "git add -- b", "git add -- c")),
+                new LogEntry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")),
+                new LogEntry(StageCmd.STAGE, executed("git add -- g", "git add -- h", "git add -- newest.txt")));
+        Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 60));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> panel.render(model, 6, 6, room, true), new dev.tamboui.layout.Size(60, 6))) {
+            String newest = RenderedText.ofSize(testRunner, () -> panel.render(model, 6, 6, room, true), 60, 6);
+            assertTrue(newest.contains("newest.txt"), newest);
+            assertFalse(newest.contains("oldest.txt"), newest);
+
+            SettledPilot.focus(testRunner, CommandLogPanel.ID);
+            var pilot = SettledPilot.of(testRunner);
+            pilot.press('g');
+            pilot.pause();
+
+            String oldest = RenderedText.ofSize(testRunner, () -> panel.render(model, 6, 6, room, true), 60, 6);
+            assertTrue(oldest.contains("oldest.txt"), oldest);
+            assertFalse(oldest.contains("newest.txt"), oldest);
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void withTheFocusShowsTheWholeErrorWrapped() throws Exception {
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, id -> {}, () -> {});
+        Model model = TestModels.withCheckoutError(
+                TestModels.loaded(SampleData.git()), "foo", "a  b  c  d  e  f  g  h  i  j  k  l  m  n  o  p END");
+        Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 16));
+        int rows = panel.focusedHeight(model, room);
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model, rows, rows, room, true))) {
+            String screen =
+                    RenderedText.ofSize(testRunner, () -> panel.render(model, rows, rows, room, true), 16, rows);
+            assertTrue(screen.contains("Checkout"), screen);
+            assertTrue(screen.contains("END"), screen);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
     private static Option<CommandLogPanel.Room> room(int rows) {
         return Option.of(new CommandLogPanel.Room(rows, 200));
     }
@@ -239,7 +308,7 @@ class CommandLogPanelTest {
      * The panel of {@code model} as tall as its lines.
      */
     private static Panel shown(Model model) {
-        return CommandLogPanel.render(model, CommandLogPanel.height(model, Option.none()), Option.none());
+        return CommandLogPanel.fitted(model, CommandLogPanel.height(model, Option.none()), Option.none());
     }
 
     /**

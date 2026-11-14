@@ -69,6 +69,10 @@ public class JazygitApp extends ToolkitApp {
     private final ContentPanel contentPanel;
     private final FocusKeeper focus;
     private final LeftColumn leftColumn;
+    private final CommandLogPanel commandLogPanel;
+    // Whether the help asked for the command log to take the focus once it is closed; only touched on the render
+    // thread.
+    private boolean commandLogAsked;
     // The borders of the left column and of the panes in it, which the user drags.
     private final BorderDrag borderDrag = new BorderDrag(dispatch);
     // Whether a Redraw is queued that no frame has been drawn since; only touched on the render thread.
@@ -115,6 +119,8 @@ public class JazygitApp extends ToolkitApp {
                 dispatch);
         this.focus = new FocusKeeper(this::runner, this::model, contentPanel, popups, this::requestRedraw);
         this.leftColumn = new LeftColumn(dispatch, styleEngine, clock, focus::openContent, this::showBranchesTab);
+        this.commandLogPanel = new CommandLogPanel(
+                Theme.spanStyles(styleEngine), id -> runner().focusManager().setFocus(id), this::leaveCommandLog);
         this.session = new RepositorySession(
                 env, terminal, this::runner, clock, this::requestRedraw, this::quit, this::started);
     }
@@ -139,6 +145,13 @@ public class JazygitApp extends ToolkitApp {
             case HelpMsg.Chosen(FileStepMsg(FileStepMsg.Step step)) -> {
                 session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
                 stepFile(step);
+            }
+            // The focus is the app's, not the model's: it moves it into the command log itself (ADR 129).
+            case CommandLogFocused() -> focus.moveToCommandLog();
+            // The help gives the focus back as it closes, so the log takes it in the frame after.
+            case HelpMsg.Chosen(CommandLogFocused()) -> {
+                commandLogAsked = true;
+                session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
             }
             default -> session.dispatch(msg);
         }
@@ -309,7 +322,7 @@ public class JazygitApp extends ToolkitApp {
                         : rendered.column().percent(model.preferences().leftWidth(model.screen())));
         var panes = row(
                 left,
-                column(contentPanel.render(model, focusedId).fill(), commandLog(model))
+                column(contentPanel.render(model, focusedId).fill(), commandLog(model, focusedId))
                         .fill());
         // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
         Element layout = column(
@@ -320,6 +333,10 @@ public class JazygitApp extends ToolkitApp {
         Popups.Rendered shown = popups.render(model, Option.of(focusedId));
         report(reports());
         shown.moveTo().forEach(focus::moveTo);
+        if (commandLogAsked && model.popup().isEmpty()) {
+            commandLogAsked = false;
+            focus.moveToCommandLog();
+        }
         focus.redrawIfMoves(focusedId);
         if (model != clocked) {
             clocked = model;
@@ -412,16 +429,24 @@ public class JazygitApp extends ToolkitApp {
      * column, which is as tall as the left one, once the height of the screen is known. It is drawn for the height it
      * goes to, in the rows it takes on its way there.
      */
-    private Element commandLog(Model model) {
+    private Element commandLog(Model model, String focusedId) {
         Option<CommandLogPanel.Room> room = leftHeight()
                 .flatMap(column -> Try.of(
                                 () -> runner().tuiRunner().backend().size().width())
                         .toOption()
                         .map(width -> new CommandLogPanel.Room(column, width - leftColumnsChosen(model, width))));
-        int rows = CommandLogPanel.height(model, room);
-        return CommandLogPanel.render(model, rows, room)
-                .length(commandLogRows(
-                        model, room.map(CommandLogPanel.Room::rows).getOrElse(0), rows));
+        // With the focus, it grows to show more of what it logged (ADR 129).
+        boolean focused = CommandLogPanel.ID.equals(focusedId);
+        int rows = focused ? commandLogPanel.focusedHeight(model, room) : CommandLogPanel.height(model, room);
+        int shown = commandLogRows(model, room.map(CommandLogPanel.Room::rows).getOrElse(0), rows);
+        return commandLogPanel.render(model, rows, shown, room, focused);
+    }
+
+    /**
+     * Gives the focus back from the command log to where it was before it had it (ADR 129).
+     */
+    private void leaveCommandLog() {
+        focus.leaveCommandLog(model());
     }
 
     /**

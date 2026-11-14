@@ -1,32 +1,58 @@
 package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.panel;
+import static dev.tamboui.toolkit.Toolkit.richTextArea;
 import static dev.tamboui.toolkit.Toolkit.text;
 
+import dev.tamboui.layout.Constraint;
+import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Overflow;
+import dev.tamboui.style.RichTextState;
+import dev.tamboui.terminal.Frame;
+import dev.tamboui.text.Line;
+import dev.tamboui.text.Span;
+import dev.tamboui.text.Text;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.RenderContext;
+import dev.tamboui.toolkit.element.Size;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.elements.RichTextAreaElement;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.operation.Outcome;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
 import net.vanfleteren.jazygit.ui.text.NoticeText;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
+import net.vanfleteren.jazygit.ui.widgets.BorderBar;
 
 /**
  * Right-hand panel under the content panel, logging the mutating git commands that were executed, each
- * under a title, followed by why the last operation failed, when it did, or by a notice about it. It is
- * display-only and does not take part in focus cycling.
+ * under a title, followed by why the last operation failed, when it did, or by a notice about it (ADR 129).
  *
  * <p>It is as tall as its lines, up to {@link #VISIBLE_LINES}, and the error or notice as it wraps: empty, it is its
  * borders and title alone. The content panel above it comes first: the log takes only the rows the content panel can
  * spare above {@link #CONTENT_MIN_ROWS}, and no fewer than its borders and a row of the error or notice, so a failure
- * always shows. While the content panel is maximized, by
- * collapsing the left column (ADR 104), the log shows the error or notice alone.
+ * always shows. While the content panel is maximized, by collapsing the left column (ADR 104), the log shows the
+ * error or notice alone.
+ *
+ * <p>{@code @} or a click gives it the focus, which no Tab or arrow does: it then grows to half the column, or as tall
+ * as all it logged when that is less, and shows all of it, wrapped, from the newest, to scroll through. Escape gives
+ * the focus back to where it was.
  */
 public final class CommandLogPanel {
+
+    /**
+     * The id the panel has the focus by.
+     */
+    public static final String ID = "command-log";
 
     /**
      * How many lines of commands fit in the panel at most; the oldest ones scroll off.
@@ -45,12 +71,32 @@ public final class CommandLogPanel {
 
     private static final String INDENT = "  ";
 
-    private CommandLogPanel() {}
+    private final Theme.SpanStyles styles;
+    private final Consumer<String> focus;
+    private final Runnable leave;
+    // The text area the log is drawn in while it has the focus, which keeps where it is scrolled to; whether it had
+    // the focus in the frame before, and the rows it was wrapped into last, for the outcome and the width they were
+    // wrapped for. Only used from the render thread.
+    private final RichTextAreaElement area = richTextArea().id(ID).fill();
+    private boolean focusedBefore = false;
+    private Option<Wrapped> wrapped = Option.none();
 
     /**
-     * How many rows the panel takes in {@code room}, when that is known: its lines and borders, as many lines as the
-     * content panel can spare above {@link #CONTENT_MIN_ROWS}, but at least its borders, and a row of the error or
-     * notice when there is one. The error or notice takes the rows it wraps onto, even past {@link #VISIBLE_LINES}.
+     * @param styles how the lines are coloured while the log has the focus
+     * @param focus  gives the focus to the element with the id given, for a click on the log
+     * @param leave  gives the focus back to where it was before the log had it, for Escape
+     */
+    public CommandLogPanel(Theme.SpanStyles styles, Consumer<String> focus, Runnable leave) {
+        this.styles = styles;
+        this.focus = focus;
+        this.leave = leave;
+    }
+
+    /**
+     * How many rows the panel takes in {@code room}, when that is known, without the focus: its lines and borders, as
+     * many lines as the content panel can spare above {@link #CONTENT_MIN_ROWS}, but at least its borders, and a row
+     * of the error or notice when there is one. The error or notice takes the rows it wraps onto, even past
+     * {@link #VISIBLE_LINES}.
      */
     public static int height(Model model, Option<Room> room) {
         int outcome = outcomeRows(model, room);
@@ -61,16 +107,112 @@ public final class CommandLogPanel {
     }
 
     /**
-     * The panel {@code rows} tall in {@code room}: the newest lines that fit in it above the error or notice, which
-     * is kept out of the cut, and shows while a line fits.
+     * How many rows the panel takes in {@code room} with the focus: half the column, or as many as all it logged
+     * takes, wrapped, and its borders, when that is less; but no fewer than without the focus.
      */
-    public static Panel render(Model model, int rows, Option<Room> room) {
+    public int focusedHeight(Model model, Option<Room> room) {
+        return room.map(column -> Math.max(
+                        height(model, room),
+                        Math.min(
+                                column.rows() / 2, BORDERS + rows(model, column).size())))
+                .getOrElse(() -> height(model, room));
+    }
+
+    /**
+     * The panel {@code rows} tall in {@code room}, drawn {@code shown} rows tall on its way there: with the
+     * {@code focused} focus, all it logged, to scroll through; else what {@link #fitted} shows, which a click gives the
+     * focus.
+     */
+    public Element render(Model model, int rows, int shown, Option<Room> room, boolean focused) {
+        if (!focused) {
+            focusedBefore = false;
+            return fitted(model, rows, room).id(ID).length(shown).onMouseEvent(this::clicked);
+        }
+        List<Row> all = room.map(column -> rows(model, column)).getOrElse(List.empty());
+        RichTextState state = area.state();
+        // The state clamps a scroll to what it was last drawn with: what it shows now is set first.
+        state.setContentHeight(all.size());
+        state.setViewportHeight(Math.max(0, rows - BORDERS));
+        // Given the focus, it shows the newest lines, as it did without it.
+        if (!focusedBefore) {
+            state.scrollToBottom();
+        }
+        focusedBefore = true;
+        area.text(Text.from(all.map(row -> Line.from(Span.styled(row.text(), styles.of(row.cssClass()))))
+                        .toJavaList()))
+                .title(Messages.get("panel.commandLog.title"))
+                .focusable(true)
+                .onKeyEvent(this::keys);
+        return new Barred(shown);
+    }
+
+    /**
+     * The panel {@code rows} tall in {@code room} without the focus: the newest lines that fit in it above the error
+     * or notice, which is kept out of the cut, and shows while a line fits.
+     */
+    static Panel fitted(Model model, int rows, Option<Room> room) {
         int lines = Math.max(0, rows - BORDERS);
         Option<Element> outcome = outcome(model).filter(line -> lines > 0);
         List<Element> shown = logLines(model)
                 .takeRight(Math.max(0, lines - outcomeRows(model, room)))
                 .appendAll(outcome);
         return panel(Messages.get("panel.commandLog.title"), shown.toJavaArray(Element[]::new));
+    }
+
+    /**
+     * A click on the log gives it the focus.
+     */
+    private EventResult clicked(MouseEvent event) {
+        if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
+            focus.accept(ID);
+            return EventResult.HANDLED;
+        }
+        return EventResult.UNHANDLED;
+    }
+
+    /**
+     * What {@code event} does with the focus on the log: Escape gives the focus back, {@code j} and {@code k} scroll a
+     * row, as the arrows do, and {@code g} and {@code G} to the top and the bottom, as Home and End do. The text area
+     * scrolls by the arrows, the pages, Home and End itself; the keys that work everywhere work here too.
+     */
+    private EventResult keys(KeyEvent event) {
+        RichTextState state = area.state();
+        Option<Runnable> action = Option.<Runnable>none()
+                .orElse(Option.when(event.isCancel(), () -> leave))
+                .orElse(Option.when(plain(event, 'j'), () -> state::scrollDown))
+                .orElse(Option.when(plain(event, 'k'), () -> state::scrollUp))
+                .orElse(Option.when(plain(event, 'g'), () -> state::scrollToTop))
+                .orElse(Option.when(plain(event, 'G'), () -> state::scrollToBottom));
+        action.forEach(Runnable::run);
+        return action.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+    }
+
+    private static boolean plain(KeyEvent event, char c) {
+        return event.isChar(c) && !event.hasCtrl() && !event.hasAlt();
+    }
+
+    /**
+     * The rows all the log takes in {@code room}, wrapped at words inside its borders as they are drawn: the commands
+     * of every operation under its title, oldest first, and the error or notice. Wrapped once for an outcome and a
+     * width.
+     */
+    private List<Row> rows(Model model, Room room) {
+        int width = room.columns() - BORDERS;
+        Outcome outcome = model.outcome();
+        Wrapped current = wrapped.filter(last -> last.outcome() == outcome && last.width() == width)
+                .getOrElse(() -> new Wrapped(
+                        outcome,
+                        width,
+                        outcome.commandLog()
+                                .flatMap(entry -> List.of(new Row(
+                                                Messages.get(entry.operation().logTitleKey()), Theme.Classes.BOLD))
+                                        .appendAll(entry.commands()
+                                                .map(command -> new Row(INDENT + command.line(), Theme.Classes.DIM))))
+                                .appendAll(outcomeText(model).map(text -> new Row(text, outcomeClass(model))))
+                                .flatMap(row -> TextWidth.wrapped(row.text(), width)
+                                        .map(text -> new Row(text, row.cssClass())))));
+        wrapped = Option.of(current);
+        return current.rows();
     }
 
     /**
@@ -95,9 +237,12 @@ public final class CommandLogPanel {
      */
     private static Option<Element> outcome(Model model) {
         return outcomeText(model)
-                .map(text -> text(text)
-                        .addClass(model.outcome().error().isDefined() ? Theme.Classes.ERROR : Theme.Classes.NOTICE))
+                .map(text -> text(text).addClass(outcomeClass(model)))
                 .map(line -> line.overflow(Overflow.WRAP_WORD));
+    }
+
+    private static String outcomeClass(Model model) {
+        return model.outcome().error().isDefined() ? Theme.Classes.ERROR : Theme.Classes.NOTICE;
     }
 
     private static Option<String> outcomeText(Model model) {
@@ -117,6 +262,46 @@ public final class CommandLogPanel {
                         .getOrElse(1))
                 .getOrElse(0);
     }
+
+    /**
+     * The text area with the focus, {@code shown} rows tall, and on its right border how far down it is scrolled, as
+     * the areas of the content panel show it.
+     */
+    private final class Barred implements Element {
+
+        private final int shown;
+
+        Barred(int shown) {
+            this.shown = shown;
+        }
+
+        @Override
+        public void render(Frame frame, Rect at, RenderContext context) {
+            area.render(frame, at, context);
+            RichTextState state = area.state();
+            BorderBar.downwards(frame, at, state.contentHeight(), state.viewportHeight(), state.scrollRow());
+        }
+
+        @Override
+        public Constraint constraint() {
+            return Constraint.length(shown);
+        }
+
+        @Override
+        public Size preferredSize(int availableWidth, int availableHeight, RenderContext context) {
+            return area.preferredSize(availableWidth, availableHeight, context);
+        }
+    }
+
+    /**
+     * A row of the log drawn with the focus, in the style of {@code cssClass}.
+     */
+    private record Row(String text, String cssClass) {}
+
+    /**
+     * The rows all the log takes, {@code outcome} wrapped at {@code width} columns.
+     */
+    private record Wrapped(Outcome outcome, int width, List<Row> rows) {}
 
     /**
      * The room the panel is drawn in: under the content panel in a column {@code rows} tall, {@code columns} wide.

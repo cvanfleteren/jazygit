@@ -10,6 +10,9 @@ import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
+import dev.tamboui.widgets.scrollbar.Scrollbar;
+import dev.tamboui.widgets.scrollbar.ScrollbarOrientation;
+import dev.tamboui.widgets.scrollbar.ScrollbarState;
 import io.vavr.collection.Vector;
 import java.util.Optional;
 
@@ -79,6 +82,31 @@ public final class BorderBar implements Element {
                     y,
                     thumb.contains(y) ? new Cell(DOWNWARDS_THUMB, line.style().patch(THUMB)) : line);
         });
+    }
+
+    /**
+     * Draws on the right border of a panel drawn in {@code at} how far down what is inside is scrolled: to row
+     * {@code row} of {@code rows}, of which {@code shown} show. Nothing while they all show, or the panel has no room
+     * inside its border. Its track is the line the border is drawn with, as the theme has it; its thumb, a heavy line,
+     * is in the terminal's own colour, as the areas of the content panel draw theirs.
+     */
+    public static void downwards(Frame frame, Rect at, int rows, int shown, int row) {
+        if (rows <= shown || at.width() < 3 || at.height() < 3) {
+            return;
+        }
+        Rect border = new Rect(at.right() - 1, at.y() + 1, 1, at.height() - 2);
+        frame.renderStatefulWidget(
+                Scrollbar.builder()
+                        .orientation(ScrollbarOrientation.VERTICAL_RIGHT)
+                        .trackSymbol(frame.buffer().get(border.x(), border.y()).symbol())
+                        .thumbSymbol(DOWNWARDS_THUMB)
+                        .thumbStyle(THUMB)
+                        .build(),
+                border,
+                new ScrollbarState()
+                        .contentLength(rows)
+                        .viewportContentLength(shown)
+                        .position(row));
     }
 
     private static Vector<Cell> cells(Buffer buffer, Rect area) {
