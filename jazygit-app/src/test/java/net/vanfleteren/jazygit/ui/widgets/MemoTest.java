@@ -38,4 +38,39 @@ class MemoTest {
         assertEquals("v22", other);
         assertEquals("v13", back);
     }
+
+    @Test
+    void theKeyGivenLastIsKeptSoThatTheNextIsTheSameInstance() {
+        Memo<Counted, String> memo = new Memo<>();
+        AtomicInteger compared = new AtomicInteger();
+        Counted next = new Counted(1, compared);
+
+        memo.get(new Counted(1, compared), key -> "v");
+        memo.get(next, key -> "v");
+        int before = compared.get();
+        memo.get(next, key -> "v");
+
+        // An equal key of another instance is compared field by field; the one kept is the one given last.
+        assertEquals(before, compared.get());
+    }
+
+    /**
+     * A key that counts in {@code compared} how often it is compared to another instance.
+     */
+    private record Counted(int value, AtomicInteger compared) {
+
+        @Override
+        public boolean equals(Object other) {
+            if (other == this) {
+                return true;
+            }
+            compared.incrementAndGet();
+            return other instanceof Counted counted && counted.value == value;
+        }
+
+        @Override
+        public int hashCode() {
+            return value;
+        }
+    }
 }

@@ -634,6 +634,24 @@ class BranchesPanelTest {
                 .withBranchLog(Option.of(new Preview<>(logOf, new Loadable.Loaded<>(log)))));
     }
 
+    @Test
+    void aCommitOfTheBranchCopiedAfterItsCommitsWereDrawnStandsOut() {
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
+        Commit copied = commit("a1", "Older");
+        Model open = listing(feature, feature, List.of(commit("a2", "Ours"), copied));
+        BranchCommitsList list = new BranchCommitsList(BranchesPanel.ID, msg -> {}, () -> {}, Theme.Highlights.DEFAULT);
+
+        list.render(open, true, true);
+        List<Option<String>> before =
+                list.shownRows().map(row -> row.segs().head().cssClass());
+        list.render(open.mapRepoView(repoView -> repoView.withCherryPick(Option.of(copied))), true, true);
+
+        assertEquals(List.of(Option.none(), Option.none()), before);
+        assertEquals(
+                List.of(Option.none(), Option.of(Theme.Classes.COPIED)),
+                list.shownRows().map(row -> row.segs().head().cssClass()));
+    }
+
     private static Commit commit(String sha, String message) {
         return Fixtures.commit(new Sha(sha), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, message, "");
     }

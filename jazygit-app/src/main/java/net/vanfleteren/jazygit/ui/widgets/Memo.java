@@ -18,8 +18,11 @@ public final class Memo<K, V> {
      * The value computed from {@code key}: the one computed last, if that was from a key equal to it.
      */
     public V get(K key, Function<? super K, ? extends V> compute) {
-        Tuple2<K, V> kept =
-                last.filter(previous -> previous._1().equals(key)).getOrElse(() -> Tuple.of(key, compute.apply(key)));
+        // The key given is kept, also when it is equal to the last one: the next one is most likely that same
+        // instance, which is compared at once.
+        Tuple2<K, V> kept = last.filter(previous -> previous._1().equals(key))
+                .map(previous -> Tuple.of(key, previous._2()))
+                .getOrElse(() -> Tuple.of(key, compute.apply(key)));
         last = Option.of(kept);
         return kept._2();
     }

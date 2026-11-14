@@ -242,6 +242,13 @@ public class CommitsPanel {
     }
 
     /**
+     * The rows the last render showed.
+     */
+    List<LoadableList.Row> shownRows() {
+        return list.shownRows();
+    }
+
+    /**
      * {@code rows}, those of {@code commits}, with the commits on the base dimmed and the fork point marked.
      */
     public static List<LoadableList.Row> marked(List<LoadableList.Row> rows, List<Commit> commits, AheadView ahead) {

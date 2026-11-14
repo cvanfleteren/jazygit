@@ -99,6 +99,13 @@ class BranchCommitsList {
     }
 
     /**
+     * The rows the last render showed.
+     */
+    List<LoadableList.Row> shownRows() {
+        return list.shownRows();
+    }
+
+    /**
      * The highlighted commit, once the commits are shown.
      */
     Option<Commit> selectedCommit() {
