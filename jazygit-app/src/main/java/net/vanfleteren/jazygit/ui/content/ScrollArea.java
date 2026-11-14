@@ -60,7 +60,9 @@ import net.vanfleteren.jazygit.ui.theme.Theme;
  */
 public final class ScrollArea {
 
-    // The thumb of the bar on the bottom border that shows how far the area is scrolled sideways.
+    // The thumbs of the bars on the right and the bottom border that show how far the area is scrolled down and
+    // sideways.
+    static final String DOWNWARDS_THUMB = "┃";
     static final String SIDEWAYS_THUMB = "━";
 
     private static final int WHEEL_LINES = 3;
@@ -93,7 +95,7 @@ public final class ScrollArea {
     private boolean review = false;
     // How far the area is scrolled sideways, as last drawn, and how far it can be. TamboUI's text area keeps a
     // column it never draws at, so the area draws its lines with as many columns cut off their start itself, and
-    // shows where it is with TamboUI's scrollbar on its bottom border.
+    // shows where it is with TamboUI's scrollbar on its bottom border, as it shows how far down on its right one.
     private int column = 0;
     private int columns = 0;
     // The size the area was last drawn in, which its lines are fitted to; none before it is first drawn (ADR 80).
@@ -107,7 +109,8 @@ public final class ScrollArea {
         this.leaveScrollArea = leaveScrollArea;
         this.focus = focus;
         this.dispatch = dispatch;
-        element = richTextArea().id(id).scrollbar().fill();
+        // Without TamboUI's scrollbar, which takes a column inside the border: the area draws its own on the border.
+        element = richTextArea().id(id).fill();
     }
 
     /**
@@ -428,34 +431,62 @@ public final class ScrollArea {
                         buffer.set(cells.left() + index % cells.width(), cells.top() + index / cells.width(), cell));
                 again.get().render(frame, at, context);
             }
-            sideways(frame, at);
+            bars(frame, at);
         }
 
         /**
-         * Draws on the bottom border of the area, drawn in {@code at}, how far it is scrolled sideways, as the bar on
-         * its right shows how far down, while its lines are wider than it. Its track is the line the border is drawn
-         * with, single or double as the theme has it, in the colour of the border. Its thumb is a heavy line, as
-         * high as the border's, in the terminal's own colour, as the thumb of the bar on its right is.
+         * Draws on the borders of the area, drawn in {@code at}, how far it is scrolled: down on its right border
+         * while it has more lines than show, sideways on its bottom border while its lines are wider than it. On
+         * the border, a bar takes no column or line from the text.
          */
-        private void sideways(Frame frame, Rect at) {
-            int width = element.state().viewportWidth();
-            if (columns == 0 || at.width() <= 2 || at.height() < 2) {
+        private void bars(Frame frame, Rect at) {
+            if (at.width() < 3 || at.height() < 3) {
                 return;
             }
-            Rect border = new Rect(at.x() + 1, at.bottom() - 1, at.width() - 2, 1);
+            RichTextState state = element.state();
+            int height = state.viewportHeight();
+            int width = state.viewportWidth();
+            if (state.contentHeight() > height) {
+                onBorder(
+                        frame,
+                        new Rect(at.right() - 1, at.y() + 1, 1, at.height() - 2),
+                        ScrollbarOrientation.VERTICAL_RIGHT,
+                        DOWNWARDS_THUMB,
+                        new ScrollbarState()
+                                .contentLength(state.contentHeight())
+                                .viewportContentLength(height)
+                                .position(state.scrollRow()));
+            }
+            if (columns > 0) {
+                onBorder(
+                        frame,
+                        new Rect(at.x() + 1, at.bottom() - 1, at.width() - 2, 1),
+                        ScrollbarOrientation.HORIZONTAL_BOTTOM,
+                        SIDEWAYS_THUMB,
+                        new ScrollbarState()
+                                .contentLength(columns + width)
+                                .viewportContentLength(width)
+                                .position(column));
+            }
+        }
+
+        /**
+         * Draws a bar {@code scrolled} over the side of the border at {@code border}. Its track is the line the
+         * border is drawn with, single or double as the theme has it, in the colour of the border; its thumb, a
+         * heavy line, is in the terminal's own colour.
+         */
+        private void onBorder(
+                Frame frame, Rect border, ScrollbarOrientation orientation, String thumb, ScrollbarState scrolled) {
             frame.renderStatefulWidget(
                     Scrollbar.builder()
-                            .orientation(ScrollbarOrientation.HORIZONTAL_BOTTOM)
+                            .orientation(orientation)
                             .trackSymbol(
                                     frame.buffer().get(border.x(), border.y()).symbol())
-                            .thumbSymbol(SIDEWAYS_THUMB)
+                            .thumbSymbol(thumb)
                             .thumbStyle(Style.EMPTY.fg(Color.RESET))
                             .build(),
                     border,
-                    new ScrollbarState()
-                            .contentLength(columns + width)
-                            .viewportContentLength(width)
-                            .position(column));
+                    scrolled);
         }
 
         @Override
