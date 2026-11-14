@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.Terminal;
 
@@ -20,6 +21,7 @@ final class TerminalHandOver implements Terminal {
     private final Supplier<ToolkitRunner> runner;
     private final Runnable requestRedraw;
     private final Consumer<Boolean> focus;
+    private final IntConsumer drawn;
     // How the terminal is set up, and the backend that hands it over, once the app is configured.
     private TuiConfig config = TuiConfig.defaults();
     private Option<HandOverBackend> backend = Option.none();
@@ -31,11 +33,14 @@ final class TerminalHandOver implements Terminal {
      * @param requestRedraw asks for a frame, on the render thread
      * @param focus         told on the render thread when the terminal gets the focus (true) or loses it (false), as
      *                      a terminal that reports it says
+     * @param drawn         told how many cells each frame drawn changed
      */
-    TerminalHandOver(Supplier<ToolkitRunner> runner, Runnable requestRedraw, Consumer<Boolean> focus) {
+    TerminalHandOver(
+            Supplier<ToolkitRunner> runner, Runnable requestRedraw, Consumer<Boolean> focus, IntConsumer drawn) {
         this.runner = runner;
         this.requestRedraw = requestRedraw;
         this.focus = focus;
+        this.drawn = drawn;
     }
 
     /**
@@ -43,8 +48,8 @@ final class TerminalHandOver implements Terminal {
      */
     TuiConfig configure() {
         // Without a backend of its own, the app still runs, but cannot hand the terminal over, nor tell the focus.
-        backend = Try.of(() ->
-                        HandOverBackend.system(focused -> runner.get().runOnRenderThread(() -> focus.accept(focused))))
+        backend = Try.of(() -> HandOverBackend.system(
+                        focused -> runner.get().runOnRenderThread(() -> focus.accept(focused)), drawn))
                 .onFailure(BugLog::log)
                 .toOption();
         // Frames are drawn when something changed, not on ticks. A paste comes as one event, drawn once, rather than
