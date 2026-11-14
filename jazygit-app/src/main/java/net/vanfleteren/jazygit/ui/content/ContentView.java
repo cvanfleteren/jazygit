@@ -44,6 +44,7 @@ import net.vanfleteren.jazygit.ui.diff.ShownRemarks;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.stash.StashPanel;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 
 /**
  * What the content panel shows in a model, apart from how it is drawn: it mirrors whichever left pane is in use,
@@ -66,6 +67,19 @@ public final class ContentView {
             return pullRequest(model);
         }
         return expanded(model, mirrored(model, focusedId));
+    }
+
+    /**
+     * The times the content shows (ADR 124): how long ago the comments of the review threads in a diff were written,
+     * which it takes to the minute of the clock ({@link #remarks}).
+     */
+    public static List<ShownTime> shownTimes(Model model) {
+        return model.repoView()
+                .commitFiles()
+                .filter(view -> !view.threads().isEmpty())
+                .map(view -> ShownTime.reading(
+                        now -> now.truncatedTo(ChronoUnit.MINUTES).toString()))
+                .toList();
     }
 
     /**

@@ -17,6 +17,7 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.Duration;
@@ -35,6 +36,7 @@ import net.vanfleteren.jazygit.ui.markdown.MarkdownAutolinks;
 import net.vanfleteren.jazygit.ui.markdown.MarkdownImages;
 import net.vanfleteren.jazygit.ui.markdown.MarkdownScroll;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -100,6 +102,17 @@ public final class CommentsDialog implements PopupView {
     @Override
     public List<String> ids() {
         return List.of(ID);
+    }
+
+    /**
+     * The times the dialog shows (ADR 124): how long ago each comment was written.
+     */
+    public static List<ShownTime> shownTimes(Model model) {
+        return model.popup(CommentsPopup.class)
+                .flatMap(popup -> popup.comments().flatMap(Either::toOption))
+                .toList()
+                .flatMap(comments -> comments)
+                .map(comment -> ShownTime.reading(now -> TimeText.age(Duration.between(comment.at(), now))));
     }
 
     /**

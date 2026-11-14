@@ -4,7 +4,6 @@ import io.vavr.collection.*;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
@@ -63,8 +62,8 @@ public record Model(
         Instant now) {
 
     /**
-     * How often the time shown moves on while the terminal does not have the focus: a frame every 5 s rather than
-     * every second (ADR 67).
+     * How often a time shown moves on at most while the terminal does not have the focus: a frame every 5 s rather
+     * than every second (ADR 67, ADR 124).
      */
     public static final Duration AWAY_CLOCK = Duration.ofSeconds(5);
 
@@ -178,8 +177,8 @@ public record Model(
      */
     public Model drawn() {
         // A command that runs shows only once it ran a while, which the spinners' frames tell, not a message, but for
-        // the branch it keeps busy, which shows at once; the time shows to the second at most, and while the terminal
-        // does not have the focus, to AWAY_CLOCK (ADR 67). What the timers left for later is not shown.
+        // the branch it keeps busy, which shows at once. The time is not drawn: a frame comes when a time shown changes
+        // (ADR 124). What the timers left for later is not shown.
         return mapJobs(jobs -> jobs.withFailed(HashSet.empty())
                         .withFetchAgain(false)
                         .withWorktreeChangesRead(Option.none())
@@ -193,12 +192,7 @@ public record Model(
                         .withMissed(LinkedHashSet.empty())
                         .withAwayAt(HashMap.empty())
                         .withIndexRefresh(IndexRefresh.NONE))
-                .withNow(jobs.away() ? awayClock(now) : now.truncatedTo(ChronoUnit.SECONDS));
-    }
-
-    private static Instant awayClock(Instant now) {
-        long step = AWAY_CLOCK.toMillis();
-        return Instant.ofEpochMilli(Math.floorDiv(now.toEpochMilli(), step) * step);
+                .withNow(Instant.EPOCH);
     }
 
     /**

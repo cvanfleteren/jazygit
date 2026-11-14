@@ -79,6 +79,20 @@ public class JazygitApp extends ToolkitApp {
     private Option<ColumnSlide> leftSlide = Option.none();
     private Option<PaneSlide> paneSlide = Option.none();
     private boolean slideFramePending;
+    // The one wake for when a time the screen shows changes next (ADR 124): it tells the model the time, and draws.
+    private final ShownTimeWake shownTimeWake = new ShownTimeWake(
+            (action, delay) -> {
+                ToolkitRunner.ScheduledAction scheduled =
+                        runner().schedule(() -> runner().runOnRenderThread(action), delay);
+                return scheduled::cancel;
+            },
+            () -> {
+                dispatch.accept(new TimerMsg.Clock());
+                requestRedraw();
+            });
+    // The model the wake was last worked out for: a frame of the same one, as a spinner's, cannot change it. Every
+    // message makes a new model, and the wake dispatches one; only touched on the render thread.
+    private Model clocked;
 
     /**
      * @param env           what the repository the app starts in is read with; it opens other repositories in
@@ -304,6 +318,10 @@ public class JazygitApp extends ToolkitApp {
         report(reports());
         shown.moveTo().forEach(focus::moveTo);
         focus.redrawIfMoves(focusedId);
+        if (model != clocked) {
+            clocked = model;
+            shownTimeWake.at(ShownClocks.next(model, model.now()), clock.instant());
+        }
         // What is behind an open popup is dimmed, so the popup stands out, unless the popup previews its choices there.
         Element behind = shown.dimsBehind() ? new Dimmed(layout, Theme.backdrop(styleEngine)) : layout;
         Element screen = shown.dialog().<Element>map(d -> stack(behind, d)).getOrElse(layout);

@@ -61,12 +61,10 @@ class ModelDrawnTest {
     }
 
     @Test
-    void theTimeIsDrawnToTheSecond() {
+    void theTimeIsNotDrawnAsAFrameComesWhenATimeShownChanges() {
         Instant now = Instant.parse("2026-10-22T10:00:00Z");
 
         assertEquals(
-                model.withNow(now).drawn(), model.withNow(now.plusMillis(999)).drawn());
-        assertNotEquals(
-                model.withNow(now).drawn(), model.withNow(now.plusSeconds(1)).drawn());
+                model.withNow(now).drawn(), model.withNow(now.plusSeconds(3600)).drawn());
     }
 }

@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
@@ -77,6 +79,19 @@ public final class PullRequestsPanel {
         list.onKey(event -> event.isConfirm()
                 ? selected().map(pr -> () -> openPullRequest.accept(scope.id()))
                 : PaneKeys.sending(keymap.handle(scope, event, selected()), dispatch));
+    }
+
+    /**
+     * The times the panes of the pull requests show (ADR 124): how long ago each was updated, on their screen.
+     */
+    public static List<ShownTime> shownTimes(Model model) {
+        PrOverview overview = model.prOverview();
+        return model.screen() == Screen.PULL_REQUESTS
+                ? List.of(overview.reviewRequested(), overview.authored(), overview.repository())
+                        .flatMap(list -> list.toOption().toList())
+                        .flatMap(PullRequestList::pullRequests)
+                        .map(pr -> ShownTime.reading(now -> TimeText.age(Duration.between(pr.updatedAt(), now))))
+                : List.empty();
     }
 
     /**

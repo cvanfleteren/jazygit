@@ -25,9 +25,9 @@ final class Timers {
     static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
     // How often GitHub is asked how the merges it does in the background are going (ADR 24).
     static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
-    // What is dispatched every so often: the time, the repository read again, and what the remotes and GitHub have.
+    // What is dispatched every so often: the repository read again, and what the remotes and GitHub have. The time
+    // comes when a time shown changes (ADR 124).
     static final List<Timer> ALL = List.of(
-            new Timer(TimeText.CLOCK_INTERVAL, TimerMsg.Clock::new),
             new Timer(REFRESH_INTERVAL, TimerMsg.Tick::new),
             new Timer(FETCH_INTERVAL, FetchMsg.Tick::new),
             new Timer(FETCH_INTERVAL, PrOverviewMsg.Tick::new),

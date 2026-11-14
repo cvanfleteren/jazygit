@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -77,6 +78,33 @@ class BranchesPanelTest {
 
     private static Model with(Model model, List<Branch> branches) {
         return TestModels.localBranchesRead(model, branches).model();
+    }
+
+    @Test
+    void theAgeOfABranchChangesTheMomentItsShownTimeSays() throws Exception {
+        java.time.Instant committed = java.time.Instant.parse("2026-11-14T10:00:00Z");
+        java.time.Instant now = committed.plusSeconds(3 * 60 + 20);
+        Model model = with(
+                        TestModels.loaded(SampleData.git()),
+                        List.of(MAIN, Fixtures.branch(new BranchName("recent"), false, new Sha("4"), committed, false)))
+                .withNow(now);
+        java.time.Instant next =
+                ShownTime.next(BranchesPanel.shownTimes(model), now).get();
+        String shown;
+        String justBefore;
+        String changed;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, BranchesPanel.ID))) {
+            shown = RenderedText.ofLarge(testRunner, () -> panel.render(model, BranchesPanel.ID));
+            justBefore = RenderedText.ofLarge(
+                    testRunner, () -> panel.render(model.withNow(next.minusMillis(1)), BranchesPanel.ID));
+            changed = RenderedText.ofLarge(testRunner, () -> panel.render(model.withNow(next), BranchesPanel.ID));
+            SettledPilot.of(testRunner).quit();
+        }
+
+        assertEquals(now.plusSeconds(40), next);
+        assertEquals(shown, justBefore);
+        assertTrue(shown.contains("3m"), shown);
+        assertTrue(changed.contains("4m"), changed);
     }
 
     @Test

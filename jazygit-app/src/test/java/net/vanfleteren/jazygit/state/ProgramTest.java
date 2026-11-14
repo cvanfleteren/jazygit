@@ -973,7 +973,7 @@ class ProgramTest {
     }
 
     @Test
-    void theModelIsToldTheTimeOfEachMessageAndDrawsAgainOnlyOnceASecondWentBy() {
+    void theModelIsToldTheTimeOfEachMessageAndDrawsNothingForTheTimeAlone() {
         Instant start = Instant.parse("2026-10-26T10:00:00Z");
         MovingClock clock = new MovingClock(start);
         AtomicInteger changes = new AtomicInteger();
@@ -1014,15 +1014,17 @@ class ProgramTest {
         clock.at(start.plusMillis(400));
         drain(queued);
 
-        // The loads brought nothing new, and the time moved on within the same second: nothing to draw.
+        // The loads brought nothing new, and only the time moved on: nothing to draw.
         assertEquals(loaded, changes.get());
         assertEquals(start.plusMillis(400), timed.model().now());
         assertEquals(HashMap.empty(), timed.model().jobs().running());
 
+        // The frame for a time shown that changes is the app's to draw, when it wakes for it (ADR 124).
         clock.at(start.plusMillis(1100));
         timed.dispatch(new TimerMsg.Clock());
 
-        assertEquals(loaded + 1, changes.get());
+        assertEquals(start.plusMillis(1100), timed.model().now());
+        assertEquals(loaded, changes.get());
     }
 
     @Test

@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
 
@@ -180,6 +181,22 @@ public class BranchesPanel {
                     return EventResult.HANDLED;
                 })
                 .getOrElse(EventResult.UNHANDLED);
+    }
+
+    /**
+     * The times the pane shows in {@code model} (ADR 124): those of the list it shows, which a divergence or the
+     * commits of a branch shown in its place hide.
+     */
+    public static List<ShownTime> shownTimes(Model model) {
+        BranchesTab tab = model.repoView().branchesTab();
+        if (model.screen() != Screen.REPOSITORY
+                || divergence(model).isDefined()
+                || model.repoView().branchCommits().isDefined()) {
+            return List.empty();
+        }
+        return tab == BranchesTab.LOCAL
+                ? LocalBranchesList.shownTimes(model)
+                : tab == BranchesTab.REMOTE ? RemoteBranchesList.shownTimes(model) : List.empty();
     }
 
     /**

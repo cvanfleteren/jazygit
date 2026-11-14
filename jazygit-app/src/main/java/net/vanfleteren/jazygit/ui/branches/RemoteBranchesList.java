@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
@@ -64,6 +65,21 @@ class RemoteBranchesList implements BranchesTabList {
                                 .appendAll(BranchSegs.group(
                                         BranchSegs.spinnerSeg(spinner).toList())))
                 .withDetail(List.of(LoadableList.Seg.of(age)).appendAll(BranchSegs.group(gitHub)));
+    }
+
+    /**
+     * The times the list shows (ADR 124): the age of each remote branch, and how its checks are doing in time.
+     */
+    static List<ShownTime> shownTimes(Model model) {
+        return model.repo()
+                .remoteBranches()
+                .toOption()
+                .toList()
+                .flatMap(read -> read.map(ref -> BranchSegs.shownTime(
+                        model,
+                        ref.tipTime(),
+                        model.gitHub().waiting(ref.branch()),
+                        model.gitHub().eta(ref.branch()))));
     }
 
     @Override

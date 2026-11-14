@@ -13,6 +13,11 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.github.prs.PrOverview;
+import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
 import org.junit.jupiter.api.Test;
@@ -87,5 +92,18 @@ class PullRequestsPanelTest {
         assertEquals(Option.of(Theme.Classes.DIM), classes.get(1));
         assertEquals(Option.of(Theme.Classes.DIM), classes.get(4));
         assertEquals(6, classes.size());
+    }
+
+    @Test
+    void onTheirScreenThePanesAreWokenWhenTheAgeOfAPullRequestChanges() {
+        // Updated at the epoch, 3m 20s before now: 3m until 40s later.
+        Instant now = Instant.EPOCH.plusSeconds(3 * 60 + 20);
+        Model shown = TestModels.loaded()
+                .withScreen(Screen.PULL_REQUESTS)
+                .withPrOverview(PrOverview.INITIAL.withAuthored(
+                        new Loadable.Loaded<>(new PullRequestList(List.of(pr(false)), 1))));
+
+        assertEquals(Option.of(now.plusSeconds(40)), ShownTime.next(PullRequestsPanel.shownTimes(shown), now));
+        assertEquals(List.empty(), PullRequestsPanel.shownTimes(shown.withScreen(Screen.REPOSITORY)));
     }
 }

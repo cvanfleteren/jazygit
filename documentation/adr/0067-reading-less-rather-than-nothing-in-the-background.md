@@ -39,3 +39,6 @@ the model is told, which a test sets.
 - A terminal that does not report the focus never says the app is away, and nothing changes there.
 
 Amends ADR 58 (`0058-less-reading-in-the-background.md`).
+
+Amended by ADR 124: decision 2 is replaced; while away, a time shown moves on no sooner than every 5 s, as the app
+is woken when a time shown changes, not by `Model.drawn()`.
