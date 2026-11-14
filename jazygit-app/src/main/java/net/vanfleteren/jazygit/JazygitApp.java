@@ -71,9 +71,10 @@ public class JazygitApp extends ToolkitApp {
     private final FocusKeeper focus;
     private final LeftColumn leftColumn;
     private final CommandLogPanel commandLogPanel;
-    // Whether the help asked for the command log to take the focus once it is closed; only touched on the render
-    // thread.
-    private boolean commandLogAsked;
+    // Whether the command log takes the focus once the popup is closed: it had the focus when the popup opened, or the
+    // help asked for it (ADR 129). A popup gives the focus back to the pane the model knows, which the log is not.
+    // Only touched on the render thread.
+    private boolean logAfterPopup;
     // The borders of the left column and of the panes in it, which the user drags.
     private final BorderDrag borderDrag = new BorderDrag(dispatch);
     // Whether a Redraw is queued that no frame has been drawn since; only touched on the render thread.
@@ -154,7 +155,7 @@ public class JazygitApp extends ToolkitApp {
             case CommandLogFocused() -> focus.moveToCommandLog();
             // The help gives the focus back as it closes, so the log takes it in the frame after.
             case HelpMsg.Chosen(CommandLogFocused()) -> {
-                commandLogAsked = true;
+                logAfterPopup = true;
                 session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
             }
             default -> session.dispatch(msg);
@@ -336,9 +337,13 @@ public class JazygitApp extends ToolkitApp {
         // The framework knows no focus before the first render.
         Popups.Rendered shown = popups.render(model, Option.of(focusedId));
         report(reports());
+        // A popup opening while the log has the focus gives it back to the log once it closes.
+        if (model.popup().isDefined() && CommandLogPanel.ID.equals(focusedId)) {
+            logAfterPopup = true;
+        }
         shown.moveTo().forEach(focus::moveTo);
-        if (commandLogAsked && model.popup().isEmpty()) {
-            commandLogAsked = false;
+        if (logAfterPopup && model.popup().isEmpty()) {
+            logAfterPopup = false;
             focus.moveToCommandLog();
         }
         focus.redrawIfMoves(focusedId);
@@ -440,10 +445,16 @@ public class JazygitApp extends ToolkitApp {
                         .toOption()
                         .map(width -> new CommandLogPanel.Room(column, width - leftColumnsChosen(model, width))));
         // With the focus, it grows to show more of what it logged (ADR 129).
-        boolean focused = CommandLogPanel.ID.equals(focusedId);
-        int rows = focused ? commandLogPanel.focusedHeight(model, room) : CommandLogPanel.height(model, room);
+        // The frame a popup closes in gives the log the focus once it is drawn: it is drawn to take it, as TamboUI
+        // only keeps the focus on what a frame drew to take it.
+        boolean focused = CommandLogPanel.ID.equals(focusedId)
+                || (logAfterPopup && model.popup().isEmpty());
+        // A popup opened from the log keeps it open behind it, where it was scrolled to, until it gives it the focus
+        // back.
+        boolean open = focused || logAfterPopup;
+        int rows = open ? commandLogPanel.focusedHeight(model, room) : CommandLogPanel.height(model, room);
         int shown = commandLogRows(model, room.map(CommandLogPanel.Room::rows).getOrElse(0), rows);
-        return commandLogPanel.render(model, rows, shown, room, focused);
+        return commandLogPanel.render(model, rows, shown, room, open, focused);
     }
 
     /**

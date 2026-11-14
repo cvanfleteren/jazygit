@@ -99,6 +99,8 @@ public final class CommandLogPanel {
     // Whether it shows the newest lines, and keeps showing them as it slides and as lines are added: from when it is
     // given the focus until it is scrolled up, and again once it is scrolled to the bottom.
     private boolean following = false;
+    // Whether it has the focus, as last drawn: a key or a turn of the wheel meant for a popup over it does nothing.
+    private boolean hasFocus = false;
 
     /**
      * @param styles how the lines are coloured
@@ -139,12 +141,13 @@ public final class CommandLogPanel {
     }
 
     /**
-     * The panel {@code rows} tall in {@code room}, drawn {@code shown} rows tall on its way there: with the
-     * {@code focused} focus, all it logged, to scroll through; else what {@link #fitted} shows, which a click gives the
-     * focus.
+     * The panel {@code rows} tall in {@code room}, drawn {@code shown} rows tall on its way there: {@code open}, all it
+     * logged, to scroll through while it has the {@code focused} focus; else what {@link #fitted} shows, which a click
+     * gives the focus. It is open with the focus, and while a popup opened from it has the focus, which gives it back.
      */
-    public Element render(Model model, int rows, int shown, Option<Room> room, boolean focused) {
-        if (!focused) {
+    public Element render(Model model, int rows, int shown, Option<Room> room, boolean open, boolean focused) {
+        hasFocus = focused;
+        if (!open) {
             focusedBefore = false;
             return fitted(model, rows, room, styles, zone).id(ID).length(shown).onMouseEvent(this::clicked);
         }
@@ -162,7 +165,7 @@ public final class CommandLogPanel {
         focusedBefore = true;
         area.text(Text.from(all.map(row -> line(row, styles)).toJavaList()))
                 .title(Messages.get("panel.commandLog.title"))
-                .focusable(true)
+                .focusable(focused)
                 .onKeyEvent(this::keys)
                 .onMouseEvent(this::wheeled);
         return new Barred(shown);
@@ -199,6 +202,9 @@ public final class CommandLogPanel {
      * bottom. Left and Right do nothing: the lines are wrapped. The keys that work everywhere work here too.
      */
     private EventResult keys(KeyEvent event) {
+        if (!hasFocus) {
+            return EventResult.UNHANDLED;
+        }
         if (event.isCancel()) {
             leave.run();
             return EventResult.HANDLED;
@@ -226,6 +232,7 @@ public final class CommandLogPanel {
                 .orElse(Option.when(event.kind() == MouseEventKind.SCROLL_UP, () -> () -> state.scrollUp(WHEEL_ROWS)))
                 .orElse(Option.when(
                         event.kind() == MouseEventKind.SCROLL_DOWN, () -> () -> state.scrollDown(WHEEL_ROWS)))
+                .filter(ignored -> hasFocus)
                 .peek(this::scrolled)
                 .map(scroll -> EventResult.HANDLED)
                 .getOrElse(EventResult.UNHANDLED);
@@ -258,12 +265,25 @@ public final class CommandLogPanel {
                         width,
                         entryRows(outcome, zone)
                                 .appendAll(outcomeText(model).map(text -> Row.of(text, outcomeClass(model))))
-                                .flatMap(row -> row.time().isDefined()
-                                        ? List.of(row)
-                                        : TextWidth.wrapped(row.text(), width)
-                                                .map(text -> Row.of(text, row.cssClass())))));
+                                .flatMap(row -> wrapped(row, width))));
         wrapped = Option.of(current);
         return current.rows();
+    }
+
+    /**
+     * The rows {@code row} takes wrapped at words in {@code width} columns, as they are drawn. A title is wrapped in
+     * the columns its time leaves: the time is on its first row, and the rows after it start as far in, under the
+     * title.
+     */
+    private static List<Row> wrapped(Row row, int width) {
+        return row.time()
+                .map(time -> TextWidth.wrapped(row.text(), width - TextWidth.of(time) - 1)
+                        .zipWithIndex()
+                        .map(text -> new Row(
+                                Option.of(text._2 == 0 ? time : " ".repeat(TextWidth.of(time))),
+                                text._1,
+                                row.cssClass())))
+                .getOrElse(() -> TextWidth.wrapped(row.text(), width).map(text -> Row.of(text, row.cssClass())));
     }
 
     /**

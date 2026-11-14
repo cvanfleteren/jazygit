@@ -7,12 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.tui.event.KeyModifiers;
+import dev.tamboui.tui.event.MouseButton;
+import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
+import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.feature.stage.StageCmd;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -273,8 +280,8 @@ class CommandLogPanelTest {
         Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 60));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
-                () -> panel.render(model, 6, 6, room, true), new dev.tamboui.layout.Size(60, 6))) {
-            String newest = RenderedText.ofSize(testRunner, () -> panel.render(model, 6, 6, room, true), 60, 6);
+                () -> panel.render(model, 6, 6, room, true, true), new dev.tamboui.layout.Size(60, 6))) {
+            String newest = RenderedText.ofSize(testRunner, () -> panel.render(model, 6, 6, room, true, true), 60, 6);
             assertTrue(newest.contains("newest.txt"), newest);
             assertTrue(newest.contains("14:32:05 Stage"), newest);
             assertFalse(newest.contains("oldest.txt"), newest);
@@ -284,7 +291,7 @@ class CommandLogPanelTest {
             pilot.press('g');
             pilot.pause();
 
-            String oldest = RenderedText.ofSize(testRunner, () -> panel.render(model, 6, 6, room, true), 60, 6);
+            String oldest = RenderedText.ofSize(testRunner, () -> panel.render(model, 6, 6, room, true, true), 60, 6);
             assertTrue(oldest.contains("oldest.txt"), oldest);
             assertFalse(oldest.contains("newest.txt"), oldest);
 
@@ -304,8 +311,8 @@ class CommandLogPanelTest {
 
         // On its way to the 14 rows that show all, it is 6 rows tall.
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
-                () -> panel.render(model, 14, 6, room, true), new dev.tamboui.layout.Size(60, 6))) {
-            String sliding = RenderedText.ofSize(testRunner, () -> panel.render(model, 14, 6, room, true), 60, 6);
+                () -> panel.render(model, 14, 6, room, true, true), new dev.tamboui.layout.Size(60, 6))) {
+            String sliding = RenderedText.ofSize(testRunner, () -> panel.render(model, 14, 6, room, true, true), 60, 6);
             assertTrue(sliding.contains("newest.txt"), sliding);
             assertFalse(sliding.contains("oldest.txt"), sliding);
 
@@ -322,14 +329,143 @@ class CommandLogPanelTest {
         int rows = panel.focusedHeight(model, room);
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> panel.render(model, rows, rows, room, true))) {
+                ToolkitTestRunner.runTest(() -> panel.render(model, rows, rows, room, true, true))) {
             String screen =
-                    RenderedText.ofSize(testRunner, () -> panel.render(model, rows, rows, room, true), 16, rows);
+                    RenderedText.ofSize(testRunner, () -> panel.render(model, rows, rows, room, true, true), 16, rows);
             assertTrue(screen.contains("Checkout"), screen);
             assertTrue(screen.contains("END"), screen);
 
             SettledPilot.of(testRunner).quit();
         }
+    }
+
+    @Test
+    void withTheFocusATitleWrapsUnderItself() throws Exception {
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
+        Model model = TestModels.withLog(
+                TestModels.loaded(SampleData.git()), entry(PullRequestCmd.DRAFT_PR, executed("gh pr ready --undo 7")));
+        // 22 columns inside the borders: 13 after the time for "Convert pull request to draft".
+        Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 24));
+        int rows = panel.focusedHeight(model, room);
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model, rows, rows, room, true, true))) {
+            String screen =
+                    RenderedText.ofSize(testRunner, () -> panel.render(model, rows, rows, room, true, true), 24, rows);
+            assertTrue(screen.contains("14:32:05 Convert pull"), screen);
+            assertTrue(screen.contains("         request to"), screen);
+            assertTrue(screen.contains("         draft"), screen);
+            assertTrue(screen.contains("gh pr ready --undo 7"), screen);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void withTheFocusScrolledUpItStaysAsLinesAreAddedUntilItIsBackAtTheBottom() throws Exception {
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
+        AtomicReference<Model> model = new AtomicReference<>(staged(4));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> open(panel, model.get()), SMALL)) {
+            SettledPilot.focus(testRunner, CommandLogPanel.ID);
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.press('k');
+            pilot.pause();
+
+            // Scrolled up, a line added stays out of sight.
+            model.set(staged(5));
+            String up = drawn(testRunner, panel, model.get());
+            assertFalse(up.contains("file5.txt"), up);
+            assertTrue(up.contains("file3.txt"), up);
+
+            // Back at the bottom, it follows the lines added again.
+            pilot.press('G');
+            pilot.pause();
+            model.set(staged(6));
+            String bottom = drawn(testRunner, panel, model.get());
+            assertTrue(bottom.contains("file6.txt"), bottom);
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void withTheFocusAgainItStartsFromTheNewest() throws Exception {
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
+        Model model = staged(4);
+        Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 60));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> open(panel, model), SMALL)) {
+            SettledPilot.focus(testRunner, CommandLogPanel.ID);
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.press('g');
+            pilot.pause();
+            assertTrue(drawn(testRunner, panel, model).contains("file1.txt"));
+
+            // Left, as Escape leaves it, and given the focus again.
+            RenderedText.ofSize(testRunner, () -> panel.render(model, 6, 6, room, false, false), 60, 6);
+            String again = drawn(testRunner, panel, model);
+            assertTrue(again.contains("file4.txt"), again);
+            assertFalse(again.contains("file1.txt"), again);
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void withTheFocusTheWheelScrollsIt() throws Exception {
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
+        AtomicReference<Model> model = new AtomicReference<>(staged(4));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> open(panel, model.get()), SMALL)) {
+            SettledPilot.focus(testRunner, CommandLogPanel.ID);
+            // Eight lines, four of which show: three up from the bottom shows the second.
+            testRunner
+                    .runner()
+                    .tuiRunner()
+                    .dispatch(new MouseEvent(MouseEventKind.SCROLL_UP, MouseButton.NONE, 5, 2, KeyModifiers.NONE));
+            SettledPilot.settle(testRunner);
+
+            String up = drawn(testRunner, panel, model.get());
+            assertTrue(up.contains("file1.txt"), up);
+            assertFalse(up.contains("file4.txt"), up);
+            // It stays there as lines are added.
+            model.set(staged(5));
+            assertFalse(drawn(testRunner, panel, model.get()).contains("file5.txt"));
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    /**
+     * A screen as wide as the log and as tall as it is drawn in the tests of scrolling it: four lines inside its
+     * borders.
+     */
+    private static final dev.tamboui.layout.Size SMALL = new dev.tamboui.layout.Size(60, 6);
+
+    /**
+     * {@code model} with {@code count} files staged one at a time, the oldest first: two lines each.
+     */
+    private static Model staged(int count) {
+        return TestModels.withLog(
+                TestModels.loaded(SampleData.git()),
+                List.rangeClosed(1, count)
+                        .map(n -> entry(StageCmd.STAGE, executed("git add -- file" + n + ".txt")))
+                        .toJavaArray(LogEntry[]::new));
+    }
+
+    /**
+     * {@code panel} with the focus, showing {@code model} in the {@link #SMALL} screen.
+     */
+    private static dev.tamboui.toolkit.element.Element open(CommandLogPanel panel, Model model) {
+        return panel.render(model, 6, 6, Option.of(new CommandLogPanel.Room(40, 60)), true, true);
+    }
+
+    /**
+     * What {@code panel} with the focus draws of {@code model}, where it is scrolled to.
+     */
+    private static String drawn(ToolkitTestRunner testRunner, CommandLogPanel panel, Model model) throws Exception {
+        return RenderedText.ofSize(testRunner, () -> open(panel, model), 60, 6);
     }
 
     private static Option<CommandLogPanel.Room> room(int rows) {

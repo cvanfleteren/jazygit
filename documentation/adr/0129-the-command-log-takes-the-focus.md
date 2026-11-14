@@ -28,12 +28,15 @@ focus back to. A popup has the focus aside from that: it is not reported to the 
   error is read whole.
 - With the focus or without, the title of each operation follows the time it was done, as `HH:mm:ss` in the local
   zone, dimmed: when the model learned how it went (`model.now()`, ADR 124), kept in `LogEntry.at`. A time, not how
-  long ago: it does not change while it shows, so it asks for no frames.
+  long ago: it does not change while it shows, so it asks for no frames. With the focus, a title wraps in the columns
+  the time leaves, its rows after the first starting under it.
 - It scrolls as the areas of the content panel do: the arrows, `j` and `k`, the pages, Home and End, `g` and `G`,
   and the wheel. How far down it is shows on its right border. Not sideways: it wraps.
 - The focus in the log is aside, as a popup's is: it is not reported to the model. The content panel keeps showing
   what it showed, the pane keeps its highlighted row, and Escape gives the focus back to the model's `shownPane`.
-- The other global keys keep working with the focus in the log.
+- The other global keys keep working with the focus in the log. A popup one of them opens gives the focus back to the
+  log as it closes, not to the pane: the log stays open behind it, where it was scrolled to. `?` shows the help of a
+  panel, which the log is not, so it does nothing in the log.
 - The log draws its lines wrapped by `TextWidth.wrapped`, which draws them as a word-wrapping `Paragraph` does: the
   text area scrolls by lines, so a line it wrapped itself would scroll as one.
 - Where it is scrolled to is the log's own, kept by its text area while it has the focus. Given the focus, it shows
