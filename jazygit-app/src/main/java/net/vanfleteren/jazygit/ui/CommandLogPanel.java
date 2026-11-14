@@ -18,6 +18,7 @@ import dev.tamboui.toolkit.element.Size;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
@@ -71,6 +72,11 @@ public final class CommandLogPanel {
 
     private static final String INDENT = "  ";
 
+    /**
+     * How many rows a turn of the wheel scrolls, as in the areas of the content panel.
+     */
+    private static final int WHEEL_ROWS = 3;
+
     private final Theme.SpanStyles styles;
     private final Consumer<String> focus;
     private final Runnable leave;
@@ -80,6 +86,9 @@ public final class CommandLogPanel {
     private final RichTextAreaElement area = richTextArea().id(ID).fill();
     private boolean focusedBefore = false;
     private Option<Wrapped> wrapped = Option.none();
+    // Whether it shows the newest lines, and keeps showing them as it slides and as lines are added: from when it is
+    // given the focus until it is scrolled up, and again once it is scrolled to the bottom.
+    private boolean following = false;
 
     /**
      * @param styles how the lines are coloured while the log has the focus
@@ -130,11 +139,13 @@ public final class CommandLogPanel {
         }
         List<Row> all = room.map(column -> rows(model, column)).getOrElse(List.empty());
         RichTextState state = area.state();
-        // The state clamps a scroll to what it was last drawn with: what it shows now is set first.
+        // The state clamps a scroll to what it was last drawn with: what it shows now is set first, in the rows it
+        // is drawn in on its way to its height.
         state.setContentHeight(all.size());
-        state.setViewportHeight(Math.max(0, rows - BORDERS));
+        state.setViewportHeight(Math.max(0, shown - BORDERS));
         // Given the focus, it shows the newest lines, as it did without it.
-        if (!focusedBefore) {
+        following = following || !focusedBefore;
+        if (following) {
             state.scrollToBottom();
         }
         focusedBefore = true;
@@ -142,7 +153,8 @@ public final class CommandLogPanel {
                         .toJavaList()))
                 .title(Messages.get("panel.commandLog.title"))
                 .focusable(true)
-                .onKeyEvent(this::keys);
+                .onKeyEvent(this::keys)
+                .onMouseEvent(this::wheeled);
         return new Barred(shown);
     }
 
@@ -171,20 +183,50 @@ public final class CommandLogPanel {
     }
 
     /**
-     * What {@code event} does with the focus on the log: Escape gives the focus back, {@code j} and {@code k} scroll a
-     * row, as the arrows do, and {@code g} and {@code G} to the top and the bottom, as Home and End do. The text area
-     * scrolls by the arrows, the pages, Home and End itself; the keys that work everywhere work here too.
+     * What {@code event} does with the focus on the log: Escape gives the focus back; the arrows and {@code j} and
+     * {@code k} scroll a row, the pages a page, and Home and End, or {@code g} and {@code G}, to the top and the
+     * bottom. Left and Right do nothing: the lines are wrapped. The keys that work everywhere work here too.
      */
     private EventResult keys(KeyEvent event) {
+        if (event.isCancel()) {
+            leave.run();
+            return EventResult.HANDLED;
+        }
         RichTextState state = area.state();
-        Option<Runnable> action = Option.<Runnable>none()
-                .orElse(Option.when(event.isCancel(), () -> leave))
-                .orElse(Option.when(plain(event, 'j'), () -> state::scrollDown))
-                .orElse(Option.when(plain(event, 'k'), () -> state::scrollUp))
-                .orElse(Option.when(plain(event, 'g'), () -> state::scrollToTop))
-                .orElse(Option.when(plain(event, 'G'), () -> state::scrollToBottom));
-        action.forEach(Runnable::run);
-        return action.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+        Option<Runnable> scroll = Option.<Runnable>none()
+                .orElse(Option.when(event.matches(Actions.MOVE_DOWN) || plain(event, 'j'), () -> state::scrollDown))
+                .orElse(Option.when(event.matches(Actions.MOVE_UP) || plain(event, 'k'), () -> state::scrollUp))
+                .orElse(Option.when(event.matches(Actions.PAGE_DOWN), () -> state::pageDown))
+                .orElse(Option.when(event.matches(Actions.PAGE_UP), () -> state::pageUp))
+                .orElse(Option.when(event.matches(Actions.HOME) || plain(event, 'g'), () -> state::scrollToTop))
+                .orElse(Option.when(event.matches(Actions.END) || plain(event, 'G'), () -> state::scrollToBottom))
+                .orElse(Option.when(
+                        event.matches(Actions.MOVE_LEFT) || event.matches(Actions.MOVE_RIGHT), () -> () -> {}));
+        scroll.forEach(this::scrolled);
+        return scroll.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+    }
+
+    /**
+     * The wheel scrolls the log with the focus three rows at a time, as it does the areas of the content panel.
+     */
+    private EventResult wheeled(MouseEvent event) {
+        RichTextState state = area.state();
+        return Option.<Runnable>none()
+                .orElse(Option.when(event.kind() == MouseEventKind.SCROLL_UP, () -> () -> state.scrollUp(WHEEL_ROWS)))
+                .orElse(Option.when(
+                        event.kind() == MouseEventKind.SCROLL_DOWN, () -> () -> state.scrollDown(WHEEL_ROWS)))
+                .peek(this::scrolled)
+                .map(scroll -> EventResult.HANDLED)
+                .getOrElse(EventResult.UNHANDLED);
+    }
+
+    /**
+     * Scrolls the log by {@code scroll}: it follows the newest lines again once it is at the bottom.
+     */
+    private void scrolled(Runnable scroll) {
+        scroll.run();
+        RichTextState state = area.state();
+        following = state.scrollRow() >= state.contentHeight() - state.viewportHeight();
     }
 
     private static boolean plain(KeyEvent event, char c) {

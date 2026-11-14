@@ -33,8 +33,9 @@ focus back to. A popup has the focus aside from that: it is not reported to the 
 - The other global keys keep working with the focus in the log.
 - The log draws its lines wrapped by `TextWidth.wrapped`, which draws them as a word-wrapping `Paragraph` does: the
   text area scrolls by lines, so a line it wrapped itself would scroll as one.
-- Where it is scrolled to is the log's own, kept by its text area while it has the focus. It starts from the newest
-  each time it is given the focus.
+- Where it is scrolled to is the log's own, kept by its text area while it has the focus. Given the focus, it shows
+  the newest lines, and keeps showing them while it slides to its height and as operations add lines, until it is
+  scrolled up; scrolled back to the bottom, it follows them again.
 
 ## Why this way
 

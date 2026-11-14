@@ -16,18 +16,20 @@ def test_at_shows_all_the_command_log_and_escape_gives_the_focus_back(repo, jazy
         ui.files.stage(f"file{n}.txt")
     # Six operations of two lines each: without the focus, the newest eight show.
     ui.app.wait_for("git add -- file6.txt")
-    assert "git add -- file1.txt" not in ui.app.text()
+    ui.app.wait_gone("git add -- file1.txt")
     shrunk = log_top(ui)
 
     ui.app.press("@")
 
+    # It grows to show all six, the newest still at its bottom.
     ui.app.wait_for("git add -- file1.txt")
-    assert log_top(ui) < shrunk
+    ui.app.eventually(lambda: log_top(ui) < shrunk, "the log to grow")
+    assert "git add -- file6.txt" in ui.app.text()
     # The panes keep their colours: none of them has the focus.
-    assert ui.app.focused_pane() is None
+    ui.app.eventually(lambda: ui.app.focused_pane() is None, "no pane to have the focus")
 
     ui.app.press("escape")
 
     ui.app.eventually(lambda: ui.app.focused_pane() == "Files", "the focus back on the files")
     ui.app.eventually(lambda: log_top(ui) == shrunk, "the log as tall as before")
-    assert "git add -- file1.txt" not in ui.app.text()
+    ui.app.wait_gone("git add -- file1.txt")

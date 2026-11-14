@@ -282,6 +282,27 @@ class CommandLogPanelTest {
     }
 
     @Test
+    void withTheFocusShowsTheNewestLinesOnItsWayToItsHeight() throws Exception {
+        CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, id -> {}, () -> {});
+        Model model = TestModels.withLog(
+                TestModels.loaded(SampleData.git()),
+                new LogEntry(StageCmd.STAGE, executed("git add -- oldest.txt", "git add -- b", "git add -- c")),
+                new LogEntry(StageCmd.STAGE, executed("git add -- d", "git add -- e", "git add -- f")),
+                new LogEntry(StageCmd.STAGE, executed("git add -- g", "git add -- h", "git add -- newest.txt")));
+        Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 60));
+
+        // On its way to the 14 rows that show all, it is 6 rows tall.
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> panel.render(model, 14, 6, room, true), new dev.tamboui.layout.Size(60, 6))) {
+            String sliding = RenderedText.ofSize(testRunner, () -> panel.render(model, 14, 6, room, true), 60, 6);
+            assertTrue(sliding.contains("newest.txt"), sliding);
+            assertFalse(sliding.contains("oldest.txt"), sliding);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
     void withTheFocusShowsTheWholeErrorWrapped() throws Exception {
         CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, id -> {}, () -> {});
         Model model = TestModels.withCheckoutError(
