@@ -23,6 +23,7 @@
           ./errorprone-ignorable-results.txt
           ./jazygit-test-support
           ./jazygit-json
+          ./jazygit-yaml
           ./jazygit-syntax
           ./jazygit-process
           ./jazygit-git
