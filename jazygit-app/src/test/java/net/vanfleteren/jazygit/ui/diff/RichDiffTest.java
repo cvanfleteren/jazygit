@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.syntax.Lexer;
 import net.vanfleteren.jazygit.syntax.Token;
+import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -370,6 +371,38 @@ class RichDiffTest {
                         "    │ ++<<<<<<< HEAD",
                         "    │  +B2"),
                 lines);
+    }
+
+    @Test
+    void aLineIsSearchedInItsCodeAfterItsGutterAndMarkerAndAConflictedOneWithoutItsPrefix() {
+        RichDiff.Drawn drawn = RichDiff.drawn(ParsedDiff.of("""
+                        diff --git a/a.txt b/a.txt
+                        --- a/a.txt
+                        +++ b/a.txt
+                        @@ -9,2 +9,2 @@
+                         nine
+                        -ten = 1
+                        +ten = 2
+                        \\ No newline at end of file
+                        diff --cc f.txt
+                        --- a/f.txt
+                        +++ b/f.txt
+                        @@@ -1,2 -1,2 +1,3 @@@
+                        ++<<<<<<< HEAD
+                        """), true, true, Option.none(), Theme.SpanStyles.NONE);
+        Rows rows = drawn.rows();
+
+        List<Tuple2<String, String>> searched = List.range(0, rows.size())
+                .map(row -> Tuple.of(
+                        rows.source(row).text(),
+                        rows.get(row).rawContent().substring(rows.source(row).from())));
+
+        // What each line is searched in is where it is drawn, after its gutter and its marker.
+        assertTrue(searched.forAll(row -> row._2().startsWith(row._1())), searched.toString());
+        assertEquals(
+                List.of("nine", "ten = 1", "ten = 2", "\\ No newline at end of file", "<<<<<<< HEAD"),
+                searched.map(Tuple2::_1)
+                        .filter(text -> List.of("nine", "ten", "\\", "<").exists(text::startsWith)));
     }
 
     @Test

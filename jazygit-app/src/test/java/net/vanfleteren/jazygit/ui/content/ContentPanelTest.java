@@ -1580,7 +1580,7 @@ class ContentPanelTest {
     /**
      * {@link #pullRequestDiff(String)}, of the diff {@code diff}, with the thread on the first line of the new file.
      */
-    private static Model pullRequestDiff(String body, String diff) {
+    static Model pullRequestDiff(String body, String diff) {
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);

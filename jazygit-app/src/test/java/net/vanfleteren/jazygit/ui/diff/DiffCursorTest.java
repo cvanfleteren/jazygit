@@ -82,6 +82,26 @@ class DiffCursorTest {
     }
 
     @Test
+    void aMatchOfASearchTakesTheCursorToItsStopAndTheViewToItsLine() {
+        // As much of the thread as fits, then on to the line of the match in it.
+        assertAt(THREAD, 8, on(LEAD, 0).toLine(12).get());
+        assertAt(THREE, 15, on(LEAD, 0).toLine(16).get());
+        assertEquals(16, on(LEAD, 0).toLine(16).get().stopStart());
+        assertEquals(20, on(LEAD, 0).toLine(16).get().stopEnd());
+    }
+
+    @Test
+    void whileARangeIsOpenAMatchOnlyReachesItToALineOfItsHunk() {
+        DiffCursor ranged =
+                cursor(STOPS, 20, 5, 0, Option.of(ONE), Option.of(ONE)).get();
+
+        assertEquals(Option.none(), ranged.toLine(12));
+        DiffCursor reached = ranged.toLine(15).get();
+        assertEquals(TWO, reached.anchor());
+        assertEquals(Option.of(ONE), reached.markAnchor());
+    }
+
+    @Test
     void downMovesFromStopToStopAndTheViewFollows() {
         DiffCursor cursor = on(LEAD, 0).down();
         assertAt(FILE, 0, cursor);

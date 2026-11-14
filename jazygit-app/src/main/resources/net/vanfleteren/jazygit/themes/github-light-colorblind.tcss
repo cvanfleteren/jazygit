@@ -97,6 +97,9 @@ Span.diff-thread { color: $attention; }
 Span.diff-thread-header { background: $subtle; }
 Span.diff-thread-author { color: $fg; text-style: bold; }
 Span.diff-cursor { background: $selection; }
+/* The matches of the search of the content panel, and the one gone to (ADR 126). */
+Span.search-match { color: black; background: yellow; }
+Span.search-current { color: black; background: #ff8c00; text-style: bold; }
 Span.diff-added-line { color: $fg; background: #ddf4ff; }
 Span.diff-added-word { color: $fg; background: #bbdfff; }
 Span.diff-removed-line { color: $fg; background: #fff5e8; }

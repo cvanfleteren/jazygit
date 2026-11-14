@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.feature.cherrypick.CherryPickKeys;
 import net.vanfleteren.jazygit.feature.commit.CommitFeature;
 import net.vanfleteren.jazygit.feature.copy.CopyAction;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesAction;
+import net.vanfleteren.jazygit.feature.diff.ContentSearchAction;
 import net.vanfleteren.jazygit.feature.diff.ExpandAction;
 import net.vanfleteren.jazygit.feature.diff.FoldAction;
 import net.vanfleteren.jazygit.feature.diff.VersionAction;
@@ -41,6 +42,7 @@ final class Standard {
                     ExpandAction.ACTION.keys(),
                     FoldAction.ACTION.keys(),
                     VersionAction.ACTION.keys(),
+                    ContentSearchAction.ACTION.keys(),
                     CopyAction.ACTION.keys(),
                     FileStepAction.ACTION.keys(),
                     GlobalKeys::register)

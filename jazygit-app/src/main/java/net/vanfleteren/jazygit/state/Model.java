@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
+import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
@@ -42,6 +43,7 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * @param popup          the popup that is open, if any; only one can be
  * @param listCursor     where the user is in the list of the popup, if it has one
  * @param scrolled       where the areas of the content panel were scrolled to, by the id of the area
+ * @param contentSearch  the search of the content panel, if there is one (ADR 126)
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
  * @param now            the time the last message was handled at, which tells how long ago things happened
  */
@@ -58,6 +60,7 @@ public record Model(
         Option<Popup> popup,
         ListCursor listCursor,
         Map<AreaId, Scrolled> scrolled,
+        Option<ContentSearch> contentSearch,
         Preferences preferences,
         Instant now) {
 
@@ -80,6 +83,7 @@ public record Model(
                 Option.none(),
                 ListCursor.START,
                 HashMap.empty(),
+                Option.none(),
                 Preferences.DEFAULT,
                 Instant.EPOCH);
     }
