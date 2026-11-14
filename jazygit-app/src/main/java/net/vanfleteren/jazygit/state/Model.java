@@ -185,7 +185,6 @@ public record Model(
         // (ADR 124). What the timers left for later is not shown.
         return mapJobs(jobs -> jobs.withFailed(HashSet.empty())
                         .withFetchAgain(false)
-                        .withWorktreeChangesRead(Option.none())
                         .withReadAt(HashMap.empty())
                         .withTicks(0)
                         .withRetries(HashMap.empty())

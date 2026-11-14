@@ -554,7 +554,7 @@ class ContentPanelTest {
     }
 
     @Test
-    void rightStopsWithTheEndOfTheWidestLineAtTheEdgeOfTheAreaBesideItsScrollbar() throws Exception {
+    void rightStopsWithTheEndOfTheWidestLineAtTheBorderOfTheArea() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         // The model takes where the area is scrolled to, as the app's does.
         java.util.concurrent.atomic.AtomicReference<Model> model =
@@ -581,7 +581,171 @@ class ContentPanelTest {
         int last = columns.last();
         assertTrue(last > 0 && last < 40, columns.toString());
         assertEquals(List.fill(40 - columns.indexOf(last), last), columns.drop(columns.indexOf(last)));
-        assertTrue(java.util.regex.Pattern.compile("xEND[█│]").matcher(screen).find(), screen);
+        // No column is kept for a scrollbar: the bars are on the border.
+        assertTrue(java.util.regex.Pattern.compile("xEND[│┃]").matcher(screen).find(), screen);
+    }
+
+    @Test
+    void theBottomBorderOfAnAreaWithLinesWiderThanItShowsHowFarItIsScrolledSideways() throws Exception {
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit("+" + "x".repeat(150) + "END"));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        String left;
+        String right;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
+            SettledPilot.focus(testRunner, area);
+            left = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            List.range(0, 80).forEach(i -> SettledPilot.of(testRunner).press(KeyCode.RIGHT));
+            SettledPilot.of(testRunner).pause();
+            right = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+        }
+
+        assertTrue(java.util.regex.Pattern.compile("[╰└]━+─+[╯┘]").matcher(left).find(), left);
+        assertTrue(
+                java.util.regex.Pattern.compile("[╰└]─+━+[╯┘]").matcher(right).find(), right);
+    }
+
+    @Test
+    void theRightBorderOfAnAreaWithMoreLinesThanShowShowsHowFarItIsScrolledDown() throws Exception {
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
+                showingCommit(List.range(0, 200).map(i -> "+line " + i).mkString("\n")));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        List<String> top;
+        List<String> end;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
+            SettledPilot.focus(testRunner, area);
+            top = List.of(RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area))
+                    .split("\n"));
+            SettledPilot.of(testRunner).press(KeyCode.END);
+            SettledPilot.of(testRunner).pause();
+            end = List.of(RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area))
+                    .split("\n"));
+        }
+
+        // The last column of the lines between the corners of the area: its right border.
+        java.util.function.Function<List<String>, String> rightBorder =
+                screen -> screen.dropWhile(row -> !row.contains("╭") && !row.contains("┌"))
+                        .tail()
+                        .takeWhile(row -> !row.contains("╰") && !row.contains("└"))
+                        .map(row -> row.substring(row.length() - 1))
+                        .mkString();
+        assertTrue(rightBorder.apply(top).matches("┃+│+"), String.join("\n", top));
+        assertTrue(rightBorder.apply(end).matches("│+┃+"), String.join("\n", end));
+    }
+
+    @Test
+    void theTrackOnTheBottomBorderIsTheLineOfTheBorderAsDoubleAsTheThemeDrawsIt() {
+        Model model = showingCommit("+" + "x".repeat(150) + "END");
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
+        String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+
+        // The none theme borders the area that has the focus with a double line.
+        dev.tamboui.buffer.Buffer buffer =
+                themed(panel.render(model, area), area, net.vanfleteren.jazygit.settings.ThemeName.NONE);
+
+        String screen = List.range(0, buffer.area().height())
+                .map(y -> List.range(0, buffer.area().width())
+                        .map(x -> buffer.get(x, y).symbol())
+                        .mkString())
+                .mkString("\n");
+        assertTrue(java.util.regex.Pattern.compile("╚━+═+╝").matcher(screen).find(), screen);
+    }
+
+    @Test
+    void theBarsOnTheRightAndBottomBordersHaveThumbsInTheTerminalsColourOnTracksInThatOfTheBorder() {
+        // Taller and wider than the area: both bars show, their thumbs at the start.
+        Model model =
+                showingCommit(List.range(0, 100).map(i -> "+" + "x".repeat(150)).mkString("\n"));
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
+        String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+
+        dev.tamboui.buffer.Buffer buffer =
+                themed(panel.render(model, area), area, net.vanfleteren.jazygit.settings.ThemeName.DARK);
+
+        int bottom = buffer.area().height() - 1;
+        int right = buffer.area().width() - 1;
+        dev.tamboui.buffer.Cell corner = buffer.get(right, bottom);
+        List<dev.tamboui.buffer.Cell> thumbs = List.of(buffer.get(1, bottom), buffer.get(right, 1));
+        List<dev.tamboui.buffer.Cell> tracks = List.of(buffer.get(right - 1, bottom), buffer.get(right, bottom - 1));
+        assertEquals(
+                List.of(
+                        net.vanfleteren.jazygit.ui.widgets.BorderBar.SIDEWAYS_THUMB,
+                        net.vanfleteren.jazygit.ui.widgets.BorderBar.DOWNWARDS_THUMB,
+                        "─",
+                        "│"),
+                thumbs.appendAll(tracks).map(dev.tamboui.buffer.Cell::symbol));
+        assertTrue(
+                thumbs.forAll(
+                        thumb -> thumb.style().fg().map(Color.RESET::equals).orElse(true)),
+                thumbs.map(dev.tamboui.buffer.Cell::style).toString());
+        assertTrue(corner.style().fg().isPresent(), corner.style().toString());
+        assertEquals(
+                List.fill(2, corner.style().fg()),
+                tracks.map(track -> track.style().fg()));
+        // No column inside the border is kept for a bar: a long line goes on to it.
+        int line = List.range(0, bottom)
+                .find(y -> buffer.get(1, y).symbol().equals("+"))
+                .get();
+        assertEquals("x", buffer.get(right - 1, line).symbol());
+    }
+
+    /**
+     * What {@code view} draws on a screen 100 by 30 in {@code theme}, while {@code focused} has the focus.
+     */
+    private static dev.tamboui.buffer.Buffer themed(
+            dev.tamboui.toolkit.element.Element view,
+            String focused,
+            net.vanfleteren.jazygit.settings.ThemeName theme) {
+        dev.tamboui.css.engine.StyleEngine engine = Theme.createEngine().get();
+        Theme.activate(engine, theme);
+        dev.tamboui.toolkit.focus.FocusManager focus = new dev.tamboui.toolkit.focus.FocusManager();
+        focus.setFocus(focused);
+        dev.tamboui.toolkit.element.DefaultRenderContext context = new dev.tamboui.toolkit.element.DefaultRenderContext(
+                focus,
+                new dev.tamboui.toolkit.event.EventRouter(focus, new dev.tamboui.toolkit.element.ElementRegistry()));
+        context.setStyleEngine(engine);
+        dev.tamboui.layout.Rect size = new dev.tamboui.layout.Rect(0, 0, 100, 30);
+        dev.tamboui.buffer.Buffer buffer = dev.tamboui.buffer.Buffer.empty(size);
+        view.render(dev.tamboui.terminal.Frame.forTesting(buffer), size, context);
+        return buffer;
+    }
+
+    @Test
+    void theBottomBorderOfAnAreaWithLinesNoWiderThanItIsLeftAsItIs() throws Exception {
+        Model model = showingCommit("+short");
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
+        String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+
+        String screen;
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
+            screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, area));
+        }
+
+        assertTrue(java.util.regex.Pattern.compile("[╰└]─+[╯┘]").matcher(screen).find(), screen);
+        // Nor are there more lines than show: the right border is left as it is too.
+        assertFalse(screen.contains(net.vanfleteren.jazygit.ui.widgets.BorderBar.DOWNWARDS_THUMB), screen);
+        assertFalse(
+                java.util.regex.Pattern.compile("[╰└][─━]*━[─━]*[╯┘]")
+                        .matcher(screen)
+                        .find(),
+                screen);
     }
 
     @Test
@@ -719,11 +883,11 @@ class ContentPanelTest {
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
             dev.tamboui.buffer.Buffer buffer = drawn(testRunner, () -> filling.render(model, area), 100);
-            // From its marker to the scrollbar, past the widest line of the file, not just as wide as that: from the
+            // From its marker to the border, past the widest line of the file, not just as wide as that: from the
             // first frame, though the area only learns how wide it is while it draws.
-            assertBackgroundTo(Color.GREEN, "+ short", 97, buffer);
+            assertBackgroundTo(Color.GREEN, "+ short", 98, buffer);
             // The bar of the file too.
-            assertBackgroundTo(Color.BLUE, "added  schema.sql", 97, buffer);
+            assertBackgroundTo(Color.BLUE, "added  schema.sql", 98, buffer);
         }
     }
 
@@ -737,7 +901,7 @@ class ContentPanelTest {
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
             assertBackgroundTo(
-                    Color.BLUE, "added  schema.sql", 97, drawn(testRunner, () -> filling.render(model, area), 100));
+                    Color.BLUE, "added  schema.sql", 98, drawn(testRunner, () -> filling.render(model, area), 100));
         }
     }
 
@@ -751,9 +915,9 @@ class ContentPanelTest {
                 ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
             drawn(testRunner, () -> filling.render(model, area), 60);
             // Wider, as when the left column is made narrower: on to the new edge, not that of the frame before.
-            assertBackgroundTo(Color.GREEN, "+ short", 97, drawn(testRunner, () -> filling.render(model, area), 100));
-            // Narrower again: nothing left of the frame before, like a column for a scrollbar.
-            assertBackgroundTo(Color.GREEN, "+ short", 57, drawn(testRunner, () -> filling.render(model, area), 60));
+            assertBackgroundTo(Color.GREEN, "+ short", 98, drawn(testRunner, () -> filling.render(model, area), 100));
+            // Narrower again: nothing left of the frame before, like the background of a line it drew wider.
+            assertBackgroundTo(Color.GREEN, "+ short", 58, drawn(testRunner, () -> filling.render(model, area), 60));
         }
     }
 

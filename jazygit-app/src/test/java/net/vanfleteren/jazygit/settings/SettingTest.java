@@ -29,6 +29,8 @@ class SettingTest {
             .withRepositoryHeights(List.of(20, 20, 20))
             .withPullRequestsHeights(List.of(40, 30))
             .withAnimations(false)
+            .withAutoRefresh(false)
+            .withAutoFetch(false)
             .withBrowsers(AccountBrowsers.NONE.with("github.com", "octocat", Option.some("firefox")));
 
     @Test

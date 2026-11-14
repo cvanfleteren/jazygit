@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
 import java.time.Duration;
+import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
@@ -34,7 +35,8 @@ public interface Msg {
     /**
      * A message a timer sends to read the repository, the remotes or GitHub again. While the terminal does not have
      * the focus, it is handled at most once every {@link #whileAway()}, kept otherwise, and handled once the terminal
-     * has it again (ADR 58, ADR 67).
+     * has it again (ADR 58, ADR 67). The user can turn some timers off; what such a timer sends is then not handled
+     * (ADR 125).
      */
     interface Periodic extends Msg {
 
@@ -42,6 +44,22 @@ public interface Msg {
          * How long this message waits between two times it is handled while the terminal does not have the focus.
          */
         Duration whileAway();
+
+        /**
+         * Whether its timer reads with {@code settings}; when not, what it sends is not handled, unless it is
+         * {@link #readOnReturn()}.
+         */
+        default boolean on(Settings settings) {
+            return true;
+        }
+
+        /**
+         * Whether, with its timer off, it is still kept while away, and handled once the focus comes back: a read
+         * put off, rather than one the user turned off.
+         */
+        default boolean readOnReturn() {
+            return false;
+        }
     }
 
     /**

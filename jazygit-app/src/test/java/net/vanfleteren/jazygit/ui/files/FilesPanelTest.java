@@ -38,6 +38,7 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
+import net.vanfleteren.jazygit.ui.widgets.BorderBar;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -77,6 +78,25 @@ class FilesPanelTest {
             String other = RenderedText.of(testRunner, () -> panel.render(deleted, FilesPanel.ID));
             assertTrue(other.contains("UD theirs-deleted.txt"), other);
             assertTrue(other.contains("DU ours-deleted.txt"), other);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void theScrollbarOfMoreFilesThanShowIsOnTheRightBorder() throws Exception {
+        Model model = TestModels.loaded(fixed(
+                List.range(0, 100).map(i -> Fixtures.fileEntry("file%03d.txt".formatted(i), ChangeType.MODIFIED))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+            List<String> rows = List.of(screen.split("\n"));
+            // The last column of the rows between the top and the bottom border: the right border.
+            String border = rows.subSequence(1, rows.size() - 1)
+                    .map(row -> row.substring(row.length() - 1))
+                    .mkString();
+            assertTrue(border.matches(BorderBar.DOWNWARDS_THUMB + "+│+"), screen);
+            assertFalse(screen.contains("█"), screen);
 
             SettledPilot.of(testRunner).quit();
         }

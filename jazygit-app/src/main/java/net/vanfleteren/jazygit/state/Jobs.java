@@ -31,7 +31,6 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  *                   a remote meanwhile that it may have missed
  * @param fetchChanged whether the fetch that runs, or ran last, changed a remote-tracking branch so far (ADR 58)
  * @param lastFetch  when a remote was last fetched from, and the remotes that failed the last time
- * @param worktreeChangesRead when reading which worktrees have changes last finished, whatever came of it
  * @param readAt     for each load that {@link CheckMetadata} guards, what the files it reads looked like when it
  *                   was last started, and for the highlighted diff, when it was last read (ADR 58); it is not
  *                   started again until they change. A load that fails is forgotten, so the next tick tries again
@@ -64,7 +63,6 @@ public record Jobs(
         boolean fetchAgain,
         boolean fetchChanged,
         Freshness lastFetch,
-        Option<Instant> worktreeChangesRead,
         Map<Load, MetadataStamp> readAt,
         Option<String> ghExecutableEntered,
         long ticks,
@@ -83,7 +81,6 @@ public record Jobs(
             false,
             false,
             Freshness.NEVER,
-            Option.none(),
             HashMap.empty(),
             Option.none(),
             0,
@@ -116,8 +113,8 @@ public record Jobs(
     private static final Duration AWAY_SLACK = Duration.ofMillis(500);
 
     /**
-     * Caps how long a tick waits before trying a read that failed again at {@code 2^6} = 64 ticks, about a minute at
-     * the default interval.
+     * Caps how long a tick waits before trying a read that failed again at {@code 2^6} = 64 ticks, about 3 minutes at
+     * the default interval (ADR 125).
      */
     private static final int MAX_BACKOFF_SHIFT = 6;
 

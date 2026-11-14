@@ -31,3 +31,5 @@ the app, however old that was.
 - Each start of a session takes a `git remote` and a `git fetch` per remote, and a read of the pull requests
   once they are done.
 - The ahead and behind counts of the branches can change shortly after the app shows them, once the fetch is in.
+
+Amended by ADR 125: with `git.auto-fetch` off, the `FetchMsg.Tick` sent at the start of a session fetches nothing.

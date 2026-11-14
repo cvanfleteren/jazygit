@@ -81,13 +81,22 @@ public final class SettingsPanelDialogs {
                             new Choice<SettingsPanelPopup>(
                                             'm',
                                             popup -> Messages.get(
-                                                    "dialog.settings.animations",
-                                                    Messages.get(
-                                                            popup.animations()
-                                                                    ? "dialog.settings.on"
-                                                                    : "dialog.settings.off")),
+                                                    "dialog.settings.animations", onOff(popup.animations())),
                                             SettingsPanelMsg.AnimationsToggled::new)
                                     .withDetails("dialog.settings.animations.details"),
+                            new Choice<SettingsPanelPopup>(
+                                            's',
+                                            popup -> Messages.get(
+                                                    "dialog.settings.autoRefresh", onOff(popup.autoRefresh())),
+                                            SettingsPanelMsg.AutoRefreshToggled::new)
+                                    .withHeading("dialog.settings.group.git")
+                                    .withDetails("dialog.settings.autoRefresh.details"),
+                            new Choice<SettingsPanelPopup>(
+                                            'f',
+                                            popup ->
+                                                    Messages.get("dialog.settings.autoFetch", onOff(popup.autoFetch())),
+                                            SettingsPanelMsg.AutoFetchToggled::new)
+                                    .withDetails("dialog.settings.autoFetch.details"),
                             new Choice<SettingsPanelPopup>(
                                             'g',
                                             SettingsPanelDialogs::ghExecutable,
@@ -156,6 +165,10 @@ public final class SettingsPanelDialogs {
         return Messages.get(
                 "dialog.settings.file",
                 popup.file().map(HomeDir::shown).getOrElse(() -> Messages.get("dialog.settings.reading")));
+    }
+
+    private static String onOff(boolean on) {
+        return Messages.get(on ? "dialog.settings.on" : "dialog.settings.off");
     }
 
     private static String themeLabel(ThemeName theme) {

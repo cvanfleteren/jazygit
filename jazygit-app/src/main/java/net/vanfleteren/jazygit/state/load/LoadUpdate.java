@@ -59,7 +59,7 @@ public final class LoadUpdate {
                                         || loaded.stashes()
                                                 .exists(listed -> listed.sha().equals(stash.sha()))))));
             case WorktreeChangesLoaded loaded ->
-                Next.of(worktreeChangesRead(done).mapRepo(repo -> repo.withWorktreeChanges(loaded.changes())));
+                Next.of(done.mapRepo(repo -> repo.withWorktreeChanges(loaded.changes())));
             // The log is only read again when HEAD moved, so the history the search runs on changed too, and what
             // is not on its base: that was read with it, so that the log is shown with it at once.
             case CommitsLoaded loaded ->
@@ -346,14 +346,6 @@ public final class LoadUpdate {
     }
 
     /**
-     * {@code model} with reading which worktrees have changes finished now, so that a tick waits before reading it
-     * again.
-     */
-    private static Model worktreeChangesRead(Model model) {
-        return model.mapJobs(jobs -> jobs.withWorktreeChangesRead(Option.of(model.now())));
-    }
-
-    /**
      * {@code model} with {@code cmd} having failed: in its {@link Target}, or as each load that is not targeted keeps
      * what it reads.
      */
@@ -366,7 +358,7 @@ public final class LoadUpdate {
                         .withRemoteBranches(repo.remoteBranches().failed(failure)));
             // Which worktrees have changes is a detail: when the whole read fails, what was read before stays, and
             // a later tick tries again. A single worktree that cannot be read is left out of a read that succeeds.
-            case LoadWorktreeChanges _ -> worktreeChangesRead(model);
+            case LoadWorktreeChanges _ -> model;
             case LoadAhead load -> AheadUpdate.failed(model, load, failure);
             // What the files look like is kept by Jobs: when looking at them fails, the next status looks again.
             case CheckMetadata() -> model;

@@ -5,7 +5,6 @@ import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -49,12 +48,6 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * {@link Msg} group.
  */
 public final class Update {
-
-    /**
-     * How long a tick waits after reading which worktrees have changes before reading that again: it takes a
-     * git status per worktree, too many to run on every tick.
-     */
-    static final Duration WORKTREE_CHANGES_INTERVAL = Duration.ofSeconds(3);
 
     /**
      * Loads that reading the repository again repeats. They are skipped while a previous one is still running.
@@ -152,6 +145,12 @@ public final class Update {
     }
 
     private static Next handle(Model model, Msg msg) {
+        if (msg instanceof Msg.Periodic periodic
+                && !periodic.on(model.preferences().settings())) {
+            return model.jobs().away() && periodic.readOnReturn()
+                    ? Next.of(model.mapJobs(jobs -> jobs.keptWhileAway(periodic, model.now())))
+                    : Next.of(model);
+        }
         if (model.jobs().away() && msg instanceof Msg.Periodic periodic) {
             return model.jobs().dueWhileAway(periodic, model.now())
                     ? msg.apply(model.mapJobs(jobs -> jobs.handledWhileAway(periodic, model.now())))
@@ -178,7 +177,8 @@ public final class Update {
     /**
      * The terminal got the focus, or lost it. While away, the timers read less: each of their messages is handled
      * once every {@link Msg.Periodic#whileAway()} (ADR 67); once back, what they asked for since it was last handled
-     * is read once, as each of their messages is handled once (ADR 58).
+     * is read once, as each of their messages is handled once (ADR 58), unless the user turned its timer off since,
+     * and it is not one that is read once back even then (ADR 125).
      */
     static Next focused(Model model, boolean focused) {
         if (!focused) {
@@ -189,7 +189,19 @@ public final class Update {
         return missed.foldLeft(
                 Next.of(model.mapJobs(jobs ->
                         jobs.withAway(false).withMissed(LinkedHashSet.empty()).withAwayAt(HashMap.empty()))),
-                (next, msg) -> next.then(m -> handled(m, msg)));
+                (next, msg) -> next.then(m -> replayed(m, msg)));
+    }
+
+    /**
+     * {@code msg}, kept while away, handled now that the terminal has the focus again: neither the away check nor the
+     * switch of a read that is read once back applies to it (ADR 125).
+     */
+    private static Next replayed(Model model, Msg msg) {
+        return msg instanceof Msg.Periodic periodic
+                        && !periodic.on(model.preferences().settings())
+                        && !periodic.readOnReturn()
+                ? Next.of(model)
+                : arrived(msg.apply(model));
     }
 
     /**
@@ -289,10 +301,7 @@ public final class Update {
         List<Load> loads = periodic.appendAll(retries.filter(due))
                 .map(load -> LoadBranches.current(model, load))
                 .filter(cmd -> !model.jobs().runs(cmd))
-                .appendAll(worktreeChanges(model)
-                        .filter(load -> model.jobs()
-                                .worktreeChangesRead()
-                                .forAll(read -> !model.now().isBefore(read.plus(WORKTREE_CHANGES_INTERVAL)))));
+                .appendAll(worktreeChanges(model));
         return new Next(model.mapJobs(jobs -> jobs.retainingRetries(retries.toSet())), List.narrow(loads));
     }
 

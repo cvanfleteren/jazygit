@@ -69,6 +69,8 @@ class SettingsPanelUpdateTest {
             Option.none(),
             Option.of(SETUP),
             true,
+            true,
+            true,
             AccountBrowsers.NONE,
             Option.none());
 
@@ -82,6 +84,8 @@ class SettingsPanelUpdateTest {
                         RepositoryTheme.NONE,
                         Option.none(),
                         Option.none(),
+                        true,
+                        true,
                         true,
                         AccountBrowsers.NONE,
                         Option.none())),
@@ -308,6 +312,8 @@ class SettingsPanelUpdateTest {
                         Option.none(),
                         Option.none(),
                         true,
+                        true,
+                        true,
                         AccountBrowsers.NONE,
                         Option.none()));
 
@@ -330,6 +336,40 @@ class SettingsPanelUpdateTest {
         Next on = Update.update(off.model(), new SettingsPanelMsg.AnimationsToggled());
 
         assertTrue(on.model().preferences().settings().animations());
+        assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
+    }
+
+    @Test
+    void readingTheRepositoryEverySoOftenIsTurnedOffAndOnAgainAndKeptWithThePanelStillOpen() {
+        Model open = TestModels.loaded().openPopup(READ);
+        Settings kept = open.preferences().settings();
+
+        Next off = Update.update(open, new SettingsPanelMsg.AutoRefreshToggled());
+
+        assertFalse(off.model().preferences().settings().autoRefresh());
+        assertEquals(Option.of(READ.withAutoRefresh(false)), off.model().popup(SettingsPanelPopup.class));
+        assertEquals(List.of(new SaveSettings(kept, kept.withAutoRefresh(false))), off.cmds());
+
+        Next on = Update.update(off.model(), new SettingsPanelMsg.AutoRefreshToggled());
+
+        assertTrue(on.model().preferences().settings().autoRefresh());
+        assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
+    }
+
+    @Test
+    void fetchingEverySoOftenIsTurnedOffAndOnAgainAndKeptWithThePanelStillOpen() {
+        Model open = TestModels.loaded().openPopup(READ);
+        Settings kept = open.preferences().settings();
+
+        Next off = Update.update(open, new SettingsPanelMsg.AutoFetchToggled());
+
+        assertFalse(off.model().preferences().settings().autoFetch());
+        assertEquals(Option.of(READ.withAutoFetch(false)), off.model().popup(SettingsPanelPopup.class));
+        assertEquals(List.of(new SaveSettings(kept, kept.withAutoFetch(false))), off.cmds());
+
+        Next on = Update.update(off.model(), new SettingsPanelMsg.AutoFetchToggled());
+
+        assertTrue(on.model().preferences().settings().autoFetch());
         assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
     }
 

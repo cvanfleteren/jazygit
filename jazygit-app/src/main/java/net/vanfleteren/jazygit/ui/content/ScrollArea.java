@@ -24,6 +24,9 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import dev.tamboui.tui.event.PasteEvent;
+import dev.tamboui.widgets.scrollbar.Scrollbar;
+import dev.tamboui.widgets.scrollbar.ScrollbarOrientation;
+import dev.tamboui.widgets.scrollbar.ScrollbarState;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.Vector;
@@ -54,6 +57,7 @@ import net.vanfleteren.jazygit.ui.diff.DiffCursor;
 import net.vanfleteren.jazygit.ui.diff.RichDiff;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
+import net.vanfleteren.jazygit.ui.widgets.BorderBar;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
 import net.vanfleteren.jazygit.ui.widgets.PasteTarget;
 
@@ -95,7 +99,8 @@ public final class ScrollArea {
     // Whether it shows the diff of a pull request's files, whose keys comment on it (ADR 60).
     private boolean review = false;
     // How far the area is scrolled sideways, as last drawn, and how far it can be. TamboUI's text area keeps a
-    // column it never draws at, so the area draws its lines with as many columns cut off their start itself.
+    // column it never draws at, so the area draws its lines with as many columns cut off their start itself, and
+    // shows where it is with TamboUI's scrollbar on its bottom border, as it shows how far down on its right one.
     private int column = 0;
     private int columns = 0;
     // The size the area was last drawn in, which its lines are fitted to; none before it is first drawn (ADR 80).
@@ -116,7 +121,8 @@ public final class ScrollArea {
         this.leaveScrollArea = leaveScrollArea;
         this.focus = focus;
         this.dispatch = dispatch;
-        element = richTextArea().id(id).scrollbar().fill();
+        // Without TamboUI's scrollbar, which takes a column inside the border: the area draws its own on the border.
+        element = richTextArea().id(id).fill();
     }
 
     /**
@@ -596,18 +602,74 @@ public final class ScrollArea {
         public void render(Frame frame, Rect at, RenderContext context) {
             if (at.width() == drawnWidth && at.height() == drawnHeight) {
                 fitted.render(frame, at, context);
+            } else {
+                drawnWidth = at.width();
+                drawnHeight = at.height();
+                Buffer buffer = frame.buffer();
+                Rect cells = buffer.area().intersection(at);
+                Vector<Cell> before = Vector.range(cells.top(), cells.bottom())
+                        .flatMap(y -> Vector.range(cells.left(), cells.right()).map(x -> buffer.get(x, y)));
+                fitted.render(frame, at, context);
+                before.forEachWithIndex((cell, index) ->
+                        buffer.set(cells.left() + index % cells.width(), cells.top() + index / cells.width(), cell));
+                again.get().render(frame, at, context);
+            }
+            bars(frame, at);
+        }
+
+        /**
+         * Draws on the borders of the area, drawn in {@code at}, how far it is scrolled: down on its right border
+         * while it has more lines than show, sideways on its bottom border while its lines are wider than it. On
+         * the border, a bar takes no column or line from the text.
+         */
+        private void bars(Frame frame, Rect at) {
+            if (at.width() < 3 || at.height() < 3) {
                 return;
             }
-            drawnWidth = at.width();
-            drawnHeight = at.height();
-            Buffer buffer = frame.buffer();
-            Rect cells = buffer.area().intersection(at);
-            Vector<Cell> before = Vector.range(cells.top(), cells.bottom())
-                    .flatMap(y -> Vector.range(cells.left(), cells.right()).map(x -> buffer.get(x, y)));
-            fitted.render(frame, at, context);
-            before.forEachWithIndex((cell, index) ->
-                    buffer.set(cells.left() + index % cells.width(), cells.top() + index / cells.width(), cell));
-            again.get().render(frame, at, context);
+            RichTextState state = element.state();
+            int height = state.viewportHeight();
+            int width = state.viewportWidth();
+            if (state.contentHeight() > height) {
+                onBorder(
+                        frame,
+                        new Rect(at.right() - 1, at.y() + 1, 1, at.height() - 2),
+                        ScrollbarOrientation.VERTICAL_RIGHT,
+                        BorderBar.DOWNWARDS_THUMB,
+                        new ScrollbarState()
+                                .contentLength(state.contentHeight())
+                                .viewportContentLength(height)
+                                .position(state.scrollRow()));
+            }
+            if (columns > 0) {
+                onBorder(
+                        frame,
+                        new Rect(at.x() + 1, at.bottom() - 1, at.width() - 2, 1),
+                        ScrollbarOrientation.HORIZONTAL_BOTTOM,
+                        BorderBar.SIDEWAYS_THUMB,
+                        new ScrollbarState()
+                                .contentLength(columns + width)
+                                .viewportContentLength(width)
+                                .position(column));
+            }
+        }
+
+        /**
+         * Draws a bar {@code scrolled} over the side of the border at {@code border}. Its track is the line the
+         * border is drawn with, single or double as the theme has it, in the colour of the border; its thumb, a
+         * heavy line, is in the terminal's own colour.
+         */
+        private void onBorder(
+                Frame frame, Rect border, ScrollbarOrientation orientation, String thumb, ScrollbarState scrolled) {
+            frame.renderStatefulWidget(
+                    Scrollbar.builder()
+                            .orientation(orientation)
+                            .trackSymbol(
+                                    frame.buffer().get(border.x(), border.y()).symbol())
+                            .thumbSymbol(thumb)
+                            .thumbStyle(BorderBar.THUMB)
+                            .build(),
+                    border,
+                    scrolled);
         }
 
         @Override

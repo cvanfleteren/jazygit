@@ -15,6 +15,8 @@ import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
  * @param ghExecutable    the gh executable chosen, if not the one on the PATH
  * @param gitHub          how gh is set up for the repository; none while it is read
  * @param animations      whether what moves on the screen moves there smoothly (ADR 81)
+ * @param autoRefresh     whether the repository is read again every so often (ADR 125)
+ * @param autoFetch       whether the remotes are fetched from every so often (ADR 125)
  * @param browsers        the browser set for each GitHub account (ADR 88)
  * @param file            the settings file, which {@code e} opens; none while it is read, or when the settings are
  *                        kept in no file (ADR 111)
@@ -28,6 +30,8 @@ public record SettingsPanelPopup(
         Option<String> ghExecutable,
         Option<GitHubSetup> gitHub,
         boolean animations,
+        boolean autoRefresh,
+        boolean autoFetch,
         AccountBrowsers browsers,
         Option<String> file,
         Option<Character> opensAt)
@@ -42,8 +46,20 @@ public record SettingsPanelPopup(
             Option<String> ghExecutable,
             Option<GitHubSetup> gitHub,
             boolean animations,
+            boolean autoRefresh,
+            boolean autoFetch,
             AccountBrowsers browsers,
             Option<String> file) {
-        this(theme, repositoryTheme, ghExecutable, gitHub, animations, browsers, file, Option.none());
+        this(
+                theme,
+                repositoryTheme,
+                ghExecutable,
+                gitHub,
+                animations,
+                autoRefresh,
+                autoFetch,
+                browsers,
+                file,
+                Option.none());
     }
 }
