@@ -105,3 +105,6 @@ without changes has no diff, and no version can be made from one.
 - `f` on the main branch still says it has no base. Left for later: the files of a branch as committed, read-only,
   for a branch not checked out; `e` at the line of the cursor, which needs the way each editor takes a line; a file
   compared with how it was before the last commit that changed it.
+
+Amended by ADR 128: `F` on the main branch lists all files of its tip as committed, read-only, whatever is checked
+out; `a` in the files of a commit lists all files of that commit.
