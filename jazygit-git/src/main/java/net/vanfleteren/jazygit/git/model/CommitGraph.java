@@ -52,7 +52,7 @@ public final class CommitGraph {
     public static List<Node> layout(List<Commit> arranged) {
         Set<Sha> listed = arranged.map(Commit::sha).toSet();
         return arranged.foldLeft(
-                        new Laid(List.empty(), List.empty()),
+                        new Laid(Vector.empty(), List.empty()),
                         (laid, commit) -> laid.next(commit, commit.parents().filter(listed::contains)))
                 .latestFirst()
                 .reverse();
@@ -61,7 +61,7 @@ public final class CommitGraph {
     /**
      * The first column from {@code from} on without a rail.
      */
-    private static int free(List<Option<Sha>> rails, int from) {
+    private static int free(Vector<Option<Sha>> rails, int from) {
         return List.range(from, rails.size())
                 .find(at -> rails.get(at).isEmpty())
                 .getOrElse(Math.max(from, rails.size()));
@@ -113,9 +113,9 @@ public final class CommitGraph {
 
     /**
      * The rails below the nodes laid out so far, by column, with the commit each waits for, and those nodes, last
-     * laid out first.
+     * laid out first. The rails are a {@link Vector}, as they are looked up by column.
      */
-    private record Laid(List<Option<Sha>> rails, List<Node> latestFirst) {
+    private record Laid(Vector<Option<Sha>> rails, List<Node> latestFirst) {
 
         /**
          * @param parents the parents of {@code commit} that get a rail
@@ -127,14 +127,13 @@ public final class CommitGraph {
                     .filter(at -> rails.get(at).equals(sha));
             List<Integer> passing = List.range(0, rails.size())
                     .filter(at -> at != column && rails.get(at).isDefined() && !joins.contains(at));
-            List<Option<Sha>> kept = List.range(0, Math.max(rails.size(), column + 1))
+            Vector<Option<Sha>> kept = Vector.range(0, Math.max(rails.size(), column + 1))
                     .map(at -> at == column
                             ? parents.headOption()
                             : joins.contains(at) ? Option.<Sha>none() : rails.get(at));
             Opened opened = parents.drop(1)
                     .foldLeft(new Opened(kept, List.empty()), (state, parent) -> state.open(parent, column));
-            List<Option<Sha>> below =
-                    opened.rails().reverse().dropWhile(Option::isEmpty).reverse();
+            Vector<Option<Sha>> below = opened.rails().dropRightWhile(Option::isEmpty);
             List<Meet> meets = List.range(0, below.size())
                     .filter(at -> doubled(below, at)
                             && !(doubled(rails, at) && rails.get(at).equals(below.get(at))))
@@ -146,7 +145,7 @@ public final class CommitGraph {
         /**
          * Whether the rail {@code at} waits for the same commit as a rail to its left.
          */
-        private static boolean doubled(List<Option<Sha>> rails, int at) {
+        private static boolean doubled(Vector<Option<Sha>> rails, int at) {
             return at < rails.size() && rails.get(at).isDefined() && rails.indexOf(rails.get(at)) < at;
         }
     }
@@ -154,7 +153,7 @@ public final class CommitGraph {
     /**
      * The rails while the other parents of a merge get theirs, and the columns they got so far.
      */
-    private record Opened(List<Option<Sha>> rails, List<Integer> opens) {
+    private record Opened(Vector<Option<Sha>> rails, List<Integer> opens) {
 
         Opened open(Sha parent, int column) {
             int at = List.range(column + 1, rails.size())
