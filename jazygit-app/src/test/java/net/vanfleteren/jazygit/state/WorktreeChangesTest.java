@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
@@ -83,34 +82,27 @@ class WorktreeChangesTest {
     }
 
     @Test
-    void aTickWaitsAWhileAfterTheyWereReadBeforeReadingThemAgain() {
-        Instant read = Instant.parse("2026-10-21T10:00:00Z");
-        Model done = Update.update(
-                        Update.refresh(onWorktreesTab(withWorktrees()).withNow(read))
+    void theNextTickReadsThemAgainOnceTheyWereRead() {
+        Model done = TestModels.done(
+                        TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
                                 .model(),
+                        LOAD,
                         new LoadMsg.WorktreeChangesLoaded(List.of(LINKED.toString()), HashMap.empty()))
                 .model();
 
-        assertFalse(Update.update(done.withNow(read.plusMillis(500)), new TimerMsg.Tick())
-                .cmds()
-                .exists(cmd -> cmd instanceof LoadWorktreeChanges));
-        assertTrue(Update.update(done.withNow(read.plus(Update.WORKTREE_CHANGES_INTERVAL)), new TimerMsg.Tick())
-                .cmds()
-                .contains(LOAD));
+        assertTrue(Update.update(done, new TimerMsg.Tick()).cmds().contains(LOAD));
     }
 
     @Test
-    void failingToReadThemAlsoMakesATickWait() {
-        Instant read = Instant.parse("2026-10-21T10:00:00Z");
-        Model failed = Update.update(
-                        Update.refresh(onWorktreesTab(withWorktrees()).withNow(read))
+    void theNextTickReadsThemAgainOnceReadingThemFailed() {
+        Model failed = TestModels.done(
+                        TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
                                 .model(),
+                        LOAD,
                         new LoadMsg.Failed(LOAD, new Failure.Git(new GitError.TimedOut("status", LINKED))))
                 .model();
 
-        assertFalse(Update.update(failed.withNow(read.plusMillis(500)), new TimerMsg.Tick())
-                .cmds()
-                .exists(cmd -> cmd instanceof LoadWorktreeChanges));
+        assertTrue(Update.update(failed, new TimerMsg.Tick()).cmds().contains(LOAD));
     }
 
     @Test

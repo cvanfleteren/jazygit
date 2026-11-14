@@ -83,6 +83,12 @@ record Setting<T>(
                     Lens.of(Settings::animations, Settings::withAnimations),
                     Setting::bool,
                     as(on -> on)),
+            of(
+                    Settings.AUTO_REFRESH,
+                    Lens.of(Settings::autoRefresh, Settings::withAutoRefresh),
+                    Setting::bool,
+                    as(on -> on)),
+            of(Settings.AUTO_FETCH, Lens.of(Settings::autoFetch, Settings::withAutoFetch), Setting::bool, as(on -> on)),
             // The browsers are a table of tables, by host and then by login.
             of(
                     Settings.BROWSERS,

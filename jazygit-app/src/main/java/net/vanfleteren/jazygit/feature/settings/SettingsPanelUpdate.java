@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.feature.settings;
 
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsUpdate;
 import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.feature.theme.ThemeUpdate;
@@ -20,8 +22,9 @@ import net.vanfleteren.jazygit.state.preferences.SettingsError;
 import net.vanfleteren.jazygit.state.preferences.SettingsMsg;
 
 /**
- * Looking at the settings and changing them: the theme, whether what moves moves smoothly, the gh executable, the
- * account gh and git use for the repository, and the browser of that account. A change to how gh runs shows the repository again, as if the app
+ * Looking at the settings and changing them: the theme, whether what moves moves smoothly, whether the repository is
+ * read and the remotes fetched from every so often, the gh executable, the account gh and git use for the repository,
+ * and the browser of that account. A change to how gh runs shows the repository again, as if the app
  * had been started with it. The settings file opens in git's editor, and is read again after it, and as the panel
  * opens (ADR 111).
  */
@@ -38,7 +41,10 @@ public final class SettingsPanelUpdate {
                 askTheme(model, ThemeScope.EVERYWHERE, SettingsPanelDialogs.THEME_KEY);
             case SettingsPanelMsg.RepositoryThemeRequested() ->
                 askTheme(model, ThemeScope.REPOSITORY, SettingsPanelDialogs.REPOSITORY_THEME_KEY);
-            case SettingsPanelMsg.AnimationsToggled() -> animationsToggled(model);
+            case SettingsPanelMsg.AnimationsToggled() -> toggled(model, Settings::animations, Settings::withAnimations);
+            case SettingsPanelMsg.AutoRefreshToggled() ->
+                toggled(model, Settings::autoRefresh, Settings::withAutoRefresh);
+            case SettingsPanelMsg.AutoFetchToggled() -> toggled(model, Settings::autoFetch, Settings::withAutoFetch);
             case SettingsPanelMsg.GhExecutableRequested() -> ghExecutableRequested(model);
             case SettingsPanelMsg.GhExecutableEntered() -> ghExecutableEntered(model);
             case SettingsPanelMsg.GhExecutableChecked(var executable, var version) ->
@@ -78,6 +84,8 @@ public final class SettingsPanelUpdate {
                         model.preferences().settings().ghExecutable(),
                         Option.none(),
                         model.preferences().settings().animations(),
+                        model.preferences().settings().autoRefresh(),
+                        model.preferences().settings().autoFetch(),
                         model.preferences().settings().browsers(),
                         Option.none())),
                 new SettingsPanelCmd.ReadGitHub(model.preferences().settings().gh()),
@@ -94,12 +102,30 @@ public final class SettingsPanelUpdate {
     }
 
     /**
-     * Turns the animations off or on from the open panel.
+     * Turns the setting that {@code on} reads off if it is on, else on, from the open panel, keeping that for the next
+     * session, with the panel still open to show it.
      */
-    private static Next animationsToggled(Model model) {
+    private static Next toggled(
+            Model model, Function<Settings, Boolean> on, BiFunction<Settings, Boolean, Settings> with) {
         return model.popup(SettingsPanelPopup.class)
-                .map(panel -> toggleAnimations(model, panel))
+                .map(panel -> {
+                    Settings kept = model.preferences().settings();
+                    Settings chosen = with.apply(kept, !on.apply(kept));
+                    return Next.of(
+                            model.mapPreferences(preferences -> preferences.withSettings(chosen))
+                                    .openPopup(shown(panel, chosen)),
+                            new SaveSettings(kept, chosen));
+                })
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * {@code panel} showing the on or off settings of {@code settings}.
+     */
+    private static SettingsPanelPopup shown(SettingsPanelPopup panel, Settings settings) {
+        return panel.withAnimations(settings.animations())
+                .withAutoRefresh(settings.autoRefresh())
+                .withAutoFetch(settings.autoFetch());
     }
 
     /**
@@ -245,9 +271,9 @@ public final class SettingsPanelUpdate {
                 .withReported(loaded.problem())
                 .withThemeOverride(applied.themeChanged() ? Option.none() : preferences.themeOverride()));
         Model shown = updated.popup(SettingsPanelPopup.class)
-                .map(panel -> updated.openPopup(panel.withTheme(settings.theme())
+                .map(panel -> updated.openPopup(shown(panel, settings)
+                        .withTheme(settings.theme())
                         .withGhExecutable(settings.ghExecutable())
-                        .withAnimations(settings.animations())
                         .withBrowsers(settings.browsers())))
                 .getOrElse(updated);
         Option<SettingsProblem> report = edited
@@ -262,19 +288,6 @@ public final class SettingsPanelUpdate {
         return settings.diffStyle() == before.settings().diffStyle()
                 ? Next.of(reported)
                 : DiffOptionsUpdate.changed(reported);
-    }
-
-    /**
-     * Turns the animations off if they are on, else on, keeping that for the next session, with the {@code panel}
-     * still open to show it.
-     */
-    private static Next toggleAnimations(Model model, SettingsPanelPopup panel) {
-        Settings kept = model.preferences().settings();
-        Settings chosen = kept.withAnimations(!kept.animations());
-        return Next.of(
-                model.mapPreferences(preferences -> preferences.withSettings(chosen))
-                        .openPopup(panel.withAnimations(chosen.animations())),
-                new SaveSettings(kept, chosen));
     }
 
     /**

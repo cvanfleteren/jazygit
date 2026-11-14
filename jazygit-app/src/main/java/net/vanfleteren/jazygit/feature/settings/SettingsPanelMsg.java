@@ -39,6 +39,16 @@ public sealed interface SettingsPanelMsg extends Msg {
      */
     record AnimationsToggled() implements SettingsPanelMsg {}
 
+    /**
+     * The user turned reading the repository every so often on or off (ADR 125).
+     */
+    record AutoRefreshToggled() implements SettingsPanelMsg {}
+
+    /**
+     * The user turned fetching from the remotes every so often on or off (ADR 125).
+     */
+    record AutoFetchToggled() implements SettingsPanelMsg {}
+
     record GhExecutableRequested() implements SettingsPanelMsg {}
 
     /**

@@ -24,6 +24,9 @@ import lombok.With;
  *                            the status takes but the last, which takes what is left, in percent
  * @param animations          whether what moves on the screen, like the left column stepped wider or narrower,
  *                            moves there smoothly, rather than at once (ADR 81)
+ * @param autoRefresh         whether the repository is read again every so often, to show what changed outside the
+ *                            app (ADR 125)
+ * @param autoFetch           whether the remotes are fetched from at the start and every so often (ADR 125)
  * @param browsers            the browser set for each GitHub account (ADR 88)
  * @param editors             the editors a worktree can be opened in (ADR 110); only read, never written, as only
  *                            the user sets them
@@ -40,6 +43,8 @@ public record Settings(
         List<Integer> repositoryHeights,
         List<Integer> pullRequestsHeights,
         boolean animations,
+        boolean autoRefresh,
+        boolean autoFetch,
         AccountBrowsers browsers,
         Editors editors) {
 
@@ -85,6 +90,8 @@ public record Settings(
             DEFAULT_REPOSITORY_HEIGHTS,
             DEFAULT_PULL_REQUESTS_HEIGHTS,
             true,
+            true,
+            true,
             AccountBrowsers.NONE,
             Editors.NONE);
 
@@ -128,6 +135,14 @@ public record Settings(
      * The key of whether what moves on the screen moves there smoothly in the settings file (ADR 81).
      */
     static final String ANIMATIONS = "ui.animations";
+    /**
+     * The key of whether the repository is read again every so often in the settings file (ADR 125).
+     */
+    static final String AUTO_REFRESH = "git.auto-refresh";
+    /**
+     * The key of whether the remotes are fetched from every so often in the settings file (ADR 125).
+     */
+    static final String AUTO_FETCH = "git.auto-fetch";
     /**
      * The key of the table of the browser of each GitHub account in the settings file (ADR 88).
      */
