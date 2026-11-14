@@ -48,7 +48,7 @@ import net.vanfleteren.jazygit.state.popup.Popup;
 class ArchitectureTest {
 
     /**
-     * The core, jazygit-json and jazygit-syntax are checked by their own rules; their classes, the test-jars of git
+     * The core, jazygit-json, jazygit-yaml and jazygit-syntax are checked by their own rules; their classes, the test-jars of git
      * and gh, and the shared rules of jazygit-test-support, are left out here.
      */
     static final class LeaveOutTheOtherModules implements ImportOption {
@@ -59,6 +59,7 @@ class ArchitectureTest {
                     && !location.contains("/jazygit-gh/")
                     && !location.contains("/jazygit-test-support/")
                     && !location.contains("/jazygit-json/")
+                    && !location.contains("/jazygit-yaml/")
                     && !location.contains("/jazygit-syntax/");
         }
     }
@@ -106,6 +107,13 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule nothingUsesParsson =
             noClasses().should().dependOnClassesThat().resideInAnyPackage("jakarta.json..", "org.eclipse.parsson..");
+    /**
+     * YAML is read through jazygit-yaml's {@code YamlTree}; SnakeYAML, which comes along with it, is not used here
+     * (ADR 123).
+     */
+    @ArchTest
+    static final ArchRule nothingUsesSnakeYaml =
+            noClasses().should().dependOnClassesThat().resideInAnyPackage("org.snakeyaml..");
     /**
      * The command line stands on its own: it reads how jazygit is asked to start, and knows nothing of what is
      * started.

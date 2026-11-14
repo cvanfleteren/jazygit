@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.Rendered;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -49,7 +50,7 @@ class RenderedJsonTest {
 
     @Test
     void eachRowStandsForItsLinesAndIsAStopByItsPath() {
-        List<RenderedJson.JsonRow> rows = rows("""
+        List<RenderedTree.TreeRow> rows = rows("""
                 {
                   "a": [1, 2],
                   "b": {
@@ -59,8 +60,8 @@ class RenderedJsonTest {
 
         assertEquals(
                 List.of(Option.of("/a"), Option.of("/b"), Option.of("/b/c~1d"), Option.of("/b/c~1d/e")),
-                rows.map(RenderedJson.JsonRow::pointer));
-        assertEquals(List.of(List.of(2), List.of(3), List.of(4), List.of(4)), rows.map(RenderedJson.JsonRow::lines));
+                rows.map(RenderedTree.TreeRow::pointer));
+        assertEquals(List.of(List.of(2), List.of(3), List.of(4), List.of(4)), rows.map(RenderedTree.TreeRow::lines));
     }
 
     @Test
@@ -113,9 +114,9 @@ class RenderedJsonTest {
 
     @Test
     void theKeysOfATableAreNoStop() {
-        List<RenderedJson.JsonRow> rows = rows("[{\"a\": 1}, {\"a\": 2}]", HashMap.empty());
+        List<RenderedTree.TreeRow> rows = rows("[{\"a\": 1}, {\"a\": 2}]", HashMap.empty());
 
-        assertEquals(List.of(Option.none(), Option.of("/0"), Option.of("/1")), rows.map(RenderedJson.JsonRow::pointer));
+        assertEquals(List.of(Option.none(), Option.of("/0"), Option.of("/1")), rows.map(RenderedTree.TreeRow::pointer));
     }
 
     @Test
@@ -153,7 +154,7 @@ class RenderedJsonTest {
 
     @Test
     void ofAKeyWrittenTwiceTheLastIsDrawnWhereItIsWrittenAndStandsForAll() {
-        List<RenderedJson.JsonRow> rows = rows("""
+        List<RenderedTree.TreeRow> rows = rows("""
                 {
                   "name": "first",
                   "size": 1,
@@ -179,15 +180,33 @@ class RenderedJsonTest {
     void textThatIsNoJsonSaysWhy() {
         assertEquals(
                 Either.left("Not rendered: line 2, column 8, unexpected 'true'"),
-                RenderedJson.rows(Vector.of("[1,", "  true true]"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                RenderedTree.rows(
+                                Rendered.JSON,
+                                Vector.of("[1,", "  true true]"),
+                                false,
+                                80,
+                                HashMap.empty(),
+                                Theme.SpanStyles.NONE)
                         .map(rows -> rows.size()));
         assertEquals(
                 Either.left("Not rendered: line 1, column 11, unexpected string"),
-                RenderedJson.rows(Vector.of("{\"a\": \"b\" \"c\"}"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                RenderedTree.rows(
+                                Rendered.JSON,
+                                Vector.of("{\"a\": \"b\" \"c\"}"),
+                                false,
+                                80,
+                                HashMap.empty(),
+                                Theme.SpanStyles.NONE)
                         .map(rows -> rows.size()));
         assertEquals(
                 Either.left("Not rendered: line 1, column 8, unexpected end"),
-                RenderedJson.rows(Vector.of("{\"a\": 1"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                RenderedTree.rows(
+                                Rendered.JSON,
+                                Vector.of("{\"a\": 1"),
+                                false,
+                                80,
+                                HashMap.empty(),
+                                Theme.SpanStyles.NONE)
                         .map(rows -> rows.size()));
     }
 
@@ -195,7 +214,13 @@ class RenderedJsonTest {
     void aLineBreakInAStringSaysSo() {
         assertEquals(
                 Either.left("Not rendered: line 1, column 4, unexpected line break"),
-                RenderedJson.rows(Vector.of("[\"a", "b\"]"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                RenderedTree.rows(
+                                Rendered.JSON,
+                                Vector.of("[\"a", "b\"]"),
+                                false,
+                                80,
+                                HashMap.empty(),
+                                Theme.SpanStyles.NONE)
                         .map(rows -> rows.size()));
     }
 
@@ -203,15 +228,33 @@ class RenderedJsonTest {
     void aCharacterThatDrawsNothingOrBadlyIsNamedByItsCodePoint() {
         assertEquals(
                 Either.left("Not rendered: line 1, column 4, unexpected character U+0009"),
-                RenderedJson.rows(Vector.of("[\"a\tb\"]"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                RenderedTree.rows(
+                                Rendered.JSON,
+                                Vector.of("[\"a\tb\"]"),
+                                false,
+                                80,
+                                HashMap.empty(),
+                                Theme.SpanStyles.NONE)
                         .map(rows -> rows.size()));
         assertEquals(
                 Either.left("Not rendered: line 1, column 4, unexpected character U+000D"),
-                RenderedJson.rows(Vector.of("[\"a\rb\"]"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                RenderedTree.rows(
+                                Rendered.JSON,
+                                Vector.of("[\"a\rb\"]"),
+                                false,
+                                80,
+                                HashMap.empty(),
+                                Theme.SpanStyles.NONE)
                         .map(rows -> rows.size()));
         assertEquals(
                 Either.left("Not rendered: line 1, column 6, unexpected character U+00A0"),
-                RenderedJson.rows(Vector.of("{\"a\":\u00A01}"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                RenderedTree.rows(
+                                Rendered.JSON,
+                                Vector.of("{\"a\":\u00A01}"),
+                                false,
+                                80,
+                                HashMap.empty(),
+                                Theme.SpanStyles.NONE)
                         .map(rows -> rows.size()));
     }
 
@@ -242,7 +285,7 @@ class RenderedJsonTest {
     void aVersionCutShortIsNotRendered() {
         assertEquals(
                 Either.left("Not rendered: the file is too long to render as JSON"),
-                RenderedJson.rows(Vector.of("{}"), true, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                RenderedTree.rows(Rendered.JSON, Vector.of("{}"), true, 80, HashMap.empty(), Theme.SpanStyles.NONE)
                         .map(rows -> rows.size()));
     }
 
@@ -343,17 +386,19 @@ class RenderedJsonTest {
     }
 
     private static List<String> text(String json, Map<String, Boolean> chose, int width) {
-        return RenderedJson.rows(Vector.of(json.split("\n", -1)), false, width, chose, Theme.SpanStyles.NONE)
+        return RenderedTree.rows(
+                        Rendered.JSON, Vector.of(json.split("\n", -1)), false, width, chose, Theme.SpanStyles.NONE)
                 .get()
                 .map(RenderedJsonTest::text);
     }
 
-    private static String text(RenderedJson.JsonRow row) {
+    private static String text(RenderedTree.TreeRow row) {
         return row.line().spans().stream().map(Span::content).collect(Collectors.joining());
     }
 
-    private static List<RenderedJson.JsonRow> rows(String json, Map<String, Boolean> chose) {
-        return RenderedJson.rows(Vector.of(json.split("\n", -1)), false, 80, chose, Theme.SpanStyles.NONE)
+    private static List<RenderedTree.TreeRow> rows(String json, Map<String, Boolean> chose) {
+        return RenderedTree.rows(
+                        Rendered.JSON, Vector.of(json.split("\n", -1)), false, 80, chose, Theme.SpanStyles.NONE)
                 .get();
     }
 }

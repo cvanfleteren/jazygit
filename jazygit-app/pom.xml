@@ -33,6 +33,10 @@
             <artifactId>jazygit-gh</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-yaml</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.vavr</groupId>
             <artifactId>vavr</artifactId>
         </dependency>

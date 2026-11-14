@@ -21,11 +21,12 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | Module | Holds | Depends on |
 |---|---|---|
 | `jazygit-json` | `json`: JSON as plain values, and decoders into records (ADR 42). | vavr, Parsson |
+| `jazygit-yaml` | `yaml`: YAML as it is written, to be drawn (ADR 123). | vavr, SnakeYAML Engine |
 | `jazygit-syntax` | `syntax`: the lexer that finds the tokens of a line of code (ADR 53, 113). | vavr |
 | `jazygit-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
 | `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | process, syntax |
 | `jazygit-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
-| `jazygit-app` | Everything else: `JazygitApp`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, `lens`. Builds the fat jar and the native image. | git, gh, TamboUI, picocli, night-config |
+| `jazygit-app` | Everything else: `JazygitApp`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, `lens`. Builds the fat jar and the native image. | git, gh, yaml, TamboUI, picocli, night-config |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, app, JMH |
 

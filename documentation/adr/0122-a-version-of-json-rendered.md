@@ -137,3 +137,6 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
 - A rendered version has a cursor row by row when its renderer gives nodes; Markdown keeps scrolling.
 - JSON larger than the limit of ADR 79, as a big `package-lock.json`, is cut, and so shows as source.
 - Folding the source of any version, by brackets or indentation, can come later with an ADR of its own.
+
+Amended by ADR 123: YAML is rendered as JSON is, by the same drawing, from one tree of the app that both are read
+into.

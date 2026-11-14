@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 
 /**
- * Opening and closing the nodes of a version of JSON rendered (ADR 122).
+ * Opening and closing the nodes of a version of JSON or YAML rendered (ADR 122).
  */
 public sealed interface FoldMsg extends Msg {
 
