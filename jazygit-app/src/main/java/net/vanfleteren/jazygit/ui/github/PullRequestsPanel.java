@@ -37,10 +37,7 @@ import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
 public final class PullRequestsPanel {
 
     /**
-     * The id of the top pane, the one that gets the focus the first time the screen is shown.
-     */
-    /**
-     * The first pane, as the focus is on it.
+     * The top pane, the one that gets the focus the first time the screen is shown.
      */
     public static final PaneId FIRST_PANE = Scopes.PR_REPOSITORY.pane();
 
