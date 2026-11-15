@@ -298,21 +298,8 @@
                             </path>
                         </annotationProcessorPaths>
                     </configuration>
-                    <executions>
-                        <!-- ErrorProne checks the main sources only; test-compile leaves -Xplugin out. -->
-                        <execution>
-                            <id>default-compile</id>
-                            <configuration>
-                                <compilerArgs combine.children="append">
-                                    <arg>-XDcompilePolicy=simple</arg>
-                                    <arg>--should-stop=ifError=FLOW</arg>
-                                    <!-- Every call into our code or Vavr must use its result, without annotating the code;
-                                         the calls in errorprone-ignorable-results.txt are the exception. -->
-                                    <arg>-Xplugin:ErrorProne -XepOpt:CheckReturnValue:Packages=net.vanfleteren.jazygit,io.vavr -XepOpt:CheckReturnValue:ApiIgnorableList=${maven.multiModuleProjectDirectory}/errorprone-ignorable-results.txt -Xep:UnnecessaryLambda:OFF -Xep:JavaTimeDefaultTimeZone:OFF -Xep:MissingSummary:OFF</arg>
-                                </compilerArgs>
-                            </configuration>
-                        </execution>
-                    </executions>
+                    <!-- ErrorProne itself is switched on by the errorprone profile; on the processor path alone it
+                         does nothing. -->
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -451,6 +438,42 @@
             <modules>
                 <module>jazygit-benchmarks</module>
             </modules>
+        </profile>
+        <!-- ErrorProne, on unless -Derrorprone.skip is given. CI's verify job leaves it out: the package job compiles
+             with it, and in verify it doubles the time the main sources take to compile. -->
+        <profile>
+            <id>errorprone</id>
+            <activation>
+                <property>
+                    <name>!errorprone.skip</name>
+                </property>
+            </activation>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-compiler-plugin</artifactId>
+                            <executions>
+                                <!-- ErrorProne checks the main sources only; test-compile leaves -Xplugin out. -->
+                                <execution>
+                                    <id>default-compile</id>
+                                    <configuration>
+                                        <compilerArgs combine.children="append">
+                                            <arg>-XDcompilePolicy=simple</arg>
+                                            <arg>--should-stop=ifError=FLOW</arg>
+                                            <!-- Every call into our code or Vavr must use its result, without
+                                                 annotating the code; the calls in errorprone-ignorable-results.txt
+                                                 are the exception. -->
+                                            <arg>-Xplugin:ErrorProne -XepOpt:CheckReturnValue:Packages=net.vanfleteren.jazygit,io.vavr -XepOpt:CheckReturnValue:ApiIgnorableList=${maven.multiModuleProjectDirectory}/errorprone-ignorable-results.txt -Xep:UnnecessaryLambda:OFF -Xep:JavaTimeDefaultTimeZone:OFF -Xep:MissingSummary:OFF</arg>
+                                        </compilerArgs>
+                                    </configuration>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
         </profile>
         <!-- On by itself in CI (GitHub Actions sets CI=true): fail on unformatted code instead of reformatting it, and
              a test JVM per core. -->
