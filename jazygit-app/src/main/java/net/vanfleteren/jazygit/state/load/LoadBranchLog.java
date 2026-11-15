@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.state.view.PreviewView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
@@ -32,7 +33,8 @@ public record LoadBranchLog(BranchRef branch, LoadAhead ahead) implements Target
      */
     @Override
     public Target<List<Commit>> target() {
-        return Target.inView(Preview.lens(RepoView::branchLog, RepoView::withBranchLog, branch));
+        return Target.inView(
+                RepoView.PREVIEW.andThen(Preview.lens(PreviewView::branchLog, PreviewView::withBranchLog, branch)));
     }
 
     @Override

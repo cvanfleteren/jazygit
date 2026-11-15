@@ -63,7 +63,7 @@ class CommitAllFilesTest {
     void allFilesAreReadTheFirstTimeTheyAreListedAndOnlyThen() {
         Next on = Update.update(withFiles(), new CommitFilesMsg.AllToggled());
 
-        CommitFilesView view = on.model().repoView().commitFiles().get();
+        CommitFilesView view = on.model().repoView().files().commitFiles().get();
         assertTrue(view.allFiles());
         assertEquals(Option.of(Loadable.loading()), view.tree());
         assertEquals(Loadable.loading(), view.listedFiles());
@@ -72,19 +72,20 @@ class CommitAllFilesTest {
         Model read = Update.update(on.model(), new LoadMsg.CommitTreeLoaded(COMMIT, ALL))
                 .model();
         assertEquals(
-                new Loadable.Loaded<>(ALL), read.repoView().commitFiles().get().listedFiles());
+                new Loadable.Loaded<>(ALL),
+                read.repoView().files().commitFiles().get().listedFiles());
 
         Next off = Update.update(read, new CommitFilesMsg.AllToggled());
-        assertFalse(off.model().repoView().commitFiles().get().allFiles());
+        assertFalse(off.model().repoView().files().commitFiles().get().allFiles());
         assertEquals(
                 new Loadable.Loaded<>(List.of(A, GONE)),
-                off.model().repoView().commitFiles().get().listedFiles());
+                off.model().repoView().files().commitFiles().get().listedFiles());
 
         Next again = Update.update(off.model(), new CommitFilesMsg.AllToggled());
         assertEquals(List.empty(), again.cmds());
         assertEquals(
                 new Loadable.Loaded<>(ALL),
-                again.model().repoView().commitFiles().get().listedFiles());
+                again.model().repoView().files().commitFiles().get().listedFiles());
     }
 
     @Test
@@ -110,7 +111,7 @@ class CommitAllFilesTest {
         assertEquals(1, listed.get());
         assertEquals(
                 new Loadable.Loaded<>(ALL),
-                program.model().repoView().commitFiles().get().listedFiles());
+                program.model().repoView().files().commitFiles().get().listedFiles());
     }
 
     @Test
@@ -123,9 +124,9 @@ class CommitAllFilesTest {
 
         assertEquals(
                 Option.of(new UnchangedNode.File(new Preview<>("b.txt", new Loadable.Loaded<>(B)))),
-                program.model().repoView().commitFiles().get().unchanged());
+                program.model().repoView().files().commitFiles().get().unchanged());
         // The working tree's node without changes stays as it is.
-        assertEquals(Option.none(), program.model().repoView().unchanged());
+        assertEquals(Option.none(), program.model().repoView().files().unchanged());
     }
 
     @Test
@@ -145,7 +146,7 @@ class CommitAllFilesTest {
 
         assertEquals(
                 Option.of(new UnchangedNode.Directory("docs", 1)),
-                selected.model().repoView().commitFiles().get().unchanged());
+                selected.model().repoView().files().commitFiles().get().unchanged());
         assertEquals(List.empty(), selected.cmds());
     }
 
@@ -160,10 +161,12 @@ class CommitAllFilesTest {
         // The diff read before is shown again, without reading it again.
         Next back = Update.update(file, new SelectionMsg.CommitFilesSelected(List.of(A)));
 
-        assertEquals(Option.none(), back.model().repoView().commitFiles().get().unchanged());
+        assertEquals(
+                Option.none(),
+                back.model().repoView().files().commitFiles().get().unchanged());
         assertEquals(
                 Option.of(List.of(A)),
-                back.model().repoView().commitFiles().get().diff().map(Preview::key));
+                back.model().repoView().files().commitFiles().get().diff().map(Preview::key));
         assertFalse(back.cmds().exists(LoadCommitFileDiff.class::isInstance));
     }
 
@@ -175,7 +178,7 @@ class CommitAllFilesTest {
 
         Model off = Update.update(file, new CommitFilesMsg.AllToggled()).model();
 
-        assertEquals(Option.none(), off.repoView().commitFiles().get().unchanged());
+        assertEquals(Option.none(), off.repoView().files().commitFiles().get().unchanged());
     }
 
     @Test
@@ -186,7 +189,7 @@ class CommitAllFilesTest {
         Model read =
                 Update.update(closed, new LoadMsg.CommitTreeLoaded(COMMIT, ALL)).model();
 
-        assertEquals(Option.none(), read.repoView().commitFiles());
+        assertEquals(Option.none(), read.repoView().files().commitFiles());
     }
 
     private static Model withFiles() {

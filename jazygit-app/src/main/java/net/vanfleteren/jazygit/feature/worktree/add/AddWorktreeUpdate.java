@@ -102,7 +102,10 @@ public final class AddWorktreeUpdate {
                                     .getOrElse(there)));
         }
         return OperationUpdate.succeeded(
-                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands)
+                        model.mapRepoView(
+                                repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES))),
+                        cmd,
+                        commands)
                 .map(succeeded -> kept.map(succeeded::inform)
                         .getOrElse(succeeded)
                         .openPopupIfFree(new SwitchToAddedPopup(cmd.source().label(), location)));

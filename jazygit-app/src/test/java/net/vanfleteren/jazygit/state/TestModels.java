@@ -284,8 +284,8 @@ public final class TestModels {
      * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
      */
     public static Model switchingBranch(Model model, String branch) {
-        return model.mapRepoView(repoView -> repoView.withBranchLog(Option.of(Preview.loading(
-                new BranchRef.Local(new BranchName(branch)), model.repoView().branchLog()))));
+        return model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withBranchLog(
+                Option.of(Preview.loading(new BranchRef.Local(new BranchName(branch)), preview.branchLog())))));
     }
 
     /**

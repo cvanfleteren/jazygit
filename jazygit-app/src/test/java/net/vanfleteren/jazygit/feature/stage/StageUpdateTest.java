@@ -102,8 +102,8 @@ class StageUpdateTest {
         FileEntry unstaged = Fixtures.fileEntry("src/ATest.java", ChangeType.MODIFIED);
         FileEntry staged = new FileEntry("src/BTest.java", ChangeType.MODIFIED, true, false);
         FileEntry added = new FileEntry("src/CTest.java", ChangeType.ADDED, true, false);
-        Model filtered = loaded().mapRepoView(
-                        repoView -> repoView.withFilesFilter(Option.of(new FileFilter("Test", Option.none()))));
+        Model filtered = loaded().mapRepoView(repoView ->
+                repoView.mapFiles(files -> files.withFilter(Option.of(new FileFilter("Test", Option.none())))));
 
         assertEquals(
                 List.of(new Stage(List.of("src/ATest.java"))),
@@ -126,8 +126,8 @@ class StageUpdateTest {
     @Test
     void anOpenLineWithNothingTypedFiltersNoDirectory() {
         FileEntry unstaged = Fixtures.fileEntry("src/a.txt", ChangeType.MODIFIED);
-        Model typing = loaded().mapRepoView(
-                        repoView -> repoView.withFilesFilter(Option.of(new FileFilter("", Option.of("")))));
+        Model typing = loaded().mapRepoView(repoView ->
+                repoView.mapFiles(files -> files.withFilter(Option.of(new FileFilter("", Option.of(""))))));
 
         assertEquals(
                 List.of(new Stage(List.of("src"))),

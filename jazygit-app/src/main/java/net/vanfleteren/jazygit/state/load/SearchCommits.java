@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.view.CommitSearch;
+import net.vanfleteren.jazygit.state.view.CommitsView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
@@ -35,10 +36,11 @@ public record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implemen
      */
     @Override
     public Target<List<Commit>> target() {
-        return Target.inView(Lens.where(
-                        RepoView::commitSearch,
-                        RepoView::withCommitSearch,
-                        search -> of(search).equals(this))
+        return Target.inView(RepoView.COMMITS
+                .andThen(Lens.where(
+                        CommitsView::commitSearch,
+                        CommitsView::withCommitSearch,
+                        search -> of(search).equals(this)))
                 .andThen(Lens.of(CommitSearch::results, CommitSearch::withResults)));
     }
 

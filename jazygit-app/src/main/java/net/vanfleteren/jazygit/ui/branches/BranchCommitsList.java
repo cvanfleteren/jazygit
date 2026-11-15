@@ -66,7 +66,7 @@ class BranchCommitsList {
      * when none is open, so that the commits of a branch opened again start at its newest one.
      */
     Option<Panel> render(Model model, boolean focused, boolean active) {
-        Option<BranchCommitsView> open = model.repoView().branchCommits();
+        Option<BranchCommitsView> open = model.repoView().branches().branchCommits();
         Option<BranchRef> branch = open.map(BranchCommitsView::branch);
         boolean opened = branch.isDefined() && !branch.equals(shown);
         shown = branch;
@@ -81,11 +81,11 @@ class BranchCommitsList {
     }
 
     private Panel panel(Model model, BranchCommitsView view, boolean focused, boolean active) {
-        Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
+        Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
         AheadView ahead = new AheadView(
                 AheadUpdate.branch(model, view.branch()),
                 AheadUpdate.distance(model, view.branch()),
-                model.repoView().onlyAhead());
+                model.repoView().commits().shown().ahead());
         Loadable<List<Commit>> source = view.commits(model);
         return list.render(
                 listed.get(Tuple.of(source, ahead), key -> source.map(ahead::shown)),

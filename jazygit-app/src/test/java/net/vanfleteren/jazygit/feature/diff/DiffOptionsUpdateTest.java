@@ -49,12 +49,12 @@ class DiffOptionsUpdateTest {
         assertEquals(
                 List.of(new LoadFileDiff(DIRTY.files(), IGNORING), new LoadCommitDetail(SHA, IGNORING)), next.cmds());
         Preview<List<FileEntry>, Diffs> diff =
-                next.model().repoView().fileDiff().get();
+                next.model().repoView().preview().fileDiff().get();
         assertEquals(new Loading<>(), diff.value());
         assertEquals(new Loaded<>(new Diffs("", "+a ")), diff.shown().value());
         assertEquals(
                 new Loaded<>(DiffText.of("changes")),
-                next.model().repoView().commitDetail().get().shown().value());
+                next.model().repoView().preview().commitDetail().get().shown().value());
 
         assertEquals(
                 DiffOptions.DEFAULT,
@@ -122,13 +122,14 @@ class DiffOptionsUpdateTest {
         Model stale = Update.update(
                         toggled, new LoadMsg.FileDiffLoaded(DIRTY.files(), DiffOptions.DEFAULT, new Diffs("", "+b ")))
                 .model();
-        assertEquals(new Loading<>(), stale.repoView().fileDiff().get().value());
+        assertEquals(
+                new Loading<>(), stale.repoView().preview().fileDiff().get().value());
 
         Model read = Update.update(toggled, new LoadMsg.FileDiffLoaded(DIRTY.files(), IGNORING, new Diffs("", "")))
                 .model();
         assertEquals(
                 Option.of(new Preview<>(DIRTY.files(), new Loaded<>(new Diffs("", "")))),
-                read.repoView().fileDiff());
+                read.repoView().preview().fileDiff());
     }
 
     @Test
@@ -144,10 +145,11 @@ class DiffOptionsUpdateTest {
 
     @Test
     void whatWasReadForTheCommitOfADivergenceBeforeTheToggleIsDropped() {
-        Model model = loaded().mapRepoView(repoView -> repoView.withDivergence(Option.of(DivergenceView.loading(
-                new BranchName("main"),
-                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
-                DivergenceView.Against.UPSTREAM))));
+        Model model = loaded().mapRepoView(repoView ->
+                repoView.mapBranches(branches -> branches.withDivergence(Option.of(DivergenceView.loading(
+                        new BranchName("main"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
+                        DivergenceView.Against.UPSTREAM)))));
         model = Update.update(model, new SelectionMsg.DivergenceCommitSelected(SHA))
                 .model();
         model = Update.update(model, new LoadMsg.CommitDetailLoaded(SHA, DiffOptions.DEFAULT, DiffText.of("changes")))
@@ -184,7 +186,8 @@ class DiffOptionsUpdateTest {
         Next next = Update.update(model, new DiffOptionsMsg.WhitespaceToggled());
 
         assertEquals(List.of(new LoadStashDetail(stash, IGNORING)), next.cmds());
-        Preview<Sha, DiffText> detail = next.model().repoView().stashDetail().get();
+        Preview<Sha, DiffText> detail =
+                next.model().repoView().preview().stashDetail().get();
         assertEquals(new Loading<>(), detail.value());
         assertEquals(new Loaded<>(DiffText.of("changes")), detail.shown().value());
         assertEquals(
@@ -194,6 +197,7 @@ class DiffOptionsUpdateTest {
                                 new LoadMsg.StashDetailLoaded(stash, DiffOptions.DEFAULT, DiffText.of("stale")))
                         .model()
                         .repoView()
+                        .preview()
                         .stashDetail()
                         .get()
                         .value());

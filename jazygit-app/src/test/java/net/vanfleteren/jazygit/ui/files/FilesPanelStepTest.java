@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.FileFilter;
 import net.vanfleteren.jazygit.state.view.FileStepMsg.Step;
+import net.vanfleteren.jazygit.state.view.FilesShown;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,7 @@ class FilesPanelStepTest {
         Model loaded = TestModels.loaded();
         return loaded.mapRepo(repo -> repo.withStatus(repo.status().map(status -> status.withFiles(List.of(CHANGED))))
                         .withAllFiles(new Loadable.Loaded<>(ALL)))
-                .mapRepoView(view -> view.withAllFiles(true));
+                .mapRepoView(view -> view.mapFiles(files -> files.withShown(FilesShown.ALL)));
     }
 
     @Test
@@ -96,8 +97,8 @@ class FilesPanelStepTest {
 
     @Test
     void theFilesTheFilterHidesAreSkipped() throws Exception {
-        Model filtered =
-                all().mapRepoView(view -> view.withFilesFilter(Option.of(new FileFilter("main", Option.none()))));
+        Model filtered = all().mapRepoView(view ->
+                view.mapFiles(files -> files.withFilter(Option.of(new FileFilter("main", Option.none())))));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(filtered, FilesPanel.PANE))) {
             RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.PANE));
 

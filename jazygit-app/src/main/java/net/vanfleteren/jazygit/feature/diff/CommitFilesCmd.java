@@ -40,6 +40,7 @@ public sealed interface CommitFilesCmd extends Cmd {
                     number,
                     settled,
                     model.repoView()
+                            .files()
                             .commitFiles()
                             .filter(view -> view.pullRequest().contains(number))
                             .map(CommitFilesView::version)

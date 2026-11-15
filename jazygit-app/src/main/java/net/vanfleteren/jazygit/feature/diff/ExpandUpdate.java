@@ -66,8 +66,8 @@ public final class ExpandUpdate {
                 .getOrElse(() -> new Expansion.Expanded(read.get().file(), Loadable.loading(), List.empty()));
         Expansion.Expanded asked = expanded.withLines(expanded.lines().append(lines));
         return new Next(
-                model.mapRepoView(view -> view.withExpanded(view.expanded()
-                        .put(area, expansion.withFiles(expansion.files().put(gap.path(), asked))))),
+                model.mapRepoView(view -> view.withExpansion(
+                        area, expansion.withFiles(expansion.files().put(gap.path(), asked)))),
                 read.toList().map(Cmd.class::cast));
     }
 
@@ -96,6 +96,7 @@ public final class ExpandUpdate {
         return switch (content) {
             case ScrolledContent.Diff(DiffText diff) ->
                 model.repoView()
+                        .preview()
                         .fileDiff()
                         .map(Preview::shown)
                         .flatMap(shown -> shown.key()

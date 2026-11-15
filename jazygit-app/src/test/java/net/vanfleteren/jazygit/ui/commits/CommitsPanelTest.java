@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.view.CommitSearch;
+import net.vanfleteren.jazygit.state.view.CommitsShown;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -443,7 +444,9 @@ class CommitsPanelTest {
                             new CommitSearchMsg.Edited("d"),
                             new CommitSearchMsg.Submitted()),
                     List.ofAll(sent));
-            assertEquals(Option.of("d"), model.get().repoView().commitSearch().map(CommitSearch::text));
+            assertEquals(
+                    Option.of("d"),
+                    model.get().repoView().commits().commitSearch().map(CommitSearch::text));
             model.set(Update.update(
                             model.get(),
                             new LoadMsg.CommitSearchLoaded(
@@ -457,7 +460,7 @@ class CommitsPanelTest {
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
 
-            assertEquals(Option.none(), model.get().repoView().commitSearch());
+            assertEquals(Option.none(), model.get().repoView().commits().commitSearch());
             SettledPilot.of(testRunner).quit();
         }
     }
@@ -492,9 +495,9 @@ class CommitsPanelTest {
     @Test
     void aSearchThatFindsNothingSaysSo() throws Exception {
         Model model = TestModels.loaded(SampleData.git())
-                .mapRepoView(
-                        repoView -> repoView.withCommitSearch(Option.of(CommitSearch.loading("nothing", Option.none())
-                                .withResults(new Loadable.Loaded<>(List.empty())))));
+                .mapRepoView(repoView -> repoView.mapCommits(
+                        commits -> commits.withCommitSearch(Option.of(CommitSearch.loading("nothing", Option.none())
+                                .withResults(new Loadable.Loaded<>(List.empty()))))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
@@ -517,7 +520,9 @@ class CommitsPanelTest {
         panel.render(model, CommitsPanel.PANE);
         List<Option<String>> before = shaClasses(panel);
         panel.render(
-                model.mapRepoView(repoView -> repoView.withCherryPick(Option.of(commit("s0")))), CommitsPanel.PANE);
+                model.mapRepoView(
+                        repoView -> repoView.mapCommits(commits -> commits.withCherryPick(Option.of(commit("s0"))))),
+                CommitsPanel.PANE);
 
         assertEquals(List.of(Option.none(), Option.none()), before);
         assertEquals(List.of(Option.none(), Option.of(Theme.Classes.COPIED)), shaClasses(panel));
@@ -540,7 +545,7 @@ class CommitsPanelTest {
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(tip, middle, fork, commit("o0"))))
                         .withAhead(new Loadable.Loaded<>(
                                 Option.of(new Ahead(tip.sha(), main, List.of(tip, middle), false, Option.of(fork))))));
-        Model only = all.mapRepoView(repoView -> repoView.withOnlyAhead(true));
+        Model only = all.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withShown(CommitsShown.AHEAD)));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         panel.render(all, CommitsPanel.PANE);
@@ -566,8 +571,8 @@ class CommitsPanelTest {
         Loadable<List<Commit>> log = new Loadable.Loaded<>(
                 List.of(commit("mmmmmmm", "bbbbbbb", "aaaaaaa"), commit("bbbbbbb", "aaaaaaa"), commit("aaaaaaa")));
         Model listed = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(log));
-        Model found = listed.mapRepoView(repoView -> repoView.withCommitSearch(
-                Option.of(CommitSearch.loading("a", Option.none()).withResults(log))));
+        Model found = listed.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withCommitSearch(
+                Option.of(CommitSearch.loading("a", Option.none()).withResults(log)))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         panel.render(listed, CommitsPanel.PANE);

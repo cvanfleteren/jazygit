@@ -158,7 +158,7 @@ public class BranchesPanel {
     }
 
     private Panel tabPanel(Model model, boolean focused, boolean active) {
-        BranchesTab tab = model.repoView().branchesTab();
+        BranchesTab tab = model.repoView().branches().tab();
         Panel panel = list(tab).render(model, focused, active, title(tab));
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event, tabClicked));
     }
@@ -195,10 +195,10 @@ public class BranchesPanel {
      * commits of a branch shown in its place hide.
      */
     public static List<ShownTime> shownTimes(Model model) {
-        BranchesTab tab = model.repoView().branchesTab();
+        BranchesTab tab = model.repoView().branches().tab();
         if (model.screen() != Screen.REPOSITORY
                 || divergence(model).isDefined()
-                || model.repoView().branchCommits().isDefined()) {
+                || model.repoView().branches().branchCommits().isDefined()) {
             return List.empty();
         }
         return tab == BranchesTab.LOCAL
@@ -211,10 +211,10 @@ public class BranchesPanel {
      * or the commits of a branch shown in its place hide.
      */
     public static boolean showsSpinner(Model model) {
-        BranchesTab tab = model.repoView().branchesTab();
+        BranchesTab tab = model.repoView().branches().tab();
         return model.screen() == Screen.REPOSITORY
                 && divergence(model).isEmpty()
-                && model.repoView().branchCommits().isEmpty()
+                && model.repoView().branches().branchCommits().isEmpty()
                 && model.jobs()
                         .busy()
                         .keySet()
@@ -227,7 +227,9 @@ public class BranchesPanel {
      * The divergence {@code model} lists in place of the local branches, if any.
      */
     private static Option<DivergenceView> divergence(Model model) {
-        return Option.when(model.repoView().branchesTab() == BranchesTab.LOCAL, model.repoView()::divergence)
+        return Option.when(
+                        model.repoView().branches().tab() == BranchesTab.LOCAL,
+                        model.repoView().branches()::divergence)
                 .flatMap(open -> open);
     }
 
@@ -238,17 +240,18 @@ public class BranchesPanel {
     public Option<Msg> selectionChange(Model model) {
         return divergence(model)
                 .map(divergenceList::selectionChange)
-                .orElse(() -> model.repoView().branchCommits().map(branchCommitsList::selectionChange))
+                .orElse(() -> model.repoView().branches().branchCommits().map(branchCommitsList::selectionChange))
                 .getOrElse(() -> tabSelectionChange(model));
     }
 
     // A row without a log says so, rather than leaving the log of the row highlighted before.
     private Option<Msg> tabSelectionChange(Model model) {
-        BranchesTabList tab = list(model.repoView().branchesTab());
+        BranchesTabList tab = list(model.repoView().branches().tab());
         return PaneKeys.selectionChange(
-                        tab.selectedRef(), model.repoView().branchLog(), SelectionMsg.BranchSelected::new)
+                        tab.selectedRef(), model.repoView().preview().branchLog(), SelectionMsg.BranchSelected::new)
                 .orElse(() -> tab.unfetched()
-                        .filter(pullRequest -> !model.repoView().unfetched().contains(pullRequest))
+                        .filter(pullRequest ->
+                                !model.repoView().branches().unfetched().contains(pullRequest))
                         .map(SelectionMsg.UnfetchedSelected::new));
     }
 }

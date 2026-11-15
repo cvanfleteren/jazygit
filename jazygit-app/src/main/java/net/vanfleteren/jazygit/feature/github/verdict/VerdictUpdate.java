@@ -95,6 +95,7 @@ public final class VerdictUpdate {
      */
     private static Either<Why, VerdictPopup> fromDiff(Model model) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .filter(view -> view.pullRequest().isDefined())
                 .flatMap(view ->

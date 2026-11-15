@@ -107,9 +107,9 @@ public record Model(
             // The files of a commit close when another pane gets the focus, as Escape closes them (ADR 44).
             case REPOSITORY ->
                 withRepoView(repoView.withFocusedPane(Option.of(focus))
-                        .withCommitFiles(repoView.commitFiles()
+                        .mapFiles(files -> files.withCommitFiles(files.commitFiles()
                                 .filter(view -> focus instanceof AreaId
-                                        || view.listedIn().equals(focus))));
+                                        || view.listedIn().equals(focus)))));
             case PULL_REQUESTS ->
                 withPrOverview(prOverview
                         .withFocusedPane(Option.of(focus))
@@ -217,7 +217,7 @@ public record Model(
      */
     public Option<Commit> commit(Sha sha) {
         return repo.commit(sha)
-                .orElse(() -> repoView.commitSearch().flatMap(search -> search.commit(sha)))
+                .orElse(() -> repoView.commits().commitSearch().flatMap(search -> search.commit(sha)))
                 .orElse(() -> AheadUpdate.head(this).flatMap(ahead -> ahead.commit(sha)));
     }
 

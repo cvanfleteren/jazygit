@@ -43,14 +43,14 @@ class CommitUnchangedContentTest {
 
     private static Model showing(UnchangedNode node) {
         return TestModels.loaded()
-                .mapRepoView(view -> view.withCommitFiles(Option.of(CommitFilesView.of(
+                .mapRepoView(view -> view.mapFiles(files -> files.withCommitFiles(Option.of(CommitFilesView.of(
                                 TIP, Scopes.BRANCHES.pane(), Scopes.FILES.pane())
                         .withFiles(new Loadable.Loaded<>(List.of(new CommitFile("a.txt", ChangeType.MODIFIED))))
                         .withAllFiles(true)
                         .withTree(Option.of(new Loadable.Loaded<>(List.of(
                                 new CommitFile("README.md", ChangeType.UNCHANGED),
                                 new CommitFile("a.txt", ChangeType.MODIFIED)))))
-                        .withUnchanged(Option.of(node)))));
+                        .withUnchanged(Option.of(node))))));
     }
 
     private static Model readme() {

@@ -241,13 +241,13 @@ public class CommitsPanel {
      * @param inUse the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
-        Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
-        Option<CommitSearch> search = model.repoView().commitSearch();
+        Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
+        Option<CommitSearch> search = model.repoView().commits().commitSearch();
         AheadView ahead = new AheadView(
                 AheadUpdate.head(model),
                 AheadUpdate.headDistance(model),
-                model.repoView().onlyAhead());
-        typing = model.repoView().searchLine();
+                model.repoView().commits().shown().ahead());
+        typing = model.repoView().commits().searchLine();
         searching = search.isDefined();
         list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));
         Loadable<List<Commit>> source =
@@ -328,6 +328,8 @@ public class CommitsPanel {
      */
     public Option<Msg> selectionChange(Model model) {
         return PaneKeys.selectionChange(
-                selectedCommit().map(Commit::sha), model.repoView().commitDetail(), SelectionMsg.CommitSelected::new);
+                selectedCommit().map(Commit::sha),
+                model.repoView().preview().commitDetail(),
+                SelectionMsg.CommitSelected::new);
     }
 }

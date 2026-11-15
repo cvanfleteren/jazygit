@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.diff;
 
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.UnaryOperator;
@@ -84,23 +83,24 @@ public final class DiffOptionsUpdate {
     public static Next changed(Model model) {
         DiffOptions options = model.preferences().diffOptions();
         Option<DivergenceView> divergence =
-                model.repoView().divergence().map(view -> view.withDetail(reloading(view.detail())));
+                model.repoView().branches().divergence().map(view -> view.withDetail(reloading(view.detail())));
         Option<BranchCommitsView> branchCommits =
-                model.repoView().branchCommits().map(view -> view.withDetail(reloading(view.detail())));
+                model.repoView().branches().branchCommits().map(view -> view.withDetail(reloading(view.detail())));
         Option<CommitFilesView> commitFiles =
-                model.repoView().commitFiles().map(view -> view.withDiff(reloading(view.diff())));
+                model.repoView().files().commitFiles().map(view -> view.withDiff(reloading(view.diff())));
         List<Cmd> loads = List.<Cmd>empty()
-                .appendAll(model.repoView().fileDiff().map(diff -> new LoadFileDiff(diff.key(), options)))
+                .appendAll(model.repoView().preview().fileDiff().map(diff -> new LoadFileDiff(diff.key(), options)))
                 .appendAll(RereadUpdate.shown(model).filter(load -> load instanceof DiffLoad));
         return new Next(
-                model.mapRepoView(repoView -> repoView.withFileDiff(reloading(repoView.fileDiff()))
-                        .withCommitDetail(reloading(repoView.commitDetail()))
-                        .withStashDetail(reloading(repoView.stashDetail()))
-                        .withDivergence(divergence)
-                        .withBranchCommits(branchCommits)
-                        .withCommitFiles(commitFiles)
+                model.mapRepoView(repoView -> repoView.mapPreview(
+                                preview -> preview.withFileDiff(reloading(preview.fileDiff()))
+                                        .withCommitDetail(reloading(preview.commitDetail()))
+                                        .withStashDetail(reloading(preview.stashDetail())))
+                        .mapBranches(
+                                branches -> branches.withDivergence(divergence).withBranchCommits(branchCommits))
+                        .mapFiles(files -> files.withCommitFiles(commitFiles))
                         // What was expanded was read with the options before, and is folded to their context.
-                        .withExpanded(HashMap.empty())),
+                        .withoutExpansions()),
                 loads);
     }
 

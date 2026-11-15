@@ -116,8 +116,8 @@ final class ReviewFixtures {
                                 HashSet.empty(),
                                 0))
                 .model();
-        return read.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
-                .map(view -> view.withDiff(Option.of(new Preview<>(List.of(A), new Loadable.Loaded<>(DIFF)))))));
+        return read.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
+                .map(view -> view.withDiff(Option.of(new Preview<>(List.of(A), new Loadable.Loaded<>(DIFF))))))));
     }
 
     static Model files() {
@@ -143,7 +143,7 @@ final class ReviewFixtures {
     }
 
     static CommitFilesView view(Model model) {
-        return model.repoView().commitFiles().get();
+        return model.repoView().files().commitFiles().get();
     }
 
     static Option<AppError> error(Model model) {
@@ -189,7 +189,7 @@ final class ReviewFixtures {
                 CONTENT,
                 io.vavr.collection.HashMap.of(
                         "a.txt", new Expansion.Expanded(read.file(), new Loadable.Loaded<>(whole), List.of(lines))));
-        return model.mapRepoView(view -> view.withExpanded(view.expanded().put(AREA, expansion)));
+        return model.mapRepoView(view -> view.withExpansion(AREA, expansion));
     }
 
     static Anchor onComment(String comment, String thread) {
@@ -217,7 +217,7 @@ final class ReviewFixtures {
      * {@code model} with each comment of its threads giving the viewer {@code rights}.
      */
     static Model withRights(Model model, CommentRights rights) {
-        return model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
                 .map(view -> view.withRemarks(view.remarks()
                         .map(remarks -> remarks.map(read -> new ReviewRemarks(
                                 read.state(),
@@ -245,7 +245,7 @@ final class ReviewFixtures {
                                                                 rights)),
                                                 thread.more(),
                                                 thread.id(),
-                                                thread.rights())))))))));
+                                                thread.rights()))))))))));
     }
 
     /**

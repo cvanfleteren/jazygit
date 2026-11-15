@@ -97,17 +97,18 @@ public final class StackUpdate {
      * Opens stack {@code stack} in the branches pane, or closes it.
      */
     private static Next toggled(Model model, int stack) {
-        return Next.of(model.mapRepoView(repoView -> repoView.withClosedStacks(
-                repoView.closedStacks().contains(stack)
-                        ? repoView.closedStacks().remove(stack)
-                        : repoView.closedStacks().add(stack))));
+        return Next.of(model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withClosedStacks(
+                branches.closedStacks().contains(stack)
+                        ? branches.closedStacks().remove(stack)
+                        : branches.closedStacks().add(stack)))));
     }
 
     /**
      * Shows the stacks in the branches pane, or lists their branches as any other.
      */
     private static Next viewToggled(Model model) {
-        return Next.of(model.mapRepoView(repoView -> repoView.withUnstacked(!repoView.unstacked())));
+        return Next.of(model.mapRepoView(repoView -> repoView.mapBranches(
+                branches -> branches.withStacking(branches.stacking().toggled()))));
     }
 
     /**

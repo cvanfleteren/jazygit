@@ -24,12 +24,13 @@ class FileFilterUpdateTest {
     }
 
     private static Option<FileFilter> filter(Model model) {
-        return model.repoView().filesFilter();
+        return model.repoView().files().filter();
     }
 
     private static Model withCommitFiles(Model model) {
-        return model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(CommitFilesView.of(
-                new Changes.OfCommit(new Sha("aaaa")), Scopes.COMMITS.pane(), Scopes.FILES.pane()))));
+        return model.mapRepoView(repoView ->
+                repoView.mapFiles(files -> files.withCommitFiles(Option.of(CommitFilesView.of(
+                        new Changes.OfCommit(new Sha("aaaa")), Scopes.COMMITS.pane(), Scopes.FILES.pane())))));
     }
 
     @Test
@@ -100,11 +101,12 @@ class FileFilterUpdateTest {
                 sent(open, new FileFilterMsg.Opened(), new FileFilterMsg.Edited("src"), new FileFilterMsg.Submitted());
         assertEquals(
                 Option.of(new FileFilter("src", Option.none())),
-                filtered.repoView().commitFiles().flatMap(CommitFilesView::filter));
+                filtered.repoView().files().commitFiles().flatMap(CommitFilesView::filter));
         assertEquals(Option.of("test"), FileFilterUpdate.workingTree(filtered));
 
         // Closing the files of the commit drops their filter; that of the working tree is still there.
-        Model closed = filtered.mapRepoView(repoView -> repoView.withCommitFiles(Option.none()));
+        Model closed =
+                filtered.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.none())));
         assertEquals(Option.of(new FileFilter("test", Option.none())), FileFilterUpdate.shown(closed));
         assertEquals(Option.none(), FileFilterUpdate.shown(withCommitFiles(closed)));
     }

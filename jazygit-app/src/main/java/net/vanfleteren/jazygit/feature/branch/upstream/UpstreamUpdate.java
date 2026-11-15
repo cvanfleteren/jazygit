@@ -43,7 +43,8 @@ public final class UpstreamUpdate {
             case UpstreamMsg.UpstreamDivergenceChosen() -> chosen(model, UpstreamUpdate::upstreamDivergence);
             case UpstreamMsg.BaseDivergenceChosen() -> chosen(model, UpstreamUpdate::baseDivergence);
             case UpstreamMsg.DivergenceClosed() ->
-                Next.of(model.mapRepoView(repoView -> repoView.withDivergence(Option.none())));
+                Next.of(model.mapRepoView(
+                        repoView -> repoView.mapBranches(branches -> branches.withDivergence(Option.none()))));
         };
     }
 
@@ -96,7 +97,9 @@ public final class UpstreamUpdate {
     private static Next open(Model model, Branch branch, BranchRef other, Against against) {
         DivergenceView view = DivergenceView.loading(branch.name(), other, against);
         return Next.of(
-                model.clearError().mapRepoView(repoView -> repoView.withDivergence(Option.of(view))),
+                model.clearError()
+                        .mapRepoView(
+                                repoView -> repoView.mapBranches(branches -> branches.withDivergence(Option.of(view)))),
                 LoadDivergence.of(view));
     }
 

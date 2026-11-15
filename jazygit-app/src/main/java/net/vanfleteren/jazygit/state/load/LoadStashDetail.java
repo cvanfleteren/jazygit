@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.state.view.PreviewView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 public record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad, Targeted<DiffText> {
@@ -28,7 +29,8 @@ public record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad,
      */
     @Override
     public Target<DiffText> target() {
-        return Target.inView(Preview.lens(RepoView::stashDetail, RepoView::withStashDetail, sha));
+        return Target.inView(
+                RepoView.PREVIEW.andThen(Preview.lens(PreviewView::stashDetail, PreviewView::withStashDetail, sha)));
     }
 
     @Override
