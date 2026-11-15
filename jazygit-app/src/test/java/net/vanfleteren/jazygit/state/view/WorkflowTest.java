@@ -208,4 +208,41 @@ class WorkflowTest {
         // Only test matches Linux and Windows, as Deploy the site is matched by its name: deploy waits for both.
         assertEquals(HashMap.of("Deploy the site", HashSet.of("Linux", "Windows")), needs);
     }
+
+    @Test
+    void aMatrixRunGoesToTheJobWithTheMostOfItsNameWrittenOut() {
+        // From the review of #496: build (17) fits both build and the job named only by an expression.
+        Map<String, Set<String>> needs = Workflow.parse("""
+                        jobs:
+                          build:
+                            strategy: { matrix: { java: [17, 21] } }
+                          test:
+                            name: ${{ matrix.os }}
+                            needs: build
+                            strategy: { matrix: { os: [Linux] } }
+                          deploy:
+                            needs: test
+                        """)
+                .get()
+                .needs(List.of("build (17)", "build (21)", "Linux", "deploy"), path -> Option.none());
+
+        assertEquals(HashMap.of("Linux", HashSet.of("build (17)", "build (21)"), "deploy", HashSet.of("Linux")), needs);
+    }
+
+    @Test
+    void aNameWithAnExpressionInItGoesToItsJobOverOneNamedOnlyByAnExpression() {
+        Map<String, Set<String>> needs =
+                Workflow.parse("""
+                        jobs:
+                          build:
+                            name: Build ${{ matrix.java }}
+                            strategy: { matrix: { java: [17] } }
+                          test:
+                            name: ${{ matrix.os }}
+                            needs: build
+                            strategy: { matrix: { os: [Linux] } }
+                        """).get().needs(List.of("Build 17", "Linux"), path -> Option.none());
+
+        assertEquals(HashMap.of("Linux", HashSet.of("Build 17")), needs);
+    }
 }

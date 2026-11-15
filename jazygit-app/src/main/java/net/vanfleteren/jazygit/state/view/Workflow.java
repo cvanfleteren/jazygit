@@ -53,8 +53,9 @@ public record Workflow(List<Workflow.Job> jobs) {
     /**
      * Which of {@code names}, the jobs of a build of this workflow as GitHub names them, each one needs: those it
      * waits for directly, not those it waits for through another. A name is matched to the job it is written as, else
-     * to the one job whose name it fits: one that fits none, or more than one, as with a job named only by an
-     * expression, is left out, as is a job that needs none. {@code called} gives the workflows its jobs call, by path;
+     * to the job whose name it fits with the most written out, the least expressions: {@code build (17)} fits both
+     * {@code build} with its matrix and a job named only by {@code ${{ matrix.os }}}, and is {@code build}'s. One that
+     * fits none, or two as well, is left out, as is a job that needs none. {@code called} gives the workflows its jobs call, by path;
      * the jobs of one it does not give are left out too.
      */
     public Map<String, Set<String>> needs(List<String> names, Function<String, Option<Workflow>> called) {
@@ -62,7 +63,9 @@ public record Workflow(List<Workflow.Job> jobs) {
         Map<String, Node> matched = HashMap.ofEntries(names.flatMap(name -> {
             List<Node> written = nodes.filter(node -> node.written().contains(name));
             List<Node> fits = nodes.filter(node -> node.matches(name));
-            return (written.size() == 1 ? written : fits).singleOption().map(node -> Tuple.of(name, node));
+            int most = fits.map(Node::literal).max().getOrElse(0);
+            List<Node> likeliest = fits.filter(node -> node.literal() == most);
+            return (written.size() == 1 ? written : likeliest).singleOption().map(node -> Tuple.of(name, node));
         }));
         // What a job needs is the names matched to the jobs it needs, not the names those jobs' patterns match.
         Map<String, Set<String>> direct = matched.mapValues(node -> HashSet.ofAll(names.filter(
@@ -93,6 +96,7 @@ public record Workflow(List<Workflow.Job> jobs) {
                         job.key() + "/" + inner.key(),
                         prefixed(job.shown(), inner.pattern()),
                         inner.written().map(name -> job.shown() + " / " + name),
+                        job.literal() + " / ".length() + inner.literal(),
                         inner.needs().isEmpty()
                                 ? job.needs().flatMap(needed -> targets(needed, called))
                                 : inner.needs().map(needed -> job.key() + "/" + needed))))
@@ -100,6 +104,7 @@ public record Workflow(List<Workflow.Job> jobs) {
                         job.key(),
                         job.pattern(),
                         job.written(),
+                        job.literal(),
                         job.needs().flatMap(needed -> targets(needed, called))))));
     }
 
@@ -180,6 +185,13 @@ public record Workflow(List<Workflow.Job> jobs) {
         }
 
         /**
+         * How much of its name is written out, without its expressions: how specific the names it fits are.
+         */
+        int literal() {
+            return EXPRESSION.matcher(shown()).replaceAll("").length();
+        }
+
+        /**
          * The name GitHub gives its run as it is written, when that has no expression in it.
          */
         Option<String> written() {
@@ -199,7 +211,7 @@ public record Workflow(List<Workflow.Job> jobs) {
      * A job, keyed by its key or, in a called workflow, by the calling job's and its own, as the names of its runs
      * match it, and the keys of those it needs.
      */
-    private record Node(String key, Pattern pattern, Option<String> written, List<String> needs) {
+    private record Node(String key, Pattern pattern, Option<String> written, int literal, List<String> needs) {
 
         boolean matches(String name) {
             return pattern.matcher(name).matches();
