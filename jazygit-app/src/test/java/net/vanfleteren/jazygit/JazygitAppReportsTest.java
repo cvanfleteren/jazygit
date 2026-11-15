@@ -212,7 +212,7 @@ class JazygitAppReportsTest {
 
             assertEquals(CommandLogPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
             // The model keeps the pane the focus was in: the content panel still shows its commit.
-            assertTrue(app.model().shownPane().contains(CommitsPanel.ID));
+            assertTrue(app.model().shownPane().contains(CommitsPanel.PANE));
 
             pilot.press(KeyCode.ESCAPE);
             pilot.pause();

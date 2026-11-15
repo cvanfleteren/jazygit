@@ -8,8 +8,10 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
@@ -22,6 +24,11 @@ import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
 public final class StashPanel {
 
     public static final String ID = Scopes.STASH.id();
+
+    /**
+     * The pane, as the focus is on it.
+     */
+    public static final PaneId PANE = Scopes.STASH.pane();
 
     private final LoadableList<List<Stash>> list;
     private final Keymap keymap = Keymap.standard();
@@ -53,22 +60,22 @@ public final class StashPanel {
     }
 
     /**
-     * @param focusedId the id of the currently focused left pane, as reported by
-     *                  {@code runner().focusManager().focusedId()}
+     * The pane while {@code pane} has the focus, and is in use.
      */
-    public Panel render(Model model, String focusedId) {
-        return render(model, focusedId, focusedId);
+    public Panel render(Model model, PaneId pane) {
+        return render(model, Option.of(pane), Option.of(pane));
     }
 
     /**
-     * @param activeId the id of the left pane in use, whose highlighted row shows
+     * @param focus what has the focus, if anything
+     * @param inUse the left pane in use, whose highlighted row shows
      */
-    public Panel render(Model model, String focusedId, String activeId) {
+    public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         return list.render(
                 model.repo().stashes(),
                 stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))),
-                ID.equals(focusedId),
-                ID.equals(activeId));
+                focus.contains(PANE),
+                inUse.contains(PANE));
     }
 
     /**

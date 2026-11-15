@@ -8,6 +8,7 @@ import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.lens.Lens;
 import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
@@ -21,9 +22,8 @@ import net.vanfleteren.jazygit.state.diff.Version;
  * @param commits     what the commits pane and the logs show
  * @param files       what the files pane shows
  * @param preview     what is read for the item highlighted in each pane
- * @param focusedPane the id of the element of the screen, outside the popups, that had the focus last, which a
- *                    closing popup gives it back to; none before the view reported one. It is a pane's id or an
- *                    {@link AreaId}'s value, so not a {@link net.vanfleteren.jazygit.state.PaneId}
+ * @param focusedPane the pane or area of the screen, outside the popups, that had the focus last, which a closing
+ *                    popup gives it back to; none before the view reported one
  * @param areas       what each area of the content panel shows besides what it is given, by the id of the area; an
  *                    area that keeps nothing is not in it
  */
@@ -33,7 +33,7 @@ public record RepoView(
         CommitsView commits,
         FilesView files,
         PreviewView preview,
-        Option<String> focusedPane,
+        Option<Focus.OnScreen> focusedPane,
         Map<AreaId, AreaView> areas) {
 
     public static final Lens<RepoView, BranchesView> BRANCHES = Lens.of(RepoView::branches, RepoView::withBranches);

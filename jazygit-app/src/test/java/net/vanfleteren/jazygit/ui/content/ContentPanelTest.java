@@ -34,6 +34,9 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Focus;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.preferences.*;
@@ -89,8 +92,8 @@ class ContentPanelTest {
     @Test
     void filesFocusedWithoutChangedFilesSaysSoInsteadOfLoading() throws Exception {
         Model clean = TestModels.loaded();
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(clean, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> content.render(clean, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(clean, FilesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> content.render(clean, FilesPanel.PANE));
             assertTrue(screen.contains("No changed files"), screen);
             assertFalse(screen.contains(Placeholders.loading()), screen);
         }
@@ -104,8 +107,8 @@ class ContentPanelTest {
                         new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("changes")))
                 .model();
 
-        String area = content.areaOfPane(selected, CommitsPanel.ID).get();
-        assertEquals(Option.of(new PaneId(CommitsPanel.ID)), content.paneOfArea(selected, area));
+        AreaId area = content.areaOfPane(selected, CommitsPanel.PANE).get();
+        assertEquals(Option.of(CommitsPanel.PANE), content.paneOfArea(selected, area));
         assertNotNull(content.render(selected, area));
     }
 
@@ -119,21 +122,21 @@ class ContentPanelTest {
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of(changes)))
                 .model();
-        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(selected, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
             SettledPilot.of(testRunner).press(dev.tamboui.tui.event.KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
         }
         ViewMsg.ContentScrolled down = (ViewMsg.ContentScrolled) dispatched.getLast();
-        assertEquals(new AreaId(area), down.area());
+        assertEquals(area, down.area());
         assertEquals(1, down.to().row());
 
         // Where the model has it scrolled to is what shows, whatever was scrolled in the element before.
         Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(
-                new AreaId(area),
+                area,
                 new Scrolled(
                         down.to().content(), 20, 0, io.vavr.control.Option.none(), io.vavr.control.Option.none())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
@@ -158,17 +161,17 @@ class ContentPanelTest {
                 """)
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
-        String area = expanding.areaOfPane(shown, CommitsPanel.ID).get();
+        AreaId area = expanding.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.Gap above = new Anchor.Gap("a.txt", 1, Option.of(9));
-        Model onMarker = shown.withScrolled(io.vavr.collection.HashMap.of(
-                new AreaId(area), new Scrolled(content, 0, 0, Option.of(above), Option.none())));
+        Model onMarker = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(above), Option.none())));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> expanding.render(onMarker, area))) {
             String screen = RenderedText.ofLarge(testRunner, () -> expanding.render(onMarker, area));
             assertTrue(screen.contains("8 lines hidden"), screen);
             assertTrue(screen.contains("more ┄"), screen);
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).press(']');
             SettledPilot.of(testRunner).pause();
@@ -183,9 +186,7 @@ class ContentPanelTest {
                         net.vanfleteren.jazygit.feature.diff.ExpandMsg.Toward.DOWN),
                 asked.map(net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked::toward));
         assertEquals(List.of(above, above), asked.map(msg -> msg.at().cursor()));
-        assertEquals(
-                List.of(new AreaId(area), new AreaId(area)),
-                asked.map(msg -> msg.at().area()));
+        assertEquals(List.of(area, area), asked.map(msg -> msg.at().area()));
     }
 
     @Test
@@ -196,15 +197,15 @@ class ContentPanelTest {
         Model shown = showingCommit(header + "@@ -9,2 +9,2 @@\n nine\n-ten\n+TEN\n")
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
-        String area = versions.areaOfPane(shown, CommitsPanel.ID).get();
+        AreaId area = versions.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine removed = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.LEFT, 10);
-        Model onLine = shown.withScrolled(io.vavr.collection.HashMap.of(
-                new AreaId(area), new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> versions.render(onLine, area))) {
             RenderedText.ofLarge(testRunner, () -> versions.render(onLine, area));
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             SettledPilot.of(testRunner).press('o', dev.tamboui.tui.event.KeyModifiers.CTRL);
             SettledPilot.of(testRunner).pause();
         }
@@ -271,18 +272,13 @@ class ContentPanelTest {
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
-        String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
+        AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine blank = new Anchor.OnLine("a.md", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 20);
-        Model onBlank = shown.withScrolled(io.vavr.collection.HashMap.of(
-                new AreaId(area), new Scrolled(content, 0, 0, Option.of(blank), Option.none())));
+        Model onBlank = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(blank), Option.none())));
         DiffCursorAt at = new DiffCursorAt(
-                new AreaId(area),
-                onBlank.scrolled(new AreaId(area), content),
-                blank,
-                Option.none(),
-                Option.none(),
-                Option.none());
+                area, onBlank.scrolled(area, content), blank, Option.none(), Option.none(), Option.none());
         Update.Next asked =
                 Update.update(onBlank, new net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled(at));
         ReadVersion read = (ReadVersion) asked.cmds().head();
@@ -316,18 +312,13 @@ class ContentPanelTest {
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
-        String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
+        AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine removed = new Anchor.OnLine("a.md", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.LEFT, 2);
-        Model onLine = shown.withScrolled(io.vavr.collection.HashMap.of(
-                new AreaId(area), new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
         DiffCursorAt at = new DiffCursorAt(
-                new AreaId(area),
-                onLine.scrolled(new AreaId(area), content),
-                removed,
-                Option.none(),
-                Option.none(),
-                Option.none());
+                area, onLine.scrolled(area, content), removed, Option.none(), Option.none(), Option.none());
         Update.Next asked =
                 Update.update(onLine, new net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled(at));
         ReadVersion read = (ReadVersion) asked.cmds().head();
@@ -342,7 +333,7 @@ class ContentPanelTest {
             assertTrue(screen.contains("+ new text"), screen);
             assertFalse(screen.contains("old text"), screen);
             assertFalse(screen.contains(" 2 │"), screen);
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             SettledPilot.of(testRunner).press('t', dev.tamboui.tui.event.KeyModifiers.CTRL);
             SettledPilot.of(testRunner).pause();
         }
@@ -367,18 +358,13 @@ class ContentPanelTest {
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
-        String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
+        AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine on = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 39);
-        Model onLine = shown.withScrolled(io.vavr.collection.HashMap.of(
-                new AreaId(area), new Scrolled(content, 0, 0, Option.of(on), Option.none())));
-        DiffCursorAt at = new DiffCursorAt(
-                new AreaId(area),
-                onLine.scrolled(new AreaId(area), content),
-                on,
-                Option.none(),
-                Option.none(),
-                Option.none());
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(on), Option.none())));
+        DiffCursorAt at =
+                new DiffCursorAt(area, onLine.scrolled(area, content), on, Option.none(), Option.none(), Option.none());
         Update.Next asked = Update.update(onLine, new net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled(at));
         ReadVersion read = (ReadVersion) asked.cmds().head();
         DiffText whole = DiffText.of(header + "@@ -1,60 +1,60 @@\n"
@@ -416,15 +402,15 @@ class ContentPanelTest {
                 """)
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
-        String area = copying.areaOfPane(shown, CommitsPanel.ID).get();
+        AreaId area = copying.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine added = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 10);
-        Model onLine = shown.withScrolled(io.vavr.collection.HashMap.of(
-                new AreaId(area), new Scrolled(content, 0, 0, Option.of(added), Option.none())));
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(added), Option.none())));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> copying.render(onLine, area))) {
             RenderedText.ofLarge(testRunner, () -> copying.render(onLine, area));
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             SettledPilot.of(testRunner).press('y');
             SettledPilot.of(testRunner).press('v');
             SettledPilot.of(testRunner).pause();
@@ -434,7 +420,7 @@ class ContentPanelTest {
                 .filter(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::isInstance)
                 .map(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::cast);
         assertEquals(List.of(added), asked.map(msg -> msg.at().cursor()));
-        assertEquals(List.of(new AreaId(area)), asked.map(msg -> msg.at().area()));
+        assertEquals(List.of(area), asked.map(msg -> msg.at().area()));
         // v opens a range in the diff of a commit too, which y then copies.
         assertEquals(
                 List.of(Option.of(added)),
@@ -458,7 +444,7 @@ class ContentPanelTest {
                 id -> {},
                 dispatched::add);
         Model selected = showingCommit("+" + "x".repeat(300));
-        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(selected, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
             testRunner.runner().eventRouter().addGlobalHandler(event -> {
@@ -467,7 +453,7 @@ class ContentPanelTest {
                 }
                 return EventResult.UNHANDLED;
             });
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
             SettledPilot.of(testRunner).press('x');
             SettledPilot.of(testRunner).press(KeyCode.RIGHT);
@@ -497,10 +483,10 @@ class ContentPanelTest {
             dispatched.add(msg);
             model.set(Update.update(model.get(), msg).model());
         });
-        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             List.of(
                             KeyCode.END,
@@ -533,11 +519,11 @@ class ContentPanelTest {
             dispatched.add(msg);
             model.set(Update.update(model.get(), msg).model());
         });
-        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
 
         String screen;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             List.of('l', 'l', 'h').forEach(key -> SettledPilot.of(testRunner).press(key));
             SettledPilot.of(testRunner).pause();
@@ -571,14 +557,14 @@ class ContentPanelTest {
                     dispatched.add(msg);
                     model.set(Update.update(model.get(), msg).model());
                 });
-        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
 
         String end;
         String start;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
                 () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
             var pilot = SettledPilot.of(testRunner);
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             pilot.press(KeyCode.RIGHT, KeyModifiers.SHIFT);
             pilot.pause();
@@ -613,13 +599,13 @@ class ContentPanelTest {
             dispatched.add(msg);
             model.set(Update.update(model.get(), msg).model());
         });
-        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
 
         String screen;
         // The frames the keys draw are as large as the screen read at the end, which the area learns its width from.
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
                 () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             List.range(0, 40).forEach(i -> SettledPilot.of(testRunner).press(KeyCode.RIGHT));
             SettledPilot.of(testRunner).pause();
@@ -645,13 +631,13 @@ class ContentPanelTest {
                 () -> false,
                 id -> {},
                 msg -> model.set(Update.update(model.get(), msg).model()));
-        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
 
         String left;
         String right;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
                 () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             left = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             List.range(0, 80).forEach(i -> SettledPilot.of(testRunner).press(KeyCode.RIGHT));
             SettledPilot.of(testRunner).pause();
@@ -673,13 +659,13 @@ class ContentPanelTest {
                 () -> false,
                 id -> {},
                 msg -> model.set(Update.update(model.get(), msg).model()));
-        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
 
         List<String> top;
         List<String> end;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
                 () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             top = List.of(RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area))
                     .split("\n"));
             SettledPilot.of(testRunner).press(KeyCode.END);
@@ -703,11 +689,11 @@ class ContentPanelTest {
     void theTrackOnTheBottomBorderIsTheLineOfTheBorderAsDoubleAsTheThemeDrawsIt() {
         Model model = showingCommit("+" + "x".repeat(150) + "END");
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
-        String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+        AreaId area = panel.areaOfPane(model, CommitsPanel.PANE).get();
 
         // The none theme borders the area that has the focus with a double line.
         dev.tamboui.buffer.Buffer buffer =
-                themed(panel.render(model, area), area, net.vanfleteren.jazygit.settings.ThemeName.NONE);
+                themed(panel.render(model, area), area.id(), net.vanfleteren.jazygit.settings.ThemeName.NONE);
 
         String screen = List.range(0, buffer.area().height())
                 .map(y -> List.range(0, buffer.area().width())
@@ -723,10 +709,10 @@ class ContentPanelTest {
         Model model =
                 showingCommit(List.range(0, 100).map(i -> "+" + "x".repeat(150)).mkString("\n"));
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
-        String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+        AreaId area = panel.areaOfPane(model, CommitsPanel.PANE).get();
 
         dev.tamboui.buffer.Buffer buffer =
-                themed(panel.render(model, area), area, net.vanfleteren.jazygit.settings.ThemeName.DARK);
+                themed(panel.render(model, area), area.id(), net.vanfleteren.jazygit.settings.ThemeName.DARK);
 
         int bottom = buffer.area().height() - 1;
         int right = buffer.area().width() - 1;
@@ -780,7 +766,7 @@ class ContentPanelTest {
     void theBottomBorderOfAnAreaWithLinesNoWiderThanItIsLeftAsItIs() throws Exception {
         Model model = showingCommit("+short");
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
-        String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+        AreaId area = panel.areaOfPane(model, CommitsPanel.PANE).get();
 
         String screen;
         try (ToolkitTestRunner testRunner =
@@ -810,12 +796,12 @@ class ContentPanelTest {
                 () -> false,
                 id -> {},
                 msg -> model.set(Update.update(model.get(), msg).model()));
-        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
 
         String screen;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
                 () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             SettledPilot.of(testRunner).press(KeyCode.END);
             List.range(0, 3).forEach(i -> SettledPilot.of(testRunner).press(KeyCode.RIGHT));
@@ -841,12 +827,12 @@ class ContentPanelTest {
                 () -> false,
                 id -> {},
                 msg -> model.set(Update.update(model.get(), msg).model()));
-        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
 
         String screen;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
                 () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             SettledPilot.of(testRunner).press(KeyCode.END);
             SettledPilot.of(testRunner).pause();
@@ -928,7 +914,7 @@ class ContentPanelTest {
     void theBackgroundOfAChangedLineGoesOnToTheEdgeOfTheArea() throws Exception {
         ContentPanel filling = new ContentPanel(GREEN_ADDED, () -> false, id -> {}, msg -> {});
         Model model = showingRichCommit("+short\n+a bit longer");
-        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+        AreaId area = filling.areaOfPane(model, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
@@ -946,7 +932,7 @@ class ContentPanelTest {
         ContentPanel filling = new ContentPanel(GREEN_ADDED, () -> false, id -> {}, msg -> {});
         // The bar is the widest line of its file: it is not padded to the width of the file.
         Model model = showingRichCommit("+x");
-        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+        AreaId area = filling.areaOfPane(model, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
@@ -959,7 +945,7 @@ class ContentPanelTest {
     void theFirstFrameInAnotherSizeFillsTheAreaItIsDrawnIn() throws Exception {
         ContentPanel filling = new ContentPanel(GREEN_ADDED, () -> false, id -> {}, msg -> {});
         Model model = showingRichCommit("+short\n+a bit longer");
-        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+        AreaId area = filling.areaOfPane(model, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
@@ -979,8 +965,9 @@ class ContentPanelTest {
                         new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
                         new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.PANE))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, FilesPanel.PANE));
             List<String> rows = List.of(screen.split("\n"));
             int staged = rows.indexWhere(row -> row.contains("Staged changes"));
             int unstaged = rows.indexWhere(row -> row.contains("Unstaged changes"));
@@ -1102,10 +1089,10 @@ class ContentPanelTest {
                     dispatched.add(msg);
                     model.set(Update.update(model.get(), msg).model());
                 });
-        String area = scrolling.areaOfPane(model.get(), FilesPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(model.get(), FilesPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             SettledPilot.of(testRunner).press(KeyCode.RIGHT);
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
@@ -1132,10 +1119,10 @@ class ContentPanelTest {
             return true;
         });
         Model selected = showingCommit("+" + "x".repeat(300));
-        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(selected, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
             SettledPilot.of(testRunner).press(KeyCode.RIGHT);
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
@@ -1168,10 +1155,10 @@ class ContentPanelTest {
             return true;
         });
         Model selected = showingCommit("+" + "x".repeat(300));
-        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(selected, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
             SettledPilot.of(testRunner).pause();
@@ -1200,11 +1187,11 @@ class ContentPanelTest {
                         new LoadMsg.CommitFileDiffLoaded(
                                 of, List.of(file), DiffOptions.DEFAULT, DiffText.of("+" + "x".repeat(300))))
                 .model();
-        String area = scrolling.areaOfPane(selected, FilesPanel.ID).get();
-        assertEquals(ContentArea.COMMIT_FILE.id().value(), area);
+        AreaId area = scrolling.areaOfPane(selected, FilesPanel.PANE).get();
+        assertEquals(ContentArea.COMMIT_FILE.id(), area);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
             SettledPilot.of(testRunner).pause();
@@ -1217,7 +1204,7 @@ class ContentPanelTest {
     void escapeGoesToTheAppWhenTheAreaCannotBeLeft() throws Exception {
         java.util.List<KeyEvent> global = new java.util.ArrayList<>();
         Model selected = showingCommit("+added line");
-        String area = content.areaOfPane(selected, CommitsPanel.ID).get();
+        AreaId area = content.areaOfPane(selected, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(selected, area))) {
             testRunner.runner().eventRouter().addGlobalHandler(event -> {
@@ -1226,7 +1213,7 @@ class ContentPanelTest {
                 }
                 return EventResult.UNHANDLED;
             });
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> content.render(selected, area));
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
@@ -1243,9 +1230,9 @@ class ContentPanelTest {
         ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
         Model selected =
                 showingCommit(List.range(0, 100).map(i -> "+" + "x".repeat(300)).mkString("\n"));
-        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+        AreaId area = scrolling.areaOfPane(selected, CommitsPanel.PANE).get();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
@@ -1255,10 +1242,9 @@ class ContentPanelTest {
 
         // TamboUI does not draw the columns scrolled past, so the next scroll tells where the area was.
         Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(
-                new AreaId(area),
-                new Scrolled(shown, 0, 11, io.vavr.control.Option.none(), io.vavr.control.Option.none())));
+                area, new Scrolled(shown, 0, 11, io.vavr.control.Option.none(), io.vavr.control.Option.none())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> scrolling.render(scrolled, area));
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
@@ -1272,10 +1258,10 @@ class ContentPanelTest {
     void theCommitAreaCannotBeFocusedWhileItsDetailLoadsOrItsCommitIsGone() {
         Model loading = Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
                 .model();
-        assertEquals(Option.none(), content.areaOfPane(loading, CommitsPanel.ID));
+        assertEquals(Option.none(), content.areaOfPane(loading, CommitsPanel.PANE));
 
         Model gone = showingCommit("changes").mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.empty())));
-        assertEquals(Option.none(), content.areaOfPane(gone, CommitsPanel.ID));
+        assertEquals(Option.none(), content.areaOfPane(gone, CommitsPanel.PANE));
     }
 
     @Test
@@ -1287,14 +1273,14 @@ class ContentPanelTest {
                                 .model(),
                         new SelectionMsg.StashSelected(stash.sha()))
                 .model();
-        assertEquals(Option.none(), content.areaOfPane(loading, StashPanel.ID));
+        assertEquals(Option.none(), content.areaOfPane(loading, StashPanel.PANE));
 
         Model loaded = Update.update(
                         loading, new LoadMsg.StashDetailLoaded(stash.sha(), DiffOptions.DEFAULT, DiffText.of("+a")))
                 .model();
-        assertTrue(content.areaOfPane(loaded, StashPanel.ID).isDefined());
+        assertTrue(content.areaOfPane(loaded, StashPanel.PANE).isDefined());
         Model gone = loaded.mapRepo(repo -> repo.withStashes(new Loadable.Loaded<>(List.empty())));
-        assertEquals(Option.none(), content.areaOfPane(gone, StashPanel.ID));
+        assertEquals(Option.none(), content.areaOfPane(gone, StashPanel.PANE));
     }
 
     @Test
@@ -1311,16 +1297,16 @@ class ContentPanelTest {
                                 Option.none())))));
         Model loading = Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
                 .model();
-        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.ID));
+        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.PANE));
 
         Model loaded = Update.update(
                         loading,
                         new LoadMsg.CommitDetailLoaded(new Sha("cccc"), DiffOptions.DEFAULT, DiffText.of("+a")))
                 .model();
-        assertTrue(content.areaOfPane(loaded, BranchesPanel.ID).isDefined());
+        assertTrue(content.areaOfPane(loaded, BranchesPanel.PANE).isDefined());
         Model remoteTab =
                 loaded.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
-        assertEquals(Option.none(), content.areaOfPane(remoteTab, BranchesPanel.ID));
+        assertEquals(Option.none(), content.areaOfPane(remoteTab, BranchesPanel.PANE));
     }
 
     @Test
@@ -1335,14 +1321,14 @@ class ContentPanelTest {
                 Update.update(logRead, new BranchCommitsMsg.Opened(feature)).model();
         Model loading = Update.update(open, new SelectionMsg.BranchCommitSelected(new Sha("ffff")))
                 .model();
-        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.ID));
+        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.PANE));
 
         Model loaded = Update.update(
                         loading,
                         new LoadMsg.CommitDetailLoaded(new Sha("ffff"), DiffOptions.DEFAULT, DiffText.of("+a")))
                 .model();
-        String area = content.areaOfPane(loaded, BranchesPanel.ID).get();
-        assertEquals(Option.of(new PaneId(BranchesPanel.ID)), content.paneOfArea(loaded, area));
+        AreaId area = content.areaOfPane(loaded, BranchesPanel.PANE).get();
+        assertEquals(Option.of(BranchesPanel.PANE), content.paneOfArea(loaded, area));
     }
 
     @Test
@@ -1359,15 +1345,15 @@ class ContentPanelTest {
                 preferences.withThemeOverride(Option.of(net.vanfleteren.jazygit.settings.ThemeName.LIGHT)));
         Model other = showingCommit("+other line\n");
 
-        counting.render(selected, CommitsPanel.ID);
+        counting.render(selected, CommitsPanel.PANE);
         int once = styled.get();
-        counting.render(selected, CommitsPanel.ID);
+        counting.render(selected, CommitsPanel.PANE);
         assertEquals(once, styled.get());
 
-        counting.render(light, CommitsPanel.ID);
+        counting.render(light, CommitsPanel.PANE);
         assertTrue(styled.get() > once, "restyled in another theme");
         int inLight = styled.get();
-        counting.render(other, CommitsPanel.ID);
+        counting.render(other, CommitsPanel.PANE);
         assertTrue(styled.get() > inLight, "restyled for another body");
     }
 
@@ -1402,10 +1388,10 @@ class ContentPanelTest {
                                                 .map(i -> "+line " + i)
                                                 .mkString("\n") + "\n")))
                 .model();
-        String area = counting.areaOfPane(model, CommitsPanel.ID).get();
+        AreaId area = counting.areaOfPane(model, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> counting.render(model, area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             String screen = RenderedText.ofLarge(testRunner, () -> counting.render(model, area));
             assertTrue(screen.contains("+ line 0"), screen);
             // Measured without drawing any, as no line of a diff is wider than its file; drawn, only those of an area
@@ -1457,10 +1443,10 @@ class ContentPanelTest {
                                 +b
                                 """)))
                 .model();
-        String area = counting.areaOfPane(model, CommitsPanel.ID).get();
+        AreaId area = counting.areaOfPane(model, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> counting.render(model, area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> counting.render(model, area));
             int once = styled.get();
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
@@ -1497,7 +1483,7 @@ class ContentPanelTest {
                                 +gamma
                                 """)))
                 .model();
-        String area = clicking.areaOfPane(model, CommitsPanel.ID).get();
+        AreaId area = clicking.areaOfPane(model, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> clicking.render(model, area))) {
             java.util.List<String> screen = RenderedText.ofLarge(testRunner, () -> clicking.render(model, area))
@@ -1507,7 +1493,7 @@ class ContentPanelTest {
                     .filter(row -> screen.get(row).contains("beta"))
                     .findFirst()
                     .getAsInt();
-            dev.tamboui.layout.Rect drawn = SettledPilot.of(testRunner).findElement(area);
+            dev.tamboui.layout.Rect drawn = SettledPilot.of(testRunner).findElement(area.id());
 
             SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, beta);
             ViewMsg.ContentScrolled clicked = (ViewMsg.ContentScrolled) dispatched.getLast();
@@ -1524,18 +1510,19 @@ class ContentPanelTest {
 
     @Test
     void aClickOnTheLogGivesItTheFocus() throws Exception {
-        java.util.List<String> focused = new java.util.ArrayList<>();
+        java.util.List<Focus> focused = new java.util.ArrayList<>();
         ContentPanel clicking = new ContentPanel(Theme.SpanStyles.NONE, () -> false, focused::add, msg -> {});
         Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> clicking.render(model, BranchesPanel.ID))) {
-            RenderedText.of(testRunner, () -> clicking.render(model, BranchesPanel.ID));
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> clicking.render(model, BranchesPanel.PANE))) {
+            RenderedText.of(testRunner, () -> clicking.render(model, BranchesPanel.PANE));
             dev.tamboui.layout.Rect drawn = SettledPilot.of(testRunner).findElement("branch-log");
 
             SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, drawn.y() + 2);
         }
 
-        assertEquals(java.util.List.of("branch-log"), focused);
+        assertEquals(java.util.List.of(AreaId.LOG), focused);
     }
 
     @Test
@@ -1543,13 +1530,13 @@ class ContentPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
         Model model = pullRequestDiff();
-        String area = reviewing.areaOfPane(model, FilesPanel.ID).get();
+        AreaId area = reviewing.areaOfPane(model, FilesPanel.PANE).get();
 
         // The model the app draws, which only knows where the cursor is once it handled the message that says so.
         java.util.concurrent.atomic.AtomicReference<Model> drawn =
                 new java.util.concurrent.atomic.AtomicReference<>(model);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(drawn.get(), area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> reviewing.render(drawn.get(), area));
             SettledPilot.of(testRunner).press('n');
             SettledPilot.of(testRunner).pause();
@@ -1588,13 +1575,13 @@ class ContentPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
         Model model = pullRequestDiff();
-        String area = reviewing.areaOfPane(model, FilesPanel.ID).get();
+        AreaId area = reviewing.areaOfPane(model, FilesPanel.PANE).get();
         Anchor.OnLine line = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1);
 
         java.util.concurrent.atomic.AtomicReference<Model> drawn =
                 new java.util.concurrent.atomic.AtomicReference<>(model);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(drawn.get(), area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> reviewing.render(drawn.get(), area));
             SettledPilot.of(testRunner).press('n');
             SettledPilot.of(testRunner).pause();
@@ -1621,7 +1608,7 @@ class ContentPanelTest {
                 .filter(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::isInstance)
                 .map(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::cast);
         assertEquals(List.of(line), asked.map(msg -> msg.at().cursor()));
-        assertEquals(List.of(new AreaId(area)), asked.map(msg -> msg.at().area()));
+        assertEquals(List.of(area), asked.map(msg -> msg.at().area()));
     }
 
     @Test
@@ -1634,11 +1621,11 @@ class ContentPanelTest {
             dispatched.add(msg);
             model.set(Update.update(model.get(), msg).model());
         });
-        String area = reviewing.areaOfPane(model.get(), FilesPanel.ID).get();
+        AreaId area = reviewing.areaOfPane(model.get(), FilesPanel.PANE).get();
 
         String screen;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(model.get(), area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
             SettledPilot.of(testRunner).press('n');
             SettledPilot.of(testRunner).pause();
@@ -1672,10 +1659,10 @@ class ContentPanelTest {
                     dispatched.add(msg);
                     model.set(Update.update(model.get(), msg).model());
                 });
-        String area = reviewing.areaOfPane(model.get(), FilesPanel.ID).get();
+        AreaId area = reviewing.areaOfPane(model.get(), FilesPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(model.get(), area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
             // On to the thread, up to its line, and a range opened there.
             SettledPilot.of(testRunner).press('n');
@@ -1725,13 +1712,13 @@ class ContentPanelTest {
                 () -> false,
                 id -> {},
                 msg -> model.set(Update.update(model.get(), msg).model()));
-        String area = reviewing.areaOfPane(model.get(), FilesPanel.ID).get();
+        AreaId area = reviewing.areaOfPane(model.get(), FilesPanel.PANE).get();
 
         String paired;
         String ranged;
         String dropped;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(model.get(), area))) {
-            SettledPilot.focus(testRunner, area);
+            SettledPilot.focus(testRunner, area.id());
             RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
             // To the end of the diff, scrolled down, and up from its marker to the second removed line.
             SettledPilot.of(testRunner).press(KeyCode.END);
@@ -1867,9 +1854,9 @@ class ContentPanelTest {
     @Test
     void theDiffAreasReturnToTheFilesPane() {
         Model model = TestModels.loaded();
-        assertEquals(Option.none(), content.paneOfArea(model, "unknown"));
-        assertEquals(Option.of(new PaneId(FilesPanel.ID)), content.paneOfArea(model, "diff-staged"));
-        assertEquals(Option.of(new PaneId(FilesPanel.ID)), content.paneOfArea(model, "diff-unstaged"));
+        assertEquals(Option.none(), content.paneOfArea(model, new PaneId("unknown")));
+        assertEquals(Option.of(FilesPanel.PANE), content.paneOfArea(model, AreaId.STAGED));
+        assertEquals(Option.of(FilesPanel.PANE), content.paneOfArea(model, AreaId.UNSTAGED));
     }
 
     @Test
@@ -1894,17 +1881,17 @@ class ContentPanelTest {
                                 pr,
                                 new Loadable.Loaded<>(
                                         new PullRequestPreview(new GhBranch("main"), "Why", "+fixed\n", false))))));
-        String first = PullRequestsPanel.FIRST_PANE_ID;
-        String second = net.vanfleteren.jazygit.keys.Scopes.PR_REVIEW_REQUESTED.id();
+        PaneId first = PullRequestsPanel.FIRST_PANE;
+        PaneId second = net.vanfleteren.jazygit.keys.Scopes.PR_REVIEW_REQUESTED.pane();
 
         // Before a list had the focus, the pull request is that of the first list.
-        assertEquals(Option.of("pull-request-preview"), content.areaOfPane(read, first));
+        assertEquals(Option.of(AreaId.PULL_REQUEST), content.areaOfPane(read, first));
         assertEquals(Option.none(), content.areaOfPane(read, second));
 
-        Model fromSecond = read.withPrOverview(read.prOverview().withListPane(Option.of(new PaneId(second))));
-        assertEquals(Option.of("pull-request-preview"), content.areaOfPane(fromSecond, second));
+        Model fromSecond = read.withPrOverview(read.prOverview().withListPane(Option.of(second)));
+        assertEquals(Option.of(AreaId.PULL_REQUEST), content.areaOfPane(fromSecond, second));
         assertEquals(Option.none(), content.areaOfPane(fromSecond, first));
-        assertEquals(Option.of(new PaneId(second)), content.paneOfArea(fromSecond, "pull-request-preview"));
+        assertEquals(Option.of(second), content.paneOfArea(fromSecond, AreaId.PULL_REQUEST));
     }
 
     @Test
@@ -2112,8 +2099,9 @@ class ContentPanelTest {
                         new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
                         new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> content.render(selected, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.PANE))) {
+            String screen = RenderedText.of(testRunner, () -> content.render(selected, FilesPanel.PANE));
             assertTrue(screen.contains("Staged changes"), screen);
             assertTrue(screen.contains("Unstaged changes"), screen);
             assertTrue(screen.indexOf("Staged changes") < screen.indexOf("Unstaged changes"), screen);

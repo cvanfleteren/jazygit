@@ -16,6 +16,8 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Reacting to a comment of a review thread of the diff of a pull request's files, from its cursor (ADR 86): the
@@ -44,7 +46,7 @@ public final class ReactUpdate {
         return reactable(model, at.cursor())
                 .fold(
                         why -> Next.of(refused(model, why)),
-                        on -> Update.ask(
+                        on -> PopupUpdate.ask(
                                 model,
                                 new ReactionPopup(
                                         on.number(),
@@ -114,7 +116,7 @@ public final class ReactUpdate {
                             popup.comment(),
                             reaction,
                             !found.comment().reactions().viewerGave(reaction));
-                    return Update.confirm(model, ReactionPopup.class, open -> Option.of(react))
+                    return PopupUpdate.confirm(model, ReactionPopup.class, open -> Option.of(react))
                             .map(started -> mapPullRequest(
                                     started,
                                     popup.number(),

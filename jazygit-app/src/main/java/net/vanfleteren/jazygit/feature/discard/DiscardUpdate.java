@@ -12,8 +12,8 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Discarding changes.
@@ -38,12 +38,12 @@ public final class DiscardUpdate {
         List<FileEntry> changed = files.filter(FileEntry::changed);
         return !files.isEmpty() && changed.isEmpty()
                 ? Next.of(model.fail(FilesError.Unchanged.of(files, Option.none())))
-                : Update.ask(model, Option.when(!changed.isEmpty(), () -> new DiscardPopup(changed)));
+                : PopupUpdate.ask(model, Option.when(!changed.isEmpty(), () -> new DiscardPopup(changed)));
     }
 
     private static Next chosen(Model model, Scope scope) {
         // Without unstaged changes there is nothing to discard of that kind.
-        return Update.confirm(
+        return PopupUpdate.confirm(
                 model,
                 DiscardPopup.class,
                 popup -> Option.of(popup)

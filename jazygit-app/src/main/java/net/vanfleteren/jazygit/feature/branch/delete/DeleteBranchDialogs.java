@@ -93,9 +93,9 @@ public final class DeleteBranchDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(DELETE_BRANCH, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(UNLOCK_WORKTREE, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(DELETE_REMOTE_BRANCH, dispatch)));
+                PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(DELETE_BRANCH, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(UNLOCK_WORKTREE, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(DELETE_REMOTE_BRANCH, dispatch)));
     }
 
     /**

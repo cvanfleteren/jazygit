@@ -10,8 +10,9 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.OpenPullReques
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Reading the conversation on the pull request that is shown, in a popup of its own, opened from the pull request
@@ -28,7 +29,8 @@ public final class CommentsUpdate {
                 model.popup(PullRequestPopup.class)
                         .filter(PullRequestPopup::detailsRead)
                         .map(shown -> Next.of(
-                                Update.ask(model, CommentsPopup.loading(shown)).model(),
+                                PopupUpdate.ask(model, CommentsPopup.loading(shown))
+                                        .model(),
                                 new LoadComments(shown.pullRequest().number())))
                         .getOrElse(() -> Next.of(model));
             case CommentsMsg.Loaded(PrNumber number, var comments) ->
@@ -44,14 +46,14 @@ public final class CommentsUpdate {
             // The popup stays open, to go on reading.
             case CommentsMsg.OpenChosen() ->
                 model.popup(CommentsPopup.class)
-                        .map(popup -> Update.start(
+                        .map(popup -> OperationUpdate.start(
                                 model.clearError(),
                                 new OpenPullRequest(popup.shown().branch(), popup.number())))
                         .getOrElse(() -> Next.of(model));
             // As opening the pull request: the popup stays open.
             case CommentsMsg.LinkChosen(String url) ->
                 model.popup(CommentsPopup.class)
-                        .map(popup -> Update.start(model.clearError(), new OpenLinkCmd(url)))
+                        .map(popup -> OperationUpdate.start(model.clearError(), new OpenLinkCmd(url)))
                         .getOrElse(() -> Next.of(model));
             case CommentsMsg.Closed() ->
                 Next.of(model.popup(CommentsPopup.class)

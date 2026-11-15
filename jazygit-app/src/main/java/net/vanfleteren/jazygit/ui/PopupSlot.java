@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.ui;
 
 import java.util.function.Function;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.github.PullRequestsPanel;
@@ -14,13 +16,13 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
  * @param returnTo the id of the pane that gets the focus back
  * @param dimsBehind whether what is behind the popup is dimmed while it is open, so it stands out
  */
-public record PopupSlot(PopupView view, Function<Model, String> returnTo, boolean dimsBehind) {
+public record PopupSlot(PopupView view, Function<Model, Focus.OnScreen> returnTo, boolean dimsBehind) {
 
     /**
-     * A popup that gives the focus back to the pane {@code paneId}, which it is opened from.
+     * A popup that gives the focus back to the pane {@code pane}, which it is opened from.
      */
-    public static PopupSlot returningTo(String paneId, PopupView view) {
-        return new PopupSlot(view, model -> paneId, true);
+    public static PopupSlot returningTo(PaneId pane, PopupView view) {
+        return new PopupSlot(view, model -> pane, true);
     }
 
     /**
@@ -41,9 +43,9 @@ public record PopupSlot(PopupView view, Function<Model, String> returnTo, boolea
      * Where the focus was outside the popups on the screen shown, which a popup opened from anywhere gives it back
      * to, and which the screen gets back when it is shown again.
      */
-    public static String focusedPane(Model model) {
+    public static Focus.OnScreen focusedPane(Model model) {
         return model.shownPane()
                 .getOrElse(
-                        () -> model.screen() == Screen.PULL_REQUESTS ? PullRequestsPanel.FIRST_PANE_ID : FilesPanel.ID);
+                        () -> model.screen() == Screen.PULL_REQUESTS ? PullRequestsPanel.FIRST_PANE : FilesPanel.PANE);
     }
 }

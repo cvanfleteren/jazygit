@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state.view;
 
 import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -13,15 +14,13 @@ import net.vanfleteren.jazygit.state.diff.Scrolled;
 public sealed interface ViewMsg extends Msg {
 
     /**
-     * The element with the id {@code id} of the screen shown, outside the popups, got the focus.
-     *
-     * @param content whether it is an area of the content panel, rather than a pane
+     * The pane or area {@code focus} of the screen shown, outside the popups, got the focus.
      */
-    record Focused(String id, boolean content) implements ViewMsg {
+    record Focused(Focus.OnScreen focus) implements ViewMsg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.Next.of(model.withShownPane(id, content));
+            return Update.Next.of(model.withShownPane(focus));
         }
     }
 

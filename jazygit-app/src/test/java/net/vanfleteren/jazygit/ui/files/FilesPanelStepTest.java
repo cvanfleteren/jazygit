@@ -66,15 +66,15 @@ class FilesPanelStepTest {
     @Test
     void aStepGoesIntoACollapsedDirectoryWhichOpensAndOnThroughTheFilesWithoutChanges() throws Exception {
         Model model = all();
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
-            String before = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            String before = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
             assertFalse(before.contains("intro.md"), before);
 
             assertTrue(panel.step(model, Step.NEXT));
             assertEquals(
                     Option.of(new SelectionMsg.UnchangedFileSelected("docs/guide/intro.md")),
                     panel.selectionChange(model));
-            String opened = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.ID));
+            String opened = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
             assertTrue(opened.contains("intro.md"), opened);
 
             assertTrue(panel.step(model, Step.NEXT));
@@ -99,8 +99,8 @@ class FilesPanelStepTest {
     void theFilesTheFilterHidesAreSkipped() throws Exception {
         Model filtered = all().mapRepoView(view ->
                 view.mapFiles(files -> files.withFilter(Option.of(new FileFilter("main", Option.none())))));
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(filtered, FilesPanel.ID))) {
-            RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(filtered, FilesPanel.PANE))) {
+            RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.PANE));
 
             assertTrue(panel.step(filtered, Step.NEXT));
             assertEquals(Option.of(new SelectionMsg.FilesSelected(List.of(CHANGED))), panel.selectionChange(filtered));

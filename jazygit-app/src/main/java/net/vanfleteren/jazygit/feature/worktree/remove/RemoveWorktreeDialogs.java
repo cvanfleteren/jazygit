@@ -56,7 +56,7 @@ public final class RemoveWorktreeDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(REMOVE_WORKTREE, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(FORCE_REMOVE_WORKTREE, dispatch)));
+                PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(REMOVE_WORKTREE, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(FORCE_REMOVE_WORKTREE, dispatch)));
     }
 }

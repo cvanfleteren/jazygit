@@ -7,9 +7,9 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Cherry-picking a commit: it is copied in the log of one branch, and picked onto another once that is checked
@@ -51,7 +51,7 @@ public final class CherryPickUpdate {
                 .cherryPick()
                 .map(commit -> model.repo().commit(commit.sha()).isDefined()
                         ? Next.of(model.fail(new CherryPickError.AlreadyPicked(commit.sha())))
-                        : Update.ask(model, popup(model, commit)))
+                        : PopupUpdate.ask(model, popup(model, commit)))
                 .getOrElse(() -> Next.of(model));
     }
 

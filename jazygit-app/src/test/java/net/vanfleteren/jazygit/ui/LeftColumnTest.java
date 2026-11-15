@@ -35,7 +35,7 @@ class LeftColumnTest {
         FocusManager focus = new FocusManager();
         DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, registry));
         leftColumn
-                .render(TestModels.loaded().withScreen(screen), "", "", Option.none())
+                .render(TestModels.loaded().withScreen(screen), Option.none(), Option.none(), Option.none())
                 .column()
                 .render(Frame.forTesting(Buffer.empty(AREA)), AREA, context);
 
@@ -57,8 +57,8 @@ class LeftColumnTest {
                 TestModels.loaded()
                         .withScreen(screen)
                         .mapPreferences(preferences -> preferences.withLeftCollapsed(screen, true)),
-                "",
-                "",
+                Option.none(),
+                Option.none(),
                 Option.none());
         rendered.column().render(Frame.forTesting(buffer), area, context);
 

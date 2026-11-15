@@ -37,6 +37,6 @@ public final class FixupDialogs {
     private FixupDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(CommitsPanel.ID, new ChoiceDialog<>(FIXUP, dispatch)));
+        return List.of(PopupSlot.returningTo(CommitsPanel.PANE, new ChoiceDialog<>(FIXUP, dispatch)));
     }
 }

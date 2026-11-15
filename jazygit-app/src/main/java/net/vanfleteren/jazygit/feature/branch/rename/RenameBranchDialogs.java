@@ -60,7 +60,7 @@ public final class RenameBranchDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.ID, new TextInputDialog<>(RENAME_BRANCH, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(RENAME_UPSTREAM, dispatch)));
+                PopupSlot.returningTo(BranchesPanel.PANE, new TextInputDialog<>(RENAME_BRANCH, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(RENAME_UPSTREAM, dispatch)));
     }
 }

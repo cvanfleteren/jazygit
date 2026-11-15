@@ -10,8 +10,8 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Renaming a local branch, and its upstream on its remote too when the user chooses so (ADR 90).
@@ -23,10 +23,10 @@ public final class RenameBranchUpdate {
     public static Next update(Model model, RenameBranchMsg msg) {
         return switch (msg) {
             case Requested(BranchName branch) ->
-                Update.ask(model, model.idleBranch(branch).map(known -> new RenameBranchPopup(branch)));
+                PopupUpdate.ask(model, model.idleBranch(branch).map(known -> new RenameBranchPopup(branch)));
             case Confirmed() -> confirmed(model);
             case LocallyChosen() ->
-                Update.confirm(
+                PopupUpdate.confirm(
                         model,
                         RenameUpstreamPopup.class,
                         popup -> Option.of(new RenameBranchCmd(popup.branch(), popup.newName())));
@@ -44,7 +44,7 @@ public final class RenameBranchUpdate {
                 .map(popup -> Next.of(model.withoutPopup(RenameUpstreamPopup.class)
                         .fail(new BranchError.UpstreamChanged(
                                 popup.branch(), popup.upstream().shortName()))))
-                .getOrElse(() -> Update.confirm(
+                .getOrElse(() -> PopupUpdate.confirm(
                         model,
                         RenameUpstreamPopup.class,
                         popup -> Option.of(
@@ -64,8 +64,8 @@ public final class RenameBranchUpdate {
         return unchanged
                 ? Next.of(model.withoutPopup(RenameBranchPopup.class))
                 : withUpstream
-                        .map(popup -> Update.ask(model.withoutPopup(RenameBranchPopup.class), popup))
-                        .getOrElse(() -> Update.confirm(
+                        .map(popup -> PopupUpdate.ask(model.withoutPopup(RenameBranchPopup.class), popup))
+                        .getOrElse(() -> PopupUpdate.confirm(
                                 model,
                                 RenameBranchPopup.class,
                                 popup -> BranchName.parse(popup.name())

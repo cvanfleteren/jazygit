@@ -24,9 +24,12 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
@@ -58,15 +61,22 @@ public final class ContentView {
     private ContentView() {}
 
     /**
-     * What goes with the pane that has the focus, {@code focusedId}; while a popup has it, what goes with the
+     * What goes with the pane or area that has the focus, {@code focus}, as {@link #of(Model, Option)} says.
+     */
+    static Shown of(Model model, Focus focus) {
+        return of(model, Option.of(focus));
+    }
+
+    /**
+     * What goes with the pane that has the focus, {@code focus}; while a popup has it, what goes with the
      * pane the popup was opened from. That holds also in the frame a popup closes in, as it still has the focus
      * until the focus is given back.
      */
-    static Shown of(Model model, String focusedId) {
+    static Shown of(Model model, Option<Focus> focus) {
         if (model.screen() == Screen.PULL_REQUESTS) {
             return pullRequest(model);
         }
-        return expanded(model, mirrored(model, focusedId));
+        return expanded(model, mirrored(model, focus));
     }
 
     /**
@@ -280,19 +290,24 @@ public final class ContentView {
     }
 
     /**
-     * The pane {@code focusedId} is or belongs to; while a popup has the focus, the pane, or the pane of the area,
-     * it was opened from. Nothing has the focus before the first render.
+     * The pane {@code focus} is or belongs to; while a popup, or a pane the content does not mirror, has the focus,
+     * the pane, or the pane of the area, that had it before. Nothing has the focus before the first render.
      */
-    private static Mirrored mirrored(Model model, String focusedId) {
-        Option<String> id = ContentArea.focusable(focusedId).isDefined()
-                        || Mirrored.of(focusedId).isDefined()
-                ? Option.of(focusedId)
-                : model.repoView().focusedPane().orElse(Option.of(focusedId));
-        return id.map(known -> ContentArea.focusable(known)
-                        .map(area -> area.pane(model).value())
-                        .getOrElse(known))
-                .flatMap(Mirrored::of)
+    private static Mirrored mirrored(Model model, Option<Focus> focus) {
+        return focus.flatMap(on -> mirrored(model, on))
+                .orElse(() -> model.repoView().focusedPane().flatMap(kept -> mirrored(model, kept)))
                 .getOrElse(Mirrored.FILES);
+    }
+
+    /**
+     * The pane {@code focus} is or belongs to, if the content mirrors it.
+     */
+    private static Option<Mirrored> mirrored(Model model, Focus focus) {
+        return switch (focus) {
+            case PaneId pane -> Mirrored.of(pane);
+            case AreaId area -> ContentArea.of(area).flatMap(shown -> Mirrored.of(shown.pane(model)));
+            case Focus.Aside aside -> Option.none();
+        };
     }
 
     private static Shown loading(String title) {
@@ -773,8 +788,8 @@ public final class ContentView {
             this.id = id;
         }
 
-        static Option<Mirrored> of(String id) {
-            return List.of(values()).find(mirrored -> mirrored.id.equals(id));
+        static Option<Mirrored> of(PaneId pane) {
+            return List.of(values()).find(mirrored -> mirrored.id.equals(pane.value()));
         }
     }
 }

@@ -2,8 +2,9 @@ package net.vanfleteren.jazygit.feature.inprogress;
 
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Continuing, aborting or skipping the operation the repository stopped in the middle of: a merge, a rebase, a
@@ -24,7 +25,7 @@ public final class InProgressUpdate {
      * With nothing in progress, nothing happens.
      */
     private static Next requested(Model model) {
-        return Update.ask(
+        return PopupUpdate.ask(
                 model,
                 model.repo()
                         .status()
@@ -44,10 +45,11 @@ public final class InProgressUpdate {
                 .map(popup -> {
                     Model closed = model.withoutPopup(InProgressPopup.class);
                     return action != InProgressAction.CONTINUE
-                            ? Update.ask(closed, new InProgressConfirmPopup(popup.inProgress(), action))
+                            ? PopupUpdate.ask(closed, new InProgressConfirmPopup(popup.inProgress(), action))
                             : popup.conflicts() > 0
                                     ? Next.of(closed.fail(new InProgressError.ConflictsRemain(popup.conflicts())))
-                                    : Update.start(closed.clearError(), new InProgressCmd(popup.inProgress(), action));
+                                    : OperationUpdate.start(
+                                            closed.clearError(), new InProgressCmd(popup.inProgress(), action));
                 })
                 .getOrElse(() -> Next.of(model));
     }

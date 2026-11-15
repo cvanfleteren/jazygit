@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.preferences.Screen;
@@ -71,7 +72,7 @@ class PullRequestsPanelTest {
 
     @Test
     void theTopPaneGetsTheFocusTheFirstTime() {
-        assertEquals("prRepository", PullRequestsPanel.FIRST_PANE_ID);
+        assertEquals(new PaneId("prRepository"), PullRequestsPanel.FIRST_PANE);
     }
 
     @Test

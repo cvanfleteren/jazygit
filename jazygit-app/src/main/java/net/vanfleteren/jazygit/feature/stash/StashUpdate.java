@@ -2,8 +2,9 @@ package net.vanfleteren.jazygit.feature.stash;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Stashing the changes, and unstashing them again.
@@ -16,9 +17,9 @@ public final class StashUpdate {
         return switch (msg) {
             case StashMsg.Requested() -> requested(model);
             case StashMsg.PopRequested(var stash) when !listed(model, stash) -> Next.of(model);
-            case StashMsg.PopRequested(var stash) -> Update.start(model.clearError(), new StashCmd.Pop(stash));
+            case StashMsg.PopRequested(var stash) -> OperationUpdate.start(model.clearError(), new StashCmd.Pop(stash));
             case StashMsg.DropRequested(var stash) ->
-                Update.ask(model, Option.when(listed(model, stash), () -> new StashDropPopup(stash)));
+                PopupUpdate.ask(model, Option.when(listed(model, stash), () -> new StashDropPopup(stash)));
         };
     }
 
@@ -26,11 +27,12 @@ public final class StashUpdate {
      * Asks for a name, when there are changes to stash.
      */
     private static Next requested(Model model) {
-        return Update.withFiles(
-                model,
-                files -> files.isEmpty()
+        return model.repo()
+                .files()
+                .map(files -> files.isEmpty()
                         ? Next.of(model.fail(new StashError.NothingToStash()))
-                        : Update.ask(model, new StashPopup()));
+                        : PopupUpdate.ask(model, new StashPopup()))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**

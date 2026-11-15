@@ -20,9 +20,11 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
@@ -43,6 +45,12 @@ import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
 public class CommitsPanel {
 
     public static final String ID = Scopes.COMMITS.id();
+
+    /**
+     * The pane, as the focus is on it.
+     */
+    public static final PaneId PANE = Scopes.COMMITS.pane();
+
     private static final int INITIALS_WIDTH = 2;
     private static final Pattern LETTER = Pattern.compile("\\X");
 
@@ -222,17 +230,17 @@ public class CommitsPanel {
     }
 
     /**
-     * @param focusedId the id of the currently focused left pane, as reported by
-     *                  {@code runner().focusManager().focusedId()}
+     * The pane while {@code pane} has the focus, and is in use.
      */
-    public Panel render(Model model, String focusedId) {
-        return render(model, focusedId, focusedId);
+    public Panel render(Model model, PaneId pane) {
+        return render(model, Option.of(pane), Option.of(pane));
     }
 
     /**
-     * @param activeId the id of the left pane in use, whose highlighted row shows
+     * @param focus what has the focus, if anything
+     * @param inUse the left pane in use, whose highlighted row shows
      */
-    public Panel render(Model model, String focusedId, String activeId) {
+    public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
         Option<CommitSearch> search = model.repoView().commits().commitSearch();
         AheadView ahead = new AheadView(
@@ -252,8 +260,8 @@ public class CommitsPanel {
                                 searching ? foundRows(commits, copied) : rows(CommitGraph.layout(commits), copied),
                                 commits,
                                 ahead)),
-                ID.equals(focusedId),
-                ID.equals(activeId),
+                focus.contains(PANE),
+                inUse.contains(PANE),
                 Pane.title(ahead.title(
                         search.map(CommitsPanel::title).getOrElse(() -> Messages.get("panel.commits.title")))),
                 typing.map(searchLine::field),

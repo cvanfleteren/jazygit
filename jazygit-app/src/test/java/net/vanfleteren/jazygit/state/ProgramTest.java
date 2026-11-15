@@ -375,13 +375,13 @@ class ProgramTest {
                 Runnable::run,
                 Runnable::run,
                 changes::incrementAndGet);
-        told.dispatch(new ViewMsg.Focused("commits", false));
+        told.dispatch(new ViewMsg.Focused(new PaneId("commits")));
         int focused = changes.get();
 
-        told.dispatch(new ViewMsg.Focused("commits", false));
+        told.dispatch(new ViewMsg.Focused(new PaneId("commits")));
         assertEquals(focused, changes.get());
 
-        told.dispatch(new ViewMsg.Focused("files", false));
+        told.dispatch(new ViewMsg.Focused(new PaneId("files")));
         assertEquals(focused + 1, changes.get());
     }
 

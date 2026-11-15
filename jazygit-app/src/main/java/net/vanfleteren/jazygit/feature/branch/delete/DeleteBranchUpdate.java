@@ -17,8 +17,8 @@ import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Deleting a branch.
@@ -33,7 +33,7 @@ public final class DeleteBranchUpdate {
             case Chosen(DeleteScope scope) -> chosen(model, scope);
             case DeleteBranchMsg.WithWorktreeChosen() -> withWorktreeChosen(model);
             case DeleteBranchMsg.UnlockConfirmed() ->
-                Update.confirm(
+                PopupUpdate.confirm(
                         model,
                         UnlockWorktreePopup.class,
                         popup -> removableWorktree(model, popup.branch())
@@ -42,7 +42,7 @@ public final class DeleteBranchUpdate {
                                         worktree.location(), false, Option.of(popup.branch()), worktree.locked())));
             case DeleteBranchMsg.RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
             case DeleteBranchMsg.RemoteConfirmed() ->
-                Update.confirm(
+                PopupUpdate.confirm(
                         model,
                         DeleteRemoteBranchPopup.class,
                         popup -> Option.when(
@@ -62,7 +62,7 @@ public final class DeleteBranchUpdate {
                 .filter(known -> !known.remoteDeletable() && worktree.isEmpty())
                 .flatMap(known -> Branches.checkedOutElsewhere(model, DeleteBranchCmd.DELETE_BRANCH, branch))
                 .map(error -> Next.of(model.fail(error)))
-                .getOrElse(() -> Update.ask(
+                .getOrElse(() -> PopupUpdate.ask(
                         model,
                         model.repo()
                                 .branch(branch)
@@ -99,11 +99,11 @@ public final class DeleteBranchUpdate {
         return model.popup(DeleteBranchPopup.class)
                 .flatMap(popup -> removableWorktree(model, popup.branch())
                         .flatMap(worktree -> worktree.locked()
-                                .map(reason -> Update.ask(
+                                .map(reason -> PopupUpdate.ask(
                                         model.withoutPopup(DeleteBranchPopup.class),
                                         new UnlockWorktreePopup(
                                                 popup.branch(), worktree.location(), worktree.name(), reason)))))
-                .getOrElse(() -> Update.confirm(
+                .getOrElse(() -> PopupUpdate.confirm(
                         model,
                         DeleteBranchPopup.class,
                         popup -> removableWorktree(model, popup.branch())
@@ -115,7 +115,7 @@ public final class DeleteBranchUpdate {
         // Deleting on the remote is not possible for a local-only branch, nor for the default one, nor when the remote
         // branch is no longer the one the dialog named; deleting it locally is not possible while another worktree
         // has it checked out.
-        return Update.confirm(
+        return PopupUpdate.confirm(
                 model,
                 DeleteBranchPopup.class,
                 popup -> model.repo()
@@ -134,7 +134,7 @@ public final class DeleteBranchUpdate {
     private static Next remoteRequested(Model model, RemoteBranch branch) {
         return isDefault(model, branch)
                 ? Next.of(model.fail(new BranchError.DefaultBranch(new BranchRef.Remote(branch))))
-                : Update.ask(
+                : PopupUpdate.ask(
                         model, Option.when(remoteDeletable(model, branch), () -> new DeleteRemoteBranchPopup(branch)));
     }
 

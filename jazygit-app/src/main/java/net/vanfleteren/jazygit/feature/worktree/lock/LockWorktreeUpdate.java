@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.feature.worktree.lock;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeMsg.Requested;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 
 /**
  * Locking a worktree, which keeps git from removing or pruning it, or unlocking it.
@@ -28,7 +28,8 @@ public final class LockWorktreeUpdate {
                 .worktree(location)
                 .map(worktree -> worktree.main()
                         ? Next.of(model.fail(new WorktreeError.MainWorktreeNotLockable()))
-                        : Update.start(model.clearError(), new LockWorktreeCmd(location, !worktree.isLocked())))
+                        : OperationUpdate.start(
+                                model.clearError(), new LockWorktreeCmd(location, !worktree.isLocked())))
                 .getOrElse(() -> Next.of(model));
     }
 }

@@ -60,8 +60,8 @@ class WorktreeChangesTest {
 
     @Test
     void aTickReadsTheOtherWorktreesThatAreOnDiskOnlyWhileTheWorktreesAreShown() {
-        assertFalse(Update.refresh(withWorktrees()).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
-        assertTrue(Update.refresh(onWorktreesTab(withWorktrees())).cmds().contains(LOAD));
+        assertFalse(RereadUpdate.refresh(withWorktrees()).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
+        assertTrue(RereadUpdate.refresh(onWorktreesTab(withWorktrees())).cmds().contains(LOAD));
     }
 
     @Test
@@ -75,16 +75,16 @@ class WorktreeChangesTest {
 
     @Test
     void aTickDoesNotReadThemAgainWhileTheyAreBeingRead() {
-        Model reading = TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
+        Model reading = TestModels.started(RereadUpdate.refresh(onWorktreesTab(withWorktrees())))
                 .model();
 
-        assertFalse(Update.refresh(reading).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
+        assertFalse(RereadUpdate.refresh(reading).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
     }
 
     @Test
     void theNextTickReadsThemAgainOnceTheyWereRead() {
         Model done = TestModels.done(
-                        TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
+                        TestModels.started(RereadUpdate.refresh(onWorktreesTab(withWorktrees())))
                                 .model(),
                         LOAD,
                         new LoadMsg.WorktreeChangesLoaded(List.of(LINKED.toString()), HashMap.empty()))
@@ -96,7 +96,7 @@ class WorktreeChangesTest {
     @Test
     void theNextTickReadsThemAgainOnceReadingThemFailed() {
         Model failed = TestModels.done(
-                        TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
+                        TestModels.started(RereadUpdate.refresh(onWorktreesTab(withWorktrees())))
                                 .model(),
                         LOAD,
                         new LoadMsg.Failed(LOAD, new Failure.Git(new GitError.TimedOut("status", LINKED))))
@@ -135,7 +135,7 @@ class WorktreeChangesTest {
     @Test
     void whatWasReadReplacesWhatWasKnownAndTheShownWorktreeGoesByItsStatus() {
         Model model = TestModels.done(
-                        TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
+                        TestModels.started(RereadUpdate.refresh(onWorktreesTab(withWorktrees())))
                                 .model(),
                         LOAD,
                         new LoadMsg.WorktreeChangesLoaded(
