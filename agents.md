@@ -12,7 +12,9 @@ The ArchUnit tests (`*ArchitectureTest`) enforce these rules; a build that break
   so a new error edits neither it nor `ErrorText`.
 - A feature package with keys or popups declares them as `XxxFeature.FEATURE`, a `Feature` of its actions, and is
   wired in by one line in `Features.ALL`, in the order its keys are to be listed in a panel; neither `Popups` nor
-  `keys/Standard` names a feature (`FeaturesTest`, ADR 127).
+  `app.keys.Standard` names a feature (`FeaturesTest`, ADR 127).
+- A feature lives in its group of features: `changes`, `branches`, `github` or `chrome`, a module each (ADR 136). A
+  group uses only the groups below it (`branches` uses `changes`), never one beside or above it.
 - An `XxxUpdate` is a final class with a private constructor and only static methods and static fields: it is only
   functions.
 - Updates make commands; only `Program` (and `StartApp`, for the start screen) runs them through `Cmd.run` or `perform`.
@@ -32,17 +34,17 @@ The updates, messages, popups and the model are pure. Pure code:
   `UUID.randomUUID`. That is IO, for a command; the model is told the time.
 
 ### Values all the way down
-- A field in state, feature, settings, cli, lens and the git and gh models holds a value that never changes: a
-  primitive, `String`, a boxed primitive, `Class`, `java.time`, `Path`, `FileTime`, `Pattern`, a function, an enum, a
-  record, a Vavr type, or an interface of jazygit. Arrays, `Object`, `CharSequence`, java.util collections,
+- A field in state, the features, settings, `app.cli`, lens and the git and gh models holds a value that never
+  changes: a primitive, `String`, a boxed primitive, `Class`, `java.time`, `Path`, `FileTime`, `Pattern`, a function,
+  an enum, a record, a Vavr type, or an interface of jazygit. Arrays, `Object`, `CharSequence`, java.util collections,
   `StringBuilder` and `java.util.concurrent` types are not. What a type is of counts too: `List<StringBuilder>` is no
   value, though `Object` there says no more than a type variable, and a function's or a `Class`'s type arguments are
   not looked at. (`Failure.Bug` keeps what a command threw, to report it.)
 - Fields are final; static fields are final too, and never of a mutable type.
 - Collections are Vavr's: no method takes or returns one of java.util's, but where a library's interface says so.
 - A missing value is Vavr's `Option`, not `java.util.Optional`, but where a library's interface says so (TamboUI,
-  picocli in `cli`).
-- Classes are built of records and interfaces: no class in state, feature, lens or the models extends another.
+  picocli in `app.cli`).
+- Classes are built of records and interfaces: no class in state, the features, lens or the models extends another.
 - Commands, and the public methods of the core, declare no exceptions, checked or unchecked, of any type: failures are
   values (`Either`, `Failure`).
 
@@ -53,6 +55,9 @@ The updates, messages, popups and the model are pure. Pure code:
 - An unused binding in a `case` label is `_` (`case Outside _ when … ->`). Elsewhere, let Spotless confirm it formats
   `_` before relying on it.
 - Nested types come after all methods (checkstyle's InnerTypeLast).
+- A message key starts with the root of the module whose code names it (`github.dialog.…`, `branches.help.…`), and
+  is in that module's `messages.properties`; a key more than one module uses is in the lowest one they all see, and
+  one of the views alone has no prefix (ADR 136). The module's `*BundleTest` says when one is missing.
 - Main code decodes images without AWT: `ImageIO` and tamboui-image make the native image need extra `.so` files, and
   jazygit ships one file (ADR 84). Tests may use `ImageIO`.
 
@@ -62,7 +67,7 @@ The updates, messages, popups and the model are pure. Pure code:
   panel. Enter, Escape, Tab and clicks move focus too.
 - Pane cursors and focus are view state, kept by the TamboUI widgets; the model holds what an update reads (ADR 2). The
   rich diff's cursor is the exception: updates act on it, so it lives in the model.
-- Help texts (`help.*.details`) are one sentence saying what the key does, in the third person ("Lists…", "Adds…"),
+- Help texts (`<root>.help.*.details`) are one sentence saying what the key does, in the third person ("Lists…", "Adds…"),
   under ~160 characters. Add a second sentence only for a warning that matters, such as lost work. Leave out what the
   popup's own choices explain, how conflicts or diffs are handled (that is the same everywhere), and rare edge cases.
 
@@ -115,8 +120,12 @@ The updates, messages, popups and the model are pure. Pure code:
 - integration tests are written in java, use a Pilot from Tamboui, and test the rendering and interaction of the UI.
 - A rendering or scrolling test asserts on the rendered screen, not only on the message it dispatched. Click behaviour
   is tested at app level (`JazygitAppReportsTest`), where the full layout routes the click.
-- Per-module JUnit configuration goes in that module's surefire `configurationParameters`. jazygit-git and jazygit-gh
-  ship test-jars, so their `src/test/resources` lands on the app's test classpath.
+- Per-module JUnit configuration goes in that module's surefire `configurationParameters`. jazygit-git, jazygit-gh,
+  jazygit-state, jazygit-ui and jazygit-branches ship test-jars, so their `src/test/resources` lands on the test
+  classpath of the modules above them.
+- A test goes in the module of what it tests, unless it needs what that module cannot see: a feature's messages or
+  text, or the app's keymap (`Keymap.standard()` is empty without the app). Then it goes in `jazygit-app`, in the
+  package of what it tests.
 
 ### Before committing
 1. `./mvnw verify`, as the last build: checkstyle only runs in verify, and Spotless reformats files locally while CI

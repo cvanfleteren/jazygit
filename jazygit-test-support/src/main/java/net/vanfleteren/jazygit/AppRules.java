@@ -28,29 +28,34 @@ import java.util.stream.Stream;
  */
 public final class AppRules {
 
-    private static final String ROOT = "net.vanfleteren.jazygit";
-    private static final String MSG = ROOT + ".state.Msg";
-    private static final String CMD = ROOT + ".state.Cmd";
-    private static final String POPUP = ROOT + ".state.popup.Popup";
-    private static final String APP_ERROR = ROOT + ".state.AppError";
-    private static final String PROGRAM = ROOT + ".state.Program";
-    private static final String BUG = ROOT + ".state.Failure$Bug";
-    private static final String START_APP = ROOT + ".app.StartApp";
-    private static final String EXECUTED_COMMAND = ROOT + ".process.ExecutedCommand";
-    private static final String GH_BRANCH = ROOT + ".gh.model.GhBranch";
-    private static final String MARKDOWN_IMAGE = ROOT + ".ui.markdown.MarkdownImage";
+    static final String ROOT = "net.vanfleteren.jazygit";
+    static final String MSG = ROOT + ".state.Msg";
+    static final String CMD = ROOT + ".state.Cmd";
+    static final String POPUP = ROOT + ".state.popup.Popup";
+    static final String APP_ERROR = ROOT + ".state.AppError";
+    static final String PROGRAM = ROOT + ".state.Program";
+    static final String BUG = ROOT + ".state.Failure$Bug";
+    static final String START_APP = ROOT + ".app.StartApp";
+    static final String EXECUTED_COMMAND = ROOT + ".process.ExecutedCommand";
+    static final String GH_BRANCH = ROOT + ".gh.model.GhBranch";
+    static final String MARKDOWN_IMAGE = ROOT + ".ui.markdown.MarkdownImage";
+    // The updates, the messages, the popups and the model, which are pure; nested classes included.
+    static final String PURE =
+            ".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|AppError|Phrase|Operation|LogEntry|CommandLog)(\\$.*)?";
+    // The dialogs of the features, which are views; nested classes included.
+    static final String DIALOGS = ".*Dialogs?(\\$.*)?";
 
     /**
      * The packages of the features, in their groups.
      */
-    private static final String[] FEATURES = {
+    static final String[] FEATURES = {
         "..jazygit.changes..", "..jazygit.branches..", "..jazygit.github..", "..jazygit.chrome.."
     };
 
     /**
      * The packages whose classes are values: the state, the features, the settings, the command line and the lens.
      */
-    private static final String[] VALUES = {
+    static final String[] VALUES = {
         "..jazygit.state..",
         "..jazygit.changes..",
         "..jazygit.branches..",
@@ -64,7 +69,7 @@ public final class AppRules {
     /**
      * The packages whose code is pure: the state, the features and the lens.
      */
-    private static final String[] PURE_PACKAGES = {
+    static final String[] PURE_PACKAGES = {
         "..jazygit.state..",
         "..jazygit.changes..",
         "..jazygit.branches..",
@@ -175,9 +180,6 @@ public final class AppRules {
             .orShould()
             .callMethod(Runtime.class, "exec", String.class)
             .allowEmptyShould(true);
-    // The updates, the messages, the popups and the model, which are pure; nested classes included.
-    private static final String PURE =
-            ".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|AppError|Phrase|Operation|LogEntry|CommandLog)(\\$.*)?";
     /**
      * The updates, the messages they handle, the popups and the model are pure: running git or gh is left to
      * the commands, showing anything to the views. The commands that ran are only passed on as data.
@@ -191,8 +193,6 @@ public final class AppRules {
             .orShould()
             .accessTargetWhere(tellsTheTimeOrChance())
             .allowEmptyShould(true);
-    // The dialogs of the features, which are views; nested classes included.
-    private static final String DIALOGS = ".*Dialogs?(\\$.*)?";
     /**
      * What happens, what is asked for and what a dialog is about are values: records, or enums.
      */

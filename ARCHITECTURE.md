@@ -26,80 +26,82 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | `jazygit-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
 | `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | process, syntax |
 | `jazygit-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
-| `jazygit-app` | Everything else: `JazygitApp`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, `lens`. Builds the fat jar and the native image. | git, gh, yaml, TamboUI, picocli, night-config |
-| `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`). Test scope only. | ArchUnit |
-| `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, app, JMH |
+| `jazygit-lens` | `lens`: `Lens`, where a value sits in another; a tool any part may use. | vavr |
+| `jazygit-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
+| `jazygit-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
+| `jazygit-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, and a subpackage per part of the model. | lens, image, settings, git, gh, json, yaml |
+| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), and `Feature`, `FeatureAction` in the shell. | state, syntax, TamboUI, commonmark |
+| `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | ui |
+| ↳ `jazygit-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress. | ui |
+| ↳ `jazygit-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
+| ↳ `jazygit-github` | `github.*`: pull requests, reviews, checks, builds. | branches, changes |
+| ↳ `jazygit-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
+| `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `Features`). Builds the fat jar and the native image. | the four groups, TamboUI's backend, picocli |
+| `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
+| `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, ui, JMH |
 
-The packages keep their names (`net.vanfleteren.jazygit.git`, ...), whichever module they are in. The core
-(`process`, `git`, `gh`, `json`, `syntax`) cannot see the application, TamboUI, picocli or night-config, and git and
-gh cannot see each other, so the compiler stops any such dependency. The rules inside the core (the models are pure,
-failures are values) are ArchUnit tests: `CoreRules` and `ModelRules`, run by each module's `*ArchitectureTest`.
+Each module of the application has one root package, which its name ends in (`jazygit-github`,
+`net.vanfleteren.jazygit.github`); the core's packages keep their names. The core (`process`, `git`, `gh`, `json`,
+`syntax`) cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other; nor can
+a module of the application see one above it, nor a group of features one beside it. The compiler stops any such
+dependency. The rules inside the modules (the models are pure, failures are values, updates are functions) are
+ArchUnit tests: `CoreRules` and `ModelRules` for the core, `AppRules` for the application, run by each module's
+`*ArchitectureTest` on its own classes.
+
+Each module of the application that has text has its own bundle, `net/vanfleteren/jazygit/<root>/messages.properties`,
+and its keys start with its root (`github.dialog.…`); `Messages` looks a key up in the bundle its first part names, and
+otherwise in the bundle of the views, whose keys have no prefix.
 
 ## Packages
 
 ```mermaid
 graph TD
-    App["JazygitApp, Launcher, RepositorySession, ...<br/><i>start, session, layout, popups, focus</i>"]
-    UI["ui.*<br/><i>panels and widgets: render a Model</i>"]
-    Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
-    Feature["feature.*<br/><i>one package per feature</i>"]
+    App["app: JazygitApp, Launcher, RepositorySession, ...<br/><i>start, session, layout, popups, focus;<br/>app.keys: the standard keymap</i>"]
+    Chrome["chrome.*<br/><i>help, error, theme, layout, settings panel</i>"]
+    Github["github.*<br/><i>pull requests, reviews, checks, builds</i>"]
+    Branches["branches.*<br/><i>branch, worktree, ...</i>"]
+    Changes["changes.*<br/><i>stage, commit, stash, diff, ...</i>"]
+    UI["ui.*<br/><i>panels and widgets: render a Model;<br/>ui.keys: Keymap; ui.i18n: Messages</i>"]
     State["state.*<br/><i>Model, Msg, Update, Cmd, Program,<br/>and a subpackage per part of the Model</i>"]
+    Settings["settings<br/><i>config.toml, state.toml</i>"]
     Git["git.*<br/><i>Git, CliGit; roles in commits, branches, files, history;<br/>GitProcess, GitError in process</i>"]
     GitModel["git.model"]
     Gh["gh.*<br/><i>GitHub, CliGitHub; a package per role;<br/>shared GraphQL; GhProcess, GhError in process</i>"]
     GhModel["gh.model"]
     Process["process<br/><i>Exec</i>"]
-    I18n["i18n<br/><i>Messages</i>"]
-    Settings["settings<br/><i>config.toml, state.toml</i>"]
 
-    App --> UI
-    App --> State
-    App --> Feature
-    App --> Git
-    App --> Gh
-    UI --> Keys
+    App --> Chrome
+    App --> Github
+    Github --> Branches
+    Branches --> Changes
+    Chrome --> Changes
+    Changes --> UI
     UI --> State
-    UI --> Git
-    UI --> Gh
-    Keys -. "lists their keys" .-> Feature
-    Feature --> Keys
-    Feature --> UI
-    Feature --> State
-    Feature --> Git
+    State --> Settings
     State --> Git
-    Git --> GitModel
-    Feature --> Gh
     State --> Gh
+    State --> Process
+    Git --> GitModel
     Gh --> GhModel
     Git --> Process
     Gh --> Process
-    State --> Process
-    UI --> I18n
-    App --> Settings
-    State --> Settings
-    Feature --> Settings
-    UI --> Settings
-    Keys --> I18n
-    Feature --> I18n
 ```
 
-The arrows are the dependencies allowed. Inside `jazygit-app`, `ArchitectureTest` fails on any other; it is the
-source of truth when the two disagree.
+Each box is a module (the core's modules hold a few); the arrows are its dependencies, and what is below a module
+it reaches through them. `lens` and `image` are below `settings` and `state`, and left out.
 
-- **The parts have no cycles**, with one exception: `Keymap.standard()` adds the keys of the features in
-  `Features.ALL`, which declare them with the types of `keys` (dotted).
-- **Nor have the subpackages of `state`** (`diff`, `view`, `load`, `github`, `operation`, `popup`, `compose`, `index`,
-  `preferences`). `state` itself uses them all, and they all use it, as the `Model` holds them.
-- **Nor have the subpackages of `ui`**, which follow the panes: the shell (`ui` itself: `LeftColumn`, the status
-  and command log panels) → `content` → the panes (`branches`, `commits`, `files`, `stash`, `github`) and `diff` →
-  `markdown`, `widgets`, `edit` → `text`, `theme`. Nothing in them uses the shell (`uiIsFreeOfCycles`,
-  `uiPartsDoNotUseTheShell`).
-- **Views use `ui` only to draw.** Nothing in `ui`, `keys` or a dialog runs git or gh. `ui.text.ErrorText` is the only
-  place that turns errors into text.
-- **Only views use `i18n`.** `state` does not.
-- **`settings` knows nothing of the application**, and is the only part that reads or writes TOML.
-- **`lens` knows nothing of the application either**: `Lens`, where a value sits in another, is a tool any part
-  may use, and is left out of the diagram.
+- **Inside a module the parts have no cycles either**: the features of a group (`ChangesArchitectureTest`, ...), the
+  subpackages of `state` (`diff`, `view`, `load`, `github`, `operation`, `popup`, `compose`, `index`, `preferences`;
+  `state` itself uses them all, and they all use it, as the `Model` holds them), and those of `ui`.
+- **The subpackages of `ui` follow the panes**: the shell (`ui` itself: `LeftColumn`, the status and command log
+  panels, `Feature`) → `content` → the panes (`branches`, `commits`, `files`, `stash`, `github`) and `diff` →
+  `markdown`, `widgets`, `edit` → `keys`, `text`, `theme`, `i18n`. Nothing in them uses the shell
+  (`UiArchitectureTest`).
+- **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
+  service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
+- **Views use `ui` only to draw.** Nothing in `ui`, `app.keys` or a dialog runs git or gh. `ui.text.ErrorText` is the
+  only place that turns errors into text.
+- **Only views use `ui.i18n` and TamboUI**: `ui`, `app.keys`, the dialogs of the features and the app itself.
 
 ## The runtime loop
 
@@ -216,9 +218,11 @@ Each feature package follows the same shape:
 | `XxxKeys` / `XxxAction` | `DropAction` | The keys, added to the immutable `Keymap`; an action bundles one operation's keys and popups. |
 | `XxxFeature` | `CommitFeature` | Its `FEATURE`, a `Feature` of the feature's actions: what `Keymap` and `Popups` know of it. |
 
-A feature is wired in by one line in `Features.ALL`, whose order is the order of the keys in a panel; nothing else
-outside its package names it (ADR 127). The larger features (commit, branch, github, worktree) give each operation a
-subpackage holding all of the above; adding an operation is adding its subpackage and one line in the `XxxFeature`.
+A feature lives in the group of features it belongs to, and is wired in by one line in `Features.ALL`, whose order is
+the order of the keys in a panel; nothing else outside its package names it (ADR 127). Its text is in its group's
+bundle, under keys that start with the group's root. The larger features (commit, branch, github, worktree) give each
+operation a subpackage holding all of the above; adding an operation is adding its subpackage and one line in the
+`XxxFeature`.
 
 ## The git and GitHub layers
 
@@ -270,6 +274,9 @@ sequenceDiagram
 
 ## Testing
 
+- **The tests go with their module**, but for those that need what it cannot see (a feature's messages or text, the
+  app's keymap): those are in `jazygit-app`, in the package of what they test. `jazygit-state`, `jazygit-ui` and
+  `jazygit-branches` share their test helpers as test-jars.
 - **Update functions** are pure: build a `Model` (`TestModels`), apply a `Msg`, assert on the next model and its
   commands. No git involved.
 - **`ProgramTest`** runs the real loop with queue executors and `StubGit`.
@@ -277,4 +284,5 @@ sequenceDiagram
 - **UI tests** use TamboUI's `ToolkitTestRunner` and its pilot, and assert on the rendered screen.
 - **Acceptance tests** (`acceptance/`, Python) run the built jar in a pseudo terminal and check the repository with
   git; see [acceptance/README.md](acceptance/README.md).
-- **`ArchitectureTest`** and the core's `*ArchitectureTest`s enforce the rules above.
+- **Each module's `*ArchitectureTest`** enforces the rules above, and its `*BundleTest` that its bundle holds the keys
+  its code names.

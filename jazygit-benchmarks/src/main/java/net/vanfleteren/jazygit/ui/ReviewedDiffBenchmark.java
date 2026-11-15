@@ -19,6 +19,9 @@ import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Collapsed;
 import net.vanfleteren.jazygit.state.diff.DiffLines;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks;
+import net.vanfleteren.jazygit.ui.content.ContentView;
+import net.vanfleteren.jazygit.ui.diff.RichDiff;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -30,9 +33,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
-import net.vanfleteren.jazygit.ui.content.ContentView;
-import net.vanfleteren.jazygit.ui.diff.RichDiff;
-import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * What the diff of a pull request with review threads costs (ADR 55, 60): placing the threads in it, drawing it, and

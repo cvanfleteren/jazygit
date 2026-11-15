@@ -88,24 +88,6 @@ public final class Keymap {
     }
 
     /**
-     * What gives the {@link #standard()} keymap: the app, which knows every feature, as a service
-     * ({@code META-INF/services}), so that the views ask for the keymap without naming the app (ADR 136).
-     */
-    public interface Source {
-
-        /**
-         * The keymap of the app.
-         */
-        Keymap keymap();
-    }
-
-    private static final class Found {
-        // Looked up once, when the standard keymap is first asked for.
-        private static final Keymap KEYMAP =
-                ServiceLoader.load(Source.class).findFirst().map(Source::keymap).orElseGet(Keymap::empty);
-    }
-
-    /**
      * This keymap with {@code bindings} added to the keys of {@code scope}.
      */
     @SafeVarargs
@@ -292,6 +274,24 @@ public final class Keymap {
         public String label() {
             return " ".equals(key) ? Messages.get("key.space") : key;
         }
+    }
+
+    /**
+     * What gives the {@link #standard()} keymap: the app, which knows every feature, as a service
+     * ({@code META-INF/services}), so that the views ask for the keymap without naming the app (ADR 136).
+     */
+    public interface Source {
+
+        /**
+         * The keymap of the app.
+         */
+        Keymap keymap();
+    }
+
+    private static final class Found {
+        // Looked up once, when the standard keymap is first asked for.
+        private static final Keymap KEYMAP =
+                ServiceLoader.load(Source.class).findFirst().map(Source::keymap).orElseGet(Keymap::empty);
     }
 
     private record Section(Scope<?> scope, List<Binding<?>> bindings) {}

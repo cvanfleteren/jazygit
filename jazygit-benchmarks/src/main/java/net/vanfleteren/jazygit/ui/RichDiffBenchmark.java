@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.bench.WordDiffBenchmark.Shape;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.ui.diff.RichDiff;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -20,8 +22,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
-import net.vanfleteren.jazygit.ui.diff.RichDiff;
-import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * How long the rich view of a diff holds up the render thread (ADR 50), and what it costs where the diff is read. In
