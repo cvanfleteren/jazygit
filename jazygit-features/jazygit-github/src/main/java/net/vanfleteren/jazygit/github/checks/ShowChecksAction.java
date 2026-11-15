@@ -18,13 +18,13 @@ public final class ShowChecksAction {
                             Scopes.BRANCHES,
                             Binding.onSelected(
                                     "C",
-                                    "help.branches.checks",
+                                    "github.help.branches.checks",
                                     name -> new ChecksMsg.Requested(new BranchRef.Local(name))))
                     .add(
                             Scopes.REMOTE_BRANCHES,
                             Binding.onSelected(
                                     "C",
-                                    "help.remoteBranches.checks",
+                                    "github.help.remoteBranches.checks",
                                     remote -> new ChecksMsg.Requested(new BranchRef.Remote(remote)))),
             dispatch -> List.of(
                     PopupSlot.returningToFocus(new ChecksDialog(dispatch)),

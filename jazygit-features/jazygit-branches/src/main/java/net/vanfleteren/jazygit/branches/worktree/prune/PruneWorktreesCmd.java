@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.state.operation.Operation;
 public record PruneWorktreesCmd() implements GitOperationCmd {
 
     public static final Operation PRUNE_WORKTREES =
-            Operation.of("log.title.pruneWorktrees", "error.pruneWorktrees.failed");
+            Operation.of("branches.log.title.pruneWorktrees", "branches.error.pruneWorktrees.failed");
 
     @Override
     public Operation operation() {

@@ -22,8 +22,8 @@ public final class StashDialogs {
     public static final TextInputDialog.Spec<StashPopup> STASH = TextInputDialog.Spec.confirming(
             "stash-name",
             StashPopup.class,
-            popup -> Messages.get("dialog.stash.title"),
-            Option.of(Messages.get("dialog.stash.placeholder")));
+            popup -> Messages.get("changes.dialog.stash.title"),
+            Option.of(Messages.get("changes.dialog.stash.placeholder")));
 
     /**
      * Asks to drop a stash.
@@ -31,8 +31,9 @@ public final class StashDialogs {
     public static final ConfirmDialog.Spec<StashDropPopup> DROP = ConfirmDialog.Spec.confirming(
             "stash-drop",
             StashDropPopup.class,
-            popup -> Messages.get("dialog.stashDrop.title"),
-            popup -> Messages.get("dialog.stashDrop.message", popup.stash().message()));
+            popup -> Messages.get("changes.dialog.stashDrop.title"),
+            popup -> Messages.get(
+                    "changes.dialog.stashDrop.message", popup.stash().message()));
 
     private StashDialogs() {}
 

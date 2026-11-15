@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  */
 public final class AllFilesAction {
 
-    public static final FeatureAction ACTION = FeatureAction.ofKeys(
-            keys -> keys.add(Scopes.FILES, Binding.always("a", "help.files.allFiles", AllFilesMsg.Toggled::new)));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys ->
+            keys.add(Scopes.FILES, Binding.always("a", "changes.help.files.allFiles", AllFilesMsg.Toggled::new)));
 
     private AllFilesAction() {}
 }

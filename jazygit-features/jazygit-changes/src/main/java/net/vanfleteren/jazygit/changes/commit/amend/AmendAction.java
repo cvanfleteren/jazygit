@@ -11,12 +11,12 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 public final class AmendAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
-            keys -> keys.add(Scopes.FILES, Binding.always("A", "help.files.amend", AmendMsg.Requested::new))
+            keys -> keys.add(Scopes.FILES, Binding.always("A", "changes.help.files.amend", AmendMsg.Requested::new))
                     .add(
                             Scopes.COMMITS,
                             Binding.onSelected(
                                     "A",
-                                    "help.commits.amend",
+                                    "changes.help.commits.amend",
                                     commit -> new AmendMsg.Requested(Option.of(commit.sha())))),
             AmendDialogs::popups);
 

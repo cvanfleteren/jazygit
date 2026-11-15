@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public record OpenLinkCmd(String url) implements OperationCmd {
 
-    public static final Operation OPEN_LINK = Operation.of("log.title.openLink", "error.openLink.failed");
+    public static final Operation OPEN_LINK = Operation.of("github.log.title.openLink", "github.error.openLink.failed");
 
     @Override
     public Operation operation() {

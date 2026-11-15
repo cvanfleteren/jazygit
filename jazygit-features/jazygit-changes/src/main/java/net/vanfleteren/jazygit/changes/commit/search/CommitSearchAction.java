@@ -11,8 +11,8 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  */
 public final class CommitSearchAction {
 
-    public static final FeatureAction ACTION = FeatureAction.ofKeys(
-            keys -> keys.add(Scopes.COMMITS, Binding.always("/", "help.commits.search", CommitSearchMsg.Opened::new)));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys ->
+            keys.add(Scopes.COMMITS, Binding.always("/", "changes.help.commits.search", CommitSearchMsg.Opened::new)));
 
     private CommitSearchAction() {}
 }

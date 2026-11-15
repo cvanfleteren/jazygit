@@ -12,7 +12,9 @@ public final class LockWorktreeAction {
     public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> keys.add(
             Scopes.WORKTREES,
             Binding.onSelected(
-                    "L", "help.worktrees.lock", worktree -> new LockWorktreeMsg.Requested(worktree.location()))));
+                    "L",
+                    "branches.help.worktrees.lock",
+                    worktree -> new LockWorktreeMsg.Requested(worktree.location()))));
 
     private LockWorktreeAction() {}
 }

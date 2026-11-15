@@ -17,7 +17,7 @@ public final class DeleteCommentDialog {
     public static final ConfirmDialog.Spec<DeleteCommentPopup> SPEC = new ConfirmDialog.Spec<>(
             "delete-review-comment",
             DeleteCommentPopup.class,
-            popup -> Messages.get("dialog.deleteComment.title"),
+            popup -> Messages.get("github.dialog.deleteComment.title"),
             DeleteCommentDialog::message,
             DeleteCommentMsg.DeleteConfirmed::new);
 
@@ -28,7 +28,7 @@ public final class DeleteCommentDialog {
                 ? Messages.get("content.remarks.ghost")
                 : popup.comment().author();
         return Messages.get(
-                "dialog.deleteComment.message",
+                "github.dialog.deleteComment.message",
                 author,
                 TimeText.ago(Duration.between(popup.comment().at(), popup.now())),
                 firstLine(popup.comment().body()));

@@ -16,7 +16,7 @@ public sealed interface CherryPickError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.cherryPick.already", sha.shortSha());
+            return Phrase.of("changes.error.cherryPick.already", sha.shortSha());
         }
     }
 }

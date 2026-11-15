@@ -114,7 +114,7 @@ public final class ChecksDialog implements PopupView {
             return DialogFrame.withHint(
                             title(popup, model.now()),
                             WIDTH,
-                            "dialog.checks.hint",
+                            "github.dialog.checks.hint",
                             lines.appendAll(List.fill(Math.max(0, blanks), () -> text(""))))
                     .id(ID)
                     .focusable()
@@ -148,16 +148,17 @@ public final class ChecksDialog implements PopupView {
      * The branch; then a spinner while its checks are read again as the user asked, or a mark when a read failed.
      */
     private String title(ChecksPopup popup, Instant now) {
-        String title = Messages.get("dialog.checks.title", name(popup.branch()))
+        String title = Messages.get("github.dialog.checks.title", name(popup.branch()))
                 + popup.asked()
                         .filter(asked -> asked.awaited(now))
                         .map(asked -> " · "
-                                + Messages.get("dialog.checks.rerunAsked", timeOfDay(asked.at(), now, clock.getZone())))
+                                + Messages.get(
+                                        "github.dialog.checks.rerunAsked", timeOfDay(asked.at(), now, clock.getZone())))
                         .getOrElse("");
         return popup.reading() == Reading.ASKED
                 ? title + " " + TimeText.spinnerFrame(clock.instant())
                 : popup.refreshFailed()
-                        .map(failure -> title + " · " + Messages.get("dialog.checks.stale"))
+                        .map(failure -> title + " · " + Messages.get("github.dialog.checks.stale"))
                         .getOrElse(title);
     }
 
@@ -170,14 +171,14 @@ public final class ChecksDialog implements PopupView {
 
     private List<StyledElement<?>> loading() {
         return List.of(row(
-                text(Messages.get("dialog.checks.loading") + " ").addClass(Theme.Classes.DIM),
+                text(Messages.get("github.dialog.checks.loading") + " ").addClass(Theme.Classes.DIM),
                 text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER)));
     }
 
     private static List<StyledElement<?>> failed(Failure failure) {
-        return List.of(
-                DialogFrame.wrapped(Messages.get("dialog.checks.failed", ErrorText.of(failure)), WIDTH, CONTENT_HEIGHT)
-                        .addClass(Theme.Classes.ERROR));
+        return List.of(DialogFrame.wrapped(
+                        Messages.get("github.dialog.checks.failed", ErrorText.of(failure)), WIDTH, CONTENT_HEIGHT)
+                .addClass(Theme.Classes.ERROR));
     }
 
     /**
@@ -194,7 +195,7 @@ public final class ChecksDialog implements PopupView {
             ZoneId zone) {
         if (all.isEmpty()) {
             return List.<StyledElement<?>>of(
-                            text(Messages.get("dialog.checks.none")).addClass(Theme.Classes.DIM))
+                            text(Messages.get("github.dialog.checks.none")).addClass(Theme.Classes.DIM))
                     .appendAll(rerun);
         }
         List<Check> ordered = CheckRows.order(all, all, times);
@@ -234,15 +235,15 @@ public final class ChecksDialog implements PopupView {
         String took = CheckTimesText.duration(span.took(now));
         List<StyledElement<?>> ended = span.end()
                 .map(end -> List.<StyledElement<?>>of(
-                        label("dialog.checks.ended", " · "),
+                        label("github.dialog.checks.ended", " · "),
                         text(timeOfDay(end, now, zone)),
-                        label("dialog.checks.took", " · "),
+                        label("github.dialog.checks.took", " · "),
                         text(took)))
                 .getOrElse(() -> List.of(label("checks.running", " · "), text(took)));
-        return row(
-                List.<StyledElement<?>>of(label("dialog.checks.started", ""), text(timeOfDay(span.start(), now, zone)))
-                        .appendAll(ended)
-                        .toJavaArray(StyledElement[]::new));
+        return row(List.<StyledElement<?>>of(
+                        label("github.dialog.checks.started", ""), text(timeOfDay(span.start(), now, zone)))
+                .appendAll(ended)
+                .toJavaArray(StyledElement[]::new));
     }
 
     /**
@@ -257,7 +258,7 @@ public final class ChecksDialog implements PopupView {
                         .map(outcomes -> {
                             List<RerunCmd.Outcome> refused = asked.refused();
                             String text = List.of(Messages.get(
-                                            "dialog.checks.rerunDone",
+                                            "github.dialog.checks.rerunDone",
                                             outcomes.size() - refused.size(),
                                             outcomes.size()))
                                     .appendAll(
@@ -269,7 +270,7 @@ public final class ChecksDialog implements PopupView {
                             return text(text).addClass(refused.isEmpty() ? Theme.Classes.DIM : Theme.Classes.ERROR);
                         })
                         .getOrElse(() -> text(Messages.get(
-                                        "dialog.checks.rerunAsking",
+                                        "github.dialog.checks.rerunAsking",
                                         asked.runIds().size()))
                                 .addClass(Theme.Classes.DIM));
         };
@@ -278,9 +279,9 @@ public final class ChecksDialog implements PopupView {
     private static String nothing(RerunPlan.Why why) {
         return Messages.get(
                 switch (why) {
-                    case NONE_FAILED -> "dialog.checks.rerunNoneFailed";
-                    case RUNNING -> "dialog.checks.rerunRunning";
-                    case NOT_ACTIONS -> "dialog.checks.rerunNotActions";
+                    case NONE_FAILED -> "github.dialog.checks.rerunNoneFailed";
+                    case RUNNING -> "github.dialog.checks.rerunRunning";
+                    case NOT_ACTIONS -> "github.dialog.checks.rerunNotActions";
                 });
     }
 

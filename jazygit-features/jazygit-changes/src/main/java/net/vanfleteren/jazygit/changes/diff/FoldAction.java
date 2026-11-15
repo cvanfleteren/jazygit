@@ -22,7 +22,7 @@ public final class FoldAction {
                                     scope,
                                     new Binding<DiffCursorAt>(
                                             "z",
-                                            "help.diff.foldAll",
+                                            "changes.help.diff.foldAll",
                                             at -> at.filter(cursor -> cursor.cursor() instanceof Anchor.Node)
                                                     .map(FoldMsg.AllToggled::new)))));
 

@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  */
 public final class PullAction {
 
-    public static final FeatureAction ACTION = FeatureAction.ofKeys(
-            keys -> keys.add(Scopes.BRANCHES, Binding.onSelected("p", "help.branches.pull", PullMsg.Requested::new)));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys ->
+            keys.add(Scopes.BRANCHES, Binding.onSelected("p", "branches.help.branches.pull", PullMsg.Requested::new)));
 
     private PullAction() {}
 }

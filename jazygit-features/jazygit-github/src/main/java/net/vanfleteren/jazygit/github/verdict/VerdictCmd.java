@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
 public sealed interface VerdictCmd extends Cmd {
 
     // The branch is not busy meanwhile, as for a comment: a review does not touch it; the popup tells it is sent.
-    Operation REVIEW_PR = Operation.of("log.title.reviewPr", "error.reviewPr.failed");
+    Operation REVIEW_PR = Operation.of("github.log.title.reviewPr", "github.error.reviewPr.failed");
 
     /**
      * The file the text is written in, in the editor (ADR 115). It is logged as writing a comment is.

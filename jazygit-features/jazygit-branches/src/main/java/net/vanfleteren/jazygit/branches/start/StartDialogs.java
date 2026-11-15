@@ -28,32 +28,32 @@ public final class StartDialogs {
                     "no-repository",
                     NoRepositoryPopup.class,
                     popup -> Messages.get(
-                            popup.exists() ? "dialog.start.notARepository" : "dialog.start.notFound",
+                            popup.exists() ? "branches.dialog.start.notARepository" : "branches.dialog.start.notFound",
                             HomeDir.shown(popup.directory())),
                     List.of(
-                            new Choice<NoRepositoryPopup>('i', "dialog.start.init", StartMsg.InitChosen::new)
+                            new Choice<NoRepositoryPopup>('i', "branches.dialog.start.init", StartMsg.InitChosen::new)
                                     .shownWhen((model, popup) -> popup.exists()),
-                            new Choice<>('o', "dialog.start.openFolder", StartMsg.OpenFolderChosen::new),
+                            new Choice<>('o', "branches.dialog.start.openFolder", StartMsg.OpenFolderChosen::new),
                             new Choice<NoRepositoryPopup>(
-                                            'r', "dialog.start.openRecent", StartMsg.OpenRecentChosen::new)
+                                            'r', "branches.dialog.start.openRecent", StartMsg.OpenRecentChosen::new)
                                     .shownWhen((model, popup) -> popup.recent().nonEmpty()),
-                            new Choice<>('q', "dialog.start.quit", Msg.Quit::new)))
+                            new Choice<>('q', "branches.dialog.start.quit", Msg.Quit::new)))
             .cancelledBy(Msg.Quit::new);
 
     public static final TextInputDialog.Spec<OpenFolderPopup> OPEN_FOLDER = new TextInputDialog.Spec<>(
                     "open-folder",
                     OpenFolderPopup.class,
                     popup -> Messages.get(
-                            "dialog.start.openFolder.title",
+                            "branches.dialog.start.openFolder.title",
                             HomeDir.shown(popup.outside().directory())),
-                    Option.of(Messages.get("dialog.start.openFolder.placeholder")),
+                    Option.of(Messages.get("branches.dialog.start.openFolder.placeholder")),
                     StartMsg.FolderConfirmed::new)
             .cancelledBy(StartMsg.FolderCancelled::new);
 
     public static final PickDialog.Spec<OpenRecentPopup, String> OPEN_RECENT = new PickDialog.Spec<>(
                     "open-recent",
                     OpenRecentPopup.class,
-                    popup -> Messages.get("dialog.recentRepos.title"),
+                    popup -> Messages.get("branches.dialog.recentRepos.title"),
                     popup -> popup.outside().recent().map(RecentReposDialog::row),
                     StartMsg.RecentPicked::new)
             .cancelledBy(StartMsg.RecentCancelled::new);
@@ -82,7 +82,7 @@ public final class StartDialogs {
      */
     private static Option<String> problem(OpenFolderPopup popup) {
         return popup.notFound()
-                .map(directory -> Messages.get("dialog.start.openFolder.notFound", HomeDir.shown(directory)))
+                .map(directory -> Messages.get("branches.dialog.start.openFolder.notFound", HomeDir.shown(directory)))
                 .orElse(() -> popup.problem().map(ErrorText::of));
     }
 

@@ -24,7 +24,7 @@ public record LoadAhead(Option<BranchRef> branch, Option<Sha> tip, Option<BaseTi
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.ahead"));
+        return Option.of(Label.of("state.work.ahead"));
     }
 
     @Override

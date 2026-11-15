@@ -19,7 +19,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
 
-    Operation PUSH = Operation.of("log.title.push", "error.push.failed").labelledWhenBusy("branches.busy.push");
+    Operation PUSH = Operation.of("branches.log.title.push", "branches.error.push.failed")
+            .labelledWhenBusy("branches.branches.busy.push");
 
     @Override
     default Operation operation() {

@@ -19,7 +19,8 @@ public final class NukeBranchDialogs {
     public static final ConfirmDialog.Spec<NukeBranchPopup> NUKE_BRANCH = new ConfirmDialog.Spec<>(
             "nuke-branch",
             NukeBranchPopup.class,
-            popup -> Messages.get("dialog.nukeBranch.title", popup.branch().value()),
+            popup -> Messages.get(
+                    "branches.dialog.nukeBranch.title", popup.branch().value()),
             NukeBranchDialogs::message,
             NukeBranchMsg.Confirmed::new);
 
@@ -31,15 +32,17 @@ public final class NukeBranchDialogs {
 
     private static String message(NukeBranchPopup popup) {
         return Messages.get(
-                "dialog.nukeBranch.message",
-                List.of(Messages.get("dialog.nukeBranch.branch", popup.branch().value()))
+                "branches.dialog.nukeBranch.message",
+                List.of(Messages.get(
+                                "branches.dialog.nukeBranch.branch",
+                                popup.branch().value()))
                         .appendAll(popup.remote()
-                                .map(remote -> Messages.get("dialog.nukeBranch.remote", remote.shortName())))
+                                .map(remote -> Messages.get("branches.dialog.nukeBranch.remote", remote.shortName())))
                         .appendAll(popup.worktree()
                                 .map(worktree -> Messages.get(
                                         worktree.isLocked()
-                                                ? "dialog.nukeBranch.worktreeLocked"
-                                                : "dialog.nukeBranch.worktree",
+                                                ? "branches.dialog.nukeBranch.worktreeLocked"
+                                                : "branches.dialog.nukeBranch.worktree",
                                         worktree.location())))
                         .mkString("\n"));
     }

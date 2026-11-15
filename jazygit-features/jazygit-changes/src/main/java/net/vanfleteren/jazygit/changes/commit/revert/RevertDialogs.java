@@ -19,9 +19,9 @@ public final class RevertDialogs {
     public static final ConfirmDialog.Spec<RevertPopup> REVERT = ConfirmDialog.Spec.confirming(
             "revert-commit",
             RevertPopup.class,
-            popup -> Messages.get("dialog.revert.title"),
+            popup -> Messages.get("changes.dialog.revert.title"),
             popup -> Messages.get(
-                    popup.commit().isMerge() ? "dialog.revert.mergeMessage" : "dialog.revert.message",
+                    popup.commit().isMerge() ? "changes.dialog.revert.mergeMessage" : "changes.dialog.revert.message",
                     popup.commit().shortSha(),
                     popup.commit().message()));
 

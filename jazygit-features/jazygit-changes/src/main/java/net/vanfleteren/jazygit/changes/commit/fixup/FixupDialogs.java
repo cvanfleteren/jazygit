@@ -22,17 +22,18 @@ public final class FixupDialogs {
             "fixup-commit",
             FixupPopup.class,
             popup -> Messages.get(
-                    "dialog.fixup.title",
+                    "changes.dialog.fixup.title",
                     popup.commit().sha().shortSha(),
                     popup.into().shortSha()),
             List.of(
-                    new Choice<FixupPopup>('f', "dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP))
-                            .withDetails("dialog.fixup.fixup.details"),
+                    new Choice<FixupPopup>(
+                                    'f', "changes.dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP))
+                            .withDetails("changes.dialog.fixup.fixup.details"),
                     new Choice<FixupPopup>(
                                     'C',
-                                    "dialog.fixup.keepMessage",
+                                    "changes.dialog.fixup.keepMessage",
                                     () -> new FixupMsg.Chosen(SquashMode.FIXUP_KEEP_MESSAGE))
-                            .withDetails("dialog.fixup.keepMessage.details")));
+                            .withDetails("changes.dialog.fixup.keepMessage.details")));
 
     private FixupDialogs() {}
 

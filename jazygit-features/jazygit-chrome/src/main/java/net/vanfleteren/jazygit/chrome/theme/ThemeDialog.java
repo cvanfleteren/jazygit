@@ -47,14 +47,14 @@ public final class ThemeDialog {
                     ThemePopup.class,
                     popup -> Messages.get(
                             switch (popup.scope()) {
-                                case EVERYWHERE -> "dialog.theme.title";
-                                case REPOSITORY -> "dialog.theme.title.repository";
+                                case EVERYWHERE -> "chrome.dialog.theme.title";
+                                case REPOSITORY -> "chrome.dialog.theme.title.repository";
                             }),
                     KEYS.toList()
                             .map(theme -> choice(theme._1, theme._2))
                             .prepend(new Choice<ThemePopup>(
                                             CLEAR,
-                                            popup -> Messages.get("dialog.theme.clear", fallback(popup)),
+                                            popup -> Messages.get("chrome.dialog.theme.clear", fallback(popup)),
                                             ThemeMsg.Cleared::new)
                                     .withPreview(ThemeMsg.FallbackPreviewed::new)
                                     .shownWhen((model, popup) -> popup.scope() == ThemeScope.REPOSITORY
@@ -68,11 +68,12 @@ public final class ThemeDialog {
      * The theme the repository of {@code popup} falls back to without one of its own, and where it comes from.
      */
     private static String fallback(ThemePopup popup) {
-        String theme = Messages.get("dialog.theme." + popup.fallback().id());
+        String theme = Messages.get("chrome.dialog.theme." + popup.fallback().id());
         return popup.repository()
                 .inherited()
-                .map(inherited -> Messages.get("dialog.theme.inherited", theme, HomeDir.shown(inherited.origin())))
-                .getOrElse(() -> Messages.get("dialog.theme.saved", theme));
+                .map(inherited ->
+                        Messages.get("chrome.dialog.theme.inherited", theme, HomeDir.shown(inherited.origin())))
+                .getOrElse(() -> Messages.get("chrome.dialog.theme.saved", theme));
     }
 
     /**
@@ -88,11 +89,11 @@ public final class ThemeDialog {
      * The choice of {@code theme}.
      */
     private static Choice<ThemePopup> choice(char key, ThemeName theme) {
-        String labelKey = "dialog.theme." + theme.id();
+        String labelKey = "chrome.dialog.theme." + theme.id();
         return new Choice<ThemePopup>(
                         key,
                         popup -> theme == popup.current()
-                                ? Messages.get("dialog.theme.current", Messages.get(labelKey))
+                                ? Messages.get("chrome.dialog.theme.current", Messages.get(labelKey))
                                 : Messages.get(labelKey),
                         () -> new ThemeMsg.Chosen(theme))
                 .withPreview(() -> new ThemeMsg.Previewed(theme));

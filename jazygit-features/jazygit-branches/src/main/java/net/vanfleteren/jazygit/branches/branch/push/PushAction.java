@@ -10,7 +10,8 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 public final class PushAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
-            keys -> keys.add(Scopes.BRANCHES, Binding.onSelected("P", "help.branches.push", PushMsg.Requested::new)),
+            keys -> keys.add(
+                    Scopes.BRANCHES, Binding.onSelected("P", "branches.help.branches.push", PushMsg.Requested::new)),
             PushDialogs::popups);
 
     private PushAction() {}

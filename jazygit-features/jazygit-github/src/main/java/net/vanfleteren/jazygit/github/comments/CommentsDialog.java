@@ -157,10 +157,10 @@ public final class CommentsDialog implements PopupView {
                 : row(listPane.length(listWidth), comment.fill()).fill();
         return DialogFrame.withHint(
                         Messages.get(
-                                "dialog.comments.title",
+                                "github.dialog.comments.title",
                                 String.valueOf(popup.number().value())),
                         width,
-                        "dialog.comments.hint",
+                        "github.dialog.comments.hint",
                         List.of(column(body).length(contentHeight)))
                 .id(ID)
                 .focusable()
@@ -176,17 +176,18 @@ public final class CommentsDialog implements PopupView {
         Element content = popup.comments()
                 .<Element>map(read -> read.fold(
                         failure -> DialogFrame.wrapped(
-                                        Messages.get("dialog.comments.failed", ErrorText.of(failure)),
+                                        Messages.get("github.dialog.comments.failed", ErrorText.of(failure)),
                                         Integer.MAX_VALUE,
                                         Integer.MAX_VALUE)
                                 .addClass(Theme.Classes.ERROR),
                         comments -> highlighted
                                 .<Element>map(comment ->
                                         scroll.render(MarkdownAutolinks.linked(body(comment), repository(popup))))
-                                .getOrElse(() -> text(Messages.get("dialog.comments.none"))
+                                .getOrElse(() -> text(Messages.get("github.dialog.comments.none"))
                                         .addClass(Theme.Classes.DIM))))
                 .getOrElse(() -> row(
-                        text(Messages.get("dialog.comments.loading") + " ").addClass(Theme.Classes.DIM),
+                        text(Messages.get("github.dialog.comments.loading") + " ")
+                                .addClass(Theme.Classes.DIM),
                         text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER)));
         Panel pane = panel(content);
         return highlighted.map(comment -> pane.title(title(comment))).getOrElse(pane);
@@ -206,7 +207,7 @@ public final class CommentsDialog implements PopupView {
     }
 
     private static String body(PullRequestComment comment) {
-        return comment.body().isBlank() ? Messages.get("dialog.comments.noText") : comment.body();
+        return comment.body().isBlank() ? Messages.get("github.dialog.comments.noText") : comment.body();
     }
 
     /**
@@ -217,23 +218,23 @@ public final class CommentsDialog implements PopupView {
         return " "
                 + List.of(author(comment), written)
                         .appendAll(state(comment.kind()))
-                        .appendAll(Option.when(comment.edited(), () -> Messages.get("dialog.comments.edited")))
+                        .appendAll(Option.when(comment.edited(), () -> Messages.get("github.dialog.comments.edited")))
                         .mkString(" · ")
                 + " ";
     }
 
     private static String author(PullRequestComment comment) {
-        return "@" + (comment.author().isEmpty() ? Messages.get("dialog.comments.ghost") : comment.author());
+        return "@" + (comment.author().isEmpty() ? Messages.get("github.dialog.comments.ghost") : comment.author());
     }
 
     private static Option<String> state(PullRequestComment.Kind kind) {
         return switch (kind) {
-            case DESCRIPTION -> Option.of(Messages.get("dialog.comments.description"));
+            case DESCRIPTION -> Option.of(Messages.get("github.dialog.comments.description"));
             case COMMENT -> Option.none();
-            case APPROVED -> Option.of(Messages.get("dialog.comments.approved"));
-            case CHANGES_REQUESTED -> Option.of(Messages.get("dialog.comments.changesRequested"));
-            case COMMENTED -> Option.of(Messages.get("dialog.comments.reviewed"));
-            case DISMISSED -> Option.of(Messages.get("dialog.comments.dismissed"));
+            case APPROVED -> Option.of(Messages.get("github.dialog.comments.approved"));
+            case CHANGES_REQUESTED -> Option.of(Messages.get("github.dialog.comments.changesRequested"));
+            case COMMENTED -> Option.of(Messages.get("github.dialog.comments.reviewed"));
+            case DISMISSED -> Option.of(Messages.get("github.dialog.comments.dismissed"));
         };
     }
 
@@ -258,13 +259,13 @@ public final class CommentsDialog implements PopupView {
             String reason = comment.hidden().get();
             return text(TextWidth.cut(
                             reason.isEmpty()
-                                    ? Messages.get("dialog.comments.hidden")
-                                    : Messages.get("dialog.comments.hiddenBecause", reason.toLowerCase()),
+                                    ? Messages.get("github.dialog.comments.hidden")
+                                    : Messages.get("github.dialog.comments.hiddenBecause", reason.toLowerCase()),
                             width))
                     .addClass(Theme.Classes.DIM);
         }
         if (comment.kind() == PullRequestComment.Kind.DESCRIPTION) {
-            return text(TextWidth.cut(Messages.get("dialog.comments.description"), width))
+            return text(TextWidth.cut(Messages.get("github.dialog.comments.description"), width))
                     .addClass(Theme.Classes.DIM);
         }
         return text(TextWidth.cut(firstLine(comment.body()), width));

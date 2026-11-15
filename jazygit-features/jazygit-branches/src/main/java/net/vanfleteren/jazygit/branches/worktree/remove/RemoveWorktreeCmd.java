@@ -31,9 +31,9 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
         implements WorktreeCmd {
 
     public static final Operation REMOVE_WORKTREE =
-            Operation.of("log.title.removeWorktree", "error.removeWorktree.failed");
+            Operation.of("branches.log.title.removeWorktree", "branches.error.removeWorktree.failed");
     public static final Operation REMOVE_WORKTREE_AND_BRANCH =
-            Operation.of("log.title.removeWorktreeAndBranch", "error.removeWorktreeAndBranch.failed");
+            Operation.of("branches.log.title.removeWorktreeAndBranch", "branches.error.removeWorktreeAndBranch.failed");
 
     /**
      * Removes the worktree at {@code location}, keeping its branch.

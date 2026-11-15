@@ -11,7 +11,8 @@ public final class NukeBranchAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
-                    Scopes.BRANCHES, Binding.onSelected("D", "help.branches.nuke", NukeBranchMsg.Requested::new)),
+                    Scopes.BRANCHES,
+                    Binding.onSelected("D", "branches.help.branches.nuke", NukeBranchMsg.Requested::new)),
             NukeBranchDialogs::popups);
 
     private NukeBranchAction() {}

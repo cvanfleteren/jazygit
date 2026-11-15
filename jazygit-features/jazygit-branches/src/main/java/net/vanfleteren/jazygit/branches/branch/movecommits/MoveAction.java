@@ -13,7 +13,7 @@ public final class MoveAction {
             keys -> keys.add(
                     Scopes.COMMITS,
                     Binding.onSelected(
-                            "N", "help.commits.moveToBranch", commit -> new MoveMsg.Requested(commit.sha()))),
+                            "N", "branches.help.commits.moveToBranch", commit -> new MoveMsg.Requested(commit.sha()))),
             MoveDialogs::popups);
 
     private MoveAction() {}

@@ -25,7 +25,7 @@ public sealed interface UpstreamError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.upstream.none", branch.value());
+            return Phrase.of("state.error.upstream.none", branch.value());
         }
     }
 
@@ -38,7 +38,7 @@ public sealed interface UpstreamError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.upstream.gone", branch.value(), upstream);
+            return Phrase.of("state.error.upstream.gone", branch.value(), upstream);
         }
     }
 }

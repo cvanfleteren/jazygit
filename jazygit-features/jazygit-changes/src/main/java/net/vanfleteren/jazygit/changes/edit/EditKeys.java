@@ -19,7 +19,7 @@ public final class EditKeys {
                 Scopes.FILES,
                 new Binding<>(
                         "e",
-                        "help.files.edit",
+                        "changes.help.files.edit",
                         selection -> selection
                                 .filter(FileTree.File.class::isInstance)
                                 .map(FileTree.File.class::cast)

@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public record BrowseCmd(RemoteBranch branch) implements OperationCmd {
 
-    public static final Operation BROWSE = Operation.of("log.title.browse", "error.browse.failed");
+    public static final Operation BROWSE = Operation.of("github.log.title.browse", "github.error.browse.failed");
 
     @Override
     public Operation operation() {

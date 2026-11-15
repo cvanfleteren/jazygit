@@ -10,12 +10,12 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 public final class BrowseAction {
 
     public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> Scopes.PULL_REQUESTS.foldLeft(
-            keys.add(Scopes.BRANCHES, Binding.onSelected("O", "help.branches.browse", BrowseMsg.Requested::new))
+            keys.add(Scopes.BRANCHES, Binding.onSelected("O", "github.help.branches.browse", BrowseMsg.Requested::new))
                     .add(
                             Scopes.REMOTE_BRANCHES,
-                            Binding.onSelected("O", "help.branches.browse", BrowseMsg.RemoteRequested::new)),
-            (added, scope) ->
-                    added.add(scope, Binding.onSelected("O", "help.prs.browse", BrowseMsg.PullRequestRequested::new))));
+                            Binding.onSelected("O", "github.help.branches.browse", BrowseMsg.RemoteRequested::new)),
+            (added, scope) -> added.add(
+                    scope, Binding.onSelected("O", "github.help.prs.browse", BrowseMsg.PullRequestRequested::new))));
 
     private BrowseAction() {}
 }

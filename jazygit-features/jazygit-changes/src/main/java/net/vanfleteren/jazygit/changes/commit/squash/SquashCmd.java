@@ -15,11 +15,11 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record SquashCmd(Sha sha, SquashMode mode) implements GitOperationCmd {
 
-    public static final Operation SQUASH =
-            Operation.of("log.title.squash", "error.squash.failed").waitingForUnfinished();
+    public static final Operation SQUASH = Operation.of("changes.log.title.squash", "changes.error.squash.failed")
+            .waitingForUnfinished();
 
-    public static final Operation FIXUP =
-            Operation.of("log.title.fixup", "error.fixup.failed").waitingForUnfinished();
+    public static final Operation FIXUP = Operation.of("changes.log.title.fixup", "changes.error.fixup.failed")
+            .waitingForUnfinished();
 
     @Override
     public Operation operation() {

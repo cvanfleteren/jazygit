@@ -185,7 +185,7 @@ class MakeStackTest {
                 List.of(new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(98)), Option.of(12))),
                 confirmed.cmds());
         assertEquals(
-                Option.of("dialog.addToStack.bottomFixed"),
+                Option.of("branches.dialog.addToStack.bottomFixed"),
                 step(picking, new StackMsg.BottomChosen(1))
                         .popup(StackPopups.Pick.class)
                         .flatMap(StackPopups.Pick::refused));
@@ -321,7 +321,7 @@ class MakeStackTest {
                 .get();
 
         assertEquals(1, pick.choice().top());
-        assertEquals(Option.of("dialog.makeStack.topBelow"), pick.refused());
+        assertEquals(Option.of("branches.dialog.makeStack.topBelow"), pick.refused());
     }
 
     @Test

@@ -22,26 +22,28 @@ public final class RebaseDialogs {
     public static final ChoiceDialog.Spec<RebasePopup> REBASE = new ChoiceDialog.Spec<>(
                     "rebase",
                     RebasePopup.class,
-                    popup -> Messages.get("dialog.rebase.title", popup.branch().value()),
+                    popup -> Messages.get(
+                            "branches.dialog.rebase.title", popup.branch().value()),
                     List.of(
                             new Choice<RebasePopup>(
                                             's',
                                             popup -> Messages.get(
-                                                    "dialog.rebase.simple",
+                                                    "branches.dialog.rebase.simple",
                                                     popup.highlighted().value()),
                                             () -> new RebaseMsg.Chosen(RebaseMsg.Target.ONTO),
                                             (model, popup) -> RebaseUpdate.onto(model, popup, RebaseMsg.Target.ONTO)
                                                     .isDefined())
-                                    .withDetails("dialog.rebase.simple.details"),
+                                    .withDetails("branches.dialog.rebase.simple.details"),
                             new Choice<RebasePopup>(
                                             'b',
                                             popup -> popup.base()
-                                                    .map(base -> Messages.get("dialog.rebase.base", base.value()))
-                                                    .getOrElse(() -> Messages.get("dialog.rebase.noBase")),
+                                                    .map(base ->
+                                                            Messages.get("branches.dialog.rebase.base", base.value()))
+                                                    .getOrElse(() -> Messages.get("branches.dialog.rebase.noBase")),
                                             () -> new RebaseMsg.Chosen(RebaseMsg.Target.BASE),
                                             (model, popup) -> RebaseUpdate.onto(model, popup, RebaseMsg.Target.BASE)
                                                     .isDefined())
-                                    .withDetails("dialog.rebase.base.details")))
+                                    .withDetails("branches.dialog.rebase.base.details")))
             .openingAt(popup -> popup.onto().isEmpty() ? Option.of('b') : Option.none());
 
     private RebaseDialogs() {}

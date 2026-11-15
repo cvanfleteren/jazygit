@@ -18,7 +18,7 @@ public record ReadFileContent(String path) implements Targeted<FileContent> {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.fileContent", path));
+        return Option.of(Label.of("state.work.fileContent", path));
     }
 
     @Override

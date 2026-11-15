@@ -96,8 +96,9 @@ public final class EditPullRequestDialog implements PopupView {
                             base(model, popup),
                             new LineEditInput(
                                             textInput(title)
-                                                    .title(Messages.get("dialog.newPullRequest.titleField"))
-                                                    .placeholder(Messages.get("dialog.newPullRequest.titlePlaceholder"))
+                                                    .title(Messages.get("github.dialog.newPullRequest.titleField"))
+                                                    .placeholder(Messages.get(
+                                                            "github.dialog.newPullRequest.titlePlaceholder"))
                                                     .length(INPUT_HEIGHT)
                                                     .onSubmit(this::confirm)
                                                     .onKeyEvent(this::keys),
@@ -106,9 +107,9 @@ public final class EditPullRequestDialog implements PopupView {
                                     .onChange(text -> edited(fields.draft())),
                             new SubmittableTextArea(
                                             textArea(body)
-                                                    .title(Messages.get("dialog.newPullRequest.body"))
-                                                    .placeholder(
-                                                            Messages.get("dialog.editPullRequest.bodyPlaceholder")),
+                                                    .title(Messages.get("github.dialog.newPullRequest.body"))
+                                                    .placeholder(Messages.get(
+                                                            "github.dialog.editPullRequest.bodyPlaceholder")),
                                             body,
                                             BODY_ID,
                                             this::confirm)
@@ -124,12 +125,15 @@ public final class EditPullRequestDialog implements PopupView {
             return new HintedDialog(
                     DialogFrame.of(
                             Messages.get(
-                                    "dialog.editPullRequest.title",
+                                    "github.dialog.editPullRequest.title",
                                     String.valueOf(popup.number().value()),
                                     popup.pullRequestPopup().branch().value()),
                             WIDTH,
                             content.toJavaArray(Element[]::new)),
-                    Messages.get(popup.saving() ? "dialog.editPullRequest.saving" : "dialog.editPullRequest.hint"));
+                    Messages.get(
+                            popup.saving()
+                                    ? "github.dialog.editPullRequest.saving"
+                                    : "github.dialog.editPullRequest.hint"));
         });
     }
 
@@ -145,8 +149,8 @@ public final class EditPullRequestDialog implements PopupView {
                         base,
                         Messages.get(
                                 popup.pullRequestPopup().open()
-                                        ? "dialog.editPullRequest.baseStacked"
-                                        : "dialog.editPullRequest.baseClosed"));
+                                        ? "github.dialog.editPullRequest.baseStacked"
+                                        : "github.dialog.editPullRequest.baseClosed"));
     }
 
     /**
@@ -166,8 +170,8 @@ public final class EditPullRequestDialog implements PopupView {
                         .addClass(Theme.Classes.DIM)
                         .length(BOX_WIDTH);
         Element label = popup.draftChangeable()
-                ? text(" " + Messages.get("dialog.newPullRequest.draft"))
-                : text(" " + Messages.get("dialog.newPullRequest.draft")).addClass(Theme.Classes.DIM);
+                ? text(" " + Messages.get("github.dialog.newPullRequest.draft"))
+                : text(" " + Messages.get("github.dialog.newPullRequest.draft")).addClass(Theme.Classes.DIM);
         return new FocusBordered(panel(row(box, label)).length(INPUT_HEIGHT), DRAFT_ID);
     }
 

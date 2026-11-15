@@ -27,8 +27,8 @@ public final class SettingsPanelDialogs {
     public static final TextInputDialog.Spec<GhExecutablePopup> GH_EXECUTABLE = new TextInputDialog.Spec<>(
             "settings-gh",
             GhExecutablePopup.class,
-            popup -> Messages.get("dialog.settings.gh.title"),
-            Option.of(Messages.get("dialog.settings.gh.placeholder")),
+            popup -> Messages.get("chrome.dialog.settings.gh.title"),
+            Option.of(Messages.get("chrome.dialog.settings.gh.placeholder")),
             SettingsPanelMsg.GhExecutableEntered::new);
     /**
      * Asks which browser links open in for the account the repository uses; left empty, none is set for it, and the
@@ -38,10 +38,10 @@ public final class SettingsPanelDialogs {
             "settings-browser",
             AccountBrowserPopup.class,
             popup -> Messages.get(
-                    "dialog.settings.browser.title",
+                    "chrome.dialog.settings.browser.title",
                     popup.account().user(),
                     popup.account().host()),
-            Option.of(Messages.get("dialog.settings.browser.placeholder")),
+            Option.of(Messages.get("chrome.dialog.settings.browser.placeholder")),
             SettingsPanelMsg.BrowserEntered::new);
     /**
      * Asks which account the repository uses: gh's active one, or one of the others gh is logged in to on the
@@ -50,8 +50,8 @@ public final class SettingsPanelDialogs {
     public static final PickDialog.Spec<GitHubAccountPopup, String> ACCOUNT = new PickDialog.Spec<>(
             "settings-account",
             GitHubAccountPopup.class,
-            popup ->
-                    Messages.get("dialog.settings.account.title", popup.gitHub().host()),
+            popup -> Messages.get(
+                    "chrome.dialog.settings.account.title", popup.gitHub().host()),
             popup -> accounts(popup.gitHub()).map(PickDialog.Row::of),
             shown -> new SettingsPanelMsg.AccountChosen(user(shown)));
     // The keys of the settings that open the theme dialog, which the panel highlights again when it is cancelled.
@@ -65,44 +65,45 @@ public final class SettingsPanelDialogs {
     public static final ChoiceDialog.Spec<SettingsPanelPopup> PANEL = new ChoiceDialog.Spec<>(
                     "settings",
                     SettingsPanelPopup.class,
-                    popup -> Messages.get("dialog.settings.title"),
+                    popup -> Messages.get("chrome.dialog.settings.title"),
                     List.of(
                             new Choice<SettingsPanelPopup>(
                                             THEME_KEY,
-                                            popup -> Messages.get("dialog.settings.theme", themeLabel(popup.theme())),
+                                            popup -> Messages.get(
+                                                    "chrome.dialog.settings.theme", themeLabel(popup.theme())),
                                             SettingsPanelMsg.ThemeRequested::new)
-                                    .withHeading("dialog.settings.group.appearance")
-                                    .withDetails("dialog.settings.theme.details"),
+                                    .withHeading("chrome.dialog.settings.group.appearance")
+                                    .withDetails("chrome.dialog.settings.theme.details"),
                             new Choice<SettingsPanelPopup>(
                                             REPOSITORY_THEME_KEY,
                                             SettingsPanelDialogs::repositoryTheme,
                                             SettingsPanelMsg.RepositoryThemeRequested::new)
-                                    .withDetails("dialog.settings.repositoryTheme.details"),
+                                    .withDetails("chrome.dialog.settings.repositoryTheme.details"),
                             new Choice<SettingsPanelPopup>(
                                             'm',
                                             popup -> Messages.get(
-                                                    "dialog.settings.animations", onOff(popup.animations())),
+                                                    "chrome.dialog.settings.animations", onOff(popup.animations())),
                                             SettingsPanelMsg.AnimationsToggled::new)
-                                    .withDetails("dialog.settings.animations.details"),
+                                    .withDetails("chrome.dialog.settings.animations.details"),
                             new Choice<SettingsPanelPopup>(
                                             's',
                                             popup -> Messages.get(
-                                                    "dialog.settings.autoRefresh", onOff(popup.autoRefresh())),
+                                                    "chrome.dialog.settings.autoRefresh", onOff(popup.autoRefresh())),
                                             SettingsPanelMsg.AutoRefreshToggled::new)
-                                    .withHeading("dialog.settings.group.git")
-                                    .withDetails("dialog.settings.autoRefresh.details"),
+                                    .withHeading("chrome.dialog.settings.group.git")
+                                    .withDetails("chrome.dialog.settings.autoRefresh.details"),
                             new Choice<SettingsPanelPopup>(
                                             'f',
-                                            popup ->
-                                                    Messages.get("dialog.settings.autoFetch", onOff(popup.autoFetch())),
+                                            popup -> Messages.get(
+                                                    "chrome.dialog.settings.autoFetch", onOff(popup.autoFetch())),
                                             SettingsPanelMsg.AutoFetchToggled::new)
-                                    .withDetails("dialog.settings.autoFetch.details"),
+                                    .withDetails("chrome.dialog.settings.autoFetch.details"),
                             new Choice<SettingsPanelPopup>(
                                             'g',
                                             SettingsPanelDialogs::ghExecutable,
                                             SettingsPanelMsg.GhExecutableRequested::new)
-                                    .withHeading("dialog.settings.group.github")
-                                    .withDetails("dialog.settings.gh.details"),
+                                    .withHeading("chrome.dialog.settings.group.github")
+                                    .withDetails("chrome.dialog.settings.gh.details"),
                             new Choice<SettingsPanelPopup>(
                                             'a',
                                             SettingsPanelDialogs::account,
@@ -110,7 +111,7 @@ public final class SettingsPanelDialogs {
                                             (model, popup) -> popup.gitHub()
                                                     .exists(gitHub ->
                                                             gitHub.logins().isRight()))
-                                    .withDetails("dialog.settings.account.details"),
+                                    .withDetails("chrome.dialog.settings.account.details"),
                             new Choice<SettingsPanelPopup>(
                                             'b',
                                             SettingsPanelDialogs::browser,
@@ -118,11 +119,11 @@ public final class SettingsPanelDialogs {
                                             (model, popup) -> popup.gitHub()
                                                     .exists(gitHub ->
                                                             gitHub.account().isDefined()))
-                                    .withDetails("dialog.settings.browser.details"),
+                                    .withDetails("chrome.dialog.settings.browser.details"),
                             new Choice<SettingsPanelPopup>(
                                             'e', SettingsPanelDialogs::file, SettingsPanelMsg.FileRequested::new)
-                                    .withHeading("dialog.settings.group.file")
-                                    .withDetails("dialog.settings.file.details")),
+                                    .withHeading("chrome.dialog.settings.group.file")
+                                    .withDetails("chrome.dialog.settings.file.details")),
                     WIDTH)
             .openingAt(SettingsPanelPopup::opensAt);
     // How a warning starts.
@@ -151,11 +152,11 @@ public final class SettingsPanelDialogs {
                 .map(SettingsPanelDialogs::themeLabel)
                 .orElse(() -> theme.inherited()
                         .map(inherited -> Messages.get(
-                                "dialog.theme.inherited",
+                                "chrome.dialog.theme.inherited",
                                 themeLabel(inherited.theme()),
                                 HomeDir.shown(inherited.origin()))))
-                .getOrElse(() -> Messages.get("dialog.settings.repositoryTheme.none"));
-        return Messages.get("dialog.settings.repositoryTheme", shown);
+                .getOrElse(() -> Messages.get("chrome.dialog.settings.repositoryTheme.none"));
+        return Messages.get("chrome.dialog.settings.repositoryTheme", shown);
     }
 
     /**
@@ -163,34 +164,34 @@ public final class SettingsPanelDialogs {
      */
     static String file(SettingsPanelPopup popup) {
         return Messages.get(
-                "dialog.settings.file",
-                popup.file().map(HomeDir::shown).getOrElse(() -> Messages.get("dialog.settings.reading")));
+                "chrome.dialog.settings.file",
+                popup.file().map(HomeDir::shown).getOrElse(() -> Messages.get("chrome.dialog.settings.reading")));
     }
 
     private static String onOff(boolean on) {
-        return Messages.get(on ? "dialog.settings.on" : "dialog.settings.off");
+        return Messages.get(on ? "chrome.dialog.settings.on" : "chrome.dialog.settings.off");
     }
 
     private static String themeLabel(ThemeName theme) {
-        return Messages.get("dialog.theme." + theme.id());
+        return Messages.get("chrome.dialog.theme." + theme.id());
     }
 
     private static String ghExecutable(SettingsPanelPopup popup) {
-        String executable = popup.ghExecutable().getOrElse(() -> Messages.get("dialog.settings.gh.onPath"));
+        String executable = popup.ghExecutable().getOrElse(() -> Messages.get("chrome.dialog.settings.gh.onPath"));
         String version = popup.gitHub()
                 .map(gitHub -> gitHub.version().fold(failure -> WARNING + ErrorText.of(failure), found -> found))
-                .getOrElse(() -> Messages.get("dialog.settings.reading"));
-        return Messages.get("dialog.settings.gh", executable, version);
+                .getOrElse(() -> Messages.get("chrome.dialog.settings.reading"));
+        return Messages.get("chrome.dialog.settings.gh", executable, version);
     }
 
     private static String account(SettingsPanelPopup popup) {
         return popup.gitHub()
                 .map(gitHub -> Messages.get(
-                        "dialog.settings.account",
+                        "chrome.dialog.settings.account",
                         gitHub.host(),
                         gitHub.logins().fold(failure -> WARNING + ErrorText.of(failure), logins -> chosen(gitHub))))
-                .getOrElse(
-                        () -> Messages.get("dialog.settings.account.reading", Messages.get("dialog.settings.reading")));
+                .getOrElse(() -> Messages.get(
+                        "chrome.dialog.settings.account.reading", Messages.get("chrome.dialog.settings.reading")));
     }
 
     /**
@@ -201,24 +202,24 @@ public final class SettingsPanelDialogs {
         return popup.gitHub()
                 .map(gitHub -> gitHub.account()
                         .map(account -> Messages.get(
-                                "dialog.settings.browser",
+                                "chrome.dialog.settings.browser",
                                 account.user(),
                                 account.host(),
                                 popup.browsers()
                                         .of(account.host(), account.user())
                                         .getOrElse(() -> instead(gitHub.browser()))))
-                        .getOrElse(() -> Messages.get("dialog.settings.browser.unknown")))
-                .getOrElse(
-                        () -> Messages.get("dialog.settings.browser.reading", Messages.get("dialog.settings.reading")));
+                        .getOrElse(() -> Messages.get("chrome.dialog.settings.browser.unknown")))
+                .getOrElse(() -> Messages.get(
+                        "chrome.dialog.settings.browser.reading", Messages.get("chrome.dialog.settings.reading")));
     }
 
     private static String instead(Option<ChosenBrowser> chosen) {
         return chosen.map(browser -> Messages.get(
-                        "dialog.settings.browser.instead",
+                        "chrome.dialog.settings.browser.instead",
                         browser.command(),
-                        Messages.get("dialog.settings.browser.source."
+                        Messages.get("chrome.dialog.settings.browser.source."
                                 + browser.source().name())))
-                .getOrElse(() -> Messages.get("dialog.settings.browser.system"));
+                .getOrElse(() -> Messages.get("chrome.dialog.settings.browser.system"));
     }
 
     /**
@@ -228,14 +229,14 @@ public final class SettingsPanelDialogs {
         return gitHub.user()
                 .map(user -> gitHub.userAvailable()
                         ? user
-                        : WARNING + Messages.get("dialog.settings.account.unavailable", user))
+                        : WARNING + Messages.get("chrome.dialog.settings.account.unavailable", user))
                 .getOrElse(() -> ghDefault(gitHub));
     }
 
     private static String ghDefault(GitHubSetup gitHub) {
         return Messages.get(
-                "dialog.settings.account.default",
-                gitHub.active().getOrElse(() -> Messages.get("dialog.settings.account.none")));
+                "chrome.dialog.settings.account.default",
+                gitHub.active().getOrElse(() -> Messages.get("chrome.dialog.settings.account.none")));
     }
 
     /**
@@ -246,12 +247,14 @@ public final class SettingsPanelDialogs {
     static List<String> accounts(GitHubSetup gitHub) {
         return gitHub.onHost()
                 .map(login -> login.login()
-                        + (login.valid() ? "" : " " + WARNING + Messages.get("dialog.settings.account.invalid"))
+                        + (login.valid() ? "" : " " + WARNING + Messages.get("chrome.dialog.settings.account.invalid"))
                         + (gitHub.user().contains(login.login())
-                                ? " " + Messages.get("dialog.settings.account.current")
+                                ? " " + Messages.get("chrome.dialog.settings.account.current")
                                 : ""))
                 .prepend(ghDefault(gitHub)
-                        + (gitHub.user().isEmpty() ? " " + Messages.get("dialog.settings.account.current") : ""));
+                        + (gitHub.user().isEmpty()
+                                ? " " + Messages.get("chrome.dialog.settings.account.current")
+                                : ""));
     }
 
     /**

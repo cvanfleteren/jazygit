@@ -40,7 +40,7 @@ public final class CommentDialog implements PopupView {
                 .map(popup -> composer.render(
                         model,
                         Messages.get(
-                                "dialog.comment.title",
+                                "github.dialog.comment.title",
                                 String.valueOf(popup.number().value())),
                         List.empty(),
                         new CommentComposer.Comment(popup.text(), popup.sending())));

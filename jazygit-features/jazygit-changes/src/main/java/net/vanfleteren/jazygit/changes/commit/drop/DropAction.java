@@ -12,7 +12,8 @@ public final class DropAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                     Scopes.COMMITS,
-                    Binding.onSelected("d", "help.commits.drop", commit -> new DropMsg.Requested(commit.sha()))),
+                    Binding.onSelected(
+                            "d", "changes.help.commits.drop", commit -> new DropMsg.Requested(commit.sha()))),
             DropDialogs::popups);
 
     private DropAction() {}

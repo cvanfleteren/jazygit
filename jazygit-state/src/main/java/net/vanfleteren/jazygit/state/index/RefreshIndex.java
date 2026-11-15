@@ -18,7 +18,7 @@ public record RefreshIndex() implements Cmd {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.status"));
+        return Option.of(Label.of("state.work.status"));
     }
 
     @Override

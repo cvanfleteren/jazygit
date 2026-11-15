@@ -20,7 +20,8 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public record OpenInEditorCmd(EditorProgram editor, String worktree) implements OperationCmd {
 
-    public static final Operation OPEN_IN_EDITOR = Operation.of("log.title.openInEditor", "error.openInEditor.failed");
+    public static final Operation OPEN_IN_EDITOR =
+            Operation.of("branches.log.title.openInEditor", "branches.error.openInEditor.failed");
 
     @Override
     public Operation operation() {

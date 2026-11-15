@@ -24,7 +24,7 @@ public sealed interface WorktreeError extends AppError {
             return Phrase.of(
                     operation.errorKey(),
                     Phrase.verbatim(branch.value()),
-                    Phrase.of("error.checkedOutElsewhere", worktree));
+                    Phrase.of("branches.error.checkedOutElsewhere", worktree));
         }
     }
 
@@ -37,7 +37,7 @@ public sealed interface WorktreeError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.removeWorktree.main", worktree);
+            return Phrase.of("branches.error.removeWorktree.main", worktree);
         }
     }
 
@@ -50,7 +50,7 @@ public sealed interface WorktreeError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.removeWorktree.shown", worktree);
+            return Phrase.of("branches.error.removeWorktree.shown", worktree);
         }
     }
 
@@ -65,8 +65,8 @@ public sealed interface WorktreeError extends AppError {
         @Override
         public Phrase phrase() {
             return reason.isBlank()
-                    ? Phrase.of("error.removeWorktree.locked", worktree)
-                    : Phrase.of("error.removeWorktree.lockedBecause", worktree, reason);
+                    ? Phrase.of("branches.error.removeWorktree.locked", worktree)
+                    : Phrase.of("branches.error.removeWorktree.lockedBecause", worktree, reason);
         }
     }
 
@@ -79,7 +79,7 @@ public sealed interface WorktreeError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.switchWorktree.shown", worktree);
+            return Phrase.of("branches.error.switchWorktree.shown", worktree);
         }
     }
 
@@ -92,7 +92,7 @@ public sealed interface WorktreeError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.switchWorktree.missing", worktree);
+            return Phrase.of("branches.error.switchWorktree.missing", worktree);
         }
     }
 
@@ -104,7 +104,7 @@ public sealed interface WorktreeError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.openInEditor.notInWorktree", branch.value());
+            return Phrase.of("branches.error.openInEditor.notInWorktree", branch.value());
         }
     }
 
@@ -116,7 +116,7 @@ public sealed interface WorktreeError extends AppError {
         @Override
         public Phrase phrase() {
             return Phrase.of(
-                    "error.openInEditor.noEditor",
+                    "branches.error.openInEditor.noEditor",
                     // On lines of their own, as TOML has them, so it can be pasted as it is.
                     "[[editors]]\nname = \"IntelliJ\"\ncommand = [\"idea\", \"" + EditorProgram.DIR + "\"]");
         }
@@ -129,7 +129,7 @@ public sealed interface WorktreeError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.pruneWorktrees.nothing");
+            return Phrase.of("branches.error.pruneWorktrees.nothing");
         }
     }
 
@@ -140,7 +140,7 @@ public sealed interface WorktreeError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.lockWorktree.main");
+            return Phrase.of("branches.error.lockWorktree.main");
         }
     }
 
@@ -151,7 +151,7 @@ public sealed interface WorktreeError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.revision.unknown", text);
+            return Phrase.of("branches.error.revision.unknown", text);
         }
     }
 }

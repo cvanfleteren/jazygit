@@ -19,9 +19,9 @@ public final class DropDialogs {
     public static final ConfirmDialog.Spec<DropPopup> DROP = ConfirmDialog.Spec.confirming(
             "drop-commit",
             DropPopup.class,
-            popup -> Messages.get("dialog.drop.title"),
+            popup -> Messages.get("changes.dialog.drop.title"),
             popup -> Messages.get(
-                    "dialog.drop.message",
+                    "changes.dialog.drop.message",
                     popup.commit().sha().shortSha(),
                     popup.commit().message()));
 

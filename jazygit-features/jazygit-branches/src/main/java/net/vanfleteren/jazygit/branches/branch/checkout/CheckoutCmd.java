@@ -19,8 +19,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
 
-    Operation CHECKOUT =
-            Operation.of("log.title.checkout", "error.checkout.failed").waitingForUnfinished();
+    Operation CHECKOUT = Operation.of("branches.log.title.checkout", "branches.error.checkout.failed")
+            .waitingForUnfinished();
 
     @Override
     default Operation operation() {

@@ -16,11 +16,12 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record InProgressCmd(InProgress inProgress, InProgressAction action) implements GitOperationCmd {
 
-    public static final Operation CONTINUE = Operation.of("log.title.continue", "error.continue.failed");
+    public static final Operation CONTINUE =
+            Operation.of("changes.log.title.continue", "changes.error.continue.failed");
 
-    public static final Operation ABORT = Operation.of("log.title.abort", "error.abort.failed");
+    public static final Operation ABORT = Operation.of("changes.log.title.abort", "changes.error.abort.failed");
 
-    public static final Operation SKIP = Operation.of("log.title.skip", "error.skip.failed");
+    public static final Operation SKIP = Operation.of("changes.log.title.skip", "changes.error.skip.failed");
 
     @Override
     public Operation operation() {

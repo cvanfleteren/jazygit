@@ -20,7 +20,7 @@ public record LoadBranchLog(BranchRef branch, LoadAhead ahead) implements Target
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.branchLog", branch.name()));
+        return Option.of(Label.of("state.work.branchLog", branch.name()));
     }
 
     @Override

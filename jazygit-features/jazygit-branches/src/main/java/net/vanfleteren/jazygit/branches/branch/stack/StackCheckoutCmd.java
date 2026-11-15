@@ -23,10 +23,10 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public sealed interface StackCheckoutCmd extends OperationCmd {
 
-    Operation FETCH_STACK = Operation.of("log.title.fetchStack", "error.fetchStack.failed");
+    Operation FETCH_STACK = Operation.of("branches.log.title.fetchStack", "branches.error.fetchStack.failed");
 
-    Operation CHECK_OUT_STACK = Operation.of("log.title.checkOutStack", "error.checkOutStack.failed")
-            .labelledWhenBusy("branches.busy.checkOutStack");
+    Operation CHECK_OUT_STACK = Operation.of("branches.log.title.checkOutStack", "branches.error.checkOutStack.failed")
+            .labelledWhenBusy("branches.branches.busy.checkOutStack");
 
     /**
      * Fetches the branches of the open pull requests of {@code stack} from {@code remote}, then reads the branches,

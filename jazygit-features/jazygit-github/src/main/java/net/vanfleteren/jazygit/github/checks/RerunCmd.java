@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public record RerunCmd(RemoteBranch branch, List<RerunPlan.Run> runs) implements OperationCmd {
 
-    public static final Operation RERUN = Operation.of("log.title.rerun", "error.rerun.failed");
+    public static final Operation RERUN = Operation.of("github.log.title.rerun", "github.error.rerun.failed");
 
     @Override
     public Operation operation() {

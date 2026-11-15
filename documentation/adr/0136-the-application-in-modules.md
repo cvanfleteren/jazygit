@@ -53,10 +53,13 @@ Two things cross them the wrong way:
    ADR 127 kept (its decision 3).
 4. **Each module has its own bundle**, `net/vanfleteren/jazygit/<root>/messages.properties`, named in its own
    native-image metadata. A key starts with the root of the module whose code holds it: `github.dialog.…`,
-   `branches.help.…`. `Messages`, in `ui.i18n`, finds the bundle from that first part, and looks a key that starts
-   with no module's root up in `ui`'s own bundle, as it does when that module has no bundle. A key that more than one
-   module uses goes to the lowest of them; one used by the widgets of `ui` alone stays without a prefix. A test of
-   each module checks that every key its code names is in its bundle, and that no key is in two.
+   `branches.help.…`. `Messages`, in `ui.i18n`, finds the bundle from that first part, and looks a key up in `ui`'s
+   own bundle when that part names no module with a bundle, or one without the key: a few keys of the views start
+   as a module does (`branches.gone`). A key that more than one module uses goes to the lowest that all of them see;
+   one used by the views alone stays without a prefix. A key made at run time from another (help's `.details`, a
+   dialog's `.title`) is where that other is. A test of each module checks that every key its code names is in its
+   bundle, and one of the app that no key is in two; the tests of `ui` that show the text of a feature move to the
+   app.
 5. **The tests go with the code they test**, with three exceptions:
    - a test that needs what its module cannot see moves to `jazygit-app`, which sees everything, and keeps its
      package: the tests of `state` and `ui` that send the messages of a feature (as `ProgramTest` and

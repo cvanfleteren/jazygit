@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public record EditCmd(List<String> files) implements OperationCmd {
 
-    public static final Operation EDIT = Operation.of("log.title.edit", "error.edit.failed");
+    public static final Operation EDIT = Operation.of("changes.log.title.edit", "changes.error.edit.failed");
 
     @Override
     public Operation operation() {

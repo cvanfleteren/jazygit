@@ -19,9 +19,10 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public sealed interface ReactCmd extends Cmd {
 
-    Operation REACT = Operation.of("log.title.reactReviewComment", "error.reactReviewComment.failed");
+    Operation REACT = Operation.of("github.log.title.reactReviewComment", "github.error.reactReviewComment.failed");
 
-    Operation UNREACT = Operation.of("log.title.unreactReviewComment", "error.unreactReviewComment.failed");
+    Operation UNREACT =
+            Operation.of("github.log.title.unreactReviewComment", "github.error.unreactReviewComment.failed");
 
     /**
      * Gives {@code reaction} to the comment with the id {@code comment} of the thread with the id {@code thread} of

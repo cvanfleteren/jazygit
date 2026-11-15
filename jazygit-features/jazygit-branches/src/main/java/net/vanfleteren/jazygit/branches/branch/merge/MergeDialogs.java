@@ -22,21 +22,28 @@ public final class MergeDialogs {
             "merge",
             MergePopup.class,
             popup -> Messages.get(
-                    "dialog.merge.title", popup.branch().value(), popup.into().value()),
+                    "branches.dialog.merge.title",
+                    popup.branch().value(),
+                    popup.into().value()),
             List.of(
                     new Choice<MergePopup>(
-                                    'm', "dialog.merge.fastForward", () -> new MergeMsg.Chosen(MergeMode.FAST_FORWARD))
-                            .withDetails("dialog.merge.fastForward.details"),
+                                    'm',
+                                    "branches.dialog.merge.fastForward",
+                                    () -> new MergeMsg.Chosen(MergeMode.FAST_FORWARD))
+                            .withDetails("branches.dialog.merge.fastForward.details"),
                     new Choice<MergePopup>(
-                                    'n', "dialog.merge.mergeCommit", () -> new MergeMsg.Chosen(MergeMode.MERGE_COMMIT))
-                            .withDetails("dialog.merge.mergeCommit.details"),
-                    new Choice<MergePopup>('s', "dialog.merge.squash", () -> new MergeMsg.Chosen(MergeMode.SQUASH))
-                            .withDetails("dialog.merge.squash.details"),
+                                    'n',
+                                    "branches.dialog.merge.mergeCommit",
+                                    () -> new MergeMsg.Chosen(MergeMode.MERGE_COMMIT))
+                            .withDetails("branches.dialog.merge.mergeCommit.details"),
+                    new Choice<MergePopup>(
+                                    's', "branches.dialog.merge.squash", () -> new MergeMsg.Chosen(MergeMode.SQUASH))
+                            .withDetails("branches.dialog.merge.squash.details"),
                     new Choice<MergePopup>(
                                     'S',
-                                    "dialog.merge.squashAndCommit",
+                                    "branches.dialog.merge.squashAndCommit",
                                     () -> new MergeMsg.Chosen(MergeMode.SQUASH_AND_COMMIT))
-                            .withDetails("dialog.merge.squashAndCommit.details")));
+                            .withDetails("branches.dialog.merge.squashAndCommit.details")));
 
     private MergeDialogs() {}
 

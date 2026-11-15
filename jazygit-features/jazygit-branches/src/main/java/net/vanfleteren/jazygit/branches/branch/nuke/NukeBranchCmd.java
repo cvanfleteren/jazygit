@@ -26,7 +26,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
 public record NukeBranchCmd(BranchName branch, Option<String> worktree, Option<RemoteBranch> remote)
         implements BranchCmd.KeepsBranchBusy {
 
-    public static final Operation NUKE_BRANCH = Operation.of("log.title.nukeBranch", "error.nukeBranch.failed");
+    public static final Operation NUKE_BRANCH =
+            Operation.of("branches.log.title.nukeBranch", "branches.error.nukeBranch.failed");
 
     @Override
     public Operation operation() {

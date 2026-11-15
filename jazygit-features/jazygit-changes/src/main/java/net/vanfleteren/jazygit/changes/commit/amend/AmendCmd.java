@@ -17,10 +17,11 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record AmendCmd(AmendTarget target, List<String> stage) implements GitOperationCmd {
 
-    public static final Operation AMEND = Operation.of("log.title.amend", "error.amend.failed");
+    public static final Operation AMEND = Operation.of("changes.log.title.amend", "changes.error.amend.failed");
 
-    public static final Operation AMEND_COMMIT =
-            Operation.of("log.title.amendCommit", "error.amendCommit.failed").waitingForUnfinished();
+    public static final Operation AMEND_COMMIT = Operation.of(
+                    "changes.log.title.amendCommit", "changes.error.amendCommit.failed")
+            .waitingForUnfinished();
 
     @Override
     public Operation operation() {

@@ -53,10 +53,10 @@ public interface AppError {
         public static Phrase kind(InProgress inProgress) {
             return Phrase.of(
                     switch (inProgress) {
-                        case InProgress.Merging m -> "inProgress.merge";
-                        case InProgress.Rebasing r -> "inProgress.rebase";
-                        case InProgress.CherryPicking c -> "inProgress.cherryPick";
-                        case InProgress.Reverting r -> "inProgress.revert";
+                        case InProgress.Merging m -> "state.inProgress.merge";
+                        case InProgress.Rebasing r -> "state.inProgress.rebase";
+                        case InProgress.CherryPicking c -> "state.inProgress.cherryPick";
+                        case InProgress.Reverting r -> "state.inProgress.revert";
                     });
         }
 
@@ -67,8 +67,9 @@ public interface AppError {
                     subjectThen(
                             subject,
                             inProgress
-                                    .map(op -> Phrase.of("error.inProgress", kind(op)))
-                                    .getOrElse(() -> Phrase.of("error.conflictsRemain", Phrase.count(conflicts)))));
+                                    .map(op -> Phrase.of("state.error.inProgress", kind(op)))
+                                    .getOrElse(
+                                            () -> Phrase.of("state.error.conflictsRemain", Phrase.count(conflicts)))));
         }
     }
 }

@@ -24,7 +24,7 @@ public final class BuildsDialog {
     public static final PickDialog.Spec<BuildsPopup, Pipeline> SPEC = new PickDialog.Spec<>(
             "builds-workflows",
             BuildsPopup.class,
-            popup -> Messages.get("dialog.builds.title"),
+            popup -> Messages.get("github.dialog.builds.title"),
             popup -> popup.choices().map(BuildsDialog::row),
             BuildsMsg.Picked::new);
 
@@ -37,16 +37,16 @@ public final class BuildsDialog {
     public static final PickDialog.Spec<BuildsWindowPopup, Option<Integer>> WINDOW = new PickDialog.Spec<>(
             "builds-window",
             BuildsWindowPopup.class,
-            popup -> Messages.get("dialog.builds.window.title"),
+            popup -> Messages.get("github.dialog.builds.window.title"),
             popup -> List.of(Option.of(10), Option.of(20), Option.of(50), Option.<Integer>none())
                     .map(builds -> new PickDialog.Row<>(
                             builds,
                             List.of(
-                                    Cell.of(builds.map(count -> Messages.get("dialog.builds.window.last", count))
-                                            .getOrElse(() -> Messages.get("dialog.builds.window.all"))),
+                                    Cell.of(builds.map(count -> Messages.get("github.dialog.builds.window.last", count))
+                                            .getOrElse(() -> Messages.get("github.dialog.builds.window.all"))),
                                     Cell.styled(
                                             popup.window().equals(builds)
-                                                    ? Messages.get("dialog.builds.window.shown")
+                                                    ? Messages.get("github.dialog.builds.window.shown")
                                                     : "",
                                             Theme.Classes.DIM)),
                             Option.of(builds.map(count -> String.valueOf(count).charAt(0))
@@ -64,7 +64,7 @@ public final class BuildsDialog {
     public static final PickDialog.Spec<BuildPickPopup, Option<Long>> BUILD = new PickDialog.Spec<>(
             "builds-build",
             BuildPickPopup.class,
-            popup -> Messages.get("dialog.builds.build.title"),
+            popup -> Messages.get("github.dialog.builds.build.title"),
             popup -> popup.builds()
                     .map(build -> new PickDialog.Row<>(
                             Option.of(build.runId()),
@@ -90,7 +90,7 @@ public final class BuildsDialog {
                                     Cell.of(""),
                                     Cell.of(""),
                                     Cell.of(""),
-                                    Cell.of(Messages.get("dialog.builds.build.last")),
+                                    Cell.of(Messages.get("github.dialog.builds.build.last")),
                                     picked(popup, Option.none())))),
             BuildsMsg.BuildPicked::new);
 
@@ -98,7 +98,7 @@ public final class BuildsDialog {
 
     private static Cell picked(BuildPickPopup popup, Option<Long> run) {
         return Cell.styled(
-                popup.picked().equals(run) ? Messages.get("dialog.builds.window.shown") : "", Theme.Classes.DIM);
+                popup.picked().equals(run) ? Messages.get("github.dialog.builds.window.shown") : "", Theme.Classes.DIM);
     }
 
     static List<PopupSlot> popups(Consumer<Msg> dispatch) {
@@ -116,7 +116,7 @@ public final class BuildsDialog {
                         Cell.of(choice.label()),
                         Cell.styled(
                                 choice.builds()
-                                        .map(count -> Messages.get("dialog.builds.count", String.valueOf(count)))
+                                        .map(count -> Messages.get("github.dialog.builds.count", String.valueOf(count)))
                                         .getOrElse(""),
                                 Theme.Classes.DIM)));
     }

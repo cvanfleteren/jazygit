@@ -27,7 +27,7 @@ public record LoadDivergence(BranchName branch, BranchRef other) implements Targ
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.divergence", branch.value(), other.name()));
+        return Option.of(Label.of("state.work.divergence", branch.value(), other.name()));
     }
 
     /**

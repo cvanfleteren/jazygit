@@ -14,7 +14,7 @@ public record Label(String key, List<Object> args) {
     /**
      * What a command that has no label of its own shows.
      */
-    public static final Label WORKING = of("work.working");
+    public static final Label WORKING = of("state.work.working");
 
     public static Label of(String key, Object... args) {
         return new Label(key, List.of(args));

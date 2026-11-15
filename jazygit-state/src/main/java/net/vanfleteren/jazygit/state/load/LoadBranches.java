@@ -33,7 +33,7 @@ public record LoadBranches(GitHubBases gitHub) implements Load {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.branches"));
+        return Option.of(Label.of("state.work.branches"));
     }
 
     @Override

@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 public final class CreateCommitAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
-            keys -> keys.add(Scopes.FILES, Binding.always("c", "help.files.commit", CommitMsg.Requested::new)),
+            keys -> keys.add(Scopes.FILES, Binding.always("c", "changes.help.files.commit", CommitMsg.Requested::new)),
             CreateCommitDialogs::popups);
 
     private CreateCommitAction() {}

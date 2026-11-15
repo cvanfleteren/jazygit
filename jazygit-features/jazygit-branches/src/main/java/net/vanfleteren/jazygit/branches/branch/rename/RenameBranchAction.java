@@ -11,7 +11,8 @@ public final class RenameBranchAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
-                    Scopes.BRANCHES, Binding.onSelected("R", "help.branches.rename", RenameBranchMsg.Requested::new)),
+                    Scopes.BRANCHES,
+                    Binding.onSelected("R", "branches.help.branches.rename", RenameBranchMsg.Requested::new)),
             RenameBranchDialogs::popups);
 
     private RenameBranchAction() {}

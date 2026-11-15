@@ -14,9 +14,9 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public sealed interface StageCmd extends GitOperationCmd {
 
-    Operation STAGE = Operation.of("log.title.stage", "error.staging.failed");
+    Operation STAGE = Operation.of("changes.log.title.stage", "changes.error.staging.failed");
 
-    Operation UNSTAGE = Operation.of("log.title.unstage", "error.staging.failed");
+    Operation UNSTAGE = Operation.of("changes.log.title.unstage", "changes.error.staging.failed");
 
     record Stage(List<String> paths) implements StageCmd {
 

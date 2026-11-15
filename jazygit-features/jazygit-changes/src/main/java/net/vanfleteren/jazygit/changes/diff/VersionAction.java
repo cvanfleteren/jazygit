@@ -34,12 +34,14 @@ public final class VersionAction {
                         (keymap, scope) -> keymap.add(
                                         scope,
                                         new Binding<DiffCursorAt>(
-                                                "ctrl+o", "help.diff.version", at -> at.map(VersionMsg.Cycled::new)))
+                                                "ctrl+o",
+                                                "changes.help.diff.version",
+                                                at -> at.map(VersionMsg.Cycled::new)))
                                 .add(
                                         scope,
                                         new Binding<DiffCursorAt>(
                                                 "ctrl+t",
-                                                "help.diff.render",
+                                                "changes.help.diff.render",
                                                 at -> at.map(VersionMsg.RenderToggled::new))));
     }
 
@@ -49,12 +51,12 @@ public final class VersionAction {
     private static Keymap files(Keymap keys) {
         return keys.add(
                         Scopes.FILES,
-                        onFile("ctrl+o", "help.files.version", VersionMsg.FilesCycled::new),
-                        onFile("ctrl+t", "help.files.render", VersionMsg.FilesRenderToggled::new))
+                        onFile("ctrl+o", "changes.help.files.version", VersionMsg.FilesCycled::new),
+                        onFile("ctrl+t", "changes.help.files.render", VersionMsg.FilesRenderToggled::new))
                 .add(
                         Scopes.COMMIT_FILES,
-                        onFile("ctrl+o", "help.commitFiles.version", VersionMsg.FilesCycled::new),
-                        onFile("ctrl+t", "help.commitFiles.render", VersionMsg.FilesRenderToggled::new));
+                        onFile("ctrl+o", "changes.help.commitFiles.version", VersionMsg.FilesCycled::new),
+                        onFile("ctrl+t", "changes.help.commitFiles.render", VersionMsg.FilesRenderToggled::new));
     }
 
     /**

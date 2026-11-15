@@ -16,7 +16,7 @@ public record BrowsePullRequestCmd(PullRequestSummary pullRequest) implements Op
     /**
      * Opening a pull request in the browser: one listed on the pull requests screen, or the one shown.
      */
-    public static final Operation OPEN_PR = Operation.of("log.title.openPr", "error.openPr.failed");
+    public static final Operation OPEN_PR = Operation.of("github.log.title.openPr", "github.error.openPr.failed");
 
     @Override
     public Operation operation() {

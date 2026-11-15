@@ -12,15 +12,16 @@ public final class CheckoutAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                             Scopes.BRANCHES,
-                            Binding.onSelected(" ", "help.branches.checkout", CheckoutMsg.Requested::new))
+                            Binding.onSelected(" ", "branches.help.branches.checkout", CheckoutMsg.Requested::new))
                     .add(
                             Scopes.REMOTE_BRANCHES,
-                            Binding.onSelected(" ", "help.remoteBranches.checkout", CheckoutMsg.RemoteRequested::new))
+                            Binding.onSelected(
+                                    " ", "branches.help.remoteBranches.checkout", CheckoutMsg.RemoteRequested::new))
                     .add(
                             Scopes.REMOTE_BRANCHES,
                             Binding.onSelected(
                                     "w",
-                                    "help.remoteBranches.worktree",
+                                    "branches.help.remoteBranches.worktree",
                                     CheckoutMsg.RemoteInNewWorktreeRequested::new)),
             CheckoutDialogs::popups);
 

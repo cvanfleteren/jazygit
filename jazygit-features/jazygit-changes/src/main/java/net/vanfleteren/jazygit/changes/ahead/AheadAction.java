@@ -14,18 +14,18 @@ public final class AheadAction {
     /**
      * The key in the commits pane.
      */
-    public static final FeatureAction COMMITS = FeatureAction.ofKeys(
-            keys -> keys.add(Scopes.COMMITS, Binding.always("b", "help.commits.onlyAhead", AheadMsg.Toggled::new)));
+    public static final FeatureAction COMMITS = FeatureAction.ofKeys(keys ->
+            keys.add(Scopes.COMMITS, Binding.always("b", "changes.help.commits.onlyAhead", AheadMsg.Toggled::new)));
 
     /**
      * The key in the tabs of the branches pane that show the log of a branch, and in the commits of a branch listed
      * in their place, listed with the branch operations.
      */
-    public static final FeatureAction BRANCHES = FeatureAction.ofKeys(
-            keys -> keys.add(Scopes.BRANCHES, Binding.always("b", "help.branches.onlyAhead", AheadMsg.Toggled::new))
-                    .add(Scopes.REMOTE_BRANCHES, Binding.always("b", "help.branches.onlyAhead", AheadMsg.Toggled::new))
-                    .add(Scopes.BRANCH_COMMITS, Binding.always("b", "help.branches.onlyAhead", AheadMsg.Toggled::new))
-                    .add(Scopes.BUILDS, Binding.always("b", "help.builds.onlyAhead", AheadMsg.Toggled::new)));
+    public static final FeatureAction BRANCHES = FeatureAction.ofKeys(keys -> keys.add(
+                    Scopes.BRANCHES, Binding.always("b", "changes.help.branches.onlyAhead", AheadMsg.Toggled::new))
+            .add(Scopes.REMOTE_BRANCHES, Binding.always("b", "changes.help.branches.onlyAhead", AheadMsg.Toggled::new))
+            .add(Scopes.BRANCH_COMMITS, Binding.always("b", "changes.help.branches.onlyAhead", AheadMsg.Toggled::new))
+            .add(Scopes.BUILDS, Binding.always("b", "changes.help.builds.onlyAhead", AheadMsg.Toggled::new)));
 
     private AheadAction() {}
 }

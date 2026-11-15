@@ -10,15 +10,17 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 public final class NewBranchAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
-            keys -> keys.add(Scopes.BRANCHES, Binding.onSelected("n", "help.branches.new", NewBranchMsg.Requested::new))
+            keys -> keys.add(
+                            Scopes.BRANCHES,
+                            Binding.onSelected("n", "branches.help.branches.new", NewBranchMsg.Requested::new))
                     .add(
                             Scopes.REMOTE_BRANCHES,
-                            Binding.onSelected("n", "help.branches.new", NewBranchMsg.RequestedAtRemote::new))
+                            Binding.onSelected("n", "branches.help.branches.new", NewBranchMsg.RequestedAtRemote::new))
                     .add(
                             Scopes.COMMITS,
                             Binding.onSelected(
                                     "n",
-                                    "help.commits.newBranch",
+                                    "branches.help.commits.newBranch",
                                     commit -> new NewBranchMsg.RequestedAtCommit(commit.sha()))),
             NewBranchDialogs::popups);
 

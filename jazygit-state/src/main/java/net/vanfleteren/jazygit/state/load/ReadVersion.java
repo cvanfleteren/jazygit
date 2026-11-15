@@ -50,7 +50,7 @@ public record ReadVersion(
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.wholeFile", path));
+        return Option.of(Label.of("state.work.wholeFile", path));
     }
 
     /**

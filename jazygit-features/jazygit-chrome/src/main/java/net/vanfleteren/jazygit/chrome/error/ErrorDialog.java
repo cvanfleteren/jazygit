@@ -18,11 +18,11 @@ public final class ErrorDialog {
     public static final ConfirmDialog.Spec<ErrorPopup> SPEC = new ConfirmDialog.Spec<>(
             "error",
             ErrorPopup.class,
-            popup -> Messages.get("dialog.error.title"),
+            popup -> Messages.get("chrome.dialog.error.title"),
             popup -> ErrorText.of(popup.error()),
             () -> new PopupMsg.Dismissed(ErrorPopup.class),
             () -> new PopupMsg.Dismissed(ErrorPopup.class),
-            "dialog.hint.close");
+            "changes.dialog.hint.close");
 
     private ErrorDialog() {}
 

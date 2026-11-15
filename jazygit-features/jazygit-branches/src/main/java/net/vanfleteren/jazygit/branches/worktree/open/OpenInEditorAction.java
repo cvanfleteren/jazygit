@@ -17,12 +17,12 @@ public final class OpenInEditorAction {
                             Scopes.WORKTREES,
                             Binding.onSelected(
                                     "e",
-                                    "help.worktrees.openInEditor",
+                                    "branches.help.worktrees.openInEditor",
                                     worktree -> new OpenInEditorMsg.WorktreeRequested(worktree.location())))
                     .add(
                             Scopes.BRANCHES,
                             Binding.onSelected(
-                                    "e", "help.branches.openInEditor", OpenInEditorMsg.BranchRequested::new)),
+                                    "e", "branches.help.branches.openInEditor", OpenInEditorMsg.BranchRequested::new)),
             dispatch -> List.of(PopupSlot.returningToFocus(new PickDialog<>(OpenInEditorDialog.MENU, dispatch))));
 
     private OpenInEditorAction() {}

@@ -13,7 +13,7 @@ public final class RerunDialog {
     public static final ConfirmDialog.Spec<RerunPopup> SPEC = new ConfirmDialog.Spec<>(
             "checks-rerun",
             RerunPopup.class,
-            popup -> Messages.get("dialog.rerun.title"),
+            popup -> Messages.get("github.dialog.rerun.title"),
             popup -> message(popup.plan()),
             ChecksMsg.RerunConfirmed::new,
             ChecksMsg.RerunCancelled::new,
@@ -28,13 +28,14 @@ public final class RerunDialog {
      * The runs run again, a line each, then those not, under a heading of their own when there are.
      */
     static String message(RerunPlan plan) {
-        List<String> runs = List.of(Messages.get("dialog.rerun.runs"))
+        List<String> runs = List.of(Messages.get("github.dialog.rerun.runs"))
                 .appendAll(plan.runs()
                         .map(run -> INDENT
-                                + Messages.get("dialog.rerun.run", run.workflow(), run.event(), run.failedJobs())));
+                                + Messages.get(
+                                        "github.dialog.rerun.run", run.workflow(), run.event(), run.failedJobs())));
         List<String> skipped = plan.skipped().isEmpty()
                 ? List.empty()
-                : List.of("", Messages.get("dialog.rerun.skipped"))
+                : List.of("", Messages.get("github.dialog.rerun.skipped"))
                         .appendAll(plan.skipped().map(RerunDialog::skipped));
         return runs.appendAll(skipped).mkString("\n");
     }
@@ -43,8 +44,8 @@ public final class RerunDialog {
         return INDENT
                 + Messages.get(
                         switch (skip.why()) {
-                            case RUNNING -> "dialog.rerun.skippedRunning";
-                            case NOT_ACTIONS, NONE_FAILED -> "dialog.rerun.skippedNotActions";
+                            case RUNNING -> "github.dialog.rerun.skippedRunning";
+                            case NOT_ACTIONS, NONE_FAILED -> "github.dialog.rerun.skippedNotActions";
                         },
                         skip.name());
     }

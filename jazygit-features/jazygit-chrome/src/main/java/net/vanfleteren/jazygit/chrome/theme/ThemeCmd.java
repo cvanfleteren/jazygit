@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
  */
 public record ThemeCmd(Option<ThemeName> theme) implements Cmd {
 
-    public static final Operation SET_THEME = Operation.of("log.title.setTheme", "error.setTheme.failed");
+    public static final Operation SET_THEME = Operation.of("chrome.log.title.setTheme", "chrome.error.setTheme.failed");
 
     @Override
     public Msg run(Env env) {

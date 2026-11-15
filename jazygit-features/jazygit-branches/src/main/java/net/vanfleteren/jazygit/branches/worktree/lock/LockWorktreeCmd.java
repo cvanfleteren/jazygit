@@ -14,9 +14,10 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record LockWorktreeCmd(String location, boolean lock) implements WorktreeCmd {
 
-    public static final Operation LOCK_WORKTREE = Operation.of("log.title.lockWorktree", "error.lockWorktree.failed");
+    public static final Operation LOCK_WORKTREE =
+            Operation.of("branches.log.title.lockWorktree", "branches.error.lockWorktree.failed");
     public static final Operation UNLOCK_WORKTREE =
-            Operation.of("log.title.unlockWorktree", "error.unlockWorktree.failed");
+            Operation.of("branches.log.title.unlockWorktree", "branches.error.unlockWorktree.failed");
 
     @Override
     public Operation operation() {

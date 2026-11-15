@@ -135,8 +135,8 @@ public final class StackUpdate {
                         .map(pick::withChoice)
                         .getOrElse(() -> pick.withRefused(
                                 pick.addTo().isDefined()
-                                        ? "dialog.addToStack.bottomFixed"
-                                        : "dialog.makeStack.bottomAbove")));
+                                        ? "branches.dialog.addToStack.bottomFixed"
+                                        : "branches.dialog.makeStack.bottomAbove")));
     }
 
     /**
@@ -148,7 +148,7 @@ public final class StackUpdate {
                 pick -> pick.choice()
                         .withTop(row)
                         .map(pick::withChoice)
-                        .getOrElse(() -> pick.withRefused("dialog.makeStack.topBelow")));
+                        .getOrElse(() -> pick.withRefused("branches.dialog.makeStack.topBelow")));
     }
 
     /**

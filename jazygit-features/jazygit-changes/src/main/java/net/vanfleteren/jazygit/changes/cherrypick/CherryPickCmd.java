@@ -16,8 +16,9 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record CherryPickCmd(Sha sha) implements GitOperationCmd {
 
-    public static final Operation CHERRY_PICK =
-            Operation.of("log.title.cherryPick", "error.cherryPick.failed").waitingForUnfinished();
+    public static final Operation CHERRY_PICK = Operation.of(
+                    "changes.log.title.cherryPick", "changes.error.cherryPick.failed")
+            .waitingForUnfinished();
 
     @Override
     public Operation operation() {

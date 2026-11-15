@@ -16,11 +16,11 @@ public sealed interface SettingsError extends AppError {
     static Phrase said(SettingsProblem problem) {
         return switch (problem) {
             case SettingsProblem.Unreadable(var file, String reason) ->
-                Phrase.of("settings.unreadable", String.valueOf(file), reason);
+                Phrase.of("state.settings.unreadable", String.valueOf(file), reason);
             case SettingsProblem.Invalid(var file, var keys) ->
-                Phrase.of("settings.invalid", String.valueOf(file), keys.mkString(", "));
+                Phrase.of("state.settings.invalid", String.valueOf(file), keys.mkString(", "));
             case SettingsProblem.Unwritable(var file, String reason) ->
-                Phrase.of("settings.unwritable", String.valueOf(file), reason);
+                Phrase.of("state.settings.unwritable", String.valueOf(file), reason);
         };
     }
 
@@ -45,9 +45,9 @@ public sealed interface SettingsError extends AppError {
         public Phrase phrase() {
             return switch (problem) {
                 case SettingsProblem.Unreadable(var file, String reason) ->
-                    Phrase.of("settings.reread.unreadable", String.valueOf(file), reason);
+                    Phrase.of("state.settings.reread.unreadable", String.valueOf(file), reason);
                 case SettingsProblem.Invalid(var file, var keys) ->
-                    Phrase.of("settings.reread.invalid", String.valueOf(file), keys.mkString(", "));
+                    Phrase.of("state.settings.reread.invalid", String.valueOf(file), keys.mkString(", "));
                 case SettingsProblem.Unwritable unwritable -> said(unwritable);
             };
         }
@@ -60,7 +60,7 @@ public sealed interface SettingsError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.settings.notSaved", Phrase.failure(failure));
+            return Phrase.of("state.error.settings.notSaved", Phrase.failure(failure));
         }
     }
 }

@@ -21,7 +21,7 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
 public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
 
     public static final Operation FORCE_DELETE_BRANCH =
-            Operation.of("log.title.forceDeleteBranch", "error.deleteBranch.failed");
+            Operation.of("branches.log.title.forceDeleteBranch", "branches.error.deleteBranch.failed");
 
     /**
      * What {@code cmd} reports once deleting {@code branch} locally failed with {@code failure}. When git refused as

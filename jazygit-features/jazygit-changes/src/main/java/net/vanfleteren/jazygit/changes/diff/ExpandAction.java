@@ -21,8 +21,8 @@ public final class ExpandAction {
                             keys,
                             (keymap, scope) -> keymap.add(
                                     scope,
-                                    onGap("]", "help.diff.expandDown", ExpandMsg.Toward.DOWN),
-                                    onGap("[", "help.diff.expandUp", ExpandMsg.Toward.UP),
+                                    onGap("]", "changes.help.diff.expandDown", ExpandMsg.Toward.DOWN),
+                                    onGap("[", "changes.help.diff.expandUp", ExpandMsg.Toward.UP),
                                     enter())));
 
     private ExpandAction() {}
@@ -32,10 +32,10 @@ public final class ExpandAction {
      * a version of JSON or YAML rendered it is on (ADR 122): one key bound once, as a version rendered has no markers.
      */
     private static Binding<DiffCursorAt> enter() {
-        Binding<DiffCursorAt> gap = onGap(Keymap.ENTER, "help.diff.expandAll", ExpandMsg.Toward.ALL);
+        Binding<DiffCursorAt> gap = onGap(Keymap.ENTER, "changes.help.diff.expandAll", ExpandMsg.Toward.ALL);
         return new Binding<>(
                 Keymap.ENTER,
-                "help.diff.expandAll",
+                "changes.help.diff.expandAll",
                 at -> gap.action()
                         .apply(at)
                         .orElse(() -> at.filter(cursor -> cursor.cursor() instanceof Anchor.Node)

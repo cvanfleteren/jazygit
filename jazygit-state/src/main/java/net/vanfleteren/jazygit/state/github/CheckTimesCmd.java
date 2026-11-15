@@ -92,7 +92,7 @@ public sealed interface CheckTimesCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.checkTimes"));
+            return Option.of(Label.of("state.work.checkTimes"));
         }
 
         @Override

@@ -33,7 +33,7 @@ public interface OperationCmd extends Cmd {
     default Option<Label> label() {
         Label title = Label.of(operation().logTitleKey());
         return Option.of(subject()
-                .map(subject -> Label.of("work.operation", title, subject))
+                .map(subject -> Label.of("state.work.operation", title, subject))
                 .getOrElse(title));
     }
 

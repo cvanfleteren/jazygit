@@ -28,7 +28,7 @@ public record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implemen
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.search"));
+        return Option.of(Label.of("state.work.search"));
     }
 
     /**

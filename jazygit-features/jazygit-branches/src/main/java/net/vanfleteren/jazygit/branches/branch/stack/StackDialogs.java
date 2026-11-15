@@ -28,20 +28,20 @@ public final class StackDialogs {
             "stack-menu",
             StackPopups.Menu.class,
             menu -> menu.stack()
-                    .map(stack -> Messages.get("dialog.stack.title", String.valueOf(stack.number())))
+                    .map(stack -> Messages.get("branches.dialog.stack.title", String.valueOf(stack.number())))
                     .getOrElse(() -> Messages.get(
-                            "dialog.stack.titleBranch",
+                            "branches.dialog.stack.titleBranch",
                             menu.branch().map(branch -> branch.name().value()).getOrElse(""))),
             List.of(
-                    new Choice<StackPopups.Menu>('m', "dialog.stack.make", StackMsg.MakeChosen::new)
+                    new Choice<StackPopups.Menu>('m', "branches.dialog.stack.make", StackMsg.MakeChosen::new)
                             .shownWhen((model, menu) -> menu.canMake())
-                            .withDetails("dialog.stack.make.details"),
-                    new Choice<StackPopups.Menu>('o', "dialog.stack.stackOn", StackMsg.StackOnChosen::new)
+                            .withDetails("branches.dialog.stack.make.details"),
+                    new Choice<StackPopups.Menu>('o', "branches.dialog.stack.stackOn", StackMsg.StackOnChosen::new)
                             .shownWhen((model, menu) -> menu.canStackOn())
-                            .withDetails("dialog.stack.stackOn.details"),
-                    new Choice<StackPopups.Menu>('a', "dialog.stack.add", StackMsg.AddChosen::new)
+                            .withDetails("branches.dialog.stack.stackOn.details"),
+                    new Choice<StackPopups.Menu>('a', "branches.dialog.stack.add", StackMsg.AddChosen::new)
                             .shownWhen((model, menu) -> menu.canAdd())
-                            .withDetails("dialog.stack.add.details"),
+                            .withDetails("branches.dialog.stack.add.details"),
                     // Disabled, with why, when there is nothing to check out or update (ADR 99).
                     new Choice<StackPopups.Menu>(
                                     'c',
@@ -50,15 +50,15 @@ public final class StackDialogs {
                                     (model, menu) -> menu.canCheckOut())
                             .shownWhen((model, menu) -> menu.canUnstack())
                             .withDetails(StackDialogs::checkoutDetails),
-                    new Choice<StackPopups.Menu>('r', "dialog.stack.rebase", StackMsg.RebaseChosen::new)
+                    new Choice<StackPopups.Menu>('r', "branches.dialog.stack.rebase", StackMsg.RebaseChosen::new)
                             .shownWhen((model, menu) -> menu.canUnstack())
-                            .withDetails("dialog.stack.rebase.details"),
-                    new Choice<StackPopups.Menu>('p', "dialog.stack.push", StackMsg.PushChosen::new)
+                            .withDetails("branches.dialog.stack.rebase.details"),
+                    new Choice<StackPopups.Menu>('p', "branches.dialog.stack.push", StackMsg.PushChosen::new)
                             .shownWhen((model, menu) -> menu.canUnstack())
-                            .withDetails("dialog.stack.push.details"),
-                    new Choice<StackPopups.Menu>('u', "dialog.stack.unstack", StackMsg.UnstackChosen::new)
+                            .withDetails("branches.dialog.stack.push.details"),
+                    new Choice<StackPopups.Menu>('u', "branches.dialog.stack.unstack", StackMsg.UnstackChosen::new)
                             .shownWhen((model, menu) -> menu.canUnstack())
-                            .withDetails("dialog.stack.unstack.details")));
+                            .withDetails("branches.dialog.stack.unstack.details")));
 
     /**
      * The pull requests the one of the branch can be stacked on: in no stack, or on the top of one.
@@ -67,7 +67,7 @@ public final class StackDialogs {
             "stack-on",
             StackPopups.StackOn.class,
             popup -> Messages.get(
-                    "dialog.stackOn.title",
+                    "branches.dialog.stackOn.title",
                     String.valueOf(popup.pullRequest().number().value()),
                     popup.branch().name().value()),
             popup -> popup.targets()
@@ -81,7 +81,8 @@ public final class StackDialogs {
                                             target.pullRequest()
                                                     .stack()
                                                     .map(stack -> Messages.get(
-                                                            "dialog.stackOn.top", String.valueOf(stack.number())))
+                                                            "branches.dialog.stackOn.top",
+                                                            String.valueOf(stack.number())))
                                                     .getOrElse(""),
                                             Theme.Classes.DIM)))),
             StackMsg.TargetChosen::new);
@@ -93,7 +94,8 @@ public final class StackDialogs {
             "stack-unstack",
             StackPopups.Unstack.class,
             popup -> Messages.get(
-                    "dialog.unstack.title", String.valueOf(popup.stack().number())),
+                    "branches.dialog.unstack.title",
+                    String.valueOf(popup.stack().number())),
             StackDialogs::unstacked,
             () -> new PopupMsg.Confirmed(StackPopups.Unstack.class));
 
@@ -105,13 +107,13 @@ public final class StackDialogs {
             "stack-rebase",
             StackPopups.RebaseConfirm.class,
             popup -> Messages.get(
-                    "dialog.rebaseStack.title",
+                    "branches.dialog.rebaseStack.title",
                     String.valueOf(popup.cmd().rebase().stack())),
             StackDialogs::rebased,
             'l',
             popup -> true,
             StackMsg.RebaseLocallyChosen::new,
-            "dialog.rebaseStack.hint");
+            "branches.dialog.rebaseStack.hint");
 
     /**
      * Asks before linking branches as a stack; when a branch is not on the one below, {@code r} links them and rebases
@@ -121,7 +123,7 @@ public final class StackDialogs {
             "stack-confirm",
             StackPopups.Confirm.class,
             confirm -> Messages.get(
-                    "dialog.makeStack.confirmTitle",
+                    "branches.dialog.makeStack.confirmTitle",
                     confirm.cmd()
                             .pullRequests()
                             .map(number -> "#" + number.value())
@@ -130,7 +132,7 @@ public final class StackDialogs {
             'r',
             confirm -> !confirm.diverged().isEmpty(),
             StackMsg.LinkAndRebaseChosen::new,
-            "dialog.makeStack.hintRebase");
+            "branches.dialog.makeStack.hintRebase");
 
     private StackDialogs() {}
 
@@ -154,8 +156,8 @@ public final class StackDialogs {
     static String checkoutLabel(StackPopups.Menu menu) {
         return Messages.get(
                 menu.checkout() == StackCheckout.Status.CHECK_OUT || menu.checkout() == StackCheckout.Status.NOTHING
-                        ? "dialog.stack.checkout"
-                        : "dialog.stack.update");
+                        ? "branches.dialog.stack.checkout"
+                        : "branches.dialog.stack.update");
     }
 
     /**
@@ -164,10 +166,10 @@ public final class StackDialogs {
     static String checkoutDetails(StackPopups.Menu menu) {
         return Messages.get(
                 switch (menu.checkout()) {
-                    case CHECK_OUT -> "dialog.stack.checkout.details";
-                    case UPDATE -> "dialog.stack.update.details";
-                    case UP_TO_DATE -> "dialog.stack.update.upToDate";
-                    case NOTHING -> "dialog.stack.checkout.nothing";
+                    case CHECK_OUT -> "branches.dialog.stack.checkout.details";
+                    case UPDATE -> "branches.dialog.stack.update.details";
+                    case UP_TO_DATE -> "branches.dialog.stack.update.upToDate";
+                    case NOTHING -> "branches.dialog.stack.checkout.nothing";
                 });
     }
 
@@ -188,13 +190,13 @@ public final class StackDialogs {
                 .map(line -> pad("#" + line.number().value(), numbers) + "  "
                         + pad(line.branch().value(), width) + "  "
                         + Messages.get(
-                                "dialog.checkoutStack." + kindKey(line.kind()),
+                                "branches.dialog.checkoutStack." + kindKey(line.kind()),
                                 line.commits(),
                                 line.upstream().shortName()));
         List<String> skipped = Option.when(
                         !checkout.skipped().isEmpty(),
                         () -> Messages.get(
-                                "dialog.checkoutStack.skipped",
+                                "branches.dialog.checkoutStack.skipped",
                                 checkout.skipped()
                                         .map(number -> "#" + number.value())
                                         .mkString(", ")))
@@ -209,26 +211,27 @@ public final class StackDialogs {
      */
     private static String landings(StackCheckout checkout) {
         if (!checkout.startable()) {
-            return Messages.get("dialog.checkoutStack.refused");
+            return Messages.get("branches.dialog.checkoutStack.refused");
         }
         StackCheckout.Landing preferred = checkout.preferred();
         List<String> options = checkout.top()
                 .map(top -> marked(
-                        Messages.get("dialog.checkoutStack.top", top.value()), preferred == StackCheckout.Landing.TOP))
+                        Messages.get("branches.dialog.checkoutStack.top", top.value()),
+                        preferred == StackCheckout.Landing.TOP))
                 .toList()
                 .appendAll(checkout.asked()
                         .map(asked -> marked(
                                 Messages.get(
-                                        "dialog.checkoutStack.asked",
+                                        "branches.dialog.checkoutStack.asked",
                                         String.valueOf(checkout.on().get().value()),
                                         asked.value()),
                                 preferred == StackCheckout.Landing.ASKED)))
-                .append(Messages.get("dialog.checkoutStack.stay"));
-        return Messages.get("dialog.checkoutStack.then") + "\n" + options.mkString("\n");
+                .append(Messages.get("branches.dialog.checkoutStack.stay"));
+        return Messages.get("branches.dialog.checkoutStack.then") + "\n" + options.mkString("\n");
     }
 
     private static String marked(String option, boolean preferred) {
-        return preferred ? option + "  " + Messages.get("dialog.checkoutStack.enter") : option;
+        return preferred ? option + "  " + Messages.get("branches.dialog.checkoutStack.enter") : option;
     }
 
     private static String pad(String text, int width) {
@@ -255,13 +258,15 @@ public final class StackDialogs {
     static String rebased(StackPopups.RebaseConfirm popup) {
         StackRebaseCmd.RebaseStack cmd = popup.cmd();
         String branches = Messages.get(
-                "dialog.rebaseStack.message",
+                "branches.dialog.rebaseStack.message",
                 cmd.rebase().branches().map(branch -> branch.value()).mkString(", "),
                 cmd.rebase().base().label());
         List<String> dropped = cmd.commits()
                 .flatMap(layer -> layer.merges()
                         .map(merge -> Messages.get(
-                                "dialog.rebaseStack.dropped", layer.branch().value(), merge.subject())));
+                                "branches.dialog.rebaseStack.dropped",
+                                layer.branch().value(),
+                                merge.subject())));
         return dropped.isEmpty() ? branches : branches + "\n\n" + dropped.mkString("\n");
     }
 
@@ -269,8 +274,10 @@ public final class StackDialogs {
      * What stays of a stack taken apart: its open pull requests, unlinked, and its merged ones, in it on GitHub.
      */
     static String unstacked(StackPopups.Unstack popup) {
-        String open = Messages.get("dialog.unstack.message", popup.open());
-        return popup.staying() == 0 ? open : open + "\n" + Messages.get("dialog.unstack.staying", popup.staying());
+        String open = Messages.get("branches.dialog.unstack.message", popup.open());
+        return popup.staying() == 0
+                ? open
+                : open + "\n" + Messages.get("branches.dialog.unstack.staying", popup.staying());
     }
 
     /**
@@ -280,23 +287,24 @@ public final class StackDialogs {
         List<String> changes = confirm.cmd()
                 .changes()
                 .map(change -> Messages.get(
-                        "dialog.makeStack.change",
+                        "branches.dialog.makeStack.change",
                         String.valueOf(change.number().value()),
                         change.from().map(GhBranch::name).getOrElse("?"),
                         change.to().name()));
         List<String> diverged = confirm.diverged()
                 .map(branch -> Messages.get(
-                        "dialog.makeStack.behind",
+                        "branches.dialog.makeStack.behind",
                         branch.branch().value(),
                         String.valueOf(branch.behind()),
                         branch.below().value()));
         return List.of(
                         Option.when(
                                 !changes.isEmpty(),
-                                () -> Messages.get("dialog.makeStack.confirmMessage", changes.mkString("\n"))),
+                                () -> Messages.get("branches.dialog.makeStack.confirmMessage", changes.mkString("\n"))),
                         Option.when(
                                 !diverged.isEmpty(),
-                                () -> Messages.get("dialog.makeStack.divergedMessage", diverged.mkString("\n"))))
+                                () -> Messages.get(
+                                        "branches.dialog.makeStack.divergedMessage", diverged.mkString("\n"))))
                 .flatMap(section -> section)
                 .mkString("\n\n");
     }

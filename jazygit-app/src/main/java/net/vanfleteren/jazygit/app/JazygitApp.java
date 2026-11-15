@@ -138,7 +138,7 @@ public class JazygitApp extends ToolkitApp {
      */
     private void started(Model model) {
         focus.moveToPaneOf(model);
-        terminal.title(Messages.get("window.title", model.repositoryName()));
+        terminal.title(Messages.get("app.window.title", model.repositoryName()));
     }
 
     /**

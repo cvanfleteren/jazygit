@@ -23,7 +23,7 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.upstream.invalid", text.strip());
+            return Phrase.of("branches.error.upstream.invalid", text.strip());
         }
     }
 
@@ -37,7 +37,7 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of(diverged ? "error.push.diverged" : "error.push.behind", branch.value());
+            return Phrase.of(diverged ? "branches.error.push.diverged" : "branches.error.push.behind", branch.value());
         }
     }
 
@@ -51,7 +51,7 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.upstream.changed", branch.value(), upstream);
+            return Phrase.of("branches.error.upstream.changed", branch.value(), upstream);
         }
     }
 
@@ -62,7 +62,7 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.detached");
+            return Phrase.of("branches.error.detached");
         }
     }
 
@@ -74,7 +74,7 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.fastForward.unpushed", branch.value());
+            return Phrase.of("branches.error.fastForward.unpushed", branch.value());
         }
     }
 
@@ -86,7 +86,8 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.stackNotRebased", Phrase.verbatim(String.valueOf(stack)), why.phrase(branch));
+            return Phrase.of(
+                    "branches.error.stackNotRebased", Phrase.verbatim(String.valueOf(stack)), why.phrase(branch));
         }
     }
 
@@ -98,7 +99,8 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.stackNotPushed", Phrase.verbatim(String.valueOf(stack)), why.phrase(branch));
+            return Phrase.of(
+                    "branches.error.stackNotPushed", Phrase.verbatim(String.valueOf(stack)), why.phrase(branch));
         }
     }
 
@@ -110,7 +112,7 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.moveCommits.changes", target.name());
+            return Phrase.of("branches.error.moveCommits.changes", target.name());
         }
     }
 
@@ -124,7 +126,7 @@ public sealed interface BranchError extends AppError {
         @Override
         public Phrase phrase() {
             return Phrase.of(
-                    "error.moveCommits.throughMerge",
+                    "branches.error.moveCommits.throughMerge",
                     oldest.shortSha(),
                     branch.value(),
                     merge.shortSha(),
@@ -141,7 +143,7 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.deleteBranch.default", branch.name());
+            return Phrase.of("branches.error.deleteBranch.default", branch.name());
         }
     }
 
@@ -156,7 +158,7 @@ public sealed interface BranchError extends AppError {
         @Override
         public Phrase phrase() {
             return Phrase.of(
-                    "error.nukeBranch.notAll",
+                    "branches.error.nukeBranch.notAll",
                     Phrase.verbatim(branch.value()),
                     Phrase.verbatim(left.mkString(", ")),
                     Phrase.joined("; ", failures.map(Phrase::failure)));
@@ -171,7 +173,7 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.pullRequest.diverged", branch.value(), upstream.shortName());
+            return Phrase.of("branches.error.pullRequest.diverged", branch.value(), upstream.shortName());
         }
     }
 
@@ -183,7 +185,7 @@ public sealed interface BranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.checkoutPr.otherRepository", pullRequest);
+            return Phrase.of("branches.error.checkoutPr.otherRepository", pullRequest);
         }
     }
 
@@ -223,7 +225,8 @@ public sealed interface BranchError extends AppError {
          * Why, said of {@code branch}.
          */
         Phrase phrase(String branch) {
-            return Phrase.of("error.stackNotRebased." + name().toLowerCase(Locale.ROOT), Phrase.verbatim(branch));
+            return Phrase.of(
+                    "branches.error.stackNotRebased." + name().toLowerCase(Locale.ROOT), Phrase.verbatim(branch));
         }
     }
 }

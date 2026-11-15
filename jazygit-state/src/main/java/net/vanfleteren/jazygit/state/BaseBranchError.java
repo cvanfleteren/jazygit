@@ -14,7 +14,7 @@ public sealed interface BaseBranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.divergence.noBase", branch.value());
+            return Phrase.of("state.error.divergence.noBase", branch.value());
         }
     }
 
@@ -25,7 +25,7 @@ public sealed interface BaseBranchError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.divergence.isBase", branch.value());
+            return Phrase.of("state.error.divergence.isBase", branch.value());
         }
     }
 }

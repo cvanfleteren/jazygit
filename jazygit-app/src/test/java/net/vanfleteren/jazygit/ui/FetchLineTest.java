@@ -178,7 +178,7 @@ class FetchLineTest {
                 FetchLine.labelText(new FetchCmd.Fetch(new RemoteName("origin"), List.empty())
                         .label()
                         .get()));
-        assertEquals("Reading pull request #12345", FetchLine.labelText(Label.of("work.pullRequest", "12345")));
+        assertEquals("Reading pull request #12345", FetchLine.labelText(Label.of("state.work.pullRequest", "12345")));
         BranchName feature = new BranchName("feature");
         BranchRef base = new BranchRef.Local(new BranchName("main"));
         assertEquals(
@@ -193,7 +193,8 @@ class FetchLineTest {
                         .label()
                         .get()));
         assertEquals(
-                "Push feature", FetchLine.labelText(Label.of("work.operation", Label.of("log.title.push"), "feature")));
+                "Push feature",
+                FetchLine.labelText(Label.of("state.work.operation", Label.of("branches.log.title.push"), "feature")));
     }
 
     private static final Instant NOW = Instant.parse("2026-10-17T12:00:00Z");

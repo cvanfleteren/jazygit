@@ -15,7 +15,7 @@ public record LoadWorkflowRuns(String workflowId, Option<String> after) implemen
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.workflowRuns"));
+        return Option.of(Label.of("state.work.workflowRuns"));
     }
 
     @Override

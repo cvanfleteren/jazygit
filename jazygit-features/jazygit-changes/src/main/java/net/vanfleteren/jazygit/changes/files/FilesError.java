@@ -41,7 +41,7 @@ public sealed interface FilesError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.unchanged", path.isEmpty() ? "/" : path);
+            return Phrase.of("changes.error.unchanged", path.isEmpty() ? "/" : path);
         }
     }
 }

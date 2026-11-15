@@ -14,8 +14,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record RebaseCmd(BranchName branch) implements BranchCmd {
 
-    public static final Operation REBASE =
-            Operation.of("log.title.rebase", "error.rebase.failed").waitingForUnfinished();
+    public static final Operation REBASE = Operation.of("branches.log.title.rebase", "branches.error.rebase.failed")
+            .waitingForUnfinished();
 
     @Override
     public Operation operation() {

@@ -14,7 +14,7 @@ public final class RemoveWorktreeAction {
                     Scopes.WORKTREES,
                     Binding.onSelected(
                             "d",
-                            "help.worktrees.remove",
+                            "branches.help.worktrees.remove",
                             worktree -> new RemoveWorktreeMsg.Requested(worktree.location()))),
             RemoveWorktreeDialogs::popups);
 

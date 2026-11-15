@@ -14,17 +14,20 @@ public final class ShowPullRequestAction {
             keys -> Scopes.PULL_REQUESTS.foldLeft(
                     keys.add(
                                     Scopes.BRANCHES,
-                                    Binding.onSelected("o", "help.branches.pullRequest", PullRequestMsg.Requested::new))
+                                    Binding.onSelected(
+                                            "o", "github.help.branches.pullRequest", PullRequestMsg.Requested::new))
                             .add(
                                     Scopes.BRANCHES,
-                                    Binding.onSelected("F", "help.branches.files", PullRequestMsg.FilesRequested::new)),
+                                    Binding.onSelected(
+                                            "F", "github.help.branches.files", PullRequestMsg.FilesRequested::new)),
                     (added, scope) -> added.add(
                                     scope,
-                                    Binding.onSelected("o", "help.prs.show", PullRequestMsg.SummaryRequested::new))
+                                    Binding.onSelected(
+                                            "o", "github.help.prs.show", PullRequestMsg.SummaryRequested::new))
                             .add(
                                     scope,
                                     Binding.onSelected(
-                                            "F", "help.prs.files", PullRequestMsg.SummaryFilesRequested::new))),
+                                            "F", "github.help.prs.files", PullRequestMsg.SummaryFilesRequested::new))),
             PullRequestDialogs::popups);
 
     private ShowPullRequestAction() {}

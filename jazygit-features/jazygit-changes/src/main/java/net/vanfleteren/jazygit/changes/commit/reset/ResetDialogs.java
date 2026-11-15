@@ -23,15 +23,17 @@ public final class ResetDialogs {
             "reset-commit",
             ResetPopup.class,
             popup -> popup.dropped() > 0
-                    ? Messages.get("dialog.reset.titleDropping", popup.target().label(), popup.dropped())
-                    : Messages.get("dialog.reset.title", popup.target().label()),
+                    ? Messages.get(
+                            "changes.dialog.reset.titleDropping", popup.target().label(), popup.dropped())
+                    : Messages.get("changes.dialog.reset.title", popup.target().label()),
             List.of(
-                    new Choice<ResetPopup>('m', "dialog.reset.mixed", () -> new ResetMsg.Chosen(ResetMode.MIXED))
-                            .withDetails("dialog.reset.mixed.details"),
-                    new Choice<ResetPopup>('s', "dialog.reset.soft", () -> new ResetMsg.Chosen(ResetMode.SOFT))
-                            .withDetails("dialog.reset.soft.details"),
-                    new Choice<ResetPopup>('h', "dialog.reset.hard", () -> new ResetMsg.Chosen(ResetMode.HARD))
-                            .withDetails("dialog.reset.hard.details")));
+                    new Choice<ResetPopup>(
+                                    'm', "changes.dialog.reset.mixed", () -> new ResetMsg.Chosen(ResetMode.MIXED))
+                            .withDetails("changes.dialog.reset.mixed.details"),
+                    new Choice<ResetPopup>('s', "changes.dialog.reset.soft", () -> new ResetMsg.Chosen(ResetMode.SOFT))
+                            .withDetails("changes.dialog.reset.soft.details"),
+                    new Choice<ResetPopup>('h', "changes.dialog.reset.hard", () -> new ResetMsg.Chosen(ResetMode.HARD))
+                            .withDetails("changes.dialog.reset.hard.details")));
 
     /**
      * Asks to confirm a hard reset, which discards the uncommitted changes.
@@ -39,10 +41,11 @@ public final class ResetDialogs {
     public static final ConfirmDialog.Spec<HardResetPopup> HARD_RESET = ConfirmDialog.Spec.confirming(
             "hard-reset",
             HardResetPopup.class,
-            popup -> Messages.get("dialog.hardReset.title", popup.target().label()),
+            popup -> Messages.get(
+                    "changes.dialog.hardReset.title", popup.target().label()),
             popup -> popup.files()
-                    .map(files -> Messages.get("dialog.hardReset.message", files))
-                    .getOrElse(() -> Messages.get("dialog.hardReset.messageUnknown")));
+                    .map(files -> Messages.get("changes.dialog.hardReset.message", files))
+                    .getOrElse(() -> Messages.get("changes.dialog.hardReset.messageUnknown")));
 
     private ResetDialogs() {}
 

@@ -105,18 +105,21 @@ class KeymapTest {
     @Test
     void aKeyCannotBeBoundTwiceInAPanel() {
         Keymap once = Keymap.empty()
-                .add(Scopes.BRANCHES, Keymap.Binding.onSelected("x", "help.global.quit", CheckoutMsg.Requested::new));
+                .add(
+                        Scopes.BRANCHES,
+                        Keymap.Binding.onSelected("x", "app.help.global.quit", CheckoutMsg.Requested::new));
 
         org.junit.jupiter.api.Assertions.assertThrows(
                 IllegalArgumentException.class,
                 () -> once.add(
                         Scopes.BRANCHES,
-                        Keymap.Binding.onSelected("x", "help.global.quit", CheckoutMsg.Requested::new)));
+                        Keymap.Binding.onSelected("x", "app.help.global.quit", CheckoutMsg.Requested::new)));
         org.junit.jupiter.api.Assertions.assertThrows(
                 IllegalArgumentException.class,
                 () -> once.add(
                         Scopes.BRANCHES,
-                        Keymap.Binding.onSelected(Keymap.HELP_KEY, "help.global.quit", CheckoutMsg.Requested::new)));
+                        Keymap.Binding.onSelected(
+                                Keymap.HELP_KEY, "app.help.global.quit", CheckoutMsg.Requested::new)));
     }
 
     @Test
@@ -197,7 +200,7 @@ class KeymapTest {
         Keymap ctrlX = Keymap.empty()
                 .add(
                         Scopes.BRANCHES,
-                        Keymap.Binding.onSelected("ctrl+x", "help.global.quit", CheckoutMsg.Requested::new));
+                        Keymap.Binding.onSelected("ctrl+x", "app.help.global.quit", CheckoutMsg.Requested::new));
         Option<BranchName> selection = Option.of(new BranchName("x"));
 
         assertEquals(
@@ -232,47 +235,51 @@ class KeymapTest {
     void thePanelsListTheKeysOfTheFeaturesInTheOrderOfTheFeatures() {
         assertEquals(
                 List.of(
-                        "help.commitFiles.filter",
-                        "help.commitFiles.close",
-                        "help.commitFiles.allFiles",
-                        "help.commitFiles.listed",
-                        "help.commitFiles.refresh",
-                        "help.commitFiles.version",
-                        "help.commitFiles.render"),
+                        "changes.help.commitFiles.filter",
+                        "changes.help.commitFiles.close",
+                        "changes.help.commitFiles.allFiles",
+                        "changes.help.commitFiles.listed",
+                        "changes.help.commitFiles.refresh",
+                        "changes.help.commitFiles.version",
+                        "changes.help.commitFiles.render"),
                 descriptions(Scopes.COMMIT_FILES));
         assertEquals(
                 List.of(
-                        "help.diff.nextFile",
-                        "help.diff.previousFile",
-                        "help.diff.expandDown",
-                        "help.diff.expandUp",
-                        "help.diff.expandAll",
-                        "help.diff.foldAll",
-                        "help.diff.version",
-                        "help.diff.render",
-                        "help.diff.search",
-                        "help.diff.nextMatch",
-                        "help.diff.previousMatch",
-                        "help.diff.copy",
-                        "help.diff.range"),
+                        "changes.help.diff.nextFile",
+                        "changes.help.diff.previousFile",
+                        "changes.help.diff.expandDown",
+                        "changes.help.diff.expandUp",
+                        "changes.help.diff.expandAll",
+                        "changes.help.diff.foldAll",
+                        "changes.help.diff.version",
+                        "changes.help.diff.render",
+                        "changes.help.diff.search",
+                        "changes.help.diff.nextMatch",
+                        "changes.help.diff.previousMatch",
+                        "changes.help.diff.copy",
+                        "changes.help.diff.range"),
                 descriptions(Scopes.DIFF));
         assertEquals(
                 List.of(
-                        "help.diff.nextFile",
-                        "help.diff.previousFile",
-                        "help.diff.expandDown",
-                        "help.diff.expandUp",
-                        "help.diff.expandAll",
-                        "help.diff.foldAll",
-                        "help.diff.version",
-                        "help.diff.render",
-                        "help.diff.search",
-                        "help.diff.copy"),
-                descriptions(Scopes.PULL_REQUEST_DIFF).filter(key -> key.startsWith("help.diff.")));
+                        "changes.help.diff.nextFile",
+                        "changes.help.diff.previousFile",
+                        "changes.help.diff.expandDown",
+                        "changes.help.diff.expandUp",
+                        "changes.help.diff.expandAll",
+                        "changes.help.diff.foldAll",
+                        "changes.help.diff.version",
+                        "changes.help.diff.render",
+                        "changes.help.diff.search",
+                        "changes.help.diff.copy"),
+                descriptions(Scopes.PULL_REQUEST_DIFF).filter(key -> key.startsWith("changes.help.diff.")));
         assertEquals(
-                List.of("help.files.filter", "help.files.allFiles", "help.files.fetch"),
+                List.of("changes.help.files.filter", "changes.help.files.allFiles", "changes.help.files.fetch"),
                 descriptions(Scopes.FILES)
-                        .filter(List.of("help.files.filter", "help.files.allFiles", "help.files.fetch")::contains));
+                        .filter(
+                                List.of(
+                                        "changes.help.files.filter",
+                                        "changes.help.files.allFiles",
+                                        "changes.help.files.fetch")::contains));
     }
 
     private List<String> descriptions(Keymap.Scope<?> scope) {

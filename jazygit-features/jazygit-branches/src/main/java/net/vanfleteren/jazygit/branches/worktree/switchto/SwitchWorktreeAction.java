@@ -12,7 +12,9 @@ public final class SwitchWorktreeAction {
     public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> keys.add(
             Scopes.WORKTREES,
             Binding.onSelected(
-                    " ", "help.worktrees.switch", worktree -> new SwitchWorktreeMsg.Requested(worktree.location()))));
+                    " ",
+                    "branches.help.worktrees.switch",
+                    worktree -> new SwitchWorktreeMsg.Requested(worktree.location()))));
 
     private SwitchWorktreeAction() {}
 }

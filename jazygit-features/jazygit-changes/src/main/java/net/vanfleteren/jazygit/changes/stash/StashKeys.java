@@ -12,10 +12,10 @@ public final class StashKeys {
     private StashKeys() {}
 
     public static Keymap register(Keymap keys) {
-        return keys.add(Scopes.FILES, Binding.always("s", "help.files.stash", StashMsg.Requested::new))
+        return keys.add(Scopes.FILES, Binding.always("s", "changes.help.files.stash", StashMsg.Requested::new))
                 .add(
                         Scopes.STASH,
-                        Binding.onSelected("g", "help.stash.pop", StashMsg.PopRequested::new),
-                        Binding.onSelected("d", "help.stash.drop", StashMsg.DropRequested::new));
+                        Binding.onSelected("g", "changes.help.stash.pop", StashMsg.PopRequested::new),
+                        Binding.onSelected("d", "changes.help.stash.drop", StashMsg.DropRequested::new));
     }
 }

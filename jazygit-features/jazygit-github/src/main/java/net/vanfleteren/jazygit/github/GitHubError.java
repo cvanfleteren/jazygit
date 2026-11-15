@@ -19,7 +19,7 @@ public sealed interface GitHubError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.mergePr.failed", branch.value(), message);
+            return Phrase.of("github.error.mergePr.failed", branch.value(), message);
         }
     }
 
@@ -30,7 +30,7 @@ public sealed interface GitHubError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.pullRequest.noBase", branch.value());
+            return Phrase.of("github.error.pullRequest.noBase", branch.value());
         }
     }
 
@@ -42,7 +42,7 @@ public sealed interface GitHubError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.checkoutPr.changes", pullRequest);
+            return Phrase.of("github.error.checkoutPr.changes", pullRequest);
         }
     }
 
@@ -54,7 +54,7 @@ public sealed interface GitHubError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.checkoutPr.here", pullRequest);
+            return Phrase.of("github.error.checkoutPr.here", pullRequest);
         }
     }
 
@@ -65,7 +65,7 @@ public sealed interface GitHubError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.browse.notOnRemote", branch.value());
+            return Phrase.of("github.error.browse.notOnRemote", branch.value());
         }
     }
 
@@ -77,7 +77,7 @@ public sealed interface GitHubError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.review." + why.name().toLowerCase(Locale.ROOT));
+            return Phrase.of("github.error.review." + why.name().toLowerCase(Locale.ROOT));
         }
 
         /**

@@ -19,12 +19,15 @@ public final class CreatePullRequestDialogs {
     public static final ConfirmDialog.Spec<PushFirstPopup> PUSH_FIRST = new ConfirmDialog.Spec<>(
             "push-first",
             PushFirstPopup.class,
-            popup -> Messages.get("dialog.pushFirst.title", popup.branch().value()),
+            popup ->
+                    Messages.get("github.dialog.pushFirst.title", popup.branch().value()),
             popup -> popup.unpushed()
                     .map(commits -> Messages.get(
-                            "dialog.pushFirst.unpushed", commits, popup.target().shortName()))
+                            "github.dialog.pushFirst.unpushed",
+                            commits,
+                            popup.target().shortName()))
                     .getOrElse(() -> Messages.get(
-                            "dialog.pushFirst.untracked", popup.target().shortName())),
+                            "github.dialog.pushFirst.untracked", popup.target().shortName())),
             CreatePullRequestMsg.PushFirstConfirmed::new);
 
     private CreatePullRequestDialogs() {}

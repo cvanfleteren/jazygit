@@ -15,7 +15,7 @@ public final class ReactionDialog {
     public static final ChoiceDialog.Spec<ReactionPopup> SPEC = new ChoiceDialog.Spec<>(
             "review-comment-reaction",
             ReactionPopup.class,
-            popup -> Messages.get("dialog.reaction.title"),
+            popup -> Messages.get("github.dialog.reaction.title"),
             List.of(Reaction.values()).zipWithIndex().map(each -> choice(each._1(), each._2())));
 
     private ReactionDialog() {}
@@ -28,9 +28,9 @@ public final class ReactionDialog {
     }
 
     private static String label(ReactionPopup popup, Reaction reaction) {
-        String name = Messages.get("dialog.reaction." + reaction.name());
+        String name = Messages.get("github.dialog.reaction." + reaction.name());
         return popup.reactions().viewerGave(reaction)
-                ? Messages.get("dialog.reaction.given", reaction.emoji(), name)
-                : Messages.get("dialog.reaction.option", reaction.emoji(), name);
+                ? Messages.get("github.dialog.reaction.given", reaction.emoji(), name)
+                : Messages.get("github.dialog.reaction.option", reaction.emoji(), name);
     }
 }

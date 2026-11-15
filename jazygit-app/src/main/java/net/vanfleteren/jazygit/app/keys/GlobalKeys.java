@@ -26,75 +26,79 @@ final class GlobalKeys {
         // The panels show their help for ? themselves; run from the help, it closes it, as pressing it there does.
         return keys.global(new Keymap.Global.Dispatching(
                         Keymap.HELP_KEY,
-                        "help.global.help",
+                        "app.help.global.help",
                         event -> false,
                         () -> new PopupMsg.Dismissed(HelpPopup.class)))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+r",
-                        "help.global.recentRepos",
+                        "app.help.global.recentRepos",
                         GlobalKeys::isRecentReposKey,
                         RecentReposMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching(
-                        "ctrl+s", "help.global.settings", GlobalKeys::isSettingsKey, SettingsPanelMsg.Requested::new))
+                        "ctrl+s",
+                        "app.help.global.settings",
+                        GlobalKeys::isSettingsKey,
+                        SettingsPanelMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+w",
-                        "help.global.ignoreWhitespace",
+                        "app.help.global.ignoreWhitespace",
                         GlobalKeys::isWhitespaceKey,
                         DiffOptionsMsg.WhitespaceToggled::new))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+d",
-                        "help.global.diffStyle",
+                        "app.help.global.diffStyle",
                         GlobalKeys::isDiffStyleKey,
                         DiffOptionsMsg.StyleToggled::new))
                 // Not ctrl+i: a terminal sends it as Tab, which moves the focus before any handler sees it.
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+e",
-                        "help.global.diffWords",
+                        "app.help.global.diffWords",
                         GlobalKeys::isDiffWordsKey,
                         DiffOptionsMsg.WordsToggled::new))
                 .global(new Keymap.Global.Dispatching(
                         "}",
-                        "help.global.moreContext",
+                        "app.help.global.moreContext",
                         event -> isChar(event, '}'),
                         DiffOptionsMsg.ContextWidened::new))
                 .global(new Keymap.Global.Dispatching(
                         "{",
-                        "help.global.lessContext",
+                        "app.help.global.lessContext",
                         event -> isChar(event, '{'),
                         DiffOptionsMsg.ContextNarrowed::new))
                 .global(new Keymap.Global.Dispatching(
-                        "ctrl+p", "help.global.screen", GlobalKeys::isScreenKey, PrOverviewMsg.Toggled::new))
+                        "ctrl+p", "app.help.global.screen", GlobalKeys::isScreenKey, PrOverviewMsg.Toggled::new))
                 // Escape only gets here when nothing else, like a dialog, took it.
                 .global(new Keymap.Global.Dispatching(
-                        "esc", "help.global.cherryPickDrop", GlobalKeys::isEscape, CherryPickMsg.Dropped::new))
+                        "esc", "app.help.global.cherryPickDrop", GlobalKeys::isEscape, CherryPickMsg.Dropped::new))
                 .global(new Keymap.Global.Dispatching(
-                        "M", "help.global.inProgress", GlobalKeys::isInProgressKey, InProgressMsg.Requested::new))
+                        "M", "app.help.global.inProgress", GlobalKeys::isInProgressKey, InProgressMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching(
                         "<",
-                        "help.global.narrower",
+                        "app.help.global.narrower",
                         event -> isChar(event, '<'),
                         () -> new LayoutMsg.Stepped(-LayoutUpdate.STEP)))
                 .global(new Keymap.Global.Dispatching(
                         ">",
-                        "help.global.wider",
+                        "app.help.global.wider",
                         event -> isChar(event, '>'),
                         () -> new LayoutMsg.Stepped(LayoutUpdate.STEP)))
                 // Characters, not places on the keyboard: + and - are on every layout, and on the numpad (ADR 92).
                 .global(new Keymap.Global.Dispatching(
                         "+",
-                        "help.global.taller",
+                        "app.help.global.taller",
                         event -> isChar(event, '+'),
                         () -> new LayoutMsg.PaneStepped(LayoutUpdate.STEP)))
                 .global(new Keymap.Global.Dispatching(
                         "-",
-                        "help.global.shorter",
+                        "app.help.global.shorter",
                         event -> isChar(event, '-'),
                         () -> new LayoutMsg.PaneStepped(-LayoutUpdate.STEP)))
                 .global(new Keymap.Global.Dispatching(
-                        "Z", "help.global.maximize", event -> isChar(event, 'Z'), LayoutMsg.MaximizeToggled::new))
+                        "Z", "app.help.global.maximize", event -> isChar(event, 'Z'), LayoutMsg.MaximizeToggled::new))
                 .global(new Keymap.Global.Dispatching(
-                        "@", "help.global.commandLog", event -> isChar(event, '@'), CommandLogFocused::new))
-                .global(new Keymap.Global.Dispatching("q", "help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
+                        "@", "app.help.global.commandLog", event -> isChar(event, '@'), CommandLogFocused::new))
+                .global(new Keymap.Global.Dispatching(
+                        "q", "app.help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
     }
 
     /**

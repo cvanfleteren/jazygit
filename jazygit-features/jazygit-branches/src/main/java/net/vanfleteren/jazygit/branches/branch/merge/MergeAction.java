@@ -10,7 +10,8 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 public final class MergeAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
-            keys -> keys.add(Scopes.BRANCHES, Binding.onSelected("m", "help.branches.merge", MergeMsg.Requested::new)),
+            keys -> keys.add(
+                    Scopes.BRANCHES, Binding.onSelected("m", "branches.help.branches.merge", MergeMsg.Requested::new)),
             MergeDialogs::popups);
 
     private MergeAction() {}

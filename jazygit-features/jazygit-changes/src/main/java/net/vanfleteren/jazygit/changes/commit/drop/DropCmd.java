@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.state.operation.Operation;
 public record DropCmd(Sha sha) implements GitOperationCmd {
 
     public static final Operation DROP =
-            Operation.of("log.title.drop", "error.drop.failed").waitingForUnfinished();
+            Operation.of("changes.log.title.drop", "changes.error.drop.failed").waitingForUnfinished();
 
     @Override
     public Operation operation() {

@@ -12,7 +12,8 @@ public final class FixupAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                     Scopes.COMMITS,
-                    Binding.onSelected("f", "help.commits.fixup", commit -> new FixupMsg.Requested(commit.sha()))),
+                    Binding.onSelected(
+                            "f", "changes.help.commits.fixup", commit -> new FixupMsg.Requested(commit.sha()))),
             FixupDialogs::popups);
 
     private FixupAction() {}

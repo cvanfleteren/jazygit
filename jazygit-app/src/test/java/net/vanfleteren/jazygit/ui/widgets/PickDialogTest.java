@@ -77,7 +77,7 @@ class PickDialogTest {
                         popup -> "Merge into",
                         popup -> popup.branches().map(PickDialog.Row::of),
                         Picked::new,
-                        Option.of("dialog.recentRepos.none")),
+                        Option.of("branches.dialog.recentRepos.none")),
                 cursor);
         Supplier<Element> view = () -> stack(
                 text("background"),

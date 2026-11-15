@@ -23,7 +23,7 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.gh"));
+            return Option.of(Label.of("chrome.work.gh"));
         }
 
         @Override
@@ -57,7 +57,7 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.gh"));
+            return Option.of(Label.of("chrome.work.gh"));
         }
 
         @Override
@@ -148,7 +148,7 @@ public sealed interface SettingsPanelCmd extends Cmd {
     record EditFile() implements SettingsPanelCmd {
 
         public static final Operation EDIT_SETTINGS =
-                Operation.of("log.title.editSettings", "error.editSettings.failed");
+                Operation.of("chrome.log.title.editSettings", "chrome.error.editSettings.failed");
 
         @Override
         public Msg run(Env env) {

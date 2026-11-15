@@ -20,7 +20,7 @@ public sealed interface CommentsCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.comments", String.valueOf(number.value())));
+            return Option.of(Label.of("github.work.comments", String.valueOf(number.value())));
         }
 
         @Override

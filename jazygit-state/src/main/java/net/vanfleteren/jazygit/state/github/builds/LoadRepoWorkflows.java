@@ -15,7 +15,7 @@ public record LoadRepoWorkflows() implements Cmd {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.repoWorkflows"));
+        return Option.of(Label.of("state.work.repoWorkflows"));
     }
 
     @Override

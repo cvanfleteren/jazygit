@@ -13,7 +13,7 @@ public record LoadWorktrees() implements Targeted<List<Worktree>> {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.worktrees"));
+        return Option.of(Label.of("state.work.worktrees"));
     }
 
     @Override

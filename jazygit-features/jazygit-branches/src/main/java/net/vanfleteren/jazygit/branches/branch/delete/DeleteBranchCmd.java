@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public sealed interface DeleteBranchCmd extends BranchCmd {
 
-    Operation DELETE_BRANCH = Operation.of("log.title.deleteBranch", "error.deleteBranch.failed");
+    Operation DELETE_BRANCH = Operation.of("branches.log.title.deleteBranch", "branches.error.deleteBranch.failed");
 
     @Override
     default Operation operation() {

@@ -19,7 +19,7 @@ public record ReadCommitFileContent(Changes of, String path) implements Targeted
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.fileContent", path));
+        return Option.of(Label.of("state.work.fileContent", path));
     }
 
     @Override

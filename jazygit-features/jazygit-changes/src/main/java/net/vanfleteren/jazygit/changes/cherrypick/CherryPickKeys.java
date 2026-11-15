@@ -17,10 +17,10 @@ public final class CherryPickKeys {
                 Scopes.COMMITS,
                 new Binding<Commit>(
                         "C",
-                        "help.commits.cherryPickCopy",
+                        "changes.help.commits.cherryPickCopy",
                         selection -> selection
                                 .filter(commit -> !commit.isMerge())
                                 .map(commit -> new CherryPickMsg.Copied(commit.sha()))),
-                Binding.always("V", "help.commits.cherryPickPaste", CherryPickMsg.Requested::new));
+                Binding.always("V", "changes.help.commits.cherryPickPaste", CherryPickMsg.Requested::new));
     }
 }

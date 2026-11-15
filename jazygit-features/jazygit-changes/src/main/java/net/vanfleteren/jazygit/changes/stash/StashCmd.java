@@ -14,11 +14,11 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public sealed interface StashCmd extends GitOperationCmd {
 
-    Operation STASH = Operation.of("log.title.stash", "error.stash.failed");
+    Operation STASH = Operation.of("changes.log.title.stash", "changes.error.stash.failed");
 
-    Operation STASH_POP = Operation.of("log.title.stashPop", "error.stashPop.failed");
+    Operation STASH_POP = Operation.of("changes.log.title.stashPop", "changes.error.stashPop.failed");
 
-    Operation STASH_DROP = Operation.of("log.title.stashDrop", "error.stashDrop.failed");
+    Operation STASH_DROP = Operation.of("changes.log.title.stashDrop", "changes.error.stashDrop.failed");
 
     /**
      * Stashes the changes under {@code name}.

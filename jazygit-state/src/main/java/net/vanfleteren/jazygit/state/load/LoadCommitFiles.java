@@ -30,7 +30,7 @@ public record LoadCommitFiles(Changes of) implements Targeted<List<CommitFile>> 
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.commitFiles", of.sha().shortSha()));
+        return Option.of(Label.of("state.work.commitFiles", of.sha().shortSha()));
     }
 
     @Override

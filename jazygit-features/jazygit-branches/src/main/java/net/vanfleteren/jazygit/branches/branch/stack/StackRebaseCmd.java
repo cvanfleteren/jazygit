@@ -27,12 +27,12 @@ import net.vanfleteren.jazygit.state.operation.Operation;
 public sealed interface StackRebaseCmd extends Cmd {
 
     // It does not start while the repository is in the middle of something, as any rebase.
-    Operation REBASE_STACK = Operation.of("log.title.rebaseStack", "error.rebaseStack.failed")
+    Operation REBASE_STACK = Operation.of("branches.log.title.rebaseStack", "branches.error.rebaseStack.failed")
             .waitingForUnfinished()
-            .labelledWhenBusy("branches.busy.rebaseStack");
+            .labelledWhenBusy("branches.branches.busy.rebaseStack");
 
-    Operation PUSH_STACK =
-            Operation.of("log.title.pushStack", "error.pushStack.failed").labelledWhenBusy("branches.busy.push");
+    Operation PUSH_STACK = Operation.of("branches.log.title.pushStack", "branches.error.pushStack.failed")
+            .labelledWhenBusy("branches.branches.busy.push");
 
     /**
      * The branches of the stack, busy while it is rebased or pushed: each shows a spinner, and so does the header of the

@@ -18,7 +18,7 @@ public final class StageKeys {
                 Scopes.FILES,
                 Binding.onSelected(
                         " ",
-                        "help.files.stage",
+                        "changes.help.files.stage",
                         node -> new StageMsg.Requested(
                                 node.entries(),
                                 node instanceof FileTree.Dir dir ? Option.of(dir.path()) : Option.none())));

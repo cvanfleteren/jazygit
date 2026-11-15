@@ -15,8 +15,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record RevertCmd(Commit commit) implements GitOperationCmd {
 
-    public static final Operation REVERT =
-            Operation.of("log.title.revert", "error.revert.failed").waitingForUnfinished();
+    public static final Operation REVERT = Operation.of("changes.log.title.revert", "changes.error.revert.failed")
+            .waitingForUnfinished();
 
     @Override
     public Operation operation() {

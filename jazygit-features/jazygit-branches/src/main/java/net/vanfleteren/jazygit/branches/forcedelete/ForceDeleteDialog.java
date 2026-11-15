@@ -16,9 +16,12 @@ public final class ForceDeleteDialog {
     public static final ConfirmDialog.Spec<ForceDeleteBranchPopup> SPEC = new ConfirmDialog.Spec<>(
             "force-delete-branch",
             ForceDeleteBranchPopup.class,
-            popup -> Messages.get("dialog.deleteBranch.title", popup.branch().value()),
             popup -> Messages.get(
-                    popup.gone() ? "dialog.forceDeleteBranch.gone" : "dialog.forceDeleteBranch.message",
+                    "branches.dialog.deleteBranch.title", popup.branch().value()),
+            popup -> Messages.get(
+                    popup.gone()
+                            ? "branches.dialog.forceDeleteBranch.gone"
+                            : "branches.dialog.forceDeleteBranch.message",
                     popup.lost(),
                     popup.branch().value()),
             ForceDeleteMsg.Confirmed::new);

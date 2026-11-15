@@ -16,11 +16,14 @@ public final class UpstreamAction {
                             Scopes.BRANCHES,
                             new Keymap.Binding<>(
                                     "u",
-                                    "help.branches.upstream",
+                                    "branches.help.branches.upstream",
                                     branch -> Option.of(new UpstreamMsg.Requested(branch))))
                     .add(
                             Scopes.DIVERGENCE,
-                            Binding.always(Keymap.ESCAPE, "help.divergence.close", UpstreamMsg.DivergenceClosed::new)),
+                            Binding.always(
+                                    Keymap.ESCAPE,
+                                    "branches.help.divergence.close",
+                                    UpstreamMsg.DivergenceClosed::new)),
             UpstreamDialogs::popups);
 
     private UpstreamAction() {}

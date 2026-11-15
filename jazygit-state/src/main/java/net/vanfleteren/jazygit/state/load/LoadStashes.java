@@ -13,7 +13,7 @@ public record LoadStashes() implements Targeted<List<Stash>> {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.stashes"));
+        return Option.of(Label.of("state.work.stashes"));
     }
 
     @Override

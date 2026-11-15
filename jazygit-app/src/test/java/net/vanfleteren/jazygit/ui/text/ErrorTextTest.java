@@ -39,7 +39,8 @@ class ErrorTextTest {
     }
 
     // An operation whose error takes a subject and a reason: "Moving commits to {0} failed: {1}".
-    private static final Operation MOVE = Operation.of("log.title.moveCommits", "error.moveCommits.failed");
+    private static final Operation MOVE =
+            Operation.of("branches.log.title.moveCommits", "branches.error.moveCommits.failed");
 
     @Test
     void aCountInsideAPhraseInsideAnotherIsStillFormattedByItsChoice() {
@@ -94,6 +95,6 @@ class ErrorTextTest {
     void verbatimTextIsAnArgumentNotAPattern() {
         assertEquals(
                 "Moving commits to it's {0} failed: x",
-                ErrorText.of(Phrase.of("error.moveCommits.failed", "it's {0}", "x")));
+                ErrorText.of(Phrase.of("branches.error.moveCommits.failed", "it's {0}", "x")));
     }
 }

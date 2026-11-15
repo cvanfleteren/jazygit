@@ -18,7 +18,8 @@ public sealed interface RecentReposError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.recentRepos.notOpened", Phrase.verbatim(directory), Phrase.failure(failure));
+            return Phrase.of(
+                    "branches.error.recentRepos.notOpened", Phrase.verbatim(directory), Phrase.failure(failure));
         }
     }
 }

@@ -12,7 +12,8 @@ public final class RewordAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                     Scopes.COMMITS,
-                    Binding.onSelected("r", "help.commits.reword", commit -> new RewordMsg.Requested(commit.sha()))),
+                    Binding.onSelected(
+                            "r", "changes.help.commits.reword", commit -> new RewordMsg.Requested(commit.sha()))),
             RewordDialogs::popups);
 
     private RewordAction() {}

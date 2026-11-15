@@ -20,7 +20,9 @@ public sealed interface SettingsPanelError extends AppError {
         @Override
         public Phrase phrase() {
             return Phrase.of(
-                    "error.settings.ghUnusable", Phrase.verbatim(executable.getOrElse("gh")), Phrase.failure(failure));
+                    "chrome.error.settings.ghUnusable",
+                    Phrase.verbatim(executable.getOrElse("gh")),
+                    Phrase.failure(failure));
         }
     }
 
@@ -31,7 +33,7 @@ public sealed interface SettingsPanelError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.settings.accountNotSet", Phrase.failure(failure));
+            return Phrase.of("chrome.error.settings.accountNotSet", Phrase.failure(failure));
         }
     }
 
@@ -42,7 +44,7 @@ public sealed interface SettingsPanelError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.settings.notApplied", Phrase.failure(failure));
+            return Phrase.of("chrome.error.settings.notApplied", Phrase.failure(failure));
         }
     }
 }

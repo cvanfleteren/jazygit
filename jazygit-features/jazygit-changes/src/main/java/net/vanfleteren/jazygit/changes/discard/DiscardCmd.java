@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public sealed interface DiscardCmd extends GitOperationCmd {
 
-    Operation DISCARD = Operation.of("log.title.discard", "error.discard.failed");
+    Operation DISCARD = Operation.of("changes.log.title.discard", "changes.error.discard.failed");
 
     record Discard(DiscardPlan plan) implements DiscardCmd {
 

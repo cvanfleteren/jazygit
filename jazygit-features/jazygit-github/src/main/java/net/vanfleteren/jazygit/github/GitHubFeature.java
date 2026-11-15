@@ -26,7 +26,8 @@ public final class GitHubFeature {
      */
     private static final FeatureAction REFRESH = FeatureAction.ofKeys(keys -> Scopes.PULL_REQUESTS.foldLeft(
             keys,
-            (added, scope) -> added.add(scope, Binding.always("r", "help.prs.refresh", PrOverviewMsg.Refresh::new))));
+            (added, scope) ->
+                    added.add(scope, Binding.always("r", "github.help.prs.refresh", PrOverviewMsg.Refresh::new))));
 
     /**
      * The operations, in the order their keys are listed in a panel.

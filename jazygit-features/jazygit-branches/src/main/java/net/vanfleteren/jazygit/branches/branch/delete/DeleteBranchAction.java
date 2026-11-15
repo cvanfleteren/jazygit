@@ -12,11 +12,11 @@ public final class DeleteBranchAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                             Scopes.BRANCHES,
-                            Binding.onSelected("d", "help.branches.delete", DeleteBranchMsg.Requested::new))
+                            Binding.onSelected("d", "branches.help.branches.delete", DeleteBranchMsg.Requested::new))
                     .add(
                             Scopes.REMOTE_BRANCHES,
                             Binding.onSelected(
-                                    "d", "help.remoteBranches.delete", DeleteBranchMsg.RemoteRequested::new)),
+                                    "d", "branches.help.remoteBranches.delete", DeleteBranchMsg.RemoteRequested::new)),
             DeleteBranchDialogs::popups);
 
     private DeleteBranchAction() {}

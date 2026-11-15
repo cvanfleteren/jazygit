@@ -26,7 +26,7 @@ public sealed interface FetchCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.remotes"));
+            return Option.of(Label.of("changes.work.remotes"));
         }
 
         @Override
@@ -47,7 +47,7 @@ public sealed interface FetchCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.fetch", remote.value()));
+            return Option.of(Label.of("changes.work.fetch", remote.value()));
         }
 
         @Override

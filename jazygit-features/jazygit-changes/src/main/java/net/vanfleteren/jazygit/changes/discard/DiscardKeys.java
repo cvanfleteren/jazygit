@@ -14,6 +14,7 @@ public final class DiscardKeys {
     public static Keymap register(Keymap keys) {
         return keys.add(
                 Scopes.FILES,
-                Binding.onSelected("d", "help.files.discard", node -> new DiscardMsg.Requested(node.entries())));
+                Binding.onSelected(
+                        "d", "changes.help.files.discard", node -> new DiscardMsg.Requested(node.entries())));
     }
 }

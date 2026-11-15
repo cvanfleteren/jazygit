@@ -14,8 +14,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record MergeCmd(BranchName branch, MergeMode mode) implements BranchCmd {
 
-    public static final Operation MERGE =
-            Operation.of("log.title.merge", "error.merge.failed").waitingForUnfinished();
+    public static final Operation MERGE = Operation.of("branches.log.title.merge", "branches.error.merge.failed")
+            .waitingForUnfinished();
 
     @Override
     public Operation operation() {

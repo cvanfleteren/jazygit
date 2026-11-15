@@ -22,9 +22,9 @@ public sealed interface EditPullRequestCmd extends Cmd {
 
     // The branch is not busy meanwhile: an edit does not touch it, so it waits for nothing done to it, nor holds
     // anything up; the popup tells it is being saved.
-    Operation EDIT_PR = Operation.of("log.title.editPr", "error.editPr.failed");
+    Operation EDIT_PR = Operation.of("github.log.title.editPr", "github.error.editPr.failed");
 
-    Operation EDIT_BODY = Operation.of("log.title.editPrBody", "error.editPrBody.failed");
+    Operation EDIT_BODY = Operation.of("github.log.title.editPrBody", "github.error.editPrBody.failed");
 
     /**
      * The file the body is written in, in the editor; editors take it for Markdown, as GitHub does.

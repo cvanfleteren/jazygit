@@ -16,7 +16,7 @@ public record LoadBuilds(RemoteBranch branch, Option<String> after) implements C
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.buildsOf", branch.shortName()));
+        return Option.of(Label.of("github.work.buildsOf", branch.shortName()));
     }
 
     @Override

@@ -11,8 +11,8 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 public final class FetchAction {
 
     public static final FeatureAction ACTION = FeatureAction.ofKeys(
-            keys -> keys.add(Scopes.FILES, Binding.always("f", "help.files.fetch", FetchMsg.Requested::new))
-                    .add(Scopes.BRANCHES, Binding.always("f", "help.branches.fetch", FetchMsg.Requested::new)));
+            keys -> keys.add(Scopes.FILES, Binding.always("f", "changes.help.files.fetch", FetchMsg.Requested::new))
+                    .add(Scopes.BRANCHES, Binding.always("f", "changes.help.branches.fetch", FetchMsg.Requested::new)));
 
     private FetchAction() {}
 }

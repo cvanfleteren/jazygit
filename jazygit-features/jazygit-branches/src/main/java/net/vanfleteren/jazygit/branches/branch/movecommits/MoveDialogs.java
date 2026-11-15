@@ -28,7 +28,7 @@ public final class MoveDialogs {
             "move-commits-target",
             MoveTargetPopup.class,
             popup -> Messages.get(
-                    "dialog.moveCommitsTarget.title",
+                    "branches.dialog.moveCommitsTarget.title",
                     popup.request().range().commits(),
                     popup.request().from().value()),
             popup -> popup.branches()
@@ -37,12 +37,14 @@ public final class MoveDialogs {
                             List.of(
                                     PickDialog.Cell.of(branch.name().value()),
                                     PickDialog.Cell.styled(
-                                            branch.checkedOutElsewhere() ? Messages.get("branches.worktree") : "",
+                                            branch.checkedOutElsewhere()
+                                                    ? Messages.get("branches.branches.worktree")
+                                                    : "",
                                             Theme.Classes.DIM))))
                     .prepend(new PickDialog.Row<>(
                             Option.none(),
                             List.of(
-                                    PickDialog.Cell.of(Messages.get("dialog.moveCommitsTarget.newBranch")),
+                                    PickDialog.Cell.of(Messages.get("branches.dialog.moveCommitsTarget.newBranch")),
                                     PickDialog.Cell.of("")))),
             MoveMsg.TargetChosen::new);
 
@@ -53,10 +55,10 @@ public final class MoveDialogs {
                     "move-commits-name",
                     MoveNamePopup.class,
                     popup -> Messages.get(
-                            "dialog.moveCommits.title",
+                            "branches.dialog.moveCommits.title",
                             popup.request().range().commits(),
                             popup.request().from().value()),
-                    Option.of(Messages.get("dialog.newBranch.placeholder")),
+                    Option.of(Messages.get("branches.dialog.newBranch.placeholder")),
                     MoveMsg.NameConfirmed::new)
             .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
@@ -66,7 +68,8 @@ public final class MoveDialogs {
     public static final PickDialog.Spec<MoveBasePopup, MoveBase> BASE = new PickDialog.Spec<>(
             "move-commits-base",
             MoveBasePopup.class,
-            popup -> Messages.get("dialog.moveCommitsBase.title", popup.name().value()),
+            popup -> Messages.get(
+                    "branches.dialog.moveCommitsBase.title", popup.name().value()),
             popup -> popup.request()
                     .bases()
                     .map(base -> new PickDialog.Row<>(base, List.of(PickDialog.Cell.of(label(popup, base))))),
@@ -79,7 +82,7 @@ public final class MoveDialogs {
             "move-commits-pushed",
             MovePushedPopup.class,
             popup -> Messages.get(
-                    "dialog.moveCommitsPushed.title",
+                    "branches.dialog.moveCommitsPushed.title",
                     popup.request().range().pushed(),
                     popup.request()
                             .upstream()
@@ -90,18 +93,18 @@ public final class MoveDialogs {
                                     'f',
                                     popup -> Messages.get(
                                             popup.request().fromIsDefault()
-                                                    ? "dialog.moveCommitsPushed.forcePushDefault"
-                                                    : "dialog.moveCommitsPushed.forcePush",
+                                                    ? "branches.dialog.moveCommitsPushed.forcePushDefault"
+                                                    : "branches.dialog.moveCommitsPushed.forcePush",
                                             popup.request().from().value()),
                                     () -> new MoveMsg.PushedConfirmed(true))
-                            .withDetails("dialog.moveCommitsPushed.forcePush.details"),
+                            .withDetails("branches.dialog.moveCommitsPushed.forcePush.details"),
                     new Choice<MovePushedPopup>(
                                     'm',
                                     popup -> Messages.get(
-                                            "dialog.moveCommitsPushed.moveOnly",
+                                            "branches.dialog.moveCommitsPushed.moveOnly",
                                             popup.request().from().value()),
                                     () -> new MoveMsg.PushedConfirmed(false))
-                            .withDetails("dialog.moveCommitsPushed.moveOnly.details")));
+                            .withDetails("branches.dialog.moveCommitsPushed.moveOnly.details")));
 
     private MoveDialogs() {}
 
@@ -109,7 +112,7 @@ public final class MoveDialogs {
         return switch (base) {
             case MoveBase.Parent() ->
                 Messages.get(
-                        "dialog.moveCommitsBase.parent",
+                        "branches.dialog.moveCommitsBase.parent",
                         popup.request().oldest().shortSha());
             case MoveBase.Onto(var branch) -> branch.name();
         };

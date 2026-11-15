@@ -24,13 +24,13 @@ import net.vanfleteren.jazygit.state.operation.OperationMsg;
  */
 public sealed interface MoveCmd extends Cmd {
 
-    Operation MOVE =
-            Operation.of("log.title.moveCommits", "error.moveCommits.failed").waitingForUnfinished();
+    Operation MOVE = Operation.of("branches.log.title.moveCommits", "branches.error.moveCommits.failed")
+            .waitingForUnfinished();
 
     /**
      * Reading which commits would move, which is reported as this when it fails.
      */
-    Operation READ = Operation.of("log.title.moveCommits", "error.moveCommits.readFailed");
+    Operation READ = Operation.of("branches.log.title.moveCommits", "branches.error.moveCommits.readFailed");
 
     /**
      * Reads the commits of {@code from} from {@code oldest} up to its tip, and how many of them are on
@@ -40,7 +40,7 @@ public sealed interface MoveCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.range", from.value()));
+            return Option.of(Label.of("branches.work.range", from.value()));
         }
 
         @Override

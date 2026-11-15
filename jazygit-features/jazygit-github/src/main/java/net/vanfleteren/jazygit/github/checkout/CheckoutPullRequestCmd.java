@@ -13,8 +13,9 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public record CheckoutPullRequestCmd(PullRequestSummary pullRequest) implements OperationCmd {
 
-    public static final Operation CHECKOUT_PR =
-            Operation.of("log.title.checkoutPr", "error.checkoutPr.failed").waitingForUnfinished();
+    public static final Operation CHECKOUT_PR = Operation.of(
+                    "github.log.title.checkoutPr", "github.error.checkoutPr.failed")
+            .waitingForUnfinished();
 
     @Override
     public Operation operation() {

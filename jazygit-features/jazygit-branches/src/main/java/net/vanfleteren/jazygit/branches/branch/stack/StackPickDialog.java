@@ -35,7 +35,7 @@ final class StackPickDialog implements PopupView {
 
     static final String ID = "stack-pick";
 
-    private static final String HINT = "dialog.makeStack.hint";
+    private static final String HINT = "branches.dialog.makeStack.hint";
 
     // The columns a branch is indented by per branch it is built on, past the branch the popup is opened on.
     private static final int INDENT = 2;
@@ -78,10 +78,10 @@ final class StackPickDialog implements PopupView {
                             List.<StyledElement<?>>of(text(""), text(text).addClass(Theme.Classes.ERROR)))
                     .getOrElse(List.empty());
             String title = pick.addTo()
-                    .map(stack -> Messages.get("dialog.addToStack.title", String.valueOf(stack)))
+                    .map(stack -> Messages.get("branches.dialog.addToStack.title", String.valueOf(stack)))
                     .getOrElse(() -> choice.base()
-                            .map(base -> Messages.get("dialog.makeStack.title", base.value()))
-                            .getOrElse(() -> Messages.get("dialog.makeStack.titleNoBase")));
+                            .map(base -> Messages.get("branches.dialog.makeStack.title", base.value()))
+                            .getOrElse(() -> Messages.get("branches.dialog.makeStack.titleNoBase")));
             int width = lines.appendAll(why)
                     .append(Messages.get(HINT))
                     .append(title)
@@ -107,7 +107,7 @@ final class StackPickDialog implements PopupView {
                 .flatMap(below -> model.repo()
                         .behindParent(row.branch().name())
                         .map(behind -> Messages.get(
-                                "dialog.makeStack.notOn",
+                                "branches.dialog.makeStack.notOn",
                                 String.valueOf(behind),
                                 choice.rows().get(below).branch().name().value())));
     }
@@ -122,8 +122,8 @@ final class StackPickDialog implements PopupView {
                 : index == choice.bottom() ? "┗" : index == choice.top() ? "┏" : choice.isChosen(index) ? "┃" : " ";
         String pullRequest = row.pullRequest()
                 .map(pr -> "#" + pr.number().value())
-                .getOrElse(() -> Messages.get("dialog.makeStack.noPullRequest"));
-        String here = index == choice.branch() ? "  " + Messages.get("dialog.makeStack.thisBranch") : "";
+                .getOrElse(() -> Messages.get("branches.dialog.makeStack.noPullRequest"));
+        String here = index == choice.branch() ? "  " + Messages.get("branches.dialog.makeStack.thisBranch") : "";
         return mark + " " + " ".repeat(INDENT * row.depth())
                 + row.branch().name().value() + "  " + pullRequest
                 + behind.map(text -> "  " + text).getOrElse("")
@@ -141,10 +141,11 @@ final class StackPickDialog implements PopupView {
     static String why(Refusal refusal, boolean adding) {
         return switch (refusal) {
             case Refusal.NoPullRequest(List<BranchName> branches) ->
-                Messages.get("dialog.makeStack.noPullRequests", names(branches));
+                Messages.get("branches.dialog.makeStack.noPullRequests", names(branches));
             case Refusal.Stacked(List<BranchName> branches) ->
-                Messages.get("dialog.makeStack.stacked", names(branches));
-            case Refusal.TooFew() -> Messages.get(adding ? "dialog.addToStack.nothing" : "dialog.makeStack.tooFew");
+                Messages.get("branches.dialog.makeStack.stacked", names(branches));
+            case Refusal.TooFew() ->
+                Messages.get(adding ? "branches.dialog.addToStack.nothing" : "branches.dialog.makeStack.tooFew");
         };
     }
 

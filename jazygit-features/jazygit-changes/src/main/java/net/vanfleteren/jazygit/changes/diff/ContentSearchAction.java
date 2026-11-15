@@ -16,13 +16,16 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  */
 public final class ContentSearchAction {
 
-    public static final FeatureAction ACTION =
-            FeatureAction.ofKeys(keys -> List.of(Scopes.DIFF, Scopes.PULL_REQUEST_DIFF)
-                    .foldLeft(
-                            keys,
-                            (keymap, scope) -> keymap.add(
-                                    scope, Binding.always("/", "help.diff.search", ContentSearchMsg.Opened::new)))
-                    .add(Scopes.DIFF, inArea("n", "help.diff.nextMatch"), inArea("N", "help.diff.previousMatch")));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> List.of(
+                    Scopes.DIFF, Scopes.PULL_REQUEST_DIFF)
+            .foldLeft(
+                    keys,
+                    (keymap, scope) -> keymap.add(
+                            scope, Binding.always("/", "changes.help.diff.search", ContentSearchMsg.Opened::new)))
+            .add(
+                    Scopes.DIFF,
+                    inArea("n", "changes.help.diff.nextMatch"),
+                    inArea("N", "changes.help.diff.previousMatch")));
 
     private ContentSearchAction() {}
 

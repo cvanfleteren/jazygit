@@ -25,8 +25,9 @@ public final class CheckoutDialogs {
     public static final ConfirmDialog.Spec<StashCheckoutPopup> STASH_CHECKOUT = ConfirmDialog.Spec.confirming(
             "stash-checkout",
             StashCheckoutPopup.class,
-            popup -> Messages.get("dialog.stashCheckout.title", popup.branch().value()),
-            popup -> Messages.get("dialog.stashCheckout.message"));
+            popup -> Messages.get(
+                    "branches.dialog.stashCheckout.title", popup.branch().value()),
+            popup -> Messages.get("branches.dialog.stashCheckout.message"));
 
     /**
      * Tells that the branch to check out is checked out in another worktree, and asks to switch to that one.
@@ -34,8 +35,9 @@ public final class CheckoutDialogs {
     public static final ConfirmDialog.Spec<SwitchWorktreePopup> SWITCH_WORKTREE = new ConfirmDialog.Spec<>(
             "switch-worktree",
             SwitchWorktreePopup.class,
-            popup -> Messages.get("dialog.switchWorktree.title", popup.branch().value()),
-            popup -> Messages.get("dialog.switchWorktree.message", HomeDir.shown(popup.worktree())),
+            popup -> Messages.get(
+                    "branches.dialog.switchWorktree.title", popup.branch().value()),
+            popup -> Messages.get("branches.dialog.switchWorktree.message", HomeDir.shown(popup.worktree())),
             CheckoutMsg.SwitchWorktreeConfirmed::new);
 
     /**
@@ -47,20 +49,23 @@ public final class CheckoutDialogs {
                     "checkout-where",
                     CheckoutWherePopup.class,
                     popup -> Messages.get(
-                            "dialog.checkoutWhere.title", popup.request().label()),
+                            "branches.dialog.checkoutWhere.title",
+                            popup.request().label()),
                     List.of(
                             new Choice<CheckoutWherePopup>(
                                             'h',
                                             CheckoutDialogs::hereLabel,
                                             CheckoutMsg.HereChosen::new,
                                             (model, popup) -> !popup.here().isLocked())
-                                    .withDetails("dialog.checkoutWhere.here.details"),
+                                    .withDetails("branches.dialog.checkoutWhere.here.details"),
                             new Choice<CheckoutWherePopup>('m', CheckoutDialogs::mainLabel, CheckoutMsg.MainChosen::new)
                                     .shownWhen((model, popup) -> popup.main().isDefined())
-                                    .withDetails("dialog.checkoutWhere.main.details"),
+                                    .withDetails("branches.dialog.checkoutWhere.main.details"),
                             new Choice<CheckoutWherePopup>(
-                                            'n', "dialog.checkoutWhere.newWorktree", CheckoutMsg.NewWorktreeChosen::new)
-                                    .withDetails("dialog.checkoutWhere.newWorktree.details")))
+                                            'n',
+                                            "branches.dialog.checkoutWhere.newWorktree",
+                                            CheckoutMsg.NewWorktreeChosen::new)
+                                    .withDetails("branches.dialog.checkoutWhere.newWorktree.details")))
             .openingAt(popup -> Option.of(popup.main().isDefined() ? 'm' : 'n'));
 
     private CheckoutDialogs() {}
@@ -72,9 +77,9 @@ public final class CheckoutDialogs {
         Worktree here = popup.here();
         return here.locked()
                 .map(reason -> reason.isBlank()
-                        ? Messages.get("dialog.checkoutWhere.hereLocked", here.name())
-                        : Messages.get("dialog.checkoutWhere.hereLockedBecause", here.name(), reason))
-                .getOrElse(() -> Messages.get("dialog.checkoutWhere.here", here.name(), checkedOut(here)));
+                        ? Messages.get("branches.dialog.checkoutWhere.hereLocked", here.name())
+                        : Messages.get("branches.dialog.checkoutWhere.hereLockedBecause", here.name(), reason))
+                .getOrElse(() -> Messages.get("branches.dialog.checkoutWhere.here", here.name(), checkedOut(here)));
     }
 
     /**
@@ -84,15 +89,17 @@ public final class CheckoutDialogs {
         return popup.main()
                 .map(main -> Messages.get(
                         popup.mainChanged().getOrElse(false)
-                                ? "dialog.checkoutWhere.mainChanged"
-                                : "dialog.checkoutWhere.main",
+                                ? "branches.dialog.checkoutWhere.mainChanged"
+                                : "branches.dialog.checkoutWhere.main",
                         main.name(),
                         checkedOut(main)))
                 .getOrElse("");
     }
 
     private static String checkedOut(Worktree worktree) {
-        return worktree.branch().map(BranchName::value).getOrElse(() -> Messages.get("dialog.checkoutWhere.noBranch"));
+        return worktree.branch()
+                .map(BranchName::value)
+                .getOrElse(() -> Messages.get("branches.dialog.checkoutWhere.noBranch"));
     }
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {

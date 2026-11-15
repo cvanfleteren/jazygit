@@ -31,7 +31,7 @@ public record LoadCommitFileDiff(Changes of, List<CommitFile> files, DiffOptions
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.diff"));
+        return Option.of(Label.of("state.work.diff"));
     }
 
     @Override

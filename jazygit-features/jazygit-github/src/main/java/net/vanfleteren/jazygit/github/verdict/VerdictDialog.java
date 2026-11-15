@@ -33,7 +33,7 @@ public final class VerdictDialog implements PopupView {
     public static final String CHOICES_ID = "pull-request-verdict-choices";
 
     private static final CommentComposer.Hints HINTS =
-            new CommentComposer.Hints("dialog.verdict.hint", "dialog.verdict.sending");
+            new CommentComposer.Hints("github.dialog.verdict.hint", "github.dialog.verdict.sending");
 
     private static final int MARK_WIDTH = 3;
     // The box of the choices: their row and its borders.
@@ -66,16 +66,16 @@ public final class VerdictDialog implements PopupView {
                 .map(popup -> composer.render(
                         model,
                         Messages.get(
-                                popup.draft() ? "dialog.verdict.titleDraft" : "dialog.verdict.title",
+                                popup.draft() ? "github.dialog.verdict.titleDraft" : "github.dialog.verdict.title",
                                 String.valueOf(popup.number().value())),
                         List.of(choices(popup.verdict())),
                         List.empty(),
-                        Option.when(popup.draft(), () -> Messages.get("dialog.verdict.draft")),
+                        Option.when(popup.draft(), () -> Messages.get("github.dialog.verdict.draft")),
                         // Whether a text is needed, as the verdict chosen says.
                         Option.of(Messages.get(
                                 popup.verdict().needsText()
-                                        ? "dialog.verdict.textRequired"
-                                        : "dialog.verdict.textOptional")),
+                                        ? "github.dialog.verdict.textRequired"
+                                        : "github.dialog.verdict.textOptional")),
                         new CommentComposer.Comment(popup.text(), popup.sending()),
                         HINTS));
     }
@@ -84,8 +84,8 @@ public final class VerdictDialog implements PopupView {
      * The choices, in a box of their own, set apart from the text, as the fields of the pull request dialogs are.
      */
     private Element choices(Verdict chosen) {
-        String approve = " " + Messages.get("dialog.verdict.approve");
-        String changes = " " + Messages.get("dialog.verdict.requestChanges");
+        String approve = " " + Messages.get("github.dialog.verdict.approve");
+        String changes = " " + Messages.get("github.dialog.verdict.requestChanges");
         // The box takes the focus, so its border shows it as that of the text does.
         return panel(row(
                         mark(Verdict.APPROVE, chosen),
@@ -93,7 +93,7 @@ public final class VerdictDialog implements PopupView {
                         text("").length(GAP),
                         mark(Verdict.REQUEST_CHANGES, chosen),
                         text(changes).length(TextWidth.of(changes))))
-                .title(Messages.get("dialog.verdict.choices"))
+                .title(Messages.get("github.dialog.verdict.choices"))
                 .id(CHOICES_ID)
                 .addClass(Theme.Classes.CHOICES)
                 .focusable()

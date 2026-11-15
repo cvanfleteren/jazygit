@@ -13,9 +13,9 @@ public final class CheckoutPullRequestAction {
             keys,
             (added, scope) -> added.add(
                     scope,
-                    Binding.onSelected(" ", "help.prs.checkout", CheckoutPullRequestMsg.Requested::new),
+                    Binding.onSelected(" ", "github.help.prs.checkout", CheckoutPullRequestMsg.Requested::new),
                     Binding.onSelected(
-                            "w", "help.prs.checkoutWorktree", CheckoutPullRequestMsg.WorktreeRequested::new))));
+                            "w", "github.help.prs.checkoutWorktree", CheckoutPullRequestMsg.WorktreeRequested::new))));
 
     private CheckoutPullRequestAction() {}
 }

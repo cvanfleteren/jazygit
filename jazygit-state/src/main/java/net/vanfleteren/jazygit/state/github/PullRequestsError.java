@@ -17,7 +17,7 @@ public sealed interface PullRequestsError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.pullRequest.notRead");
+            return Phrase.of("state.error.pullRequest.notRead");
         }
     }
 
@@ -29,7 +29,7 @@ public sealed interface PullRequestsError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.pullRequest.unavailable", Phrase.failure(failure));
+            return Phrase.of("state.error.pullRequest.unavailable", Phrase.failure(failure));
         }
     }
 }

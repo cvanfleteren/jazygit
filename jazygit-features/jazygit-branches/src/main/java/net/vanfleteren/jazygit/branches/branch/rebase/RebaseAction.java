@@ -11,7 +11,8 @@ public final class RebaseAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
-                    Scopes.BRANCHES, Binding.onSelected("r", "help.branches.rebase", RebaseMsg.Requested::new)),
+                    Scopes.BRANCHES,
+                    Binding.onSelected("r", "branches.help.branches.rebase", RebaseMsg.Requested::new)),
             RebaseDialogs::popups);
 
     private RebaseAction() {}

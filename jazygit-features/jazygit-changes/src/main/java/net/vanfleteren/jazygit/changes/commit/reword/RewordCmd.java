@@ -15,8 +15,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record RewordCmd(Sha sha, CommitMessage message) implements GitOperationCmd {
 
-    public static final Operation REWORD =
-            Operation.of("log.title.reword", "error.reword.failed").waitingForUnfinished();
+    public static final Operation REWORD = Operation.of("changes.log.title.reword", "changes.error.reword.failed")
+            .waitingForUnfinished();
 
     @Override
     public Operation operation() {

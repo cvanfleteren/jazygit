@@ -16,7 +16,7 @@ public record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad,
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.stashDetail"));
+        return Option.of(Label.of("state.work.stashDetail"));
     }
 
     @Override

@@ -19,8 +19,8 @@ public final class SquashDialogs {
     public static final ConfirmDialog.Spec<SquashPopup> SQUASH = ConfirmDialog.Spec.confirming(
             "squash-commit",
             SquashPopup.class,
-            popup -> Messages.get("dialog.squash.title"),
-            popup -> Messages.get("dialog.squash.message"));
+            popup -> Messages.get("changes.dialog.squash.title"),
+            popup -> Messages.get("changes.dialog.squash.message"));
 
     private SquashDialogs() {}
 

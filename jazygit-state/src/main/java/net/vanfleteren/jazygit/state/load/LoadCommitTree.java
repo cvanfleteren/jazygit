@@ -20,7 +20,7 @@ public record LoadCommitTree(Changes of) implements Targeted<List<CommitFile>> {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.commitTree", of.sha().shortSha()));
+        return Option.of(Label.of("state.work.commitTree", of.sha().shortSha()));
     }
 
     @Override

@@ -15,7 +15,7 @@ public sealed interface CommitError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.commit.nothing");
+            return Phrase.of("changes.error.commit.nothing");
         }
     }
 
@@ -26,7 +26,7 @@ public sealed interface CommitError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.amend.nothing");
+            return Phrase.of("changes.error.amend.nothing");
         }
     }
 
@@ -37,7 +37,7 @@ public sealed interface CommitError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.amendCommit.merge");
+            return Phrase.of("changes.error.amendCommit.merge");
         }
     }
 }

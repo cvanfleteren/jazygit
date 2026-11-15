@@ -12,7 +12,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record MessageEditorCmd(CommitMessage message) implements Cmd {
 
-    public static final Operation EDIT_MESSAGE = Operation.of("log.title.editMessage", "error.editMessage.failed");
+    public static final Operation EDIT_MESSAGE =
+            Operation.of("changes.log.title.editMessage", "changes.error.editMessage.failed");
 
     @Override
     public Msg run(Env env) {

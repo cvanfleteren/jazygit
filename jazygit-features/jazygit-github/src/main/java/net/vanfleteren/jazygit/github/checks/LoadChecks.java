@@ -18,7 +18,7 @@ public record LoadChecks(RemoteBranch branch) implements Cmd {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.checksOf", branch.branch().value()));
+        return Option.of(Label.of("github.work.checksOf", branch.branch().value()));
     }
 
     @Override

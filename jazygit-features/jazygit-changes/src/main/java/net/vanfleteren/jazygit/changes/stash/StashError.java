@@ -15,7 +15,7 @@ public sealed interface StashError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.stash.nothing");
+            return Phrase.of("changes.error.stash.nothing");
         }
     }
 }

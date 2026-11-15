@@ -15,7 +15,7 @@ public record LoadAllFiles() implements Targeted<List<String>> {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.allFiles"));
+        return Option.of(Label.of("state.work.allFiles"));
     }
 
     @Override

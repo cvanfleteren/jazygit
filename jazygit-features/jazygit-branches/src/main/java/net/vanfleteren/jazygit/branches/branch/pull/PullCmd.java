@@ -15,12 +15,12 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
 
-    Operation PULL = Operation.of("log.title.pull", "error.pull.failed")
+    Operation PULL = Operation.of("branches.log.title.pull", "branches.error.pull.failed")
             .waitingForUnfinished()
-            .labelledWhenBusy("branches.busy.pull");
+            .labelledWhenBusy("branches.branches.busy.pull");
 
-    Operation FAST_FORWARD =
-            Operation.of("log.title.fastForward", "error.fastForward.failed").labelledWhenBusy("branches.busy.pull");
+    Operation FAST_FORWARD = Operation.of("branches.log.title.fastForward", "branches.error.fastForward.failed")
+            .labelledWhenBusy("branches.branches.busy.pull");
 
     @Override
     default Option<Guard> guard() {

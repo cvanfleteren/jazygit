@@ -23,19 +23,21 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public sealed interface ReviewCmd extends Cmd {
 
-    Operation START = Operation.of("log.title.startThread", "error.startThread.failed");
+    Operation START = Operation.of("github.log.title.startThread", "github.error.startThread.failed");
 
-    Operation REPLY = Operation.of("log.title.replyThread", "error.replyThread.failed");
+    Operation REPLY = Operation.of("github.log.title.replyThread", "github.error.replyThread.failed");
 
-    Operation RESOLVE = Operation.of("log.title.resolveThread", "error.resolveThread.failed");
+    Operation RESOLVE = Operation.of("github.log.title.resolveThread", "github.error.resolveThread.failed");
 
-    Operation UNRESOLVE = Operation.of("log.title.unresolveThread", "error.unresolveThread.failed");
+    Operation UNRESOLVE = Operation.of("github.log.title.unresolveThread", "github.error.unresolveThread.failed");
 
     // Writing a comment in the editor, with Ctrl+O; not saving the edit of one, which UPDATE_COMMENT is.
-    Operation EDIT_COMMENT = Operation.of("log.title.editReviewComment", "error.editReviewComment.failed");
+    Operation EDIT_COMMENT =
+            Operation.of("github.log.title.editReviewComment", "github.error.editReviewComment.failed");
 
     // Saving the edit of a comment with GitHub (ADR 65).
-    Operation UPDATE_COMMENT = Operation.of("log.title.updateReviewComment", "error.updateReviewComment.failed");
+    Operation UPDATE_COMMENT =
+            Operation.of("github.log.title.updateReviewComment", "github.error.updateReviewComment.failed");
 
     /**
      * The file the comment is written in, in the editor (ADR 115).

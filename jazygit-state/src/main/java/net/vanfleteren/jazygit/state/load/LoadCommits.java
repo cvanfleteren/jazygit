@@ -20,7 +20,7 @@ public record LoadCommits(LoadAhead ahead) implements Targeted<List<Commit>> {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.commits"));
+        return Option.of(Label.of("state.work.commits"));
     }
 
     @Override

@@ -28,8 +28,8 @@ public final class AmendDialogs {
     public static final ConfirmDialog.Spec<AmendStageAllPopup> AMEND_STAGE_ALL = new ConfirmDialog.Spec<>(
             "amend-commit-stage-all",
             AmendStageAllPopup.class,
-            popup -> Messages.get("dialog.amend.stageAll.title"),
-            popup -> Messages.get("dialog.amend.stageAll.message"),
+            popup -> Messages.get("changes.dialog.amend.stageAll.title"),
+            popup -> Messages.get("changes.dialog.amend.stageAll.message"),
             AmendMsg.StageAllConfirmed::new);
 
     private AmendDialogs() {}
@@ -39,8 +39,8 @@ public final class AmendDialogs {
      */
     private static String amendKey(AmendTarget target) {
         return switch (target) {
-            case AmendTarget.LastCommit() -> "dialog.amend";
-            case AmendTarget.Older(var sha) -> "dialog.amendCommit";
+            case AmendTarget.LastCommit() -> "changes.dialog.amend";
+            case AmendTarget.Older(var sha) -> "changes.dialog.amendCommit";
         };
     }
 

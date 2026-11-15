@@ -22,11 +22,11 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public sealed interface StackCmd extends OperationCmd {
 
-    Operation MAKE_STACK = Operation.of("log.title.makeStack", "error.makeStack.failed");
+    Operation MAKE_STACK = Operation.of("branches.log.title.makeStack", "branches.error.makeStack.failed");
 
-    Operation ADD_TO_STACK = Operation.of("log.title.addToStack", "error.addToStack.failed");
+    Operation ADD_TO_STACK = Operation.of("branches.log.title.addToStack", "branches.error.addToStack.failed");
 
-    Operation UNSTACK = Operation.of("log.title.unstack", "error.unstack.failed");
+    Operation UNSTACK = Operation.of("branches.log.title.unstack", "branches.error.unstack.failed");
 
     /**
      * What the pull requests read from GitHub show once they show this change, which they are read again for until

@@ -18,16 +18,16 @@ public final class DiscardDialog {
     public static final ChoiceDialog.Spec<DiscardPopup> SPEC = new ChoiceDialog.Spec<>(
             "discard",
             DiscardPopup.class,
-            popup -> Messages.get("dialog.discard.title"),
+            popup -> Messages.get("changes.dialog.discard.title"),
             List.of(
-                    new Choice<DiscardPopup>('x', "dialog.discard.all", () -> new DiscardMsg.Chosen(Scope.ALL))
-                            .withDetails("dialog.discard.all.details"),
+                    new Choice<DiscardPopup>('x', "changes.dialog.discard.all", () -> new DiscardMsg.Chosen(Scope.ALL))
+                            .withDetails("changes.dialog.discard.all.details"),
                     new Choice<DiscardPopup>(
                                     'u',
-                                    "dialog.discard.unstaged",
+                                    "changes.dialog.discard.unstaged",
                                     () -> new DiscardMsg.Chosen(Scope.UNSTAGED),
                                     (model, popup) -> popup.hasUnstaged())
-                            .withDetails("dialog.discard.unstaged.details")));
+                            .withDetails("changes.dialog.discard.unstaged.details")));
 
     private DiscardDialog() {}
 

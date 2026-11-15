@@ -12,7 +12,8 @@ public final class SquashAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                     Scopes.COMMITS,
-                    Binding.onSelected("s", "help.commits.squash", commit -> new SquashMsg.Requested(commit.sha()))),
+                    Binding.onSelected(
+                            "s", "changes.help.commits.squash", commit -> new SquashMsg.Requested(commit.sha()))),
             SquashDialogs::popups);
 
     private SquashAction() {}

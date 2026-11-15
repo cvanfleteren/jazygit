@@ -99,69 +99,69 @@ public final class PullRequestDialog implements PopupView {
         this.actions = ChoiceList.inTwoColumns(
                 ID,
                 List.of(
-                        new Choice<>('o', "dialog.pullRequest.open", PullRequestMsg.OpenConfirmed::new),
+                        new Choice<>('o', "github.dialog.pullRequest.open", PullRequestMsg.OpenConfirmed::new),
                         new Choice<>(
                                 'c',
-                                "dialog.pullRequest.comment",
+                                "github.dialog.pullRequest.comment",
                                 CommentMsg.Requested::new,
                                 (model, popup) -> popup.detailsRead()),
                         // Not on the viewer's own, nor on one that is not open (ADR 100).
                         new Choice<PullRequestPopup>(
                                         'a',
-                                        "dialog.pullRequest.approve",
+                                        "github.dialog.pullRequest.approve",
                                         VerdictMsg.DialogAsked::new,
                                         (model, popup) -> VerdictUpdate.reviewable(popup))
-                                .withDetails("dialog.pullRequest.approve.details"),
+                                .withDetails("github.dialog.pullRequest.approve.details"),
                         new Choice<PullRequestPopup>(
                                         'e',
-                                        "dialog.pullRequest.edit",
+                                        "github.dialog.pullRequest.edit",
                                         EditPullRequestMsg.Requested::new,
                                         (model, popup) -> popup.detailsRead())
-                                .withDetails("dialog.pullRequest.edit.details"),
+                                .withDetails("github.dialog.pullRequest.edit.details"),
                         new Choice<PullRequestPopup>(
                                         'v',
-                                        "dialog.pullRequest.viewComments",
+                                        "github.dialog.pullRequest.viewComments",
                                         CommentsMsg.Requested::new,
                                         (model, popup) -> popup.detailsRead())
-                                .withDetails("dialog.pullRequest.viewComments.details"),
+                                .withDetails("github.dialog.pullRequest.viewComments.details"),
                         new Choice<PullRequestPopup>(
                                         'C',
-                                        "dialog.pullRequest.viewChecks",
+                                        "github.dialog.pullRequest.viewChecks",
                                         ChecksMsg.PullRequestChecksRequested::new,
                                         (model, popup) -> ChecksUpdate.ofPullRequest(model, popup)
                                                 .isDefined())
-                                .withDetails("dialog.pullRequest.viewChecks.details"),
+                                .withDetails("github.dialog.pullRequest.viewChecks.details"),
                         new Choice<PullRequestPopup>(
                                         'F',
-                                        "dialog.pullRequest.files",
+                                        "github.dialog.pullRequest.files",
                                         PullRequestMsg.FilesChosen::new,
                                         (model, popup) -> popup.commits().isDefined())
-                                .withDetails("dialog.pullRequest.files.details"),
+                                .withDetails("github.dialog.pullRequest.files.details"),
                         // Before merging, which a draft has to wait for.
                         new Choice<PullRequestPopup>(
                                         'd',
                                         popup -> Messages.get(
                                                 popup.draft().getOrElse(false)
-                                                        ? "dialog.pullRequest.ready"
-                                                        : "dialog.pullRequest.toDraft"),
+                                                        ? "github.dialog.pullRequest.ready"
+                                                        : "github.dialog.pullRequest.toDraft"),
                                         PullRequestMsg.DraftChosen::new,
                                         PullRequestUpdate::draftChangeable)
-                                .withDetails("dialog.pullRequest.draft.details"),
-                        merge('m', "dialog.pullRequest.merge", MergeMethod.MERGE),
-                        merge('s', "dialog.pullRequest.squash", MergeMethod.SQUASH),
-                        merge('r', "dialog.pullRequest.rebase", MergeMethod.REBASE),
+                                .withDetails("github.dialog.pullRequest.draft.details"),
+                        merge('m', "github.dialog.pullRequest.merge", MergeMethod.MERGE),
+                        merge('s', "github.dialog.pullRequest.squash", MergeMethod.SQUASH),
+                        merge('r', "github.dialog.pullRequest.rebase", MergeMethod.REBASE),
                         new Choice<PullRequestPopup>(
                                         'x',
-                                        "dialog.pullRequest.close",
+                                        "github.dialog.pullRequest.close",
                                         PullRequestMsg.CloseChosen::new,
                                         (model, popup) -> popup.open())
-                                .withDetails("dialog.pullRequest.close.details"),
+                                .withDetails("github.dialog.pullRequest.close.details"),
                         new Choice<PullRequestPopup>(
                                         'R',
-                                        "dialog.pullRequest.refresh",
+                                        "github.dialog.pullRequest.refresh",
                                         PullRequestMsg.RefreshChosen::new,
                                         PullRequestUpdate::refreshChoosable)
-                                .withDetails("dialog.pullRequest.refresh.details")),
+                                .withDetails("github.dialog.pullRequest.refresh.details")),
                 () -> new PopupMsg.Dismissed(PullRequestPopup.class),
                 dispatch,
                 DialogFrame.contentWidth(WIDTH));
@@ -182,7 +182,7 @@ public final class PullRequestDialog implements PopupView {
                         PullRequestUpdate::mergeable)
                 .withDetails(popup -> popup.stack().exists(stack -> stack.below() > 0)
                         ? Messages.get(labelKey + ".details") + " "
-                                + Messages.get("dialog.pullRequest.merge.stack.details")
+                                + Messages.get("github.dialog.pullRequest.merge.stack.details")
                         : Messages.get(labelKey + ".details"));
     }
 
@@ -191,22 +191,24 @@ public final class PullRequestDialog implements PopupView {
      */
     private static Line stack(PullRequestStack stack) {
         String position = Messages.get(
-                "dialog.pullRequest.stack.position",
+                "github.dialog.pullRequest.stack.position",
                 String.valueOf(stack.number()),
                 String.valueOf(stack.position()),
                 String.valueOf(stack.size()));
         return stack.below() > 0
                 ? Line.labelled(
-                        "dialog.pullRequest.stack",
+                        "github.dialog.pullRequest.stack",
                         text(position + " · "),
-                        text(Messages.get("dialog.pullRequest.stack.below", stack.below()))
+                        text(Messages.get("github.dialog.pullRequest.stack.below", stack.below()))
                                 .addClass(Theme.Classes.CHECKS_RUNNING))
-                : Line.labelled("dialog.pullRequest.stack", text(position));
+                : Line.labelled("github.dialog.pullRequest.stack", text(position));
     }
 
     private static List<Line> failed(Failure failure) {
         return List.of(Line.wrapped(
-                Messages.get("dialog.pullRequest.failed", ErrorText.of(failure)), Theme.Classes.ERROR, CONTENT_HEIGHT));
+                Messages.get("github.dialog.pullRequest.failed", ErrorText.of(failure)),
+                Theme.Classes.ERROR,
+                CONTENT_HEIGHT));
     }
 
     private static StyledElement<?> label(String labelKey) {
@@ -217,11 +219,11 @@ public final class PullRequestDialog implements PopupView {
     private static String state(PullRequestDetails pr) {
         String state = Messages.get(
                 switch (pr.status().state()) {
-                    case OPEN -> "dialog.pullRequest.state.open";
-                    case CLOSED -> "dialog.pullRequest.state.closed";
-                    case MERGED -> "dialog.pullRequest.state.merged";
+                    case OPEN -> "github.dialog.pullRequest.state.open";
+                    case CLOSED -> "github.dialog.pullRequest.state.closed";
+                    case MERGED -> "github.dialog.pullRequest.state.merged";
                 });
-        return pr.status().draft() ? state + " · " + Messages.get("dialog.pullRequest.draft") : state;
+        return pr.status().draft() ? state + " · " + Messages.get("github.dialog.pullRequest.draft") : state;
     }
 
     // Mergeable only says it merges without conflicts; GitHub warns about a base that moved on apart from that.
@@ -229,27 +231,30 @@ public final class PullRequestDialog implements PopupView {
         return pr.branches()
                 .behindBase()
                 .filter(commits -> commits > 0)
-                .map(commits -> text(" · " + Messages.get("dialog.pullRequest.branch.behind", String.valueOf(commits)))
+                .map(commits -> text(" · "
+                                + Messages.get("github.dialog.pullRequest.branch.behind", String.valueOf(commits)))
                         .addClass(Theme.Classes.BEHIND));
     }
 
     private static StyledElement<?> mergeable(PullRequestDetails.Mergeable mergeable) {
         return switch (mergeable) {
-            case MERGEABLE -> text(Messages.get("dialog.pullRequest.mergeable.yes"));
+            case MERGEABLE -> text(Messages.get("github.dialog.pullRequest.mergeable.yes"));
             case CONFLICTING ->
-                text(Messages.get("dialog.pullRequest.mergeable.conflicting")).addClass(Theme.Classes.CHECKS_FAILED);
+                text(Messages.get("github.dialog.pullRequest.mergeable.conflicting"))
+                        .addClass(Theme.Classes.CHECKS_FAILED);
             case UNKNOWN ->
-                text(Messages.get("dialog.pullRequest.mergeable.unknown")).addClass(Theme.Classes.DIM);
+                text(Messages.get("github.dialog.pullRequest.mergeable.unknown"))
+                        .addClass(Theme.Classes.DIM);
         };
     }
 
     private static List<StyledElement<?>> review(Review review) {
         String text = Messages.get(
                 switch (review) {
-                    case NONE -> "dialog.pullRequest.review.none";
-                    case REQUIRED -> "dialog.pullRequest.review.required";
-                    case APPROVED -> "dialog.pullRequest.review.approved";
-                    case CHANGES_REQUESTED -> "dialog.pullRequest.review.changes";
+                    case NONE -> "github.dialog.pullRequest.review.none";
+                    case REQUIRED -> "github.dialog.pullRequest.review.required";
+                    case APPROVED -> "github.dialog.pullRequest.review.approved";
+                    case CHANGES_REQUESTED -> "github.dialog.pullRequest.review.changes";
                 });
         return PullRequestSymbols.review(review)
                 .map(symbol -> List.of(symbol(symbol), text(" " + text)))
@@ -278,8 +283,8 @@ public final class PullRequestDialog implements PopupView {
     private static List<Line> checks(List<Check> checks, Option<CheckTimes> times, double progress, Instant now) {
         if (checks.isEmpty()) {
             return List.of(Line.labelled(
-                    "dialog.pullRequest.checks",
-                    text(Messages.get("dialog.pullRequest.checks.none")).addClass(Theme.Classes.DIM)));
+                    "github.dialog.pullRequest.checks",
+                    text(Messages.get("github.dialog.pullRequest.checks.none")).addClass(Theme.Classes.DIM)));
         }
         List<Check> notPassed = checks.filter(check -> check.state() != Checks.PASSING);
         List<Check> listed = CheckRows.order(notPassed, checks, times).take(LISTED_CHECKS);
@@ -288,7 +293,7 @@ public final class PullRequestDialog implements PopupView {
                 ? CheckRows.barredDoingWidth(listed, checks, times, now)
                 : CheckRows.doingWidth(listed, checks, times, now, false);
         return List.of(
-                        Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.checks"))
+                        Line.pieces(List.<StyledElement<?>>of(label("github.dialog.pullRequest.checks"))
                                 .appendAll(CheckRows.counts(checks, times, now))),
                         Line.pieces(List.<StyledElement<?>>of(text(INDENT))
                                 .appendAll(CheckRows.gauge(checks, times, progress, now, CHECK_WIDTH))))
@@ -303,7 +308,7 @@ public final class PullRequestDialog implements PopupView {
                         notPassed.size() > LISTED_CHECKS,
                         () -> Line.of(text(INDENT
                                         + Messages.get(
-                                                "dialog.pullRequest.checks.more",
+                                                "github.dialog.pullRequest.checks.more",
                                                 String.valueOf(notPassed.size() - LISTED_CHECKS)))
                                 .addClass(Theme.Classes.DIM))));
     }
@@ -381,23 +386,24 @@ public final class PullRequestDialog implements PopupView {
      */
     private String title(PullRequestPopup popup) {
         String title = Messages.get(
-                "dialog.pullRequest.title",
+                "github.dialog.pullRequest.title",
                 String.valueOf(popup.pullRequest().number().value()));
         return popup.reading() == Reading.ASKED
                 ? title + " " + TimeText.spinnerFrame(clock.instant())
                 : popup.refreshFailed()
-                        .map(failure -> title + " · " + Messages.get("dialog.pullRequest.stale"))
+                        .map(failure -> title + " · " + Messages.get("github.dialog.pullRequest.stale"))
                         .getOrElse(title);
     }
 
     private List<Line> loading(PullRequestPopup popup) {
         return List.of(
                 Line.labelled(
-                        "dialog.pullRequest.branch",
+                        "github.dialog.pullRequest.branch",
                         text(popup.pullRequest().headBranch().name())),
                 Line.blank(),
                 Line.pieces(List.of(
-                        text(Messages.get("dialog.pullRequest.loading") + " ").addClass(Theme.Classes.DIM),
+                        text(Messages.get("github.dialog.pullRequest.loading") + " ")
+                                .addClass(Theme.Classes.DIM),
                         text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER))));
     }
 
@@ -405,52 +411,52 @@ public final class PullRequestDialog implements PopupView {
         return List.of(
                         Line.wrapped(pr.title(), Theme.Classes.BOLD, TITLE_LINES),
                         Line.blank(),
-                        Line.labelled("dialog.pullRequest.state", text(state(pr))))
+                        Line.labelled("github.dialog.pullRequest.state", text(state(pr))))
                 .appendAll(Option.when(
                         !pr.author().isEmpty(),
-                        () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
+                        () -> Line.labelled("github.dialog.pullRequest.author", text("@" + pr.author()))))
                 .append(Line.pieces(List.<StyledElement<?>>of(
-                                label("dialog.pullRequest.branch"),
+                                label("github.dialog.pullRequest.branch"),
                                 text(pr.branches().head().name() + " → "
                                         + pr.branches().base().name()))
                         .appendAll(behindBase(pr))))
                 .appendAll(pr.stack().map(PullRequestDialog::stack))
                 .appendAll(List.of(
                         Line.labelled(
-                                "dialog.pullRequest.created",
+                                "github.dialog.pullRequest.created",
                                 text(when(pr.activity().createdAt(), now))),
                         Line.labelled(
-                                "dialog.pullRequest.pushed",
+                                "github.dialog.pullRequest.pushed",
                                 text(when(pr.activity().pushedAt(), now))),
                         Line.labelled(
-                                "dialog.pullRequest.changes",
+                                "github.dialog.pullRequest.changes",
                                 text("+" + pr.size().additions()).addClass(Theme.Classes.DIFF_ADDED),
                                 text(" −" + pr.size().deletions()).addClass(Theme.Classes.DIFF_REMOVED),
                                 text(" "
                                         + Messages.get(
-                                                "dialog.pullRequest.changes.files",
+                                                "github.dialog.pullRequest.changes.files",
                                                 pr.size().changedFiles(),
                                                 pr.size().commits()))),
                         Line.labelled(
-                                "dialog.pullRequest.mergeable",
+                                "github.dialog.pullRequest.mergeable",
                                 mergeable(pr.status().mergeable())),
                         Line.blank(),
-                        Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.review"))
+                        Line.pieces(List.<StyledElement<?>>of(label("github.dialog.pullRequest.review"))
                                 .appendAll(review(pr.conversation().review())))))
                 .appendAll(Option.when(
                         !pr.conversation().reviewers().isEmpty(),
-                        () -> Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.reviewers"))
+                        () -> Line.pieces(List.<StyledElement<?>>of(label("github.dialog.pullRequest.reviewers"))
                                 .appendAll(reviewers(pr)))))
                 .append(Line.labelled(
-                        "dialog.pullRequest.comments",
+                        "github.dialog.pullRequest.comments",
                         text(String.valueOf(pr.conversation().comments()))))
                 .append(Line.labelled(
-                        "dialog.pullRequest.threads",
+                        "github.dialog.pullRequest.threads",
                         text(threads(pr.conversation().reviewThreads()))))
                 .appendAll(Option.when(
                         !pr.conversation().labels().isEmpty(),
                         () -> Line.labelled(
-                                "dialog.pullRequest.labels",
+                                "github.dialog.pullRequest.labels",
                                 text(pr.conversation().labels().mkString(", ")))))
                 .append(Line.blank())
                 .appendAll(checks(pr.checks(), times, progress, now));
@@ -463,17 +469,22 @@ public final class PullRequestDialog implements PopupView {
         if (threads.unresolved() == 0) {
             // Unless every thread was read, one that was not may still be unresolved.
             return Messages.get(
-                    threads.complete() ? "dialog.pullRequest.threads.resolved" : "dialog.pullRequest.threads.partial",
+                    threads.complete()
+                            ? "github.dialog.pullRequest.threads.resolved"
+                            : "github.dialog.pullRequest.threads.partial",
                     threads.threads(),
                     threads.comments());
         }
         return Messages.get(
-                "dialog.pullRequest.threads.unresolved", threads.threads(), threads.comments(), threads.unresolved());
+                "github.dialog.pullRequest.threads.unresolved",
+                threads.threads(),
+                threads.comments(),
+                threads.unresolved());
     }
 
     private String when(Instant at, Instant now) {
         return Messages.get(
-                "dialog.pullRequest.when",
+                "github.dialog.pullRequest.when",
                 LocalDate.ofInstant(at, clock.getZone()).toString(),
                 TimeText.ago(Duration.between(at, now)));
     }

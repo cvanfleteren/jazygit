@@ -16,7 +16,7 @@ public sealed interface InProgressError extends AppError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.conflictsRemain", Phrase.count(files));
+            return Phrase.of("state.error.conflictsRemain", Phrase.count(files));
         }
     }
 }

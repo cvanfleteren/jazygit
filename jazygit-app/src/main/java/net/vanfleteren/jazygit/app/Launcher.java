@@ -50,10 +50,10 @@ final class Launcher {
         Option<Path> debugLog = Option.when(options.debug(), SettingsPaths::debugLog);
         Either<String, Option<JazygitApp>> app = DebugLog.start(debugLog)
                 .toEither()
-                .mapLeft(failed -> Messages.get("debugLog.failed", debugLog.get(), ErrorText.reason(failed)))
+                .mapLeft(failed -> Messages.get("app.debugLog.failed", debugLog.get(), ErrorText.reason(failed)))
                 .flatMap(logging -> Theme.createEngine()
                         .mapLeft(failed ->
-                                Messages.get("theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause()))))
+                                Messages.get("app.theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause()))))
                 .flatMap(engine -> {
                     RecentRepositories recent = new RecentRepositoriesFile(
                             SettingsPaths.stateFile(),
@@ -91,7 +91,7 @@ final class Launcher {
                     System.err.println(problem);
                     System.exit(1);
                 });
-        debugLog.forEach(log -> System.err.println(Messages.get("debugLog.written", log)));
+        debugLog.forEach(log -> System.err.println(Messages.get("app.debugLog.written", log)));
     }
 
     /**

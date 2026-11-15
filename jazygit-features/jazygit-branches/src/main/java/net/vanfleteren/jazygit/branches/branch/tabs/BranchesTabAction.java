@@ -16,8 +16,10 @@ public final class BranchesTabAction {
                     keys,
                     (added, scope) -> added.add(
                             scope,
-                            Binding.always("[", "help.branches.previousTab", () -> new BranchesTabMsg.Switched(-1)),
-                            Binding.always("]", "help.branches.nextTab", () -> new BranchesTabMsg.Switched(1)))));
+                            Binding.always(
+                                    "[", "branches.help.branches.previousTab", () -> new BranchesTabMsg.Switched(-1)),
+                            Binding.always(
+                                    "]", "branches.help.branches.nextTab", () -> new BranchesTabMsg.Switched(1)))));
 
     private BranchesTabAction() {}
 }

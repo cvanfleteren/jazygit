@@ -15,7 +15,7 @@ public final class VerdictAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                     Scopes.PULL_REQUEST_DIFF,
-                    Binding.always("a", "help.pullRequestDiff.review", VerdictMsg.DiffAsked::new)),
+                    Binding.always("a", "github.help.pullRequestDiff.review", VerdictMsg.DiffAsked::new)),
             dispatch -> List.of(PopupSlot.returningToFocus(new VerdictDialog(dispatch))));
 
     private VerdictAction() {}

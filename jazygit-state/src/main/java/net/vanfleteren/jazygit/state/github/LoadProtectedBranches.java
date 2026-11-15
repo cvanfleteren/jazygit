@@ -15,7 +15,7 @@ public record LoadProtectedBranches() implements Cmd {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.protectedBranches"));
+        return Option.of(Label.of("state.work.protectedBranches"));
     }
 
     @Override

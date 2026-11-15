@@ -13,16 +13,16 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  */
 public final class CopyAction {
 
-    public static final FeatureAction ACTION =
-            FeatureAction.ofKeys(keys -> List.of(Scopes.DIFF, Scopes.PULL_REQUEST_DIFF)
-                    .foldLeft(keys, (keymap, scope) -> keymap.add(scope, copy()))
-                    .add(
-                            Scopes.DIFF,
-                            new Binding<DiffCursorAt>("v", "help.diff.range", at -> at.flatMap(DiffCursorAt::marked))));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> List.of(
+                    Scopes.DIFF, Scopes.PULL_REQUEST_DIFF)
+            .foldLeft(keys, (keymap, scope) -> keymap.add(scope, copy()))
+            .add(
+                    Scopes.DIFF,
+                    new Binding<DiffCursorAt>("v", "changes.help.diff.range", at -> at.flatMap(DiffCursorAt::marked))));
 
     private CopyAction() {}
 
     private static Binding<DiffCursorAt> copy() {
-        return new Binding<>("y", "help.diff.copy", at -> at.map(CopyMsg.Asked::new));
+        return new Binding<>("y", "changes.help.diff.copy", at -> at.map(CopyMsg.Asked::new));
     }
 }

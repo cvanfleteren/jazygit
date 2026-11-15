@@ -15,7 +15,7 @@ public record LoadMyPullRequests() implements Cmd {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.pullRequests"));
+        return Option.of(Label.of("state.work.pullRequests"));
     }
 
     @Override

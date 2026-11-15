@@ -21,7 +21,7 @@ public record CheckMetadata() implements Load {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.metadata"));
+        return Option.of(Label.of("state.work.metadata"));
     }
 
     @Override

@@ -59,32 +59,32 @@ public final class HelpDialog implements PopupView {
     private static final Map<String, List<Tuple2<String, String>>> LEGENDS = HashMap.of(
             Scopes.BRANCHES.id(),
             List.of(
-                    Tuple.of(Messages.get("branches.gone"), "help.branches.legend.gone"),
-                    Tuple.of("⇡2", "help.branches.legend.ahead"),
-                    Tuple.of("⇣3", "help.branches.legend.behind"),
-                    Tuple.of(Messages.get("branches.worktree.short"), "help.branches.legend.worktree"),
-                    Tuple.of("#42", "help.branches.legend.pullRequest"),
+                    Tuple.of(Messages.get("branches.gone"), "chrome.help.branches.legend.gone"),
+                    Tuple.of("⇡2", "chrome.help.branches.legend.ahead"),
+                    Tuple.of("⇣3", "chrome.help.branches.legend.behind"),
+                    Tuple.of(Messages.get("branches.worktree.short"), "chrome.help.branches.legend.worktree"),
+                    Tuple.of("#42", "chrome.help.branches.legend.pullRequest"),
                     Tuple.of(
                             texts(
                                     PullRequestSymbols.PASSED,
                                     PullRequestSymbols.FAILED,
                                     PullRequestSymbols.RUNNING,
                                     PullRequestSymbols.QUEUED),
-                            "help.branches.legend.checks"),
+                            "chrome.help.branches.legend.checks"),
                     Tuple.of(
                             texts(
                                     PullRequestSymbols.APPROVED,
                                     PullRequestSymbols.CHANGES,
                                     PullRequestSymbols.TO_REVIEW),
-                            "help.branches.legend.review"),
+                            "chrome.help.branches.legend.review"),
                     Tuple.of(
                             texts(
                                     PullRequestSymbols.MERGING,
                                     PullRequestSymbols.ENQUEUED,
                                     PullRequestSymbols.MERGE_FAILED,
                                     PullRequestSymbols.MERGED),
-                            "help.branches.legend.merge"),
-                    Tuple.of("2/4", "help.branches.legend.stack")));
+                            "chrome.help.branches.legend.merge"),
+                    Tuple.of("2/4", "chrome.help.branches.legend.stack")));
 
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;
@@ -116,7 +116,7 @@ public final class HelpDialog implements PopupView {
      */
     private static List<Row> legend(String scopeId) {
         return LEGENDS.get(scopeId)
-                .map(symbols -> List.<Row>of(new Text(""), Text.heading("dialog.help.legend"))
+                .map(symbols -> List.<Row>of(new Text(""), Text.heading("chrome.dialog.help.legend"))
                         .appendAll(symbols.map(symbol -> new Text(line(symbol._1, symbol._2)))))
                 .getOrElse(List.empty());
     }
@@ -180,10 +180,10 @@ public final class HelpDialog implements PopupView {
         int widest = rows.map(HelpDialog::line).map(String::length).max().getOrElse(0);
         DialogElement frame = DialogFrame.withHint(
                         Messages.get(
-                                "dialog.help.title",
+                                "chrome.dialog.help.title",
                                 Messages.get(keymap.titleKey(popup.scopeId()).get())),
                         Math.max(WIDTH, widest + DialogFrame.FRAME),
-                        "dialog.help.hint",
+                        "chrome.dialog.help.hint",
                         List.of(list.constraint(Constraint.fill())))
                 // The rows, the blank line and the hint, plus the border.
                 .length(rows.size() + 2 + 2);
@@ -204,7 +204,7 @@ public final class HelpDialog implements PopupView {
                         (Row) new Key(binding.label(), binding.descriptionKey(), binding::matches, action))
                 .appendAll(legend(popup.scopeId()))
                 .append(new Text(""))
-                .append(Text.heading("dialog.help.global"))
+                .append(Text.heading("chrome.dialog.help.global"))
                 .appendAll(keymap.globals()
                         .map(global -> new Key(
                                 global.label(),

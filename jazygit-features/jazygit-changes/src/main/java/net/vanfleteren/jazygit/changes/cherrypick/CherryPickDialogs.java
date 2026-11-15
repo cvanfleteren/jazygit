@@ -19,12 +19,13 @@ public final class CherryPickDialogs {
     public static final ConfirmDialog.Spec<CherryPickPopup> PICK = ConfirmDialog.Spec.confirming(
             "cherry-pick",
             CherryPickPopup.class,
-            popup -> Messages.get("dialog.cherryPick.title"),
+            popup -> Messages.get("changes.dialog.cherryPick.title"),
             popup -> popup.onto()
                     .map(branch -> Messages.get(
-                            "dialog.cherryPick.message", popup.commit().shortSha(), branch.value()))
+                            "changes.dialog.cherryPick.message", popup.commit().shortSha(), branch.value()))
                     .getOrElse(() -> Messages.get(
-                            "dialog.cherryPick.messageDetached", popup.commit().shortSha())));
+                            "changes.dialog.cherryPick.messageDetached",
+                            popup.commit().shortSha())));
 
     private CherryPickDialogs() {}
 

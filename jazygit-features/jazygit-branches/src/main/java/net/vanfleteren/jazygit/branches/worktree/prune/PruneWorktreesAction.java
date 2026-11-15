@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  */
 public final class PruneWorktreesAction {
 
-    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys ->
-            keys.add(Scopes.WORKTREES, Binding.always("p", "help.worktrees.prune", PruneWorktreesMsg.Requested::new)));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> keys.add(
+            Scopes.WORKTREES, Binding.always("p", "branches.help.worktrees.prune", PruneWorktreesMsg.Requested::new)));
 
     private PruneWorktreesAction() {}
 }

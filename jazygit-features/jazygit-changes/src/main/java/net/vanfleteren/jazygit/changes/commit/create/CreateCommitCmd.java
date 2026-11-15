@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public sealed interface CreateCommitCmd extends GitOperationCmd {
 
-    Operation COMMIT = Operation.of("log.title.commit", "error.commit.failed");
+    Operation COMMIT = Operation.of("changes.log.title.commit", "changes.error.commit.failed");
 
     /**
      * Stages the paths so they can be committed; the commit dialog opens afterwards.

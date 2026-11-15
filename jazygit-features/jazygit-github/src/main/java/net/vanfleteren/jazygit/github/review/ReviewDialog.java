@@ -48,11 +48,12 @@ public final class ReviewDialog implements PopupView {
     private static String title(ReviewPopup popup) {
         Where where = popup.where();
         if (where.reply()) {
-            return Messages.get("dialog.review.titleReply", where.path());
+            return Messages.get("github.dialog.review.titleReply", where.path());
         }
         // An edit says so, on the lines of its thread (ADR 65).
-        String key =
-                popup.target() instanceof ReviewPopup.Target.Edit ? "dialog.review.titleEdit" : "dialog.review.title";
+        String key = popup.target() instanceof ReviewPopup.Target.Edit
+                ? "github.dialog.review.titleEdit"
+                : "github.dialog.review.title";
         return where.lines()
                 .map(lines -> lines.first() == lines.last()
                         ? Messages.get(key + "Line", where.path(), String.valueOf(lines.last()))

@@ -30,8 +30,8 @@ import net.vanfleteren.jazygit.state.operation.*;
  */
 public sealed interface CreatePullRequestCmd extends Cmd {
 
-    Operation CREATE_PR =
-            Operation.of("log.title.createPr", "error.createPr.failed").labelledWhenBusy("branches.busy.pullRequest");
+    Operation CREATE_PR = Operation.of("github.log.title.createPr", "github.error.createPr.failed")
+            .labelledWhenBusy("github.branches.busy.pullRequest");
 
     /**
      * The subject of the oldest commit of {@code branch} that is not on {@code baseRef}, if it could be read.
@@ -100,7 +100,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.base", branch.value()));
+            return Option.of(Label.of("github.work.base", branch.value()));
         }
 
         @Override
@@ -156,7 +156,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.title", branch.value()));
+            return Option.of(Label.of("github.work.title", branch.value()));
         }
 
         @Override
@@ -182,7 +182,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.title", branch.value()));
+            return Option.of(Label.of("github.work.title", branch.value()));
         }
 
         @Override

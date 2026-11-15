@@ -20,9 +20,9 @@ public sealed interface CommentCmd extends Cmd {
 
     // The branch is not busy meanwhile: a comment does not touch it, so it waits for nothing done to it, nor holds
     // anything up; the popup tells it is being sent.
-    Operation COMMENT_PR = Operation.of("log.title.commentPr", "error.commentPr.failed");
+    Operation COMMENT_PR = Operation.of("github.log.title.commentPr", "github.error.commentPr.failed");
 
-    Operation EDIT_COMMENT = Operation.of("log.title.editComment", "error.editComment.failed");
+    Operation EDIT_COMMENT = Operation.of("github.log.title.editComment", "github.error.editComment.failed");
 
     /**
      * The file the comment is written in, in the editor (ADR 115).

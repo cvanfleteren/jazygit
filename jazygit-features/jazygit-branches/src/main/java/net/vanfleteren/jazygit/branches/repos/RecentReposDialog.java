@@ -24,10 +24,10 @@ public final class RecentReposDialog {
     public static final PickDialog.Spec<RecentReposPopup, String> SPEC = new PickDialog.Spec<>(
             "recent-repos",
             RecentReposPopup.class,
-            popup -> Messages.get("dialog.recentRepos.title"),
+            popup -> Messages.get("branches.dialog.recentRepos.title"),
             popup -> popup.repos().map(RecentReposDialog::row),
             RecentReposMsg.Chosen::new,
-            Option.of("dialog.recentRepos.none"));
+            Option.of("branches.dialog.recentRepos.none"));
     // The characters of a name or a branch shown at most, so that long ones do not push the rest away.
     private static final int CAP = 30;
 

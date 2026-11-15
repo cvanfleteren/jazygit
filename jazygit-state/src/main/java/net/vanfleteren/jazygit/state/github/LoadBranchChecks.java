@@ -15,7 +15,7 @@ public record LoadBranchChecks() implements Cmd {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.checks"));
+        return Option.of(Label.of("state.work.checks"));
     }
 
     @Override

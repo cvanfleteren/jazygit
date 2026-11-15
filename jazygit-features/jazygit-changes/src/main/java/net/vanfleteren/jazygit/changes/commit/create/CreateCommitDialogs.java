@@ -20,8 +20,8 @@ public final class CreateCommitDialogs {
     public static final ConfirmDialog.Spec<StageAllPopup> STAGE_ALL = new ConfirmDialog.Spec<>(
             "stage-all",
             StageAllPopup.class,
-            popup -> Messages.get("dialog.stageAll.title"),
-            popup -> Messages.get("dialog.stageAll.message"),
+            popup -> Messages.get("changes.dialog.stageAll.title"),
+            popup -> Messages.get("changes.dialog.stageAll.message"),
             CommitMsg.StageAllConfirmed::new);
 
     private CreateCommitDialogs() {}

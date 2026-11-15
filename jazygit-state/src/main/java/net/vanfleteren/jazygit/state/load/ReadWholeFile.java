@@ -35,7 +35,7 @@ public record ReadWholeFile(AreaId area, ScrolledContent content, Source source,
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.wholeFile", path));
+        return Option.of(Label.of("state.work.wholeFile", path));
     }
 
     /**

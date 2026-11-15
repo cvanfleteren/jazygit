@@ -17,39 +17,43 @@ public final class CommitFilesAction {
                     Scopes.COMMITS,
                     Binding.onSelected(
                             KEY,
-                            "help.commits.files",
+                            "changes.help.commits.files",
                             commit -> new CommitFilesMsg.Opened(
                                     new Changes.OfCommit(commit.sha()), Scopes.COMMITS.pane())))
             .add(
                     Scopes.DIVERGENCE,
                     Binding.onSelected(
                             KEY,
-                            "help.commits.files",
+                            "changes.help.commits.files",
                             commit -> new CommitFilesMsg.Opened(
                                     new Changes.OfCommit(commit.sha()), Scopes.BRANCHES.pane())))
             .add(
                     Scopes.BRANCH_COMMITS,
                     Binding.onSelected(
                             KEY,
-                            "help.commits.files",
+                            "changes.help.commits.files",
                             commit -> new CommitFilesMsg.Opened(
                                     new Changes.OfCommit(commit.sha()), Scopes.BRANCHES.pane())))
             .add(
                     Scopes.STASH,
                     Binding.onSelected(
                             KEY,
-                            "help.stash.files",
+                            "changes.help.stash.files",
                             stash -> new CommitFilesMsg.Opened(new Changes.OfStash(stash.sha()), Scopes.STASH.pane())))
             .add(
                     Scopes.COMMIT_FILES,
-                    Binding.always(Keymap.ESCAPE, "help.commitFiles.close", CommitFilesMsg.Closed::new))
+                    Binding.always(Keymap.ESCAPE, "changes.help.commitFiles.close", CommitFilesMsg.Closed::new))
             // The review threads of a pull request (ADR 55); nothing for a commit or a stash.
             // All files of the commit the files end at (ADR 128), as `a` lists those of the working tree (ADR 108).
-            .add(Scopes.COMMIT_FILES, Binding.always("a", "help.commitFiles.allFiles", CommitFilesMsg.AllToggled::new))
-            .add(Scopes.COMMIT_FILES, Binding.always("c", "help.commitFiles.listed", CommitFilesMsg.ListedCycled::new))
             .add(
                     Scopes.COMMIT_FILES,
-                    Binding.always("R", "help.commitFiles.refresh", CommitFilesMsg.RemarksRefreshed::new)));
+                    Binding.always("a", "changes.help.commitFiles.allFiles", CommitFilesMsg.AllToggled::new))
+            .add(
+                    Scopes.COMMIT_FILES,
+                    Binding.always("c", "changes.help.commitFiles.listed", CommitFilesMsg.ListedCycled::new))
+            .add(
+                    Scopes.COMMIT_FILES,
+                    Binding.always("R", "changes.help.commitFiles.refresh", CommitFilesMsg.RemarksRefreshed::new)));
 
     private CommitFilesAction() {}
 }

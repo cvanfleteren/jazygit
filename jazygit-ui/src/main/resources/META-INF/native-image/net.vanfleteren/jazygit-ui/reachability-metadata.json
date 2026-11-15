@@ -4,6 +4,6 @@
     { "glob": "dev/tamboui/tui/bindings/*.properties" }
   ],
   "bundles": [
-    { "name": "net.vanfleteren.jazygit.messages" }
+    { "name": "net.vanfleteren.jazygit.ui.messages" }
   ]
 }

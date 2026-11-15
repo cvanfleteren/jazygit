@@ -112,7 +112,8 @@ class StackPickDialogTest {
 
     @Test
     void aRefusedBottomSaysWhy() throws Exception {
-        String screen = render(new StackPopups.Pick(CHOICE, Option.of("dialog.makeStack.bottomAbove"), Option.none()));
+        String screen =
+                render(new StackPopups.Pick(CHOICE, Option.of("branches.dialog.makeStack.bottomAbove"), Option.none()));
 
         assertTrue(screen.contains("The bottom is this branch or one below it"), screen);
     }

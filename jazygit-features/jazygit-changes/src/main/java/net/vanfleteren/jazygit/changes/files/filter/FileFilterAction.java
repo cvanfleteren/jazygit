@@ -11,9 +11,11 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  */
 public final class FileFilterAction {
 
-    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> keys.add(
-                    Scopes.FILES, Binding.always("/", "help.files.filter", FileFilterMsg.Opened::new))
-            .add(Scopes.COMMIT_FILES, Binding.always("/", "help.commitFiles.filter", FileFilterMsg.Opened::new)));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(
+            keys -> keys.add(Scopes.FILES, Binding.always("/", "changes.help.files.filter", FileFilterMsg.Opened::new))
+                    .add(
+                            Scopes.COMMIT_FILES,
+                            Binding.always("/", "changes.help.commitFiles.filter", FileFilterMsg.Opened::new)));
 
     private FileFilterAction() {}
 }

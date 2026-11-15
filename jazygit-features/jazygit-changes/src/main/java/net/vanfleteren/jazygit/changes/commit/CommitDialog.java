@@ -123,8 +123,8 @@ public final class CommitDialog implements PopupView {
         return Option.of(dialog(
                         new LineEditInput(
                                         textInput(summary)
-                                                .title(Messages.get("dialog.commit.summary.title"))
-                                                .placeholder(Messages.get("dialog.commit.summary.placeholder"))
+                                                .title(Messages.get("changes.dialog.commit.summary.title"))
+                                                .placeholder(Messages.get("changes.dialog.commit.summary.placeholder"))
                                                 .length(INPUT_HEIGHT)
                                                 .onSubmit(this::confirm)
                                                 .onKeyEvent(this::summaryKeys),
@@ -133,14 +133,15 @@ public final class CommitDialog implements PopupView {
                                 .onChange(text -> edited()),
                         new SubmittableTextArea(
                                         textArea(description)
-                                                .title(Messages.get("dialog.commit.description.title"))
-                                                .placeholder(Messages.get("dialog.commit.description.placeholder")),
+                                                .title(Messages.get("changes.dialog.commit.description.title"))
+                                                .placeholder(
+                                                        Messages.get("changes.dialog.commit.description.placeholder")),
                                         description,
                                         descriptionId,
                                         this::confirm)
                                 .onChange(text -> edited())
                                 .rows(DESCRIPTION_HEIGHT)
-                                .bottomTitle(Messages.get("dialog.commit.hint"))
+                                .bottomTitle(Messages.get("changes.dialog.commit.hint"))
                                 .onKeyEvent(this::keys))
                 .borderType(BorderType.NONE)
                 .width(WIDTH)

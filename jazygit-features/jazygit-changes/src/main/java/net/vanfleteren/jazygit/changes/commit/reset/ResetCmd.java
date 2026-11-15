@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.state.operation.Operation;
  */
 public record ResetCmd(ResetTarget target, ResetMode mode) implements GitOperationCmd {
 
-    public static final Operation RESET = Operation.of("log.title.reset", "error.reset.failed");
+    public static final Operation RESET = Operation.of("changes.log.title.reset", "changes.error.reset.failed");
 
     @Override
     public Operation operation() {

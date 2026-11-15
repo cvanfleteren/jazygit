@@ -13,20 +13,23 @@ public final class AddWorktreeAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                             Scopes.BRANCHES,
-                            Binding.onSelected("w", "help.branches.newWorktree", AddWorktreeMsg.Requested::new))
+                            Binding.onSelected(
+                                    "w", "branches.help.branches.newWorktree", AddWorktreeMsg.Requested::new))
                     .add(
                             Scopes.BRANCHES,
                             Binding.onSelected(
-                                    "W", "help.branches.newBranchWorktree", AddWorktreeMsg.NewBranchRequested::new))
+                                    "W",
+                                    "branches.help.branches.newBranchWorktree",
+                                    AddWorktreeMsg.NewBranchRequested::new))
                     .add(
                             Scopes.REMOTE_BRANCHES,
                             Binding.onSelected(
                                     "W",
-                                    "help.branches.newBranchWorktree",
+                                    "branches.help.branches.newBranchWorktree",
                                     AddWorktreeMsg.NewBranchAtRemoteRequested::new))
                     .add(
                             Scopes.WORKTREES,
-                            Binding.always("n", "help.worktrees.new", AddWorktreeMsg.StartRequested::new)),
+                            Binding.always("n", "branches.help.worktrees.new", AddWorktreeMsg.StartRequested::new)),
             AddWorktreeDialogs::popups);
 
     private AddWorktreeAction() {}

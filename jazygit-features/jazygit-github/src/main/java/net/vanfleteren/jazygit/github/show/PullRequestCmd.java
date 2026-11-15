@@ -17,17 +17,17 @@ import net.vanfleteren.jazygit.state.operation.*;
  */
 public sealed interface PullRequestCmd extends Cmd {
 
-    Operation MERGE_PR =
-            Operation.of("log.title.mergePr", "error.mergePr.failed").labelledWhenBusy("branches.busy.mergePr");
+    Operation MERGE_PR = Operation.of("github.log.title.mergePr", "github.error.mergePr.failed")
+            .labelledWhenBusy("github.branches.busy.mergePr");
 
-    Operation CLOSE_PR =
-            Operation.of("log.title.closePr", "error.closePr.failed").labelledWhenBusy("branches.busy.closePr");
+    Operation CLOSE_PR = Operation.of("github.log.title.closePr", "github.error.closePr.failed")
+            .labelledWhenBusy("github.branches.busy.closePr");
 
-    Operation READY_PR =
-            Operation.of("log.title.readyPr", "error.readyPr.failed").labelledWhenBusy("branches.busy.readyPr");
+    Operation READY_PR = Operation.of("github.log.title.readyPr", "github.error.readyPr.failed")
+            .labelledWhenBusy("github.branches.busy.readyPr");
 
-    Operation DRAFT_PR =
-            Operation.of("log.title.draftPr", "error.draftPr.failed").labelledWhenBusy("branches.busy.draftPr");
+    Operation DRAFT_PR = Operation.of("github.log.title.draftPr", "github.error.draftPr.failed")
+            .labelledWhenBusy("github.branches.busy.draftPr");
 
     /**
      * An operation that ends pull request {@code number} of {@code branch}: its branch is busy meanwhile, and
@@ -111,7 +111,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.checkMerge", String.valueOf(number.value())));
+            return Option.of(Label.of("github.work.checkMerge", String.valueOf(number.value())));
         }
 
         @Override
@@ -203,7 +203,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.pullRequest", String.valueOf(number.value())));
+            return Option.of(Label.of("state.work.pullRequest", String.valueOf(number.value())));
         }
 
         @Override

@@ -101,7 +101,8 @@ public final class NewPullRequestDialog implements PopupView {
             return new HintedDialog(
                     DialogFrame.of(
                             Messages.get(
-                                    "dialog.newPullRequest.title", open.branch().value()),
+                                    "github.dialog.newPullRequest.title",
+                                    open.branch().value()),
                             WIDTH,
                             bases.render(
                                     open.bases(),
@@ -111,8 +112,9 @@ public final class NewPullRequestDialog implements PopupView {
                                     this::keys),
                             new LineEditInput(
                                             textInput(title)
-                                                    .title(Messages.get("dialog.newPullRequest.titleField"))
-                                                    .placeholder(Messages.get("dialog.newPullRequest.titlePlaceholder"))
+                                                    .title(Messages.get("github.dialog.newPullRequest.titleField"))
+                                                    .placeholder(Messages.get(
+                                                            "github.dialog.newPullRequest.titlePlaceholder"))
                                                     .length(INPUT_HEIGHT)
                                                     .onSubmit(this::confirm)
                                                     .onKeyEvent(this::keys),
@@ -121,8 +123,9 @@ public final class NewPullRequestDialog implements PopupView {
                                     .onChange(text -> edited(pullRequest.draft())),
                             new SubmittableTextArea(
                                             textArea(body)
-                                                    .title(Messages.get("dialog.newPullRequest.body"))
-                                                    .placeholder(Messages.get("dialog.newPullRequest.bodyPlaceholder")),
+                                                    .title(Messages.get("github.dialog.newPullRequest.body"))
+                                                    .placeholder(Messages.get(
+                                                            "github.dialog.newPullRequest.bodyPlaceholder")),
                                             body,
                                             BODY_ID,
                                             this::confirm)
@@ -140,12 +143,14 @@ public final class NewPullRequestDialog implements PopupView {
                                                                     .length(BOX_WIDTH)
                                                                     .onKeyEvent(event ->
                                                                             draftKeys(event, pullRequest.draft())),
-                                                            text(" " + Messages.get("dialog.newPullRequest.draft")))
+                                                            text(" "
+                                                                    + Messages.get(
+                                                                            "github.dialog.newPullRequest.draft")))
                                                     .appendAll(stack(model, open))
                                                     .toJavaArray(StyledElement[]::new)))
                                             .length(INPUT_HEIGHT),
                                     List.of(DRAFT_ID, STACK_ID))),
-                    Messages.get("dialog.newPullRequest.hint"));
+                    Messages.get("github.dialog.newPullRequest.hint"));
         });
     }
 
@@ -160,11 +165,11 @@ public final class NewPullRequestDialog implements PopupView {
                                         + box(false)
                                         + " "
                                         + Messages.get(
-                                                "dialog.newPullRequest.stack",
+                                                "github.dialog.newPullRequest.stack",
                                                 String.valueOf(notTop.below().value()))
                                         + " · "
                                         + Messages.get(
-                                                "dialog.newPullRequest.notTop",
+                                                "github.dialog.newPullRequest.notTop",
                                                 String.valueOf(notTop.below().value()),
                                                 String.valueOf(notTop.stack())))
                                 .addClass(Theme.Classes.DIM)),
@@ -178,7 +183,7 @@ public final class NewPullRequestDialog implements PopupView {
                                         .onKeyEvent(this::stackKeys),
                                 text(" "
                                         + Messages.get(
-                                                "dialog.newPullRequest.stack",
+                                                "github.dialog.newPullRequest.stack",
                                                 String.valueOf(stacking.below().value()))))))
                 .getOrElse(List.empty());
     }

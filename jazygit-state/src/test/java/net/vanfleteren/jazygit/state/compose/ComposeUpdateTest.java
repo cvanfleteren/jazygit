@@ -40,7 +40,8 @@ import org.junit.jupiter.api.Test;
  */
 class ComposeUpdateTest {
 
-    private static final Operation EDIT_NOTE = Operation.of("log.title.editComment", "error.editComment.failed");
+    private static final Operation EDIT_NOTE =
+            Operation.of("github.log.title.editComment", "github.error.editComment.failed");
     private static final EditorFile NOTE_FILE = new EditorFile("NOTE.md", EDIT_NOTE);
     private static final ExecutedCommand NVIM = ExecutedCommand.of("nvim", "NOTE.md");
     private static final Model SENT = loaded().withoutPopup(Note.class);

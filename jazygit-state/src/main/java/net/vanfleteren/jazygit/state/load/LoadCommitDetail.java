@@ -33,7 +33,7 @@ public record LoadCommitDetail(Sha sha, DiffOptions options, Slot preview) imple
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.commitDetail", sha.shortSha()));
+        return Option.of(Label.of("state.work.commitDetail", sha.shortSha()));
     }
 
     @Override

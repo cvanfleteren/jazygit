@@ -17,7 +17,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
 public record NewBranchCmd(BranchName branch, Revision base, Option<BranchName> parent)
         implements BranchCmd.ChecksOutBranch {
 
-    public static final Operation NEW_BRANCH = Operation.of("log.title.newBranch", "error.newBranch.failed");
+    public static final Operation NEW_BRANCH =
+            Operation.of("branches.log.title.newBranch", "branches.error.newBranch.failed");
 
     @Override
     public Operation operation() {

@@ -21,8 +21,8 @@ public final class FileStepAction {
                             keys,
                             (keymap, scope) -> keymap.add(
                                     scope,
-                                    step("J", "help.diff.nextFile", Step.NEXT),
-                                    step("K", "help.diff.previousFile", Step.PREVIOUS))));
+                                    step("J", "changes.help.diff.nextFile", Step.NEXT),
+                                    step("K", "changes.help.diff.previousFile", Step.PREVIOUS))));
 
     private FileStepAction() {}
 

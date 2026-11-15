@@ -25,11 +25,11 @@ public final class PushDialogs {
                     SetUpstreamPopup.class,
                     popup -> popup.refused()
                             .map(refused -> Messages.get(
-                                    "dialog.setUpstream.refusedTitle",
+                                    "branches.dialog.setUpstream.refusedTitle",
                                     popup.branch().value(),
                                     refused.upstream().shortName(),
                                     refused.pushDefault()))
-                            .getOrElse(() -> Messages.get("dialog.setUpstream.title")),
+                            .getOrElse(() -> Messages.get("branches.dialog.setUpstream.title")),
                     Option.none(),
                     PushMsg.UpstreamConfirmed::new)
             .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
@@ -41,10 +41,11 @@ public final class PushDialogs {
     public static final ConfirmDialog.Spec<ForcePushPopup> FORCE_PUSH = new ConfirmDialog.Spec<>(
             "force-push",
             ForcePushPopup.class,
-            popup -> Messages.get("dialog.forcePush.title", popup.branch().value()),
+            popup -> Messages.get(
+                    "branches.dialog.forcePush.title", popup.branch().value()),
             popup -> popup.onlyBehind()
-                    ? Messages.get("dialog.forcePush.behind", popup.behind())
-                    : Messages.get("dialog.forcePush.message"),
+                    ? Messages.get("branches.dialog.forcePush.behind", popup.behind())
+                    : Messages.get("branches.dialog.forcePush.message"),
             PushMsg.ForceConfirmed::new);
 
     private PushDialogs() {}

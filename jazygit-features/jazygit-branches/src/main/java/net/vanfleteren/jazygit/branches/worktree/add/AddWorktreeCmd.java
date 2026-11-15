@@ -33,7 +33,8 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public record AddWorktreeCmd(WorktreeSource source, String location, boolean switching) implements OperationCmd {
 
-    public static final Operation ADD_WORKTREE = Operation.of("log.title.addWorktree", "error.addWorktree.failed");
+    public static final Operation ADD_WORKTREE =
+            Operation.of("branches.log.title.addWorktree", "branches.error.addWorktree.failed");
 
     /**
      * Adds it; once added, switching to it is offered.

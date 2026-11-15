@@ -49,7 +49,7 @@ public sealed interface CommitFilesCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.reviewRemarks", String.valueOf(number.value())));
+            return Option.of(Label.of("changes.work.reviewRemarks", String.valueOf(number.value())));
         }
 
         @Override
@@ -81,7 +81,7 @@ public sealed interface CommitFilesCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.picture", String.valueOf(number.value())));
+            return Option.of(Label.of("changes.work.picture", String.valueOf(number.value())));
         }
 
         @Override

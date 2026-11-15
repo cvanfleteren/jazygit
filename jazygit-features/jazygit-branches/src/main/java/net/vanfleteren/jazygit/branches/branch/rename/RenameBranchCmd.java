@@ -17,7 +17,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
 public record RenameBranchCmd(BranchName branch, BranchName newName, Option<RemoteBranch> upstream)
         implements BranchCmd {
 
-    public static final Operation RENAME_BRANCH = Operation.of("log.title.renameBranch", "error.renameBranch.failed");
+    public static final Operation RENAME_BRANCH =
+            Operation.of("branches.log.title.renameBranch", "branches.error.renameBranch.failed");
 
     /**
      * Renames only the local branch {@code branch} to {@code newName}.

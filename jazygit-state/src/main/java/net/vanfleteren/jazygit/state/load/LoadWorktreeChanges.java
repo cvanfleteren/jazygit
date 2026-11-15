@@ -16,7 +16,7 @@ public record LoadWorktreeChanges(List<String> worktrees) implements Load {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.worktreeChanges"));
+        return Option.of(Label.of("state.work.worktreeChanges"));
     }
 
     @Override

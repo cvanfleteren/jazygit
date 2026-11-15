@@ -22,8 +22,8 @@ public final class AddWorktreeDialogs {
     public static final TextInputDialog.Spec<NewWorktreeStartPopup> NEW_WORKTREE_START = new TextInputDialog.Spec<>(
                     "new-worktree-start",
                     NewWorktreeStartPopup.class,
-                    popup -> Messages.get("dialog.newWorktreeStart.title"),
-                    Option.of(Messages.get("dialog.newWorktreeStart.placeholder")),
+                    popup -> Messages.get("branches.dialog.newWorktreeStart.title"),
+                    Option.of(Messages.get("branches.dialog.newWorktreeStart.placeholder")),
                     AddWorktreeMsg.StartConfirmed::new)
             .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
@@ -35,12 +35,12 @@ public final class AddWorktreeDialogs {
                     "new-worktree",
                     NewWorktreePopup.class,
                     popup -> Messages.get(
-                            "dialog.newWorktree.title", popup.source().label()),
-                    Option.of(Messages.get("dialog.newWorktree.placeholder")))
+                            "branches.dialog.newWorktree.title", popup.source().label()),
+                    Option.of(Messages.get("branches.dialog.newWorktree.placeholder")))
             .withWidth(TextInputDialog.BRANCH_NAME_WIDTH)
             .withDetails(popup -> popup.templated()
                     ? Option.none()
-                    : Option.of(Messages.get("dialog.newWorktree.template.details", popup.templateKey())));
+                    : Option.of(Messages.get("branches.dialog.newWorktree.template.details", popup.templateKey())));
 
     /**
      * Asks for the name of the new branch to check out in a new worktree. A name that is no branch name keeps it
@@ -52,11 +52,11 @@ public final class AddWorktreeDialogs {
                     popup -> popup.ifBlank()
                             .map(blank -> Messages.get(
                                     blank instanceof WorktreeSource.Existing
-                                            ? "dialog.newWorktreeBranch.orExisting"
-                                            : "dialog.newWorktreeBranch.orDetached",
+                                            ? "branches.dialog.newWorktreeBranch.orExisting"
+                                            : "branches.dialog.newWorktreeBranch.orDetached",
                                     popup.label()))
-                            .getOrElse(() -> Messages.get("dialog.newWorktreeBranch.title", popup.label())),
-                    Option.of(Messages.get("dialog.newBranch.placeholder")),
+                            .getOrElse(() -> Messages.get("branches.dialog.newWorktreeBranch.title", popup.label())),
+                    Option.of(Messages.get("branches.dialog.newBranch.placeholder")),
                     AddWorktreeMsg.NameConfirmed::new)
             .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
@@ -66,8 +66,8 @@ public final class AddWorktreeDialogs {
     public static final ConfirmDialog.Spec<SwitchToAddedPopup> SWITCH_TO_ADDED = new ConfirmDialog.Spec<>(
             "switch-to-added-worktree",
             SwitchToAddedPopup.class,
-            popup -> Messages.get("dialog.switchToAddedWorktree.title", popup.label()),
-            popup -> Messages.get("dialog.switchToAddedWorktree.message", HomeDir.shown(popup.location())),
+            popup -> Messages.get("branches.dialog.switchToAddedWorktree.title", popup.label()),
+            popup -> Messages.get("branches.dialog.switchToAddedWorktree.message", HomeDir.shown(popup.location())),
             AddWorktreeMsg.SwitchConfirmed::new);
 
     private AddWorktreeDialogs() {}

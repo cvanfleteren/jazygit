@@ -17,7 +17,8 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  */
 public sealed interface DeleteCommentCmd extends Cmd {
 
-    Operation DELETE_COMMENT = Operation.of("log.title.deleteReviewComment", "error.deleteReviewComment.failed");
+    Operation DELETE_COMMENT =
+            Operation.of("github.log.title.deleteReviewComment", "github.error.deleteReviewComment.failed");
 
     /**
      * Deletes the comment with the id {@code comment} of the thread with the id {@code thread} of pull request

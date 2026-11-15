@@ -12,7 +12,8 @@ public final class ResetAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                     Scopes.COMMITS,
-                    Binding.onSelected("g", "help.commits.reset", commit -> new ResetMsg.Requested(commit.sha()))),
+                    Binding.onSelected(
+                            "g", "changes.help.commits.reset", commit -> new ResetMsg.Requested(commit.sha()))),
             ResetDialogs::popups);
 
     private ResetAction() {}

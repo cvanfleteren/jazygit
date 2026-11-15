@@ -25,27 +25,31 @@ public final class UpstreamDialogs {
             "upstream",
             UpstreamPopup.class,
             popup -> popup.branch()
-                    .map(branch ->
-                            Messages.get("dialog.upstream.title", branch.name().value()))
-                    .getOrElse(() -> Messages.get("dialog.upstream.titleDetached")),
+                    .map(branch -> Messages.get(
+                            "branches.dialog.upstream.title", branch.name().value()))
+                    .getOrElse(() -> Messages.get("branches.dialog.upstream.titleDetached")),
             List.of(
                     new Choice<UpstreamPopup>(
                                     'v',
-                                    popup -> Messages.get("dialog.upstream.divergence", upstreamName(popup.branch())),
+                                    popup -> Messages.get(
+                                            "branches.dialog.upstream.divergence", upstreamName(popup.branch())),
                                     UpstreamMsg.UpstreamDivergenceChosen::new)
-                            .withDetails("dialog.upstream.divergence.details"),
+                            .withDetails("branches.dialog.upstream.divergence.details"),
                     new Choice<UpstreamPopup>(
                                     'b',
                                     popup -> popup.base()
-                                            .map(base -> Messages.get("dialog.upstream.baseDivergence", base.name()))
-                                            .getOrElse(() -> Messages.get("dialog.upstream.baseDivergenceUnknown")),
+                                            .map(base -> Messages.get(
+                                                    "branches.dialog.upstream.baseDivergence", base.name()))
+                                            .getOrElse(() ->
+                                                    Messages.get("branches.dialog.upstream.baseDivergenceUnknown")),
                                     UpstreamMsg.BaseDivergenceChosen::new)
-                            .withDetails("dialog.upstream.baseDivergence.details"),
+                            .withDetails("branches.dialog.upstream.baseDivergence.details"),
                     new Choice<UpstreamPopup>(
                                     'g',
-                                    popup -> Messages.get("dialog.upstream.reset", upstreamName(popup.checkedOut())),
+                                    popup -> Messages.get(
+                                            "branches.dialog.upstream.reset", upstreamName(popup.checkedOut())),
                                     UpstreamMsg.ResetChosen::new)
-                            .withDetails("dialog.upstream.reset.details")));
+                            .withDetails("branches.dialog.upstream.reset.details")));
 
     private UpstreamDialogs() {}
 
@@ -56,6 +60,6 @@ public final class UpstreamDialogs {
     private static String upstreamName(Option<Branch> branch) {
         return branch.flatMap(Branch::upstream)
                 .map(upstream -> upstream.branch().name())
-                .getOrElse(() -> Messages.get("dialog.upstream.unknown"));
+                .getOrElse(() -> Messages.get("branches.dialog.upstream.unknown"));
     }
 }

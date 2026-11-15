@@ -12,7 +12,8 @@ public final class RevertAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> keys.add(
                     Scopes.COMMITS,
-                    Binding.onSelected("t", "help.commits.revert", commit -> new RevertMsg.Requested(commit.sha()))),
+                    Binding.onSelected(
+                            "t", "changes.help.commits.revert", commit -> new RevertMsg.Requested(commit.sha()))),
             RevertDialogs::popups);
 
     private RevertAction() {}

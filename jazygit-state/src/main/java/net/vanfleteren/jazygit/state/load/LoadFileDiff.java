@@ -18,7 +18,7 @@ public record LoadFileDiff(List<FileEntry> files, DiffOptions options) implement
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.diff"));
+        return Option.of(Label.of("state.work.diff"));
     }
 
     @Override

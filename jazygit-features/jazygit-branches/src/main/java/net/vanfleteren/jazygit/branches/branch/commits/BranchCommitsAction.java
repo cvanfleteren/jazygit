@@ -15,17 +15,17 @@ public final class BranchCommitsAction {
                     Scopes.BRANCHES,
                     Binding.onSelected(
                             Keymap.ENTER,
-                            "help.branches.viewCommits",
+                            "branches.help.branches.viewCommits",
                             name -> new BranchCommitsMsg.Opened(new BranchRef.Local(name))))
             .add(
                     Scopes.REMOTE_BRANCHES,
                     Binding.onSelected(
                             Keymap.ENTER,
-                            "help.branches.viewCommits",
+                            "branches.help.branches.viewCommits",
                             remote -> new BranchCommitsMsg.Opened(new BranchRef.Remote(remote))))
             .add(
                     Scopes.BRANCH_COMMITS,
-                    Binding.always(Keymap.ESCAPE, "help.branchCommits.close", BranchCommitsMsg.Closed::new)));
+                    Binding.always(Keymap.ESCAPE, "branches.help.branchCommits.close", BranchCommitsMsg.Closed::new)));
 
     private BranchCommitsAction() {}
 }
