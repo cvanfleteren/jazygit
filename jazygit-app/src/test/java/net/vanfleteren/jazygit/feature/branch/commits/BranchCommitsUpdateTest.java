@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
@@ -182,8 +183,8 @@ class BranchCommitsUpdateTest {
                 view(failed).flatMap(BranchCommitsView::detail).exists(d -> d.value() instanceof Loadable.Failed),
                 view(failed).toString());
         assertTrue(
-                Update.tick(failed).cmds().contains(load),
-                Update.tick(failed).cmds().toString());
+                RereadUpdate.tick(failed).cmds().contains(load),
+                RereadUpdate.tick(failed).cmds().toString());
     }
 
     @Test

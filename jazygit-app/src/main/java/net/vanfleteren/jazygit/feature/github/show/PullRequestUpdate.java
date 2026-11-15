@@ -33,6 +33,8 @@ import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
 
@@ -91,7 +93,7 @@ public final class PullRequestUpdate {
                         pullRequest.pullRequest(),
                         pullRequest.fromFork(),
                         false)
-                : Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+                : OperationUpdate.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
     }
 
     /**
@@ -105,7 +107,7 @@ public final class PullRequestUpdate {
                         FromGitHub.branch(pullRequest.headBranch()),
                         pullRequest.pullRequest(),
                         pullRequest.fromFork())
-                : Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+                : OperationUpdate.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
     }
 
     /**
@@ -141,7 +143,7 @@ public final class PullRequestUpdate {
      */
     private static Next openConfirmed(Model model) {
         return model.popup(PullRequestPopup.class)
-                .map(popup -> Update.start(
+                .map(popup -> OperationUpdate.start(
                         model.clearError(),
                         new OpenPullRequest(popup.branch(), popup.pullRequest().number())))
                 .getOrElse(() -> Next.of(model));
@@ -162,7 +164,7 @@ public final class PullRequestUpdate {
      * Asks to confirm merging the pull request shown as {@code method} says, when it can be merged.
      */
     private static Next mergeChosen(Model model, MergeMethod method) {
-        return Update.confirm(
+        return PopupUpdate.confirm(
                 model,
                 PullRequestPopup.class,
                 popup -> Option.when(
@@ -175,7 +177,7 @@ public final class PullRequestUpdate {
      * Asks to confirm closing the pull request shown, when it is open.
      */
     private static Next closeChosen(Model model) {
-        return Update.confirm(
+        return PopupUpdate.confirm(
                 model,
                 PullRequestPopup.class,
                 popup -> Option.when(
@@ -192,7 +194,7 @@ public final class PullRequestUpdate {
         return model.popup(PullRequestPopup.class)
                 .filter(popup -> draftChangeable(model, popup))
                 .flatMap(popup -> popup.draft()
-                        .map(draft -> Update.start(
+                        .map(draft -> OperationUpdate.start(
                                 model.clearError(),
                                 new SetDraft(popup.branch(), popup.pullRequest().number(), !draft))))
                 .getOrElse(() -> Next.of(model));
@@ -431,7 +433,9 @@ public final class PullRequestUpdate {
             PullRequestPopup opened = PullRequestPopup.loading(branch, pullRequest, model.now(), load.read());
             PullRequestPopup loading = fromFork ? opened.ofFork() : opened;
             return Next.of(
-                    Update.ask(given, files ? loading.wantingFiles() : loading).model(), load);
+                    PopupUpdate.ask(given, files ? loading.wantingFiles() : loading)
+                            .model(),
+                    load);
         });
     }
 }

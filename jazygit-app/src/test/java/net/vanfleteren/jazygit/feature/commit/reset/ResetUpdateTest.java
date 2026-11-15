@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.popup.*;
@@ -111,7 +112,7 @@ class ResetUpdateTest {
 
     @Test
     void aHardResetAsksWhenTheStatusIsNotKnown() {
-        Model model = Update.update(Update.init("repo").model(), TestModels.commitsLoaded(List.of(TIP, ROOT)))
+        Model model = Update.update(TestModels.init("repo").model(), TestModels.commitsLoaded(List.of(TIP, ROOT)))
                 .model();
 
         Next next = Update.update(opened(model), new ResetMsg.Chosen(ResetMode.HARD));

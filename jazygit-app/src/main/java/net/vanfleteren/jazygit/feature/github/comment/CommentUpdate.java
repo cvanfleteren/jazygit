@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.compose.ComposeUpdate;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Commenting on the pull request that is shown. The comment is written in a popup of its own, or in the editor, and
@@ -30,7 +32,7 @@ public final class CommentUpdate {
             // Once the details are read, whatever state the pull request is in: closed ones take comments too. The
             // comments are only shown once the details are read.
             case CommentMsg.Requested() ->
-                Update.ask(
+                PopupUpdate.ask(
                         model,
                         model.popup(PullRequestPopup.class)
                                 .filter(PullRequestPopup::detailsRead)
@@ -67,7 +69,7 @@ public final class CommentUpdate {
     static Next send(Model model, CommentPopup popup) {
         return popup.text().isBlank()
                 ? Next.of(model)
-                : Update.start(
+                : OperationUpdate.start(
                         model.clearError().openPopup(popup.withSending(true)),
                         new AddComment(popup.pullRequestPopup().branch(), popup.number(), popup.text()));
     }

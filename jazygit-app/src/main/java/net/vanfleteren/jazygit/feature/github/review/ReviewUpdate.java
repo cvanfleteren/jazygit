@@ -30,6 +30,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.compose.ComposeUpdate;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 import net.vanfleteren.jazygit.state.view.*;
 
 /**
@@ -77,7 +79,8 @@ public final class ReviewUpdate {
                 .fold(why -> Next.of(refused(model, why)), on -> {
                     Resolve resolve = new Resolve(
                             on.number(), on.thread().id(), !on.thread().resolved());
-                    return Update.start(sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
+                    return OperationUpdate.start(
+                            sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
                 });
     }
 
@@ -131,7 +134,7 @@ public final class ReviewUpdate {
         // An edit does not mark its thread as being sent, as a reply does: the popup takes every key while it is
         // saved, so nothing else is sent for the thread meanwhile (ADR 65).
         Model sending = model.clearError().openPopup(popup.withSending(true));
-        return Update.start(
+        return OperationUpdate.start(
                 popup.target() instanceof Target.Reply(ReviewThread.Id thread, var comment)
                         ? sending(sending, set -> set.add(thread))
                         : sending,
@@ -139,7 +142,7 @@ public final class ReviewUpdate {
     }
 
     private static Next asked(Model model, Either<Why, ReviewPopup> popup) {
-        return popup.fold(why -> Next.of(refused(model, why)), open -> Update.ask(model, open));
+        return popup.fold(why -> Next.of(refused(model, why)), open -> PopupUpdate.ask(model, open));
     }
 
     /**

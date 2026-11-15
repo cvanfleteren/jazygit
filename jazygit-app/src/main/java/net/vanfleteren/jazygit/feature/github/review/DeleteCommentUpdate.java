@@ -15,6 +15,8 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Deleting a comment of a review thread of the diff of a pull request's files, from its cursor (ADR 64). It is asked
@@ -42,7 +44,7 @@ public final class DeleteCommentUpdate {
         return deletable(model, at.cursor())
                 .fold(
                         why -> Next.of(refused(model, why)),
-                        on -> Update.ask(
+                        on -> PopupUpdate.ask(
                                 model,
                                 new DeleteCommentPopup(on.number(), on.thread().id(), on.comment(), model.now())));
     }
@@ -99,7 +101,7 @@ public final class DeleteCommentUpdate {
                 .filterOrElse(found -> found.number().equals(popup.number()), found -> Why.NOT_READ)
                 .fold(
                         why -> Next.of(refused(model.withoutPopup(DeleteCommentPopup.class), why)),
-                        found -> Update.confirm(
+                        found -> PopupUpdate.confirm(
                                         model,
                                         DeleteCommentPopup.class,
                                         open -> Option.of(new DeleteComment(

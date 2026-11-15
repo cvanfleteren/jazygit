@@ -67,7 +67,7 @@ class TimerSwitchesTest {
 
     @Test
     void withAutoRefreshOffTheAppsOwnCommandsStillReadTheRepository() {
-        assertTrue(Update.refresh(autoRefreshOff()).cmds().contains(new LoadStatus()));
+        assertTrue(RereadUpdate.refresh(autoRefreshOff()).cmds().contains(new LoadStatus()));
     }
 
     @Test

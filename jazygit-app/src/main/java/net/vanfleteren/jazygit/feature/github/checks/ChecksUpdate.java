@@ -11,12 +11,12 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.CheckTimesUpdate;
 import net.vanfleteren.jazygit.state.github.FromGitHub;
 import net.vanfleteren.jazygit.state.github.PendingChecks;
 import net.vanfleteren.jazygit.state.github.Reading;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Showing the checks on the tip of a branch one by one, with how long they took or run, and reading them again by
@@ -31,7 +31,7 @@ public final class ChecksUpdate {
             case ChecksMsg.Requested(BranchRef branch) ->
                 onGitHub(model, branch)
                         .map(remote -> Next.of(
-                                Update.ask(model, ChecksPopup.loading(branch, remote, model.now()))
+                                PopupUpdate.ask(model, ChecksPopup.loading(branch, remote, model.now()))
                                         .model(),
                                 new LoadChecks(remote)))
                         .getOrElse(() -> Next.of(model));
@@ -40,7 +40,7 @@ public final class ChecksUpdate {
                 model.popup(PullRequestPopup.class)
                         .flatMap(dialog -> ofPullRequest(model, dialog)
                                 .map(remote -> Next.of(
-                                        Update.ask(
+                                        PopupUpdate.ask(
                                                         model,
                                                         ChecksPopup.loading(
                                                                 remote.tracking(), remote, model.now(), dialog))

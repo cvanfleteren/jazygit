@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.DiffLoad;
 import net.vanfleteren.jazygit.state.load.LoadFileDiff;
@@ -91,7 +91,7 @@ public final class DiffOptionsUpdate {
                 model.repoView().commitFiles().map(view -> view.withDiff(reloading(view.diff())));
         List<Cmd> loads = List.<Cmd>empty()
                 .appendAll(model.repoView().fileDiff().map(diff -> new LoadFileDiff(diff.key(), options)))
-                .appendAll(Update.shown(model).filter(load -> load instanceof DiffLoad));
+                .appendAll(RereadUpdate.shown(model).filter(load -> load instanceof DiffLoad));
         return new Next(
                 model.mapRepoView(repoView -> repoView.withFileDiff(reloading(repoView.fileDiff()))
                         .withCommitDetail(reloading(repoView.commitDetail()))
