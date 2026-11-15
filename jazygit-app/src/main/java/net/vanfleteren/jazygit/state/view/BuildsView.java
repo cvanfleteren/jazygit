@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.state.Loadable;
  * @param onGitHub      the branch on GitHub it follows, whose builds are read; none when it follows none
  * @param builds        the builds read so far, of the newest commit first
  * @param commits       how many commits of the branch were read, with or without builds
+ * @param limit         how many commits are read before it stops, until more are asked for
  * @param after         where the commits still to be read start; none at the tip
  * @param reading       whether more commits are being read
  * @param stopped       why reading more failed, after some were read; none while it did not
@@ -43,6 +44,7 @@ public record BuildsView(
         Option<RemoteBranch> onGitHub,
         Loadable<List<Build>> builds,
         int commits,
+        int limit,
         Option<String> after,
         boolean reading,
         Option<Failure> stopped,
@@ -54,7 +56,7 @@ public record BuildsView(
         @With Option<Integer> window) {
 
     /**
-     * How many commits are read, at most (ADR 131).
+     * How many commits are read at first, and how many more each time more are asked for (ADR 131, 132).
      */
     public static final int COMMITS = 100;
 
@@ -67,6 +69,7 @@ public record BuildsView(
                 Option.of(onGitHub),
                 Loadable.loading(),
                 0,
+                COMMITS,
                 Option.none(),
                 true,
                 Option.none(),
@@ -87,6 +90,7 @@ public record BuildsView(
                 Option.none(),
                 new Loadable.Loaded<>(List.empty()),
                 0,
+                COMMITS,
                 Option.none(),
                 false,
                 Option.none(),
@@ -129,7 +133,7 @@ public record BuildsView(
     }
 
     /**
-     * This, with the builds of {@code page} after those read; it reads on while fewer than {@link #COMMITS} commits
+     * This, with the builds of {@code page} after those read; it reads on while fewer than {@code limit} commits
      * were read and older ones are left. None read means the branch is not on GitHub.
      */
     public BuildsView read(Option<BuildsPage> page) {
@@ -141,8 +145,9 @@ public record BuildsView(
                 new Loadable.Loaded<>(builds.getOrElse(List.empty())
                         .appendAll(page.map(BuildsPage::builds).getOrElse(List.empty()))),
                 read,
+                limit,
                 next,
-                read < COMMITS && next.isDefined(),
+                read < limit && next.isDefined(),
                 Option.none(),
                 workflows,
                 selected,
@@ -162,6 +167,7 @@ public record BuildsView(
                 onGitHub,
                 builds.failed(failure),
                 commits,
+                limit,
                 after,
                 false,
                 builds.toOption().map(read -> failure),
@@ -174,6 +180,37 @@ public record BuildsView(
     }
 
     /**
+     * Whether more commits can be asked for: older ones are left, and none are being read (ADR 132).
+     */
+    public boolean hasMore() {
+        return !reading && after.isDefined();
+    }
+
+    /**
+     * This, reading {@link #COMMITS} more commits from where those read end, or again from where reading them failed;
+     * none when no older ones are left, or they are being read (ADR 132).
+     */
+    public Option<BuildsView> more() {
+        return Option.when(
+                hasMore(),
+                () -> new BuildsView(
+                        branch,
+                        onGitHub,
+                        builds,
+                        commits,
+                        commits + COMMITS,
+                        after,
+                        true,
+                        Option.none(),
+                        workflows,
+                        selected,
+                        allBranches,
+                        runs,
+                        repoWorkflows,
+                        window));
+    }
+
+    /**
      * This, with {@code read} of the files of workflows; a file being read is in it as none.
      */
     public BuildsView withWorkflows(Map<FileAt, Option<Workflow>> read) {
@@ -182,6 +219,7 @@ public record BuildsView(
                 onGitHub,
                 builds,
                 commits,
+                limit,
                 after,
                 reading,
                 stopped,
@@ -202,6 +240,7 @@ public record BuildsView(
                 onGitHub,
                 builds,
                 commits,
+                limit,
                 after,
                 reading,
                 stopped,

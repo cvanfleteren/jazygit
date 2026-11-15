@@ -12,9 +12,11 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.builds.BuildsReads;
+import net.vanfleteren.jazygit.state.github.builds.LoadWorkflowRuns;
 import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
+import net.vanfleteren.jazygit.state.view.WorkflowRuns;
 
 /**
  * Showing the builds of a local branch on GitHub, reading them some commits at a time, and choosing the tab and
@@ -62,6 +64,7 @@ public final class BuildsUpdate {
                                                 tab._2(),
                                                 count(model, tab._1()))))))
                         .getOrElse(() -> Next.of(model));
+            case BuildsMsg.MoreRequested() -> more(model);
             case BuildsMsg.WindowRequested() ->
                 PopupUpdate.ask(
                         model, model.repoView().branches().builds().map(view -> new BuildsWindowPopup(view.window())));
@@ -72,6 +75,33 @@ public final class BuildsUpdate {
                 BuildsReads.next(
                         changed(model.withoutPopup(BuildsPopup.class), (view, builds) -> view.withSelected(pipeline)));
         };
+    }
+
+    /**
+     * {@code model}, reading older builds than those read, when older ones are left and none are being read: on every
+     * branch, more runs of the workflow of the tab shown; else more commits of the branch (ADR 132).
+     */
+    private static Next more(Model model) {
+        return model.repoView()
+                .branches()
+                .builds()
+                .flatMap(view -> view.allBranches()
+                        ? view.shownTab(BuildsReads.shownBuilds(model, view))
+                                .flatMap(tab -> view.workflowId(tab.workflow()))
+                                .flatMap(id -> view.runs()
+                                        .get(id)
+                                        .flatMap(WorkflowRuns::more)
+                                        .map(runs -> Next.of(
+                                                shown(
+                                                        model,
+                                                        Option.of(view.withRuns(
+                                                                view.runs().put(id, runs)))),
+                                                new LoadWorkflowRuns(id, runs.after()))))
+                        : view.onGitHub()
+                                .flatMap(remote -> view.more()
+                                        .map(more -> Next.of(
+                                                shown(model, Option.of(more)), new LoadBuilds(remote, more.after())))))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**

@@ -44,6 +44,7 @@ import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
+import net.vanfleteren.jazygit.state.view.WorkflowRuns;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.AheadView;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
@@ -454,7 +455,16 @@ public final class ContentView {
                                     : Messages.get("panel.builds.title", branch, commits);
                     // Only the builds of the commits not on the base show: the title says how many there are.
                     String ofBranch = ahead.only() ? ahead.title(read) : read;
-                    String title = view.allBranches() ? Messages.get("panel.builds.everyBranch", ofBranch) : ofBranch;
+                    String every = view.allBranches() ? Messages.get("panel.builds.everyBranch", ofBranch) : ofBranch;
+                    // Older builds can be read with m, or read again after failing: of the branch, or on every
+                    // branch, of the tab (ADR 132).
+                    Option<WorkflowRuns> runs = view.shownTab(shown).flatMap(tab -> view.runsOf(tab.workflow()));
+                    boolean more = view.allBranches() ? runs.exists(WorkflowRuns::hasMore) : view.hasMore();
+                    boolean failed = view.allBranches()
+                            ? runs.exists(ofTab -> ofTab.stopped().isDefined())
+                            : view.stopped().isDefined();
+                    String title =
+                            more ? Messages.get(failed ? "panel.builds.retry" : "panel.builds.more", every) : every;
                     return whenLoaded(
                             title,
                             view.builds(),

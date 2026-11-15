@@ -192,6 +192,34 @@ class BuildsEveryBranchTest {
     }
 
     @Test
+    void mOnEveryBranchReadsAHundredMoreRunsOfTheTab() {
+        Model read = Update.update(
+                        model(),
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN, Option.none(), Option.of(new BuildsPage(List.of(MINE), 3, Option.none()))))
+                .model();
+        Model every = Update.update(read, new BuildsMsg.AllToggled()).model();
+        Model hundred = Update.update(
+                        every,
+                        new BuildsViewMsg.RunsRead(
+                                BUILD_ID,
+                                Option.none(),
+                                Option.of(new WorkflowRunsPage(List.of(MINE), 100, Option.of("c100")))))
+                .model();
+        assertEquals(
+                "Builds: main · last 3 commits · every branch · m for more",
+                ((Shown.Area) ContentView.of(hundred, BranchesPanel.PANE)).title());
+
+        Next more = Update.update(hundred, new BuildsMsg.MoreRequested());
+
+        assertEquals(List.of(new LoadWorkflowRuns(BUILD_ID, Option.of("c100"))), more.cmds());
+        WorkflowRuns runs = view(more.model()).runs().get(BUILD_ID).get();
+        assertTrue(runs.reading());
+        assertEquals(200, runs.limit());
+        assertFalse(view(more.model()).reading());
+    }
+
+    @Test
     void theRunsOfEveryBranchMarkTheBranchesOwnAndSayWhatEachRanFor() {
         BuildsView view = BuildsView.reading(MAIN, ORIGIN_MAIN)
                 .read(Option.of(new BuildsPage(List.of(MINE), 3, Option.none())))

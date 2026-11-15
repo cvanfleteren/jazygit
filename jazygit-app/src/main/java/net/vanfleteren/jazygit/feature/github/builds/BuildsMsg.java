@@ -49,6 +49,12 @@ public sealed interface BuildsMsg extends Msg {
     record AllToggled() implements BuildsMsg {}
 
     /**
+     * The user asked for older builds than those read: of more commits of the branch, or, on every branch, more runs
+     * of the workflow of the tab (ADR 132).
+     */
+    record MoreRequested() implements BuildsMsg {}
+
+    /**
      * The user asked to choose how many builds show.
      */
     record WindowRequested() implements BuildsMsg {}
