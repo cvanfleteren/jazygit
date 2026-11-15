@@ -148,6 +148,59 @@ class BuildsTextTest {
                 lines.exists(line -> line.startsWith("✗ abcdef0  13 Nov 20:00   5m00") && line.endsWith("Commit 20")));
     }
 
+    /**
+     * What {@code builds} of every branch show, the first of them run for {@code first}.
+     */
+    private static List<String> drawnOnEveryBranch(List<Build> builds, Build.Origin first) {
+        Build head = builds.head();
+        List<Build> ran = builds.tail()
+                .prepend(new Build(
+                        head.workflow(),
+                        head.event(),
+                        head.runId(),
+                        head.attempt(),
+                        head.sha(),
+                        head.title(),
+                        head.createdAt(),
+                        head.jobs(),
+                        head.file(),
+                        first));
+        BuildsShown shown = shown(ran, Option.none());
+        BuildsShown everyBranch = new BuildsShown(
+                shown.tabs(),
+                shown.lasts(),
+                shown.index(),
+                true,
+                shown.builds(),
+                shown.of(),
+                shown.mine(),
+                shown.baseline(),
+                shown.needs());
+        return BuildsText.lines(everyBranch, ZoneOffset.UTC, Theme.SpanStyles.NONE, 120)
+                .map(BuildsTextTest::text);
+    }
+
+    @Test
+    void theColumnOfWhatABuildRanForIsAsWideAsWhatItShows() {
+        List<String> lines =
+                drawnOnEveryBranch(PUBLISH, new Build.Origin(Option.none(), Option.none(), Option.of(501)));
+        int header = lines.indexWhere(line -> line.contains("commit   when"));
+
+        assertEquals("    for  commit   when            time  vs median  title", lines.get(header));
+        assertEquals("✓   #501 abcdef0  14 Nov 05:00   4m00     +0s  Commit 29", lines.get(header + 1));
+        assertEquals("✓   –    abcdef0  14 Nov 04:00   4m00     +0s  Commit 28", lines.get(header + 2));
+    }
+
+    @Test
+    void aLongBranchIsCutToTheWidestTheColumnOfWhatABuildRanForIs() {
+        List<String> lines = drawnOnEveryBranch(
+                PUBLISH, new Build.Origin(Option.none(), Option.of("feature/a-long-branch"), Option.none()));
+        int header = lines.indexWhere(line -> line.contains("commit   when"));
+
+        assertEquals("    for           commit   when            time  vs median  title", lines.get(header));
+        assertTrue(lines.get(header + 1).startsWith("✓   feature/a-lo… abcdef0"), lines.get(header + 1));
+    }
+
     @Test
     void durationsAreShortest() {
         assertEquals("45s", BuildsText.duration(Duration.ofSeconds(45)));

@@ -45,7 +45,7 @@ final class BuildsText {
     private static final String SPARKS = "▁▂▃▄▅▆▇█";
     // What marks a run of the branch among those of every branch.
     private static final String MINE = "◆";
-    // The widest what a run on every branch ran for is shown: its pull request, else its branch.
+    // The widest the column of what a run on every branch ran for is: its pull request, else its branch.
     private static final int FOR = 14;
     // The widest a build's bar in the chart is, with the column after it, when there are few builds.
     private static final int WIDEST = 5;
@@ -565,6 +565,15 @@ final class BuildsText {
          * median, and the commit's title.
          */
         private List<Line> list(List<Build> builds, Option<Duration> median) {
+            String forLabel = Messages.get("content.builds.for");
+            // As wide as what the builds ran for and its header, with a column after it, up to FOR.
+            int forWidth = Math.min(
+                    FOR,
+                    builds.map(build -> TextWidth.of(ranFor(build)))
+                                    .append(TextWidth.of(forLabel))
+                                    .max()
+                                    .getOrElse(0)
+                            + 1);
             return builds.map(build -> {
                         Option<Duration> took = build.duration();
                         Option<Duration> difference = took.filter(done -> build.outcome() == Outcome.PASSED)
@@ -574,7 +583,7 @@ final class BuildsText {
                                         isMine(build) ? span(MINE, Theme.Classes.CURRENT_BRANCH) : Span.raw(" "),
                                         Span.raw(" "),
                                         span(
-                                                pad(ranFor(build), FOR),
+                                                pad(ranFor(build), forWidth),
                                                 isMine(build) ? Theme.Classes.CURRENT_BRANCH : Theme.Classes.DIM))
                                 : List.empty();
                         Span vsMedian = difference
@@ -605,8 +614,8 @@ final class BuildsText {
                                         Span.raw("  " + build.title())))
                                 .toJavaList());
                     })
-                    .prepend(Line.from(
-                            dim(Messages.get(allBranches ? "content.builds.listEveryBranch" : "content.builds.list"))));
+                    .prepend(Line.from(dim("  " + (allBranches ? "  " + pad(forLabel, forWidth) : "")
+                            + Messages.get("content.builds.list"))));
         }
     }
 }
