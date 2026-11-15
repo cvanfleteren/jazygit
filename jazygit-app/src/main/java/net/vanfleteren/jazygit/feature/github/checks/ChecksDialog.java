@@ -101,11 +101,18 @@ public final class ChecksDialog implements PopupView {
             List<StyledElement<?>> lines = popup.checks()
                     .map(read -> read.fold(
                             ChecksDialog::failed,
-                            checks -> checks(all, first, times, popup.progress(model), model.now(), clock.getZone())))
+                            checks -> checks(
+                                    all,
+                                    first,
+                                    times,
+                                    popup.progress(model),
+                                    popup.rerun().map(ChecksDialog::rerun),
+                                    model.now(),
+                                    clock.getZone())))
                     .getOrElse(this::loading);
             int blanks = CONTENT_HEIGHT - lines.size();
             return DialogFrame.withHint(
-                            title(popup),
+                            title(popup, model.now()),
                             WIDTH,
                             "dialog.checks.hint",
                             lines.appendAll(List.fill(Math.max(0, blanks), () -> text(""))))
@@ -140,8 +147,13 @@ public final class ChecksDialog implements PopupView {
     /**
      * The branch; then a spinner while its checks are read again as the user asked, or a mark when a read failed.
      */
-    private String title(ChecksPopup popup) {
-        String title = Messages.get("dialog.checks.title", name(popup.branch()));
+    private String title(ChecksPopup popup, Instant now) {
+        String title = Messages.get("dialog.checks.title", name(popup.branch()))
+                + popup.asked()
+                        .filter(asked -> asked.awaited(now))
+                        .map(asked -> " · "
+                                + Messages.get("dialog.checks.rerunAsked", timeOfDay(asked.at(), now, clock.getZone())))
+                        .getOrElse("");
         return popup.reading() == Reading.ASKED
                 ? title + " " + TimeText.spinnerFrame(clock.instant())
                 : popup.refreshFailed()
@@ -173,9 +185,17 @@ public final class ChecksDialog implements PopupView {
      * {@code first} one shown.
      */
     private static List<StyledElement<?>> checks(
-            List<Check> all, int first, Option<CheckTimes> times, double progress, Instant now, ZoneId zone) {
+            List<Check> all,
+            int first,
+            Option<CheckTimes> times,
+            double progress,
+            Option<StyledElement<?>> rerun,
+            Instant now,
+            ZoneId zone) {
         if (all.isEmpty()) {
-            return List.of(text(Messages.get("dialog.checks.none")).addClass(Theme.Classes.DIM));
+            return List.<StyledElement<?>>of(
+                            text(Messages.get("dialog.checks.none")).addClass(Theme.Classes.DIM))
+                    .appendAll(rerun);
         }
         List<Check> ordered = CheckRows.order(all, all, times);
         // The bars of the checks only while one is not done; once they all are, their names get the room.
@@ -187,7 +207,8 @@ public final class ChecksDialog implements PopupView {
         return List.<StyledElement<?>>of(row(CheckRows.counts(all, times, now).toJavaArray(StyledElement[]::new)))
                 .appendAll(CheckSpan.of(all).map(span -> span(span, now, zone)))
                 .append(row(gauge(all, times, progress, now).toJavaArray(StyledElement[]::new)))
-                .append(text(""))
+                // What running failed checks again says takes the blank line above the checks.
+                .append(rerun.getOrElse(() -> text("")))
                 .appendAll(ordered.drop(first)
                         .take(VISIBLE_CHECKS)
                         .map(check -> row((running
@@ -225,6 +246,45 @@ public final class ChecksDialog implements PopupView {
     }
 
     /**
+     * What running failed checks again says (ADR 135): why nothing is, that GitHub is asked to, or how that went,
+     * {@code rerun 2 of 3 · E2E: <what GitHub said>}, as an error when it refused one.
+     */
+    static StyledElement<?> rerun(RerunNote note) {
+        return switch (note) {
+            case RerunNote.Nothing(RerunPlan.Why why) -> text(nothing(why)).addClass(Theme.Classes.DIM);
+            case RerunNote.Asked asked ->
+                asked.outcomes()
+                        .map(outcomes -> {
+                            List<RerunCmd.Outcome> refused = asked.refused();
+                            String text = List.of(Messages.get(
+                                            "dialog.checks.rerunDone",
+                                            outcomes.size() - refused.size(),
+                                            outcomes.size()))
+                                    .appendAll(
+                                            refused.map(outcome -> outcome.run().workflow() + ": "
+                                                    + outcome.refused()
+                                                            .map(ErrorText::of)
+                                                            .getOrElse("")))
+                                    .mkString(" · ");
+                            return text(text).addClass(refused.isEmpty() ? Theme.Classes.DIM : Theme.Classes.ERROR);
+                        })
+                        .getOrElse(() -> text(Messages.get(
+                                        "dialog.checks.rerunAsking",
+                                        asked.runIds().size()))
+                                .addClass(Theme.Classes.DIM));
+        };
+    }
+
+    private static String nothing(RerunPlan.Why why) {
+        return Messages.get(
+                switch (why) {
+                    case NONE_FAILED -> "dialog.checks.rerunNoneFailed";
+                    case RUNNING -> "dialog.checks.rerunRunning";
+                    case NOT_ACTIONS -> "dialog.checks.rerunNotActions";
+                });
+    }
+
+    /**
      * The label {@code key}, dimmed, after {@code before} and with a space after it.
      */
     private static StyledElement<?> label(String key, String before) {
@@ -250,6 +310,8 @@ public final class ChecksDialog implements PopupView {
             dispatch.accept(new ChecksMsg.Closed());
         } else if (event.isChar('R')) {
             dispatch.accept(new ChecksMsg.RefreshChosen());
+        } else if (event.isChar('r')) {
+            dispatch.accept(new ChecksMsg.RerunRequested());
         } else if (event.isChar('j') || event.code() == KeyCode.DOWN) {
             scroll(cursor, first + 1, last);
         } else if (event.isChar('k') || event.code() == KeyCode.UP) {

@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.feature.github.checks;
 
+import io.vavr.collection.List;
 import java.time.Duration;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -45,6 +47,27 @@ public sealed interface ChecksMsg extends Msg {
      * The user asked to read the checks that are shown again.
      */
     record RefreshChosen() implements ChecksMsg {}
+
+    /**
+     * The user asked to run the failed checks shown again (ADR 135).
+     */
+    record RerunRequested() implements ChecksMsg {}
+
+    /**
+     * The user confirmed running the failed checks again.
+     */
+    record RerunConfirmed() implements ChecksMsg {}
+
+    /**
+     * The user did not confirm running the failed checks again.
+     */
+    record RerunCancelled() implements ChecksMsg {}
+
+    /**
+     * GitHub was asked to run the failed jobs of the runs of {@code cmd} again, which went as {@code outcomes}, running
+     * {@code commands}.
+     */
+    record Rerun(RerunCmd cmd, List<RerunCmd.Outcome> outcomes, List<ExecutedCommand> commands) implements ChecksMsg {}
 
     /**
      * Periodic prompt to read the checks again, while they are shown.
