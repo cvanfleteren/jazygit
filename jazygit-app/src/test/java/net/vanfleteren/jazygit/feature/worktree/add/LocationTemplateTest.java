@@ -145,6 +145,32 @@ class LocationTemplateTest {
     }
 
     @Test
+    void anyOtherWorktreeIsOfTheRepositoryThePullRequestsWereReadFor() {
+        Option<String> template = Option.of("{owner}-{name}-{branch}");
+        Model read = model().withPrOverview(model().prOverview().withRepositoryName(Option.of("octo/repo")));
+        assertEquals(
+                Option.of(new NewWorktreePopup(BRANCH, "/repos/octo-repo-feature-login", false, true)),
+                LocationAsked.located(AddWorktreeUpdate.ask(read, BRANCH), template)
+                        .model()
+                        .popup());
+
+        // Before they are read, or without gh, they are left as they are written.
+        assertEquals(
+                Option.of(new NewWorktreePopup(BRANCH, "/repos/{owner}-{name}-feature-login", false, true)),
+                LocationAsked.located(AddWorktreeUpdate.ask(model(), BRANCH), template)
+                        .model()
+                        .popup());
+
+        // So are they for a name that is not owner/name.
+        Model odd = model().withPrOverview(model().prOverview().withRepositoryName(Option.of("repo")));
+        assertEquals(
+                Option.of(new NewWorktreePopup(BRANCH, "/repos/{owner}-{name}-feature-login", false, true)),
+                LocationAsked.located(AddWorktreeUpdate.ask(odd, BRANCH), template)
+                        .model()
+                        .popup());
+    }
+
+    @Test
     void aPopupThatOpenedWhileTheTemplateWasReadStaysOpen() {
         RenameBranchPopup typing = new RenameBranchPopup(LOGIN, "typed");
 

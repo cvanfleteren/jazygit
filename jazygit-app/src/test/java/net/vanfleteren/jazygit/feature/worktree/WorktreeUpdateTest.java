@@ -1121,5 +1121,10 @@ class WorktreeUpdateTest {
         assertEquals(Path.of(System.getProperty("user.home"), "x"), WorktreeCmd.path("~/x"));
         assertEquals(Path.of("rel/x"), WorktreeCmd.path("rel/x"));
         assertEquals(Path.of("~x"), WorktreeCmd.path("~x"));
+        // The same rule holds for a template of where a new worktree starts out (ADR 134).
+        assertEquals("/home/me/reviews", WorktreeCmd.expandedHome("~/reviews", "/home/me"));
+        assertEquals("/home/me", WorktreeCmd.expandedHome("~", "/home/me"));
+        assertEquals("~bob/reviews", WorktreeCmd.expandedHome("~bob/reviews", "/home/me"));
+        assertEquals("reviews/~", WorktreeCmd.expandedHome("reviews/~", "/home/me"));
     }
 }

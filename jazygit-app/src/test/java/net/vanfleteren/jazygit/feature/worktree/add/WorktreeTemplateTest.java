@@ -85,12 +85,4 @@ class WorktreeTemplateTest {
                 "x-{repo}-$1\\",
                 WorktreeTemplate.filled("x-{branch}", LinkedHashMap.of("branch", "{repo}-$1\\", "repo", "app")));
     }
-
-    @Test
-    void aLeadingTildeIsTheHomeDirectory() {
-        assertEquals("/home/me/reviews", WorktreeTemplate.expandedHome("~/reviews", "/home/me"));
-        assertEquals("/home/me", WorktreeTemplate.expandedHome("~", "/home/me"));
-        assertEquals("~bob/reviews", WorktreeTemplate.expandedHome("~bob/reviews", "/home/me"));
-        assertEquals("reviews/~", WorktreeTemplate.expandedHome("reviews/~", "/home/me"));
-    }
 }

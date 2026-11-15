@@ -53,7 +53,9 @@ Where a new worktree starts out is kept the same way, as `jazygit.newWorktreeTem
 pull request as `jazygit.pullRequestWorktreeTemplate`, which falls back to the first. A template can use `{repo}` (the
 directory of the main worktree), `{branch}` (with `/` as `-`), `{owner}` and `{name}` (the repository on GitHub) and,
 for a pull request, `{number}`. A leading `~` is your home directory, and a relative location is next to the main
-worktree:
+worktree. For a worktree that is not of a pull request, `{owner}` and `{name}` are known once jazygit has read the
+pull requests of the repository from GitHub, shortly after it starts; until then, or without gh, they are left as
+written, and the popup shows them so:
 
 ```ini
 [jazygit]

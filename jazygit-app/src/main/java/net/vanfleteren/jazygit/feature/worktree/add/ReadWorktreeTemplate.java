@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.git.model.ConfigValue;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
@@ -37,7 +38,7 @@ public record ReadWorktreeTemplate(WorktreeSource source, boolean switching) imp
         return read(keys.toStream()
                 .flatMap(key -> read(env, key))
                 .headOption()
-                .map(template -> WorktreeTemplate.expandedHome(template, System.getProperty("user.home"))));
+                .map(template -> WorktreeCmd.expandedHome(template, System.getProperty("user.home"))));
     }
 
     @Override

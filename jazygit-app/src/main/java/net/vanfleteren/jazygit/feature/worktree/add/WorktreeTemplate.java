@@ -59,13 +59,6 @@ final class WorktreeTemplate {
     }
 
     /**
-     * {@code template} with a leading {@code ~} as {@code home}, as the shell takes it: alone or before a {@code /}.
-     */
-    static String expandedHome(String template, String home) {
-        return template.equals("~") || template.startsWith("~/") ? home + template.substring(1) : template;
-    }
-
-    /**
      * Where {@code filled} leads: an absolute location as it is, a relative one resolved against {@code base}; none
      * for a relative one without a base.
      */
