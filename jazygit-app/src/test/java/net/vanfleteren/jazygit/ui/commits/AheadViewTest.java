@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.view.CommitsShown;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.content.ContentText;
@@ -101,12 +102,24 @@ class AheadViewTest {
         AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
 
         List<LoadableList.Row> rows =
-                CommitsPanel.marked(CommitsPanel.rows(CommitGraph.layout(only.shown(LOG))), only.shown(LOG), only);
+                CommitsPanel.graphed(only.shown(LOG), Option.none(), only).map(LoadableList.Item::row);
 
         assertEquals("aaaaaaa Ad ○ ⑂ origin/main msg a", rows.last().text());
         assertTrue(rows.last().segs().forAll(seg -> seg.cssClass().contains(Theme.Classes.DIM)));
         assertTrue(rows.head().segs().forAll(seg -> seg.cssClass().isEmpty()));
         assertFalse(new AheadView(Option.of(MORE), Option.none(), false).dimmed(OLD.sha()));
+    }
+
+    @Test
+    void eachRowOfALogIsOneLineWithTheCopiedShaStandingOutAndTheForkPointDimmed() {
+        AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
+
+        List<LoadableList.Item> items = CommitsPanel.graphed(only.shown(LOG), Option.of(MIDDLE.sha()), only);
+
+        assertTrue(items.forAll(item -> item.height() == 1 && item.row().height() == 1));
+        assertEquals(
+                List.of(Option.none(), Option.of(Theme.Classes.COPIED), Option.of(Theme.Classes.DIM)),
+                items.map(item -> item.row().segs().head().cssClass()));
     }
 
     @Test
@@ -135,7 +148,7 @@ class AheadViewTest {
         Model model = TestModels.loaded(SampleData.git())
                 .mapRepo(repo ->
                         repo.withCommits(new Loadable.Loaded<>(LOG)).withAhead(new Loadable.Loaded<>(Option.of(AHEAD))))
-                .mapRepoView(repoView -> repoView.withOnlyAhead(true));
+                .mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withShown(CommitsShown.AHEAD)));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {

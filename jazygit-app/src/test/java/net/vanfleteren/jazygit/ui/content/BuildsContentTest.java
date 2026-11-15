@@ -113,7 +113,7 @@ class BuildsContentTest {
 
         assertEquals(
                 Option.of(BuildsView.reading(MAIN, ORIGIN_MAIN)),
-                asked.model().repoView().builds());
+                asked.model().repoView().branches().builds());
         assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.none())), asked.cmds());
         assertEquals("Builds: main · reading, 0 commits so far", ((Shown.Message) content(asked.model())).title());
     }
@@ -124,7 +124,7 @@ class BuildsContentTest {
 
         Next again = Update.update(shown, new BuildsMsg.Toggled(MAIN));
 
-        assertEquals(Option.none(), again.model().repoView().builds());
+        assertEquals(Option.none(), again.model().repoView().branches().builds());
         assertEquals(ContentArea.LOG, ((Shown.Area) content(again.model())).area());
     }
 
@@ -157,7 +157,7 @@ class BuildsContentTest {
             assertEquals(page < 4, !read.cmds().isEmpty());
         }
 
-        BuildsView view = reading.repoView().builds().get();
+        BuildsView view = reading.repoView().branches().builds().get();
         assertFalse(view.reading());
         assertEquals(100, view.commits());
         assertEquals(4, view.builds().getOrElse(List.empty()).size());
@@ -172,7 +172,7 @@ class BuildsContentTest {
                 Update.update(shown, new BuildsMsg.Read(ORIGIN_MAIN, Option.none(), Option.of(page(3, Option.none()))));
 
         assertTrue(read.cmds().isEmpty());
-        assertFalse(read.model().repoView().builds().get().reading());
+        assertFalse(read.model().repoView().branches().builds().get().reading());
     }
 
     @Test
@@ -224,7 +224,9 @@ class BuildsContentTest {
                                 ORIGIN_MAIN, Option.none(), Failure.of(new GhError.UnexpectedOutput("timeout"))))
                 .model();
 
-        assertInstanceOf(Loadable.Failed.class, failed.repoView().builds().get().builds());
+        assertInstanceOf(
+                Loadable.Failed.class,
+                failed.repoView().branches().builds().get().builds());
         assertEquals(ContentView.Tone.ERROR, ((Shown.Message) content(failed)).tone());
     }
 
@@ -243,7 +245,7 @@ class BuildsContentTest {
         assertTrue(failed.cmds().isEmpty());
         assertEquals(
                 List.of(BUILD),
-                failed.model().repoView().builds().get().builds().getOrElse(List.empty()));
+                failed.model().repoView().branches().builds().get().builds().getOrElse(List.empty()));
         assertEquals("Builds: main · 25 commits, could not read more", ((Shown.Area) content(failed.model())).title());
     }
 
@@ -454,8 +456,9 @@ class BuildsContentTest {
         Model clicked = Update.update(shown, new BuildsViewMsg.TabClicked(lint)).model();
         Model closed = Update.update(clicked, new BuildsMsg.Closed()).model();
 
-        assertEquals(Option.of(lint), clicked.repoView().builds().get().selected());
-        assertEquals(Option.none(), closed.repoView().builds());
+        assertEquals(
+                Option.of(lint), clicked.repoView().branches().builds().get().selected());
+        assertEquals(Option.none(), closed.repoView().branches().builds());
     }
 
     @Test
@@ -499,7 +502,7 @@ class BuildsContentTest {
                         .shown());
 
         Model again = Update.update(picked, new BuildsMsg.Toggled(LOCAL)).model();
-        assertEquals(Option.of(lint), again.repoView().builds().get().selected());
+        assertEquals(Option.of(lint), again.repoView().branches().builds().get().selected());
     }
 
     @Test
@@ -524,7 +527,7 @@ class BuildsContentTest {
         assertEquals(3, drawn.of());
 
         Model other = Update.update(picked, new BuildsMsg.Toggled(LOCAL)).model();
-        assertEquals(Option.of(2), other.repoView().builds().get().window());
+        assertEquals(Option.of(2), other.repoView().branches().builds().get().window());
     }
 
     private static Build withFile(Build build) {

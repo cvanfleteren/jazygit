@@ -20,10 +20,12 @@ public final class BranchCommitsUpdate {
         return switch (msg) {
             case Opened(var branch) ->
                 new SelectionMsg.BranchSelected(branch)
-                        .apply(model.mapRepoView(
-                                repoView -> repoView.withBranchCommits(Option.of(BranchCommitsView.of(branch)))
-                                        .withDivergence(Option.none())));
-            case Closed() -> Next.of(model.mapRepoView(repoView -> repoView.withBranchCommits(Option.none())));
+                        .apply(model.mapRepoView(repoView -> repoView.mapBranches(
+                                        branches -> branches.withBranchCommits(Option.of(BranchCommitsView.of(branch))))
+                                .mapBranches(branches -> branches.withDivergence(Option.none()))));
+            case Closed() ->
+                Next.of(model.mapRepoView(
+                        repoView -> repoView.mapBranches(branches -> branches.withBranchCommits(Option.none()))));
         };
     }
 }

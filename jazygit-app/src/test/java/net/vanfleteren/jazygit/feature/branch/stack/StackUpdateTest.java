@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.view.Stacking;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -20,10 +21,10 @@ class StackUpdateTest {
     @Test
     void aStackStartsOpenAndEnterOnItsHeaderClosesAndOpensIt() {
         Model loaded = TestModels.loaded();
-        assertEquals(HashSet.empty(), loaded.repoView().closedStacks());
+        assertEquals(HashSet.empty(), loaded.repoView().branches().closedStacks());
 
         Update.Next closed = Update.update(loaded, new StackMsg.Toggled(12));
-        assertEquals(HashSet.of(12), closed.model().repoView().closedStacks());
+        assertEquals(HashSet.of(12), closed.model().repoView().branches().closedStacks());
         assertEquals(List.empty(), closed.cmds());
 
         assertEquals(
@@ -31,6 +32,7 @@ class StackUpdateTest {
                 Update.update(closed.model(), new StackMsg.Toggled(12))
                         .model()
                         .repoView()
+                        .branches()
                         .closedStacks());
     }
 
@@ -47,18 +49,19 @@ class StackUpdateTest {
     @Test
     void theStacksShowAtFirstAndSHidesAndShowsThem() {
         Model loaded = TestModels.loaded();
-        assertEquals(false, loaded.repoView().unstacked());
+        assertEquals(Stacking.STACKED, loaded.repoView().branches().stacking());
 
         Update.Next unstacked = Update.update(loaded, new StackMsg.ViewToggled());
-        assertEquals(true, unstacked.model().repoView().unstacked());
+        assertEquals(Stacking.UNSTACKED, unstacked.model().repoView().branches().stacking());
         assertEquals(List.empty(), unstacked.cmds());
 
         assertEquals(
-                false,
+                Stacking.STACKED,
                 Update.update(unstacked.model(), new StackMsg.ViewToggled())
                         .model()
                         .repoView()
-                        .unstacked());
+                        .branches()
+                        .stacking());
     }
 
     @Test

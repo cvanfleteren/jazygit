@@ -114,8 +114,7 @@ public final class VersionUpdate {
                     was.column(),
                     was.cursor().map(on -> version.moved(source(on, next), next.version())),
                     Option.none());
-            Model shown = model.mapRepoView(
-                            view -> view.withVersions(view.versions().put(area, version)))
+            Model shown = model.mapRepoView(view -> view.withVersion(area, version))
                     .withScrolled(model.scrolled().put(area, to));
             return new Next(shown, reads && reused.isEmpty() ? List.<Cmd>of(how) : List.empty());
         });
@@ -130,7 +129,8 @@ public final class VersionUpdate {
     private static List<Tuple2<AreaId, Scrolled>> filesAreas(Model model) {
         RepoView view = model.repoView();
         boolean rich = model.preferences().diffLook().style() == DiffStyle.RICH;
-        List<Tuple2<AreaId, ScrolledContent>> areas = view.commitFiles()
+        List<Tuple2<AreaId, ScrolledContent>> areas = view.files()
+                .commitFiles()
                 .map(files -> files.unchanged()
                         .filter(node -> files.allFiles())
                         .map(node -> unchanged(
@@ -144,8 +144,9 @@ public final class VersionUpdate {
                                                 AreaId.COMMIT_FILE,
                                                 new ScrolledContent.FileChanges(files.of(), diff.key(), changes))))
                                 .toList()))
-                .orElse(() -> view.unchanged().map(node -> unchanged(node, AreaId.FILE_CONTENT, Option.none())))
-                .getOrElse(() -> view.fileDiff()
+                .orElse(() -> view.files().unchanged().map(node -> unchanged(node, AreaId.FILE_CONTENT, Option.none())))
+                .getOrElse(() -> view.preview()
+                        .fileDiff()
                         .map(Preview::shown)
                         .filter(ignored -> rich)
                         .flatMap(diff -> diff.value().toOption())

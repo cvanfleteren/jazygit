@@ -32,7 +32,8 @@ class TargetTest {
     private static final Failure FAILURE = TestModels.refused("gone");
 
     private static Model withStashDetail(Model model, Sha sha, Loadable<DiffText> detail) {
-        return model.mapRepoView(repoView -> repoView.withStashDetail(Option.of(new Preview<>(sha, detail))));
+        return model.mapRepoView(repoView ->
+                repoView.mapPreview(preview -> preview.withStashDetail(Option.of(new Preview<>(sha, detail)))));
     }
 
     private static DiffOptions options(Model model) {
@@ -100,11 +101,12 @@ class TargetTest {
         Target<DiffText> ofBranch = new LoadCommitDetail(SHA, options(shown), Cmd.Slot.BRANCH_COMMITS_DETAIL).target();
         Option<Preview<Sha, DiffText>> failed = Option.of(new Preview<>(SHA, new Loadable.Failed<>(FAILURE)));
 
-        Model commitsFailed = shown.mapRepoView(repoView -> repoView.withCommitDetail(failed));
-        Model divergenceFailed = shown.mapRepoView(
-                repoView -> repoView.withDivergence(repoView.divergence().map(view -> view.withDetail(failed))));
-        Model branchFailed = shown.mapRepoView(
-                repoView -> repoView.withBranchCommits(repoView.branchCommits().map(view -> view.withDetail(failed))));
+        Model commitsFailed =
+                shown.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withCommitDetail(failed)));
+        Model divergenceFailed = shown.mapRepoView(repoView -> repoView.mapBranches(
+                branches -> branches.withDivergence(branches.divergence().map(view -> view.withDetail(failed)))));
+        Model branchFailed = shown.mapRepoView(repoView -> repoView.mapBranches(
+                branches -> branches.withBranchCommits(branches.branchCommits().map(view -> view.withDetail(failed)))));
 
         assertEquals(
                 List.of(true, false, false),
@@ -124,14 +126,14 @@ class TargetTest {
     private static Model everyPreviewOf(Sha sha, Loadable<DiffText> detail) {
         Option<Preview<Sha, DiffText>> preview = Option.of(new Preview<>(sha, detail));
         return TestModels.loaded()
-                .mapRepoView(repoView -> repoView.withCommitDetail(preview)
-                        .withDivergence(Option.of(DivergenceView.loading(
+                .mapRepoView(repoView -> repoView.mapPreview(previews -> previews.withCommitDetail(preview))
+                        .mapBranches(branches -> branches.withDivergence(Option.of(DivergenceView.loading(
                                         new BranchName("feature"),
                                         new BranchRef.Local(new BranchName("main")),
                                         DivergenceView.Against.UPSTREAM)
-                                .withDetail(preview)))
-                        .withBranchCommits(Option.of(
-                                new BranchCommitsView(new BranchRef.Local(new BranchName("feature")), preview))));
+                                .withDetail(preview))))
+                        .mapBranches(branches -> branches.withBranchCommits(Option.of(
+                                new BranchCommitsView(new BranchRef.Local(new BranchName("feature")), preview)))));
     }
 
     /**
@@ -140,9 +142,9 @@ class TargetTest {
     private static List<Loadable<DiffText>> previews(Model model) {
         RepoView repoView = model.repoView();
         return List.of(
-                        repoView.commitDetail(),
-                        repoView.divergence().flatMap(DivergenceView::detail),
-                        repoView.branchCommits().flatMap(BranchCommitsView::detail))
+                        repoView.preview().commitDetail(),
+                        repoView.branches().divergence().flatMap(DivergenceView::detail),
+                        repoView.branches().branchCommits().flatMap(BranchCommitsView::detail))
                 .map(preview -> preview.get().value());
     }
 }

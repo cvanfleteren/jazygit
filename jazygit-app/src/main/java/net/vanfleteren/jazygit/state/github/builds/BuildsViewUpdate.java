@@ -40,6 +40,7 @@ public final class BuildsViewUpdate {
      */
     private static Next awaited(Model model, String id, Option<String> after, UnaryOperator<WorkflowRuns> read) {
         return model.repoView()
+                .branches()
                 .builds()
                 .flatMap(view -> view.runs()
                         .get(id)
@@ -56,7 +57,9 @@ public final class BuildsViewUpdate {
     }
 
     private static Model changed(Model model, UnaryOperator<BuildsView> change) {
-        return model.withRepoView(
-                model.repoView().withBuilds(model.repoView().builds().map(change)));
+        return model.withRepoView(model.repoView()
+                .withBranches(model.repoView()
+                        .branches()
+                        .withBuilds(model.repoView().branches().builds().map(change))));
     }
 }

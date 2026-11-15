@@ -43,6 +43,7 @@ public final class FetchLine {
      */
     public static StyledElement<?> render(Model model, Instant now, int width) {
         String cherryPick = model.repoView()
+                .commits()
                 .cherryPick()
                 .map(commit -> Messages.get("status.cherryPick", commit.shortSha()))
                 .getOrElse("");

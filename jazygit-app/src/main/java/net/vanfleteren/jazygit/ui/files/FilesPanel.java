@@ -308,6 +308,7 @@ public class FilesPanel {
      */
     public Option<Msg> selectionChange(Model model) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .map(this::commitSelectionChange)
                 .getOrElse(() -> workingSelectionChange(model));
@@ -362,15 +363,16 @@ public class FilesPanel {
     private Option<Msg> workingSelectionChange(Model model) {
         RepoView view = model.repoView();
         Option<FileTree<FileEntry>> selected = workingTree(view).selected();
-        if (selected.exists(node -> view.allFiles() && !hasChanges(node))) {
-            return unchangedSelection(selected.get()).filter(msg -> !shows(view.unchanged(), msg));
+        if (selected.exists(node -> view.files().shown().all() && !hasChanges(node))) {
+            return unchangedSelection(selected.get())
+                    .filter(msg -> !shows(view.files().unchanged(), msg));
         }
         Option<List<FileEntry>> entries =
                 selected.map(node -> node.directEntries().filter(FileEntry::changed));
         // Coming from a node without changes, its diff shows again even when it is the one read last.
-        return view.unchanged().isDefined()
+        return view.files().unchanged().isDefined()
                 ? entries.map(SelectionMsg.FilesSelected::new)
-                : PaneKeys.selectionChange(entries, view.fileDiff(), SelectionMsg.FilesSelected::new);
+                : PaneKeys.selectionChange(entries, view.preview().fileDiff(), SelectionMsg.FilesSelected::new);
     }
 
     /**
@@ -445,6 +447,7 @@ public class FilesPanel {
      */
     public boolean step(Model model, FileStepMsg.Step step) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .map(view -> commitTreeOf(view).step(step))
                 .getOrElse(() -> workingTree(model.repoView()).step(step));
@@ -454,7 +457,7 @@ public class FilesPanel {
      * The tree of the working tree shown: of all its files, or of its changed ones (ADR 108).
      */
     private FileTreeList<FileEntry> workingTree(RepoView view) {
-        return view.allFiles() ? allTree : statusTree;
+        return view.files().shown().all() ? allTree : statusTree;
     }
 
     /**
@@ -486,11 +489,15 @@ public class FilesPanel {
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         focused = focus.contains(PANE);
         boolean active = inUse.contains(PANE);
-        threads = ThreadsByPath.of(
-                model.repoView().commitFiles().map(CommitFilesView::threads).getOrElse(List.empty()));
+        threads = ThreadsByPath.of(model.repoView()
+                .files()
+                .commitFiles()
+                .map(CommitFilesView::threads)
+                .getOrElse(List.empty()));
         filter = FileFilterUpdate.shown(model);
         Option<String> shown = FileFilter.shown(filter);
         return model.repoView()
+                .files()
                 .commitFiles()
                 .map(view -> Pane.bordered(
                         view.ended()
@@ -510,7 +517,7 @@ public class FilesPanel {
                         commitTreeOf(view).selectedRow(),
                         commitTreeOf(view).count(view.listedFiles())))
                 .getOrElse(() -> {
-                    boolean all = model.repoView().allFiles();
+                    boolean all = model.repoView().files().shown().all();
                     Loadable<List<FileEntry>> files = workingFiles(model.repo(), all);
                     FileTreeList<FileEntry> tree = workingTree(model.repoView());
                     return Pane.bordered(

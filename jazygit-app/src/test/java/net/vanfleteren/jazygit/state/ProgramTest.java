@@ -617,7 +617,7 @@ class ProgramTest {
 
         assertEquals(
                 new Loaded<>(new Diffs("", "diff of 1")),
-                program.model().repoView().fileDiff().get().value());
+                program.model().repoView().preview().fileDiff().get().value());
     }
 
     @Test
@@ -673,7 +673,7 @@ class ProgramTest {
                 Option.of(new Preview<>(
                         new BranchRef.Local(new BranchName("other")),
                         new Loaded<>(List.of(FakeRepo.commit("other-tip"))))),
-                program.model().repoView().branchLog());
+                program.model().repoView().preview().branchLog());
         assertEquals(java.util.List.of("other"), repo.logLoads);
     }
 
@@ -689,7 +689,7 @@ class ProgramTest {
         assertEquals(java.util.List.of("other"), repo.logLoads);
         assertEquals(
                 Option.of(new Loaded<>(List.of(FakeRepo.commit("other-tip")))),
-                program.model().repoView().branchLog().map(Preview::value));
+                program.model().repoView().preview().branchLog().map(Preview::value));
     }
 
     @Test

@@ -699,7 +699,8 @@ class FilesPanelTest {
             // The rows shown: /, src/test and its two files.
             assertTrue(kept.contains("4/4"), kept);
             assertEquals(
-                    Option.of("Test"), FileFilter.shown(model.get().repoView().filesFilter()));
+                    Option.of("Test"),
+                    FileFilter.shown(model.get().repoView().files().filter()));
 
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
@@ -748,7 +749,8 @@ class FilesPanelTest {
     @Test
     void escapeInTheLinePutsBackTheFilterFromBefore() throws Exception {
         AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(fixed(FILTERED))
-                .mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("README", Option.none())))));
+                .mapRepoView(repoView -> repoView.mapFiles(
+                        files -> files.withFilter(Option.of(new FileFilter("README", Option.none()))))));
         FilesPanel panel =
                 new FilesPanel(msg -> model.set(Update.update(model.get(), msg).model()), () -> {});
 
@@ -775,7 +777,8 @@ class FilesPanelTest {
     @Test
     void nothingMatchingLeavesNothingToActOn() throws Exception {
         Model model = TestModels.loaded(fixed(FILTERED))
-                .mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("zzz", Option.none()))));
+                .mapRepoView(repoView ->
+                        repoView.mapFiles(files -> files.withFilter(Option.of(new FileFilter("zzz", Option.none())))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
@@ -791,10 +794,10 @@ class FilesPanelTest {
     @Test
     void theDirectoriesOpenWhileFilteredAndCloseAgainOnceTheFilterIsCleared() throws Exception {
         Model all = TestModels.loaded(fixed(FILTERED));
-        Model filtered =
-                all.mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("java", Option.none()))));
-        Model other =
-                all.mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("Test", Option.none()))));
+        Model filtered = all.mapRepoView(repoView ->
+                repoView.mapFiles(files -> files.withFilter(Option.of(new FileFilter("java", Option.none())))));
+        Model other = all.mapRepoView(repoView ->
+                repoView.mapFiles(files -> files.withFilter(Option.of(new FileFilter("Test", Option.none())))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(all, FilesPanel.PANE))) {
             RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.PANE));
@@ -834,8 +837,8 @@ class FilesPanelTest {
     void escapeInTheFilteredFilesOfACommitClearsTheFilterBeforeItClosesThem() throws Exception {
         AtomicReference<Model> model =
                 new AtomicReference<>(loaded(opened(TestModels.loaded(fixed(List.of()))), MODEL_AND_TEST)
-                        .mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
-                                .map(view -> view.withFilter(Option.of(new FileFilter("Test", Option.none())))))));
+                        .mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
+                                .map(view -> view.withFilter(Option.of(new FileFilter("Test", Option.none()))))))));
         FilesPanel panel =
                 new FilesPanel(msg -> model.set(Update.update(model.get(), msg).model()), () -> {});
 
@@ -849,13 +852,13 @@ class FilesPanelTest {
 
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
-            assertTrue(model.get().repoView().commitFiles().isDefined());
+            assertTrue(model.get().repoView().files().commitFiles().isDefined());
             assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE))
                     .contains("WordDiff.java"));
 
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
-            assertTrue(model.get().repoView().commitFiles().isEmpty());
+            assertTrue(model.get().repoView().files().commitFiles().isEmpty());
             SettledPilot.of(testRunner).quit();
         }
     }

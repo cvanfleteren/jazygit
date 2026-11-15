@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Repo;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.UpstreamError;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -54,10 +53,10 @@ public final class LoadUpdate {
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded loaded ->
                 Next.of(loaded.kept(done)
-                        .mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                        .mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
                                 .filter(view -> !(view.of() instanceof Changes.OfStash stash)
                                         || loaded.stashes()
-                                                .exists(listed -> listed.sha().equals(stash.sha()))))));
+                                                .exists(listed -> listed.sha().equals(stash.sha())))))));
             case WorktreeChangesLoaded loaded ->
                 Next.of(done.mapRepo(repo -> repo.withWorktreeChanges(loaded.changes())));
             // The log is only read again when HEAD moved, so the history the search runs on changed too, and what
@@ -80,7 +79,7 @@ public final class LoadUpdate {
                 }));
             // Only the diff that is still shown, with the options now chosen, is read again.
             case FileDiffChecked(var load, var stamp) ->
-                Update.shownDiff(done).contains(load)
+                shownDiff(done).contains(load)
                         ? metadataChecked(done, List.of(Tuple.of((Load) load, stamp)))
                         : Next.of(done);
             // The cursor goes from the diff, which showed while the file was read, to the version asked for (ADR 102).
@@ -108,6 +107,7 @@ public final class LoadUpdate {
     private static Next rereadWhole(Model model) {
         DiffOptions options = model.preferences().diffOptions();
         Set<String> shown = model.repoView()
+                .preview()
                 .fileDiff()
                 .flatMap(preview -> preview.value().toOption())
                 .toList()
@@ -118,7 +118,7 @@ public final class LoadUpdate {
                 .map(file -> file.file().path())
                 .toSet();
         List<ReadWholeFile> reads = model.repoView()
-                .expanded()
+                .expansions()
                 .toList()
                 .filter(area -> area._2().content() instanceof ScrolledContent.Diff)
                 .<ReadWholeFile>flatMap(area -> area._2()
@@ -166,6 +166,7 @@ public final class LoadUpdate {
         return read.then(model -> new Next(
                 model,
                 model.repoView()
+                        .commits()
                         .commitSearch()
                         .<Cmd>map(SearchCommits::of)
                         .filter(search -> !read.cmds().contains(search))
@@ -222,7 +223,35 @@ public final class LoadUpdate {
         // an earlier one is in progress.
         List<Cmd> cmds = (headMoved ? List.<Cmd>of(new LoadCommits(AheadUpdate.ofHead(next))) : List.<Cmd>empty())
                 .appendAll(allFilesLoad(before, next));
-        return Update.reloadDiff(next, cmds, headMoved);
+        return reloadDiff(next, cmds, headMoved);
+    }
+
+    /**
+     * Reads the highlighted diff again once its files changed, as they can change on disk without their status
+     * changing: it looks at them first, without git (ADR 58), unless HEAD moved, which changes what the staged changes
+     * are compared with. This waits for the status: right after (un)staging, the entries the diff was read for are
+     * outdated, and reading them again would show their changes as gone for as long as the new status takes to
+     * arrive.
+     */
+    private static Next reloadDiff(Model model, List<Cmd> cmds, boolean headMoved) {
+        return shownDiff(model)
+                .filter(load -> !model.jobs().runs(load) && !model.jobs().runs(new CheckFileDiff(load)))
+                .map(load -> new Next(model, cmds.append(headMoved ? load : new CheckFileDiff(load))))
+                .getOrElse(() -> new Next(model, cmds));
+    }
+
+    /**
+     * The read of the highlighted diff, with the options now chosen, while the status still lists its files.
+     */
+    private static Option<LoadFileDiff> shownDiff(Model model) {
+        return model.repoView()
+                .preview()
+                .fileDiff()
+                .filter(d -> model.repo()
+                        .status()
+                        .toOption()
+                        .exists(status -> status.files().toSet().containsAll(d.key())))
+                .map(d -> new LoadFileDiff(d.key(), model.preferences().diffOptions()));
     }
 
     /**
@@ -232,7 +261,7 @@ public final class LoadUpdate {
      */
     private static List<Cmd> allFilesLoad(Model before, Model next) {
         return Option.<Cmd>of(new LoadAllFiles())
-                .filter(load -> next.repoView().allFiles()
+                .filter(load -> next.repoView().files().shown().all()
                         && (next.repo().allFiles().toOption().isEmpty()
                                 || !before.repo().status().equals(next.repo().status())))
                 .toList();
@@ -260,6 +289,7 @@ public final class LoadUpdate {
     private static Next reloadDivergence(Model before, Next next) {
         Model model = next.model();
         return model.repoView()
+                .branches()
                 .divergence()
                 .map(view -> switch (validity(model, view)) {
                     case Validity.Keep() ->
@@ -278,14 +308,16 @@ public final class LoadUpdate {
      */
     private static Model closeGoneBranchCommits(Model model) {
         return model.repoView()
+                .branches()
                 .branchCommits()
                 .filter(view -> tipOf(model, view.branch()).contains(Option.none()))
-                .map(gone -> model.mapRepoView(repoView -> repoView.withBranchCommits(Option.none())))
+                .map(gone -> model.mapRepoView(
+                        repoView -> repoView.mapBranches(branches -> branches.withBranchCommits(Option.none()))))
                 .getOrElse(model);
     }
 
     private static Model withoutDivergence(Model model) {
-        return model.mapRepoView(repoView -> repoView.withDivergence(Option.none()));
+        return model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withDivergence(Option.none())));
     }
 
     /**
@@ -338,6 +370,7 @@ public final class LoadUpdate {
      */
     private static Next reloadMovedLog(Model next, Predicate<BranchRef> moved) {
         return next.repoView()
+                .preview()
                 .branchLog()
                 .map(Preview::key)
                 .filter(moved)

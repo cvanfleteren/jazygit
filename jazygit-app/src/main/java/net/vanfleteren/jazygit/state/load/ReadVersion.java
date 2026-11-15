@@ -61,13 +61,12 @@ public record ReadVersion(
         return Target.inView(new Lens<RepoView, Loadable<DiffText>>(
                 view -> version(view).map(Version::whole),
                 (view, change) -> version(view)
-                        .map(version -> view.withVersions(
-                                view.versions().put(area, version.withWhole(change.apply(version.whole())))))
+                        .map(version -> view.withVersion(area, version.withWhole(change.apply(version.whole()))))
                         .getOrElse(view)));
     }
 
     private Option<Version> version(RepoView view) {
-        return view.versions().get(area).filter(version -> version.read().equals(file()));
+        return view.versionOf(area).filter(version -> version.read().equals(file()));
     }
 
     @Override

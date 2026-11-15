@@ -28,7 +28,9 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Creating the pull request of a branch: pushing it first when it is not on its remote, reading the branch it came
@@ -126,7 +128,7 @@ public final class CreatePullRequestUpdate {
                 .exists(popup -> popup.pullRequest().title().isBlank())) {
             return Next.of(model);
         }
-        return Update.confirm(
+        return PopupUpdate.confirm(
                 model,
                 NewPullRequestPopup.class,
                 popup -> model.repo()
@@ -151,7 +153,7 @@ public final class CreatePullRequestUpdate {
                 .flatMap(popup -> model.idleBranch(popup.branch()))
                 .filter(known -> pushFirst(known).isEmpty())
                 .map(known -> askPushed(model.withoutPopup(PushFirstPopup.class), known))
-                .getOrElse(() -> Update.confirm(
+                .getOrElse(() -> PopupUpdate.confirm(
                         model,
                         PushFirstPopup.class,
                         popup -> model.idleBranch(popup.branch()).flatMap(CreatePullRequestUpdate::pushFirst)));
@@ -251,10 +253,10 @@ public final class CreatePullRequestUpdate {
                         ? ask(model, branch)
                         : branch.behind() > 0
                                 ? Next.of(model.fail(new BranchError.Diverged(branch.name(), upstream)))
-                                : Update.ask(
+                                : PopupUpdate.ask(
                                         model, new PushFirstPopup(branch.name(), upstream, Option.of(branch.ahead()))))
-                .getOrElse(
-                        () -> Update.ask(model, new PushFirstPopup(branch.name(), branch.pushTarget(), Option.none())));
+                .getOrElse(() ->
+                        PopupUpdate.ask(model, new PushFirstPopup(branch.name(), branch.pushTarget(), Option.none())));
     }
 
     /**

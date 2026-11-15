@@ -16,28 +16,37 @@ public final class CommitSearchUpdate {
     public static Next update(Model model, CommitSearchMsg msg) {
         return switch (msg) {
             case CommitSearchMsg.Opened() ->
-                Next.of(model.mapRepoView(repoView -> repoView.withSearchLine(Option.of(
-                        repoView.commitSearch().map(CommitSearch::text).getOrElse("")))));
+                Next.of(model.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withSearchLine(
+                        Option.of(commits.commitSearch().map(CommitSearch::text).getOrElse(""))))));
             case CommitSearchMsg.Edited(String text) ->
-                Next.of(model.mapRepoView(repoView ->
-                        repoView.withSearchLine(repoView.searchLine().map(open -> text))));
+                Next.of(model.mapRepoView(repoView -> repoView.mapCommits(
+                        commits -> commits.withSearchLine(commits.searchLine().map(open -> text)))));
             case CommitSearchMsg.Cancelled() ->
-                Next.of(model.mapRepoView(repoView -> repoView.withSearchLine(Option.none())));
+                Next.of(model.mapRepoView(
+                        repoView -> repoView.mapCommits(commits -> commits.withSearchLine(Option.none()))));
             case CommitSearchMsg.Submitted() ->
-                model.repoView().searchLine().map(text -> run(model, text)).getOrElse(() -> Next.of(model));
+                model.repoView()
+                        .commits()
+                        .searchLine()
+                        .map(text -> run(model, text))
+                        .getOrElse(() -> Next.of(model));
             case CommitSearchMsg.Cleared() ->
                 Next.of(model.mapRepoView(
-                        repoView -> repoView.withSearchLine(Option.none()).withCommitSearch(Option.none())));
+                        repoView -> repoView.mapCommits(commits -> commits.withSearchLine(Option.none()))
+                                .mapCommits(commits -> commits.withCommitSearch(Option.none()))));
         };
     }
 
     private static Next run(Model model, String text) {
         CommitSearch search = CommitSearch.loading(text.strip(), AheadUpdate.searchNotOn(model));
-        Model closed = model.mapRepoView(repoView -> repoView.withSearchLine(Option.none()));
+        Model closed =
+                model.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withSearchLine(Option.none())));
         return search.query().isEmpty()
-                ? Next.of(closed.mapRepoView(repoView -> repoView.withCommitSearch(Option.none())))
+                ? Next.of(closed.mapRepoView(
+                        repoView -> repoView.mapCommits(commits -> commits.withCommitSearch(Option.none()))))
                 : Next.of(
-                        closed.mapRepoView(repoView -> repoView.withCommitSearch(Option.of(search))),
+                        closed.mapRepoView(repoView ->
+                                repoView.mapCommits(commits -> commits.withCommitSearch(Option.of(search)))),
                         SearchCommits.of(search));
     }
 }

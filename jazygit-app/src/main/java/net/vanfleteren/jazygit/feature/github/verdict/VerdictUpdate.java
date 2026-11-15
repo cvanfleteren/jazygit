@@ -18,12 +18,12 @@ import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.compose.ComposeUpdate;
 import net.vanfleteren.jazygit.state.github.Reading;
 import net.vanfleteren.jazygit.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 
 /**
@@ -45,7 +45,7 @@ public final class VerdictUpdate {
                         .flatMap(dialog -> dialog.readDetails().map(details -> fromDialog(model, dialog, details)))
                         .getOrElse(() -> Next.of(model));
             case VerdictMsg.DiffAsked() ->
-                fromDiff(model).fold(why -> Next.of(refused(model, why)), popup -> Update.ask(model, popup));
+                fromDiff(model).fold(why -> Next.of(refused(model, why)), popup -> PopupUpdate.ask(model, popup));
             case VerdictMsg.Chosen(Verdict verdict) -> Next.of(changed(model, popup -> popup.withVerdict(verdict)));
             case VerdictMsg.Sent(SubmitReview cmd, var commands) -> sent(model, cmd, commands);
             // The popup stays open, with the text, to send it again or to copy it.
@@ -84,7 +84,7 @@ public final class VerdictUpdate {
     private static Next fromDialog(Model model, PullRequestPopup dialog, PullRequestDetails details) {
         Reviewing reviewing = details.conversation().reviewing();
         return mayReview(details.status().state(), reviewing).fold(why -> Next.of(model), may -> {
-            Next asked = Update.ask(model, VerdictPopup.of(dialog, reviewing));
+            Next asked = PopupUpdate.ask(model, VerdictPopup.of(dialog, reviewing));
             return reviewing.pending() ? Next.of(refused(asked.model(), Why.PENDING_REVIEW)) : asked;
         });
     }
@@ -95,6 +95,7 @@ public final class VerdictUpdate {
      */
     private static Either<Why, VerdictPopup> fromDiff(Model model) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .filter(view -> view.pullRequest().isDefined())
                 .flatMap(view ->
@@ -135,7 +136,7 @@ public final class VerdictUpdate {
         if (popup.verdict().needsText() && popup.text().isBlank()) {
             return Next.of(refused(model, Why.NO_REASON));
         }
-        return Update.start(
+        return OperationUpdate.start(
                 model.clearError().openPopup(popup.withSending(true)),
                 new SubmitReview(popup.number(), popup.pullRequest(), popup.verdict(), popup.text()));
     }

@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsStore;
+import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.load.LoadBranchLog;
@@ -137,7 +138,7 @@ public final class TestModels {
      * The sample model before its log is read, as {@link Program} has it.
      */
     private static Model branchesRead() {
-        Model model = started(Update.init("repo", PLAIN)).model();
+        Model model = started(init("repo", PLAIN)).model();
         model = done(model, new LoadStatus(), new LoadMsg.StatusLoaded(CLEAN)).model();
         model = done(model, LoadBranches.LISTED, branchesLoaded(new AllBranches(BRANCHES, List.empty())))
                 .model();
@@ -283,8 +284,8 @@ public final class TestModels {
      * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
      */
     public static Model switchingBranch(Model model, String branch) {
-        return model.mapRepoView(repoView -> repoView.withBranchLog(Option.of(Preview.loading(
-                new BranchRef.Local(new BranchName(branch)), model.repoView().branchLog()))));
+        return model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withBranchLog(
+                Option.of(Preview.loading(new BranchRef.Local(new BranchName(branch)), preview.branchLog())))));
     }
 
     /**
@@ -377,5 +378,36 @@ public final class TestModels {
         public Msg run(Env env) {
             return succeeded(List.empty());
         }
+    }
+
+    /**
+     * The start of a session in {@code repositoryName}, with the default settings.
+     */
+    public static Update.Next init(String repositoryName) {
+        return init(repositoryName, SettingsStore.Loaded.DEFAULT);
+    }
+
+    /**
+     * The start of a session with {@code settings}.
+     */
+    public static Update.Next init(String repositoryName, SettingsStore.Loaded settings) {
+        return init(repositoryName, settings, Option.none());
+    }
+
+    /**
+     * The start of a session with {@code settings}, drawn in {@code themeOverride} if there is one.
+     */
+    public static Update.Next init(
+            String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
+        return init(repositoryName, settings, themeOverride, Landing.START);
+    }
+
+    /**
+     * The start of a session as {@link #init(String, SettingsStore.Loaded, Option)} starts it, shown where
+     * {@code landing} says.
+     */
+    public static Update.Next init(
+            String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
+        return Update.init(Model.initial(repositoryName), settings, themeOverride, RepositoryTheme.NONE, landing);
     }
 }

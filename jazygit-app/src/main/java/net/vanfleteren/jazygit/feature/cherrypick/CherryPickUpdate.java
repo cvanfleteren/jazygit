@@ -7,9 +7,9 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Cherry-picking a commit: it is copied in the log of one branch, and picked onto another once that is checked
@@ -23,7 +23,8 @@ public final class CherryPickUpdate {
         return switch (msg) {
             case CherryPickMsg.Copied(Sha sha) -> copied(model, sha);
             case CherryPickMsg.Dropped() ->
-                Next.of(model.mapRepoView(repoView -> repoView.withCherryPick(Option.none())));
+                Next.of(model.mapRepoView(
+                        repoView -> repoView.mapCommits(commits -> commits.withCherryPick(Option.none()))));
             case CherryPickMsg.Requested() -> requested(model);
             case CherryPickMsg.Picked(CherryPickCmd cmd, List<ExecutedCommand> commands) ->
                 OperationUpdate.succeeded(picked(model, cmd.sha()), cmd, commands);
@@ -36,7 +37,8 @@ public final class CherryPickUpdate {
     private static Next copied(Model model, Sha sha) {
         return Next.of(model.commit(sha)
                 .filter(commit -> !commit.isMerge())
-                .map(commit -> model.mapRepoView(repoView -> repoView.withCherryPick(Option.of(commit))))
+                .map(commit -> model.mapRepoView(
+                        repoView -> repoView.mapCommits(commits -> commits.withCherryPick(Option.of(commit)))))
                 .getOrElse(model));
     }
 
@@ -45,10 +47,11 @@ public final class CherryPickUpdate {
      */
     private static Next requested(Model model) {
         return model.repoView()
+                .commits()
                 .cherryPick()
                 .map(commit -> model.repo().commit(commit.sha()).isDefined()
                         ? Next.of(model.fail(new CherryPickError.AlreadyPicked(commit.sha())))
-                        : Update.ask(model, popup(model, commit)))
+                        : PopupUpdate.ask(model, popup(model, commit)))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -60,8 +63,11 @@ public final class CherryPickUpdate {
      * The copy is done with once it is picked; one copied meanwhile stays.
      */
     private static Model picked(Model model, Sha sha) {
-        return model.repoView().cherryPick().exists(commit -> commit.sha().equals(sha))
-                ? model.mapRepoView(repoView -> repoView.withCherryPick(Option.none()))
+        return model.repoView()
+                        .commits()
+                        .cherryPick()
+                        .exists(commit -> commit.sha().equals(sha))
+                ? model.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withCherryPick(Option.none())))
                 : model;
     }
 }

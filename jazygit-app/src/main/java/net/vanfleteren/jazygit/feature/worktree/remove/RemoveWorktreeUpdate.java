@@ -5,8 +5,11 @@ import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg.*;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Removing a worktree, and deleting its branch with it when the user chose so; when it has changes, removing it
@@ -23,13 +26,13 @@ public final class RemoveWorktreeUpdate {
                         .worktree(location)
                         .map(worktree -> notRemovable(worktree)
                                 .map(error -> Next.of(model.fail(error)))
-                                .getOrElse(() -> Update.ask(
+                                .getOrElse(() -> PopupUpdate.ask(
                                         model,
                                         new RemoveWorktreePopup(
                                                 worktree.location(), worktree.name(), worktree.branch()))))
                         .getOrElse(() -> Next.of(model));
             case Chosen(boolean deleteBranch) ->
-                Update.confirm(
+                PopupUpdate.confirm(
                         model,
                         RemoveWorktreePopup.class,
                         popup -> model.repo()
@@ -40,7 +43,7 @@ public final class RemoveWorktreeUpdate {
                                         popup.location(), false, popup.branch().filter(branch -> deleteBranch))));
             // The removal ran, and failed; removing it anyway is offered instead of the failure.
             case NeedsForce(var cmd, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new ForceRemoveWorktreePopup(
                                 cmd,
                                 model.repo()

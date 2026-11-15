@@ -10,9 +10,9 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.builds.BuildsReads;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 
@@ -27,7 +27,10 @@ public final class BuildsUpdate {
     public static Next update(Model model, BuildsMsg msg) {
         return switch (msg) {
             case BuildsMsg.Toggled(BranchName branch) ->
-                model.repoView().builds().exists(view -> view.branch().equals(branch))
+                model.repoView()
+                                .branches()
+                                .builds()
+                                .exists(view -> view.branch().equals(branch))
                         ? Next.of(shown(model, Option.none()))
                         : onGitHub(model, branch)
                                 .map(remote -> Next.of(
@@ -46,9 +49,10 @@ public final class BuildsUpdate {
                 BuildsReads.next(changed(model, (view, builds) -> view.withAllBranches(!view.allBranches())));
             case BuildsMsg.PickRequested() ->
                 model.repoView()
+                        .branches()
                         .builds()
                         .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(model, view)))
-                        .map(shown -> Update.ask(
+                        .map(shown -> PopupUpdate.ask(
                                 model,
                                 new BuildsPopup(shown.tabs()
                                         .zip(shown.lasts())
@@ -59,7 +63,8 @@ public final class BuildsUpdate {
                                                 count(model, tab._1()))))))
                         .getOrElse(() -> Next.of(model));
             case BuildsMsg.WindowRequested() ->
-                Update.ask(model, model.repoView().builds().map(view -> new BuildsWindowPopup(view.window())));
+                PopupUpdate.ask(
+                        model, model.repoView().branches().builds().map(view -> new BuildsWindowPopup(view.window())));
             case BuildsMsg.WindowPicked(Option<Integer> builds) ->
                 BuildsReads.next(
                         changed(model.withoutPopup(BuildsWindowPopup.class), (view, read) -> view.withWindow(builds)));
@@ -74,6 +79,7 @@ public final class BuildsUpdate {
      */
     private static Option<Integer> count(Model model, Pipeline tab) {
         return model.repoView()
+                .branches()
                 .builds()
                 .flatMap(view -> view.allBranches()
                         ? view.runsOf(tab.workflow())
@@ -89,6 +95,7 @@ public final class BuildsUpdate {
     private static Next awaited(
             Model model, RemoteBranch branch, Option<String> after, UnaryOperator<BuildsView> read) {
         return model.repoView()
+                .branches()
                 .builds()
                 .filter(view -> view.awaits(branch, after))
                 .map(read)
@@ -105,6 +112,7 @@ public final class BuildsUpdate {
      */
     private static BuildsView kept(Model model, BuildsView view) {
         return model.repoView()
+                .branches()
                 .builds()
                 .map(before -> before.selected()
                         .map(view::withSelected)
@@ -119,13 +127,15 @@ public final class BuildsUpdate {
      */
     private static Model changed(Model model, BiFunction<BuildsView, List<Build>, BuildsView> change) {
         return model.repoView()
+                .branches()
                 .builds()
                 .map(view -> shown(model, Option.of(change.apply(view, BuildsReads.shownBuilds(model, view)))))
                 .getOrElse(model);
     }
 
     private static Model shown(Model model, Option<BuildsView> builds) {
-        return model.withRepoView(model.repoView().withBuilds(builds));
+        return model.withRepoView(
+                model.repoView().withBranches(model.repoView().branches().withBuilds(builds)));
     }
 
     /**

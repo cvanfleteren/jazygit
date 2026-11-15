@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.view.BranchesView;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
@@ -34,7 +35,9 @@ public record LoadDivergence(BranchName branch, BranchRef other) implements Targ
      */
     @Override
     public Target<Divergence> target() {
-        return Target.inView(Lens.where(RepoView::divergence, RepoView::withDivergence, view -> of(view).equals(this))
+        return Target.inView(RepoView.BRANCHES
+                .andThen(Lens.where(
+                        BranchesView::divergence, BranchesView::withDivergence, view -> of(view).equals(this)))
                 .andThen(Lens.of(DivergenceView::commits, DivergenceView::withCommits)));
     }
 

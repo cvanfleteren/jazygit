@@ -381,8 +381,7 @@ class ReviewUpdateTest {
                 files().preferences().diffOptions());
         Version shown =
                 new Version(CONTENT, "a.txt", Option.of(FileVersion.NEW), read.file(), new Loadable.Loaded<>(DIFF));
-        Model inVersion =
-                files().mapRepoView(view -> view.withVersions(view.versions().put(AREA, shown)));
+        Model inVersion = files().mapRepoView(view -> view.withVersion(AREA, shown));
 
         assertEquals(
                 Option.of(new GitHubError.CannotReview(Why.IN_VERSION)),

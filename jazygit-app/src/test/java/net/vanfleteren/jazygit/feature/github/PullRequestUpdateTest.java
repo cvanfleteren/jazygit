@@ -71,6 +71,7 @@ import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.BaseTip;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -78,6 +79,7 @@ import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -841,7 +843,7 @@ class PullRequestUpdateTest {
     void onceItIsPushedItsPullRequestIsAskedForWhileTheRepositoryIsReadAgain() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model pushing = Update.start(model(), push).model();
+        Model pushing = OperationUpdate.start(model(), push).model();
 
         List<ExecutedCommand> commands = StubGit.executed("git push -u origin local");
 
@@ -869,7 +871,7 @@ class PullRequestUpdateTest {
     void aFailedPushAsksForNoPullRequest() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model pushing = Update.start(model(), push).model();
+        Model pushing = OperationUpdate.start(model(), push).model();
 
         Next failed = Update.update(pushing, failed(push, "rejected"));
 
@@ -932,7 +934,7 @@ class PullRequestUpdateTest {
     void aPushedBranchThatIsGoneMeanwhileAsksForNoPullRequest() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model pushing = Update.start(model(), push).model();
+        Model pushing = OperationUpdate.start(model(), push).model();
         Model gone = localBranchesRead(pushing, List.of(RELEASE, PUSHED, AHEAD, MAIN))
                 .model();
         List<ExecutedCommand> commands = StubGit.executed("git push -u origin local");
@@ -947,7 +949,9 @@ class PullRequestUpdateTest {
     void aPushThatEndsWhileAnotherPopupIsOpenLeavesThatOpen() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model other = Update.start(model(), push).model().openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
+        Model other = OperationUpdate.start(model(), push)
+                .model()
+                .openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
         Model pushed = Update.update(other, push.succeeded(StubGit.executed("git push -u origin local")))
                 .model();
 
@@ -1432,7 +1436,7 @@ class PullRequestUpdateTest {
             assertEquals(Screen.REPOSITORY, opened.model().screen());
             assertEquals(
                     Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
-                    opened.model().repoView().commitFiles());
+                    opened.model().repoView().files().commitFiles());
             assertEquals(
                     List.of(
                             new LoadCommitFiles(of),
@@ -1494,7 +1498,7 @@ class PullRequestUpdateTest {
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(
                 Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
-                opened.model().repoView().commitFiles());
+                opened.model().repoView().files().commitFiles());
         assertTrue(opened.cmds()
                 .containsAll(List.of(
                         new LoadCommitFiles(of),
@@ -1547,7 +1551,7 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(
                 Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
-                opened.model().repoView().commitFiles());
+                opened.model().repoView().files().commitFiles());
         assertEquals(
                 List.of(
                         new LoadCommitFiles(of),
@@ -1570,7 +1574,7 @@ class PullRequestUpdateTest {
 
             assertEquals(
                     Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
-                    opened.model().repoView().commitFiles());
+                    opened.model().repoView().files().commitFiles());
             assertEquals(List.of(new LoadCommitFiles(of)), opened.cmds());
             assertFalse(opened.cmds().head().background());
         }
@@ -1586,7 +1590,7 @@ class PullRequestUpdateTest {
                 Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))
                         .withAllFiles(true)
                         .withTree(Option.of(Loadable.loading()))),
-                opened.model().repoView().commitFiles());
+                opened.model().repoView().files().commitFiles());
         assertEquals(List.of(new LoadCommitFiles(of), new LoadCommitTree(of)), opened.cmds());
     }
 
@@ -1603,7 +1607,7 @@ class PullRequestUpdateTest {
         assertTrue(requested.model().popup(PullRequestPopup.class).get().filesWanted());
         assertEquals(
                 List.of(new LoadPullRequestDetails(new PrNumber(7), lastRead(requested.model()))), requested.cmds());
-        assertEquals(Option.none(), requested.model().repoView().commitFiles());
+        assertEquals(Option.none(), requested.model().repoView().files().commitFiles());
     }
 
     @Test
@@ -1613,7 +1617,7 @@ class PullRequestUpdateTest {
         Next opened = Update.update(failed, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
 
         assertEquals(Option.none(), opened.model().outcome().error());
-        assertTrue(opened.model().repoView().commitFiles().isDefined());
+        assertTrue(opened.model().repoView().files().commitFiles().isDefined());
     }
 
     /**
@@ -1634,7 +1638,7 @@ class PullRequestUpdateTest {
 
         Next read = readAt(closed, lastRead(requested));
 
-        assertEquals(Option.none(), read.model().repoView().commitFiles());
+        assertEquals(Option.none(), read.model().repoView().files().commitFiles());
         assertEquals(Option.none(), read.model().popup(PullRequestPopup.class));
         assertFalse(read.cmds().exists(cmd -> cmd instanceof LoadCommitFiles));
     }
@@ -1656,7 +1660,7 @@ class PullRequestUpdateTest {
 
         Next read = readAt(other, lastRead(requested));
 
-        assertEquals(Option.none(), read.model().repoView().commitFiles());
+        assertEquals(Option.none(), read.model().repoView().files().commitFiles());
         PullRequestPopup shown = read.model().popup(PullRequestPopup.class).get();
         assertEquals(new PrNumber(43), shown.number());
         assertTrue(shown.filesWanted());
@@ -1675,12 +1679,12 @@ class PullRequestUpdateTest {
 
         Next older = readAt(again, lastRead(first));
 
-        assertEquals(Option.none(), older.model().repoView().commitFiles());
+        assertEquals(Option.none(), older.model().repoView().files().commitFiles());
         assertTrue(older.model().popup(PullRequestPopup.class).get().filesWanted());
 
         Next newer = readAt(older.model(), lastRead(again));
 
-        assertTrue(newer.model().repoView().commitFiles().isDefined());
+        assertTrue(newer.model().repoView().files().commitFiles().isDefined());
         assertEquals(Option.none(), newer.model().popup(PullRequestPopup.class));
     }
 
@@ -1700,7 +1704,7 @@ class PullRequestUpdateTest {
                                 42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID))),
                         new PaneId("branches"),
                         new PaneId("files"))),
-                again.model().repoView().commitFiles());
+                again.model().repoView().files().commitFiles());
         assertFalse(again.cmds().exists(cmd -> cmd instanceof LoadPullRequestDetails));
     }
 
@@ -2658,7 +2662,7 @@ class PullRequestUpdateTest {
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(
                 Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
-                opened.model().repoView().commitFiles());
+                opened.model().repoView().files().commitFiles());
         assertTrue(opened.cmds().contains(new LoadCommitFiles(of)));
     }
 
@@ -2690,7 +2694,7 @@ class PullRequestUpdateTest {
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(
                 Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
-                opened.model().repoView().commitFiles());
+                opened.model().repoView().files().commitFiles());
         assertTrue(opened.cmds().contains(new LoadCommitFiles(of)));
     }
 
@@ -2704,7 +2708,7 @@ class PullRequestUpdateTest {
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(elsewhere));
 
         assertEquals(Option.none(), opened.model().popup());
-        assertEquals(Option.none(), opened.model().repoView().commitFiles());
+        assertEquals(Option.none(), opened.model().repoView().files().commitFiles());
         assertEquals(List.of(new BrowsePullRequestCmd(elsewhere)), opened.cmds());
     }
 
@@ -2911,7 +2915,7 @@ class PullRequestUpdateTest {
         PullRequestSummary pr = summary("owner/repo");
         Landing landing = new Landing(BranchesTab.LOCAL, Option.none())
                 .followedBy(new CheckoutMsg.Placed(new PullRequestCheckout(pr)));
-        Model model = TestModels.started(Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
+        Model model = TestModels.started(TestModels.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
                 .model();
         Next branches = TestModels.done(
                 model,

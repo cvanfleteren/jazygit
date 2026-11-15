@@ -32,7 +32,7 @@ public record Landing(BranchesTab branchesTab, Option<Focus.OnScreen> focusedPan
      * Where {@code view} is: the same list of the branches pane, the same pane focused.
      */
     public static Landing of(RepoView view) {
-        return new Landing(view.branchesTab(), view.focusedPane());
+        return new Landing(view.branches().tab(), view.focusedPane());
     }
 
     /**
@@ -46,6 +46,6 @@ public record Landing(BranchesTab branchesTab, Option<Focus.OnScreen> focusedPan
      * {@code view} shown here.
      */
     public RepoView applyTo(RepoView view) {
-        return view.withBranchesTab(branchesTab).withFocusedPane(focusedPane);
+        return view.mapBranches(branches -> branches.withTab(branchesTab)).withFocusedPane(focusedPane);
     }
 }

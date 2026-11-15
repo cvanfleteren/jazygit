@@ -90,6 +90,8 @@ public final class StashPanel {
      */
     public Option<Msg> selectionChange(Model model) {
         return PaneKeys.selectionChange(
-                selectedStash().map(Stash::sha), model.repoView().stashDetail(), SelectionMsg.StashSelected::new);
+                selectedStash().map(Stash::sha),
+                model.repoView().preview().stashDetail(),
+                SelectionMsg.StashSelected::new);
     }
 }

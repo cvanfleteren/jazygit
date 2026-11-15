@@ -9,7 +9,6 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -42,7 +41,7 @@ class BranchCommitsList {
     // The commits listed and their rows, worked out again only when what they are drawn from changes, as the commits
     // pane does.
     private final Memo<Tuple2<Loadable<List<Commit>>, AheadView>, Loadable<List<Commit>>> listed = new Memo<>();
-    private final Memo<Tuple3<List<Commit>, Option<Sha>, AheadView>, List<LoadableList.Row>> drawn = new Memo<>();
+    private final Memo<Tuple3<List<Commit>, Option<Sha>, AheadView>, List<LoadableList.Item>> drawn = new Memo<>();
 
     /**
      * @param id         the id of the pane the commits are listed in
@@ -66,7 +65,7 @@ class BranchCommitsList {
      * when none is open, so that the commits of a branch opened again start at its newest one.
      */
     Option<Panel> render(Model model, boolean focused, boolean active) {
-        Option<BranchCommitsView> open = model.repoView().branchCommits();
+        Option<BranchCommitsView> open = model.repoView().branches().branchCommits();
         Option<BranchRef> branch = open.map(BranchCommitsView::branch);
         boolean opened = branch.isDefined() && !branch.equals(shown);
         shown = branch;
@@ -81,21 +80,21 @@ class BranchCommitsList {
     }
 
     private Panel panel(Model model, BranchCommitsView view, boolean focused, boolean active) {
-        Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
+        Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
         AheadView ahead = new AheadView(
                 AheadUpdate.branch(model, view.branch()),
                 AheadUpdate.distance(model, view.branch()),
-                model.repoView().onlyAhead());
+                model.repoView().commits().shown().ahead());
         Loadable<List<Commit>> source = view.commits(model);
-        return list.render(
+        return list.renderItems(
                 listed.get(Tuple.of(source, ahead), key -> source.map(ahead::shown)),
                 commits -> drawn.get(
-                        Tuple.of(commits, copied, ahead),
-                        key -> CommitsPanel.marked(
-                                CommitsPanel.rows(CommitGraph.layout(commits), copied), commits, ahead)),
+                        Tuple.of(commits, copied, ahead), key -> CommitsPanel.graphed(commits, copied, ahead)),
                 focused,
                 active,
-                Pane.title(ahead.title(view.branch().name())));
+                Pane.title(ahead.title(view.branch().name())),
+                Option.none(),
+                event -> {});
     }
 
     /**

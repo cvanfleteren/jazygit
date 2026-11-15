@@ -17,9 +17,10 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 
 /**
@@ -36,11 +37,14 @@ public final class CheckoutUpdate {
             case RemoteInNewWorktreeRequested(RemoteBranch branch) -> remoteInNewWorktree(model, branch);
             // The checkout ran, and failed; the stash it needs is offered instead of the failure.
             case NeedsStash(var cmd, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new StashCheckoutPopup(cmd.branch())));
             case CheckedOut(var cmd, var commands) ->
                 OperationUpdate.succeeded(
-                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.LOCAL)), cmd, commands);
+                        model.mapRepoView(
+                                repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.LOCAL))),
+                        cmd,
+                        commands);
             // It is shown as a checkout here shows it: on the local branches, the focus where it was.
             case SwitchWorktreeConfirmed() ->
                 model.popup(SwitchWorktreePopup.class)
@@ -96,7 +100,7 @@ public final class CheckoutUpdate {
                 .filter(here -> !here.main())
                 .map(here -> {
                     Option<Worktree> main = model.repo().mainWorktree();
-                    return Update.ask(
+                    return PopupUpdate.ask(
                             model, new CheckoutWherePopup(request, here, main, main.flatMap(model.repo()::hasChanges)));
                 })
                 .getOrElse(() -> request.here(model.clearError()));
@@ -117,7 +121,7 @@ public final class CheckoutUpdate {
                 .trackingBranch(remote)
                 .map(local -> requested(model, local.name(), CatchUp.of(local)))
                 .getOrElse(() -> model.repo().branch(remote.branch()).isDefined()
-                        ? Update.ask(model, NewBranchPopup.following(remote))
+                        ? PopupUpdate.ask(model, NewBranchPopup.following(remote))
                         : place(model, new CheckoutRequest.Remote(remote.branch(), remote)));
     }
 
@@ -134,7 +138,7 @@ public final class CheckoutUpdate {
         return model.repo()
                 .trackingBranch(remote)
                 .map(local -> local.worktreeLocation()
-                        .map(worktree -> Update.ask(model, new SwitchWorktreePopup(local.name(), worktree)))
+                        .map(worktree -> PopupUpdate.ask(model, new SwitchWorktreePopup(local.name(), worktree)))
                         .getOrElse(() -> local.current()
                                 ? namedFollowing(model, remote)
                                 : AddWorktreeUpdate.forBranch(model, local.name(), CatchUp.of(local), false)))
@@ -168,7 +172,7 @@ public final class CheckoutUpdate {
     private static Next requested(Model model, BranchName branch, CatchUp catchUp) {
         return model.idleBranch(branch)
                 .flatMap(Branch::worktreeLocation)
-                .map(worktree -> Update.ask(model, new SwitchWorktreePopup(branch, worktree)))
+                .map(worktree -> PopupUpdate.ask(model, new SwitchWorktreePopup(branch, worktree)))
                 .getOrElse(() -> Branches.isOtherIdleBranch(model, branch)
                         ? place(model, new CheckoutRequest.Local(branch, catchUp))
                         : Next.of(model));

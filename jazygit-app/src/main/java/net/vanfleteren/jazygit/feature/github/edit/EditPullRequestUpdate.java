@@ -20,7 +20,9 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Editing the pull request that is shown (ADR 59): its title, body, base and whether it is a draft, in a popup of its
@@ -54,7 +56,7 @@ public final class EditPullRequestUpdate {
      * are edited too.
      */
     private static Next requested(Model model) {
-        return Update.ask(
+        return PopupUpdate.ask(
                 model,
                 model.popup(PullRequestPopup.class)
                         .flatMap(shown -> shown.readDetails().map(details -> opened(model, shown, details))));
@@ -94,7 +96,7 @@ public final class EditPullRequestUpdate {
         return editable(model)
                 .filter(popup -> !popup.fields().title().isBlank())
                 .map(popup -> save(popup)
-                        .map(cmd -> Update.start(model.clearError().openPopup(popup.withSaving(true)), cmd))
+                        .map(cmd -> OperationUpdate.start(model.clearError().openPopup(popup.withSaving(true)), cmd))
                         .getOrElse(() -> Next.of(model.clearError().openPopup(popup.from()))))
                 .getOrElse(() -> Next.of(model));
     }

@@ -101,7 +101,10 @@ class JazygitAppBuildsTest {
         TestApp app = new TestApp(env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
-            awaitModel(testRunner, app, model -> model.repoView().branchLog().isDefined());
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().preview().branchLog().isDefined());
             SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
 
@@ -110,6 +113,7 @@ class JazygitAppBuildsTest {
                     testRunner,
                     app,
                     model -> model.repoView()
+                            .branches()
                             .builds()
                             .exists(view -> view.builds().toOption().isDefined()));
             SettledPilot.settle(testRunner, app.drawnAt::size);
@@ -122,12 +126,16 @@ class JazygitAppBuildsTest {
                     testRunner,
                     app,
                     model -> model.repoView()
+                            .branches()
                             .builds()
                             .flatMap(BuildsView::selected)
                             .contains(new BuildsView.Pipeline("Markdown", "pull_request")));
 
             pilot.press('B');
-            awaitModel(testRunner, app, model -> model.repoView().builds().isEmpty());
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().branches().builds().isEmpty());
             SettledPilot.settle(testRunner, app.drawnAt::size);
             assertEquals(BranchesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
         } finally {

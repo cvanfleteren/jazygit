@@ -242,4 +242,17 @@ class CommitGraphTest {
             assertEquals(CommitGraphReference.layout(arranged), CommitGraph.layout(arranged), "seed " + seed);
         });
     }
+
+    @Test
+    void theFirstNodesLaidOutAreThoseOfTheWholeLayout() {
+        // A row only depends on the rows above it, so the nodes asked for first come out as the whole layout has them.
+        List.range(0, 100).forEach(seed -> {
+            List<Commit> arranged = CommitGraph.arrange(Fixtures.randomLog(new Random(seed), seed % 3 == 2));
+            int asked = seed % (arranged.size() + 1);
+            assertEquals(
+                    CommitGraph.layout(arranged).take(asked),
+                    CommitGraph.laidOut(arranged).take(asked).toList(),
+                    "seed " + seed);
+        });
+    }
 }

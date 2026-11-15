@@ -103,7 +103,7 @@ public final class BranchChecksUpdate {
      * {@code next}, also reading the checks again, as something changed on GitHub: when a read is still running,
      * which may have missed that, once it is done.
      */
-    static Next loadAnyway(Next next) {
+    public static Next loadAnyway(Next next) {
         return GitHubReads.loadAnyway(next, new LoadBranchChecks());
     }
 }

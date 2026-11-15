@@ -79,6 +79,7 @@ class JazygitAppWiringTest {
                     testRunner,
                     app,
                     model -> model.repoView()
+                            .files()
                             .commitFiles()
                             .exists(view -> view.of() instanceof Changes.OfTip && view.allFiles()));
             await(

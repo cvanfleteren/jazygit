@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.LoadAllFiles;
+import net.vanfleteren.jazygit.state.view.FilesShown;
 
 /**
  * Listing all files of the working tree in the files pane, or only its changed files (ADR 108). All of them are read
@@ -27,9 +28,10 @@ public final class AllFilesUpdate {
      * tree of changed files highlights a node with changes.
      */
     private static Next toggled(Model model) {
-        boolean all = !model.repoView().allFiles();
+        FilesShown shown = model.repoView().files().shown().toggled();
         return new Next(
-                model.mapRepoView(view -> view.withAllFiles(all).withUnchanged(all ? view.unchanged() : Option.none())),
-                all ? List.<Cmd>of(new LoadAllFiles()) : List.empty());
+                model.mapRepoView(view -> view.mapFiles(files ->
+                        files.withShown(shown).withUnchanged(shown.all() ? files.unchanged() : Option.none()))),
+                shown.all() ? List.<Cmd>of(new LoadAllFiles()) : List.empty());
     }
 }

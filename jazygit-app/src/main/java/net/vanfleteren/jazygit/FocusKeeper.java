@@ -111,7 +111,7 @@ final class FocusKeeper {
      * back to the branches once they are closed while they have it (ADR 131).
      */
     private void followBuilds(Model model) {
-        Option<BranchName> builds = model.repoView().builds().map(BuildsView::branch);
+        Option<BranchName> builds = model.repoView().branches().builds().map(BuildsView::branch);
         if (!builds.equals(shownBuilds)) {
             if (builds.isEmpty() && focus().contains(AreaId.BUILDS)) {
                 moveTo(BranchesPanel.PANE);
@@ -150,7 +150,7 @@ final class FocusKeeper {
      * pane they were opened from once they are closed while that pane, or the diff it shows, has it (ADR 44).
      */
     private void followCommitFiles(Model model) {
-        Option<CommitFilesView> files = model.repoView().commitFiles();
+        Option<CommitFilesView> files = model.repoView().files().commitFiles();
         if (files.map(CommitFilesView::of).equals(shownFiles.map(CommitFilesView::of))) {
             return;
         }

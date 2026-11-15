@@ -100,7 +100,7 @@ class BuildsEveryBranchTest {
     }
 
     private static BuildsView view(Model model) {
-        return model.repoView().builds().get();
+        return model.repoView().branches().builds().get();
     }
 
     private static BuildsShown shown(Model model) {

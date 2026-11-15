@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.FileFilter;
+import net.vanfleteren.jazygit.state.view.FilesShown;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
@@ -31,16 +32,16 @@ class FilesPanelAllFilesTest {
 
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
-    private static Model all(boolean listed) {
+    private static Model all(FilesShown shown) {
         Model loaded = TestModels.loaded();
         return loaded.mapRepo(repo -> repo.withStatus(repo.status().map(status -> status.withFiles(List.of(CHANGED))))
                         .withAllFiles(new Loadable.Loaded<>(ALL)))
-                .mapRepoView(view -> view.withAllFiles(listed));
+                .mapRepoView(view -> view.mapFiles(files -> files.withShown(shown)));
     }
 
     @Test
     void allFilesAreListedThoseWithoutChangesWithoutAMarkerAndCollapsedUnlessTheyHoldChanges() throws Exception {
-        Model model = all(true);
+        Model model = all(FilesShown.ALL);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
 
@@ -57,7 +58,7 @@ class FilesPanelAllFilesTest {
 
     @Test
     void theChangedFilesKeepTheirOwnTree() throws Exception {
-        Model changed = all(false);
+        Model changed = all(FilesShown.CHANGED);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(changed, FilesPanel.PANE))) {
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(changed, FilesPanel.PANE));
 
@@ -70,7 +71,7 @@ class FilesPanelAllFilesTest {
 
     @Test
     void aNodeWithoutChangesIsReadOrCountedAndOneWithChangesShowsItsDiff() throws Exception {
-        Model model = all(true);
+        Model model = all(FilesShown.ALL);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
             RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
 
@@ -95,8 +96,9 @@ class FilesPanelAllFilesTest {
 
     @Test
     void theFilterNarrowsAllFiles() throws Exception {
-        Model filtered =
-                all(true).mapRepoView(view -> view.withFilesFilter(Option.of(new FileFilter("intro", Option.none()))));
+        Model filtered = all(FilesShown.ALL)
+                .mapRepoView(view ->
+                        view.mapFiles(files -> files.withFilter(Option.of(new FileFilter("intro", Option.none())))));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(filtered, FilesPanel.PANE))) {
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.PANE));
 
@@ -120,7 +122,7 @@ class FilesPanelAllFilesTest {
 
     @Test
     void untilAllFilesAreReadTheTreeSaysItIsLoading() throws Exception {
-        Model reading = all(true).mapRepo(repo -> repo.withAllFiles(Loadable.loading()));
+        Model reading = all(FilesShown.ALL).mapRepo(repo -> repo.withAllFiles(Loadable.loading()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(reading, FilesPanel.PANE))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(reading, FilesPanel.PANE));
 

@@ -316,6 +316,6 @@ class JazygitAppReportsTest {
     }
 
     private static Option<Sha> shownCommit(Model model) {
-        return model.repoView().commitDetail().map(Preview::key);
+        return model.repoView().preview().commitDetail().map(Preview::key);
     }
 }

@@ -89,6 +89,7 @@ public final class ContentView {
      */
     public static List<ShownTime> shownTimes(Model model) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .filter(view -> !view.threads().isEmpty())
                 .map(view -> ShownTime.reading(
@@ -103,9 +104,11 @@ public final class ContentView {
         return switch (mirrored) {
             case FILES ->
                 model.repoView()
+                        .files()
                         .commitFiles()
                         .map(view -> commitFiles(model, view))
                         .getOrElse(() -> model.repoView()
+                                .files()
                                 .unchanged()
                                 .map(node -> unchanged(model, node))
                                 .getOrElse(() -> fileDiffs(model)));
@@ -114,7 +117,7 @@ public final class ContentView {
                 commit(
                         model,
                         ContentArea.COMMIT,
-                        model.repoView().commitDetail(),
+                        model.repoView().preview().commitDetail(),
                         model::commit,
                         Option.when(model.repo().commits().toOption().exists(List::isEmpty), "content.noCommits"));
             case STASH -> stash(model);
@@ -363,6 +366,7 @@ public final class ContentView {
                 : model.repo().status().toOption().exists(status -> FilesPanel.noneMatch(model, status.files()))
                         ? dim(title, Messages.get("panel.files.noMatches"))
                         : model.repoView()
+                                .preview()
                                 .fileDiff()
                                 .map(Preview::shown)
                                 .map(diff -> whenLoaded(
@@ -398,8 +402,9 @@ public final class ContentView {
      */
     private static Shown branches(Model model) {
         return model.repoView()
+                .branches()
                 .divergence()
-                .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
+                .filter(view -> model.repoView().branches().tab() == BranchesTab.LOCAL)
                 .map(view -> commit(
                         model,
                         ContentArea.DIVERGENCE,
@@ -407,6 +412,7 @@ public final class ContentView {
                         view::commit,
                         Option.when(view.commits().toOption().exists(Divergence::isEmpty), "content.noDivergence")))
                 .orElse(() -> model.repoView()
+                        .branches()
                         .branchCommits()
                         .map(view -> commit(
                                 model,
@@ -424,9 +430,11 @@ public final class ContentView {
      */
     private static Option<Shown> builds(Model model) {
         return model.repoView()
+                .branches()
                 .builds()
-                .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL
+                .filter(view -> model.repoView().branches().tab() == BranchesTab.LOCAL
                         && model.repoView()
+                                .preview()
                                 .branchLog()
                                 .exists(log -> log.key().equals(new BranchRef.Local(view.branch()))))
                 .map(view -> {
@@ -436,7 +444,7 @@ public final class ContentView {
                     AheadView ahead = new AheadView(
                             AheadUpdate.branch(model, local),
                             AheadUpdate.distance(model, local),
-                            model.repoView().onlyAhead());
+                            model.repoView().commits().shown().ahead());
                     List<Build> shown =
                             BuildsView.shown(view.builds().getOrElse(List.empty()), ahead.ahead(), ahead.only());
                     String read = view.reading()
@@ -479,6 +487,7 @@ public final class ContentView {
 
     private static Shown branchLog(Model model) {
         return model.repoView()
+                .preview()
                 .branchLog()
                 .map(Preview::shown)
                 .map(log -> {
@@ -486,7 +495,7 @@ public final class ContentView {
                     AheadView ahead = new AheadView(
                             AheadUpdate.branch(model, log.key()),
                             AheadUpdate.distance(model, log.key()),
-                            model.repoView().onlyAhead());
+                            model.repoView().commits().shown().ahead());
                     return whenLoaded(ahead.title(title), log.value(), commits -> {
                         List<Commit> shown = ahead.shown(commits);
                         return new Shown.Area(
@@ -497,6 +506,7 @@ public final class ContentView {
                     });
                 })
                 .getOrElse(() -> model.repoView()
+                        .branches()
                         .unfetched()
                         .map(pullRequest -> dim(
                                 Messages.get("panel.log.title"),
@@ -649,6 +659,7 @@ public final class ContentView {
         DiffOptions options = model.preferences().diffOptions();
         String title = Messages.get("panel.stash.title");
         return model.repoView()
+                .preview()
                 .stashDetail()
                 .map(Preview::shown)
                 .flatMap(detail -> model.repo()

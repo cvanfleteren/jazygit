@@ -15,6 +15,8 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 import net.vanfleteren.jazygit.state.view.*;
 
 /**
@@ -29,19 +31,19 @@ public final class AddWorktreeUpdate {
         return switch (msg) {
             case Requested(BranchName branch) -> forBranch(model, branch, false);
             case NewBranchRequested(BranchName base) ->
-                Update.ask(
+                PopupUpdate.ask(
                         model,
                         model.idleBranch(base).map(known -> NewWorktreeBranchPopup.fromLocal(base, Option.none())));
             // It starts out named as the remote branch, which it follows.
             case NewBranchAtRemoteRequested(RemoteBranch remote) ->
-                Update.ask(
+                PopupUpdate.ask(
                         model,
                         model.repo()
                                 .remoteBranch(remote)
                                 .map(known -> NewWorktreeBranchPopup.followingRemote(remote, Option.none())));
             // It starts out at the branch checked out here, or on no branch at the commit checked out.
             case StartRequested() ->
-                Update.ask(
+                PopupUpdate.ask(
                         model,
                         new NewWorktreeStartPopup(model.repo()
                                 .currentBranch()
@@ -72,7 +74,7 @@ public final class AddWorktreeUpdate {
      * Asks where the new worktree that checks out {@code source} goes, starting out at {@link #location}.
      */
     public static Next ask(Model model, WorktreeSource source) {
-        return Update.ask(model, new NewWorktreePopup(source, location(model, source.directory())));
+        return PopupUpdate.ask(model, new NewWorktreePopup(source, location(model, source.directory())));
     }
 
     /**
@@ -80,7 +82,7 @@ public final class AddWorktreeUpdate {
      * once added, the app switches to it without asking, as it was chosen to check {@code source} out in (ADR 68).
      */
     public static Next askSwitching(Model model, WorktreeSource source) {
-        return Update.ask(model, new NewWorktreePopup(source, location(model, source.directory()), true));
+        return PopupUpdate.ask(model, new NewWorktreePopup(source, location(model, source.directory()), true));
     }
 
     /**
@@ -100,7 +102,10 @@ public final class AddWorktreeUpdate {
                                     .getOrElse(there)));
         }
         return OperationUpdate.succeeded(
-                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands)
+                        model.mapRepoView(
+                                repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES))),
+                        cmd,
+                        commands)
                 .map(succeeded -> kept.map(succeeded::inform)
                         .getOrElse(succeeded)
                         .openPopupIfFree(new SwitchToAddedPopup(cmd.source().label(), location)));
@@ -156,7 +161,7 @@ public final class AddWorktreeUpdate {
                     Model asked = model.withoutPopup(NewWorktreeStartPopup.class);
                     return switch (resolve(model, start)) {
                         case Start.Local(BranchName branch) ->
-                            Update.ask(
+                            PopupUpdate.ask(
                                     asked,
                                     NewWorktreeBranchPopup.fromLocal(
                                             branch,
@@ -166,7 +171,7 @@ public final class AddWorktreeUpdate {
                                                     .getOrElse(() -> new WorktreeSource.Detached(
                                                             new BranchRef.Local(branch), start)))));
                         case Start.Remote(RemoteBranch followed) ->
-                            Update.ask(
+                            PopupUpdate.ask(
                                     asked,
                                     NewWorktreeBranchPopup.followingRemote(
                                             followed,

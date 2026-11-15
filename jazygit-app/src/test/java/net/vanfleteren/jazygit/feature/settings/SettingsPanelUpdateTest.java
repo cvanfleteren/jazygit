@@ -265,8 +265,8 @@ class SettingsPanelUpdateTest {
     @Test
     void theRepositoryIsShownAgainWhereItWas() {
         Model there = TestModels.loaded()
-                .mapRepoView(view ->
-                        view.withBranchesTab(BranchesTab.WORKTREES).withFocusedPane(Option.of(new PaneId("commits"))))
+                .mapRepoView(view -> view.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES))
+                        .withFocusedPane(Option.of(new PaneId("commits"))))
                 .mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/opt/gh/bin/gh")));
 
         Next next = Update.update(

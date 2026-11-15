@@ -21,7 +21,7 @@ public sealed interface TimerMsg extends Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.tick(model);
+            return RereadUpdate.tick(model);
         }
 
         @Override

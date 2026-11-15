@@ -12,10 +12,10 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.state.BaseBranchError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.UpstreamError;
 import net.vanfleteren.jazygit.state.load.LoadDivergence;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.DivergenceView.Against;
 
@@ -32,7 +32,7 @@ public final class UpstreamUpdate {
         return switch (msg) {
             case UpstreamMsg.Requested(Option<BranchName> branch) -> {
                 Option<Branch> highlighted = branch.flatMap(model.repo()::branch);
-                yield Update.ask(
+                yield PopupUpdate.ask(
                         model,
                         new UpstreamPopup(
                                 highlighted,
@@ -43,7 +43,8 @@ public final class UpstreamUpdate {
             case UpstreamMsg.UpstreamDivergenceChosen() -> chosen(model, UpstreamUpdate::upstreamDivergence);
             case UpstreamMsg.BaseDivergenceChosen() -> chosen(model, UpstreamUpdate::baseDivergence);
             case UpstreamMsg.DivergenceClosed() ->
-                Next.of(model.mapRepoView(repoView -> repoView.withDivergence(Option.none())));
+                Next.of(model.mapRepoView(
+                        repoView -> repoView.mapBranches(branches -> branches.withDivergence(Option.none()))));
         };
     }
 
@@ -96,7 +97,9 @@ public final class UpstreamUpdate {
     private static Next open(Model model, Branch branch, BranchRef other, Against against) {
         DivergenceView view = DivergenceView.loading(branch.name(), other, against);
         return Next.of(
-                model.clearError().mapRepoView(repoView -> repoView.withDivergence(Option.of(view))),
+                model.clearError()
+                        .mapRepoView(
+                                repoView -> repoView.mapBranches(branches -> branches.withDivergence(Option.of(view)))),
                 LoadDivergence.of(view));
     }
 
@@ -108,7 +111,7 @@ public final class UpstreamUpdate {
     private static Next resetChosen(Model model, UpstreamPopup popup) {
         return popup.checkedOut()
                 .map(branch -> branch.upstream()
-                        .map(upstream -> Update.ask(
+                        .map(upstream -> PopupUpdate.ask(
                                 model, new ResetPopup(new ResetTarget.ToUpstream(upstream.branch()), upstream.ahead())))
                         .getOrElse(() -> Next.of(model.fail(UpstreamError.of(branch)))))
                 .getOrElse(() ->

@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.state.load;
 
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
@@ -55,8 +54,9 @@ public final class SelectionUpdate {
         return selected(
                 model,
                 branch,
-                model.repoView().branchLog(),
-                log -> model.mapRepoView(repoView -> repoView.withBranchLog(log).withUnfetched(Option.none())),
+                model.repoView().preview().branchLog(),
+                log -> model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withBranchLog(log))
+                        .mapBranches(branches -> branches.withUnfetched(Option.none()))),
                 log -> new LoadBranchLog(log, AheadUpdate.of(model, log)));
     }
 
@@ -64,8 +64,9 @@ public final class SelectionUpdate {
      * No log is shown, nor read again as branches move.
      */
     private static Next unfetchedSelected(Model model, PrNumber pullRequest) {
-        return Next.of(model.mapRepoView(
-                repoView -> repoView.withBranchLog(Option.none()).withUnfetched(Option.of(pullRequest))));
+        return Next.of(
+                model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withBranchLog(Option.none()))
+                        .mapBranches(branches -> branches.withUnfetched(Option.of(pullRequest)))));
     }
 
     /**
@@ -75,8 +76,9 @@ public final class SelectionUpdate {
         return selected(
                 model,
                 sha,
-                model.repoView().commitDetail(),
-                detail -> model.mapRepoView(repoView -> repoView.withCommitDetail(detail)),
+                model.repoView().preview().commitDetail(),
+                detail ->
+                        model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withCommitDetail(detail))),
                 detail(model, Cmd.Slot.COMMIT_DETAIL));
     }
 
@@ -85,13 +87,14 @@ public final class SelectionUpdate {
      */
     private static Next divergenceCommitSelected(Model model, Sha sha) {
         return model.repoView()
+                .branches()
                 .divergence()
                 .map(view -> selected(
                         model,
                         sha,
                         view.detail(),
-                        detail -> model.mapRepoView(
-                                repoView -> repoView.withDivergence(Option.of(view.withDetail(detail)))),
+                        detail -> model.mapRepoView(repoView -> repoView.mapBranches(
+                                branches -> branches.withDivergence(Option.of(view.withDetail(detail))))),
                         detail(model, Cmd.Slot.DIVERGENCE_DETAIL)))
                 .getOrElse(() -> Next.of(model));
     }
@@ -101,13 +104,14 @@ public final class SelectionUpdate {
      */
     private static Next branchCommitSelected(Model model, Sha sha) {
         return model.repoView()
+                .branches()
                 .branchCommits()
                 .map(view -> selected(
                         model,
                         sha,
                         view.detail(),
-                        detail -> model.mapRepoView(
-                                repoView -> repoView.withBranchCommits(Option.of(view.withDetail(detail)))),
+                        detail -> model.mapRepoView(repoView -> repoView.mapBranches(
+                                branches -> branches.withBranchCommits(Option.of(view.withDetail(detail))))),
                         detail(model, Cmd.Slot.BRANCH_COMMITS_DETAIL)))
                 .getOrElse(() -> Next.of(model));
     }
@@ -116,12 +120,12 @@ public final class SelectionUpdate {
      * A node with changes shows its diff, not the node without them highlighted before (ADR 108).
      */
     private static Next filesSelected(Model model, List<FileEntry> files) {
-        Model changed = model.mapRepoView(repoView -> repoView.withUnchanged(Option.none()));
+        Model changed = model.mapRepoView(repoView -> repoView.mapFiles(view -> view.withUnchanged(Option.none())));
         return selected(
                 changed,
                 files,
-                changed.repoView().fileDiff(),
-                diff -> changed.mapRepoView(repoView -> repoView.withFileDiff(diff)),
+                changed.repoView().preview().fileDiff(),
+                diff -> changed.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withFileDiff(diff))),
                 entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
     }
 
@@ -131,13 +135,14 @@ public final class SelectionUpdate {
      */
     private static Next unchangedFileSelected(Model model, String path) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .map(view -> selected(
                         model,
                         path,
                         file(view.unchanged()),
-                        content -> model.mapRepoView(repoView -> repoView.withCommitFiles(
-                                Option.of(view.withUnchanged(content.map(UnchangedNode.File::new))))),
+                        content -> model.mapRepoView(repoView -> repoView.mapFiles(part -> part.withCommitFiles(
+                                Option.of(view.withUnchanged(content.map(UnchangedNode.File::new)))))),
                         read -> new ReadCommitFileContent(view.of(), read)))
                 .getOrElse(() -> workingFileSelected(model, path));
     }
@@ -151,8 +156,9 @@ public final class SelectionUpdate {
         return selected(
                 model,
                 path,
-                file(model.repoView().unchanged()),
-                content -> model.mapRepoView(repoView -> repoView.withUnchanged(content.map(UnchangedNode.File::new))),
+                file(model.repoView().files().unchanged()),
+                content -> model.mapRepoView(repoView ->
+                        repoView.mapFiles(part -> part.withUnchanged(content.map(UnchangedNode.File::new)))),
                 ReadFileContent::new);
     }
 
@@ -162,10 +168,12 @@ public final class SelectionUpdate {
      */
     private static Next unchangedDirectorySelected(Model model, String path, int files) {
         UnchangedNode node = new UnchangedNode.Directory(path, files);
-        return Next.of(model.mapRepoView(repoView -> repoView.commitFiles()
-                .map(view -> repoView.withCommitFiles(Option.of(view.withUnchanged(Option.of(node)))))
-                .getOrElse(() -> repoView.withUnchanged(Option.of(node)))
-                .withVersions(HashMap.empty())));
+        return Next.of(model.mapRepoView(repoView -> repoView.files()
+                .commitFiles()
+                .map(view ->
+                        repoView.mapFiles(part -> part.withCommitFiles(Option.of(view.withUnchanged(Option.of(node))))))
+                .getOrElse(() -> repoView.mapFiles(part -> part.withUnchanged(Option.of(node))))
+                .withoutVersions()));
     }
 
     /**
@@ -173,16 +181,17 @@ public final class SelectionUpdate {
      * the node without them highlighted before (ADR 128).
      */
     private static Next commitFilesSelected(Model model, List<CommitFile> files) {
-        Model changed = model.mapRepoView(repoView ->
-                repoView.withCommitFiles(repoView.commitFiles().map(open -> open.withUnchanged(Option.none()))));
+        Model changed = model.mapRepoView(repoView -> repoView.mapFiles(
+                part -> part.withCommitFiles(part.commitFiles().map(open -> open.withUnchanged(Option.none())))));
         return changed.repoView()
+                .files()
                 .commitFiles()
                 .map(view -> selected(
                         changed,
                         files,
                         view.diff(),
-                        diff -> changed.mapRepoView(
-                                repoView -> repoView.withCommitFiles(Option.of(view.withDiff(diff)))),
+                        diff -> changed.mapRepoView(repoView ->
+                                repoView.mapFiles(part -> part.withCommitFiles(Option.of(view.withDiff(diff))))),
                         entries -> LoadCommitFileDiff.of(
                                 view, entries, model.preferences().diffOptions())))
                 .getOrElse(() -> Next.of(model));
@@ -195,8 +204,9 @@ public final class SelectionUpdate {
         return selected(
                 model,
                 sha,
-                model.repoView().stashDetail(),
-                detail -> model.mapRepoView(repoView -> repoView.withStashDetail(detail)),
+                model.repoView().preview().stashDetail(),
+                detail ->
+                        model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withStashDetail(detail))),
                 stash -> new LoadStashDetail(stash, model.preferences().diffOptions()));
     }
 
@@ -221,8 +231,7 @@ public final class SelectionUpdate {
         return shown.exists(preview -> preview.key().equals(key))
                 ? Next.of(model)
                 : Next.of(
-                        with.apply(Option.of(Preview.loading(key, shown)))
-                                .mapRepoView(view -> view.withVersions(HashMap.empty())),
+                        with.apply(Option.of(Preview.loading(key, shown))).mapRepoView(view -> view.withoutVersions()),
                         load.apply(key));
     }
 }

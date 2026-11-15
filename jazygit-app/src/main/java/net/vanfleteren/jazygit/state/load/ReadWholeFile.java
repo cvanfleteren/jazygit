@@ -46,13 +46,12 @@ public record ReadWholeFile(AreaId area, ScrolledContent content, Source source,
         return Target.inView(new Lens<RepoView, Loadable<DiffText>>(
                 view -> expanded(view).map(Expansion.Expanded::whole),
                 (view, change) -> expanded(view)
-                        .map(file -> view.withExpanded(view.expanded()
-                                .computeIfPresent(
+                        .flatMap(file -> view.expandedOf(area)
+                                .map(expansion -> view.withExpansion(
                                         area,
-                                        (key, expansion) -> expansion.withFiles(expansion
+                                        expansion.withFiles(expansion
                                                 .files()
-                                                .put(path, file.withWhole(change.apply(file.whole())))))
-                                ._2()))
+                                                .put(path, file.withWhole(change.apply(file.whole())))))))
                         .getOrElse(view)));
     }
 

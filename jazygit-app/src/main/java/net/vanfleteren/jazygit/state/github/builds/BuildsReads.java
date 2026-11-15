@@ -33,7 +33,7 @@ public final class BuildsReads {
         return BuildsView.shown(
                 view.builds().getOrElse(List.empty()),
                 AheadUpdate.branch(model, new BranchRef.Local(view.branch())),
-                model.repoView().onlyAhead());
+                model.repoView().commits().shown().ahead());
     }
 
     /**
@@ -41,6 +41,7 @@ public final class BuildsReads {
      */
     public static Next next(Model model) {
         return model.repoView()
+                .branches()
                 .builds()
                 .filter(view -> view.builds().toOption().isDefined())
                 .map(view -> {
@@ -57,7 +58,11 @@ public final class BuildsReads {
                     List<Cmd> cmds = files.<Cmd>map(ReadWorkflows::new)
                             .appendAll(Option.when(repo, LoadRepoWorkflows::new))
                             .appendAll(runs.map(id -> new LoadWorkflowRuns(id, Option.none())));
-                    return new Next(model.withRepoView(model.repoView().withBuilds(Option.of(asked))), cmds, false);
+                    return new Next(
+                            model.withRepoView(model.repoView()
+                                    .withBranches(model.repoView().branches().withBuilds(Option.of(asked)))),
+                            cmds,
+                            false);
                 })
                 .getOrElse(() -> Next.of(model));
     }

@@ -6,8 +6,8 @@ import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.settings.EditorProgram;
 import net.vanfleteren.jazygit.settings.Editors;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 
 /**
  * Opening a worktree in an editor the user set (ADR 110): at once with only one set, else after choosing it in a
@@ -71,6 +71,6 @@ public final class OpenInEditorUpdate {
     }
 
     private static Next open(Model model, EditorProgram editor, String location) {
-        return Update.start(model.clearError(), new OpenInEditorCmd(editor, location));
+        return OperationUpdate.start(model.clearError(), new OpenInEditorCmd(editor, location));
     }
 }

@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.BranchChecksMsg;
 import net.vanfleteren.jazygit.state.github.CheckTimesCmd;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.state.github.LoadBranchChecks;
 import net.vanfleteren.jazygit.state.github.PendingChecks;
 import net.vanfleteren.jazygit.state.github.Reading;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
@@ -100,8 +101,14 @@ class ChecksUpdateTest {
             .with(Either.right(DETAILS), 0);
 
     private static Model shown() {
-        return Update.update(model(Checks.PENDING), new ChecksMsg.Requested(MINE))
-                .model();
+        return shown(Checks.PENDING);
+    }
+
+    /**
+     * The checks popup on {@code mine}, whose branch on GitHub shows its checks as {@code checks}.
+     */
+    private static Model shown(Checks checks) {
+        return Update.update(model(checks), new ChecksMsg.Requested(MINE)).model();
     }
 
     @Test
@@ -143,7 +150,7 @@ class ChecksUpdateTest {
 
     @Test
     void whatWasReadIsShownAndLearnedFrom() {
-        Next next = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ));
+        Next next = Update.update(shown(Checks.PASSING), new ChecksMsg.Loaded(FEATURE, READ));
 
         assertEquals(
                 Option.of(ChecksPopup.loading(MINE, FEATURE, Instant.EPOCH).with(Either.right(READ))),
@@ -155,6 +162,71 @@ class ChecksUpdateTest {
                         next.model().now(),
                         false)),
                 next.cmds());
+    }
+
+    @Test
+    void theBranchesAreReadAgainWhenTheChecksReadDoOtherwiseThanTheBranchShows() {
+        Next next = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ));
+
+        assertTrue(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
+        assertEquals(Option.of(Checks.PENDING), next.model().gitHub().checks(FEATURE));
+    }
+
+    @Test
+    void theBranchesAreNotReadAgainWhenTheBranchShowsTheChecksAsRead() {
+        Next passed = Update.update(shown(Checks.PASSING), new ChecksMsg.Loaded(FEATURE, READ));
+        Next running = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING));
+
+        assertFalse(
+                passed.cmds().contains(new LoadBranchChecks()), passed.cmds().toString());
+        assertFalse(
+                running.cmds().contains(new LoadBranchChecks()), running.cmds().toString());
+    }
+
+    // The checks were read for the tip before a push; the branch read since says those of the new tip run.
+    @Test
+    void anEarlierReadOfTheChecksLeavesTheBranchAsALaterReadOfTheBranchesShowsIt() {
+        Model pushed = Update.update(
+                        shown(Checks.PASSING),
+                        new BranchChecksMsg.Loaded(new GitHubChecks(
+                                HashSet.of(new RemoteName("origin")),
+                                HashMap.of(new BranchName("feature"), Checks.PENDING))))
+                .model();
+
+        Next next = Update.update(pushed, new ChecksMsg.Loaded(FEATURE, READ));
+
+        assertEquals(Option.of(Checks.PENDING), next.model().gitHub().checks(FEATURE));
+    }
+
+    // As gh reads them when the branch is gone on GitHub.
+    @Test
+    void noChecksReadLeaveTheBranchesAsTheyAre() {
+        Next next =
+                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, new PendingChecks("owner/repo", HashMap.empty())));
+
+        assertFalse(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
+        assertEquals(shown().gitHub(), next.model().gitHub());
+    }
+
+    @Test
+    void checksReadOfABranchNotOnGitHubLeaveTheBranchesAsTheyAre() {
+        RemoteBranch fork = new RemoteBranch("fork", new BranchName("feature"));
+
+        Next next = Update.update(shown(), new ChecksMsg.Loaded(fork, READ));
+
+        assertFalse(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
+        assertEquals(shown().gitHub(), next.model().gitHub());
+    }
+
+    // What was read is as true once the popup is closed.
+    @Test
+    void checksReadAfterClosingStillHaveTheBranchesReadAgain() {
+        Model closed = Update.update(shown(), new PopupMsg.Dismissed(ChecksPopup.class))
+                .model();
+
+        Next next = Update.update(closed, new ChecksMsg.Loaded(FEATURE, READ));
+
+        assertTrue(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
     }
 
     @Test
@@ -172,7 +244,7 @@ class ChecksUpdateTest {
 
     @Test
     void whatIsReadAfterClosingIsLearnedFromWithoutShowingItAgain() {
-        Model closed = Update.update(shown(), new PopupMsg.Dismissed(ChecksPopup.class))
+        Model closed = Update.update(shown(Checks.PASSING), new PopupMsg.Dismissed(ChecksPopup.class))
                 .model();
 
         Next next = Update.update(closed, new ChecksMsg.Loaded(FEATURE, READ));

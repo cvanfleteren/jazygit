@@ -6,8 +6,8 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 
 /**
  * Opening branches on GitHub, in the browser.
@@ -22,13 +22,13 @@ public final class BrowseUpdate {
                 model.repo()
                         .branch(name)
                         .map(branch -> onRemote(branch)
-                                .map(remote -> Update.start(model.clearError(), new BrowseCmd(remote)))
+                                .map(remote -> OperationUpdate.start(model.clearError(), new BrowseCmd(remote)))
                                 .getOrElse(() -> Next.of(model.fail(new GitHubError.NotOnRemote(name)))))
                         .getOrElse(() -> Next.of(model));
             case BrowseMsg.RemoteRequested(RemoteBranch branch) ->
-                Update.start(model.clearError(), new BrowseCmd(branch));
+                OperationUpdate.start(model.clearError(), new BrowseCmd(branch));
             case BrowseMsg.PullRequestRequested(var pullRequest) ->
-                Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+                OperationUpdate.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
         };
     }
 

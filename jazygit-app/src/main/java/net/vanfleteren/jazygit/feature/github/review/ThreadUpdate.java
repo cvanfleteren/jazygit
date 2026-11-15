@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.state.view.*;
 
 /**
@@ -58,7 +59,7 @@ public final class ThreadUpdate {
     private static Next openAsked(Model model, DiffCursorAt at) {
         return pullRequestFiles(model)
                 .flatMap(view -> link(view, at.cursor()))
-                .map(link -> Update.start(model.clearError(), new BrowseRemarkCmd(link)))
+                .map(link -> OperationUpdate.start(model.clearError(), new BrowseRemarkCmd(link)))
                 .getOrElse(() -> Next.of(model));
     }
 

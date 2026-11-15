@@ -303,7 +303,7 @@ class JazygitAppPilotTest {
         java.util.List<Msg> dispatched = new ArrayList<>();
         RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
         Model remote = TestModels.loaded(data)
-                .mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
+                .mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)))
                 .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.of(
                         new RemoteRef(feature, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH)))));
         Fixture fixture = new Fixture(

@@ -7,6 +7,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple3;
 import io.vavr.Tuple4;
 import io.vavr.collection.List;
+import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -66,7 +67,7 @@ public class CommitsPanel {
     // keeps what it built from them, and the graph is not laid out on every render.
     private final Memo<Tuple3<Boolean, Loadable<List<Commit>>, AheadView>, Loadable<List<Commit>>> listed =
             new Memo<>();
-    private final Memo<Tuple4<List<Commit>, Boolean, Option<Sha>, AheadView>, List<LoadableList.Row>> drawn =
+    private final Memo<Tuple4<List<Commit>, Boolean, Option<Sha>, AheadView>, List<LoadableList.Item>> drawn =
             new Memo<>();
 
     /**
@@ -113,23 +114,30 @@ public class CommitsPanel {
         return selected == 0 ? 0 : LoadableList.Reselect.following(Commit::sha).apply(previous, next, selected);
     }
 
-    public static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes) {
-        return rows(nodes, Option.none());
-    }
-
     /**
+     * The items of {@code commits}, a log, on the rails of its graph, with the commits on the base dimmed and the
+     * fork point marked. Each row, and the graph down to it, is only worked out once the list draws it: a log of
+     * thousands of commits then lays out only what is scrolled to. A row is one line.
+     *
      * @param copied the commit copied to cherry-pick, whose sha stands out
      */
-    public static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes, Option<Sha> copied) {
-        return nodes.map(node -> row(node, copied.contains(node.commit().sha())));
+    public static List<LoadableList.Item> graphed(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
+        Stream<CommitGraph.Node> nodes = CommitGraph.laidOut(commits);
+        return commits.zipWithIndex((commit, at) -> LoadableList.Item.later(
+                1, () -> marked(row(nodes.get(at), copied.contains(commit.sha())), commit.sha(), ahead)));
     }
 
     /**
-     * The rows of the commits a search found, without the rails of merges: with commits left out, they no longer
-     * join up. A merge is still a {@code ◎}.
+     * The items of the commits a search found, without the rails of merges: with commits left out, they no longer
+     * join up. A merge is still a {@code ◎}. Each row is worked out once it is drawn.
      */
-    static List<LoadableList.Row> foundRows(List<Commit> commits, Option<Sha> copied) {
-        return commits.map(commit -> row(commit, commit.isMerge() ? "◎ " : "○ ", copied.contains(commit.sha())));
+    static List<LoadableList.Item> foundItems(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
+        return commits.map(commit ->
+                LoadableList.Item.later(1, () -> marked(foundRow(commit, copied), commit.sha(), ahead)));
+    }
+
+    private static LoadableList.Row foundRow(Commit commit, Option<Sha> copied) {
+        return row(commit, commit.isMerge() ? "◎ " : "○ ", copied.contains(commit.sha()));
     }
 
     /**
@@ -241,25 +249,22 @@ public class CommitsPanel {
      * @param inUse the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
-        Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
-        Option<CommitSearch> search = model.repoView().commitSearch();
+        Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
+        Option<CommitSearch> search = model.repoView().commits().commitSearch();
         AheadView ahead = new AheadView(
                 AheadUpdate.head(model),
                 AheadUpdate.headDistance(model),
-                model.repoView().onlyAhead());
-        typing = model.repoView().searchLine();
+                model.repoView().commits().shown().ahead());
+        typing = model.repoView().commits().searchLine();
         searching = search.isDefined();
         list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));
         Loadable<List<Commit>> source =
                 search.map(CommitSearch::results).getOrElse(() -> model.repo().commits());
-        return list.render(
+        return list.renderItems(
                 listed.get(Tuple.of(searching, source, ahead), key -> searching ? source : source.map(ahead::shown)),
                 commits -> drawn.get(
                         Tuple.of(commits, searching, copied, ahead),
-                        key -> marked(
-                                searching ? foundRows(commits, copied) : rows(CommitGraph.layout(commits), copied),
-                                commits,
-                                ahead)),
+                        key -> searching ? foundItems(commits, copied, ahead) : graphed(commits, copied, ahead)),
                 focus.contains(PANE),
                 inUse.contains(PANE),
                 Pane.title(ahead.title(
@@ -276,12 +281,9 @@ public class CommitsPanel {
     }
 
     /**
-     * {@code rows}, those of {@code commits}, with the commits on the base dimmed and the fork point marked.
+     * {@code row}, that of the commit {@code sha}, dimmed when the commit is on the base, and marked when it is the
+     * fork point.
      */
-    public static List<LoadableList.Row> marked(List<LoadableList.Row> rows, List<Commit> commits, AheadView ahead) {
-        return rows.zipWith(commits, (row, commit) -> marked(row, commit.sha(), ahead));
-    }
-
     private static LoadableList.Row marked(LoadableList.Row row, Sha sha, AheadView ahead) {
         // The mark goes before the message, the last piece of the row.
         LoadableList.Row labelled = ahead.mark(sha)
@@ -328,6 +330,8 @@ public class CommitsPanel {
      */
     public Option<Msg> selectionChange(Model model) {
         return PaneKeys.selectionChange(
-                selectedCommit().map(Commit::sha), model.repoView().commitDetail(), SelectionMsg.CommitSelected::new);
+                selectedCommit().map(Commit::sha),
+                model.repoView().preview().commitDetail(),
+                SelectionMsg.CommitSelected::new);
     }
 }

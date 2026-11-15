@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class BranchCommitsUpdateTest {
     }
 
     private static Option<BranchCommitsView> view(Model model) {
-        return model.repoView().branchCommits();
+        return model.repoView().branches().branchCommits();
     }
 
     @Test
@@ -69,10 +70,11 @@ class BranchCommitsUpdateTest {
     @Test
     void openingClosesTheDivergence() {
         Model diverged = featureLogRead()
-                .mapRepoView(repoView -> repoView.withDivergence(Option.of(DivergenceView.loading(
-                        MAIN, new BranchRef.Local(new BranchName("feature")), DivergenceView.Against.BASE))));
+                .mapRepoView(repoView ->
+                        repoView.mapBranches(branches -> branches.withDivergence(Option.of(DivergenceView.loading(
+                                MAIN, new BranchRef.Local(new BranchName("feature")), DivergenceView.Against.BASE)))));
 
-        assertEquals(Option.none(), opened(diverged).repoView().divergence());
+        assertEquals(Option.none(), opened(diverged).repoView().branches().divergence());
     }
 
     @Test
@@ -91,6 +93,7 @@ class BranchCommitsUpdateTest {
                 Update.update(open, new BranchCommitsMsg.Closed())
                         .model()
                         .repoView()
+                        .preview()
                         .branchLog()
                         .map(Preview::key));
     }
@@ -182,8 +185,8 @@ class BranchCommitsUpdateTest {
                 view(failed).flatMap(BranchCommitsView::detail).exists(d -> d.value() instanceof Loadable.Failed),
                 view(failed).toString());
         assertTrue(
-                Update.tick(failed).cmds().contains(load),
-                Update.tick(failed).cmds().toString());
+                RereadUpdate.tick(failed).cmds().contains(load),
+                RereadUpdate.tick(failed).cmds().toString());
     }
 
     @Test
@@ -191,11 +194,11 @@ class BranchCommitsUpdateTest {
         Commit fork = Fixtures.commit(new Sha("eeee"), "Ada", "ada@example.com", Instant.EPOCH, "Fork", "");
         BranchRef base = new BranchRef.Local(MAIN);
         Model open = opened(featureLogRead())
-                .mapRepoView(repoView -> repoView.withOnlyAhead(true)
-                        .withBranchAhead(Option.of(new Preview<>(
+                .mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withShown(CommitsShown.AHEAD))
+                        .mapPreview(preview -> preview.withBranchAhead(Option.of(new Preview<>(
                                 FEATURE,
                                 new Loadable.Loaded<>(Option.of(
-                                        new Ahead(FEATURE_TIP, base, FEATURE_COMMITS, false, Option.of(fork))))))));
+                                        new Ahead(FEATURE_TIP, base, FEATURE_COMMITS, false, Option.of(fork)))))))));
 
         assertEquals(Option.of(fork), view(open).flatMap(v -> open.branchCommit(v, fork.sha())));
     }

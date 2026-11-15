@@ -4,8 +4,8 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Squashing a commit into the one below it.
@@ -27,7 +27,7 @@ public final class SquashUpdate {
     private static Next requested(Model model, Sha sha) {
         return model.commit(sha)
                 .flatMap(commit -> onlyParent(commit).map(into -> new SquashPopup(commit, into)))
-                .transform(popup -> Update.ask(model, popup));
+                .transform(popup -> PopupUpdate.ask(model, popup));
     }
 
     /**

@@ -59,7 +59,7 @@ class CommitFilesUpdateTest {
 
         assertEquals(
                 Option.of(CommitFilesView.of(COMMIT, Scopes.COMMITS.pane(), Scopes.FILES.pane())),
-                next.model().repoView().commitFiles());
+                next.model().repoView().files().commitFiles());
         assertEquals(List.of(new LoadCommitFiles(COMMIT)), next.cmds());
     }
 
@@ -68,7 +68,8 @@ class CommitFilesUpdateTest {
         Model open = withFiles(opened());
 
         assertEquals(
-                new Loaded<>(List.of(A, B)), open.repoView().commitFiles().get().files());
+                new Loaded<>(List.of(A, B)),
+                open.repoView().files().commitFiles().get().files());
 
         Next selected = Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(A)));
 
@@ -79,7 +80,7 @@ class CommitFilesUpdateTest {
                 .model();
         assertEquals(
                 Option.of(new Preview<>(List.of(A), new Loaded<>(DiffText.of("+a")))),
-                read.repoView().commitFiles().get().diff());
+                read.repoView().files().commitFiles().get().diff());
     }
 
     @Test
@@ -90,7 +91,8 @@ class CommitFilesUpdateTest {
                         open, new LoadMsg.CommitFilesLoaded(new Changes.OfCommit(new Sha("bbbb")), List.of(A)))
                 .model();
 
-        assertEquals(new Loading<>(), other.repoView().commitFiles().get().files());
+        assertEquals(
+                new Loading<>(), other.repoView().files().commitFiles().get().files());
     }
 
     @Test
@@ -98,7 +100,7 @@ class CommitFilesUpdateTest {
         Model closed =
                 Update.update(withFiles(opened()), new CommitFilesMsg.Closed()).model();
 
-        assertEquals(Option.none(), closed.repoView().commitFiles());
+        assertEquals(Option.none(), closed.repoView().files().commitFiles());
     }
 
     @Test
@@ -108,11 +110,13 @@ class CommitFilesUpdateTest {
         assertTrue(Update.update(open, new ViewMsg.Focused(Scopes.FILES.pane()))
                 .model()
                 .repoView()
+                .files()
                 .commitFiles()
                 .isDefined());
         assertTrue(Update.update(open, new ViewMsg.Focused(new AreaId("commit-file-changes")))
                 .model()
                 .repoView()
+                .files()
                 .commitFiles()
                 .isDefined());
         assertEquals(
@@ -120,6 +124,7 @@ class CommitFilesUpdateTest {
                 Update.update(open, new ViewMsg.Focused(Scopes.COMMITS.pane()))
                         .model()
                         .repoView()
+                        .files()
                         .commitFiles());
     }
 
@@ -136,8 +141,8 @@ class CommitFilesUpdateTest {
         Model dropped =
                 Update.update(kept, new LoadMsg.StashesLoaded(List.of(other))).model();
 
-        assertTrue(kept.repoView().commitFiles().isDefined());
-        assertEquals(Option.none(), dropped.repoView().commitFiles());
+        assertTrue(kept.repoView().files().commitFiles().isDefined());
+        assertEquals(Option.none(), dropped.repoView().files().commitFiles());
     }
 
     @Test
@@ -160,7 +165,15 @@ class CommitFilesUpdateTest {
                         open.preferences().settings().withDiffStyle(DiffStyle.RICH))));
         assertEquals(
                 new Loaded<>(DiffText.of("+a")),
-                next.model().repoView().commitFiles().get().diff().get().shown().value());
+                next.model()
+                        .repoView()
+                        .files()
+                        .commitFiles()
+                        .get()
+                        .diff()
+                        .get()
+                        .shown()
+                        .value());
     }
 
     private static final PullRequestCommits COMMITS =
@@ -205,14 +218,14 @@ class CommitFilesUpdateTest {
                 opened.cmds());
         assertEquals(
                 Option.of(new Loading<>()),
-                opened.model().repoView().commitFiles().get().remarks());
+                opened.model().repoView().files().commitFiles().get().remarks());
 
         Model read = Update.update(
                         opened.model(),
                         new CommitFilesMsg.RemarksLoaded(
                                 new PrNumber(7), remarks("a".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
                 .model();
-        CommitFilesView view = read.repoView().commitFiles().get();
+        CommitFilesView view = read.repoView().files().commitFiles().get();
         assertEquals(List.of(THREAD), view.threads());
         assertEquals(PULL_REQUEST, view.of());
         assertTrue(view.remarksAtItsCommits());
@@ -227,7 +240,8 @@ class CommitFilesUpdateTest {
                         new CommitFilesMsg.RemarksFailed(
                                 new PrNumber(7), new Failure.Bug(new Exception()), HashSet.empty(), 0))
                 .model();
-        assertEquals(List.of(THREAD), failed.repoView().commitFiles().get().threads());
+        assertEquals(
+                List.of(THREAD), failed.repoView().files().commitFiles().get().threads());
     }
 
     @Test
@@ -268,7 +282,7 @@ class CommitFilesUpdateTest {
                 read.cmds());
         assertEquals(
                 HashMap.of(icon, Option.none(), pasted, Option.none()),
-                read.model().repoView().commitFiles().get().pictures());
+                read.model().repoView().files().commitFiles().get().pictures());
         // Read again, they are not read again.
         assertEquals(
                 List.empty(),
@@ -283,7 +297,7 @@ class CommitFilesUpdateTest {
                 .model();
         assertEquals(
                 Option.of(Option.of(picture)),
-                shown.repoView().commitFiles().get().pictures().get(icon));
+                shown.repoView().files().commitFiles().get().pictures().get(icon));
     }
 
     @Test
@@ -293,17 +307,18 @@ class CommitFilesUpdateTest {
                 Update.update(opened, new CommitFilesMsg.ListedCycled()).model();
         assertEquals(
                 CommitFilesView.Listed.UNRESOLVED,
-                unresolved.repoView().commitFiles().get().listed());
+                unresolved.repoView().files().commitFiles().get().listed());
         Model remarked =
                 Update.update(unresolved, new CommitFilesMsg.ListedCycled()).model();
         assertEquals(
                 CommitFilesView.Listed.REMARKED,
-                remarked.repoView().commitFiles().get().listed());
+                remarked.repoView().files().commitFiles().get().listed());
         assertEquals(
                 CommitFilesView.Listed.ALL,
                 Update.update(remarked, new CommitFilesMsg.ListedCycled())
                         .model()
                         .repoView()
+                        .files()
                         .commitFiles()
                         .get()
                         .listed());
@@ -315,7 +330,7 @@ class CommitFilesUpdateTest {
                 .model();
         assertEquals(
                 CommitFilesView.Listed.REMARKED,
-                moved.repoView().commitFiles().get().listed());
+                moved.repoView().files().commitFiles().get().listed());
     }
 
     @Test
@@ -327,7 +342,7 @@ class CommitFilesUpdateTest {
 
         Changes now = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("c".repeat(40))));
-        CommitFilesView view = moved.model().repoView().commitFiles().get();
+        CommitFilesView view = moved.model().repoView().files().commitFiles().get();
         assertEquals(now, view.of());
         assertEquals(new Loading<>(), view.files());
         assertEquals(List.of(THREAD), view.threads());
@@ -348,7 +363,7 @@ class CommitFilesUpdateTest {
 
         Changes now = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("c".repeat(40))));
-        CommitFilesView view = moved.model().repoView().commitFiles().get();
+        CommitFilesView view = moved.model().repoView().files().commitFiles().get();
         assertTrue(view.allFiles());
         assertEquals(Option.of(new Loading<>()), view.tree());
         assertEquals(List.of(new LoadCommitFiles(now), new LoadCommitTree(now)), moved.cmds());
@@ -361,7 +376,7 @@ class CommitFilesUpdateTest {
                 new CommitFilesMsg.RemarksLoaded(
                         new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
 
-        CommitFilesView view = moved.model().repoView().commitFiles().get();
+        CommitFilesView view = moved.model().repoView().files().commitFiles().get();
         assertFalse(view.allFiles());
         assertEquals(Option.none(), view.tree());
         assertFalse(moved.cmds().exists(LoadCommitTree.class::isInstance));
@@ -371,8 +386,8 @@ class CommitFilesUpdateTest {
     void theFilterOfTheFilesOfAPullRequestStaysWhenItMovedOn() {
         Option<FileFilter> filter = Option.of(new FileFilter("Test", Option.none()));
         Model filtered = withFiles(openedPullRequest())
-                .mapRepoView(repoView ->
-                        repoView.withCommitFiles(repoView.commitFiles().map(view -> view.withFilter(filter))));
+                .mapRepoView(repoView -> repoView.mapFiles(
+                        files -> files.withCommitFiles(files.commitFiles().map(view -> view.withFilter(filter)))));
 
         Model moved = Update.update(
                         filtered,
@@ -380,7 +395,7 @@ class CommitFilesUpdateTest {
                                 new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
                 .model();
 
-        assertEquals(filter, moved.repoView().commitFiles().get().filter());
+        assertEquals(filter, moved.repoView().files().commitFiles().get().filter());
         // Other changes opened in their place start without a filter.
         assertEquals(
                 Option.none(),
@@ -390,6 +405,7 @@ class CommitFilesUpdateTest {
                                         new Changes.OfCommit(new Sha("a".repeat(40))), new PaneId("x")))
                         .model()
                         .repoView()
+                        .files()
                         .commitFiles()
                         .get()
                         .filter());
@@ -404,7 +420,7 @@ class CommitFilesUpdateTest {
                     new CommitFilesMsg.RemarksLoaded(
                             new PrNumber(7), remarks(state, "c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
 
-            CommitFilesView view = read.model().repoView().commitFiles().get();
+            CommitFilesView view = read.model().repoView().files().commitFiles().get();
             assertEquals(PULL_REQUEST, view.of());
             assertEquals(Option.of(state), view.ended());
             assertEquals(List.of(THREAD), view.threads());
@@ -414,7 +430,7 @@ class CommitFilesUpdateTest {
         }
         assertEquals(
                 Option.none(),
-                openedPullRequest().repoView().commitFiles().get().ended());
+                openedPullRequest().repoView().files().commitFiles().get().ended());
     }
 
     @Test
