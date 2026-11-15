@@ -46,7 +46,11 @@ Two things cross them the wrong way:
    them the modules below them once. Each group adds the groups it uses.
 3. **The keymap names no feature.** `Keymap` is given the message that asks for the help of a scope, as a function
    of the scope and its actions, by whoever makes the standard keymap; it no longer makes a `HelpMsg` itself.
-   `GlobalKeys`, `Standard` and `Features` move to `app.keys`. This ends the exception ADR 127 kept (its decision 3).
+   `GlobalKeys`, `Standard` and `Features` move to `app.keys`. The panels of `ui` still ask for
+   `Keymap.standard()`, which finds the keymap the app gives as a service, a `Keymap.Source` in
+   `META-INF/services`; without the app, as in the tests of `ui`, it is an empty keymap. Not: handing the keymap to
+   every panel that reads its keys, through every constructor between the app and them. This ends the exception
+   ADR 127 kept (its decision 3).
 4. **Each module has its own bundle**, `net/vanfleteren/jazygit/<root>/messages.properties`, named in its own
    native-image metadata. A key starts with the root of the module whose code holds it: `github.dialog.…`,
    `branches.help.…`. `Messages`, in `ui.i18n`, finds the bundle from that first part, and looks a key that starts
@@ -75,9 +79,9 @@ Two things cross them the wrong way:
   their parts into, which is a decision of its own.
 - Not: the messages of the features moved down into `state`, so that the tests of `state` keep sending them. A feature
   owns its messages, its errors and its settings.
-- Not: the bundles of the modules registered with `Messages` by the app when it starts, or found through a
-  `ServiceLoader`. The first is state set once, before any text is looked up, in tests too; the second needs
-  service metadata for the shaded jar and the native image. A key that names its module needs neither.
+- Not: the bundles of the modules registered with `Messages` by the app when it starts, or found as services. The
+  first is state set once, before any text is looked up, in tests too; the second is a service in each module, for
+  what the name of a key says already.
 
 ## Consequences
 

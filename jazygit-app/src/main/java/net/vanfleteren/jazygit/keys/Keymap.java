@@ -6,10 +6,11 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.util.ServiceLoader;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
@@ -17,8 +18,8 @@ import net.vanfleteren.jazygit.state.PaneId;
 /**
  * The single source of truth for keyboard shortcuts: every key is declared once, with its description, and
  * the panels both react to the keys and the help popup lists them from here. A feature declares the keys it
- * adds to a panel ({@link Scope}) in its own package, through its {@code Feature}; {@link #standard()} adds those of
- * every feature, and the keys that work wherever the focus is ({@link Global}).
+ * adds to a panel ({@link Scope}) in its own package, through its {@code Feature}; {@link #standard()} is the keymap
+ * the app makes of those of every feature, and of the keys that work wherever the focus is ({@link Global}).
  */
 public final class Keymap {
 
@@ -39,17 +40,30 @@ public final class Keymap {
 
     private final Map<String, Section> sections;
     private final List<Global> globals;
+    private final Option<BiFunction<String, List<Option<Msg>>, Msg>> help;
 
-    private Keymap(Map<String, Section> sections, List<Global> globals) {
+    private Keymap(
+            Map<String, Section> sections,
+            List<Global> globals,
+            Option<BiFunction<String, List<Option<Msg>>, Msg>> help) {
         this.sections = sections;
         this.globals = globals;
+        this.help = help;
     }
 
     /**
-     * A keymap without keys, for the features to add theirs to.
+     * A keymap without keys, for the features to add theirs to, in which {@link #HELP_KEY} does nothing.
      */
     public static Keymap empty() {
-        return new Keymap(LinkedHashMap.empty(), List.empty());
+        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.none());
+    }
+
+    /**
+     * A keymap without keys, in which {@link #HELP_KEY} sends what {@code help} makes of the id of the panel and of
+     * what each of its keys would send. The keymap names no feature, the help included (ADR 136).
+     */
+    public static Keymap withHelp(BiFunction<String, List<Option<Msg>>, Msg> help) {
+        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.of(help));
     }
 
     /**
@@ -66,10 +80,29 @@ public final class Keymap {
     }
 
     /**
-     * The keys of the app, as declared by its features.
+     * The keys of the app, as declared by its features: the keymap of the {@link Source} on the classpath, which the
+     * app gives. Without the app, as in the tests of the views, it is {@link #empty()}.
      */
     public static Keymap standard() {
-        return Standard.KEYMAP;
+        return Found.KEYMAP;
+    }
+
+    /**
+     * What gives the {@link #standard()} keymap: the app, which knows every feature, as a service
+     * ({@code META-INF/services}), so that the views ask for the keymap without naming the app (ADR 136).
+     */
+    public interface Source {
+
+        /**
+         * The keymap of the app.
+         */
+        Keymap keymap();
+    }
+
+    private static final class Found {
+        // Looked up once, when the standard keymap is first asked for.
+        private static final Keymap KEYMAP =
+                ServiceLoader.load(Source.class).findFirst().map(Source::keymap).orElseGet(Keymap::empty);
     }
 
     /**
@@ -88,19 +121,19 @@ public final class Keymap {
                 .forEach(key -> {
                     throw new IllegalArgumentException("The key \"" + key + "\" is bound twice in " + scope.id());
                 });
-        return new Keymap(sections.put(scope.id(), new Section(scope, all)), globals);
+        return new Keymap(sections.put(scope.id(), new Section(scope, all)), globals, help);
     }
 
     /**
      * This keymap with the key {@code global} added.
      */
     public Keymap global(Global global) {
-        return new Keymap(sections, globals.append(global));
+        return new Keymap(sections, globals.append(global), help);
     }
 
     /**
-     * What the keys of {@code scope} do in the event {@code event}: help for {@code ?}, otherwise the message
-     * of the key, if the scope has it. A key let go does nothing.
+     * What the keys of {@code scope} do in the event {@code event}: help for {@code ?}, if this keymap has help,
+     * otherwise the message of the key, if the scope has it. A key let go does nothing.
      *
      * @param selection what is selected in the panel, if anything
      */
@@ -109,7 +142,7 @@ public final class Keymap {
             return Option.none();
         }
         if (HELP_KEY.equals(name(event))) {
-            return Option.of(new HelpMsg.Requested(scope.id(), actions(scope, selection)));
+            return help.map(requested -> requested.apply(scope.id(), actions(scope, selection)));
         }
         return sections.get(scope.id())
                 .flatMap(section -> section.bindings().find(binding -> binding.matches(event)))

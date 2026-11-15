@@ -1,15 +1,20 @@
 package net.vanfleteren.jazygit.keys;
 
 import net.vanfleteren.jazygit.feature.Features;
+import net.vanfleteren.jazygit.feature.help.HelpMsg;
 
 /**
  * The keys of the features, in the order of {@link Features#ALL}, which is the order in which the keys of a panel are
- * listed, and then those that work wherever the focus is.
+ * listed, and then those that work wherever the focus is. {@code ?} asks for the help of the panel. It is the
+ * {@link Keymap#standard()} keymap, given to the views as a service (ADR 136).
  */
-final class Standard {
+public final class Standard implements Keymap.Source {
 
-    static final Keymap KEYMAP =
-            GlobalKeys.register(Features.ALL.foldLeft(Keymap.empty(), (keymap, feature) -> feature.keys(keymap)));
+    private static final Keymap KEYMAP = GlobalKeys.register(
+            Features.ALL.foldLeft(Keymap.withHelp(HelpMsg.Requested::new), (keymap, feature) -> feature.keys(keymap)));
 
-    private Standard() {}
+    @Override
+    public Keymap keymap() {
+        return KEYMAP;
+    }
 }
