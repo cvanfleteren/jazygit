@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A module whose sources, poms and dependencies are what an earlier build saw is taken from that build instead of
+     built again: its classes, jars and the outcome of its tests and checks.
+     Off unless -Dmaven.build.cache.enabled=true, which CI passes; locally Spotless rewrites the sources the cache
+     hashes. CI keeps the cache in ~/.m2/build-cache between runs, and starts a new one when flake.lock changes,
+     as that brings another git for the tests to run. -->
+<cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.4.0"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.4.0 https://maven.apache.org/xsd/build-cache-config-1.4.0.xsd">
+    <configuration>
+        <enabled>false</enabled>
+        <hashAlgorithm>XX</hashAlgorithm>
+    </configuration>
+    <input>
+        <global>
+            <glob>*</glob>
+        </global>
+    </input>
+    <executionControl>
+        <!-- The fat jar is a file shade writes, no artifact of the module, so the cache doesn't keep it: shade makes it
+             again from the jars the cache restores, for the acceptance tests to run. -->
+        <runAlways>
+            <goalsLists>
+                <goalsList artifactId="maven-shade-plugin">
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                </goalsList>
+            </goalsLists>
+        </runAlways>
+        <!-- A build that skipped the tests doesn't stand in for one that runs them: the package job's for verify. -->
+        <reconcile>
+            <plugins>
+                <plugin artifactId="maven-surefire-plugin" goal="test">
+                    <reconciles>
+                        <reconcile propertyName="skip" skipValue="true"/>
+                        <reconcile propertyName="skipExec" skipValue="true"/>
+                        <reconcile propertyName="skipTests" skipValue="true"/>
+                        <reconcile propertyName="testFailureIgnore" skipValue="true"/>
+                    </reconciles>
+                </plugin>
+            </plugins>
+        </reconcile>
+    </executionControl>
+</cache>

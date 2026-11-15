@@ -52,11 +52,21 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 25
+        id: java
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
+
+      # Each run keeps its build cache under a key of its own, and starts from the latest one with the same JDK, git
+      # (flake.lock) and checks; see .mvn/maven-build-cache-config.xml.
+      - name: Restore the build cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/build-cache
+          key: build-cache-verify-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', 'checkstyle.xml', 'errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: build-cache-verify-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', 'checkstyle.xml', 'errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -68,11 +78,13 @@ jobs:
           nix profile install --inputs-from . nixpkgs#git
           echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
 
-      # The package job checks the code, so the tests here don't wait for ErrorProne, Spotless or checkstyle.
+      # The package job checks the code, so the tests here don't wait for ErrorProne, Spotless or checkstyle. A module
+      # that didn't change since the build cache saw it is restored, its tests not run again.
       - name: Build and test
         run: |
           git --version
-          ./mvnw --batch-mode --no-transfer-progress verify -Derrorprone.skip -Dspotless.check.skip -Dcheckstyle.skip
+          ./mvnw --batch-mode --no-transfer-progress verify -Dmaven.build.cache.enabled=true \
+            -Derrorprone.skip -Dspotless.check.skip -Dcheckstyle.skip
 
   package:
     needs: changes
@@ -83,15 +95,25 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 25
+        id: java
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
 
-      # Spotless checks the formatting and ErrorProne the main sources as they compile.
+      # As verify's, but a cache of its own: this build has ErrorProne and no tests.
+      - name: Restore the build cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/build-cache
+          key: build-cache-package-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', 'checkstyle.xml', 'errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: build-cache-package-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', 'checkstyle.xml', 'errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-
+
+      # Spotless checks the formatting and ErrorProne the main sources as they compile, of the modules the build
+      # cache doesn't restore. shade makes the fat jar either way.
       - name: Build and check the jar
-        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests package
+        run: ./mvnw --batch-mode --no-transfer-progress -Dmaven.build.cache.enabled=true -DskipTests package
 
       - name: Keep the fat jar
         uses: actions/upload-artifact@v7
@@ -101,7 +123,8 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      # Once the jar is on its way to the acceptance tests, so they don't wait for it.
+      # Once the jar is on its way to the acceptance tests, so they don't wait for it. Without the build cache, so it
+      # checks every module.
       - name: Checkstyle
         run: ./mvnw --batch-mode --no-transfer-progress checkstyle:check
 
