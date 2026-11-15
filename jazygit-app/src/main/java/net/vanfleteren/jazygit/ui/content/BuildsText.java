@@ -695,7 +695,9 @@ final class BuildsText {
                                     .append(duration(Duration.ofMinutes(59))),
                             "content.builds.time"),
                     // As wide as its header, which is wider than a wait below an hour.
-                    widest(builds.flatMap(build -> build.queued().map(BuildsText::duration)), "content.builds.wait"),
+                    widest(
+                            builds.flatMap(build -> build.queued().map(BuildsText::duration)),
+                            "content.builds.queuedHeader"),
                     widest(
                             builds.flatMap(build -> difference(build, median)).map(BuildsText::signed),
                             "content.builds.vsMedian"));
@@ -737,7 +739,7 @@ final class BuildsText {
                                                 + padLeft(
                                                         build.queued()
                                                                 .map(BuildsText::duration)
-                                                                .getOrElse(""),
+                                                                .getOrElse(build.attempt() == 1 ? "–" : ""),
                                                         columns.queued())
                                                 + GAP),
                                         vsMedian,
@@ -753,7 +755,7 @@ final class BuildsText {
                             + GAP
                             + padLeft(Messages.get("content.builds.time"), columns.time())
                             + GAP
-                            + padLeft(Messages.get("content.builds.wait"), columns.queued())
+                            + padLeft(Messages.get("content.builds.queuedHeader"), columns.queued())
                             + GAP
                             + padLeft(Messages.get("content.builds.vsMedian"), columns.vsMedian())
                             + GAP

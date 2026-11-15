@@ -233,6 +233,26 @@ class BuildsTextTest {
     }
 
     @Test
+    void aBuildWhoseJobsWaitForARunnerIsNotTakenForARerun() {
+        // Its only job has no runner yet: how long it waits is not known yet, unlike a re-run's, which never is.
+        Build waiting = new Build(
+                "Publish",
+                "push",
+                3,
+                1,
+                "abcdef03",
+                "Commit 3",
+                MIDNIGHT.plusSeconds(10800),
+                List.of(new Build.Job("package", "", Option.none(), Option.none())));
+        List<String> lines = drawn(List.of(waiting, build("Publish", 1, "SUCCESS", 240)));
+        int header = lines.indexWhere(line -> line.contains("commit   when"));
+
+        assertTrue(
+                lines.get(header + 1).endsWith("abcdef0  13 Nov 03:00      –       –             Commit 3"),
+                lines.get(header + 1));
+    }
+
+    @Test
     void aDayOfOneDigitIsAlignedWithOneOfTwo() {
         // Builds on 13 and 3 November: the day of the second is padded, so the columns after it stay put.
         List<String> lines =
