@@ -161,7 +161,75 @@ class BuildsContentTest {
         assertFalse(view.reading());
         assertEquals(100, view.commits());
         assertEquals(4, view.builds().getOrElse(List.empty()).size());
-        assertEquals("Builds: main · last 100 commits", ((Shown.Area) content(reading)).title());
+        assertEquals("Builds: main · last 100 commits · m for more", ((Shown.Area) content(reading)).title());
+    }
+
+    @Test
+    void mReadsAHundredMoreCommitsFromWhereThoseReadEnd() {
+        Model read = Update.update(
+                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
+                        new BuildsMsg.Read(ORIGIN_MAIN, Option.none(), Option.of(page(100, Option.of("c100")))))
+                .model();
+
+        Next more = Update.update(read, new BuildsMsg.MoreRequested());
+
+        assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.of("c100"))), more.cmds());
+        assertEquals("Builds: main · reading, 100 commits so far", ((Shown.Area) content(more.model())).title());
+        assertTrue(Update.update(more.model(), new BuildsMsg.MoreRequested())
+                .cmds()
+                .isEmpty());
+
+        Next next = Update.update(
+                more.model(),
+                new BuildsMsg.Read(ORIGIN_MAIN, Option.of("c100"), Option.of(page(75, Option.of("c175")))));
+        assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.of("c175"))), next.cmds());
+        Model done = Update.update(
+                        next.model(),
+                        new BuildsMsg.Read(ORIGIN_MAIN, Option.of("c175"), Option.of(page(25, Option.of("c200")))))
+                .model();
+        BuildsView view = done.repoView().branches().builds().get();
+        assertFalse(view.reading());
+        assertEquals(200, view.commits());
+        assertEquals(3, view.builds().getOrElse(List.empty()).size());
+        assertEquals("Builds: main · last 200 commits · m for more", ((Shown.Area) content(done)).title());
+    }
+
+    @Test
+    void mReadsNothingAtTheOldestCommit() {
+        Model read = Update.update(
+                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
+                        new BuildsMsg.Read(ORIGIN_MAIN, Option.none(), Option.of(page(3, Option.none()))))
+                .model();
+
+        Next more = Update.update(read, new BuildsMsg.MoreRequested());
+
+        assertSame(read, more.model());
+        assertTrue(more.cmds().isEmpty());
+        assertEquals("Builds: main · last 3 commits", ((Shown.Area) content(read)).title());
+    }
+
+    @Test
+    void mReadsAgainFromWhereReadingFailed() {
+        Model read = Update.update(
+                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
+                        new BuildsMsg.Read(ORIGIN_MAIN, Option.none(), Option.of(page(25, Option.of("c25")))))
+                .model();
+        Model stopped = Update.update(
+                        read,
+                        new BuildsMsg.Failed(
+                                ORIGIN_MAIN, Option.of("c25"), Failure.of(new GhError.UnexpectedOutput("timeout"))))
+                .model();
+
+        Next again = Update.update(stopped, new BuildsMsg.MoreRequested());
+
+        assertEquals(
+                "Builds: main · 25 commits, could not read more · m to try again",
+                ((Shown.Area) content(stopped)).title());
+        assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.of("c25"))), again.cmds());
+        BuildsView view = again.model().repoView().branches().builds().get();
+        assertTrue(view.reading());
+        assertEquals(Option.none(), view.stopped());
+        assertEquals(125, view.limit());
     }
 
     @Test
@@ -231,6 +299,33 @@ class BuildsContentTest {
     }
 
     @Test
+    void mReadsAgainFromTheTipWhenTheFirstReadFailed() {
+        Model failed = Update.update(
+                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
+                        new BuildsMsg.Failed(
+                                ORIGIN_MAIN, Option.none(), Failure.of(new GhError.UnexpectedOutput("timeout"))))
+                .model();
+        assertEquals("Builds: main · last 0 commits · m to try again", ((Shown.Message) content(failed)).title());
+
+        Next again = Update.update(failed, new BuildsMsg.MoreRequested());
+
+        assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.none())), again.cmds());
+        BuildsView view = again.model().repoView().branches().builds().get();
+        assertTrue(view.reading());
+        assertInstanceOf(Loadable.Loading.class, view.builds());
+        assertTrue(Update.update(again.model(), new BuildsMsg.MoreRequested())
+                .cmds()
+                .isEmpty());
+        Model read = Update.update(
+                        again.model(),
+                        new BuildsMsg.Read(ORIGIN_MAIN, Option.none(), Option.of(page(3, Option.none()))))
+                .model();
+        assertEquals(
+                new Loadable.Loaded<>(List.of(BUILD)),
+                read.repoView().branches().builds().get().builds());
+    }
+
+    @Test
     void aFailedLaterReadKeepsWhatWasRead() {
         Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
         Model first = Update.update(
@@ -246,7 +341,9 @@ class BuildsContentTest {
         assertEquals(
                 List.of(BUILD),
                 failed.model().repoView().branches().builds().get().builds().getOrElse(List.empty()));
-        assertEquals("Builds: main · 25 commits, could not read more", ((Shown.Area) content(failed.model())).title());
+        assertEquals(
+                "Builds: main · 25 commits, could not read more · m to try again",
+                ((Shown.Area) content(failed.model())).title());
     }
 
     @Test

@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -189,6 +190,111 @@ class BuildsEveryBranchTest {
         WorkflowRuns runs = view(first.model()).runs().get(BUILD_ID).get();
         assertEquals(25, runs.count());
         assertTrue(runs.reading());
+    }
+
+    @Test
+    void mOnEveryBranchReadsAHundredMoreRunsOfTheTab() {
+        Model read = Update.update(
+                        model(),
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN, Option.none(), Option.of(new BuildsPage(List.of(MINE), 3, Option.none()))))
+                .model();
+        Model every = Update.update(read, new BuildsMsg.AllToggled()).model();
+        Model hundred = Update.update(
+                        every,
+                        new BuildsViewMsg.RunsRead(
+                                BUILD_ID,
+                                Option.none(),
+                                Option.of(new WorkflowRunsPage(List.of(MINE), 100, Option.of("c100")))))
+                .model();
+        assertEquals(
+                "Builds: main · last 3 commits · every branch · m for more",
+                ((Shown.Area) ContentView.of(hundred, BranchesPanel.PANE)).title());
+
+        Next more = Update.update(hundred, new BuildsMsg.MoreRequested());
+
+        assertEquals(List.of(new LoadWorkflowRuns(BUILD_ID, Option.of("c100"))), more.cmds());
+        WorkflowRuns runs = view(more.model()).runs().get(BUILD_ID).get();
+        assertTrue(runs.reading());
+        assertEquals(200, runs.limit());
+        assertFalse(view(more.model()).reading());
+    }
+
+    /**
+     * The builds of the branch, read, shown on every branch.
+     */
+    private static Model everyBranch() {
+        Model read = Update.update(
+                        model(),
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN, Option.none(), Option.of(new BuildsPage(List.of(MINE), 3, Option.none()))))
+                .model();
+        return Update.update(read, new BuildsMsg.AllToggled()).model();
+    }
+
+    private static String title(Model model) {
+        return ((Shown.Area) ContentView.of(model, BranchesPanel.PANE)).title();
+    }
+
+    private static final Failure TIMEOUT = Failure.of(new GhError.UnexpectedOutput("timeout"));
+
+    @Test
+    void mOnEveryBranchReadsAgainFromWhereReadingTheRunsFailed() {
+        Model first = Update.update(
+                        everyBranch(),
+                        new BuildsViewMsg.RunsRead(
+                                BUILD_ID,
+                                Option.none(),
+                                Option.of(new WorkflowRunsPage(List.of(MINE), 25, Option.of("c25")))))
+                .model();
+        assertEquals("Builds: main · last 3 commits · every branch · reading, 25 runs so far", title(first));
+        Model stopped = Update.update(first, new BuildsViewMsg.RunsFailed(BUILD_ID, Option.of("c25"), TIMEOUT))
+                .model();
+        assertEquals("Builds: main · last 3 commits · every branch · m to try again", title(stopped));
+
+        Next again = Update.update(stopped, new BuildsMsg.MoreRequested());
+
+        assertEquals(List.of(new LoadWorkflowRuns(BUILD_ID, Option.of("c25"))), again.cmds());
+        WorkflowRuns runs = view(again.model()).runs().get(BUILD_ID).get();
+        assertTrue(runs.reading());
+        assertEquals(Option.none(), runs.stopped());
+        assertEquals(125, runs.limit());
+        assertEquals("Builds: main · last 3 commits · every branch · reading, 25 runs so far", title(again.model()));
+    }
+
+    @Test
+    void mOnEveryBranchReadsAgainFromTheNewestWhenTheFirstRunsFailed() {
+        Model failed = Update.update(everyBranch(), new BuildsViewMsg.RunsFailed(BUILD_ID, Option.none(), TIMEOUT))
+                .model();
+        assertEquals("Builds: main · last 3 commits · every branch · m to try again", title(failed));
+
+        Next again = Update.update(failed, new BuildsMsg.MoreRequested());
+
+        assertEquals(List.of(new LoadWorkflowRuns(BUILD_ID, Option.none())), again.cmds());
+        WorkflowRuns runs = view(again.model()).runs().get(BUILD_ID).get();
+        assertTrue(runs.reading());
+        assertInstanceOf(Loadable.Loading.class, runs.builds());
+        assertInstanceOf(Loadable.Loading.class, shown(again.model()).builds());
+    }
+
+    @Test
+    void mOnEveryBranchReadsNothingWhileTheRunsAreReadOrAtTheOldest() {
+        Model reading = everyBranch();
+        Next whileReading = Update.update(reading, new BuildsMsg.MoreRequested());
+        assertSame(reading, whileReading.model());
+        assertTrue(whileReading.cmds().isEmpty());
+
+        Model oldest = Update.update(
+                        reading,
+                        new BuildsViewMsg.RunsRead(
+                                BUILD_ID,
+                                Option.none(),
+                                Option.of(new WorkflowRunsPage(List.of(MINE), 40, Option.none()))))
+                .model();
+        Next atOldest = Update.update(oldest, new BuildsMsg.MoreRequested());
+        assertSame(oldest, atOldest.model());
+        assertTrue(atOldest.cmds().isEmpty());
+        assertEquals("Builds: main · last 3 commits · every branch", title(oldest));
     }
 
     @Test
