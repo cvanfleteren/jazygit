@@ -76,7 +76,7 @@ final class ReviewLookup {
 
     static Model mapView(Model model, Function<CommitFilesView, CommitFilesView> f) {
         return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(
-                repoView.files().commitFiles().map(view -> view.pullRequest().isDefined() ? f.apply(view) : view))));
+                files.commitFiles().map(view -> view.pullRequest().isDefined() ? f.apply(view) : view))));
     }
 
     /**

@@ -92,12 +92,10 @@ public final class DiffOptionsUpdate {
                 .appendAll(model.repoView().preview().fileDiff().map(diff -> new LoadFileDiff(diff.key(), options)))
                 .appendAll(Update.shown(model).filter(load -> load instanceof DiffLoad));
         return new Next(
-                model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withFileDiff(
-                                reloading(repoView.preview().fileDiff())))
-                        .mapPreview(preview -> preview.withCommitDetail(
-                                reloading(repoView.preview().commitDetail())))
-                        .mapPreview(preview -> preview.withStashDetail(
-                                reloading(repoView.preview().stashDetail())))
+                model.mapRepoView(repoView -> repoView.mapPreview(
+                                preview -> preview.withFileDiff(reloading(preview.fileDiff()))
+                                        .withCommitDetail(reloading(preview.commitDetail()))
+                                        .withStashDetail(reloading(preview.stashDetail())))
                         .mapBranches(
                                 branches -> branches.withDivergence(divergence).withBranchCommits(branchCommits))
                         .mapFiles(files -> files.withCommitFiles(commitFiles))

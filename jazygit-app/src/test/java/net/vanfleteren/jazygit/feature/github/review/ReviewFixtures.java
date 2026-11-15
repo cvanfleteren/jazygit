@@ -116,8 +116,7 @@ final class ReviewFixtures {
                                 HashSet.empty(),
                                 0))
                 .model();
-        return read.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(repoView.files()
-                .commitFiles()
+        return read.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
                 .map(view -> view.withDiff(Option.of(new Preview<>(List.of(A), new Loadable.Loaded<>(DIFF))))))));
     }
 
@@ -218,8 +217,7 @@ final class ReviewFixtures {
      * {@code model} with each comment of its threads giving the viewer {@code rights}.
      */
     static Model withRights(Model model, CommentRights rights) {
-        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(repoView.files()
-                .commitFiles()
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
                 .map(view -> view.withRemarks(view.remarks()
                         .map(remarks -> remarks.map(read -> new ReviewRemarks(
                                 read.state(),

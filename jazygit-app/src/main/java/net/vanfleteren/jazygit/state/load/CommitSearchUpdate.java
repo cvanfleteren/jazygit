@@ -16,14 +16,11 @@ public final class CommitSearchUpdate {
     public static Next update(Model model, CommitSearchMsg msg) {
         return switch (msg) {
             case CommitSearchMsg.Opened() ->
-                Next.of(model.mapRepoView(repoView ->
-                        repoView.mapCommits(commits -> commits.withSearchLine(Option.of(repoView.commits()
-                                .commitSearch()
-                                .map(CommitSearch::text)
-                                .getOrElse(""))))));
+                Next.of(model.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withSearchLine(
+                        Option.of(commits.commitSearch().map(CommitSearch::text).getOrElse(""))))));
             case CommitSearchMsg.Edited(String text) ->
-                Next.of(model.mapRepoView(repoView -> repoView.mapCommits(commits ->
-                        commits.withSearchLine(repoView.commits().searchLine().map(open -> text)))));
+                Next.of(model.mapRepoView(repoView -> repoView.mapCommits(
+                        commits -> commits.withSearchLine(commits.searchLine().map(open -> text)))));
             case CommitSearchMsg.Cancelled() ->
                 Next.of(model.mapRepoView(
                         repoView -> repoView.mapCommits(commits -> commits.withSearchLine(Option.none()))));

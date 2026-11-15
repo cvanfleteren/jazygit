@@ -385,8 +385,8 @@ class CommitFilesUpdateTest {
     void theFilterOfTheFilesOfAPullRequestStaysWhenItMovedOn() {
         Option<FileFilter> filter = Option.of(new FileFilter("Test", Option.none()));
         Model filtered = withFiles(openedPullRequest())
-                .mapRepoView(repoView -> repoView.mapFiles(files ->
-                        files.withCommitFiles(repoView.files().commitFiles().map(view -> view.withFilter(filter)))));
+                .mapRepoView(repoView -> repoView.mapFiles(
+                        files -> files.withCommitFiles(files.commitFiles().map(view -> view.withFilter(filter)))));
 
         Model moved = Update.update(
                         filtered,

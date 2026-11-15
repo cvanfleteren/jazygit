@@ -98,9 +98,9 @@ public final class StackUpdate {
      */
     private static Next toggled(Model model, int stack) {
         return Next.of(model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withClosedStacks(
-                repoView.branches().closedStacks().contains(stack)
-                        ? repoView.branches().closedStacks().remove(stack)
-                        : repoView.branches().closedStacks().add(stack)))));
+                branches.closedStacks().contains(stack)
+                        ? branches.closedStacks().remove(stack)
+                        : branches.closedStacks().add(stack)))));
     }
 
     /**

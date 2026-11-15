@@ -103,10 +103,10 @@ class TargetTest {
 
         Model commitsFailed =
                 shown.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withCommitDetail(failed)));
-        Model divergenceFailed = shown.mapRepoView(repoView -> repoView.mapBranches(branches ->
-                branches.withDivergence(repoView.branches().divergence().map(view -> view.withDetail(failed)))));
-        Model branchFailed = shown.mapRepoView(repoView -> repoView.mapBranches(branches ->
-                branches.withBranchCommits(repoView.branches().branchCommits().map(view -> view.withDetail(failed)))));
+        Model divergenceFailed = shown.mapRepoView(repoView -> repoView.mapBranches(
+                branches -> branches.withDivergence(branches.divergence().map(view -> view.withDetail(failed)))));
+        Model branchFailed = shown.mapRepoView(repoView -> repoView.mapBranches(
+                branches -> branches.withBranchCommits(branches.branchCommits().map(view -> view.withDetail(failed)))));
 
         assertEquals(
                 List.of(true, false, false),

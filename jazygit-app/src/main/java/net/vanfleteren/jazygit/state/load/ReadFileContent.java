@@ -41,8 +41,8 @@ public record ReadFileContent(String path) implements Targeted<FileContent> {
     }
 
     private static RepoView withContent(RepoView view, Option<Preview<String, FileContent>> content) {
-        return view.mapFiles(files -> files.withUnchanged(content.<UnchangedNode>map(UnchangedNode.File::new)
-                .orElse(view.files().unchanged())));
+        return view.mapFiles(files -> files.withUnchanged(
+                content.<UnchangedNode>map(UnchangedNode.File::new).orElse(files.unchanged())));
     }
 
     @Override

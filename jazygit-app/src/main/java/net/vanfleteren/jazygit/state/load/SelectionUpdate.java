@@ -181,8 +181,8 @@ public final class SelectionUpdate {
      * the node without them highlighted before (ADR 128).
      */
     private static Next commitFilesSelected(Model model, List<CommitFile> files) {
-        Model changed = model.mapRepoView(repoView -> repoView.mapFiles(part ->
-                part.withCommitFiles(repoView.files().commitFiles().map(open -> open.withUnchanged(Option.none())))));
+        Model changed = model.mapRepoView(repoView -> repoView.mapFiles(
+                part -> part.withCommitFiles(part.commitFiles().map(open -> open.withUnchanged(Option.none())))));
         return changed.repoView()
                 .files()
                 .commitFiles()

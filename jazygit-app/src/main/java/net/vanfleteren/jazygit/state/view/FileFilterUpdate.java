@@ -51,8 +51,8 @@ public final class FileFilterUpdate {
 
     private static Model with(Model model, Option<FileFilter> filter) {
         return model.mapRepoView(repoView -> repoView.files().commitFiles().isDefined()
-                ? repoView.mapFiles(files ->
-                        files.withCommitFiles(repoView.files().commitFiles().map(view -> view.withFilter(filter))))
+                ? repoView.mapFiles(
+                        files -> files.withCommitFiles(files.commitFiles().map(view -> view.withFilter(filter))))
                 : repoView.mapFiles(files -> files.withFilter(filter)));
     }
 }

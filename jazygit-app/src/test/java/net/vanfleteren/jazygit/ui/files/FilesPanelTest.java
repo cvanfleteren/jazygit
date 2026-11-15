@@ -831,8 +831,7 @@ class FilesPanelTest {
     void escapeInTheFilteredFilesOfACommitClearsTheFilterBeforeItClosesThem() throws Exception {
         AtomicReference<Model> model =
                 new AtomicReference<>(loaded(opened(TestModels.loaded(fixed(List.of()))), MODEL_AND_TEST)
-                        .mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(repoView.files()
-                                .commitFiles()
+                        .mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
                                 .map(view -> view.withFilter(Option.of(new FileFilter("Test", Option.none()))))))));
         FilesPanel panel =
                 new FilesPanel(msg -> model.set(Update.update(model.get(), msg).model()), () -> {});

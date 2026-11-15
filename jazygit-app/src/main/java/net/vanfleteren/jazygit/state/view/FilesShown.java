@@ -14,16 +14,16 @@ public enum FilesShown {
     ALL;
 
     /**
-     * {@code ALL} if {@code all}, else {@code CHANGED}.
-     */
-    public static FilesShown of(boolean all) {
-        return all ? ALL : CHANGED;
-    }
-
-    /**
      * Whether all files are listed.
      */
     public boolean all() {
         return this == ALL;
+    }
+
+    /**
+     * The other choice.
+     */
+    public FilesShown toggled() {
+        return this == CHANGED ? ALL : CHANGED;
     }
 }

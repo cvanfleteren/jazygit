@@ -54,8 +54,7 @@ public final class LoadUpdate {
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded loaded ->
                 Next.of(loaded.kept(done)
-                        .mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(repoView.files()
-                                .commitFiles()
+                        .mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
                                 .filter(view -> !(view.of() instanceof Changes.OfStash stash)
                                         || loaded.stashes()
                                                 .exists(listed -> listed.sha().equals(stash.sha())))))));

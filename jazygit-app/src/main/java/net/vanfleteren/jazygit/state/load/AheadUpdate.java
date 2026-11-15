@@ -170,8 +170,7 @@ public final class AheadUpdate {
      */
     static Next branchLogLoaded(Model model, BranchRef branch, LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
         Model reading = model.mapRepoView(repoView ->
-                repoView.mapPreview(previews -> previews.withBranchAhead(Option.of(repoView.preview()
-                        .branchAhead()
+                repoView.mapPreview(previews -> previews.withBranchAhead(Option.of(previews.branchAhead()
                         .filter(preview -> preview.key().equals(branch))
                         .getOrElse(() -> new Preview<>(branch, Loadable.loading()))))));
         return read(reading, load, ahead);
@@ -228,9 +227,7 @@ public final class AheadUpdate {
                                 .mapRepo(repo -> repo.withAhead(repo.ahead().reload(ahead)))),
                         branch -> Next.of(model.mapRepoView(repoView ->
                                 repoView.mapPreview(previews -> previews.withBranchAhead(Preview.updated(
-                                        repoView.preview().branchAhead(),
-                                        branch,
-                                        preview -> preview.reload(ahead)))))));
+                                        previews.branchAhead(), branch, preview -> preview.reload(ahead)))))));
     }
 
     /**
@@ -243,9 +240,7 @@ public final class AheadUpdate {
                                 .mapRepo(repo -> repo.withAhead(repo.ahead().failed(failure))),
                         branch -> model.mapRepoView(repoView ->
                                 repoView.mapPreview(previews -> previews.withBranchAhead(Preview.updated(
-                                        repoView.preview().branchAhead(),
-                                        branch,
-                                        preview -> preview.failed(failure))))));
+                                        previews.branchAhead(), branch, preview -> preview.failed(failure))))));
     }
 
     /**

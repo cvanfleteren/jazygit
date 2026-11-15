@@ -62,11 +62,11 @@ public final class CommitFilesUpdate {
                                         .getOrElse(() -> new Loadable.Failed<>(failure))))
                                 .withSending(view.sending().removeAll(settled))));
             case CommitFilesMsg.ListedCycled() ->
-                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(repoView.files()
-                        .commitFiles()
-                        .map(view -> view.remarks().isDefined()
-                                ? view.withListed(view.listed().next())
-                                : view)))));
+                Next.of(model.mapRepoView(repoView ->
+                        repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
+                                .map(view -> view.remarks().isDefined()
+                                        ? view.withListed(view.listed().next())
+                                        : view)))));
             // Those flipped before the threads are read are as they start until then (ADR 63).
             case CommitFilesMsg.CollapsedLoaded(PrNumber number, var kept) ->
                 Next.of(mapPullRequest(
@@ -279,8 +279,7 @@ public final class CommitFilesUpdate {
     }
 
     private static Model mapPullRequest(Model model, PrNumber number, Function<CommitFilesView, CommitFilesView> f) {
-        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(repoView.files()
-                .commitFiles()
-                .map(view -> view.pullRequest().contains(number) ? f.apply(view) : view))));
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(
+                files.commitFiles().map(view -> view.pullRequest().contains(number) ? f.apply(view) : view))));
     }
 }
