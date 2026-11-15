@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
@@ -212,6 +213,41 @@ class BuildsTextTest {
         assertEquals("  commit   when           time  vs median  title", lines.get(header));
         assertEquals("✓ abcdef0  13 Nov 01:00   4m00       −30s  Commit 1", lines.get(header + 1));
         assertEquals("✓ abcdef0   3 Nov 00:00   5m00       +30s  Commit -240", lines.get(header + 2));
+    }
+
+    @Test
+    void aDayOfTwoDigitsIsReservedForEvenFarEast() {
+        // Only builds on the 3rd in Auckland, at UTC+13: the column is as wide as with a build on the 13th, so it
+        // stays put when older builds are read.
+        List<String> lines = BuildsText.lines(
+                        shown(
+                                List.of(build("Publish", -240, "SUCCESS", 240), build("Publish", -250, "SUCCESS", 300)),
+                                Option.none()),
+                        ZoneId.of("Pacific/Auckland"),
+                        Theme.SpanStyles.NONE,
+                        80)
+                .map(BuildsTextTest::text);
+        int header = lines.indexWhere(line -> line.contains("commit   when"));
+
+        assertEquals("  commit   when           time  vs median  title", lines.get(header));
+        assertTrue(lines.get(header + 1).startsWith("✓ abcdef0   3 Nov 13:00   4m00"), lines.get(header + 1));
+        assertTrue(lines.get(header + 2).startsWith("✓ abcdef0   3 Nov 03:00   5m00"), lines.get(header + 2));
+    }
+
+    @Test
+    void aTimeBelowAnHourIsReservedFor() {
+        // Builds of a few minutes: their titles start where those of builds of twenty minutes do.
+        List<String> quick = drawn(List.of(build("Publish", 1, "SUCCESS", 120), build("Publish", 0, "SUCCESS", 180)));
+        List<String> slow = drawn(PUBLISH);
+        String title = "  vs median  title";
+
+        assertEquals(
+                slow.find(line -> line.contains(title)).get(),
+                quick.find(line -> line.contains(title)).get());
+        assertTrue(quick.exists(line -> line.startsWith("✓ abcdef0  13 Nov 01:00   2m00")), quick.mkString("\n"));
+        assertEquals(
+                slow.find(line -> line.endsWith("Commit 29")).get().indexOf("Commit"),
+                quick.find(line -> line.endsWith("Commit 1")).get().indexOf("Commit"));
     }
 
     /**

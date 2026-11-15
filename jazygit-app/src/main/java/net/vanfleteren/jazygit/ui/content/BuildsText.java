@@ -58,8 +58,9 @@ final class BuildsText {
     private static final Pattern SHARD = Pattern.compile("\\s*\\(\\d+/\\d+\\)$");
     // The space between the columns of the list of builds.
     private static final String GAP = "  ";
-    // A moment whose day has two digits, so that the column of when a build ran is as wide as it can be.
-    private static final Instant WIDEST_DAY = Instant.parse("2000-12-31T12:00:00Z");
+    // A moment whose day has two digits in every zone, so that the column of when a build ran is as wide as it can
+    // be. A month is as wide as December: in other locales the months can differ in width.
+    private static final Instant WIDEST_DAY = Instant.parse("2000-12-15T12:00:00Z");
 
     private BuildsText() {}
 
@@ -220,6 +221,15 @@ final class BuildsText {
      */
     private static String shortSha(String sha) {
         return sha.substring(0, Math.min(7, sha.length()));
+    }
+
+    /**
+     * How much longer than {@code median} {@code build} took, when it passed.
+     */
+    private static Option<Duration> difference(Build build, Option<Duration> median) {
+        return build.duration()
+                .filter(done -> build.outcome() == Outcome.PASSED)
+                .flatMap(done -> median.map(done::minus));
     }
 
     private static String padLeft(String text, int width) {
@@ -671,11 +681,6 @@ final class BuildsText {
                                     .max()
                                     .getOrElse(0)
                             + 1);
-            Map<Long, Option<Duration>> differences = HashMap.ofEntries(builds.map(build -> Tuple.of(
-                    build.runId(),
-                    build.duration()
-                            .filter(done -> build.outcome() == Outcome.PASSED)
-                            .flatMap(done -> median.map(done::minus)))));
             ListColumns columns = new ListColumns(
                     widest(builds.map(build -> shortSha(build.sha())), "content.builds.commit"),
                     // A day of two digits is reserved for, so that the column stays put as older builds are read.
@@ -690,14 +695,10 @@ final class BuildsText {
                                     .append(duration(Duration.ofMinutes(59))),
                             "content.builds.time"),
                     widest(
-                            differences
-                                    .values()
-                                    .flatMap(difference -> difference.map(BuildsText::signed))
-                                    .toList(),
+                            builds.flatMap(build -> difference(build, median)).map(BuildsText::signed),
                             "content.builds.vsMedian"));
             return builds.map(build -> {
-                        Option<Duration> difference =
-                                differences.get(build.runId()).flatMap(change -> change);
+                        Option<Duration> difference = difference(build, median);
                         List<Span> forWhat = allBranches
                                 ? List.of(
                                         isMine(build) ? span(MINE, Theme.Classes.CURRENT_BRANCH) : Span.raw(" "),
