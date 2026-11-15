@@ -37,6 +37,19 @@ public final class TimeText {
     }
 
     /**
+     * How long something took, as the builds show it: {@code 45s}, {@code 4m08}, {@code 1h02} (ADR 131).
+     */
+    public static String took(Duration took) {
+        long seconds = Math.max(0, took.toSeconds());
+        if (seconds < 60) {
+            return seconds + "s";
+        }
+        return seconds < 3600
+                ? "%dm%02d".formatted(seconds / 60, seconds % 60)
+                : "%dh%02d".formatted(seconds / 3600, seconds % 3600 / 60);
+    }
+
+    /**
      * How long ago something happened {@code since}, to show in a sentence: "2m ago", or "just now" under a minute.
      */
     public static String ago(Duration since) {

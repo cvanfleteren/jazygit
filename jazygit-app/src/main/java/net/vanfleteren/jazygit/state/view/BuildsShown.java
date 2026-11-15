@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 
 /**
- * What the builds of a branch show, as the content panel draws it (ADR 131).
+ * What the builds of a branch show, as the content panel draws it (ADR 131, 133).
  *
  * @param tabs        the workflows of the tabs, in their order
  * @param lasts       how the last build of each tab ended, as far as that is read
@@ -23,6 +23,8 @@ import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
  * @param baseline    of the branch's builds of the tab: how long the runs of its workflow that passed took on every
  *                    branch, in the middle, and how many of those there are; none until those are read
  * @param needs       of the builds whose jobs show on one time line, by the id of their run, which job needs which
+ * @param picked      the run of the build whose jobs show on one time line, when it is among those shown; else the
+ *                    last that is done shows (ADR 133)
  */
 public record BuildsShown(
         List<Pipeline> tabs,
@@ -33,7 +35,8 @@ public record BuildsShown(
         int of,
         Set<String> mine,
         Option<Baseline> baseline,
-        Map<Long, Map<String, Set<String>>> needs) {
+        Map<Long, Map<String, Set<String>>> needs,
+        Option<Long> picked) {
 
     /**
      * The workflow of the tab shown.

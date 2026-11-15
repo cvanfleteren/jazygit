@@ -65,6 +65,16 @@ public sealed interface BuildsMsg extends Msg {
     record WindowPicked(Option<Integer> builds) implements BuildsMsg {}
 
     /**
+     * The user asked to pick the build whose jobs show on one time line (ADR 133).
+     */
+    record BuildPickRequested() implements BuildsMsg {}
+
+    /**
+     * The user picked the build of the run {@code run}; none for the last build that is done (ADR 133).
+     */
+    record BuildPicked(Option<Long> run) implements BuildsMsg {}
+
+    /**
      * The user asked to choose the workflow whose builds show from all of them.
      */
     record PickRequested() implements BuildsMsg {}

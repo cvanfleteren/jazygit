@@ -527,6 +527,20 @@ public final class ScrollArea {
                 tab.forEach(dispatch);
                 return EventResult.HANDLED;
             }
+            // A click on a build in the chart or the list shows its jobs on one time line (ADR 133).
+            Option<Msg> build = Option.of(element.renderedArea())
+                    .flatMap(drawn -> styled.flatMap(shown -> shown.body() instanceof Body.Builds(var builds)
+                            ? BuildsText.buildAt(
+                                    builds,
+                                    shown.width(),
+                                    state.scrollRow() + event.y() - drawn.top() - 1,
+                                    column + event.x() - drawn.left() - 1)
+                            : Option.none()))
+                    .map(BuildsViewMsg.BuildClicked::new);
+            if (build.isDefined()) {
+                build.forEach(dispatch);
+                return EventResult.HANDLED;
+            }
             // The text starts a line below the top of the area, under its border.
             return cursor.flatMap(on ->
                             Option.of(element.renderedArea()).flatMap(drawn -> on.clicked(event.y() - drawn.top() - 1)))

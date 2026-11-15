@@ -10,6 +10,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.github.builds.BuildPickPopup;
 import net.vanfleteren.jazygit.feature.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.feature.github.builds.BuildsPopup;
 import net.vanfleteren.jazygit.feature.github.builds.BuildsWindowPopup;
@@ -625,6 +626,37 @@ class BuildsContentTest {
 
         Model other = Update.update(picked, new BuildsMsg.Toggled(LOCAL)).model();
         assertEquals(Option.of(2), other.repoView().branches().builds().get().window());
+    }
+
+    @Test
+    void pPicksTheBuildWhoseJobsShowOnTheTimeLineReadingItsWorkflowAtItsCommit() {
+        String older = "1234567".repeat(5) + "12345";
+        Build tip = withFile(BUILD);
+        Build before = withFile(new Build(
+                "Build", "push", 2, 1, older, "Before", BUILD.createdAt().minusSeconds(3600), BUILD.jobs()));
+        Model read = Update.update(
+                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN,
+                                Option.none(),
+                                Option.of(new BuildsPage(List.of(tip, before), 2, Option.none()))))
+                .model();
+
+        Model asked = Update.update(read, new BuildsMsg.BuildPickRequested()).model();
+        assertEquals(
+                Option.of(new BuildPickPopup(List.of(tip, before), Option.none())), asked.popup(BuildPickPopup.class));
+
+        Next picked = Update.update(asked, new BuildsMsg.BuildPicked(Option.of(2L)));
+        assertTrue(picked.model().popup(BuildPickPopup.class).isEmpty());
+        assertEquals(List.of(new ReadWorkflows(new FileAt(older, ".github/workflows/publish.yml"))), picked.cmds());
+        BuildsShown drawn = ((ContentView.Body.Builds) ((Shown.Area) content(picked.model())).body()).shown();
+        assertEquals(Option.of(2L), drawn.picked());
+
+        Model again =
+                Update.update(picked.model(), new BuildsViewMsg.BuildClicked(2)).model();
+        assertEquals(Option.none(), again.repoView().branches().builds().get().picked());
+        Model clicked = Update.update(again, new BuildsViewMsg.BuildClicked(1)).model();
+        assertEquals(Option.of(1L), clicked.repoView().branches().builds().get().picked());
     }
 
     private static Build withFile(Build build) {

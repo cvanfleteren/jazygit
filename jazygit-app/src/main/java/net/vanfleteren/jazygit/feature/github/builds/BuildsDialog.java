@@ -2,11 +2,15 @@ package net.vanfleteren.jazygit.feature.github.builds;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog.Cell;
@@ -49,31 +53,81 @@ public final class BuildsDialog {
                                     .getOrElse('a')))),
             BuildsMsg.WindowPicked::new);
 
+    private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern(
+                    Messages.get("content.builds.whenPattern"))
+            .withZone(ZoneId.systemDefault());
+
+    /**
+     * Which build's jobs show on one time line: the last that is done, then each build of the tab, the newest first,
+     * with how it ended, its commit, when, how long it took and its title (ADR 133).
+     */
+    public static final PickDialog.Spec<BuildPickPopup, Option<Long>> BUILD = new PickDialog.Spec<>(
+            "builds-build",
+            BuildPickPopup.class,
+            popup -> Messages.get("dialog.builds.build.title"),
+            popup -> popup.builds()
+                    .map(build -> new PickDialog.Row<>(
+                            Option.of(build.runId()),
+                            List.of(
+                                    outcome(Option.of(build.outcome())),
+                                    Cell.styled(
+                                            build.sha()
+                                                    .substring(
+                                                            0,
+                                                            Math.min(
+                                                                    7,
+                                                                    build.sha().length())),
+                                            Theme.Classes.SHA),
+                                    Cell.styled(WHEN.format(build.createdAt()), Theme.Classes.DIM),
+                                    Cell.of(build.duration().map(TimeText::took).getOrElse("–")),
+                                    Cell.of(build.title()).capped(50),
+                                    picked(popup, Option.of(build.runId())))))
+                    .prepend(new PickDialog.Row<>(
+                            Option.<Long>none(),
+                            // In the column of the titles, so that the columns of the builds stay narrow.
+                            List.of(
+                                    Cell.of(""),
+                                    Cell.of(""),
+                                    Cell.of(""),
+                                    Cell.of(""),
+                                    Cell.of(Messages.get("dialog.builds.build.last")),
+                                    picked(popup, Option.none())))),
+            BuildsMsg.BuildPicked::new);
+
     private BuildsDialog() {}
+
+    private static Cell picked(BuildPickPopup popup, Option<Long> run) {
+        return Cell.styled(
+                popup.picked().equals(run) ? Messages.get("dialog.builds.window.shown") : "", Theme.Classes.DIM);
+    }
 
     static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
                 PopupSlot.returningToFocus(new PickDialog<>(SPEC, dispatch)),
-                PopupSlot.returningToFocus(new PickDialog<>(WINDOW, dispatch)));
+                PopupSlot.returningToFocus(new PickDialog<>(WINDOW, dispatch)),
+                PopupSlot.returningToFocus(new PickDialog<>(BUILD, dispatch)));
     }
 
     private static PickDialog.Row<Pipeline> row(BuildsPopup.Choice choice) {
         return new PickDialog.Row<>(
                 choice.pipeline(),
                 List.of(
-                        choice.last()
-                                .map(last -> switch (last) {
-                                    case PASSED -> Cell.styled("✓", Theme.Classes.CHECKS_PASSED);
-                                    case FAILED -> Cell.styled("✗", Theme.Classes.CHECKS_FAILED);
-                                    case CANCELLED -> Cell.styled("⊘", Theme.Classes.DIM);
-                                    case RUNNING -> Cell.styled("○", Theme.Classes.CHECKS_RUNNING);
-                                })
-                                .getOrElse(() -> Cell.styled("·", Theme.Classes.DIM)),
+                        outcome(choice.last()),
                         Cell.of(choice.label()),
                         Cell.styled(
                                 choice.builds()
                                         .map(count -> Messages.get("dialog.builds.count", String.valueOf(count)))
                                         .getOrElse(""),
                                 Theme.Classes.DIM)));
+    }
+
+    private static Cell outcome(Option<Build.Outcome> outcome) {
+        return outcome.map(last -> switch (last) {
+                    case PASSED -> Cell.styled("✓", Theme.Classes.CHECKS_PASSED);
+                    case FAILED -> Cell.styled("✗", Theme.Classes.CHECKS_FAILED);
+                    case CANCELLED -> Cell.styled("⊘", Theme.Classes.DIM);
+                    case RUNNING -> Cell.styled("○", Theme.Classes.CHECKS_RUNNING);
+                })
+                .getOrElse(() -> Cell.styled("·", Theme.Classes.DIM));
     }
 }

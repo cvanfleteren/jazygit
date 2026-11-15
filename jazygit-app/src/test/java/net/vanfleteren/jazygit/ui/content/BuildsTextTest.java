@@ -134,8 +134,62 @@ class BuildsTextTest {
         int header = lines.indexWhere(line -> line.contains("· the last build, 4m00"));
 
         assertTrue(lines.get(header).startsWith("✓ abcdef0 Commit 29"), lines.get(header));
-        assertTrue(lines.get(header + 1).startsWith("package       │ █"), lines.get(header + 1));
-        assertTrue(lines.get(header + 1).endsWith("55s"), lines.get(header + 1));
+        assertTrue(lines.get(header).endsWith("· the last build, 4m00, 14 Nov 05:00 · queued 5s"), lines.get(header));
+        assertTrue(lines.get(header + 1).strip().matches("took\\s+waited\\s+vs median"), lines.get(header + 1));
+        // package took 55 s, as in every build, after waiting 5 s for a runner.
+        assertTrue(lines.get(header + 2).startsWith("package       │ █"), lines.get(header + 2));
+        assertTrue(lines.get(header + 2).endsWith("55s      5s        +0s"), lines.get(header + 2));
+    }
+
+    /**
+     * What the builds of {@code builds} show with the build of the run {@code run} picked.
+     */
+    private static BuildsShown picked(List<Build> builds, long run) {
+        return BuildsView.reading(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")))
+                .read(Option.of(new BuildsPage(builds, 1, Option.none())))
+                .withPicked(Option.of(run))
+                .shownOf(builds)
+                .get();
+    }
+
+    @Test
+    void aBuildPickedShowsItsJobsOnTheTimeLineAndIsMarkedInTheList() {
+        List<String> lines = BuildsText.lines(picked(PUBLISH, 25), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+                .map(BuildsTextTest::text);
+
+        String header = lines.find(line -> line.contains("· the build picked")).get();
+        assertTrue(header.startsWith("✓ abcdef0 Commit 25"), header);
+        assertTrue(header.contains("the build picked, 20m00, 14 Nov 01:00"), header);
+        assertFalse(lines.exists(line -> line.contains("· the last build")), lines.mkString("\n"));
+        assertEquals(
+                List.of("✓▸abcdef0  14 Nov 01:00  20m00  +16m00  Commit 25"),
+                lines.filter(line -> line.startsWith("✓▸")));
+    }
+
+    @Test
+    void aBuildPickedThatNoLongerShowsGivesWayToTheLastOne() {
+        List<String> lines = BuildsText.lines(picked(PUBLISH, 99), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+                .map(BuildsTextTest::text);
+
+        assertTrue(lines.exists(line -> line.contains("· the last build, 4m00")), lines.mkString("\n"));
+        assertFalse(lines.exists(line -> line.contains("▸")), lines.mkString("\n"));
+    }
+
+    @Test
+    void aBuildIsFoundByARowOfTheListOrAColumnOfTheChart() {
+        BuildsShown shown = shown(PUBLISH, Option.none());
+        List<String> lines = drawn(PUBLISH);
+        int list = lines.indexWhere(line -> line.contains("commit   when"));
+
+        assertEquals(Option.of(29L), BuildsText.buildAt(shown, 80, list + 1, 3));
+        assertEquals(Option.of(0L), BuildsText.buildAt(shown, 80, lines.size() - 1, 3));
+        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, list, 3));
+        // The chart has 30 builds of two columns each in its 73, the oldest first, after its scale.
+        assertEquals(Option.of(0L), BuildsText.buildAt(shown, 80, 12, 6));
+        assertEquals(Option.of(1L), BuildsText.buildAt(shown, 80, 12, 8));
+        assertEquals(Option.of(29L), BuildsText.buildAt(shown, 80, 5, 6 + 2 * 29 + 1));
+        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, 12, 3));
+        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, 3, 10));
     }
 
     @Test
@@ -175,7 +229,8 @@ class BuildsTextTest {
                 shown.of(),
                 shown.mine(),
                 shown.baseline(),
-                shown.needs());
+                shown.needs(),
+                shown.picked());
         return BuildsText.lines(everyBranch, ZoneOffset.UTC, Theme.SpanStyles.NONE, 120)
                 .map(BuildsTextTest::text);
     }

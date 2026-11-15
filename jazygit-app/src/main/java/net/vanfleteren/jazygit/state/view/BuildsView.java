@@ -38,6 +38,8 @@ import net.vanfleteren.jazygit.state.Loadable;
  * @param runs          the runs of workflows on every branch, by the id of the workflow, as far as they are read
  * @param repoWorkflows the workflows of the repository, once they are asked for: the tabs of every branch
  * @param window        how many of the builds of a tab show, the newest; none for all those read
+ * @param picked        the run of the build whose jobs show on one time line, as the user picked it; none for the
+ *                      last build that is done (ADR 133)
  */
 public record BuildsView(
         BranchName branch,
@@ -53,7 +55,8 @@ public record BuildsView(
         @With boolean allBranches,
         @With Map<String, WorkflowRuns> runs,
         @With Option<Loadable<List<RepoWorkflow>>> repoWorkflows,
-        @With Option<Integer> window) {
+        @With Option<Integer> window,
+        @With Option<Long> picked) {
 
     /**
      * How many commits are read at first, and how many more each time more are asked for (ADR 131, 132).
@@ -78,6 +81,7 @@ public record BuildsView(
                 false,
                 HashMap.empty(),
                 Option.none(),
+                Option.none(),
                 Option.none());
     }
 
@@ -98,6 +102,7 @@ public record BuildsView(
                 Option.none(),
                 false,
                 HashMap.empty(),
+                Option.none(),
                 Option.none(),
                 Option.none());
     }
@@ -154,7 +159,8 @@ public record BuildsView(
                 allBranches,
                 runs,
                 repoWorkflows,
-                window);
+                window,
+                picked);
     }
 
     /**
@@ -176,7 +182,8 @@ public record BuildsView(
                 allBranches,
                 runs,
                 repoWorkflows,
-                window);
+                window,
+                picked);
     }
 
     /**
@@ -215,7 +222,8 @@ public record BuildsView(
                         allBranches,
                         runs,
                         repoWorkflows,
-                        window));
+                        window,
+                        picked));
     }
 
     /**
@@ -236,7 +244,8 @@ public record BuildsView(
                 allBranches,
                 runs,
                 repoWorkflows,
-                window);
+                window,
+                picked);
     }
 
     /**
@@ -257,12 +266,13 @@ public record BuildsView(
                 allBranches,
                 runs,
                 repoWorkflows,
-                window);
+                window,
+                picked);
     }
 
     /**
      * Of each workflow and event, the last build that is done, and of each workflow whose runs on every branch are
-     * read, its last run that is done: those whose jobs show on one time line.
+     * read, its last run that is done, and the build picked: those whose jobs can show on one time line.
      */
     public List<Build> lastDone() {
         List<Build> read = builds.getOrElse(List.empty());
@@ -271,7 +281,26 @@ public record BuildsView(
                 .flatMap(pipeline -> lastDoneOf(read.filter(pipeline::ran)))
                 .appendAll(runs.values()
                         .toList()
-                        .flatMap(ofWorkflow -> ofWorkflow.builds().toOption().flatMap(BuildsView::lastDoneOf)));
+                        .flatMap(ofWorkflow -> ofWorkflow.builds().toOption().flatMap(BuildsView::lastDoneOf)))
+                .appendAll(pickedBuild())
+                .distinctBy(Build::runId);
+    }
+
+    /**
+     * The build picked, among those of the branch and the runs on every branch read; none when none is, or it is no
+     * longer read (ADR 133).
+     */
+    public Option<Build> pickedBuild() {
+        return picked.flatMap(run -> builds.getOrElse(List.empty())
+                .appendAll(runs.values().toList().flatMap(read -> read.builds().getOrElse(List.empty())))
+                .find(build -> build.runId() == run));
+    }
+
+    /**
+     * This, with the build of the run {@code run} picked, or none picked again when it already was (ADR 133).
+     */
+    public BuildsView toggledPick(long run) {
+        return withPicked(picked.contains(run) ? Option.none() : Option.of(run));
     }
 
     /**
@@ -438,7 +467,8 @@ public record BuildsView(
                     ofTab.toOption().map(List::size).getOrElse(0),
                     allBranches ? mine : HashSet.empty(),
                     allBranches ? Option.none() : baseline(tab),
-                    needs());
+                    needs(),
+                    picked);
         });
     }
 

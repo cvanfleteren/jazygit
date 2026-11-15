@@ -20,6 +20,8 @@ public final class BuildsViewUpdate {
         return switch (msg) {
             case BuildsViewMsg.TabClicked(var pipeline) ->
                 BuildsReads.next(changed(model, view -> view.withSelected(pipeline)));
+            case BuildsViewMsg.BuildClicked(long run) ->
+                BuildsReads.next(changed(model, view -> view.toggledPick(run)));
             case BuildsViewMsg.WorkflowsRead(var workflows) ->
                 Next.of(changed(model, view -> view.withWorkflows(workflows)));
             case BuildsViewMsg.RunsRead(String id, var after, var page) ->
