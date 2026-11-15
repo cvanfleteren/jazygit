@@ -33,9 +33,15 @@ ended, and the run when it was created; what each job waits for comes from the f
   - for each job, after how long it took: how long it waited for a runner, from the end of the last job it needs, or
     from the start of the build without any, to its start; and how long it took against its median over the builds
     the jobs above show (the last 40), of its slowest shard, as those do. Under a line naming those columns.
+  - a wait only where it can be known; else `–`. Not while the file of the workflow is not read, or could not be, nor
+    for a job it does not match: from the start of the build, a job that waited for others would seem to have waited
+    minutes for a runner. Nor for a job that needs one that did not run, as one skipped, whose end is not known: what
+    each job needs (ADR 131) now keeps those by their key, and a job that needs none as needing an empty set, so that
+    one that needs none is told apart from one whose needs are not known.
+  - a job still running has `–` against its median: its time is not known yet.
   - the jobs that decided how long the build took, in bold: the last to end, the job of those it needs that ended
     last, and so on. Not while the file of the workflow is not read, or could not be: without what each job needs,
-    the last job to end is all that is known.
+    the last job to end is all that is known. Nor while the build runs: nothing decided how long it takes yet.
 - Not yet: the steps of a job (GraphQL's `CheckRun.steps`), which a picked build could read on its own, one call.
 
 ## Consequences

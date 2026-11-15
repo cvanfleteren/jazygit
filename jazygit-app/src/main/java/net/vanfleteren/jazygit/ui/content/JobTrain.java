@@ -47,8 +47,10 @@ final class JobTrain {
      * The rows of the jobs of {@code build}, in a panel {@code panel} columns wide, under a line naming their columns;
      * {@code needs} says which jobs each job needs, empty when that is not known, and the jobs then show without lines
      * between them. Each row says how long its job took, how long it waited for a runner after what it needs ended,
-     * and how long it took against {@code medians}, by the name of the job without its shard (ADR 133). The jobs that
-     * decided how long the build took, the last to end and what it waited for, are in bold, once the needs are known.
+     * and how long it took against {@code medians}, by the name of the job without its shard (ADR 133); a wait that
+     * cannot be known, without the needs or with a job it needs that did not run, and a job still running against its
+     * median, show {@code –}. The jobs that decided how long the build took, the last to end and what it waited for,
+     * are in bold, once the needs are known and the build is done.
      */
     static List<Line> lines(
             Build build,
@@ -70,8 +72,10 @@ final class JobTrain {
         // The time line takes what the names, its two borders and the numbers leave of the panel.
         int width = Math.max(MIN_LINE, Math.min(MAX_LINE, panel - name - 2 - TOOK - WAITED - VS));
         Layout layout = layout(ordered(groups), start, whole, width);
-        // Without the needs, the last job to end is all that is known: it did not decide alone.
-        Set<String> critical = needs.isEmpty() ? HashSet.empty() : critical(groups);
+        // Without the needs, the last job to end is all that is known: it did not decide alone. While the build runs,
+        // nothing decided yet how long it takes.
+        Set<String> critical =
+                needs.isEmpty() || build.outcome() == Outcome.RUNNING ? HashSet.empty() : critical(groups);
         Line header = Line.from(Span.styled(
                 " ".repeat(name + width + 2)
                         + padLeft(Messages.get("content.builds.train.took"), TOOK)
@@ -96,15 +100,16 @@ final class JobTrain {
 
     /**
      * How long {@code group} waited for a runner: from the end of the last of the groups it needs, or from the start
-     * of the build without any, to its start.
+     * of the build without any, to its start; none when what it needs is not known, or one it needs is not among
+     * {@code groups}, as one skipped, whose end is not known.
      */
-    static Duration waited(Group group, List<Group> groups, Instant start) {
-        Instant ready = groups.filter(other -> group.needs().contains(other.name()))
-                .map(Group::end)
-                .max()
-                .getOrElse(start);
-        Duration waited = Duration.between(ready, group.start());
-        return waited.isNegative() ? Duration.ZERO : waited;
+    static Option<Duration> waited(Group group, List<Group> groups, Instant start) {
+        List<Group> needed = groups.filter(other -> group.needs().contains(other.name()));
+        return Option.when(group.known() && needed.size() == group.needs().size(), () -> {
+            Instant ready = needed.map(Group::end).max().getOrElse(start);
+            Duration waited = Duration.between(ready, group.start());
+            return waited.isNegative() ? Duration.ZERO : waited;
+        });
     }
 
     /**
@@ -133,7 +138,7 @@ final class JobTrain {
                             members.flatMap(job -> needs.get(job.name()).getOrElse(HashSet.empty()))
                                     .map(BuildsText::jobName))
                     .remove(name);
-            return new Group(name, members, needed);
+            return new Group(name, members, needed, members.forAll(job -> needs.containsKey(job.name())));
         });
     }
 
@@ -164,8 +169,10 @@ final class JobTrain {
      */
     private static Layout layout(List<Group> rows, Instant start, long whole, int width) {
         List<Bar> bars = rows.foldLeft(List.<Bar>empty(), (done, group) -> {
+            // A job it needs that did not run has no bar to wait for.
             List<Integer> from = group.needs()
                     .toList()
+                    .filter(needed -> rows.exists(row -> row.name().equals(needed)))
                     .flatMap(needed -> rows.indexWhere(row -> row.name().equals(needed)) < done.size()
                             ? Option.of(
                                     done.get(rows.indexWhere(row -> row.name().equals(needed)))
@@ -257,7 +264,10 @@ final class JobTrain {
                                         : change.compareTo(STEADY.negated()) < 0
                                                 ? Theme.Classes.CHECKS_PASSED
                                                 : Theme.Classes.DIM)))
-                .getOrElse(() -> Span.raw(""));
+                // A job still running has no time yet to hold against its median.
+                .getOrElse(() -> group.members().exists(Build.Job::running)
+                        ? Span.styled(padLeft("–", VS), styles.of(Theme.Classes.DIM))
+                        : Span.raw(""));
         Span label = numbers.critical()
                 ? Span.styled(pad(group.label(), name), styles.of(Theme.Classes.BOLD))
                 : Span.raw(pad(group.label(), name));
@@ -266,7 +276,8 @@ final class JobTrain {
                 .append(Span.styled("│", styles.of(Theme.Classes.DIM)))
                 .append(Span.raw(padLeft(group.took(), TOOK)))
                 .append(Span.styled(
-                        padLeft(BuildsText.duration(numbers.waited()), WAITED), styles.of(Theme.Classes.DIM)))
+                        padLeft(numbers.waited().map(BuildsText::duration).getOrElse("–"), WAITED),
+                        styles.of(Theme.Classes.DIM)))
                 .append(vsMedian)
                 .toJavaList());
     }
@@ -295,9 +306,10 @@ final class JobTrain {
      *
      * @param name    the job's name without its shard
      * @param members its runs: itself, or its shards
-     * @param needs   the names of the groups it needs
+     * @param needs   the names of the groups it needs, and of jobs it needs that did not run
+     * @param known   whether what it needs is known: none of its members was left out of the needs
      */
-    record Group(String name, List<Build.Job> members, Set<String> needs) {
+    record Group(String name, List<Build.Job> members, Set<String> needs, boolean known) {
 
         /**
          * Its name, with how many shards it has, if it has more than one.
@@ -330,10 +342,12 @@ final class JobTrain {
         }
 
         /**
-         * How long its slowest member took; none before one is done.
+         * How long its slowest member took; none while one still runs.
          */
         Option<Duration> slowest() {
-            return members.flatMap(Build.Job::duration).max();
+            return members.exists(Build.Job::running)
+                    ? Option.none()
+                    : members.flatMap(Build.Job::duration).max();
         }
 
         /**
@@ -353,11 +367,11 @@ final class JobTrain {
     /**
      * The numbers after a row's bar, besides how long it took.
      *
-     * @param waited   how long it waited for a runner after what it needs ended
+     * @param waited   how long it waited for a runner after what it needs ended; none when that is not known
      * @param median   how long it takes in the middle of the builds above; none when it never passed in them
      * @param critical whether it decided how long the build took
      */
-    private record Numbers(Duration waited, Option<Duration> median, boolean critical) {}
+    private record Numbers(Option<Duration> waited, Option<Duration> median, boolean critical) {}
 
     /**
      * The columns of a bar: where it starts, where its first shard ends, and where its last one does.

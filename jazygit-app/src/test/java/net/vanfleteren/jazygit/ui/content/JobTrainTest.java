@@ -48,14 +48,18 @@ class JobTrainTest {
                     job("verify / build-ok", 226, 230),
                     job("snapshot", 244, 256)));
 
-    private static final Map<String, Set<String>> NEEDS = HashMap.of(
-            "verify / package", HashSet.of("verify / changes"),
-            "verify / verify", HashSet.of("verify / changes"),
-            "verify / acceptance (1/2)", HashSet.of("verify / package"),
-            "verify / acceptance (2/2)", HashSet.of("verify / package"),
-            "verify / build-ok",
-                    HashSet.of("verify / verify", "verify / acceptance (1/2)", "verify / acceptance (2/2)"),
-            "snapshot", HashSet.of("verify / build-ok", "build"));
+    // As Workflow.needs gives them: a job that needs none needs an empty set.
+    private static final Map<String, Set<String>> NEEDS = HashMap.<String, Set<String>>of(
+                    "verify / changes", HashSet.empty(),
+                    "build", HashSet.empty())
+            .put("verify / package", HashSet.of("verify / changes"))
+            .merge(HashMap.of(
+                    "verify / verify", HashSet.of("verify / changes"),
+                    "verify / acceptance (1/2)", HashSet.of("verify / package"),
+                    "verify / acceptance (2/2)", HashSet.of("verify / package"),
+                    "verify / build-ok",
+                            HashSet.of("verify / verify", "verify / acceptance (1/2)", "verify / acceptance (2/2)"),
+                    "snapshot", HashSet.of("verify / build-ok", "build")));
 
     // The time line is 50 columns wide, after the names and before the numbers.
     private static final int PANEL = 50 + 23 + 2 + 10 + 8 + 11;
@@ -182,5 +186,46 @@ class JobTrainTest {
         assertFalse(JobTrain.lines(BUILD, HashMap.empty(), HashMap.empty(), PANEL, bold)
                 .tail()
                 .exists(line -> line.spans().get(0).style().equals(Style.EMPTY.bold())));
+    }
+
+    @Test
+    void withoutWhatTheyNeedNoJobIsSaidToHaveWaitedForARunner() {
+        List<String> rows = drawn(HashMap.empty());
+
+        // From the start of the build, snapshot would seem to have waited 4 minutes for a runner.
+        assertTrue(rows.forAll(row -> row.endsWith("       –")), rows.mkString("\n"));
+    }
+
+    @Test
+    void aJobThatNeedsOneThatDidNotRunIsNotSaidToHaveWaited() {
+        // snapshot needs release too, which was skipped: when release was done is not known. No line comes from it.
+        List<String> rows = drawn(NEEDS.put("snapshot", HashSet.of("verify / build-ok", "build", "release")));
+
+        assertTrue(rows.find(row -> row.startsWith("snapshot")).get().endsWith("12s       –"), rows.mkString("\n"));
+        assertTrue(rows.find(row -> row.startsWith("build")).get().endsWith("4m01      2s"), rows.mkString("\n"));
+    }
+
+    @Test
+    void aBuildStillRunningHasNoJobThatDecidedAndARunningJobNoTimeAgainstItsMedian() {
+        Build running = new Build(
+                "Publish",
+                "push",
+                1,
+                1,
+                "b17c669",
+                "A sealed Focus",
+                START,
+                BUILD.jobs()
+                        .filter(job -> !job.name().equals("snapshot"))
+                        .map(job -> job.name().equals("build")
+                                ? new Build.Job("build", "", job.startedAt(), Option.none())
+                                : job));
+        Theme.SpanStyles bold = cssClass -> cssClass.equals(Theme.Classes.BOLD) ? Style.EMPTY.bold() : Style.EMPTY;
+
+        List<Line> lines = JobTrain.lines(running, NEEDS, HashMap.of("build", Duration.ofSeconds(200)), PANEL, bold);
+
+        assertFalse(lines.tail().exists(line -> line.spans().get(0).style().equals(Style.EMPTY.bold())));
+        String build = text(lines).find(row -> row.startsWith("build")).get();
+        assertTrue(build.endsWith("      2s          –"), build);
     }
 }

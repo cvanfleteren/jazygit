@@ -479,7 +479,7 @@ class BuildsContentTest {
                 .model();
 
         assertEquals(
-                HashMap.of(1L, HashMap.of("package", HashSet.of("verify"))),
+                HashMap.of(1L, HashMap.of("verify", HashSet.<String>empty(), "package", HashSet.of("verify"))),
                 ((ContentView.Body.Builds) ((Shown.Area) content(known)).body())
                         .shown()
                         .needs());

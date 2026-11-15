@@ -105,11 +105,21 @@ class WorkflowTest {
     }
 
     @Test
-    void aJobThatNeedsNoneIsLeftOut() {
+    void aJobThatNeedsNoneNeedsAnEmptySet() {
         Map<String, Set<String>> needs = needs(JOBS);
 
-        assertFalse(needs.containsKey("build"));
-        assertFalse(needs.containsKey("verify / changes"));
+        assertEquals(Option.of(HashSet.empty()), needs.get("build"));
+        assertEquals(Option.of(HashSet.empty()), needs.get("verify / changes"));
+    }
+
+    @Test
+    void aJobNeededThatDidNotRunIsNeededByItsKey() {
+        // The acceptance tests were skipped: build-ok waited for them, but when they were done is not known.
+        Map<String, Set<String>> needs = needs(JOBS.filter(job -> !job.startsWith("verify / acceptance")));
+
+        assertEquals(
+                HashSet.of("verify / verify", "verify / package", "verify/acceptance"),
+                needs.get("verify / build-ok").get());
     }
 
     @Test
@@ -122,7 +132,8 @@ class WorkflowTest {
         Map<String, Set<String>> needs = Workflow.parse(PUBLISH).get().needs(JOBS, path -> Option.none());
 
         assertEquals(HashMap.empty(), needs.filterKeys(job -> job.startsWith("verify /")));
-        assertEquals(HashSet.of("build"), needs.get("snapshot").get());
+        // snapshot needs verify too, whose jobs are not known: by its key, as no job that ran is it.
+        assertEquals(HashSet.of("build", "verify"), needs.get("snapshot").get());
     }
 
     @Test
@@ -169,6 +180,7 @@ class WorkflowTest {
         // build and deploy are written as they run; Linux and Windows fit test alone. Not: deploy off build.
         assertEquals(
                 HashMap.of(
+                        "build", HashSet.<String>empty(),
                         "Linux", HashSet.of("build"),
                         "Windows", HashSet.of("build"),
                         "deploy", HashSet.of("Linux", "Windows")),
@@ -206,7 +218,12 @@ class WorkflowTest {
                         """).get().needs(List.of("Linux", "Windows", "Deploy the site"), path -> Option.none());
 
         // Only test matches Linux and Windows, as Deploy the site is matched by its name: deploy waits for both.
-        assertEquals(HashMap.of("Deploy the site", HashSet.of("Linux", "Windows")), needs);
+        assertEquals(
+                HashMap.of(
+                        "Linux", HashSet.<String>empty(),
+                        "Windows", HashSet.<String>empty(),
+                        "Deploy the site", HashSet.of("Linux", "Windows")),
+                needs);
     }
 
     @Test
@@ -226,7 +243,13 @@ class WorkflowTest {
                 .get()
                 .needs(List.of("build (17)", "build (21)", "Linux", "deploy"), path -> Option.none());
 
-        assertEquals(HashMap.of("Linux", HashSet.of("build (17)", "build (21)"), "deploy", HashSet.of("Linux")), needs);
+        assertEquals(
+                HashMap.of(
+                        "build (17)", HashSet.<String>empty(),
+                        "build (21)", HashSet.<String>empty(),
+                        "Linux", HashSet.of("build (17)", "build (21)"),
+                        "deploy", HashSet.of("Linux")),
+                needs);
     }
 
     @Test
@@ -243,6 +266,6 @@ class WorkflowTest {
                             strategy: { matrix: { os: [Linux] } }
                         """).get().needs(List.of("Build 17", "Linux"), path -> Option.none());
 
-        assertEquals(HashMap.of("Linux", HashSet.of("Build 17")), needs);
+        assertEquals(HashMap.of("Build 17", HashSet.<String>empty(), "Linux", HashSet.of("Build 17")), needs);
     }
 }

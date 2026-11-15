@@ -136,9 +136,9 @@ class BuildsTextTest {
         assertTrue(lines.get(header).startsWith("✓ abcdef0 Commit 29"), lines.get(header));
         assertTrue(lines.get(header).endsWith("· the last build, 4m00, 14 Nov 05:00 · queued 5s"), lines.get(header));
         assertTrue(lines.get(header + 1).strip().matches("took\\s+waited\\s+vs median"), lines.get(header + 1));
-        // package took 55 s, as in every build, after waiting 5 s for a runner.
+        // package took 55 s, as in every build; how long it waited is not known without the file of its workflow.
         assertTrue(lines.get(header + 2).startsWith("package       │ █"), lines.get(header + 2));
-        assertTrue(lines.get(header + 2).endsWith("55s      5s        +0s"), lines.get(header + 2));
+        assertTrue(lines.get(header + 2).endsWith("55s       –        +0s"), lines.get(header + 2));
     }
 
     /**
