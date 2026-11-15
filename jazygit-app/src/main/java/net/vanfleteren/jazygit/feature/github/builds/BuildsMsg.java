@@ -49,6 +49,16 @@ public sealed interface BuildsMsg extends Msg {
     record AllToggled() implements BuildsMsg {}
 
     /**
+     * The user asked to choose how many builds show.
+     */
+    record WindowRequested() implements BuildsMsg {}
+
+    /**
+     * The user chose to show the newest {@code builds} builds; none for all those read.
+     */
+    record WindowPicked(Option<Integer> builds) implements BuildsMsg {}
+
+    /**
      * The user asked to choose the workflow whose builds show from all of them.
      */
     record PickRequested() implements BuildsMsg {}

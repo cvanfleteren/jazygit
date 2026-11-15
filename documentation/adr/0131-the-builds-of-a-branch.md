@@ -71,6 +71,12 @@ issue (`issue_comment`, `issues`) are on the main branch too, as GitHub runs tho
   - Whether the builds show every branch stays for another branch, as the tab does. Not: a panel of the workflows of
     the repository of its own, apart from the branches: on every branch the tabs are those workflows already, and the
     branch's runs stay marked in them.
+- `n` in the builds asks, in a popup, how many of the newest builds of a tab show: 10, 20, 50 or all those read. It
+  takes what is read, nothing is read again; the title says `last 20 of 97 builds`, and the chart gives each build up
+  to five columns, a bar and a column between them, so that a trend over a few builds shows. The summary, the chart,
+  the jobs and the list follow it; the last build that is done and how long the workflow takes on every branch do
+  not. Not: `+` and `-`, or `<` and `>`, which size the panes everywhere (ADR 92). The choice stays for another
+  branch.
 - The builds take the focus once `B` shows them, so that their keys work at once; `B` in them shows the log again,
   and gives the focus back to the branches.
 - The builds of a workflow show:

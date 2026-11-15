@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.feature.github.builds.BuildsPopup;
+import net.vanfleteren.jazygit.feature.github.builds.BuildsWindowPopup;
 import net.vanfleteren.jazygit.feature.github.builds.LoadBuilds;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.Build;
@@ -440,6 +441,9 @@ class BuildsContentTest {
                 Option.of(new BuildsMsg.Closed()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('B'), Option.none()));
         assertEquals(
                 Option.of(new BuildsMsg.AllToggled()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('a'), Option.none()));
+        assertEquals(
+                Option.of(new BuildsMsg.WindowRequested()),
+                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('n'), Option.none()));
     }
 
     @Test
@@ -496,6 +500,31 @@ class BuildsContentTest {
 
         Model again = Update.update(picked, new BuildsMsg.Toggled(LOCAL)).model();
         assertEquals(Option.of(lint), again.repoView().builds().get().selected());
+    }
+
+    @Test
+    void nAsksHowManyBuildsShowAndTheChoiceStaysForAnotherBranch() {
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+        Model read = Update.update(
+                        shown,
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN,
+                                Option.none(),
+                                Option.of(new BuildsPage(List.of(BUILD, BUILD, BUILD), 3, Option.none()))))
+                .model();
+
+        Model asked = Update.update(read, new BuildsMsg.WindowRequested()).model();
+        assertEquals(Option.of(new BuildsWindowPopup(Option.none())), asked.popup(BuildsWindowPopup.class));
+
+        Model picked =
+                Update.update(asked, new BuildsMsg.WindowPicked(Option.of(2))).model();
+        BuildsShown drawn = ((ContentView.Body.Builds) ((Shown.Area) content(picked)).body()).shown();
+        assertTrue(picked.popup(BuildsWindowPopup.class).isEmpty());
+        assertEquals(2, drawn.builds().getOrElse(List.empty()).size());
+        assertEquals(3, drawn.of());
+
+        Model other = Update.update(picked, new BuildsMsg.Toggled(LOCAL)).model();
+        assertEquals(Option.of(2), other.repoView().builds().get().window());
     }
 
     private static Build withFile(Build build) {

@@ -58,6 +58,11 @@ public final class BuildsUpdate {
                                                 tab._2(),
                                                 count(model, tab._1()))))))
                         .getOrElse(() -> Next.of(model));
+            case BuildsMsg.WindowRequested() ->
+                Update.ask(model, model.repoView().builds().map(view -> new BuildsWindowPopup(view.window())));
+            case BuildsMsg.WindowPicked(Option<Integer> builds) ->
+                BuildsReads.next(
+                        changed(model.withoutPopup(BuildsWindowPopup.class), (view, read) -> view.withWindow(builds)));
             case BuildsMsg.Picked(Pipeline pipeline) ->
                 BuildsReads.next(
                         changed(model.withoutPopup(BuildsPopup.class), (view, builds) -> view.withSelected(pipeline)));
@@ -104,7 +109,8 @@ public final class BuildsUpdate {
                 .map(before -> before.selected()
                         .map(view::withSelected)
                         .getOrElse(view)
-                        .withAllBranches(before.allBranches()))
+                        .withAllBranches(before.allBranches())
+                        .withWindow(before.window()))
                 .getOrElse(view);
     }
 

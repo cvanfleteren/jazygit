@@ -47,6 +47,8 @@ final class BuildsText {
     private static final String MINE = "◆";
     // The widest what a run on every branch ran for is shown: its pull request, else its branch.
     private static final int FOR = 14;
+    // The widest a build's bar in the chart is, with the column after it, when there are few builds.
+    private static final int WIDEST = 5;
     // A job split in shards, like "acceptance (1/6)", is one job.
     private static final Pattern SHARD = Pattern.compile("\\s*\\(\\d+/\\d+\\)$");
 
@@ -63,6 +65,7 @@ final class BuildsText {
                 shown.mine(),
                 shown.allBranches(),
                 shown.baseline(),
+                shown.of(),
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.dayPattern"))
                         .withZone(zone),
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.whenPattern"))
@@ -185,6 +188,7 @@ final class BuildsText {
      * @param mine   the commits of the branch, whose runs are marked among those of every branch
      * @param allBranches whether the builds are the runs of their workflow on every branch
      * @param baseline how long the runs of the workflow that passed took on every branch
+     * @param of     how many builds of the tab are read, of which some show
      * @param day    how a day is written
      * @param when   how a day and a time are written
      * @param chart  the builds the chart has room for
@@ -195,6 +199,7 @@ final class BuildsText {
             Set<String> mine,
             boolean allBranches,
             Option<BuildsShown.Baseline> baseline,
+            int of,
             DateTimeFormatter day,
             DateTimeFormatter when,
             int chart) {
@@ -245,14 +250,26 @@ final class BuildsText {
 
         private Line title(List<Build> builds) {
             Build newest = builds.head();
+            String event = allBranches ? Messages.get("content.builds.allEvents") : newest.event();
+            String from = day.format(builds.last().createdAt());
+            String to = day.format(newest.createdAt());
             return Line.from(
                     span(newest.workflow(), Theme.Classes.BOLD),
-                    dim(Messages.get(
-                            "content.builds.workflow",
-                            allBranches ? Messages.get("content.builds.allEvents") : newest.event(),
-                            String.valueOf(builds.size()),
-                            day.format(builds.last().createdAt()),
-                            day.format(newest.createdAt()))));
+                    dim(
+                            of > builds.size()
+                                    ? Messages.get(
+                                            "content.builds.workflowOf",
+                                            event,
+                                            String.valueOf(builds.size()),
+                                            String.valueOf(of),
+                                            from,
+                                            to)
+                                    : Messages.get(
+                                            "content.builds.workflow",
+                                            event,
+                                            String.valueOf(builds.size()),
+                                            from,
+                                            to)));
         }
 
         private Line summary(List<Build> builds, Option<Duration> median) {
@@ -303,12 +320,14 @@ final class BuildsText {
             long top = top(drawn);
             int medianRow = median.map(middle -> (int) (middle.toSeconds() * CHART_ROWS / top))
                     .getOrElse(-1);
+            int each = Math.max(1, Math.min(WIDEST, chart / shown.size()));
             List<Line> rows = List.range(0, CHART_ROWS)
                     .reverse()
                     .map(row -> Line.from(List.of(dim(scale(row, top)))
-                            .appendAll(shown.zip(bars).map(bar -> cell(bar._1(), bar._2(), row, top, row == medianRow)))
+                            .appendAll(shown.zip(bars)
+                                    .flatMap(bar -> cell(bar._1(), bar._2(), row, top, row == medianRow, each)))
                             .toJavaList()));
-            return rows.appendAll(axis(shown));
+            return rows.appendAll(axis(shown, each));
         }
 
         /**
@@ -332,19 +351,27 @@ final class BuildsText {
             return (row + 1) % 2 == 0 ? padLeft(label, SCALE - 1) + "┤" : " ".repeat(SCALE - 1) + "│";
         }
 
-        private Span cell(Build build, Option<Duration> bar, int row, long top, boolean medianRow) {
+        /**
+         * The cell of {@code build} in {@code row}, {@code each} columns wide: its bar, and a column between it and the
+         * next once there is room for one.
+         */
+        private List<Span> cell(Build build, Option<Duration> bar, int row, long top, boolean medianRow, int each) {
             int eighths = bar.map(took -> (int) Math.round(took.toSeconds() * CHART_ROWS * 8.0 / top) - row * 8)
                     .getOrElse(0);
             boolean clipped = row == CHART_ROWS - 1 && bar.exists(took -> took.toSeconds() > top);
             String block =
                     clipped ? "▲" : eighths >= 8 ? "█" : eighths > 0 ? String.valueOf(EIGHTHS.charAt(eighths)) : " ";
-            return block.equals(" ") && medianRow ? dim("┄") : span(block, style(build.outcome()));
+            int wide = each > 2 ? each - 1 : each;
+            Span drawn = block.equals(" ") && medianRow
+                    ? dim("┄".repeat(wide))
+                    : span(block.repeat(wide), style(build.outcome()));
+            return each > 2 ? List.of(drawn, medianRow ? dim("┄") : Span.raw(" ")) : List.of(drawn);
         }
 
         /**
          * The axis under the chart, the days the builds were on, and a mark for each build that did not pass.
          */
-        private List<Line> axis(List<Build> shown) {
+        private List<Line> axis(List<Build> shown, int each) {
             List<String> days = shown.map(build -> day.format(build.createdAt()));
             List<Boolean> starts = days.zipWithIndex()
                     .map(dated -> dated._2() == 0 || !dated._1().equals(days.get(dated._2() - 1)));
@@ -352,24 +379,28 @@ final class BuildsText {
                     .zipWithIndex()
                     .foldLeft(
                             "",
-                            (done, dated) -> dated._1()._2() && done.length() <= dated._2()
-                                    ? done + " ".repeat(dated._2() - done.length())
+                            (done, dated) -> dated._1()._2() && done.length() <= dated._2() * each
+                                    ? done + " ".repeat(dated._2() * each - done.length())
                                             + dated._1()._1() + " "
                                     : done);
             return List.of(
                             Line.from(dim(" ".repeat(SCALE - 1) + "└"
-                                    + starts.map(start -> start ? "┴" : "─").mkString())),
+                                    + starts.map(start -> (start ? "┴" : "─") + "─".repeat(each - 1))
+                                            .mkString())),
                             Line.from(dim(" ".repeat(SCALE) + labels.stripTrailing())),
                             Line.from(List.of(dim(" ".repeat(SCALE)))
-                                    .appendAll(shown.map(build -> build.outcome() == Outcome.PASSED
-                                            ? Span.raw(" ")
-                                            : outcome(build.outcome())))
+                                    .appendAll(shown.flatMap(build -> List.of(
+                                            build.outcome() == Outcome.PASSED
+                                                    ? Span.raw(" ")
+                                                    : outcome(build.outcome()),
+                                            Span.raw(" ".repeat(each - 1)))))
                                     .toJavaList()))
                     .appendAll(Option.when(
                             allBranches && shown.exists(this::isMine),
                             () -> Line.from(List.of(dim(" ".repeat(SCALE)))
-                                    .appendAll(shown.map(build ->
-                                            isMine(build) ? span(MINE, Theme.Classes.CURRENT_BRANCH) : Span.raw(" ")))
+                                    .appendAll(shown.flatMap(build -> List.of(
+                                            isMine(build) ? span(MINE, Theme.Classes.CURRENT_BRANCH) : Span.raw(" "),
+                                            Span.raw(" ".repeat(each - 1)))))
                                     .append(dim(Messages.get("content.builds.mine")))
                                     .toJavaList())));
         }

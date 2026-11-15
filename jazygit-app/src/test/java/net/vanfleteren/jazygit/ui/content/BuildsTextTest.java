@@ -114,7 +114,7 @@ class BuildsTextTest {
         assertTrue(chart.head().contains("▲"), chart.mkString("\n"));
         assertTrue(chart.last().startsWith("     │" + "█".repeat(20)), chart.mkString("\n"));
         assertTrue(lines.exists(line -> line.startsWith("     └┴") && line.contains("┴")), lines.mkString("\n"));
-        assertTrue(lines.exists(line -> line.trim().equals("13 Nov                  14 Nov")), lines.mkString("\n"));
+        assertTrue(lines.exists(line -> line.trim().matches("13 Nov +14 Nov")), lines.mkString("\n"));
         assertTrue(lines.exists(line -> line.trim().equals("✗")), lines.mkString("\n"));
     }
 
@@ -198,5 +198,31 @@ class BuildsTextTest {
         assertEquals(header.indexOf("last 1"), row.indexOf("▆"), header + "\n" + row);
         assertEquals(
                 header.indexOf("median") + "median".length(), row.indexOf("55s") + "55s".length(), header + "\n" + row);
+    }
+
+    @Test
+    void theNewestTwentyShowWithWiderBarsAndTheTitleSaysOfHowMany() {
+        BuildsShown twenty = shown(PUBLISH, Option.none())
+                .withBuilds(new net.vanfleteren.jazygit.state.Loadable.Loaded<>(PUBLISH.take(20)));
+        List<String> lines = BuildsText.lines(twenty, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+                .map(BuildsTextTest::text);
+
+        assertEquals("Publish · push · last 20 of 30 builds · 13 Nov – 14 Nov", lines.get(2));
+        // 73 columns for 20 builds: three each, a bar of two and a column between them.
+        String bottom = lines.drop(5).take(8).last();
+        assertTrue(bottom.startsWith("     │" + "██ ".repeat(20)), bottom);
+    }
+
+    @Test
+    void tenBuildsGetBarsWithAColumnBetweenThem() {
+        BuildsShown ten = shown(PUBLISH, Option.none())
+                .withBuilds(new net.vanfleteren.jazygit.state.Loadable.Loaded<>(PUBLISH.take(10)));
+        String bottom = BuildsText.lines(ten, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+                .map(BuildsTextTest::text)
+                .drop(5)
+                .take(8)
+                .last();
+
+        assertTrue(bottom.startsWith("     │████ ████ ████ "), bottom);
     }
 }

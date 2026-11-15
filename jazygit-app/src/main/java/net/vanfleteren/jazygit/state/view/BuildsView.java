@@ -36,6 +36,7 @@ import net.vanfleteren.jazygit.state.Loadable;
  * @param allBranches   whether a tab shows the runs of its workflow on every branch, not only the branch's builds
  * @param runs          the runs of workflows on every branch, by the id of the workflow, as far as they are read
  * @param repoWorkflows the workflows of the repository, once they are asked for: the tabs of every branch
+ * @param window        how many of the builds of a tab show, the newest; none for all those read
  */
 public record BuildsView(
         BranchName branch,
@@ -49,7 +50,8 @@ public record BuildsView(
         Option<BuildsView.Pipeline> selected,
         @With boolean allBranches,
         @With Map<String, WorkflowRuns> runs,
-        @With Option<Loadable<List<RepoWorkflow>>> repoWorkflows) {
+        @With Option<Loadable<List<RepoWorkflow>>> repoWorkflows,
+        @With Option<Integer> window) {
 
     /**
      * How many commits are read, at most (ADR 131).
@@ -72,6 +74,7 @@ public record BuildsView(
                 Option.none(),
                 false,
                 HashMap.empty(),
+                Option.none(),
                 Option.none());
     }
 
@@ -91,6 +94,7 @@ public record BuildsView(
                 Option.none(),
                 false,
                 HashMap.empty(),
+                Option.none(),
                 Option.none());
     }
 
@@ -144,7 +148,8 @@ public record BuildsView(
                 selected,
                 allBranches,
                 runs,
-                repoWorkflows);
+                repoWorkflows,
+                window);
     }
 
     /**
@@ -164,7 +169,8 @@ public record BuildsView(
                 selected,
                 allBranches,
                 runs,
-                repoWorkflows);
+                repoWorkflows,
+                window);
     }
 
     /**
@@ -183,7 +189,8 @@ public record BuildsView(
                 selected,
                 allBranches,
                 runs,
-                repoWorkflows);
+                repoWorkflows,
+                window);
     }
 
     /**
@@ -202,7 +209,8 @@ public record BuildsView(
                 Option.of(pipeline),
                 allBranches,
                 runs,
-                repoWorkflows);
+                repoWorkflows,
+                window);
     }
 
     /**
@@ -370,20 +378,21 @@ public record BuildsView(
     public Option<BuildsShown> shownOf(List<Build> builds) {
         List<Pipeline> all = tabs(builds);
         Set<String> mine = HashSet.ofAll(this.builds.getOrElse(List.empty()).map(Build::sha));
-        return shownTab(builds)
-                .map(tab -> new BuildsShown(
-                        all,
-                        all.map(each -> lastOf(each, builds)),
-                        all.indexOf(tab),
-                        allBranches,
-                        allBranches
-                                ? runsOf(tab.workflow())
-                                        .map(WorkflowRuns::builds)
-                                        .getOrElse(Loadable::loading)
-                                : new Loadable.Loaded<>(builds.filter(tab::ran)),
-                        allBranches ? mine : HashSet.empty(),
-                        allBranches ? Option.none() : baseline(tab),
-                        needs()));
+        return shownTab(builds).map(tab -> {
+            Loadable<List<Build>> ofTab = allBranches
+                    ? runsOf(tab.workflow()).map(WorkflowRuns::builds).getOrElse(Loadable::loading)
+                    : new Loadable.Loaded<>(builds.filter(tab::ran));
+            return new BuildsShown(
+                    all,
+                    all.map(each -> lastOf(each, builds)),
+                    all.indexOf(tab),
+                    allBranches,
+                    ofTab.map(read -> window.map(read::take).getOrElse(read)),
+                    ofTab.toOption().map(List::size).getOrElse(0),
+                    allBranches ? mine : HashSet.empty(),
+                    allBranches ? Option.none() : baseline(tab),
+                    needs());
+        });
     }
 
     /**

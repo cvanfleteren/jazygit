@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.builds;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
@@ -23,13 +24,37 @@ public final class BuildsDialog {
             popup -> popup.choices().map(BuildsDialog::row),
             BuildsMsg.Picked::new);
 
-    private BuildsDialog() {}
-
     /**
      * The popups of the builds, which send what the user does to {@code dispatch}.
      */
+    /**
+     * How many builds show: the newest 10, 20 or 50, or all those read, each picked with its first character too.
+     */
+    public static final PickDialog.Spec<BuildsWindowPopup, Option<Integer>> WINDOW = new PickDialog.Spec<>(
+            "builds-window",
+            BuildsWindowPopup.class,
+            popup -> Messages.get("dialog.builds.window.title"),
+            popup -> List.of(Option.of(10), Option.of(20), Option.of(50), Option.<Integer>none())
+                    .map(builds -> new PickDialog.Row<>(
+                            builds,
+                            List.of(
+                                    Cell.of(builds.map(count -> Messages.get("dialog.builds.window.last", count))
+                                            .getOrElse(() -> Messages.get("dialog.builds.window.all"))),
+                                    Cell.styled(
+                                            popup.window().equals(builds)
+                                                    ? Messages.get("dialog.builds.window.shown")
+                                                    : "",
+                                            Theme.Classes.DIM)),
+                            Option.of(builds.map(count -> String.valueOf(count).charAt(0))
+                                    .getOrElse('a')))),
+            BuildsMsg.WindowPicked::new);
+
+    private BuildsDialog() {}
+
     static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningToFocus(new PickDialog<>(SPEC, dispatch)));
+        return List.of(
+                PopupSlot.returningToFocus(new PickDialog<>(SPEC, dispatch)),
+                PopupSlot.returningToFocus(new PickDialog<>(WINDOW, dispatch)));
     }
 
     private static PickDialog.Row<Pipeline> row(BuildsPopup.Choice choice) {
