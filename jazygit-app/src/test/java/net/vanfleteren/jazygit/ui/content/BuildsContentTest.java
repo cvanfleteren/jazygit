@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui.content;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
@@ -10,6 +11,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.feature.github.builds.BuildsPopup;
 import net.vanfleteren.jazygit.feature.github.builds.LoadBuilds;
 import net.vanfleteren.jazygit.feature.github.builds.ReadWorkflows;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -27,6 +29,8 @@ import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -131,7 +135,10 @@ class BuildsContentTest {
         Shown.Area area = (Shown.Area) content(read.model());
         assertEquals(ContentArea.BUILDS, area.area());
         assertEquals("Builds: main · reading, 25 commits so far", area.title());
-        assertEquals(new ContentView.Body.Builds(List.of(BUILD), HashMap.empty()), area.body());
+        assertEquals(
+                new ContentView.Body.Builds(
+                        List.of(BUILD), HashMap.empty(), Option.of(new BuildsView.Pipeline("Build", "push"))),
+                area.body());
     }
 
     @Test
@@ -408,6 +415,54 @@ class BuildsContentTest {
         FileAt file = new FileAt("abcdef0123456789abcdef0123456789abcdef01", ".github/workflows/gone.yml");
 
         assertEquals(new BuildsMsg.WorkflowsRead(HashMap.of(file, Option.none())), new ReadWorkflows(file).run(env));
+    }
+
+    @Test
+    void bracketsStepThroughTheWorkflowsAndWChoosesOne() {
+        Keymap keys = Keymap.standard();
+
+        assertEquals(
+                Option.of(new BuildsMsg.Stepped(1)), keys.handle(Scopes.BUILDS, KeyEvent.ofChar(']'), Option.none()));
+        assertEquals(
+                Option.of(new BuildsMsg.Stepped(-1)), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('['), Option.none()));
+        assertEquals(
+                Option.of(new BuildsMsg.PickRequested()),
+                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('w'), Option.none()));
+    }
+
+    @Test
+    void aWorkflowChosenInThePopupShowsAndStaysForAnotherBranch() {
+        Build markdown =
+                new Build("Markdown", "pull_request", 2, 1, "abcdef0", "A commit", BUILD.createdAt(), BUILD.jobs());
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+        Model read = Update.update(
+                        shown,
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN,
+                                Option.none(),
+                                Option.of(new BuildsPage(List.of(BUILD, markdown), 3, Option.none()))))
+                .model();
+        BuildsView.Pipeline build = new BuildsView.Pipeline("Build", "push");
+        BuildsView.Pipeline lint = new BuildsView.Pipeline("Markdown", "pull_request");
+        assertEquals(Option.of(build), ((ContentView.Body.Builds) ((Shown.Area) content(read)).body()).pipeline());
+
+        Model asked = Update.update(read, new BuildsMsg.PickRequested()).model();
+        assertEquals(
+                List.of(build, lint),
+                asked.popup(BuildsPopup.class).get().choices().map(BuildsPopup.Choice::pipeline));
+
+        Model picked = Update.update(asked, new BuildsMsg.Picked(lint)).model();
+        assertTrue(picked.popup(BuildsPopup.class).isEmpty());
+        assertEquals(Option.of(lint), ((ContentView.Body.Builds) ((Shown.Area) content(picked)).body()).pipeline());
+        assertEquals(
+                Option.of(build),
+                ((ContentView.Body.Builds) ((Shown.Area) content(Update.update(picked, new BuildsMsg.Stepped(1))
+                                        .model()))
+                                .body())
+                        .pipeline());
+
+        Model again = Update.update(picked, new BuildsMsg.Toggled(LOCAL)).model();
+        assertEquals(Option.of(lint), again.repoView().builds().get().selected());
     }
 
     private static Build withFile(Build build) {

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
+import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.state.view.Workflow;
 
 /**
@@ -39,4 +40,19 @@ public sealed interface BuildsMsg extends Msg {
      * The files of workflows were read at the commit of a build, each as its workflow, or none when it could not be.
      */
     record WorkflowsRead(Map<FileAt, Option<Workflow>> workflows) implements BuildsMsg {}
+
+    /**
+     * The user asked for the builds of the workflow {@code by} tabs after the one that shows, before it when negative.
+     */
+    record Stepped(int by) implements BuildsMsg {}
+
+    /**
+     * The user asked to choose the workflow whose builds show from all of them.
+     */
+    record PickRequested() implements BuildsMsg {}
+
+    /**
+     * The user chose {@code pipeline} in the popup.
+     */
+    record Picked(Pipeline pipeline) implements BuildsMsg {}
 }

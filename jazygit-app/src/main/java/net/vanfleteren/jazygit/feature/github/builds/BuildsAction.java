@@ -9,8 +9,12 @@ import net.vanfleteren.jazygit.keys.Scopes;
  */
 public final class BuildsAction {
 
-    public static final FeatureAction ACTION = FeatureAction.ofKeys(
-            keys -> keys.add(Scopes.BRANCHES, Binding.onSelected("B", "help.branches.builds", BuildsMsg.Toggled::new)));
+    public static final FeatureAction ACTION = new FeatureAction(
+            keys -> keys.add(Scopes.BRANCHES, Binding.onSelected("B", "help.branches.builds", BuildsMsg.Toggled::new))
+                    .add(Scopes.BUILDS, Binding.always("[", "help.builds.previous", () -> new BuildsMsg.Stepped(-1)))
+                    .add(Scopes.BUILDS, Binding.always("]", "help.builds.next", () -> new BuildsMsg.Stepped(1)))
+                    .add(Scopes.BUILDS, Binding.always("w", "help.builds.pick", BuildsMsg.PickRequested::new)),
+            BuildsDialog::popups);
 
     private BuildsAction() {}
 }

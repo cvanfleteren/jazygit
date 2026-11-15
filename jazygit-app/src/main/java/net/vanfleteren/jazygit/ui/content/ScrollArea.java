@@ -296,6 +296,12 @@ public final class ScrollArea {
                 .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(
                                 review ? Scopes.PULL_REQUEST_DIFF : Scopes.DIFF, event, Option.of(at(on, content))))
                         .map(this::reviewed))
+                // The builds of a branch have keys of their own, to show another workflow (ADR 131).
+                .orElse(() -> Option.when(
+                                content instanceof ScrolledContent.Builds,
+                                () -> KEYMAP.handle(Scopes.BUILDS, event, Option.none()))
+                        .flatMap(msg -> msg)
+                        .map(this::reviewed))
                 // Without a cursor, as in the plain style, only the keys that move to another file act (ADR 117).
                 .orElse(() -> Option.when(cursor.isEmpty(), () -> KEYMAP.handle(Scopes.DIFF, event, Option.none()))
                         .flatMap(msg -> msg)

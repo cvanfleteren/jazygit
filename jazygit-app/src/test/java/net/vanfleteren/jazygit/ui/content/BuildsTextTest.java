@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import net.vanfleteren.jazygit.gh.model.Build;
+import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +53,7 @@ class BuildsTextTest {
     }
 
     private static List<String> drawn(List<Build> builds) {
-        return BuildsText.lines(builds, HashMap.empty(), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+        return BuildsText.lines(builds, HashMap.empty(), Option.none(), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
                 .map(BuildsTextTest::text);
     }
 
@@ -66,16 +67,28 @@ class BuildsTextTest {
             .reverse();
 
     @Test
-    void eachWorkflowHasAPartTheOneWithTheMostBuildsFirst() {
-        List<String> lines = drawn(PUBLISH.prepend(build("Nix", 40, "SUCCESS", 100)));
+    void theTabsNameEachWorkflowAndOnlyTheOneShownHasItsBuilds() {
+        List<Build> builds = PUBLISH.prepend(build("Nix", 40, "FAILURE", 100));
 
-        assertEquals("Publish · push · 30 builds · 13 Nov – 14 Nov", lines.head());
-        assertTrue(lines.exists(line -> line.equals("Nix · push · 1 builds · 14 Nov – 14 Nov")), lines.mkString("\n"));
+        List<String> lines = drawn(builds);
+        assertEquals("✗ Nix │ ✓ Publish", lines.head());
+        assertEquals("Nix · push · 1 builds · 14 Nov – 14 Nov", lines.get(2));
+        assertFalse(lines.exists(line -> line.startsWith("Publish · push")), lines.mkString("\n"));
+
+        List<String> publish = BuildsText.lines(
+                        builds,
+                        HashMap.empty(),
+                        Option.of(new BuildsView.Pipeline("Publish", "push")),
+                        ZoneOffset.UTC,
+                        Theme.SpanStyles.NONE,
+                        80)
+                .map(BuildsTextTest::text);
+        assertEquals("Publish · push · 30 builds · 13 Nov – 14 Nov", publish.get(2));
     }
 
     @Test
     void theSummaryCountsHowTheBuildsEndedAndHowLongTheyTook() {
-        String summary = drawn(PUBLISH).get(1);
+        String summary = drawn(PUBLISH).get(3);
 
         assertTrue(summary.startsWith("✓ 29  ✗ 1  ⊘ 0"), summary);
         assertTrue(summary.contains("passed 97%   median 4m00   p90 4m00"), summary);
@@ -85,7 +98,7 @@ class BuildsTextTest {
     @Test
     void theChartIsScaledBelowTheSlowestBuildWhichItMarks() {
         List<String> lines = drawn(PUBLISH);
-        List<String> chart = lines.drop(3).take(8);
+        List<String> chart = lines.drop(5).take(8);
 
         assertTrue(chart.head().startsWith("   8m┤"), chart.mkString("\n"));
         assertTrue(chart.head().contains("▲"), chart.mkString("\n"));

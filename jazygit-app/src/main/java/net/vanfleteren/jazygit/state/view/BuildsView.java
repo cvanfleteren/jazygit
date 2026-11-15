@@ -5,10 +5,13 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.util.Comparator;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
+import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 
@@ -24,6 +27,7 @@ import net.vanfleteren.jazygit.state.Loadable;
  * @param stopped   why reading more failed, after some were read; none while it did not
  * @param workflows the files of the workflows read, at the commit of a build, which say which job needs which; none
  *                  for one being read, or that could not be
+ * @param selected  the workflow whose builds show, as the user chose it; none to show the one on the tip
  */
 public record BuildsView(
         BranchName branch,
@@ -33,7 +37,8 @@ public record BuildsView(
         Option<String> after,
         boolean reading,
         Option<Failure> stopped,
-        Map<BuildsView.FileAt, Option<Workflow>> workflows) {
+        Map<BuildsView.FileAt, Option<Workflow>> workflows,
+        Option<BuildsView.Pipeline> selected) {
 
     /**
      * How many commits are read, at most (ADR 131).
@@ -52,7 +57,8 @@ public record BuildsView(
                 Option.none(),
                 true,
                 Option.none(),
-                HashMap.empty());
+                HashMap.empty(),
+                Option.none());
     }
 
     /**
@@ -67,7 +73,8 @@ public record BuildsView(
                 Option.none(),
                 false,
                 Option.none(),
-                HashMap.empty());
+                HashMap.empty(),
+                Option.none());
     }
 
     /**
@@ -101,7 +108,8 @@ public record BuildsView(
                 next,
                 read < COMMITS && next.isDefined(),
                 Option.none(),
-                workflows);
+                workflows,
+                selected);
     }
 
     /**
@@ -117,7 +125,8 @@ public record BuildsView(
                 after,
                 false,
                 builds.toOption().map(read -> failure),
-                workflows);
+                workflows,
+                selected);
     }
 
     /**
@@ -146,7 +155,15 @@ public record BuildsView(
      */
     public BuildsView withWorkflows(Map<FileAt, Option<Workflow>> read) {
         return new BuildsView(
-                branch, onGitHub, builds, commits, after, reading, stopped, workflows.merge(read, (was, now) -> now));
+                branch,
+                onGitHub,
+                builds,
+                commits,
+                after,
+                reading,
+                stopped,
+                workflows.merge(read, (was, now) -> now),
+                selected);
     }
 
     /**
@@ -163,6 +180,78 @@ public record BuildsView(
                                         build.ran().map(Build.Job::name), called -> workflow(build.sha(), called))))));
     }
 
+    /**
+     * This, showing the builds of {@code pipeline}.
+     */
+    public BuildsView withSelected(Pipeline pipeline) {
+        return new BuildsView(
+                branch, onGitHub, builds, commits, after, reading, stopped, workflows, Option.of(pipeline));
+    }
+
+    /**
+     * Of {@code builds}, those that show: all of them, or with {@code only}, those of the commits not on the base of
+     * the branch, as {@code ahead} tells, the same as its log lists (ADR 20, 131).
+     */
+    public static List<Build> shown(List<Build> builds, Option<Ahead> ahead, boolean only) {
+        return ahead.filter(read -> only)
+                .map(read -> builds.filter(build -> Sha.parse(build.sha()).exists(sha -> !read.shared(sha))))
+                .getOrElse(builds);
+    }
+
+    /**
+     * The workflows {@code builds} ran, in the order their tabs show: those that ran on the newest commit with builds
+     * first, then the others; each by how many builds it has, then by its name. The order stays as builds come in
+     * and end, so that a key that steps through them lands where it did.
+     */
+    public static List<Pipeline> pipelines(List<Build> builds) {
+        List<Pipeline> onTip = onTip(builds);
+        Comparator<Pipeline> byCount = Comparator.<Pipeline>comparingInt(pipeline -> -builds.count(pipeline::ran))
+                .thenComparing(Pipeline::workflow)
+                .thenComparing(Pipeline::event);
+        return onTip.sorted(byCount)
+                .appendAll(builds.map(Pipeline::of)
+                        .distinct()
+                        .filter(pipeline -> !onTip.contains(pipeline))
+                        .sorted(byCount));
+    }
+
+    /**
+     * The workflow whose builds of {@code builds} show: the one chosen, while it has builds; else, of those on the
+     * newest commit with builds, one whose last build failed, else the one with the most builds.
+     */
+    public Option<Pipeline> shownPipeline(List<Build> builds) {
+        List<Pipeline> all = pipelines(builds);
+        return selected.filter(all::contains)
+                .orElse(() -> onTip(builds)
+                        .sorted(Comparator.<Pipeline, Boolean>comparing(pipeline -> builds.find(pipeline::ran)
+                                        .exists(last -> last.outcome() != Build.Outcome.FAILED))
+                                .thenComparing(
+                                        Comparator.<Pipeline>comparingInt(pipeline -> -builds.count(pipeline::ran)))
+                                .thenComparing(Pipeline::workflow)
+                                .thenComparing(Pipeline::event))
+                        .headOption())
+                .orElse(all::headOption);
+    }
+
+    /**
+     * This, showing the workflow {@code by} tabs after the one of {@code builds} that shows, around from the last to
+     * the first.
+     */
+    public BuildsView stepped(List<Build> builds, int by) {
+        List<Pipeline> all = pipelines(builds);
+        return shownPipeline(builds)
+                .map(now -> all.get(Math.floorMod(all.indexOf(now) + by, all.size())))
+                .map(this::withSelected)
+                .getOrElse(this);
+    }
+
+    private static List<Pipeline> onTip(List<Build> builds) {
+        Option<String> tip = builds.headOption().map(Build::sha);
+        return builds.filter(build -> tip.contains(build.sha()))
+                .map(Pipeline::of)
+                .distinct();
+    }
+
     private Option<Workflow> workflow(String sha, String path) {
         return workflows.get(new FileAt(sha, path)).flatMap(read -> read);
     }
@@ -174,4 +263,35 @@ public record BuildsView(
      * @param path its path
      */
     public record FileAt(String sha, String path) {}
+
+    /**
+     * A workflow as it runs for one event, like {@code Build} for {@code pull_request}: the builds of one tab.
+     *
+     * @param workflow the name of the workflow
+     * @param event    what starts it
+     */
+    public record Pipeline(String workflow, String event) {
+
+        /**
+         * The workflow and the event of {@code build}.
+         */
+        public static Pipeline of(Build build) {
+            return new Pipeline(build.workflow(), build.event());
+        }
+
+        /**
+         * How its tab names it among {@code all}: its workflow, and the event it runs for when that workflow runs for
+         * more than one.
+         */
+        public String label(List<Pipeline> all) {
+            return all.count(other -> other.workflow().equals(workflow)) > 1 ? workflow + " · " + event : workflow;
+        }
+
+        /**
+         * Whether {@code build} is one of its builds.
+         */
+        public boolean ran(Build build) {
+            return build.workflow().equals(workflow) && build.event().equals(event);
+        }
+    }
 }

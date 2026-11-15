@@ -41,6 +41,7 @@ import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
@@ -432,11 +433,20 @@ public final class ContentView {
                 .map(view -> {
                     String branch = view.branch().value();
                     String commits = String.valueOf(view.commits());
-                    String title = view.reading()
+                    BranchRef local = new BranchRef.Local(view.branch());
+                    AheadView ahead = new AheadView(
+                            AheadUpdate.branch(model, local),
+                            AheadUpdate.distance(model, local),
+                            model.repoView().onlyAhead());
+                    List<Build> shown =
+                            BuildsView.shown(view.builds().getOrElse(List.empty()), ahead.ahead(), ahead.only());
+                    String read = view.reading()
                             ? Messages.get("panel.builds.reading", branch, commits)
                             : view.stopped().isDefined()
                                     ? Messages.get("panel.builds.stopped", branch, commits)
                                     : Messages.get("panel.builds.title", branch, commits);
+                    // Only the builds of the commits not on the base show: the title says how many there are.
+                    String title = ahead.only() ? ahead.title(read) : read;
                     return whenLoaded(
                             title,
                             view.builds(),
@@ -456,11 +466,14 @@ public final class ContentView {
                                                                             "content.builds.none",
                                                                             remote.shortName(),
                                                                             String.valueOf(view.commits())))
-                                            : new Shown.Area(
-                                                    ContentArea.BUILDS,
-                                                    title,
-                                                    new ScrolledContent.Builds(view.branch()),
-                                                    new Body.Builds(builds, view.needs())))
+                                            : shown.isEmpty()
+                                                    ? dim(title, Messages.get("content.builds.noneAhead"))
+                                                    : new Shown.Area(
+                                                            ContentArea.BUILDS,
+                                                            title,
+                                                            new ScrolledContent.Builds(view.branch()),
+                                                            new Body.Builds(
+                                                                    shown, view.needs(), view.shownPipeline(shown))))
                                     .getOrElse(() -> dim(title, Messages.get("content.builds.offGitHub", branch))));
                 });
     }
@@ -727,7 +740,9 @@ public final class ContentView {
         /**
          * The builds of a branch, of the newest commit first (ADR 131).
          */
-        record Builds(List<Build> builds, Map<Long, Map<String, Set<String>>> needs) implements Body {}
+        record Builds(
+                List<Build> builds, Map<Long, Map<String, Set<String>>> needs, Option<BuildsView.Pipeline> pipeline)
+                implements Body {}
 
         /**
          * A commit and what it changed, drawn as {@code look} says.

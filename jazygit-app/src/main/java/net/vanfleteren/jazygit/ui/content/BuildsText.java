@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.Build.Outcome;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.view.BuildsView;
+import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
@@ -46,12 +47,13 @@ final class BuildsText {
 
     /**
      * The lines that draw {@code builds}, the newest first, in {@code zone}, the chart as wide as {@code width}
-     * allows; {@code needs} says, of the builds whose jobs show on one time line, by the id of their run, which of
+     * allows: the tabs of their workflows, and the builds of {@code pipeline}, or of the first tab without; {@code needs} says, of the builds whose jobs show on one time line, by the id of their run, which of
      * their jobs each job needs, as far as that is known (ADR 131).
      */
     static List<Line> lines(
             List<Build> builds,
             Map<Long, Map<String, Set<String>>> needs,
+            Option<Pipeline> pipeline,
             ZoneId zone,
             Theme.SpanStyles styles,
             int width) {
@@ -63,23 +65,12 @@ final class BuildsText {
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.whenPattern"))
                         .withZone(zone),
                 Math.max(10, width - SCALE - 1));
-        return workflows(builds)
-                .map(drawing::workflow)
-                .intersperse(List.of(Line.from("")))
-                .flatMap(lines -> lines);
-    }
-
-    /**
-     * The builds of each workflow and event, the one with the most first.
-     */
-    static List<List<Build>> workflows(List<Build> builds) {
-        return builds.groupBy(build -> Tuple.of(build.workflow(), build.event()))
-                .values()
-                .toList()
-                .sorted(Comparator.<List<Build>>comparingInt(List::size)
-                        .reversed()
-                        .thenComparing(ofWorkflow -> ofWorkflow.head().workflow())
-                        .thenComparing(ofWorkflow -> ofWorkflow.head().event()));
+        List<Pipeline> all = BuildsView.pipelines(builds);
+        Pipeline shown = pipeline.filter(all::contains).getOrElse(all::head);
+        List<TabStrip.Tab> tabs = all.map(each -> new TabStrip.Tab(
+                each.label(all), builds.find(each::ran).map(Build::outcome).getOrElse(Outcome.PASSED)));
+        return List.of(TabStrip.line(tabs, all.indexOf(shown), width, styles), Line.from(""))
+                .appendAll(drawing.workflow(builds.filter(shown::ran)));
     }
 
     /**
