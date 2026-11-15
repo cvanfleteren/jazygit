@@ -41,12 +41,21 @@ public final class Exec {
      */
     public static Either<ExecFailure, String> run(
             Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout) {
+        return run(directory, commandLine, environment, timeout, MAX_OUTPUT);
+    }
+
+    /**
+     * {@link #run}, failing once the program printed more than {@code limit}: a test need not print all of
+     * {@link #MAX_OUTPUT} to see that.
+     */
+    static Either<ExecFailure, String> run(
+            Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout, Limit limit) {
         long started = System.nanoTime();
         return logged(
                 directory,
                 commandLine,
                 started,
-                execute(directory, commandLine, environment, timeout, MAX_OUTPUT, false)
+                execute(directory, commandLine, environment, timeout, limit, false)
                         .flatMap(output -> output.cut()
                                 ? Either.left(new ExecFailure.TooMuchOutput())
                                 : Either.right(output.text())));

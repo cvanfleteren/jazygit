@@ -164,9 +164,17 @@ class ExecTest {
                         Duration.ofMillis(500)));
     }
 
+    // Against a small limit: printing all of MAX_OUTPUT takes seconds.
     @Test
     void aProgramThatPrintsMoreThanIsEverReadFails() {
-        assertEquals(Either.left(new ExecFailure.TooMuchOutput()), sh("yes", HashMap.empty()));
+        assertEquals(
+                Either.left(new ExecFailure.TooMuchOutput()),
+                Exec.run(
+                        dir,
+                        List.of("yes"),
+                        HashMap.empty(),
+                        Duration.ofSeconds(10),
+                        new Limit(Integer.MAX_VALUE, 1000)));
     }
 
     @Test
