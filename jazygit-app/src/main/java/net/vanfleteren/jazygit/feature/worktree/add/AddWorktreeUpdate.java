@@ -1,11 +1,14 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg.*;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -58,6 +61,11 @@ public final class AddWorktreeUpdate {
             case StartNotResolved(String typed, var failure) ->
                 Next.of(model.fail(
                         new AppError.OperationFailed(AddWorktreeCmd.ADD_WORKTREE, Option.of(typed), failure)));
+            // The read may wait behind other git commands: a popup that opened meanwhile, or the same one asked for
+            // twice, is not taken away, and an error shown meanwhile stays.
+            case LocationTemplateRead(WorktreeSource source, boolean switching, Option<String> template) ->
+                Next.of(model.openPopupIfFree(
+                        new NewWorktreePopup(source, location(model, source, template), switching)));
             case NameConfirmed() -> nameConfirmed(model);
             case Added(var cmd, String location, var commands) -> added(model, cmd, location, commands);
             case Informed(var notice) -> Next.of(model.inform(notice));
@@ -71,10 +79,12 @@ public final class AddWorktreeUpdate {
     }
 
     /**
-     * Asks where the new worktree that checks out {@code source} goes, starting out at {@link #location}.
+     * Asks where the new worktree that checks out {@code source} goes, starting out at {@link #location}, once the
+     * template of where it starts out is read (ADR 134). The error shown is cleared now, as the user asks, not once
+     * the read is back.
      */
     public static Next ask(Model model, WorktreeSource source) {
-        return PopupUpdate.ask(model, new NewWorktreePopup(source, location(model, source.directory())));
+        return Next.of(model.clearError(), new ReadWorktreeTemplate(source, false));
     }
 
     /**
@@ -82,7 +92,7 @@ public final class AddWorktreeUpdate {
      * once added, the app switches to it without asking, as it was chosen to check {@code source} out in (ADR 68).
      */
     public static Next askSwitching(Model model, WorktreeSource source) {
-        return PopupUpdate.ask(model, new NewWorktreePopup(source, location(model, source.directory()), true));
+        return Next.of(model.clearError(), new ReadWorktreeTemplate(source, true));
     }
 
     /**
@@ -214,22 +224,45 @@ public final class AddWorktreeUpdate {
     }
 
     /**
-     * Where a new worktree named after {@code name} starts out: next to the main worktree, named after it and
-     * {@code name}; without one, as next to a bare repository, next to the one shown, named after {@code name}. A
-     * location a worktree has already gets a number appended. Empty while the worktrees are not read.
+     * Where the new worktree that checks out {@code source} starts out: where {@code template} leads, as
+     * {@link WorktreeTemplate#location} works it out (ADR 134). A location a worktree has already gets a number
+     * appended. Empty while the worktrees are not read, unless the template leads to an absolute location.
      */
-    static String location(Model model, BranchName name) {
+    static String location(Model model, WorktreeSource source, Option<String> template) {
         List<String> taken =
                 model.repo().worktrees().toOption().getOrElse(List.empty()).map(Worktree::location);
-        return model.repo()
-                .mainWorktree()
-                .map(main -> main.siblingFor(name))
-                .orElse(() -> model.repo().currentWorktree().map(current -> current.nextTo(name)))
+        return WorktreeTemplate.location(
+                        template, model.repo().mainWorktree(), model.repo().currentWorktree(), values(model, source))
                 .map(wanted -> Stream.from(1)
                         .map(n -> n == 1 ? wanted : wanted + "-" + n)
                         .find(candidate -> !taken.contains(candidate))
                         .get())
                 .getOrElse("");
+    }
+
+    /**
+     * What the variables of a template of where the worktree that checks out {@code source} starts out stand for,
+     * but for {@code {repo}}, which {@link WorktreeTemplate#location} knows (ADR 134): those it has no value for are
+     * left out. The repository on GitHub is the one of a pull request, or else the one the pull requests were read
+     * for.
+     */
+    private static Map<String, String> values(Model model, WorktreeSource source) {
+        Option<PullRequestSummary> pullRequest =
+                source instanceof WorktreeSource.PullRequest(var of) ? Option.of(of) : Option.none();
+        Map<String, String> onGitHub = pullRequest
+                .map(PullRequestSummary::repository)
+                .orElse(() -> model.prOverview().repositoryName())
+                .map(repository -> List.of(repository.split("/", 2)))
+                .filter(parts -> parts.size() == 2)
+                .<Map<String, String>>map(parts -> LinkedHashMap.of("owner", parts.get(0), "name", parts.get(1)))
+                .getOrElse(LinkedHashMap.empty());
+        return LinkedHashMap.<String, String>of(
+                        "branch", source.directory().value().replace('/', '-'))
+                .merge(onGitHub)
+                .merge(pullRequest
+                        .<Map<String, String>>map(of -> LinkedHashMap.of(
+                                "number", String.valueOf(of.number().value())))
+                        .getOrElse(LinkedHashMap.empty()));
     }
 
     /**

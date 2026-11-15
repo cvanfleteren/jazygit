@@ -60,6 +60,13 @@ public sealed interface AddWorktreeMsg extends Msg {
     record StartNotResolved(String typed, Failure failure) implements AddWorktreeMsg {}
 
     /**
+     * Where the new worktree that checks out {@code source} starts out was read: {@code template}, or empty for none
+     * (ADR 134); the app switches to it once it is added when {@code switching} (ADR 68).
+     */
+    record LocationTemplateRead(WorktreeSource source, boolean switching, Option<String> template)
+            implements AddWorktreeMsg {}
+
+    /**
      * The user confirmed the name of the new branch, as typed in the popup.
      */
     record NameConfirmed() implements AddWorktreeMsg {}

@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.add.LocationAsked;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreeBranchPopup;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreeStartPopup;
@@ -121,7 +122,7 @@ class WorktreeUpdateTest {
 
     @Test
     void aNewWorktreeForABranchStartsOutNextToTheMainOne() {
-        Next asked = Update.update(model(), new AddWorktreeMsg.Requested(FEATURE));
+        Next asked = LocationAsked.located(Update.update(model(), new AddWorktreeMsg.Requested(FEATURE)));
 
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/app-feature")),
@@ -137,7 +138,7 @@ class WorktreeUpdateTest {
     void forTheCheckedOutBranchANewBranchMadeFromItIsAskedFor() {
         BranchName main = new BranchName("main");
 
-        Next next = Update.update(model(), new AddWorktreeMsg.Requested(main));
+        Next next = LocationAsked.located(Update.update(model(), new AddWorktreeMsg.Requested(main)));
 
         assertEquals(
                 Option.of(new NewWorktreeBranchPopup(
@@ -157,8 +158,11 @@ class WorktreeUpdateTest {
         Model blank = typed(named.model(), " ");
         assertEquals(
                 blank.popup(),
-                Update.update(blank, new AddWorktreeMsg.NameConfirmed()).model().popup());
-        Next located = Update.update(typed(named.model(), "topic"), new AddWorktreeMsg.NameConfirmed());
+                LocationAsked.located(Update.update(blank, new AddWorktreeMsg.NameConfirmed()))
+                        .model()
+                        .popup());
+        Next located =
+                LocationAsked.located(Update.update(typed(named.model(), "topic"), new AddWorktreeMsg.NameConfirmed()));
         BranchName topic = new BranchName("topic");
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Created(topic, fromFeature), "/repos/app-topic")),
@@ -241,13 +245,13 @@ class WorktreeUpdateTest {
                 started.popup());
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/app-feature")),
-                Update.update(started, new AddWorktreeMsg.NameConfirmed())
+                LocationAsked.located(Update.update(started, new AddWorktreeMsg.NameConfirmed()))
                         .model()
                         .popup());
         BranchName topic = new BranchName("topic");
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Created(topic, fromFeature), "/repos/app-topic")),
-                Update.update(typed(started, "topic"), new AddWorktreeMsg.NameConfirmed())
+                LocationAsked.located(Update.update(typed(started, "topic"), new AddWorktreeMsg.NameConfirmed()))
                         .model()
                         .popup());
     }
@@ -276,7 +280,7 @@ class WorktreeUpdateTest {
                     start._1.popup(NewWorktreeBranchPopup.class).flatMap(NewWorktreeBranchPopup::ifBlank));
             assertEquals(
                     Option.of(new NewWorktreePopup(start._2, start._3)),
-                    Update.update(start._1, new AddWorktreeMsg.NameConfirmed())
+                    LocationAsked.located(Update.update(start._1, new AddWorktreeMsg.NameConfirmed()))
                             .model()
                             .popup());
         }
@@ -530,19 +534,19 @@ class WorktreeUpdateTest {
 
         assertEquals(
                 Option.none(),
-                Update.update(model(), new AddWorktreeMsg.Requested(new BranchName("nope")))
+                LocationAsked.located(Update.update(model(), new AddWorktreeMsg.Requested(new BranchName("nope"))))
                         .model()
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(busy, new AddWorktreeMsg.Requested(FEATURE))
+                LocationAsked.located(Update.update(busy, new AddWorktreeMsg.Requested(FEATURE)))
                         .model()
                         .popup());
     }
 
     @Test
     void aBranchCheckedOutInAnotherWorktreeGetsNoOtherOneAndTheErrorSaysWhere() {
-        Next next = Update.update(model(), new AddWorktreeMsg.Requested(TAKEN));
+        Next next = LocationAsked.located(Update.update(model(), new AddWorktreeMsg.Requested(TAKEN)));
 
         assertEquals(
                 Option.of(
@@ -552,8 +556,8 @@ class WorktreeUpdateTest {
 
     @Test
     void confirmingAddsTheWorktreeWithTheBranchBusyAndABlankLocationKeepsTheDialogOpen() {
-        Model asked =
-                Update.update(model(), new AddWorktreeMsg.Requested(FEATURE)).model();
+        Model asked = LocationAsked.located(Update.update(model(), new AddWorktreeMsg.Requested(FEATURE)))
+                .model();
 
         assertEquals(
                 List.of(),
@@ -1013,7 +1017,7 @@ class WorktreeUpdateTest {
                 false);
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/proj/feature")),
-                Update.update(worktrees(shown, LINKED), new AddWorktreeMsg.Requested(FEATURE))
+                LocationAsked.located(Update.update(worktrees(shown, LINKED), new AddWorktreeMsg.Requested(FEATURE)))
                         .model()
                         .popup());
 
@@ -1026,7 +1030,8 @@ class WorktreeUpdateTest {
                 false);
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/app-feature-2")),
-                Update.update(worktrees(MAIN, LINKED, taken), new AddWorktreeMsg.Requested(FEATURE))
+                LocationAsked.located(
+                                Update.update(worktrees(MAIN, LINKED, taken), new AddWorktreeMsg.Requested(FEATURE)))
                         .model()
                         .popup());
     }

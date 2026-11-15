@@ -77,25 +77,4 @@ public record Worktree(
         // The root directory has no name.
         return Option.of(path.getFileName()).map(Path::toString).getOrElse(this::location);
     }
-
-    /**
-     * Where a new worktree for {@code branch} goes by default: next to this one, named after it and the branch,
-     * e.g. {@code /repos/app-feature-login} for {@code feature/login} next to {@code /repos/app}.
-     */
-    public String siblingFor(BranchName branch) {
-        return path.resolveSibling(name() + "-" + directoryFor(branch)).toString();
-    }
-
-    /**
-     * Where a new worktree for {@code branch} goes next to this one when there is no main one to name it after, as
-     * next to a bare repository: named after the branch, e.g. {@code /repos/proj/feature-login} for
-     * {@code feature/login} next to {@code /repos/proj/main}.
-     */
-    public String nextTo(BranchName branch) {
-        return path.resolveSibling(directoryFor(branch)).toString();
-    }
-
-    private static String directoryFor(BranchName branch) {
-        return branch.value().replace('/', '-');
-    }
 }

@@ -49,6 +49,20 @@ includes:
     newBranchNameTemplate = ART03DEV01-
 ```
 
+Where a new worktree starts out is kept the same way, as `jazygit.newWorktreeTemplate`, and for the worktree of a
+pull request as `jazygit.pullRequestWorktreeTemplate`, which falls back to the first. A template can use `{repo}` (the
+directory of the main worktree), `{branch}` (with `/` as `-`), `{owner}` and `{name}` (the repository on GitHub) and,
+for a pull request, `{number}`. A leading `~` is your home directory, and a relative location is next to the main
+worktree:
+
+```ini
+[jazygit]
+    newWorktreeTemplate = worktrees/{repo}/{branch}          # /repos/worktrees/app/feature-login
+    pullRequestWorktreeTemplate = ~/reviews/{repo}-{number}  # ~/reviews/app-42
+```
+
+Without one, a new worktree starts out next to the main one: `/repos/app-feature-login`.
+
 ## Getting it
 
 Download the jar, or the native Linux executable, from [Releases](https://github.com/cvanfleteren/jazygit/releases).
