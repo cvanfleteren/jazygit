@@ -52,16 +52,21 @@ public record Workflow(List<Workflow.Job> jobs) {
 
     /**
      * Which of {@code names}, the jobs of a build of this workflow as GitHub names them, each one needs: those it
-     * waits for directly, not those it waits for through another. A job whose name does not match one of this
-     * workflow is left out, as is one that needs none. {@code called} gives the workflows its jobs call, by path;
+     * waits for directly, not those it waits for through another. A name is matched to the job it is written as, else
+     * to the one job whose name it fits: one that fits none, or more than one, as with a job named only by an
+     * expression, is left out, as is a job that needs none. {@code called} gives the workflows its jobs call, by path;
      * the jobs of one it does not give are left out too.
      */
     public Map<String, Set<String>> needs(List<String> names, Function<String, Option<Workflow>> called) {
         List<Node> nodes = nodes(called);
-        Map<String, Node> matched = HashMap.ofEntries(
-                names.flatMap(name -> nodes.find(node -> node.matches(name)).map(node -> Tuple.of(name, node))));
+        Map<String, Node> matched = HashMap.ofEntries(names.flatMap(name -> {
+            List<Node> written = nodes.filter(node -> node.written().contains(name));
+            List<Node> fits = nodes.filter(node -> node.matches(name));
+            return (written.size() == 1 ? written : fits).singleOption().map(node -> Tuple.of(name, node));
+        }));
+        // What a job needs is the names matched to the jobs it needs, not the names those jobs' patterns match.
         Map<String, Set<String>> direct = matched.mapValues(node -> HashSet.ofAll(names.filter(
-                other -> node.needs().exists(needed -> needed.matcher(other).matches()))));
+                other -> matched.get(other).exists(needed -> node.needs().contains(needed.key())))));
         return direct.mapValues(needed -> needed.filter(
                         one -> !needed.exists(other -> !other.equals(one) && waitsFor(direct, other, one, 0))))
                 .filterValues(needed -> !needed.isEmpty());
@@ -77,36 +82,40 @@ public record Workflow(List<Workflow.Job> jobs) {
     }
 
     /**
-     * The jobs of this workflow as patterns of the names GitHub gives them, each with what it needs: a job that calls
-     * a workflow is the jobs of that one, named after it, and those of them that need none need what it needs.
+     * The jobs of this workflow, each with the pattern of the names GitHub gives its runs and the keys of the jobs it
+     * needs: a job that calls a workflow is the jobs of that one, named after it and keyed {@code caller/inner}, and
+     * those of them that need none need what it needs.
      */
     private List<Node> nodes(Function<String, Option<Workflow>> called) {
         return jobs.flatMap(job -> job.called()
                 .flatMap(called)
                 .map(workflow -> workflow.jobs.map(inner -> new Node(
+                        job.key() + "/" + inner.key(),
                         prefixed(job.shown(), inner.pattern()),
+                        inner.written().map(name -> job.shown() + " / " + name),
                         inner.needs().isEmpty()
                                 ? job.needs().flatMap(needed -> targets(needed, called))
-                                : inner.needs()
-                                        .flatMap(needed -> workflow.job(needed))
-                                        .map(other -> prefixed(job.shown(), other.pattern())))))
-                .getOrElse(() ->
-                        List.of(new Node(job.pattern(), job.needs().flatMap(needed -> targets(needed, called))))));
+                                : inner.needs().map(needed -> job.key() + "/" + needed))))
+                .getOrElse(() -> List.of(new Node(
+                        job.key(),
+                        job.pattern(),
+                        job.written(),
+                        job.needs().flatMap(needed -> targets(needed, called))))));
     }
 
     /**
-     * The patterns of the jobs that end the job {@code key}: itself, or, when it calls a workflow, the jobs of that one
-     * no other job of it needs.
+     * The keys of the jobs that end the job {@code key}: itself, or, when it calls a workflow, the jobs of that one no
+     * other job of it needs.
      */
-    private List<Pattern> targets(String key, Function<String, Option<Workflow>> called) {
+    private List<String> targets(String key, Function<String, Option<Workflow>> called) {
         return job(key).toList()
                 .flatMap(job -> job.called()
                         .flatMap(called)
                         .map(workflow -> workflow.jobs
                                 .filter(inner -> !workflow.jobs.exists(
                                         other -> other.needs().contains(inner.key())))
-                                .map(inner -> prefixed(job.shown(), inner.pattern())))
-                        .getOrElse(() -> List.of(job.pattern())));
+                                .map(inner -> job.key() + "/" + inner.key()))
+                        .getOrElse(() -> List.of(job.key())));
     }
 
     private Option<Job> job(String key) {
@@ -171,6 +180,13 @@ public record Workflow(List<Workflow.Job> jobs) {
         }
 
         /**
+         * The name GitHub gives its run as it is written, when that has no expression in it.
+         */
+        Option<String> written() {
+            return Option.of(shown()).filter(name -> !EXPRESSION.matcher(name).find());
+        }
+
+        /**
          * The path of the workflow of this repository it calls, like {@code .github/workflows/build.yml}.
          */
         Option<String> called() {
@@ -180,9 +196,10 @@ public record Workflow(List<Workflow.Job> jobs) {
     }
 
     /**
-     * A job as the names of its runs match it, and the patterns of the names of those it needs.
+     * A job, keyed by its key or, in a called workflow, by the calling job's and its own, as the names of its runs
+     * match it, and the keys of those it needs.
      */
-    private record Node(Pattern pattern, List<Pattern> needs) {
+    private record Node(String key, Pattern pattern, Option<String> written, List<String> needs) {
 
         boolean matches(String name) {
             return pattern.matcher(name).matches();

@@ -554,7 +554,7 @@ final class BuildsText {
                                                 .getOrElse("–"))));
                         Map<String, Set<String>> ofBuild =
                                 needs.get(build.runId()).getOrElse(HashMap.empty());
-                        return JobTrain.lines(build, ofBuild, Math.max(10, Math.min(60, chart - NAME)), styles)
+                        return JobTrain.lines(build, ofBuild, chart + SCALE + 1, styles)
                                 .prepend(header);
                     })
                     .getOrElse(List.empty());

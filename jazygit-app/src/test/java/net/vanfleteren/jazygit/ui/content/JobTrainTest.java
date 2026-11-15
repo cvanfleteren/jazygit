@@ -54,7 +54,7 @@ class JobTrainTest {
             "snapshot", HashSet.of("verify / build-ok", "build"));
 
     private static List<String> drawn(Map<String, Set<String>> needs) {
-        return JobTrain.lines(BUILD, needs, 50, Theme.SpanStyles.NONE)
+        return JobTrain.lines(BUILD, needs, 50 + 23 + 2 + 10, Theme.SpanStyles.NONE)
                 .map(line -> List.ofAll(line.spans()).map(Span::content).mkString());
     }
 
@@ -108,5 +108,27 @@ class JobTrainTest {
     void aLineTurnsWhereItLeavesACell() {
         assertEquals("╰", JobTrain.Direction.box(HashSet.of(JobTrain.Direction.UP, JobTrain.Direction.RIGHT)));
         assertEquals("┼", JobTrain.Direction.box(HashSet.of(JobTrain.Direction.values())));
+    }
+
+    @Test
+    void everyRowFitsInThePanelWithALongJobName() {
+        Build longNames = new Build(
+                "Publish",
+                "push",
+                1,
+                1,
+                "abc",
+                "Title",
+                START,
+                List.of(
+                        job("Publish fat-jar and native image / build", 2, 120),
+                        job("verify / acceptance (1/2)", 2, 100),
+                        job("verify / acceptance (2/2)", 2, 110)));
+
+        List<String> rows = JobTrain.lines(longNames, HashMap.empty(), 80, Theme.SpanStyles.NONE)
+                .map(line -> List.ofAll(line.spans()).map(Span::content).mkString());
+
+        assertTrue(rows.forAll(row -> row.length() <= 80), rows.mkString("\n"));
+        assertTrue(rows.exists(row -> row.endsWith("1m38–1m48")), rows.mkString("\n"));
     }
 }

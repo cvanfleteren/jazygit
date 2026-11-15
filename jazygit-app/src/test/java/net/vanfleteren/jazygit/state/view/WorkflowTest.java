@@ -147,4 +147,65 @@ class WorkflowTest {
         assertEquals(Option.none(), Workflow.parse("name: nothing\n"));
         assertEquals(Option.none(), Workflow.parse("jobs: [\n"));
     }
+
+    // From the review of #496: a job named only by an expression matches every name.
+    private static final String BY_EXPRESSION = """
+            jobs:
+              build: {}
+              test:
+                name: ${{ matrix.os }}
+                needs: build
+                strategy: { matrix: { os: [Linux, Windows] } }
+              deploy:
+                needs: test
+            """;
+
+    @Test
+    void aJobNamedOnlyByAnExpressionTakesTheNamesNoOtherJobIsWrittenAs() {
+        Map<String, Set<String>> needs = Workflow.parse(BY_EXPRESSION)
+                .get()
+                .needs(List.of("build", "Linux", "Windows", "deploy"), path -> Option.none());
+
+        // build and deploy are written as they run; Linux and Windows fit test alone. Not: deploy off build.
+        assertEquals(
+                HashMap.of(
+                        "Linux", HashSet.of("build"),
+                        "Windows", HashSet.of("build"),
+                        "deploy", HashSet.of("Linux", "Windows")),
+                needs);
+    }
+
+    @Test
+    void aNameTwoJobsFitIsLeftOut() {
+        Map<String, Set<String>> needs =
+                Workflow.parse("""
+                        jobs:
+                          one:
+                            name: ${{ matrix.os }}
+                            strategy: { matrix: { os: [Linux] } }
+                          two:
+                            name: ${{ matrix.arch }}
+                            needs: one
+                            strategy: { matrix: { arch: [arm] } }
+                        """).get().needs(List.of("Linux", "arm"), path -> Option.none());
+
+        assertEquals(HashMap.empty(), needs);
+    }
+
+    @Test
+    void aJobThatNeedsAJobNamedOnlyByAnExpressionNeedsItsRunsAlone() {
+        Map<String, Set<String>> needs =
+                Workflow.parse("""
+                        jobs:
+                          test:
+                            name: ${{ matrix.os }}
+                            strategy: { matrix: { os: [Linux, Windows] } }
+                          deploy-site:
+                            name: Deploy the site
+                            needs: test
+                        """).get().needs(List.of("Linux", "Windows", "Deploy the site"), path -> Option.none());
+
+        // Only test matches Linux and Windows, as Deploy the site is matched by its name: deploy waits for both.
+        assertEquals(HashMap.of("Deploy the site", HashSet.of("Linux", "Windows")), needs);
+    }
 }

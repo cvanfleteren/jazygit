@@ -28,14 +28,19 @@ final class JobTrain {
 
     // The widest a job's name is shown.
     private static final int NAME = 28;
+    // The columns of how long a job took, like "1m28–2m23".
+    private static final int TOOK = 10;
+    // The narrowest and the widest the time line is.
+    private static final int MIN_LINE = 10;
+    private static final int MAX_LINE = 60;
 
     private JobTrain() {}
 
     /**
-     * The rows of the jobs of {@code build}, whose time line is {@code width} columns wide; {@code needs} says which
+     * The rows of the jobs of {@code build}, in a panel {@code panel} columns wide; {@code needs} says which
      * jobs each job needs, empty when that is not known, and the jobs then show without lines between them.
      */
-    static List<Line> lines(Build build, Map<String, Set<String>> needs, int width, Theme.SpanStyles styles) {
+    static List<Line> lines(Build build, Map<String, Set<String>> needs, int panel, Theme.SpanStyles styles) {
         List<Group> groups = groups(build, needs);
         if (groups.isEmpty()) {
             return List.empty();
@@ -43,11 +48,13 @@ final class JobTrain {
         Instant start = build.started();
         long whole = Math.max(
                 1, Duration.between(start, groups.map(Group::end).max().get()).toMillis());
-        Layout layout = layout(ordered(groups), start, whole, width);
         int name = Math.min(
                         NAME,
                         groups.map(group -> TextWidth.of(group.label())).max().getOrElse(0))
                 + 1;
+        // The time line takes what the names, its two borders and the times leave of the panel.
+        int width = Math.max(MIN_LINE, Math.min(MAX_LINE, panel - name - 2 - TOOK));
+        Layout layout = layout(ordered(groups), start, whole, width);
         return layout.rows().zipWithIndex().map(row -> line(layout, row._1(), row._2(), name, width, styles));
     }
 
@@ -179,7 +186,7 @@ final class JobTrain {
         return Line.from(List.of(Span.raw(pad(group.label(), name)), Span.styled("│", styles.of(Theme.Classes.DIM)))
                 .appendAll(cells)
                 .append(Span.styled("│", styles.of(Theme.Classes.DIM)))
-                .append(Span.raw(padLeft(group.took(), 10)))
+                .append(Span.raw(padLeft(group.took(), TOOK)))
                 .toJavaList());
     }
 
