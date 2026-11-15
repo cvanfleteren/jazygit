@@ -82,7 +82,7 @@ class LogGraphTest {
         // f is merged into m, g into n; both forked from b.
         assertEquals(
                 List.of(
-                        List.of("* |   first", "|-|\\  Merge", "|/  | second"),
+                        List.of("* |   first", "|─┼\\  Merge", "|/  | second"),
                         List.of("|   * first", "|__/  second"),
                         List.of("* first", "| second")),
                 drawn(
@@ -119,7 +119,7 @@ class LogGraphTest {
     void anOctopusMergeOpensARailForEachOtherParentOnOneLine() {
         assertEquals(
                 List.of(
-                        List.of("*     first", "|\\-\\  Merge", "| | | second"),
+                        List.of("*     first", "|\\─\\  Merge", "| | | second"),
                         List.of("| * | first", "|/  | second"),
                         List.of("|   * first", "|__/  second"),
                         List.of("* first", "| second")),

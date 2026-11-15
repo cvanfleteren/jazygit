@@ -13,6 +13,17 @@ import net.vanfleteren.jazygit.git.model.CommitGraph;
  */
 public final class LogGraph {
 
+    /**
+     * What the line on which a merge opens its rails draws between them: box drawing rather than {@code "-"}, as a
+     * {@code "-"} next to a {@code "|"} reads as joining it, and fonts with ligatures draw {@code "-|"} as one glyph.
+     */
+    private static final String ACROSS = "─";
+
+    /**
+     * A rail that line crosses.
+     */
+    private static final String CROSSING = "┼";
+
     private LogGraph() {}
 
     /**
@@ -29,7 +40,8 @@ public final class LogGraph {
      * The rails before the lines of the commit of {@code node}, two characters a rail, without the rails in
      * {@code ended}. A rail that joins the commit and did not end yet ends on a line of its own before it with a
      * {@code "/"}, the outermost first, along {@code "_"} past the rails in between. A merge opens the rails of its
-     * other parents on the line after its first with a {@code "\"}, along {@code "-"} past the rails in between.
+     * other parents on the line after its first with a {@code "\"}, along {@code "─"}, crossing the rails in between
+     * with {@code "┼"}.
      * The rails that meet one to their left end after that, the same way, one a line.
      */
     static Gutter gutter(CommitGraph.Node node, List<Integer> ended) {
@@ -85,13 +97,16 @@ public final class LogGraph {
     private static String opening(CommitGraph.Node node, boolean[] rails, int width) {
         int reach = node.opens().max().getOrElse(node.column());
         boolean[] opens = columns(width + 1, node.opens());
-        return line(
-                width,
-                at -> opens[(at + 1) / 2] && at % 2 == 1
-                        ? "\\"
-                        : rails[at / 2] && at % 2 == 0
-                                ? "|"
-                                : at > 2 * node.column() && at < 2 * reach - 1 ? "-" : " ");
+        return line(width, at -> {
+            boolean across = at > 2 * node.column() && at < 2 * reach - 1;
+            if (opens[(at + 1) / 2] && at % 2 == 1) {
+                return "\\";
+            }
+            if (rails[at / 2] && at % 2 == 0) {
+                return across ? CROSSING : "|";
+            }
+            return across ? ACROSS : " ";
+        });
     }
 
     private static String rail(boolean[] rails, int at) {
