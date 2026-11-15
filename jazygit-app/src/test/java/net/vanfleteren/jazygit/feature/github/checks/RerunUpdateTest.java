@@ -241,6 +241,73 @@ class RerunUpdateTest {
     }
 
     @Test
+    void rDoesNothingWhileTheRunsAskedToRunAgainAreStillBeingRunAgainAndTheAnswerShows() {
+        RerunCmd cmd = new RerunCmd(FEATURE, List.of(BUILD, E2E));
+        List<RerunCmd.Outcome> outcomes =
+                List.of(new RerunCmd.Outcome(BUILD, Option.none()), new RerunCmd.Outcome(E2E, Option.none()));
+        Model asked = confirmed().model();
+
+        Next again = Update.update(asked, new ChecksMsg.RerunRequested());
+        assertEquals(Next.of(asked), again);
+
+        Model answered = Update.update(again.model(), new ChecksMsg.Rerun(cmd, outcomes, List.empty()))
+                .model();
+        assertEquals(Option.none(), answered.popup(RerunPopup.class));
+        assertEquals(
+                Option.of(RerunNote.Asked.at(ASKED, List.of(1L, 2L)).answered(outcomes)),
+                checks(answered).rerun());
+        // Still waited for to show running, the checks still show them failed and done.
+        assertEquals(
+                Option.none(),
+                Update.update(answered, new ChecksMsg.RerunRequested()).model().popup(RerunPopup.class));
+    }
+
+    @Test
+    void anAnswerThatComesWhileAskingToRunAgainShowsOnceBackToTheChecks() {
+        RerunCmd cmd = new RerunCmd(FEATURE, List.of(BUILD));
+        List<RerunCmd.Outcome> outcomes = List.of(new RerunCmd.Outcome(BUILD, Option.none()));
+        ChecksPopup checks = checks(confirmed().model());
+        Model asking =
+                confirmed().model().openPopup(new RerunPopup(checks, new RerunPlan(List.of(BUILD), List.empty())));
+
+        Model answered = Update.update(asking, new ChecksMsg.Rerun(cmd, outcomes, List.empty()))
+                .model();
+        Model back = Update.update(answered, new ChecksMsg.RerunCancelled()).model();
+
+        assertEquals(
+                Option.of(RerunNote.Asked.at(ASKED, List.of(1L, 2L)).answered(outcomes)),
+                checks(back).rerun());
+    }
+
+    @Test
+    void whyNothingIsRunAgainGoesOnceTheChecksAreReadAgain() {
+        Model model = shown(List.of(check("verify", 1, "Build", Checks.PASSING, "SUCCESS")));
+        Model nothing = Update.update(model, new ChecksMsg.RerunRequested()).model();
+
+        Model read = Update.update(nothing, new ChecksMsg.Loaded(FEATURE, read(List.of(BUILD_FAILED))))
+                .model();
+
+        assertEquals(Option.none(), checks(read).rerun());
+    }
+
+    @Test
+    void onceGitHubRefusedEveryRunNoneIsWaitedForAndRCanAskAgain() {
+        Failure forbidden = refused("Must have admin rights to Repository. (HTTP 403)");
+        RerunCmd cmd = new RerunCmd(FEATURE, List.of(BUILD, E2E));
+        List<RerunCmd.Outcome> outcomes = List.of(
+                new RerunCmd.Outcome(BUILD, Option.of(forbidden)), new RerunCmd.Outcome(E2E, Option.of(forbidden)));
+
+        Model answered = Update.update(confirmed().model(), new ChecksMsg.Rerun(cmd, outcomes, List.empty()))
+                .model();
+
+        assertFalse(checks(answered).rerunAwaited(ASKED.plusSeconds(10)));
+        assertTrue(Update.update(answered, new ChecksMsg.RerunRequested())
+                .model()
+                .popup(RerunPopup.class)
+                .isDefined());
+    }
+
+    @Test
     void eachRunIsAskedToRunAgainAndOneRefusedDoesNotStopTheOthers() {
         GhFailure forbidden = new GhFailure(new GhError.TimedOut("rerun"), List.of(POSTED));
         java.util.List<Long> asked = new java.util.ArrayList<>();

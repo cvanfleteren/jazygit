@@ -117,7 +117,8 @@ public record ChecksPopup(
                 readAt,
                 reached,
                 from,
-                rerun.map(note -> note instanceof RerunNote.Asked asked ? asked.reading(checksRead) : note));
+                // Why nothing was run again was of the checks before; what was asked to run again stays.
+                asked().<RerunNote>map(asked -> asked.reading(checksRead)));
     }
 
     /**

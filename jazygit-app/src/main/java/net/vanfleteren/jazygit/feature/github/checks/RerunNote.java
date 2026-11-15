@@ -59,11 +59,22 @@ public sealed interface RerunNote {
         }
 
         /**
-         * Whether the runs are still waited for to show running again at {@code now}: not seen yet, and for no longer
-         * than {@link #AWAITED}.
+         * Whether the runs are still waited for to show running again at {@code now}: not seen yet, for no longer than
+         * {@link #AWAITED}, and not when GitHub refused to run any of them again, as none will then.
          */
         public boolean awaited(Instant now) {
-            return !seen && now.isBefore(at.plus(AWAITED));
+            return !seen
+                    && now.isBefore(at.plus(AWAITED))
+                    && outcomes.forAll(
+                            all -> all.exists(outcome -> outcome.refused().isEmpty()));
+        }
+
+        /**
+         * Whether the runs are still being run again at {@code now}: GitHub has not answered yet, or they are still
+         * waited for to show running, so that the checks shown may still show them failed and done.
+         */
+        public boolean pending(Instant now) {
+            return outcomes.isEmpty() || awaited(now);
         }
 
         /**

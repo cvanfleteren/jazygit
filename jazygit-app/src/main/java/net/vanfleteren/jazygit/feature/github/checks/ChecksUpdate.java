@@ -96,11 +96,14 @@ public final class ChecksUpdate {
     }
 
     /**
-     * Asks to run the failed checks shown again, once they were read; or says why nothing would be (ADR 135).
+     * Asks to run the failed checks shown again, once they were read; or says why nothing would be (ADR 135). Not
+     * while those asked to run again before are still being run again: the checks shown may still show them failed and
+     * done, and the title says they were asked to.
      */
     private static Next rerunRequested(Model model) {
         return Next.of(model.popup(ChecksPopup.class)
                 .filter(ChecksPopup::wasRead)
+                .filter(popup -> !popup.asked().exists(asked -> asked.pending(model.now())))
                 .map(popup -> {
                     RerunPlan plan = RerunPlan.of(popup.checksRead());
                     return plan.runs().isEmpty()
@@ -147,6 +150,13 @@ public final class ChecksUpdate {
                 .filter(popup -> popup.onGitHub().equals(cmd.branch()))
                 .flatMap(popup ->
                         popup.asked().map(asked -> refresh(told.openPopup(popup.withRerun(asked.answered(outcomes))))))
+                // Over the checks, they say so once back to them, and read them again by themselves meanwhile.
+                .orElse(() -> told.popup(RerunPopup.class)
+                        .filter(asking -> asking.checks().onGitHub().equals(cmd.branch()))
+                        .flatMap(asking -> asking.checks()
+                                .asked()
+                                .map(asked -> Next.of(told.openPopup(
+                                        asking.over(asking.checks().withRerun(asked.answered(outcomes))))))))
                 .getOrElse(() -> Next.of(told));
         return refused.size() < outcomes.size() ? BranchChecksUpdate.loadAnyway(answered) : answered;
     }
