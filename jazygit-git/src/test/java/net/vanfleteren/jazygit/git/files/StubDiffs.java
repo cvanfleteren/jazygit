@@ -37,6 +37,11 @@ public interface StubDiffs extends Diffs {
     }
 
     @Override
+    default Either<GitError, String> treeText(Sha sha, String path) {
+        return Either.left(new GitError.Unreadable(path, "not in " + sha.shortSha()));
+    }
+
+    @Override
     default Either<GitError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }

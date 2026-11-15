@@ -455,6 +455,14 @@ public final class ContentText {
     }
 
     /**
+     * Whether {@code body} is drawn for the width of its area, so drawn anew when that changes: a version of a file
+     * rendered (ADR 103), or the builds of a branch, whose chart has a column for as many builds as fit (ADR 131).
+     */
+    public static boolean drawnToWidth(Body body) {
+        return body instanceof Body.Builds || rendering(body);
+    }
+
+    /**
      * Whether {@code body} shows a version of a file rendered (ADR 103), which is drawn as wide as its area.
      */
     public static boolean rendering(Body body) {
@@ -462,7 +470,7 @@ public final class ContentText {
             case Body.Diff(ShownDiff shown, var look, var remarks) -> Option.of(shown);
             case Body.CommitChanges(var commit, ShownDiff changes, var look) -> Option.of(changes);
             case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
-            case Body.BranchLog _, Body.PullRequest _, Body.Note _ -> Option.none();
+            case Body.BranchLog _, Body.Builds _, Body.PullRequest _, Body.Note _ -> Option.none();
         };
         return diff.flatMap(ShownDiff::version)
                 .exists(version -> version.rendering().isDefined());

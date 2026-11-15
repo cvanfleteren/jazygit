@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -77,6 +78,15 @@ class CliTreeFilesTest {
                 new FileContent.Submodule(Sha.parse(submodule)),
                 diffs().treeContent(head, "sub").get());
         assertTrue(diffs().treeFiles(head).get().contains("sub"));
+    }
+
+    @Test
+    void theTextOfAFileIsReadWholeAsItIsInTheCommit() throws Exception {
+        Sha main = init();
+        Files.writeString(repo.resolve("dir/b.txt"), "edited\n");
+
+        assertEquals(Either.right("one\ntwo\n"), diffs().treeText(main, "dir/b.txt"));
+        assertTrue(diffs().treeText(main, "gone.txt").isLeft());
     }
 
     @Test

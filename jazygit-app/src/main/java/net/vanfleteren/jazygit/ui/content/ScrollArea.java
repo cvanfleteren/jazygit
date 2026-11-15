@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.ui.content;
 
 import static dev.tamboui.toolkit.Toolkit.*;
+import static net.vanfleteren.jazygit.ui.content.ContentText.drawnToWidth;
 import static net.vanfleteren.jazygit.ui.content.ContentText.markedHunk;
-import static net.vanfleteren.jazygit.ui.content.ContentText.rendering;
 import static net.vanfleteren.jazygit.ui.content.ContentText.window;
 import static net.vanfleteren.jazygit.ui.content.ContentText.windowed;
 
@@ -48,6 +48,7 @@ import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Found;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.FileStepMsg;
@@ -173,10 +174,12 @@ public final class ScrollArea {
                 before -> before.theme() == theme && shownAt.content().sameChanges(content));
         shownAt = known;
         Body body = shown.body();
-        // A version rendered is drawn as wide as the area, which it learns while it draws (ADR 80, 103).
+        // A version rendered, or the builds, are drawn as wide as the area, which it learns while it draws (ADR 80,
+        // 103, 131).
         int width = element.state().viewportWidth() > 0 ? element.state().viewportWidth() : RichDiff.RENDERED_WIDTH;
-        Option<Styled> last = styled.filter(before ->
-                before.body().equals(body) && before.theme() == theme && (!rendering(body) || before.width() == width));
+        Option<Styled> last = styled.filter(before -> before.body().equals(body)
+                && before.theme() == theme
+                && (!drawnToWidth(body) || before.width() == width));
         // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
         // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
         // The stop the cursor was on, which the stops of the cursor and the range are looked for from.
@@ -293,6 +296,12 @@ public final class ScrollArea {
                 .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(to, content)))
                 .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(
                                 review ? Scopes.PULL_REQUEST_DIFF : Scopes.DIFF, event, Option.of(at(on, content))))
+                        .map(this::reviewed))
+                // The builds of a branch have keys of their own, to show another workflow (ADR 131).
+                .orElse(() -> Option.when(
+                                content instanceof ScrolledContent.Builds,
+                                () -> KEYMAP.handle(Scopes.BUILDS, event, Option.none()))
+                        .flatMap(msg -> msg)
                         .map(this::reviewed))
                 // Without a cursor, as in the plain style, only the keys that move to another file act (ADR 117).
                 .orElse(() -> Option.when(cursor.isEmpty(), () -> KEYMAP.handle(Scopes.DIFF, event, Option.none()))
@@ -507,6 +516,17 @@ public final class ScrollArea {
         RichTextState state = element.state();
         if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
             focus.accept(area.id());
+            // A click on a tab of the builds of a branch shows its workflow (ADR 131).
+            Option<Msg> tab = Option.of(element.renderedArea())
+                    .filter(drawn -> state.scrollRow() + event.y() - drawn.top() - 1 == 0)
+                    .flatMap(drawn -> styled.flatMap(shown -> shown.body() instanceof Body.Builds(var builds)
+                            ? BuildsText.tabAt(builds, shown.width(), column + event.x() - drawn.left() - 1)
+                            : Option.none()))
+                    .map(BuildsViewMsg.TabClicked::new);
+            if (tab.isDefined()) {
+                tab.forEach(dispatch);
+                return EventResult.HANDLED;
+            }
             // The text starts a line below the top of the area, under its border.
             return cursor.flatMap(on ->
                             Option.of(element.renderedArea()).flatMap(drawn -> on.clicked(event.y() - drawn.top() - 1)))

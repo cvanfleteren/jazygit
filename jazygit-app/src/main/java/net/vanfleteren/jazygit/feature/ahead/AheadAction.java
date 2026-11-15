@@ -24,7 +24,8 @@ public final class AheadAction {
     public static final FeatureAction BRANCHES = FeatureAction.ofKeys(
             keys -> keys.add(Scopes.BRANCHES, Binding.always("b", "help.branches.onlyAhead", AheadMsg.Toggled::new))
                     .add(Scopes.REMOTE_BRANCHES, Binding.always("b", "help.branches.onlyAhead", AheadMsg.Toggled::new))
-                    .add(Scopes.BRANCH_COMMITS, Binding.always("b", "help.branches.onlyAhead", AheadMsg.Toggled::new)));
+                    .add(Scopes.BRANCH_COMMITS, Binding.always("b", "help.branches.onlyAhead", AheadMsg.Toggled::new))
+                    .add(Scopes.BUILDS, Binding.always("b", "help.builds.onlyAhead", AheadMsg.Toggled::new)));
 
     private AheadAction() {}
 }

@@ -6,9 +6,11 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffContext;
@@ -37,6 +39,8 @@ import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.state.view.BuildsShown;
+import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
@@ -417,7 +421,68 @@ public final class ContentView {
                                 sha -> model.branchCommit(view, sha),
                                 Option.when(
                                         view.commits(model).toOption().exists(List::isEmpty), "content.noCommits"))))
+                .orElse(() -> builds(model))
                 .getOrElse(() -> branchLog(model));
+    }
+
+    /**
+     * The builds of the local branch highlighted in the branches pane, while they are shown for it (ADR 131).
+     */
+    private static Option<Shown> builds(Model model) {
+        return model.repoView()
+                .branches()
+                .builds()
+                .filter(view -> model.repoView().branches().tab() == BranchesTab.LOCAL
+                        && model.repoView()
+                                .preview()
+                                .branchLog()
+                                .exists(log -> log.key().equals(new BranchRef.Local(view.branch()))))
+                .map(view -> {
+                    String branch = view.branch().value();
+                    String commits = String.valueOf(view.commits());
+                    BranchRef local = new BranchRef.Local(view.branch());
+                    AheadView ahead = new AheadView(
+                            AheadUpdate.branch(model, local),
+                            AheadUpdate.distance(model, local),
+                            model.repoView().commits().shown().ahead());
+                    List<Build> shown =
+                            BuildsView.shown(view.builds().getOrElse(List.empty()), ahead.ahead(), ahead.only());
+                    String read = view.reading()
+                            ? Messages.get("panel.builds.reading", branch, commits)
+                            : view.stopped().isDefined()
+                                    ? Messages.get("panel.builds.stopped", branch, commits)
+                                    : Messages.get("panel.builds.title", branch, commits);
+                    // Only the builds of the commits not on the base show: the title says how many there are.
+                    String ofBranch = ahead.only() ? ahead.title(read) : read;
+                    String title = view.allBranches() ? Messages.get("panel.builds.everyBranch", ofBranch) : ofBranch;
+                    return whenLoaded(
+                            title,
+                            view.builds(),
+                            builds -> view.onGitHub()
+                                    .map(remote -> view.shownOf(shown)
+                                            .<Shown>map(drawn -> new Shown.Area(
+                                                    ContentArea.BUILDS,
+                                                    title,
+                                                    new ScrolledContent.Builds(view.branch()),
+                                                    new Body.Builds(drawn)))
+                                            .getOrElse(() -> builds.isEmpty()
+                                                    ? view.reading()
+                                                            ? loading(title)
+                                                            : view.commits() == 0
+                                                                    ? dim(
+                                                                            title,
+                                                                            Messages.get(
+                                                                                    "content.builds.notOnGitHub",
+                                                                                    remote.shortName()))
+                                                                    : dim(
+                                                                            title,
+                                                                            Messages.get(
+                                                                                    "content.builds.none",
+                                                                                    remote.shortName(),
+                                                                                    String.valueOf(view.commits())))
+                                                    : dim(title, Messages.get("content.builds.noneAhead"))))
+                                    .getOrElse(() -> dim(title, Messages.get("content.builds.offGitHub", branch))));
+                });
     }
 
     private static Shown branchLog(Model model) {
@@ -681,6 +746,11 @@ public final class ContentView {
          * The log of a branch, as far as {@code ahead} shows it.
          */
         record BranchLog(List<Commit> commits, AheadView ahead) implements Body {}
+
+        /**
+         * The builds of a branch, of the newest commit first (ADR 131).
+         */
+        record Builds(BuildsShown shown) implements Body {}
 
         /**
          * A commit and what it changed, drawn as {@code look} says.

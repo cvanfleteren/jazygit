@@ -7,6 +7,7 @@ import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Focus;
@@ -14,10 +15,12 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.content.ContentPanel;
 
 /**
@@ -37,6 +40,9 @@ final class FocusKeeper {
     private Option<Focus> lastFocus = Option.none();
     // The files of a commit the last frame listed; when the model opens or closes them, the focus follows.
     private Option<CommitFilesView> shownFiles = Option.none();
+    // The branch whose builds the last frame had open, and whether they are to take the focus once they show.
+    private Option<BranchName> shownBuilds = Option.none();
+    private boolean buildsToFocus = false;
 
     /**
      * @param runner        the runner of the app, once it is started
@@ -91,12 +97,38 @@ final class FocusKeeper {
             moveToPaneOf(model);
         }
         followCommitFiles(model);
+        followBuilds(model);
         leaveCollapsedColumn(model);
         // An area that no longer shows gives the focus to the one that took its place, not to the first pane.
         focus().flatMap(focus -> contentPanel.replacing(model, focus)).forEach(this::moveTo);
         Option<Focus> settled = focus();
         lastFocus = settled.orElse(lastFocus);
         return settled;
+    }
+
+    /**
+     * Moves the focus from the branches into the builds of a branch once they show, after {@code B} opened them, and
+     * back to the branches once they are closed while they have it (ADR 131).
+     */
+    private void followBuilds(Model model) {
+        Option<BranchName> builds = model.repoView().branches().builds().map(BuildsView::branch);
+        if (!builds.equals(shownBuilds)) {
+            if (builds.isEmpty() && focus().contains(AreaId.BUILDS)) {
+                moveTo(BranchesPanel.PANE);
+            }
+            buildsToFocus = builds.isDefined();
+            shownBuilds = builds;
+        }
+        // The area takes the focus only once a frame drew it: until then, the next frame tries again.
+        if (buildsToFocus && contentPanel.areaOfPane(model, BranchesPanel.PANE).contains(AreaId.BUILDS)) {
+            if (focus().contains(BranchesPanel.PANE)) {
+                moveTo(AreaId.BUILDS);
+            }
+            buildsToFocus = focus().contains(BranchesPanel.PANE);
+            if (buildsToFocus) {
+                requestRedraw.run();
+            }
+        }
     }
 
     /**

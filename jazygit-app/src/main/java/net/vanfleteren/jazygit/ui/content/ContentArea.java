@@ -33,7 +33,9 @@ public enum ContentArea {
     BRANCH_COMMIT(AreaId.BRANCH_COMMIT, BranchesPanel.ID),
     // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
     PULL_REQUEST(AreaId.PULL_REQUEST, model -> model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE)),
-    LOG(AreaId.LOG, BranchesPanel.ID);
+    LOG(AreaId.LOG, BranchesPanel.ID),
+    // The builds of the branch highlighted in the branches pane, in place of its log (ADR 131).
+    BUILDS(AreaId.BUILDS, BranchesPanel.ID);
 
     private final AreaId id;
     private final Function<Model, PaneId> pane;

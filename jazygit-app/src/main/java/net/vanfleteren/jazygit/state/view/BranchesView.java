@@ -19,6 +19,8 @@ import net.vanfleteren.jazygit.gh.model.PrNumber;
  * @param closedStacks  the numbers of the stacks the pane shows closed, as only their header; a stack starts open
  *                      (ADR 72)
  * @param stacking      whether the pane lists the branches of a stack under a header, or as any other branch (ADR 87)
+ * @param builds        the builds of a local branch on GitHub, which the content panel shows in place of its log
+ *                      while that branch is highlighted (ADR 131)
  */
 @With
 public record BranchesView(
@@ -27,8 +29,15 @@ public record BranchesView(
         Option<BranchCommitsView> branchCommits,
         Option<PrNumber> unfetched,
         Set<Integer> closedStacks,
-        Stacking stacking) {
+        Stacking stacking,
+        Option<BuildsView> builds) {
 
     public static final BranchesView INITIAL = new BranchesView(
-            BranchesTab.LOCAL, Option.none(), Option.none(), Option.none(), HashSet.empty(), Stacking.STACKED);
+            BranchesTab.LOCAL,
+            Option.none(),
+            Option.none(),
+            Option.none(),
+            HashSet.empty(),
+            Stacking.STACKED,
+            Option.none());
 }

@@ -42,6 +42,12 @@ public interface Diffs {
     Either<GitError, FileContent> treeContent(Sha sha, String path);
 
     /**
+     * The text of the file at {@code path} in the commit {@code sha}, whole, as a small file of settings is read, like
+     * a workflow of GitHub Actions (ADR 131).
+     */
+    Either<GitError, String> treeText(Sha sha, String path);
+
+    /**
      * What the commit {@code sha} changed in {@code files}, like {@code git show -- <paths>}: only the diff, a merge
      * against its first parent, read with {@code options}. Long output is cut off.
      */

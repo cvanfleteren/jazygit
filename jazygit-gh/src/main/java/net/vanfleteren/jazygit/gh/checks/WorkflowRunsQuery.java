@@ -1,0 +1,142 @@
+package net.vanfleteren.jazygit.gh.checks;
+
+import static net.vanfleteren.jazygit.gh.process.GhCommand.gh;
+import static net.vanfleteren.jazygit.json.Decoder.at;
+import static net.vanfleteren.jazygit.json.Decoder.bool;
+import static net.vanfleteren.jazygit.json.Decoder.field;
+import static net.vanfleteren.jazygit.json.Decoder.instant;
+import static net.vanfleteren.jazygit.json.Decoder.integer;
+import static net.vanfleteren.jazygit.json.Decoder.list;
+import static net.vanfleteren.jazygit.json.Decoder.longValue;
+import static net.vanfleteren.jazygit.json.Decoder.map2;
+import static net.vanfleteren.jazygit.json.Decoder.map4;
+import static net.vanfleteren.jazygit.json.Decoder.map5;
+import static net.vanfleteren.jazygit.json.Decoder.map6;
+import static net.vanfleteren.jazygit.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.json.Decoder.string;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.Build;
+import net.vanfleteren.jazygit.gh.model.WorkflowRunsPage;
+import net.vanfleteren.jazygit.gh.process.GhCommand;
+import net.vanfleteren.jazygit.json.Decoder;
+
+/**
+ * The runs of one workflow on every branch, some at a time, the newest first, each with its jobs: how long a workflow
+ * takes in general, not only on one branch (ADR 42, 131).
+ */
+final class WorkflowRunsQuery {
+
+    /**
+     * The runs read in one call: 50 with their jobs take under 2 s.
+     */
+    static final int RUNS = 25;
+
+    static final String QUERY = """
+            query($id: ID!, $count: Int!, $after: String) { node(id: $id) { ... on Workflow { name \
+            runs(first: $count, after: $after) { pageInfo { hasNextPage endCursor } nodes { databaseId createdAt \
+            runAttempt event file { path } checkSuite { branch { name } commit { oid message } \
+            matchingPullRequests(first: 1) { nodes { number } } \
+            checkRuns(first: 50) { nodes { name status conclusion startedAt completedAt } } } } } } } }""";
+
+    // A job of a run: running until it is completed, then how it ended.
+    static final Decoder<Build.Job> JOB = map5(
+            field("name", string()),
+            field("status", string()),
+            field("conclusion", nullable(string())),
+            field("startedAt", nullable(instant())),
+            field("completedAt", nullable(instant())),
+            (name, status, conclusion, started, completed) -> new Build.Job(
+                    name, status.equals("COMPLETED") ? conclusion.getOrElse("") : "", started, completed));
+
+    // The commit, the branch, the pull request and the jobs of a run.
+    static final Decoder<Suite> SUITE = map4(
+            field("branch", nullable(field("name", string()))),
+            field(
+                    "commit",
+                    map2(
+                            field("oid", string()),
+                            field("message", string()),
+                            (oid, message) ->
+                                    new Commit(oid, message.lines().findFirst().orElse("")))),
+            at("matchingPullRequests.nodes", list(field("number", integer()))).map(List::headOption),
+            at("checkRuns.nodes", list(JOB)),
+            Suite::new);
+
+    private WorkflowRunsQuery() {}
+
+    /**
+     * The runs read, as builds of the workflow {@code workflow}, whose id is {@code id}; none when it is not a workflow.
+     */
+    static Decoder<Option<WorkflowRunsPage>> decoder(String id) {
+        return at(
+                "data.node",
+                nullable(map2(
+                        field("name", string()),
+                        field(
+                                "runs",
+                                map2(
+                                        field(
+                                                "pageInfo",
+                                                map2(
+                                                        field("hasNextPage", bool()),
+                                                        field("endCursor", nullable(string())),
+                                                        (more, cursor) -> cursor.filter(at -> more))),
+                                        field("nodes", list(run())),
+                                        RunsRead::new)),
+                        (name, read) -> new WorkflowRunsPage(
+                                read.runs()
+                                        .map(run -> run.build(name, id))
+                                        .filter(build -> BuildsQuery.EVENTS.contains(build.event())),
+                                read.runs().size(),
+                                read.next()))));
+    }
+
+    /**
+     * The call reading {@link #RUNS} runs of the workflow {@code id}, the newest first, from {@code after} on, or from
+     * the newest without.
+     */
+    static GhCommand command(String id, Option<String> after) {
+        List<String> args = List.of("api", "graphql", "-f", "id=" + id, "-F", "count=" + RUNS)
+                .appendAll(after.toList().flatMap(cursor -> List.of("-f", "after=" + cursor)))
+                .appendAll(List.of("-f", "query=" + QUERY));
+        return gh(args.toJavaArray(String[]::new));
+    }
+
+    private static Decoder<Run> run() {
+        return map6(
+                field("databaseId", longValue()),
+                field("createdAt", instant()),
+                field("runAttempt", nullable(integer())),
+                field("event", string()),
+                field("file", nullable(field("path", string()))),
+                field("checkSuite", SUITE),
+                Run::new);
+    }
+
+    private record Commit(String sha, String title) {}
+
+    private record Suite(Option<String> branch, Commit commit, Option<Integer> pullRequest, List<Build.Job> jobs) {}
+
+    private record RunsRead(Option<String> next, List<Run> runs) {}
+
+    private record Run(
+            long id, Instant createdAt, Option<Integer> attempt, String event, Option<String> file, Suite suite) {
+
+        Build build(String workflow, String workflowId) {
+            return new Build(
+                    workflow,
+                    event,
+                    id,
+                    attempt.getOrElse(1),
+                    suite.commit().sha(),
+                    suite.commit().title(),
+                    createdAt,
+                    suite.jobs(),
+                    file,
+                    new Build.Origin(Option.of(workflowId), suite.branch(), suite.pullRequest()));
+        }
+    }
+}
