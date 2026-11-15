@@ -169,6 +169,15 @@ final class BuildsText {
     }
 
     /**
+     * The widths of the columns of the jobs, before their numbers.
+     *
+     * @param name   of the names of the jobs
+     * @param passed of whether each passed
+     * @param time   of how long each took
+     */
+    private record Columns(int name, int passed, int time) {}
+
+    /**
      * How the builds are drawn.
      *
      * @param styles the styles of the theme
@@ -406,11 +415,18 @@ final class BuildsText {
             }
             int width = Math.min(NAME, names.map(TextWidth::of).max().getOrElse(0)) + 1;
             int count = builds.size();
+            String passedLabel = Messages.get("content.builds.lastBuilds", String.valueOf(count));
+            String timeLabel = Messages.get("content.builds.time");
+            // A column is as wide as its builds, or as its header with few of them, with two columns after it.
+            Columns columns = new Columns(
+                    width,
+                    Math.max(count, TextWidth.of(passedLabel)) + 2,
+                    Math.max(count, TextWidth.of(timeLabel)) + 2);
             Line header = Line.from(dim(pad(Messages.get("content.builds.job"), width)
-                    + pad(Messages.get("content.builds.lastBuilds", String.valueOf(count)), count + 2)
-                    + pad(Messages.get("content.builds.time"), count + 2)
+                    + pad(passedLabel, columns.passed())
+                    + pad(timeLabel, columns.time())
                     + Messages.get("content.builds.jobTimes")));
-            return names.map(name -> job(name, builds.map(build -> ofJob(build, name)), width))
+            return names.map(name -> job(name, builds.map(build -> ofJob(build, name)), columns))
                     .prepend(header)
                     .append(Line.from(""));
         }
@@ -438,7 +454,7 @@ final class BuildsText {
                             shards.flatMap(Build.Job::duration).max().getOrElse(Duration.ZERO)));
         }
 
-        private Line job(String name, List<Option<Tuple2<Outcome, Duration>>> runs, int width) {
+        private Line job(String name, List<Option<Tuple2<Outcome, Duration>>> runs, Columns columns) {
             List<Duration> passed = runs.flatMap(run -> run)
                     .filter(run -> run._1() == Outcome.PASSED)
                     .map(Tuple2::_2);
@@ -467,11 +483,11 @@ final class BuildsText {
                             .minus(median(passed.take(half)).get()));
             Option<Duration> last =
                     runs.reverse().flatMap(run -> run).headOption().map(Tuple2::_2);
-            return Line.from(List.of(Span.raw(pad(name, width)))
+            return Line.from(List.of(Span.raw(pad(name, columns.name())))
                     .appendAll(results)
-                    .append(Span.raw("  "))
+                    .append(Span.raw(" ".repeat(Math.max(0, columns.passed() - runs.size()))))
                     .appendAll(sparks)
-                    .append(Span.raw("  "))
+                    .append(Span.raw(" ".repeat(Math.max(0, columns.time() - runs.size()))))
                     .append(Span.raw(
                             padLeft(median(passed).map(BuildsText::duration).getOrElse("–"), 6)))
                     .append(Span.raw(padLeft(last.map(BuildsText::duration).getOrElse("–"), 7)))

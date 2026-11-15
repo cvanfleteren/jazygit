@@ -186,4 +186,17 @@ class BuildsTextTest {
 
         assertEquals("▆".repeat(30), acceptance.substring("acceptance ".length(), "acceptance ".length() + 30));
     }
+
+    @Test
+    void theHeadersOfTheJobsShowInFullWithOneBuild() {
+        List<String> lines = drawn(List.of(build("Publish", 0, "SUCCESS", 240)));
+        String header = lines.find(line -> line.startsWith("job")).get();
+        String row = lines.find(line -> line.startsWith("package ")).get();
+
+        assertTrue(header.contains("last 1  time  median"), header);
+        // The strip and the sparkline sit under their headers, the numbers under theirs.
+        assertEquals(header.indexOf("last 1"), row.indexOf("▆"), header + "\n" + row);
+        assertEquals(
+                header.indexOf("median") + "median".length(), row.indexOf("55s") + "55s".length(), header + "\n" + row);
+    }
 }
