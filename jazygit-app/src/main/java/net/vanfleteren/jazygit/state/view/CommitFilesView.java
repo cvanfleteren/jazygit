@@ -252,10 +252,10 @@ public record CommitFilesView(
      * The view of the files of {@code of}, while it is the one open.
      */
     public static Lens<RepoView, CommitFilesView> open(Changes of) {
-        return Lens.where(
-                RepoView::commitFiles,
-                RepoView::withCommitFiles,
-                view -> view.of().equals(of));
+        return RepoView.FILES.andThen(Lens.where(
+                FilesView::commitFiles,
+                FilesView::withCommitFiles,
+                view -> view.of().equals(of)));
     }
 
     /**

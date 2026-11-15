@@ -54,10 +54,11 @@ public final class LoadUpdate {
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded loaded ->
                 Next.of(loaded.kept(done)
-                        .mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                        .mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(repoView.files()
+                                .commitFiles()
                                 .filter(view -> !(view.of() instanceof Changes.OfStash stash)
                                         || loaded.stashes()
-                                                .exists(listed -> listed.sha().equals(stash.sha()))))));
+                                                .exists(listed -> listed.sha().equals(stash.sha())))))));
             case WorktreeChangesLoaded loaded ->
                 Next.of(done.mapRepo(repo -> repo.withWorktreeChanges(loaded.changes())));
             // The log is only read again when HEAD moved, so the history the search runs on changed too, and what
@@ -108,6 +109,7 @@ public final class LoadUpdate {
     private static Next rereadWhole(Model model) {
         DiffOptions options = model.preferences().diffOptions();
         Set<String> shown = model.repoView()
+                .preview()
                 .fileDiff()
                 .flatMap(preview -> preview.value().toOption())
                 .toList()
@@ -118,7 +120,7 @@ public final class LoadUpdate {
                 .map(file -> file.file().path())
                 .toSet();
         List<ReadWholeFile> reads = model.repoView()
-                .expanded()
+                .expansions()
                 .toList()
                 .filter(area -> area._2().content() instanceof ScrolledContent.Diff)
                 .<ReadWholeFile>flatMap(area -> area._2()
@@ -166,6 +168,7 @@ public final class LoadUpdate {
         return read.then(model -> new Next(
                 model,
                 model.repoView()
+                        .commits()
                         .commitSearch()
                         .<Cmd>map(SearchCommits::of)
                         .filter(search -> !read.cmds().contains(search))
@@ -232,7 +235,7 @@ public final class LoadUpdate {
      */
     private static List<Cmd> allFilesLoad(Model before, Model next) {
         return Option.<Cmd>of(new LoadAllFiles())
-                .filter(load -> next.repoView().allFiles()
+                .filter(load -> next.repoView().files().shown().all()
                         && (next.repo().allFiles().toOption().isEmpty()
                                 || !before.repo().status().equals(next.repo().status())))
                 .toList();
@@ -260,6 +263,7 @@ public final class LoadUpdate {
     private static Next reloadDivergence(Model before, Next next) {
         Model model = next.model();
         return model.repoView()
+                .branches()
                 .divergence()
                 .map(view -> switch (validity(model, view)) {
                     case Validity.Keep() ->
@@ -278,14 +282,16 @@ public final class LoadUpdate {
      */
     private static Model closeGoneBranchCommits(Model model) {
         return model.repoView()
+                .branches()
                 .branchCommits()
                 .filter(view -> tipOf(model, view.branch()).contains(Option.none()))
-                .map(gone -> model.mapRepoView(repoView -> repoView.withBranchCommits(Option.none())))
+                .map(gone -> model.mapRepoView(
+                        repoView -> repoView.mapBranches(branches -> branches.withBranchCommits(Option.none()))))
                 .getOrElse(model);
     }
 
     private static Model withoutDivergence(Model model) {
-        return model.mapRepoView(repoView -> repoView.withDivergence(Option.none()));
+        return model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withDivergence(Option.none())));
     }
 
     /**
@@ -338,6 +344,7 @@ public final class LoadUpdate {
      */
     private static Next reloadMovedLog(Model next, Predicate<BranchRef> moved) {
         return next.repoView()
+                .preview()
                 .branchLog()
                 .map(Preview::key)
                 .filter(moved)

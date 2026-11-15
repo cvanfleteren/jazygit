@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.FileFilter;
+import net.vanfleteren.jazygit.state.view.FilesShown;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
@@ -35,7 +36,7 @@ class FilesPanelAllFilesTest {
         Model loaded = TestModels.loaded();
         return loaded.mapRepo(repo -> repo.withStatus(repo.status().map(status -> status.withFiles(List.of(CHANGED))))
                         .withAllFiles(new Loadable.Loaded<>(ALL)))
-                .mapRepoView(view -> view.withAllFiles(listed));
+                .mapRepoView(view -> view.mapFiles(files -> files.withShown(FilesShown.of(listed))));
     }
 
     @Test
@@ -95,8 +96,9 @@ class FilesPanelAllFilesTest {
 
     @Test
     void theFilterNarrowsAllFiles() throws Exception {
-        Model filtered =
-                all(true).mapRepoView(view -> view.withFilesFilter(Option.of(new FileFilter("intro", Option.none()))));
+        Model filtered = all(true)
+                .mapRepoView(view ->
+                        view.mapFiles(files -> files.withFilter(Option.of(new FileFilter("intro", Option.none())))));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(filtered, FilesPanel.ID))) {
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.ID));
 

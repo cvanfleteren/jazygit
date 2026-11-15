@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.state.view.PreviewView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 public record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad, Targeted<Diffs> {
@@ -30,7 +31,8 @@ public record LoadFileDiff(List<FileEntry> files, DiffOptions options) implement
      */
     @Override
     public Target<Diffs> target() {
-        return Target.inView(Preview.lens(RepoView::fileDiff, RepoView::withFileDiff, files));
+        return Target.inView(
+                RepoView.PREVIEW.andThen(Preview.lens(PreviewView::fileDiff, PreviewView::withFileDiff, files)));
     }
 
     /**

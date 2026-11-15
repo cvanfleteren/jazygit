@@ -33,6 +33,7 @@ public record BranchCommitsView(BranchRef branch, Option<Preview<Sha, DiffText>>
      */
     public Loadable<List<Commit>> commits(Model model) {
         return model.repoView()
+                .preview()
                 .branchLog()
                 .filter(log -> log.key().equals(branch))
                 .map(Preview::value)

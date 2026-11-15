@@ -128,7 +128,10 @@ class JazygitAppFileStepTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
-            awaitModel(testRunner, app, model -> model.repoView().commitDetail().isDefined());
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().preview().commitDetail().isDefined());
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
             pilot.press(KeyCode.RIGHT);
             pilot.pause();
@@ -183,7 +186,8 @@ class JazygitAppFileStepTest {
             app.start(testRunner);
             SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
             SettledPilot.of(testRunner, app.drawnAt::size).press('a');
-            awaitModel(testRunner, app, model -> model.repoView().allFiles());
+            awaitModel(
+                    testRunner, app, model -> model.repoView().files().shown().all());
             Pilot pilot = inTheDiffOf(testRunner, app, "a.txt");
             assertFocused(testRunner, AreaId.UNSTAGED);
 
@@ -212,7 +216,7 @@ class JazygitAppFileStepTest {
             awaitModel(
                     testRunner,
                     app,
-                    model -> model.repoView().unchanged().isEmpty()
+                    model -> model.repoView().files().unchanged().isEmpty()
                             && shownFiles(model).contains(List.of("a.txt")));
             pilot.pause();
             assertFocused(testRunner, AreaId.UNSTAGED);
@@ -227,13 +231,17 @@ class JazygitAppFileStepTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
-            awaitModel(testRunner, app, model -> model.repoView().commitDetail().isDefined());
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().preview().commitDetail().isDefined());
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
             pilot.press('F');
             awaitModel(
                     testRunner,
                     app,
                     model -> model.repoView()
+                            .files()
                             .commitFiles()
                             .exists(view -> view.files().toOption().isDefined()));
             for (int row = 0;
@@ -355,6 +363,7 @@ class JazygitAppFileStepTest {
 
     private static Option<String> unchangedShown(Model model) {
         return model.repoView()
+                .files()
                 .unchanged()
                 .flatMap(node -> node instanceof UnchangedNode.File(var content)
                                 && content.value() instanceof Loadable.Loaded<FileContent>
@@ -364,6 +373,7 @@ class JazygitAppFileStepTest {
 
     private static Option<String> commitFileShown(Model model) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .flatMap(CommitFilesView::diff)
                 .filter(diff -> diff.value() instanceof Loadable.Loaded<DiffText>)
@@ -395,6 +405,7 @@ class JazygitAppFileStepTest {
                 testRunner,
                 app,
                 model -> model.repoView()
+                        .preview()
                         .fileDiff()
                         .exists(diff -> diff.value().toOption().isDefined()));
         pilot.press(KeyCode.RIGHT);
@@ -409,6 +420,6 @@ class JazygitAppFileStepTest {
     }
 
     private static Option<List<String>> shownFiles(Model model) {
-        return model.repoView().fileDiff().map(Preview::key).map(files -> files.map(FileEntry::path));
+        return model.repoView().preview().fileDiff().map(Preview::key).map(files -> files.map(FileEntry::path));
     }
 }

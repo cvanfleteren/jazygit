@@ -40,11 +40,11 @@ class FilesPanelCommitAllFilesTest {
 
     private static Model listing(boolean all, Loadable<List<CommitFile>> tree) {
         return TestModels.loaded()
-                .mapRepoView(view -> view.withCommitFiles(
+                .mapRepoView(view -> view.mapFiles(files -> files.withCommitFiles(
                         Option.of(CommitFilesView.of(TIP, Scopes.BRANCHES.pane(), Scopes.FILES.pane())
                                 .withFiles(new Loadable.Loaded<>(List.of(CHANGED)))
                                 .withAllFiles(all)
-                                .withTree(Option.of(tree)))));
+                                .withTree(Option.of(tree))))));
     }
 
     @Test

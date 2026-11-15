@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.view.FilesShown;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -38,7 +39,9 @@ class UnchangedContentTest {
     private final ContentPanel content = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
 
     private static Model showing(UnchangedNode node) {
-        return TestModels.loaded().mapRepoView(view -> view.withAllFiles(true).withUnchanged(Option.of(node)));
+        return TestModels.loaded()
+                .mapRepoView(view -> view.mapFiles(files -> files.withShown(FilesShown.ALL))
+                        .mapFiles(files -> files.withUnchanged(Option.of(node))));
     }
 
     private static Model showing(String path, FileContent read) {

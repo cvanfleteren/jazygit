@@ -70,7 +70,7 @@ class ExpandUpdateTest {
         Next next = Update.update(read, new ExpandMsg.Asked(at(BELOW), ExpandMsg.Toward.DOWN));
 
         assertEquals(List.of(), next.cmds());
-        Expansion expansion = next.model().repoView().expanded().get(AREA).get();
+        Expansion expansion = next.model().repoView().expansions().get(AREA).get();
         assertEquals(
                 List.of("@@ -1,23 +1,23 @@"),
                 expansion
@@ -110,7 +110,7 @@ class ExpandUpdateTest {
 
         Model wider = Update.update(read, new DiffOptionsMsg.ContextWidened()).model();
 
-        assertTrue(wider.repoView().expanded().isEmpty());
+        assertTrue(wider.repoView().expansions().isEmpty());
     }
 
     @Test
@@ -219,7 +219,7 @@ class ExpandUpdateTest {
 
     private static Option<Expansion.Expanded> expanded(Model model) {
         return model.repoView()
-                .expanded()
+                .expansions()
                 .get(AREA)
                 .flatMap(expansion -> expansion.files().get("a.txt"));
     }

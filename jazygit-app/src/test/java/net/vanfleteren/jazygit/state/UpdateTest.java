@@ -86,11 +86,11 @@ class UpdateTest {
         Model started = Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing)
                 .model();
 
-        assertEquals(BranchesTab.WORKTREES, started.repoView().branchesTab());
+        assertEquals(BranchesTab.WORKTREES, started.repoView().branches().tab());
         assertEquals(Option.of("branches"), started.shownPane());
         // Where the app starts: the local branches, and no pane yet, so the files get the focus.
         Model fresh = Update.init("repo").model();
-        assertEquals(BranchesTab.LOCAL, fresh.repoView().branchesTab());
+        assertEquals(BranchesTab.LOCAL, fresh.repoView().branches().tab());
         assertEquals(Option.none(), fresh.shownPane());
     }
 

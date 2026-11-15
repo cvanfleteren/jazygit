@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.view.Stacking;
 import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -281,8 +282,8 @@ class LocalBranchesList implements BranchesTabList {
                 .map(branches -> BranchNode.of(
                         branches,
                         model.gitHub()::pullRequest,
-                        !model.repoView().unstacked(),
-                        model.repoView().closedStacks(),
+                        model.repoView().branches().stacking() == Stacking.STACKED,
+                        model.repoView().branches().closedStacks(),
                         head -> fetched(model, head)));
         nodes = read.equals(nodes) ? nodes : read;
         Function<Branch, LoadableList.Row> rowOf = b -> row(

@@ -61,8 +61,7 @@ public final class FoldUpdate {
                                 .flatMap(lines ->
                                         Tree.read(kind, lines.mkString("\n")).toOption()))
                         .flatMap(documents -> choose.apply(version, TreeFolds.nodes(documents)))
-                        .map(nodes -> model.mapRepoView(
-                                view -> view.withVersions(view.versions().put(at.area(), version.withNodes(nodes))))))
+                        .map(nodes -> model.mapRepoView(view -> view.withVersion(at.area(), version.withNodes(nodes)))))
                 .map(Next::of)
                 .getOrElse(() -> Next.of(model));
     }

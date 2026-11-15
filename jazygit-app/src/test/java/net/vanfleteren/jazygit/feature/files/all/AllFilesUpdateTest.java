@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.view.FilesShown;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
 import org.junit.jupiter.api.Test;
@@ -70,7 +71,7 @@ class AllFilesUpdateTest {
 
         program.dispatch(new AllFilesMsg.Toggled());
 
-        assertTrue(program.model().repoView().allFiles());
+        assertTrue(program.model().repoView().files().shown().all());
         assertEquals(1, listed.get());
         assertEquals(
                 new Loadable.Loaded<>(
@@ -82,7 +83,7 @@ class AllFilesUpdateTest {
 
     @Test
     void untilAllFilesAreReadTheyAreLoading() {
-        Model model = TestModels.loaded().mapRepoView(view -> view.withAllFiles(true));
+        Model model = TestModels.loaded().mapRepoView(view -> view.mapFiles(files -> files.withShown(FilesShown.ALL)));
 
         assertEquals(Loadable.loading(), model.repo().workingFiles(true));
     }
@@ -115,7 +116,7 @@ class AllFilesUpdateTest {
 
         assertEquals(
                 Option.of(new UnchangedNode.File(new Preview<>("b.txt", new Loadable.Loaded<>(B)))),
-                program.model().repoView().unchanged());
+                program.model().repoView().files().unchanged());
     }
 
     @Test
@@ -127,7 +128,7 @@ class AllFilesUpdateTest {
 
         assertEquals(
                 Option.of(new UnchangedNode.Directory("docs", 1)),
-                program.model().repoView().unchanged());
+                program.model().repoView().files().unchanged());
     }
 
     @Test
@@ -140,8 +141,8 @@ class AllFilesUpdateTest {
         // The diff read before is shown again, without reading it again.
         program.dispatch(new SelectionMsg.FilesSelected(List.of(CHANGED)));
 
-        assertEquals(Option.none(), program.model().repoView().unchanged());
-        assertTrue(program.model().repoView().fileDiff().isDefined());
+        assertEquals(Option.none(), program.model().repoView().files().unchanged());
+        assertTrue(program.model().repoView().preview().fileDiff().isDefined());
     }
 
     @Test
@@ -152,8 +153,8 @@ class AllFilesUpdateTest {
 
         program.dispatch(new AllFilesMsg.Toggled());
 
-        assertFalse(program.model().repoView().allFiles());
-        assertEquals(Option.none(), program.model().repoView().unchanged());
+        assertFalse(program.model().repoView().files().shown().all());
+        assertEquals(Option.none(), program.model().repoView().files().unchanged());
     }
 
     @Test

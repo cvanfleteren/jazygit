@@ -122,7 +122,7 @@ class UpstreamUpdateTest {
 
         DivergenceView view = DivergenceView.loading(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE), Against.UPSTREAM);
         assertEquals(Option.none(), next.model().popup());
-        assertEquals(Option.of(view), next.model().repoView().divergence());
+        assertEquals(Option.of(view), next.model().repoView().branches().divergence());
         assertEquals(List.of(new LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))), next.cmds());
     }
 
@@ -134,7 +134,7 @@ class UpstreamUpdateTest {
 
         assertEquals(
                 Option.of(DivergenceView.loading(FEATURE, new BranchRef.Remote(ORIGIN_MAIN), Against.BASE)),
-                next.model().repoView().divergence());
+                next.model().repoView().branches().divergence());
         assertEquals(List.of(new LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_MAIN))), next.cmds());
     }
 
@@ -142,7 +142,7 @@ class UpstreamUpdateTest {
     void theMainBranchHasNoDivergenceFromTheBase() {
         Next next = Update.update(opened(with(TRACKING, FEATURE_BRANCH)), new UpstreamMsg.BaseDivergenceChosen());
 
-        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(Option.none(), next.model().repoView().branches().divergence());
         assertEquals(
                 Option.of("main is the main branch: there is no base to compare it with"), errorText(next.model()));
     }
@@ -151,7 +151,7 @@ class UpstreamUpdateTest {
     void withoutAMainBranchThereIsNoDivergenceFromTheBase() {
         Next next = Update.update(opened(with(FEATURE_BRANCH), FEATURE), new UpstreamMsg.BaseDivergenceChosen());
 
-        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(Option.none(), next.model().repoView().branches().divergence());
         assertEquals(
                 Option.of("Branch feature has no base branch to compare with: there is no main or master branch"),
                 errorText(next.model()));
@@ -161,7 +161,7 @@ class UpstreamUpdateTest {
     void aBranchWithoutUpstreamHasNoDivergenceFromIt() {
         Next next = Update.update(opened(loaded()), new UpstreamMsg.UpstreamDivergenceChosen());
 
-        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(Option.none(), next.model().repoView().branches().divergence());
         assertEquals(Option.of("Branch main has no upstream"), errorText(next.model()));
     }
 
@@ -169,7 +169,7 @@ class UpstreamUpdateTest {
     void theDivergenceReadIsShown() {
         assertEquals(
                 Option.of(new Loadable.Loaded<>(DIVERGENCE)),
-                viewing().repoView().divergence().map(DivergenceView::commits));
+                viewing().repoView().branches().divergence().map(DivergenceView::commits));
     }
 
     @Test
@@ -187,23 +187,27 @@ class UpstreamUpdateTest {
 
         assertEquals(
                 Option.of(new Loadable.Loaded<>(DiffText.of("diff"))),
-                shown.repoView().divergence().flatMap(DivergenceView::detail).map(detail -> detail.value()));
-        assertEquals(Option.none(), shown.repoView().commitDetail());
+                shown.repoView()
+                        .branches()
+                        .divergence()
+                        .flatMap(DivergenceView::detail)
+                        .map(detail -> detail.value()));
+        assertEquals(Option.none(), shown.repoView().preview().commitDetail());
     }
 
     @Test
     void closingShowsTheBranchesAgain() {
         Next next = Update.update(viewing(), new UpstreamMsg.DivergenceClosed());
 
-        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(Option.none(), next.model().repoView().branches().divergence());
     }
 
     @Test
     void switchingTabsClosesIt() {
         Next next = Update.update(viewing(), new BranchesTabMsg.Switched(1));
 
-        assertEquals(Option.none(), next.model().repoView().divergence());
-        assertEquals(BranchesTab.REMOTE, next.model().repoView().branchesTab());
+        assertEquals(Option.none(), next.model().repoView().branches().divergence());
+        assertEquals(BranchesTab.REMOTE, next.model().repoView().branches().tab());
     }
 
     @Test
@@ -256,7 +260,7 @@ class UpstreamUpdateTest {
 
         Next next = TestModels.localBranchesRead(viewing(), List.of(TRACKING, gone));
 
-        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(Option.none(), next.model().repoView().branches().divergence());
         assertEquals(
                 Option.of("Branch feature has no upstream anymore: origin/feature was deleted on the remote"),
                 errorText(next.model()));
@@ -276,7 +280,7 @@ class UpstreamUpdateTest {
 
         Next next = TestModels.localBranchesRead(viewing(), List.of(TRACKING, elsewhere));
 
-        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(Option.none(), next.model().repoView().branches().divergence());
         assertEquals(Option.none(), errorText(next.model()));
     }
 
@@ -289,7 +293,7 @@ class UpstreamUpdateTest {
         Next next = TestModels.remoteBranchesRead(
                 open, REMOTES.filter(ref -> !ref.branch().equals(ORIGIN_MAIN)));
 
-        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(Option.none(), next.model().repoView().branches().divergence());
         assertEquals(
                 Option.of("Branch feature has no base branch to compare with: there is no main or master branch"),
                 errorText(next.model()));
@@ -299,7 +303,7 @@ class UpstreamUpdateTest {
     void itClosesQuietlyWhenTheBranchIsGone() {
         Next next = TestModels.localBranchesRead(viewing(), List.of(TRACKING));
 
-        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(Option.none(), next.model().repoView().branches().divergence());
         assertEquals(Option.none(), errorText(next.model()));
     }
 

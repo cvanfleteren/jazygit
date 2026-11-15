@@ -1,14 +1,12 @@
 package net.vanfleteren.jazygit.state.view;
 
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
-import io.vavr.collection.HashSet;
-import io.vavr.collection.List;
 import io.vavr.collection.Map;
-import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.util.function.UnaryOperator;
 import lombok.With;
-import net.vanfleteren.jazygit.gh.model.PrNumber;
-import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.lens.Lens;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
@@ -16,110 +14,146 @@ import net.vanfleteren.jazygit.state.diff.Version;
 
 /**
  * What the repository screen shows, apart from what git reports: what is highlighted in its panes, the previews
- * read for that, and where its focus was. It stays while the pull requests screen is shown.
+ * read for that, and where its focus was. It stays while the pull requests screen is shown. Each part is owned by the
+ * pane or the feature that fills it, so that a feature changes only its own part.
  *
- * @param branchesTab  which branches the branches pane lists; it stays when the focus leaves the pane
- * @param divergence   the commits a local branch and its upstream or base branch do not share, which the
- *                     branches pane lists in place of the local branches while it is open
- * @param branchCommits the commits of a branch, local or remote, which the branches pane lists in place of the
- *                      branches while it is open
- * @param branchLog    the log of the branch, local or remote, highlighted in the branches pane, once one is
- *                     highlighted
- * @param unfetched    the pull request of a stack highlighted in the branches pane in place of a branch, whose
- *                     branch is neither checked out nor fetched, so that no log shows (ADR 72)
- * @param branchAhead  the commits of the branch whose log is shown that are not on its base, keyed by the branch;
- *                     none in it when the branch has no base
- * @param commitDetail what the commit highlighted in the commits pane changed (its files, a summary and its
- *                     diff), once one is highlighted
- * @param fileDiff     the diff of the node highlighted in the files pane, keyed by the changed files under
- *                     it, once one is highlighted
- * @param stashDetail  what the stash highlighted in the stash pane stashed (its files, a summary and its diff),
- *                     keyed by its sha, which stays as stashes are added and dropped, once one is highlighted
- * @param commitFiles  the files a commit or a stash changed, which the files pane lists in place of the changed
- *                     files of the working tree while it is open
- * @param focusedPane  the id of the element of the screen, outside the popups, that had the focus last, which a
- *                     closing popup gives it back to; none before the view reported one. It is a pane's id or
- *                     an {@link AreaId}'s value, so not a {@link net.vanfleteren.jazygit.state.PaneId}
- * @param cherryPick   the commit copied to be cherry-picked onto the branch checked out later, if one is
- * @param searchLine   the text of the line above the commits pane to type a search in, while it is open
- * @param commitSearch the search of the log of HEAD that was run last, which the commits pane lists in place of
- *                     the log until it is cleared
- * @param filesFilter  the filter of the files of the working tree: the files pane shows only those that match it
- *                     (ADR 105)
- * @param onlyAhead    whether the logs list only the commits not on their base, and the commit they forked from
- * @param closedStacks the numbers of the stacks the branches pane shows closed, as only their header; a stack
- *                     starts open (ADR 72)
- * @param unstacked    whether the branches pane lists the branches of a stack as any other branch, by when they last
- *                     saw activity, with no header (ADR 87); it starts showing the stacks
- * @param expanded     the lines expanded around the hunks of the diff each area of the content panel shows, by the
- *                     id of the area (ADR 77)
- * @param versions     the version of its one file each area of the content panel shows in place of its diff, by
- *                     the id of the area, while another item was not highlighted (ADR 102)
- * @param allFiles     whether the files pane lists all files of the working tree, not only those with changes
- *                     (ADR 108); a reload then lists them too
- * @param unchanged    the node highlighted in the files pane while it lists all files, when nothing under it has
- *                     changed: the content panel shows it in place of a diff (ADR 108)
+ * @param branches    what the branches pane shows
+ * @param commits     what the commits pane and the logs show
+ * @param files       what the files pane shows
+ * @param preview     what is read for the item highlighted in each pane
+ * @param focusedPane the id of the element of the screen, outside the popups, that had the focus last, which a
+ *                    closing popup gives it back to; none before the view reported one. It is a pane's id or an
+ *                    {@link AreaId}'s value, so not a {@link net.vanfleteren.jazygit.state.PaneId}
+ * @param areas       what each area of the content panel shows besides what it is given, by the id of the area; an
+ *                    area that keeps nothing is not in it
  */
 @With
 public record RepoView(
-        BranchesTab branchesTab,
-        Option<DivergenceView> divergence,
-        Option<BranchCommitsView> branchCommits,
-        Option<Preview<BranchRef, List<Commit>>> branchLog,
-        Option<PrNumber> unfetched,
-        Option<Preview<BranchRef, Option<Ahead>>> branchAhead,
-        Option<Preview<Sha, DiffText>> commitDetail,
-        Option<Preview<List<FileEntry>, Diffs>> fileDiff,
-        Option<Preview<Sha, DiffText>> stashDetail,
-        Option<CommitFilesView> commitFiles,
+        BranchesView branches,
+        CommitsView commits,
+        FilesView files,
+        PreviewView preview,
         Option<String> focusedPane,
-        Option<Commit> cherryPick,
-        Option<String> searchLine,
-        Option<CommitSearch> commitSearch,
-        Option<FileFilter> filesFilter,
-        boolean onlyAhead,
-        Set<Integer> closedStacks,
-        boolean unstacked,
-        Map<AreaId, Expansion> expanded,
-        Map<AreaId, Version> versions,
-        boolean allFiles,
-        Option<UnchangedNode> unchanged) {
+        Map<AreaId, AreaView> areas) {
+
+    public static final Lens<RepoView, BranchesView> BRANCHES = Lens.of(RepoView::branches, RepoView::withBranches);
+
+    public static final Lens<RepoView, CommitsView> COMMITS = Lens.of(RepoView::commits, RepoView::withCommits);
+
+    public static final Lens<RepoView, FilesView> FILES = Lens.of(RepoView::files, RepoView::withFiles);
+
+    public static final Lens<RepoView, PreviewView> PREVIEW = Lens.of(RepoView::preview, RepoView::withPreview);
 
     public static final RepoView INITIAL = new RepoView(
-            BranchesTab.LOCAL,
+            BranchesView.INITIAL,
+            CommitsView.INITIAL,
+            FilesView.INITIAL,
+            PreviewView.INITIAL,
             Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            Option.none(),
-            false,
-            HashSet.empty(),
-            false,
-            HashMap.empty(),
-            HashMap.empty(),
-            false,
-            Option.none());
+            HashMap.empty());
+
+    /**
+     * This view with its branches part changed by {@code f}.
+     */
+    public RepoView mapBranches(UnaryOperator<BranchesView> f) {
+        return withBranches(f.apply(branches));
+    }
+
+    /**
+     * This view with its commits part changed by {@code f}.
+     */
+    public RepoView mapCommits(UnaryOperator<CommitsView> f) {
+        return withCommits(f.apply(commits));
+    }
+
+    /**
+     * This view with its files part changed by {@code f}.
+     */
+    public RepoView mapFiles(UnaryOperator<FilesView> f) {
+        return withFiles(f.apply(files));
+    }
+
+    /**
+     * This view with its previews changed by {@code f}.
+     */
+    public RepoView mapPreview(UnaryOperator<PreviewView> f) {
+        return withPreview(f.apply(preview));
+    }
+
+    /**
+     * The version each area keeps, by the id of the area.
+     */
+    public Map<AreaId, Version> versions() {
+        return areas.flatMap((area, view) -> view.version().map(version -> Tuple.of(area, version)));
+    }
+
+    /**
+     * The lines expanded in each area that has some, by the id of the area.
+     */
+    public Map<AreaId, Expansion> expansions() {
+        return areas.flatMap((area, view) -> view.expanded().map(expansion -> Tuple.of(area, expansion)));
+    }
+
+    /**
+     * The version kept for the area with the id {@code area}, if there is one.
+     */
+    public Option<Version> versionOf(AreaId area) {
+        return areas.get(area).flatMap(AreaView::version);
+    }
+
+    /**
+     * The lines expanded in the area with the id {@code area}, if there are some.
+     */
+    public Option<Expansion> expandedOf(AreaId area) {
+        return areas.get(area).flatMap(AreaView::expanded);
+    }
 
     /**
      * The version kept for the area with the id {@code area} while it shows {@code content}, if it holds for that.
      */
     public Option<Version> version(AreaId area, ScrolledContent content) {
-        return versions.get(area).filter(version -> version.holdsFor(content));
+        return versionOf(area).filter(version -> version.holdsFor(content));
     }
 
     /**
      * The lines expanded in the area with the id {@code area} while it shows {@code content}, if they hold for that.
      */
     public Option<Expansion> expansion(AreaId area, ScrolledContent content) {
-        return expanded.get(area).filter(kept -> kept.holdsFor(content));
+        return expandedOf(area).filter(kept -> kept.holdsFor(content));
+    }
+
+    /**
+     * This view with {@code version} kept for the area with the id {@code area}.
+     */
+    public RepoView withVersion(AreaId area, Version version) {
+        return mapArea(area, view -> view.withVersion(Option.of(version)));
+    }
+
+    /**
+     * This view with {@code expansion} kept for the area with the id {@code area}.
+     */
+    public RepoView withExpansion(AreaId area, Expansion expansion) {
+        return mapArea(area, view -> view.withExpanded(Option.of(expansion)));
+    }
+
+    /**
+     * This view with no version kept for any area.
+     */
+    public RepoView withoutVersions() {
+        return withAreas(
+                areas.mapValues(view -> view.withVersion(Option.none())).filterValues(view -> !view.isEmpty()));
+    }
+
+    /**
+     * This view with no lines expanded in any area.
+     */
+    public RepoView withoutExpansions() {
+        return withAreas(
+                areas.mapValues(view -> view.withExpanded(Option.none())).filterValues(view -> !view.isEmpty()));
+    }
+
+    private RepoView mapArea(AreaId area, UnaryOperator<AreaView> f) {
+        AreaView changed = f.apply(areas.get(area).getOrElse(AreaView.INITIAL));
+        return withAreas(changed.isEmpty() ? areas.remove(area) : areas.put(area, changed));
     }
 }

@@ -76,7 +76,8 @@ class StackRowsTest {
     private static final Model OPEN = model(MAIN, List.of(MAIN, FEAT_A, FEAT_B));
 
     private static Model closed(Model model) {
-        return model.mapRepoView(repoView -> repoView.withClosedStacks(HashSet.of(12)));
+        return model.mapRepoView(
+                repoView -> repoView.mapBranches(branches -> branches.withClosedStacks(HashSet.of(12))));
     }
 
     private static Option<Msg> selecting(BranchRef branch) {
@@ -117,13 +118,15 @@ class StackRowsTest {
                         new SelectionMsg.UnfetchedSelected(new PrNumber(95)))
                 .model();
 
-        assertEquals(Option.none(), unfetched.repoView().branchLog());
-        assertEquals(Option.of(new PrNumber(95)), unfetched.repoView().unfetched());
+        assertEquals(Option.none(), unfetched.repoView().preview().branchLog());
+        assertEquals(
+                Option.of(new PrNumber(95)), unfetched.repoView().branches().unfetched());
         assertEquals(
                 Option.none(),
                 Update.update(unfetched, new SelectionMsg.BranchSelected(new BranchRef.Local(MAIN)))
                         .model()
                         .repoView()
+                        .branches()
                         .unfetched());
     }
 

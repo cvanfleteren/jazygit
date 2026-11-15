@@ -33,7 +33,8 @@ public final class AheadUpdate {
     public static Next update(Model model, AheadMsg msg) {
         return switch (msg) {
             case AheadMsg.Toggled() ->
-                searchFollowed(model.mapRepoView(repoView -> repoView.withOnlyAhead(!repoView.onlyAhead())));
+                searchFollowed(model.mapRepoView(repoView -> repoView.mapCommits(
+                        commits -> commits.withShown(commits.shown().toggled()))));
         };
     }
 
@@ -44,11 +45,13 @@ public final class AheadUpdate {
     private static Next searchFollowed(Model model) {
         Option<BranchRef> notOn = searchNotOn(model);
         return model.repoView()
+                .commits()
                 .commitSearch()
                 .filter(search -> !search.notOn().equals(notOn))
                 .map(search -> CommitSearch.loading(search.text(), notOn))
                 .map(search -> Next.of(
-                        model.mapRepoView(repoView -> repoView.withCommitSearch(Option.of(search))),
+                        model.mapRepoView(repoView ->
+                                repoView.mapCommits(commits -> commits.withCommitSearch(Option.of(search)))),
                         SearchCommits.of(search)))
                 .getOrElse(() -> Next.of(model));
     }
@@ -58,7 +61,9 @@ public final class AheadUpdate {
      * listed.
      */
     public static Option<BranchRef> searchNotOn(Model model) {
-        return Option.when(model.repoView().onlyAhead(), () -> head(model).map(Ahead::base))
+        return Option.when(
+                        model.repoView().commits().shown().ahead(),
+                        () -> head(model).map(Ahead::base))
                 .flatMap(base -> base);
     }
 
@@ -100,12 +105,14 @@ public final class AheadUpdate {
      */
     public static Option<Ahead> branch(Model model, BranchRef branch) {
         Loadable<List<Commit>> log = model.repoView()
+                .preview()
                 .branchLog()
                 .map(Preview::shown)
                 .filter(shown -> shown.key().equals(branch))
                 .map(Preview::value)
                 .getOrElse(Loadable.loading());
         return model.repoView()
+                .preview()
                 .branchAhead()
                 .filter(preview -> preview.key().equals(branch))
                 .flatMap(preview -> preview.value().toOption())
@@ -162,9 +169,11 @@ public final class AheadUpdate {
      * Keeps what {@code load} read of the log of {@code branch} just read, so that the log is shown with it at once.
      */
     static Next branchLogLoaded(Model model, BranchRef branch, LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
-        Model reading = model.mapRepoView(repoView -> repoView.withBranchAhead(Option.of(repoView.branchAhead()
-                .filter(preview -> preview.key().equals(branch))
-                .getOrElse(() -> new Preview<>(branch, Loadable.loading())))));
+        Model reading = model.mapRepoView(repoView ->
+                repoView.mapPreview(previews -> previews.withBranchAhead(Option.of(repoView.preview()
+                        .branchAhead()
+                        .filter(preview -> preview.key().equals(branch))
+                        .getOrElse(() -> new Preview<>(branch, Loadable.loading()))))));
         return read(reading, load, ahead);
     }
 
@@ -188,6 +197,7 @@ public final class AheadUpdate {
     static Next aheadLoaded(Model model, LoadAhead load, Option<Ahead> ahead) {
         boolean shown = load.branch()
                 .forAll(branch -> model.repoView()
+                        .preview()
                         .branchAhead()
                         .exists(preview -> preview.key().equals(branch)));
         LoadAhead current = load.branch().fold(() -> ofHead(model), branch -> of(model, branch));
@@ -216,8 +226,11 @@ public final class AheadUpdate {
                 .fold(
                         () -> searchFollowed(model.mapJobs(jobs -> jobs.withoutFailedRead(load))
                                 .mapRepo(repo -> repo.withAhead(repo.ahead().reload(ahead)))),
-                        branch -> Next.of(model.mapRepoView(repoView -> repoView.withBranchAhead(
-                                Preview.updated(repoView.branchAhead(), branch, preview -> preview.reload(ahead))))));
+                        branch -> Next.of(model.mapRepoView(repoView ->
+                                repoView.mapPreview(previews -> previews.withBranchAhead(Preview.updated(
+                                        repoView.preview().branchAhead(),
+                                        branch,
+                                        preview -> preview.reload(ahead)))))));
     }
 
     /**
@@ -228,8 +241,11 @@ public final class AheadUpdate {
                 .fold(
                         () -> model.mapJobs(jobs -> jobs.withFailedRead(load))
                                 .mapRepo(repo -> repo.withAhead(repo.ahead().failed(failure))),
-                        branch -> model.mapRepoView(repoView -> repoView.withBranchAhead(
-                                Preview.updated(repoView.branchAhead(), branch, preview -> preview.failed(failure)))));
+                        branch -> model.mapRepoView(repoView ->
+                                repoView.mapPreview(previews -> previews.withBranchAhead(Preview.updated(
+                                        repoView.preview().branchAhead(),
+                                        branch,
+                                        preview -> preview.failed(failure))))));
     }
 
     /**
@@ -242,6 +258,7 @@ public final class AheadUpdate {
     static List<Cmd> basesRead(Model before, Model next) {
         Option<Cmd> head = Option.when(logOfHead(next) && !ofHead(before).equals(ofHead(next)), () -> ofHead(next));
         Option<Cmd> branch = next.repoView()
+                .preview()
                 .branchAhead()
                 .map(Preview::key)
                 .filter(shown -> LoadUpdate.tipOf(before, shown).equals(LoadUpdate.tipOf(next, shown)))
@@ -270,6 +287,7 @@ public final class AheadUpdate {
                 .appendAll(Option.when(
                         model.repo().ahead().isFailed() || model.jobs().headAheadFailed(), () -> ofHead(model)))
                 .appendAll(model.repoView()
+                        .preview()
                         .branchAhead()
                         .filter(preview -> preview.value().isFailed())
                         .map(preview -> of(model, preview.key())));

@@ -35,13 +35,14 @@ public record ReadFileContent(String path) implements Targeted<FileContent> {
     }
 
     private static Option<Preview<String, FileContent>> content(RepoView view) {
-        return view.unchanged()
+        return view.files()
+                .unchanged()
                 .flatMap(node -> node instanceof UnchangedNode.File(var content) ? Option.of(content) : Option.none());
     }
 
     private static RepoView withContent(RepoView view, Option<Preview<String, FileContent>> content) {
-        return view.withUnchanged(
-                content.<UnchangedNode>map(UnchangedNode.File::new).orElse(view.unchanged()));
+        return view.mapFiles(files -> files.withUnchanged(content.<UnchangedNode>map(UnchangedNode.File::new)
+                .orElse(view.files().unchanged())));
     }
 
     @Override

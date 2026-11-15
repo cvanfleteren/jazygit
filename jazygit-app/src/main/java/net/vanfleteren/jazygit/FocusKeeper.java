@@ -116,7 +116,7 @@ final class FocusKeeper {
      * pane they were opened from once they are closed while that pane, or the diff it shows, has it (ADR 44).
      */
     private void followCommitFiles(Model model) {
-        Option<CommitFilesView> files = model.repoView().commitFiles();
+        Option<CommitFilesView> files = model.repoView().files().commitFiles();
         if (files.map(CommitFilesView::of).equals(shownFiles.map(CommitFilesView::of))) {
             return;
         }

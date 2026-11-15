@@ -45,9 +45,10 @@ class CommitSearchUpdateTest {
     @Test
     void openingTheLineStartsItEmptyAndEditingChangesIt() {
         Model opened = Update.update(loaded(), new CommitSearchMsg.Opened()).model();
-        assertEquals(Option.of(""), opened.repoView().searchLine());
+        assertEquals(Option.of(""), opened.repoView().commits().searchLine());
 
-        assertEquals(Option.of("fix"), typed(loaded(), "fix").repoView().searchLine());
+        assertEquals(
+                Option.of("fix"), typed(loaded(), "fix").repoView().commits().searchLine());
     }
 
     @Test
@@ -62,10 +63,10 @@ class CommitSearchUpdateTest {
     void runningTheQueryClosesTheLineAndReadsWhatItFinds() {
         Next next = run(" fix author:bob ");
 
-        assertEquals(Option.none(), next.model().repoView().searchLine());
+        assertEquals(Option.none(), next.model().repoView().commits().searchLine());
         assertEquals(
                 Option.of(CommitSearch.loading("fix author:bob", Option.none())),
-                next.model().repoView().commitSearch());
+                next.model().repoView().commits().commitSearch());
         assertEquals(List.of(new SearchCommits(CommitQuery.parse("fix author:bob"), Option.none())), next.cmds());
     }
 
@@ -78,6 +79,7 @@ class CommitSearchUpdateTest {
                 Update.update(searched, new CommitSearchMsg.Opened())
                         .model()
                         .repoView()
+                        .commits()
                         .searchLine());
     }
 
@@ -88,8 +90,10 @@ class CommitSearchUpdateTest {
         Model cancelled = Update.update(typed(searched, "other"), new CommitSearchMsg.Cancelled())
                 .model();
 
-        assertEquals(Option.none(), cancelled.repoView().searchLine());
-        assertEquals(searched.repoView().commitSearch(), cancelled.repoView().commitSearch());
+        assertEquals(Option.none(), cancelled.repoView().commits().searchLine());
+        assertEquals(
+                searched.repoView().commits().commitSearch(),
+                cancelled.repoView().commits().commitSearch());
     }
 
     @Test
@@ -98,7 +102,7 @@ class CommitSearchUpdateTest {
 
         Next next = Update.update(typed(searched, "author: "), new CommitSearchMsg.Submitted());
 
-        assertEquals(Option.none(), next.model().repoView().commitSearch());
+        assertEquals(Option.none(), next.model().repoView().commits().commitSearch());
         assertEquals(List.of(), next.cmds());
     }
 
@@ -108,8 +112,8 @@ class CommitSearchUpdateTest {
 
         Model cleared = Update.update(searched, new CommitSearchMsg.Cleared()).model();
 
-        assertEquals(Option.none(), cleared.repoView().commitSearch());
-        assertEquals(Option.none(), cleared.repoView().searchLine());
+        assertEquals(Option.none(), cleared.repoView().commits().commitSearch());
+        assertEquals(Option.none(), cleared.repoView().commits().searchLine());
     }
 
     @Test
@@ -120,7 +124,9 @@ class CommitSearchUpdateTest {
                         searched, new LoadMsg.CommitSearchLoaded(CommitQuery.parse("fix"), Option.none(), FOUND))
                 .model();
 
-        assertEquals(new Loaded<>(FOUND), found.repoView().commitSearch().get().results());
+        assertEquals(
+                new Loaded<>(FOUND),
+                found.repoView().commits().commitSearch().get().results());
         assertEquals(FOUND.headOption(), found.commit(new Sha("0123")));
         assertEquals(FOUND.lastOption(), found.commit(new Sha("4567")));
         assertEquals(COMMITS.headOption(), found.commit(new Sha("aaaa")));
@@ -145,7 +151,8 @@ class CommitSearchUpdateTest {
         Model failed =
                 Update.update(searched, load.failed(refused("bad pathspec"))).model();
 
-        assertInstanceOf(Failed.class, failed.repoView().commitSearch().get().results());
+        assertInstanceOf(
+                Failed.class, failed.repoView().commits().commitSearch().get().results());
         assertTrue(Update.refresh(failed).cmds().contains(load));
     }
 
@@ -172,7 +179,7 @@ class CommitSearchUpdateTest {
 
         Next only = Update.update(searched, new AheadMsg.Toggled());
 
-        assertTrue(only.model().repoView().onlyAhead());
+        assertTrue(only.model().repoView().commits().shown().ahead());
         assertEquals(List.of(new SearchCommits(CommitQuery.parse("fix"), Option.of(base))), only.cmds());
         Next whole = Update.update(only.model(), new AheadMsg.Toggled());
         assertEquals(List.of(new SearchCommits(CommitQuery.parse("fix"), Option.none())), whole.cmds());

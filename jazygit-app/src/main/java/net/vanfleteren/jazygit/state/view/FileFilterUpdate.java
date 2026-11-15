@@ -35,9 +35,10 @@ public final class FileFilterUpdate {
      */
     public static Option<FileFilter> shown(Model model) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .map(CommitFilesView::filter)
-                .getOrElse(() -> model.repoView().filesFilter());
+                .getOrElse(() -> model.repoView().files().filter());
     }
 
     /**
@@ -45,12 +46,13 @@ public final class FileFilterUpdate {
      * shown under it.
      */
     public static Option<String> workingTree(Model model) {
-        return FileFilter.shown(model.repoView().filesFilter());
+        return FileFilter.shown(model.repoView().files().filter());
     }
 
     private static Model with(Model model, Option<FileFilter> filter) {
-        return model.mapRepoView(repoView -> repoView.commitFiles().isDefined()
-                ? repoView.withCommitFiles(repoView.commitFiles().map(view -> view.withFilter(filter)))
-                : repoView.withFilesFilter(filter));
+        return model.mapRepoView(repoView -> repoView.files().commitFiles().isDefined()
+                ? repoView.mapFiles(files ->
+                        files.withCommitFiles(repoView.files().commitFiles().map(view -> view.withFilter(filter))))
+                : repoView.mapFiles(files -> files.withFilter(filter)));
     }
 }

@@ -11,8 +11,10 @@ import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
+import net.vanfleteren.jazygit.state.view.BranchesView;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.state.view.PreviewView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
@@ -46,11 +48,12 @@ public record LoadCommitDetail(Sha sha, DiffOptions options, Slot preview) imple
     @Override
     public Target<DiffText> target() {
         Lens<RepoView, Loadable<DiffText>> commits =
-                Preview.lens(RepoView::commitDetail, RepoView::withCommitDetail, sha);
-        Lens<RepoView, Loadable<DiffText>> divergence = Lens.some(RepoView::divergence, RepoView::withDivergence)
+                RepoView.PREVIEW.andThen(Preview.lens(PreviewView::commitDetail, PreviewView::withCommitDetail, sha));
+        Lens<RepoView, Loadable<DiffText>> divergence = RepoView.BRANCHES
+                .andThen(Lens.some(BranchesView::divergence, BranchesView::withDivergence))
                 .andThen(Preview.lens(DivergenceView::detail, DivergenceView::withDetail, sha));
-        Lens<RepoView, Loadable<DiffText>> branchCommits = Lens.some(
-                        RepoView::branchCommits, RepoView::withBranchCommits)
+        Lens<RepoView, Loadable<DiffText>> branchCommits = RepoView.BRANCHES
+                .andThen(Lens.some(BranchesView::branchCommits, BranchesView::withBranchCommits))
                 .andThen(Preview.lens(BranchCommitsView::detail, BranchCommitsView::withDetail, sha));
         return Target.inView(
                 switch (preview) {

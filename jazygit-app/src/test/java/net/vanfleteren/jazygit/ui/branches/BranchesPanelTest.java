@@ -45,7 +45,7 @@ class BranchesPanelTest {
     private final Model before = with(TestModels.loaded(SampleData.git()), List.of(MAIN, FEATURE, OLD));
 
     private static Model withWorktrees(Model model) {
-        return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES))
+        return model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES)))
                 .mapRepo(repo -> repo.withWorktrees(new Loadable.Loaded<>(List.of(
                         new Worktree(
                                 java.nio.file.Path.of("/repos/app"),
@@ -64,7 +64,7 @@ class BranchesPanelTest {
     }
 
     private static Model withRemotes(Model model) {
-        return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
+        return model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)))
                 .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.of(
                         new RemoteRef(
                                 new RemoteBranch("origin", new BranchName("feature")),
@@ -415,7 +415,8 @@ class BranchesPanelTest {
 
     @Test
     void theRemoteTabSaysWhenThereAreNoRemoteBranches() throws Exception {
-        Model none = before.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
+        Model none = before.mapRepoView(
+                        repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)))
                 .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.empty())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(none, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(none, BranchesPanel.ID));
@@ -525,13 +526,15 @@ class BranchesPanelTest {
         Commit newer = Fixtures.commit(new Sha("a2"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours two", "");
         Commit older = Fixtures.commit(new Sha("a1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Ours one", "");
         RemoteBranch upstream = new RemoteBranch("origin", new BranchName("feature"));
-        Model diverged = before.mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                new BranchName("feature"),
-                new BranchRef.Remote(upstream),
-                DivergenceView.Against.UPSTREAM,
-                new Loadable.Loaded<>(new Divergence(
-                        new Divergence.Side(List.of(newer, older), 2), new Divergence.Side(List.of(behind), 1))),
-                Option.none()))));
+        Model diverged = before.mapRepoView(repoView ->
+                repoView.mapBranches(branches -> branches.withDivergence(Option.of(new DivergenceView(
+                        new BranchName("feature"),
+                        new BranchRef.Remote(upstream),
+                        DivergenceView.Against.UPSTREAM,
+                        new Loadable.Loaded<>(new Divergence(
+                                new Divergence.Side(List.of(newer, older), 2),
+                                new Divergence.Side(List.of(behind), 1))),
+                        Option.none())))));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         java.util.List<String> opened = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(
@@ -605,12 +608,14 @@ class BranchesPanelTest {
         Commit older = Fixtures.commit(new Sha("a1"), "Ada Lovelace", "a@x", java.time.Instant.EPOCH, "Shared", "");
         BranchRef feature = new BranchRef.Local(new BranchName("feature"));
         BranchRef base = new BranchRef.Local(new BranchName("main"));
-        Model open = before.mapRepoView(repoView -> repoView.withBranchCommits(Option.of(BranchCommitsView.of(feature)))
-                .withBranchLog(Option.of(new Preview<>(feature, new Loadable.Loaded<>(List.of(newer, older)))))
-                .withBranchAhead(Option.of(new Preview<>(
+        Model open = before.mapRepoView(repoView -> repoView.mapBranches(
+                        branches -> branches.withBranchCommits(Option.of(BranchCommitsView.of(feature))))
+                .mapPreview(preview -> preview.withBranchLog(
+                        Option.of(new Preview<>(feature, new Loadable.Loaded<>(List.of(newer, older))))))
+                .mapPreview(preview -> preview.withBranchAhead(Option.of(new Preview<>(
                         feature,
-                        new Loadable.Loaded<>(
-                                Option.of(new Ahead(new Sha("a2"), base, List.of(newer), false, Option.of(older))))))));
+                        new Loadable.Loaded<>(Option.of(
+                                new Ahead(new Sha("a2"), base, List.of(newer), false, Option.of(older)))))))));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         java.util.List<String> opened = new java.util.ArrayList<>();
         BranchesPanel sending = new BranchesPanel(
@@ -658,8 +663,10 @@ class BranchesPanelTest {
      * {@code before} listing the commits of {@code branch}, with {@code log} read as the log of {@code logOf}.
      */
     private Model listing(BranchRef branch, BranchRef logOf, List<Commit> log) {
-        return before.mapRepoView(repoView -> repoView.withBranchCommits(Option.of(BranchCommitsView.of(branch)))
-                .withBranchLog(Option.of(new Preview<>(logOf, new Loadable.Loaded<>(log)))));
+        return before.mapRepoView(repoView -> repoView.mapBranches(
+                        branches -> branches.withBranchCommits(Option.of(BranchCommitsView.of(branch))))
+                .mapPreview(
+                        preview -> preview.withBranchLog(Option.of(new Preview<>(logOf, new Loadable.Loaded<>(log))))));
     }
 
     @Test
@@ -672,7 +679,10 @@ class BranchesPanelTest {
         list.render(open, true, true);
         List<Option<String>> before =
                 list.shownRows().map(row -> row.segs().head().cssClass());
-        list.render(open.mapRepoView(repoView -> repoView.withCherryPick(Option.of(copied))), true, true);
+        list.render(
+                open.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withCherryPick(Option.of(copied)))),
+                true,
+                true);
 
         assertEquals(List.of(Option.none(), Option.none()), before);
         assertEquals(
@@ -745,11 +755,11 @@ class BranchesPanelTest {
         BranchRef feature = new BranchRef.Local(new BranchName("feature"));
         BranchRef base = new BranchRef.Local(new BranchName("main"));
         Model open = listing(feature, feature, List.of(ours, fork, commit("a1", "Older")))
-                .mapRepoView(repoView -> repoView.withOnlyAhead(true)
-                        .withBranchAhead(Option.of(new Preview<>(
+                .mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withShown(CommitsShown.AHEAD))
+                        .mapPreview(preview -> preview.withBranchAhead(Option.of(new Preview<>(
                                 feature,
                                 new Loadable.Loaded<>(Option.of(
-                                        new Ahead(ours.sha(), base, List.of(ours), false, Option.of(fork))))))));
+                                        new Ahead(ours.sha(), base, List.of(ours), false, Option.of(fork)))))))));
         String screen;
         Option<Msg> highlighted;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, BranchesPanel.ID))) {

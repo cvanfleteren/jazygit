@@ -55,7 +55,7 @@ class WorktreeChangesTest {
     }
 
     private static Model onWorktreesTab(Model model) {
-        return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES));
+        return model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES)));
     }
 
     @Test

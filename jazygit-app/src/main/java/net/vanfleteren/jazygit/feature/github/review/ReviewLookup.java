@@ -64,7 +64,10 @@ final class ReviewLookup {
     }
 
     static Option<CommitFilesView> pullRequestFiles(Model model) {
-        return model.repoView().commitFiles().filter(view -> view.pullRequest().isDefined());
+        return model.repoView()
+                .files()
+                .commitFiles()
+                .filter(view -> view.pullRequest().isDefined());
     }
 
     static Model refused(Model model, Why why) {
@@ -72,8 +75,8 @@ final class ReviewLookup {
     }
 
     static Model mapView(Model model, Function<CommitFilesView, CommitFilesView> f) {
-        return model.mapRepoView(repoView -> repoView.withCommitFiles(
-                repoView.commitFiles().map(view -> view.pullRequest().isDefined() ? f.apply(view) : view)));
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(
+                repoView.files().commitFiles().map(view -> view.pullRequest().isDefined() ? f.apply(view) : view))));
     }
 
     /**

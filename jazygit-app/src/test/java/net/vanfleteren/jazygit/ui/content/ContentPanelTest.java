@@ -1300,13 +1300,15 @@ class ContentPanelTest {
     @Test
     void theDivergenceAreaCanOnlyBeFocusedOnTheLocalTabOnceItsCommitIsLoaded() {
         Model diverged = TestModels.loaded()
-                .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                        new BranchName("main"),
-                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
-                        DivergenceView.Against.UPSTREAM,
-                        new Loadable.Loaded<>(new Divergence(
-                                new Divergence.Side(List.of(plain("cccc")), 1), new Divergence.Side(List.of(), 0))),
-                        Option.none()))));
+                .mapRepoView(repoView ->
+                        repoView.mapBranches(branches -> branches.withDivergence(Option.of(new DivergenceView(
+                                new BranchName("main"),
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
+                                DivergenceView.Against.UPSTREAM,
+                                new Loadable.Loaded<>(new Divergence(
+                                        new Divergence.Side(List.of(plain("cccc")), 1),
+                                        new Divergence.Side(List.of(), 0))),
+                                Option.none())))));
         Model loading = Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
                 .model();
         assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.ID));
@@ -1316,7 +1318,8 @@ class ContentPanelTest {
                         new LoadMsg.CommitDetailLoaded(new Sha("cccc"), DiffOptions.DEFAULT, DiffText.of("+a")))
                 .model();
         assertTrue(content.areaOfPane(loaded, BranchesPanel.ID).isDefined());
-        Model remoteTab = loaded.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE));
+        Model remoteTab =
+                loaded.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
         assertEquals(Option.none(), content.areaOfPane(remoteTab, BranchesPanel.ID));
     }
 

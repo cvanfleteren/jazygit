@@ -47,7 +47,8 @@ public final class CommitFilesUpdate {
             case CommitFilesMsg.Opened(var of, var pane) ->
                 open(model, CommitFilesView.of(of, pane, Scopes.FILES.pane()));
             case CommitFilesMsg.Closed() ->
-                Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(Option.none())));
+                Next.of(model.mapRepoView(
+                        repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.none()))));
             case CommitFilesMsg.RemarksLoaded(PrNumber number, var remarks, var settled, int version) ->
                 remarksRead(model, number, remarks, settled, version);
             // The review threads read before stay shown; what was sent is done with all the same. A failed read
@@ -61,10 +62,11 @@ public final class CommitFilesUpdate {
                                         .getOrElse(() -> new Loadable.Failed<>(failure))))
                                 .withSending(view.sending().removeAll(settled))));
             case CommitFilesMsg.ListedCycled() ->
-                Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(repoView.files()
+                        .commitFiles()
                         .map(view -> view.remarks().isDefined()
                                 ? view.withListed(view.listed().next())
-                                : view))));
+                                : view)))));
             // Those flipped before the threads are read are as they start until then (ADR 63).
             case CommitFilesMsg.CollapsedLoaded(PrNumber number, var kept) ->
                 Next.of(mapPullRequest(
@@ -79,7 +81,11 @@ public final class CommitFilesUpdate {
             case CommitFilesMsg.RemarksRefreshed() ->
                 new Next(
                         model,
-                        List.narrow(model.repoView().commitFiles().toList().flatMap(CommitFilesUpdate::remarksLoad)));
+                        List.narrow(model.repoView()
+                                .files()
+                                .commitFiles()
+                                .toList()
+                                .flatMap(CommitFilesUpdate::remarksLoad)));
         };
     }
 
@@ -89,7 +95,7 @@ public final class CommitFilesUpdate {
      */
     private static Next open(Model model, CommitFilesView view) {
         return new Next(
-                model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(view))),
+                model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(view)))),
                 List.<Cmd>of(LoadCommitFiles.of(view))
                         .appendAll(treeLoad(view))
                         .appendAll(remarksLoad(view))
@@ -102,6 +108,7 @@ public final class CommitFilesUpdate {
      */
     private static Next allToggled(Model model) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .map(view -> {
                     boolean all = !view.allFiles();
@@ -109,7 +116,8 @@ public final class CommitFilesUpdate {
                     CommitFilesView toggled =
                             view.listingAll(all).withTree(reads ? Option.of(Loadable.loading()) : view.tree());
                     return new Next(
-                            model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(toggled))),
+                            model.mapRepoView(
+                                    repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(toggled)))),
                             reads ? List.<Cmd>of(new LoadCommitTree(view.of())) : List.empty());
                 })
                 .getOrElse(() -> Next.of(model));
@@ -180,6 +188,7 @@ public final class CommitFilesUpdate {
     private static Next remarksRead(
             Model model, PrNumber number, ReviewRemarks remarks, Set<ReviewThread.Id> settled, int version) {
         return model.repoView()
+                .files()
                 .commitFiles()
                 .filter(view -> view.pullRequest().contains(number))
                 .map(view -> {
@@ -210,13 +219,15 @@ public final class CommitFilesUpdate {
                                         .withAllFiles(read.allFiles())
                                         .withTree(Option.when(read.allFiles(), Loadable::loading));
                                 return pictures(
-                                        model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(again))),
+                                        model.mapRepoView(repoView ->
+                                                repoView.mapFiles(files -> files.withCommitFiles(Option.of(again)))),
                                         again,
                                         number,
                                         List.<Cmd>of(LoadCommitFiles.of(again)).appendAll(treeLoad(again)));
                             })
                             .getOrElse(() -> pictures(
-                                    model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(read))),
+                                    model.mapRepoView(repoView ->
+                                            repoView.mapFiles(files -> files.withCommitFiles(Option.of(read)))),
                                     read,
                                     number,
                                     List.empty()));
@@ -268,7 +279,8 @@ public final class CommitFilesUpdate {
     }
 
     private static Model mapPullRequest(Model model, PrNumber number, Function<CommitFilesView, CommitFilesView> f) {
-        return model.mapRepoView(repoView -> repoView.withCommitFiles(
-                repoView.commitFiles().map(view -> view.pullRequest().contains(number) ? f.apply(view) : view)));
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(repoView.files()
+                .commitFiles()
+                .map(view -> view.pullRequest().contains(number) ? f.apply(view) : view))));
     }
 }

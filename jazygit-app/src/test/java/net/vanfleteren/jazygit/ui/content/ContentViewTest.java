@@ -139,13 +139,15 @@ class ContentViewTest {
      */
     private static Model divergenceHighlighted() {
         Model diverged = TestModels.loaded()
-                .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                        new BranchName("main"),
-                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
-                        DivergenceView.Against.UPSTREAM,
-                        new Loadable.Loaded<>(new Divergence(
-                                new Divergence.Side(List.of(plain("cccc")), 1), new Divergence.Side(List.of(), 0))),
-                        Option.none()))));
+                .mapRepoView(repoView ->
+                        repoView.mapBranches(branches -> branches.withDivergence(Option.of(new DivergenceView(
+                                new BranchName("main"),
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
+                                DivergenceView.Against.UPSTREAM,
+                                new Loadable.Loaded<>(new Divergence(
+                                        new Divergence.Side(List.of(plain("cccc")), 1),
+                                        new Divergence.Side(List.of(), 0))),
+                                Option.none())))));
         return Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
                 .model();
     }
@@ -512,7 +514,8 @@ class ContentViewTest {
         Model loading = divergenceHighlighted();
 
         assertEquals(loading("Commit"), ContentView.of(loading, BranchesPanel.ID));
-        Model remoteTab = loading.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE));
+        Model remoteTab =
+                loading.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
         // The remote branches show the log of the branch, which none is selected for here.
         assertEquals(loading("Log"), ContentView.of(remoteTab, BranchesPanel.ID));
     }
@@ -520,13 +523,14 @@ class ContentViewTest {
     @Test
     void aDivergenceWithoutCommitsSaysTheBranchesHaveNotDiverged() {
         Model diverged = TestModels.loaded()
-                .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                        new BranchName("main"),
-                        new BranchRef.Local(new BranchName("feature")),
-                        DivergenceView.Against.BASE,
-                        new Loadable.Loaded<>(
-                                new Divergence(new Divergence.Side(List.of(), 0), new Divergence.Side(List.of(), 0))),
-                        Option.none()))));
+                .mapRepoView(repoView ->
+                        repoView.mapBranches(branches -> branches.withDivergence(Option.of(new DivergenceView(
+                                new BranchName("main"),
+                                new BranchRef.Local(new BranchName("feature")),
+                                DivergenceView.Against.BASE,
+                                new Loadable.Loaded<>(new Divergence(
+                                        new Divergence.Side(List.of(), 0), new Divergence.Side(List.of(), 0))),
+                                Option.none())))));
 
         assertEquals(dim("Commit", "The branches have not diverged"), ContentView.of(diverged, BranchesPanel.ID));
     }

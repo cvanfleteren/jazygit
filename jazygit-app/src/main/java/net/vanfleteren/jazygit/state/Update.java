@@ -325,21 +325,26 @@ public final class Update {
         RepoView repoView = model.repoView();
         DiffOptions options = model.preferences().diffOptions();
         return List.<Targeted<?>>empty()
-                .appendAll(repoView.commitSearch().map(SearchCommits::of))
-                .appendAll(repoView.branchLog()
+                .appendAll(repoView.commits().commitSearch().map(SearchCommits::of))
+                .appendAll(repoView.preview()
+                        .branchLog()
                         .map(log -> new LoadBranchLog(log.key(), AheadUpdate.of(model, log.key()))))
-                .appendAll(repoView.commitDetail()
+                .appendAll(repoView.preview()
+                        .commitDetail()
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.COMMIT_DETAIL)))
-                .appendAll(repoView.divergence().map(LoadDivergence::of))
-                .appendAll(repoView.divergence()
+                .appendAll(repoView.branches().divergence().map(LoadDivergence::of))
+                .appendAll(repoView.branches()
+                        .divergence()
                         .flatMap(DivergenceView::detail)
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.DIVERGENCE_DETAIL)))
-                .appendAll(repoView.branchCommits()
+                .appendAll(repoView.branches()
+                        .branchCommits()
                         .flatMap(BranchCommitsView::detail)
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.BRANCH_COMMITS_DETAIL)))
-                .appendAll(repoView.stashDetail().map(detail -> new LoadStashDetail(detail.key(), options)))
-                .appendAll(repoView.commitFiles().map(LoadCommitFiles::of))
-                .appendAll(repoView.commitFiles()
+                .appendAll(repoView.preview().stashDetail().map(detail -> new LoadStashDetail(detail.key(), options)))
+                .appendAll(repoView.files().commitFiles().map(LoadCommitFiles::of))
+                .appendAll(repoView.files()
+                        .commitFiles()
                         .flatMap(view -> view.diff().map(diff -> LoadCommitFileDiff.of(view, diff.key(), options))));
     }
 
@@ -359,7 +364,7 @@ public final class Update {
         List<String> others = model.repo().otherWorktrees();
         return Option.<Load>of(new LoadWorktreeChanges(others))
                 .filter(load -> model.screen() == Screen.REPOSITORY
-                        && model.repoView().branchesTab() == BranchesTab.WORKTREES
+                        && model.repoView().branches().tab() == BranchesTab.WORKTREES
                         && others.nonEmpty()
                         && !model.jobs().runs(LoadWorktreeChanges.class::isInstance));
     }
@@ -383,6 +388,7 @@ public final class Update {
      */
     public static Option<LoadFileDiff> shownDiff(Model model) {
         return model.repoView()
+                .preview()
                 .fileDiff()
                 .filter(d -> model.repo()
                         .status()

@@ -518,8 +518,12 @@ class AheadUpdateTest {
     void togglingSwitchesBetweenTheWholeLogAndOnlyWhatIsNotOnTheBase() {
         Model only = Update.update(loaded(), new AheadMsg.Toggled()).model();
 
-        assertTrue(only.repoView().onlyAhead());
-        assertFalse(
-                Update.update(only, new AheadMsg.Toggled()).model().repoView().onlyAhead());
+        assertTrue(only.repoView().commits().shown().ahead());
+        assertFalse(Update.update(only, new AheadMsg.Toggled())
+                .model()
+                .repoView()
+                .commits()
+                .shown()
+                .ahead());
     }
 }

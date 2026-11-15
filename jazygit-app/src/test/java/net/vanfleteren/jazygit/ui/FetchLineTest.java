@@ -143,7 +143,7 @@ class FetchLineTest {
         Model model = running(
                 TestModels.loaded()
                         .withNow(now)
-                        .mapRepoView(view -> view.withCherryPick(Option.of(copied)))
+                        .mapRepoView(view -> view.mapCommits(commits -> commits.withCherryPick(Option.of(copied))))
                         .mapJobs(
                                 jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", now.minusSeconds(120)))),
                 new FetchCmd.Fetch(new RemoteName("origin"), List.empty()),

@@ -19,7 +19,7 @@ public final class BranchesTabUpdate {
     public static Next update(Model model, BranchesTabMsg msg) {
         return switch (msg) {
             case Switched(int by) ->
-                switched(model, model.repoView().branchesTab().shifted(by));
+                switched(model, model.repoView().branches().tab().shifted(by));
             case Chosen(BranchesTab tab) -> switched(model, tab);
         };
     }
@@ -28,7 +28,9 @@ public final class BranchesTabUpdate {
      * Shows {@code tab}; for the worktrees, reads which have changes right away rather than at the next tick.
      */
     private static Next switched(Model model, BranchesTab tab) {
-        return Update.readWorktreeChanges(model.mapRepoView(repoView ->
-                repoView.withBranchesTab(tab).withDivergence(Option.none()).withBranchCommits(Option.none())));
+        return Update.readWorktreeChanges(
+                model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(tab))
+                        .mapBranches(branches -> branches.withDivergence(Option.none()))
+                        .mapBranches(branches -> branches.withBranchCommits(Option.none()))));
     }
 }
