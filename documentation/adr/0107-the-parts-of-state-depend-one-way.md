@@ -56,3 +56,5 @@ Three things tie the parts together:
   place, and the build says so.
 - A part's data is plain values: it can be built and compared in a test without a read.
 - Members that cross a part are public, where they were package-private in one package.
+
+Amended by ADR 136: the state is a module of its own, `jazygit-state`, below the views and the features.
