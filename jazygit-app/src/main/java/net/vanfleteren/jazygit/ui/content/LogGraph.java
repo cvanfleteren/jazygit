@@ -4,6 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.function.IntFunction;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 
 /**
@@ -55,9 +57,11 @@ public final class LogGraph {
                         meet._1.rail(),
                         meet._1.into(),
                         below.removeAll(meets.take(meet._2 + 1).map(CommitGraph.Meet::rail))));
-        String first = line(width, at -> at % 2 == 1 ? " " : at / 2 == column ? "*" : rail(through, at));
-        Option<String> opening = Option.when(node.commit().isMerge(), () -> opening(node, through, width));
-        String rest = line(width, at -> rail(below.removeAll(meets.map(CommitGraph.Meet::rail)), at));
+        boolean[] going = columns(width, through);
+        String first = line(width, at -> at % 2 == 1 ? " " : at / 2 == column ? "*" : rail(going, at));
+        Option<String> opening = Option.when(node.commit().isMerge(), () -> opening(node, going, width));
+        boolean[] staying = columns(width, below.removeAll(meets.map(CommitGraph.Meet::rail)));
+        String rest = line(width, at -> rail(staying, at));
         return new Gutter(joining, first, opening, meeting, rest);
     }
 
@@ -66,37 +70,53 @@ public final class LogGraph {
      * {@code rails} go on.
      */
     private static String ending(int width, int end, int into, List<Integer> rails) {
+        boolean[] on = columns(width, rails);
         return line(
                 width,
                 at -> at == 2 * end - 1
                         ? "/"
-                        : rails.contains(at / 2) && at % 2 == 0 ? "|" : at > 2 * into && at < 2 * end - 1 ? "_" : " ");
+                        : on[at / 2] && at % 2 == 0 ? "|" : at > 2 * into && at < 2 * end - 1 ? "_" : " ");
     }
 
     /**
      * The line on which a merge opens the rails of its other parents, while {@code rails} go on; when none of those
      * parents is listed, it opens none.
      */
-    private static String opening(CommitGraph.Node node, List<Integer> rails, int width) {
+    private static String opening(CommitGraph.Node node, boolean[] rails, int width) {
         int reach = node.opens().max().getOrElse(node.column());
+        boolean[] opens = columns(width + 1, node.opens());
         return line(
                 width,
-                at -> node.opens().contains((at + 1) / 2) && at % 2 == 1
+                at -> opens[(at + 1) / 2] && at % 2 == 1
                         ? "\\"
-                        : rails.contains(at / 2) && at % 2 == 0
+                        : rails[at / 2] && at % 2 == 0
                                 ? "|"
                                 : at > 2 * node.column() && at < 2 * reach - 1 ? "-" : " ");
     }
 
-    private static String rail(List<Integer> rails, int at) {
-        return at % 2 == 0 && rails.contains(at / 2) ? "|" : " ";
+    private static String rail(boolean[] rails, int at) {
+        return at % 2 == 0 && rails[at / 2] ? "|" : " ";
+    }
+
+    /**
+     * For each of the first {@code width} columns, whether it is one of {@code rails}: looked up once for a line
+     * rather than in the list for each character, as a graph can be hundreds of rails wide.
+     */
+    private static boolean[] columns(int width, List<Integer> rails) {
+        boolean[] on = new boolean[width];
+        for (int at : rails) {
+            if (at < width) {
+                on[at] = true;
+            }
+        }
+        return on;
     }
 
     /**
      * The {@code width} rails of a line, two characters each: what {@code at} gives for each character.
      */
     private static String line(int width, IntFunction<String> at) {
-        return List.range(0, 2 * width).map(at::apply).mkString();
+        return IntStream.range(0, 2 * width).mapToObj(at).collect(Collectors.joining());
     }
 
     /**
