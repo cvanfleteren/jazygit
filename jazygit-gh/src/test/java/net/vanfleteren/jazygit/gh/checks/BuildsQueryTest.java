@@ -39,7 +39,7 @@ class BuildsQueryTest {
                 { "__typename": "CheckRun", "databaseId": %d, "name": "%s", "status": "COMPLETED",
                   "conclusion": %s, "startedAt": "2026-11-14T23:00:10Z", "completedAt": "2026-11-14T23:04:00Z",
                   "checkSuite": { "workflowRun": { "databaseId": %d, "createdAt": "2026-11-14T23:00:00Z",
-                    "runAttempt": %d, "event": "%s", "workflow": { "name": "Publish" },
+                    "runAttempt": %d, "event": "%s", "workflow": { "name": "Publish", "id": "W_1" },
                     "file": { "path": ".github/workflows/publish.yml" } } } }""".formatted(id, name, conclusion == null ? "null" : "\"" + conclusion + "\"", runId, attempt, event);
     }
 

@@ -106,18 +106,23 @@ final class TabStrip {
     }
 
     private static String counted(String before, List<Tab> hidden, String after) {
-        long failed = hidden.count(tab -> tab.last() == Outcome.FAILED);
+        long failed = hidden.count(tab -> tab.last().contains(Outcome.FAILED));
         return before + hidden.size() + (failed > 0 ? " ✗" + failed : "") + after;
     }
 
     private static Span counter(String before, List<Tab> hidden, String after, Theme.SpanStyles styles) {
-        boolean failed = hidden.exists(tab -> tab.last() == Outcome.FAILED);
+        boolean failed = hidden.exists(tab -> tab.last().contains(Outcome.FAILED));
         return Span.styled(
                 counted(before, hidden, after), styles.of(failed ? Theme.Classes.CHECKS_FAILED : Theme.Classes.DIM));
     }
 
     private static Span tab(Tab tab, boolean shown, Theme.SpanStyles styles) {
-        return Span.styled(tab.text(), styles.of(shown ? Theme.Classes.SELECTION : style(tab.last())));
+        return Span.styled(
+                tab.text(),
+                styles.of(
+                        shown
+                                ? Theme.Classes.SELECTION
+                                : tab.last().map(TabStrip::style).getOrElse(Theme.Classes.DIM)));
     }
 
     private static String style(Outcome outcome) {
@@ -130,21 +135,22 @@ final class TabStrip {
     }
 
     /**
-     * A tab: the workflow it shows, as it is named, and how its last build ended.
+     * A tab: the workflow it shows, as it is named, and how its last build ended, as far as that is read.
      */
-    record Tab(String label, Outcome last) {
+    record Tab(String label, Option<Outcome> last) {
 
         String text() {
             return symbol() + " " + label;
         }
 
         private String symbol() {
-            return switch (last) {
-                case PASSED -> "✓";
-                case FAILED -> "✗";
-                case CANCELLED -> "⊘";
-                case RUNNING -> "○";
-            };
+            return last.map(outcome -> switch (outcome) {
+                        case PASSED -> "✓";
+                        case FAILED -> "✗";
+                        case CANCELLED -> "⊘";
+                        case RUNNING -> "○";
+                    })
+                    .getOrElse("·");
         }
     }
 

@@ -15,12 +15,12 @@ import org.junit.jupiter.api.Test;
 class TabStripTest {
 
     private static final List<TabStrip.Tab> TABS = List.of(
-            new TabStrip.Tab("Build", Outcome.PASSED),
-            new TabStrip.Tab("Lint", Outcome.FAILED),
-            new TabStrip.Tab("E2E", Outcome.PASSED),
-            new TabStrip.Tab("Docker", Outcome.RUNNING),
-            new TabStrip.Tab("Docs", Outcome.PASSED),
-            new TabStrip.Tab("Release", Outcome.FAILED));
+            new TabStrip.Tab("Build", Option.of(Outcome.PASSED)),
+            new TabStrip.Tab("Lint", Option.of(Outcome.FAILED)),
+            new TabStrip.Tab("E2E", Option.of(Outcome.PASSED)),
+            new TabStrip.Tab("Docker", Option.of(Outcome.RUNNING)),
+            new TabStrip.Tab("Docs", Option.of(Outcome.PASSED)),
+            new TabStrip.Tab("Release", Option.of(Outcome.FAILED)));
 
     private static String line(int shown, int width) {
         return List.ofAll(

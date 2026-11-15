@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.feature.github.builds;
+package net.vanfleteren.jazygit.state.github.builds;
 
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
@@ -31,12 +31,12 @@ public record ReadWorkflows(FileAt file) implements Cmd {
                 .flatMap(Workflow::called)
                 .map(path -> new FileAt(file.sha(), path))
                 .map(at -> Tuple.of(at, read(env, at))));
-        return new BuildsMsg.WorkflowsRead(called.put(file, workflow));
+        return new BuildsViewMsg.WorkflowsRead(called.put(file, workflow));
     }
 
     @Override
     public Msg failed(Failure failure) {
-        return new BuildsMsg.WorkflowsRead(HashMap.of(file, Option.none()));
+        return new BuildsViewMsg.WorkflowsRead(HashMap.of(file, Option.none()));
     }
 
     private static Option<Workflow> read(Env env, FileAt at) {

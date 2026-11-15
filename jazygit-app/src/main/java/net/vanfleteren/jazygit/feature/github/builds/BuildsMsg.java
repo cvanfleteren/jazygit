@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.github.builds;
 
-import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -9,9 +8,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
-import net.vanfleteren.jazygit.state.view.Workflow;
 
 /**
  * Showing the builds of a local branch on GitHub (ADR 131).
@@ -42,14 +39,14 @@ public sealed interface BuildsMsg extends Msg {
     record Failed(RemoteBranch branch, Option<String> after, Failure failure) implements BuildsMsg {}
 
     /**
-     * The files of workflows were read at the commit of a build, each as its workflow, or none when it could not be.
-     */
-    record WorkflowsRead(Map<FileAt, Option<Workflow>> workflows) implements BuildsMsg {}
-
-    /**
      * The user asked for the builds of the workflow {@code by} tabs after the one that shows, before it when negative.
      */
     record Stepped(int by) implements BuildsMsg {}
+
+    /**
+     * The user asked for the runs of the workflows on every branch in place of the builds of the branch, or back.
+     */
+    record AllToggled() implements BuildsMsg {}
 
     /**
      * The user asked to choose the workflow whose builds show from all of them.

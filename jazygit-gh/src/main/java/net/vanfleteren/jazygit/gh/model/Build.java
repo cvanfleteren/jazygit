@@ -21,6 +21,7 @@ import java.util.Comparator;
  * @param jobs      its jobs, the check runs of its run
  * @param file      the path of the file of its workflow, which says which job needs which (ADR 131); none when GitHub
  *                  does not say
+ * @param origin    which workflow it is a run of, and the branch and pull request it ran for, as far as GitHub says
  */
 public record Build(
         String workflow,
@@ -31,7 +32,8 @@ public record Build(
         String title,
         Instant createdAt,
         List<Job> jobs,
-        Option<String> file) {
+        Option<String> file,
+        Origin origin) {
 
     private static final Set<String> FAILED = HashSet.of("FAILURE", "TIMED_OUT", "STARTUP_FAILURE", "ACTION_REQUIRED");
 
@@ -47,7 +49,23 @@ public record Build(
             String title,
             Instant createdAt,
             List<Job> jobs) {
-        this(workflow, event, runId, attempt, sha, title, createdAt, jobs, Option.none());
+        this(workflow, event, runId, attempt, sha, title, createdAt, jobs, Option.none(), Origin.NONE);
+    }
+
+    /**
+     * A build with the file of its workflow, of which nothing else is known.
+     */
+    public Build(
+            String workflow,
+            String event,
+            long runId,
+            int attempt,
+            String sha,
+            String title,
+            Instant createdAt,
+            List<Job> jobs,
+            Option<String> file) {
+        this(workflow, event, runId, attempt, sha, title, createdAt, jobs, file, Origin.NONE);
     }
 
     /**
@@ -92,6 +110,18 @@ public record Build(
     public List<Job> ran() {
         return jobs.filter(
                 job -> !job.conclusion().equals("SKIPPED") && job.startedAt().isDefined());
+    }
+
+    /**
+     * Which workflow a build is a run of, and what it ran for.
+     *
+     * @param workflowId  the id of its workflow on GitHub, to read the runs of that workflow on every branch with
+     * @param branch      the branch it ran on; none when GitHub does not say, as of a branch deleted since
+     * @param pullRequest the number of the pull request it ran for, if it ran for one
+     */
+    public record Origin(Option<String> workflowId, Option<String> branch, Option<Integer> pullRequest) {
+
+        public static final Origin NONE = new Origin(Option.none(), Option.none(), Option.none());
     }
 
     /**

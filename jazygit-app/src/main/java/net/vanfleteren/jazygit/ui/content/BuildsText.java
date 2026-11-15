@@ -17,8 +17,11 @@ import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.Build.Outcome;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
+import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
@@ -40,55 +43,58 @@ final class BuildsText {
     private static final Duration STEADY = Duration.ofSeconds(10);
     private static final String EIGHTHS = " ▁▂▃▄▅▆▇█";
     private static final String SPARKS = "▁▂▃▄▅▆▇█";
+    // What marks a run of the branch among those of every branch.
+    private static final String MINE = "◆";
+    // The widest what a run on every branch ran for is shown: its pull request, else its branch.
+    private static final int FOR = 14;
     // A job split in shards, like "acceptance (1/6)", is one job.
     private static final Pattern SHARD = Pattern.compile("\\s*\\(\\d+/\\d+\\)$");
 
     private BuildsText() {}
 
     /**
-     * The lines that draw {@code builds}, the newest first, in {@code zone}, the chart as wide as {@code width}
-     * allows: the tabs of their workflows, and the builds of {@code pipeline}, or of the first tab without; {@code needs} says, of the builds whose jobs show on one time line, by the id of their run, which of
-     * their jobs each job needs, as far as that is known (ADR 131).
+     * The lines that draw what the builds of a branch show, {@code shown}, in {@code zone}, the chart as wide as
+     * {@code width} allows: the tabs of their workflows, and the builds of the tab shown (ADR 131).
      */
-    static List<Line> lines(
-            List<Build> builds,
-            Map<Long, Map<String, Set<String>>> needs,
-            Option<Pipeline> pipeline,
-            ZoneId zone,
-            Theme.SpanStyles styles,
-            int width) {
+    static List<Line> lines(BuildsShown shown, ZoneId zone, Theme.SpanStyles styles, int width) {
         Drawing drawing = new Drawing(
                 styles,
-                needs,
+                shown.needs(),
+                shown.mine(),
+                shown.allBranches(),
+                shown.baseline(),
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.dayPattern"))
                         .withZone(zone),
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.whenPattern"))
                         .withZone(zone),
                 Math.max(10, width - SCALE - 1));
-        List<Pipeline> all = BuildsView.pipelines(builds);
-        Pipeline shown = pipeline.filter(all::contains).getOrElse(all::head);
-        return List.of(TabStrip.line(tabs(builds, all), all.indexOf(shown), width, styles), Line.from(""))
-                .appendAll(drawing.workflow(builds.filter(shown::ran)));
+        String workflow = shown.shown().workflow();
+        List<Line> builds = switch (shown.builds()) {
+            case Loadable.Loading<List<Build>>() ->
+                List.of(Line.from(drawing.dim(Messages.get("content.builds.readingRuns", workflow))));
+            case Loadable.Failed<List<Build>>(var failure) ->
+                List.of(Line.from(Span.styled(Placeholders.error(failure), styles.of(Theme.Classes.ERROR))));
+            case Loadable.Loaded<List<Build>>(var read) ->
+                read.isEmpty()
+                        ? List.of(Line.from(drawing.dim(Messages.get("content.builds.noRuns", workflow))))
+                        : drawing.workflow(read);
+        };
+        return List.of(TabStrip.line(tabs(shown), shown.index(), width, styles), Line.from(""))
+                .appendAll(builds);
     }
 
     /**
-     * The workflow of the tab at {@code column} of the first line {@link #lines} draws of {@code builds}, with
-     * {@code pipeline} shown, {@code width} columns wide; none between the tabs.
+     * The workflow of the tab at {@code column} of the first line {@link #lines} draws of {@code shown},
+     * {@code width} columns wide; none between the tabs.
      */
-    static Option<Pipeline> tabAt(List<Build> builds, Option<Pipeline> pipeline, int width, int column) {
-        List<Pipeline> all = BuildsView.pipelines(builds);
-        return all.headOption()
-                .flatMap(first -> TabStrip.at(
-                                tabs(builds, all),
-                                all.indexOf(pipeline.filter(all::contains).getOrElse(first)),
-                                width,
-                                column)
-                        .map(all::get));
+    static Option<Pipeline> tabAt(BuildsShown shown, int width, int column) {
+        return TabStrip.at(tabs(shown), shown.index(), width, column).map(shown.tabs()::get);
     }
 
-    private static List<TabStrip.Tab> tabs(List<Build> builds, List<Pipeline> all) {
-        return all.map(each -> new TabStrip.Tab(
-                each.label(all), builds.find(each::ran).map(Build::outcome).getOrElse(Outcome.PASSED)));
+    private static List<TabStrip.Tab> tabs(BuildsShown shown) {
+        return shown.tabs()
+                .zip(shown.lasts())
+                .map(tab -> new TabStrip.Tab(tab._1().label(shown.tabs()), tab._2()));
     }
 
     /**
@@ -167,6 +173,9 @@ final class BuildsText {
      *
      * @param styles the styles of the theme
      * @param needs  which jobs each job needs, by the id of the run of a build whose jobs show on one time line
+     * @param mine   the commits of the branch, whose runs are marked among those of every branch
+     * @param allBranches whether the builds are the runs of their workflow on every branch
+     * @param baseline how long the runs of the workflow that passed took on every branch
      * @param day    how a day is written
      * @param when   how a day and a time are written
      * @param chart  the builds the chart has room for
@@ -174,6 +183,9 @@ final class BuildsText {
     private record Drawing(
             Theme.SpanStyles styles,
             Map<Long, Map<String, Set<String>>> needs,
+            Set<String> mine,
+            boolean allBranches,
+            Option<BuildsShown.Baseline> baseline,
             DateTimeFormatter day,
             DateTimeFormatter when,
             int chart) {
@@ -196,7 +208,7 @@ final class BuildsText {
             return Span.styled(text, styles.of(cssClass));
         }
 
-        private Span dim(String text) {
+        Span dim(String text) {
             return span(text, Theme.Classes.DIM);
         }
 
@@ -228,7 +240,7 @@ final class BuildsText {
                     span(newest.workflow(), Theme.Classes.BOLD),
                     dim(Messages.get(
                             "content.builds.workflow",
-                            newest.event(),
+                            allBranches ? Messages.get("content.builds.allEvents") : newest.event(),
                             String.valueOf(builds.size()),
                             day.format(builds.last().createdAt()),
                             day.format(newest.createdAt()))));
@@ -261,7 +273,10 @@ final class BuildsText {
                                                                             : Theme.Classes.DIM))
                                                     .getOrElse(() -> dim("")))))
                             .getOrElse(List.empty()));
-            return Line.from(counts.appendAll(times).toJavaList());
+            List<Span> everyBranch = baseline.map(known -> List.of(dim(Messages.get(
+                            "content.builds.baseline", duration(known.median()), String.valueOf(known.runs())))))
+                    .getOrElse(List.empty());
+            return Line.from(counts.appendAll(times).appendAll(everyBranch).toJavaList());
         }
 
         /**
@@ -333,13 +348,39 @@ final class BuildsText {
                                             + dated._1()._1() + " "
                                     : done);
             return List.of(
-                    Line.from(dim(" ".repeat(SCALE - 1) + "└"
-                            + starts.map(start -> start ? "┴" : "─").mkString())),
-                    Line.from(dim(" ".repeat(SCALE) + labels.stripTrailing())),
-                    Line.from(List.of(dim(" ".repeat(SCALE)))
-                            .appendAll(shown.map(build ->
-                                    build.outcome() == Outcome.PASSED ? Span.raw(" ") : outcome(build.outcome())))
-                            .toJavaList()));
+                            Line.from(dim(" ".repeat(SCALE - 1) + "└"
+                                    + starts.map(start -> start ? "┴" : "─").mkString())),
+                            Line.from(dim(" ".repeat(SCALE) + labels.stripTrailing())),
+                            Line.from(List.of(dim(" ".repeat(SCALE)))
+                                    .appendAll(shown.map(build -> build.outcome() == Outcome.PASSED
+                                            ? Span.raw(" ")
+                                            : outcome(build.outcome())))
+                                    .toJavaList()))
+                    .appendAll(Option.when(
+                            allBranches && shown.exists(this::isMine),
+                            () -> Line.from(List.of(dim(" ".repeat(SCALE)))
+                                    .appendAll(shown.map(build ->
+                                            isMine(build) ? span(MINE, Theme.Classes.CURRENT_BRANCH) : Span.raw(" ")))
+                                    .append(dim(Messages.get("content.builds.mine")))
+                                    .toJavaList())));
+        }
+
+        /**
+         * Whether {@code build} ran on a commit of the branch.
+         */
+        private boolean isMine(Build build) {
+            return mine.contains(build.sha());
+        }
+
+        /**
+         * What a run on every branch ran for: its pull request, else its branch.
+         */
+        private String ranFor(Build build) {
+            return build.origin()
+                    .pullRequest()
+                    .map(number -> "#" + number)
+                    .orElse(build.origin().branch())
+                    .getOrElse("–");
         }
 
         /**
@@ -481,29 +522,44 @@ final class BuildsText {
                         Option<Duration> took = build.duration();
                         Option<Duration> difference = took.filter(done -> build.outcome() == Outcome.PASSED)
                                 .flatMap(done -> median.map(done::minus));
-                        return Line.from(
-                                outcome(build.outcome()),
-                                Span.raw(" "),
-                                span(
-                                        build.sha()
-                                                .substring(
-                                                        0,
-                                                        Math.min(7, build.sha().length())),
-                                        Theme.Classes.SHA),
-                                dim("  " + when.format(build.createdAt()) + "  "),
-                                Span.raw(padLeft(took.map(BuildsText::duration).getOrElse("–"), 5)),
-                                difference
-                                        .map(change -> span(
-                                                padLeft(signed(change), 8),
-                                                change.compareTo(Duration.ofSeconds(30)) > 0
-                                                        ? Theme.Classes.CHECKS_FAILED
-                                                        : change.compareTo(Duration.ofSeconds(-30)) < 0
-                                                                ? Theme.Classes.CHECKS_PASSED
-                                                                : Theme.Classes.DIM))
-                                        .getOrElse(() -> Span.raw(" ".repeat(8))),
-                                Span.raw("  " + build.title()));
+                        List<Span> forWhat = allBranches
+                                ? List.of(
+                                        isMine(build) ? span(MINE, Theme.Classes.CURRENT_BRANCH) : Span.raw(" "),
+                                        Span.raw(" "),
+                                        span(
+                                                pad(ranFor(build), FOR),
+                                                isMine(build) ? Theme.Classes.CURRENT_BRANCH : Theme.Classes.DIM))
+                                : List.empty();
+                        Span vsMedian = difference
+                                .map(change -> span(
+                                        padLeft(signed(change), 8),
+                                        change.compareTo(Duration.ofSeconds(30)) > 0
+                                                ? Theme.Classes.CHECKS_FAILED
+                                                : change.compareTo(Duration.ofSeconds(-30)) < 0
+                                                        ? Theme.Classes.CHECKS_PASSED
+                                                        : Theme.Classes.DIM))
+                                .getOrElse(() -> Span.raw(" ".repeat(8)));
+                        return Line.from(List.of(outcome(build.outcome()), Span.raw(" "))
+                                .appendAll(forWhat)
+                                .appendAll(List.of(
+                                        span(
+                                                build.sha()
+                                                        .substring(
+                                                                0,
+                                                                Math.min(
+                                                                        7,
+                                                                        build.sha()
+                                                                                .length())),
+                                                Theme.Classes.SHA),
+                                        dim("  " + when.format(build.createdAt()) + "  "),
+                                        Span.raw(padLeft(
+                                                took.map(BuildsText::duration).getOrElse("–"), 5)),
+                                        vsMedian,
+                                        Span.raw("  " + build.title())))
+                                .toJavaList());
                     })
-                    .prepend(Line.from(dim(Messages.get("content.builds.list"))));
+                    .prepend(Line.from(
+                            dim(Messages.get(allBranches ? "content.builds.listEveryBranch" : "content.builds.list"))));
         }
     }
 }

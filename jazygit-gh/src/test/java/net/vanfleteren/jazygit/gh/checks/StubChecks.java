@@ -46,6 +46,22 @@ public interface StubChecks extends Checks {
     }
 
     /**
+     * No workflow of that id.
+     */
+    @Override
+    default Either<GhError, Option<WorkflowRunsPage>> workflowRuns(String workflowId, Option<String> after) {
+        return Either.right(Option.none());
+    }
+
+    /**
+     * A repository without workflows.
+     */
+    @Override
+    default Either<GhError, List<RepoWorkflow>> workflows() {
+        return Either.right(List.empty());
+    }
+
+    /**
      * A repository that protects no branch.
      */
     @Override

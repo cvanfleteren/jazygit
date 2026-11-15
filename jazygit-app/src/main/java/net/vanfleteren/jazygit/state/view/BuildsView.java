@@ -1,13 +1,18 @@
 package net.vanfleteren.jazygit.state.view;
 
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.util.Comparator;
+import lombok.With;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
+import net.vanfleteren.jazygit.gh.model.RepoWorkflow;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -18,16 +23,19 @@ import net.vanfleteren.jazygit.state.Loadable;
 /**
  * The builds of a local branch on GitHub, which the content panel shows in place of its log (ADR 131).
  *
- * @param branch    the local branch
- * @param onGitHub  the branch on GitHub it follows, whose builds are read; none when it follows none
- * @param builds    the builds read so far, of the newest commit first
- * @param commits   how many commits of the branch were read, with or without builds
- * @param after     where the commits still to be read start; none at the tip
- * @param reading   whether more commits are being read
- * @param stopped   why reading more failed, after some were read; none while it did not
- * @param workflows the files of the workflows read, at the commit of a build, which say which job needs which; none
- *                  for one being read, or that could not be
- * @param selected  the workflow whose builds show, as the user chose it; none to show the one on the tip
+ * @param branch        the local branch
+ * @param onGitHub      the branch on GitHub it follows, whose builds are read; none when it follows none
+ * @param builds        the builds read so far, of the newest commit first
+ * @param commits       how many commits of the branch were read, with or without builds
+ * @param after         where the commits still to be read start; none at the tip
+ * @param reading       whether more commits are being read
+ * @param stopped       why reading more failed, after some were read; none while it did not
+ * @param workflows     the files of the workflows read, at the commit of a build, which say which job needs which;
+ *                      none for one being read, or that could not be
+ * @param selected      the workflow whose builds show, as the user chose it; none to show the one on the tip
+ * @param allBranches   whether a tab shows the runs of its workflow on every branch, not only the branch's builds
+ * @param runs          the runs of workflows on every branch, by the id of the workflow, as far as they are read
+ * @param repoWorkflows the workflows of the repository, once they are asked for: the tabs of every branch
  */
 public record BuildsView(
         BranchName branch,
@@ -38,7 +46,10 @@ public record BuildsView(
         boolean reading,
         Option<Failure> stopped,
         Map<BuildsView.FileAt, Option<Workflow>> workflows,
-        Option<BuildsView.Pipeline> selected) {
+        Option<BuildsView.Pipeline> selected,
+        @With boolean allBranches,
+        @With Map<String, WorkflowRuns> runs,
+        @With Option<Loadable<List<RepoWorkflow>>> repoWorkflows) {
 
     /**
      * How many commits are read, at most (ADR 131).
@@ -58,6 +69,9 @@ public record BuildsView(
                 true,
                 Option.none(),
                 HashMap.empty(),
+                Option.none(),
+                false,
+                HashMap.empty(),
                 Option.none());
     }
 
@@ -74,6 +88,9 @@ public record BuildsView(
                 false,
                 Option.none(),
                 HashMap.empty(),
+                Option.none(),
+                false,
+                HashMap.empty(),
                 Option.none());
     }
 
@@ -83,6 +100,21 @@ public record BuildsView(
      */
     public static Option<Build> lastDoneOf(List<Build> builds) {
         return builds.find(build -> build.duration().isDefined() && !build.ran().isEmpty());
+    }
+
+    /**
+     * The middle of {@code durations}; none without any.
+     */
+    public static Option<Duration> median(List<Duration> durations) {
+        List<Duration> sorted = durations.sorted();
+        int size = sorted.size();
+        if (size == 0) {
+            return Option.none();
+        }
+        return Option.of(
+                size % 2 == 1
+                        ? sorted.get(size / 2)
+                        : sorted.get(size / 2 - 1).plus(sorted.get(size / 2)).dividedBy(2));
     }
 
     /**
@@ -109,7 +141,10 @@ public record BuildsView(
                 read < COMMITS && next.isDefined(),
                 Option.none(),
                 workflows,
-                selected);
+                selected,
+                allBranches,
+                runs,
+                repoWorkflows);
     }
 
     /**
@@ -126,28 +161,10 @@ public record BuildsView(
                 false,
                 builds.toOption().map(read -> failure),
                 workflows,
-                selected);
-    }
-
-    /**
-     * Of each workflow and event, the last build that is done: those whose jobs show on one time line.
-     */
-    public List<Build> lastDone() {
-        List<Build> read = builds.getOrElse(List.empty());
-        return read.map(build -> io.vavr.Tuple.of(build.workflow(), build.event()))
-                .distinct()
-                .flatMap(workflow -> lastDoneOf(read.filter(build ->
-                        build.workflow().equals(workflow._1()) && build.event().equals(workflow._2()))));
-    }
-
-    /**
-     * The files of the workflows of the last builds that are done, that are not read yet, nor being read.
-     */
-    public List<FileAt> unread() {
-        return lastDone()
-                .flatMap(build -> build.file().map(path -> new FileAt(build.sha(), path)))
-                .distinct()
-                .filter(file -> !workflows.containsKey(file));
+                selected,
+                allBranches,
+                runs,
+                repoWorkflows);
     }
 
     /**
@@ -163,7 +180,53 @@ public record BuildsView(
                 reading,
                 stopped,
                 workflows.merge(read, (was, now) -> now),
-                selected);
+                selected,
+                allBranches,
+                runs,
+                repoWorkflows);
+    }
+
+    /**
+     * This, showing the builds of {@code pipeline}.
+     */
+    public BuildsView withSelected(Pipeline pipeline) {
+        return new BuildsView(
+                branch,
+                onGitHub,
+                builds,
+                commits,
+                after,
+                reading,
+                stopped,
+                workflows,
+                Option.of(pipeline),
+                allBranches,
+                runs,
+                repoWorkflows);
+    }
+
+    /**
+     * Of each workflow and event, the last build that is done, and of each workflow whose runs on every branch are
+     * read, its last run that is done: those whose jobs show on one time line.
+     */
+    public List<Build> lastDone() {
+        List<Build> read = builds.getOrElse(List.empty());
+        return read.map(Pipeline::of)
+                .distinct()
+                .flatMap(pipeline -> lastDoneOf(read.filter(pipeline::ran)))
+                .appendAll(runs.values()
+                        .toList()
+                        .flatMap(ofWorkflow -> ofWorkflow.builds().toOption().flatMap(BuildsView::lastDoneOf)));
+    }
+
+    /**
+     * The files of the workflows of the last builds that are done, that are not read yet, nor being read.
+     */
+    public List<FileAt> unread() {
+        return lastDone()
+                .flatMap(build -> build.file().map(path -> new FileAt(build.sha(), path)))
+                .distinct()
+                .filter(file -> !workflows.containsKey(file));
     }
 
     /**
@@ -174,18 +237,10 @@ public record BuildsView(
         return HashMap.ofEntries(lastDone()
                 .flatMap(build -> build.file()
                         .flatMap(path -> workflow(build.sha(), path))
-                        .map(workflow -> io.vavr.Tuple.of(
+                        .map(workflow -> Tuple.of(
                                 build.runId(),
                                 workflow.needs(
                                         build.ran().map(Build.Job::name), called -> workflow(build.sha(), called))))));
-    }
-
-    /**
-     * This, showing the builds of {@code pipeline}.
-     */
-    public BuildsView withSelected(Pipeline pipeline) {
-        return new BuildsView(
-                branch, onGitHub, builds, commits, after, reading, stopped, workflows, Option.of(pipeline));
     }
 
     /**
@@ -217,11 +272,13 @@ public record BuildsView(
 
     /**
      * The workflow whose builds of {@code builds} show: the one chosen, while it has builds; else, of those on the
-     * newest commit with builds, one whose last build failed, else the one with the most builds.
+     * newest commit with builds, one whose last build failed, else the one with the most builds. A workflow chosen on
+     * every branch stands for its tab with the most builds.
      */
     public Option<Pipeline> shownPipeline(List<Build> builds) {
         List<Pipeline> all = pipelines(builds);
-        return selected.filter(all::contains)
+        return selected.flatMap(chosen -> all.filter(chosen::covers)
+                        .maxBy(Comparator.comparingInt(pipeline -> builds.count(pipeline::ran))))
                 .orElse(() -> onTip(builds)
                         .sorted(Comparator.<Pipeline, Boolean>comparing(pipeline -> builds.find(pipeline::ran)
                                         .exists(last -> last.outcome() != Build.Outcome.FAILED))
@@ -234,15 +291,124 @@ public record BuildsView(
     }
 
     /**
-     * This, showing the workflow {@code by} tabs after the one of {@code builds} that shows, around from the last to
-     * the first.
+     * The workflows of the tabs, of {@code builds}, those of the branch that show: of the branch, those it ran; on
+     * every branch, the workflows it ran first, in the same order, then the other workflows of the repository that
+     * run, by name, each of any event.
+     */
+    public List<Pipeline> tabs(List<Build> builds) {
+        if (!allBranches) {
+            return pipelines(builds);
+        }
+        List<String> ran = pipelines(builds).map(Pipeline::workflow).distinct();
+        List<String> others = repoWorkflows
+                .flatMap(Loadable::toOption)
+                .getOrElse(List.empty())
+                .filter(RepoWorkflow::active)
+                .map(RepoWorkflow::name)
+                .filter(name -> !ran.contains(name))
+                .distinct()
+                .sorted();
+        return ran.appendAll(others).map(Pipeline::any);
+    }
+
+    /**
+     * The tab shown of the tabs of {@code builds}: of the branch, as {@link #shownPipeline} says; on every branch, the
+     * workflow chosen, else that of the tab the branch shows, else the first.
+     */
+    public Option<Pipeline> shownTab(List<Build> builds) {
+        if (!allBranches) {
+            return shownPipeline(builds);
+        }
+        List<Pipeline> all = tabs(builds);
+        return selected.map(chosen -> Pipeline.any(chosen.workflow()))
+                .filter(all::contains)
+                .orElse(() -> shownPipeline(builds)
+                        .map(pipeline -> Pipeline.any(pipeline.workflow()))
+                        .filter(all::contains))
+                .orElse(all::headOption);
+    }
+
+    /**
+     * This, showing the tab {@code by} tabs after the one of {@code builds} that shows, around from the last to the
+     * first.
      */
     public BuildsView stepped(List<Build> builds, int by) {
-        List<Pipeline> all = pipelines(builds);
-        return shownPipeline(builds)
+        List<Pipeline> all = tabs(builds);
+        return shownTab(builds)
                 .map(now -> all.get(Math.floorMod(all.indexOf(now) + by, all.size())))
                 .map(this::withSelected)
                 .getOrElse(this);
+    }
+
+    /**
+     * The id on GitHub of the workflow {@code workflow}, as a build of the branch or the workflows of the repository
+     * tell it; none while neither does.
+     */
+    public Option<String> workflowId(String workflow) {
+        return builds.getOrElse(List.empty())
+                .filter(build -> build.workflow().equals(workflow))
+                .flatMap(build -> build.origin().workflowId())
+                .headOption()
+                .orElse(() -> repoWorkflows
+                        .flatMap(Loadable::toOption)
+                        .getOrElse(List.empty())
+                        .find(known -> known.name().equals(workflow))
+                        .map(RepoWorkflow::id));
+    }
+
+    /**
+     * The runs on every branch of the workflow {@code workflow}, as far as they are asked for.
+     */
+    public Option<WorkflowRuns> runsOf(String workflow) {
+        return workflowId(workflow).flatMap(runs::get);
+    }
+
+    /**
+     * What the builds show of {@code builds}, those of the branch that show: the tabs, how the last build of each
+     * ended, and the builds of the tab shown, with what goes with them; none without a tab.
+     */
+    public Option<BuildsShown> shownOf(List<Build> builds) {
+        List<Pipeline> all = tabs(builds);
+        Set<String> mine = HashSet.ofAll(this.builds.getOrElse(List.empty()).map(Build::sha));
+        return shownTab(builds)
+                .map(tab -> new BuildsShown(
+                        all,
+                        all.map(each -> lastOf(each, builds)),
+                        all.indexOf(tab),
+                        allBranches,
+                        allBranches
+                                ? runsOf(tab.workflow())
+                                        .map(WorkflowRuns::builds)
+                                        .getOrElse(Loadable::loading)
+                                : new Loadable.Loaded<>(builds.filter(tab::ran)),
+                        allBranches ? mine : HashSet.empty(),
+                        allBranches ? Option.none() : baseline(tab),
+                        needs()));
+    }
+
+    /**
+     * How the last build of {@code tab} ended: of the branch, among {@code builds}; on every branch, among its runs,
+     * once read.
+     */
+    private Option<Build.Outcome> lastOf(Pipeline tab, List<Build> builds) {
+        return allBranches
+                ? runsOf(tab.workflow())
+                        .flatMap(read -> read.builds().toOption())
+                        .flatMap(read -> read.headOption())
+                        .map(Build::outcome)
+                : builds.find(tab::ran).map(Build::outcome);
+    }
+
+    /**
+     * How long the runs of {@code tab}'s workflow and event that passed took on every branch, once they are read.
+     */
+    private Option<BuildsShown.Baseline> baseline(Pipeline tab) {
+        return runsOf(tab.workflow())
+                .flatMap(read -> read.builds().toOption())
+                .map(read -> read.filter(tab::ran)
+                        .filter(build -> build.outcome() == Build.Outcome.PASSED)
+                        .flatMap(Build::duration))
+                .flatMap(passed -> median(passed).map(middle -> new BuildsShown.Baseline(middle, passed.size())));
     }
 
     private static List<Pipeline> onTip(List<Build> builds) {
@@ -265,10 +431,11 @@ public record BuildsView(
     public record FileAt(String sha, String path) {}
 
     /**
-     * A workflow as it runs for one event, like {@code Build} for {@code pull_request}: the builds of one tab.
+     * A workflow as it runs for one event, like {@code Build} for {@code pull_request}, or for any: the builds of one
+     * tab.
      *
      * @param workflow the name of the workflow
-     * @param event    what starts it
+     * @param event    what starts it; empty for any event
      */
     public record Pipeline(String workflow, String event) {
 
@@ -280,18 +447,35 @@ public record BuildsView(
         }
 
         /**
+         * The workflow {@code workflow}, for any event.
+         */
+        public static Pipeline any(String workflow) {
+            return new Pipeline(workflow, "");
+        }
+
+        /**
          * How its tab names it among {@code all}: its workflow, and the event it runs for when that workflow runs for
          * more than one.
          */
         public String label(List<Pipeline> all) {
-            return all.count(other -> other.workflow().equals(workflow)) > 1 ? workflow + " · " + event : workflow;
+            return !event.isEmpty() && all.count(other -> other.workflow().equals(workflow)) > 1
+                    ? workflow + " · " + event
+                    : workflow;
         }
 
         /**
          * Whether {@code build} is one of its builds.
          */
         public boolean ran(Build build) {
-            return build.workflow().equals(workflow) && build.event().equals(event);
+            return build.workflow().equals(workflow)
+                    && (event.isEmpty() || build.event().equals(event));
+        }
+
+        /**
+         * Whether this, chosen, stands for {@code other}: it is, or it is its workflow for any event.
+         */
+        boolean covers(Pipeline other) {
+            return equals(other) || event.isEmpty() && workflow.equals(other.workflow());
         }
     }
 }

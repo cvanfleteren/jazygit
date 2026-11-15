@@ -14,6 +14,7 @@ import static net.vanfleteren.jazygit.json.Decoder.succeed;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
@@ -53,11 +54,11 @@ final class BuildsQuery {
             nodes { oid message %s } } } } } } }""".formatted(
                     "statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { %s } } } }"
                             .formatted(CheckFragment.CHECK_RUN_FIELDS.replace(
-                                    "workflow { name }", "workflow { name } file { path }")));
+                                    "workflow { name }", "workflow { name id } file { path }")));
 
-    // A check run, with the path of the file of its workflow, which says which job needs which (ADR 131); a commit
-    // status answers only its __typename, and is left out.
-    static final Decoder<Option<Tuple2<Check, Option<String>>>> CHECK_RUN = byField(
+    // A check run, with the file and the id of its workflow (ADR 131); a commit status answers only its __typename, and
+    // is left out.
+    static final Decoder<Option<Tuple2<Check, Workflow>>> CHECK_RUN = byField(
             "__typename",
             HashMap.of(
                     "CheckRun",
@@ -67,16 +68,18 @@ final class BuildsQuery {
                                                     "checkSuite",
                                                     nullable(field(
                                                             "workflowRun",
-                                                            nullable(
-                                                                    field("file", nullable(field("path", string())))))))
-                                            .map(suite ->
-                                                    suite.flatMap(run -> run).flatMap(file -> file)),
+                                                            nullable(map2(
+                                                                    field("file", nullable(field("path", string()))),
+                                                                    field("workflow", nullable(field("id", string()))),
+                                                                    Workflow::new)))))
+                                            .map(suite -> suite.flatMap(run -> run)
+                                                    .getOrElse(new Workflow(Option.none(), Option.none()))),
                                     Tuple::of)
                             .map(Option::some)),
             succeed(Option.none()));
 
     // The check runs on a commit.
-    static final Decoder<List<Tuple2<Check, Option<String>>>> CHECKS = field(
+    static final Decoder<List<Tuple2<Check, Workflow>>> CHECKS = field(
                     "statusCheckRollup", nullable(at("contexts.nodes", list(CHECK_RUN))))
             .map(checks -> checks.toList().flatMap(nodes -> nodes).flatMap(check -> check));
 
@@ -142,17 +145,18 @@ final class BuildsQuery {
      * The builds on the commit {@code sha} titled {@code title} that {@code checks} tell, the newest first: its check
      * runs grouped by their workflow run, of an event that builds the code.
      */
-    private static List<Build> builds(String sha, String title, List<Tuple2<Check, Option<String>>> checks) {
-        List<Tuple2<String, CheckRun>> runs = checks.flatMap(
-                        check -> check._1().run().map(run -> Tuple.of(check._1().name(), run)))
+    private static List<Build> builds(String sha, String title, List<Tuple2<Check, Workflow>> checks) {
+        List<Tuple3<String, CheckRun, Workflow>> runs = checks.flatMap(
+                        check -> check._1().run().map(run -> Tuple.of(check._1().name(), run, check._2())))
                 .filter(named -> EVENTS.contains(named._2().event()));
-        List<Tuple2<Long, String>> files = checks.flatMap(check ->
-                check._1().run().flatMap(run -> check._2().map(path -> Tuple.of(run.runId(), path))));
         return runs.map(named -> named._2().runId())
                 .distinct()
                 .map(runId -> runs.filter(named -> named._2().runId() == runId))
                 .map(ofRun -> {
                     CheckRun first = ofRun.head()._2();
+                    Workflow workflow = ofRun.map(Tuple3::_3)
+                            .find(known -> known.path().isDefined())
+                            .getOrElse(ofRun.head()._3());
                     return new Build(
                             first.workflow(),
                             first.event(),
@@ -166,8 +170,14 @@ final class BuildsQuery {
                                     named._2().conclusion(),
                                     named._2().startedAt(),
                                     named._2().completedAt())),
-                            files.find(file -> file._1() == first.runId()).map(Tuple2::_2));
+                            workflow.path(),
+                            new Build.Origin(workflow.id(), Option.none(), Option.none()));
                 })
                 .sorted(Comparator.comparing(Build::createdAt).reversed());
     }
+
+    /**
+     * The workflow of a check run: the path of its file and its id, as far as GitHub says.
+     */
+    record Workflow(Option<String> path, Option<String> id) {}
 }

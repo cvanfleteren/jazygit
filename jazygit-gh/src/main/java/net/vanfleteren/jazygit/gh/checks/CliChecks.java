@@ -39,6 +39,16 @@ public final class CliChecks implements Checks {
     }
 
     @Override
+    public Either<GhError, Option<WorkflowRunsPage>> workflowRuns(String workflowId, Option<String> after) {
+        return process.readJson(WorkflowRunsQuery.command(workflowId, after), WorkflowRunsQuery.decoder(workflowId));
+    }
+
+    @Override
+    public Either<GhError, List<RepoWorkflow>> workflows() {
+        return process.readJson(RepoWorkflowsQuery.COMMAND, RepoWorkflowsQuery.DECODER);
+    }
+
+    @Override
     public Either<GhError, List<GhBranch>> protectedBranches() {
         return process.readJson(ProtectedBranchesQuery.COMMAND, ProtectedBranchesQuery.DECODER);
     }

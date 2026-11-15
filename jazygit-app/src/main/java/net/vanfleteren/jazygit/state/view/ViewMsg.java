@@ -25,18 +25,6 @@ public sealed interface ViewMsg extends Msg {
     }
 
     /**
-     * The user clicked the tab of {@code pipeline} in the builds of a branch (ADR 131).
-     */
-    record BuildsTabClicked(BuildsView.Pipeline pipeline) implements ViewMsg {
-
-        @Override
-        public Update.Next apply(Model model) {
-            return Update.Next.of(model.withRepoView(
-                    model.repoView().withBuilds(model.repoView().builds().map(view -> view.withSelected(pipeline)))));
-        }
-    }
-
-    /**
      * The user scrolled the content area {@code area}.
      */
     record ContentScrolled(AreaId area, Scrolled to) implements ViewMsg {

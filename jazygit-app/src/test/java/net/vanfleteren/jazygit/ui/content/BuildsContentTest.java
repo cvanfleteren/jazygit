@@ -13,7 +13,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.feature.github.builds.BuildsPopup;
 import net.vanfleteren.jazygit.feature.github.builds.LoadBuilds;
-import net.vanfleteren.jazygit.feature.github.builds.ReadWorkflows;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
@@ -40,11 +39,13 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.BranchChecksMsg;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
+import net.vanfleteren.jazygit.state.github.builds.ReadWorkflows;
 import net.vanfleteren.jazygit.state.load.AheadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
-import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.state.view.Workflow;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
@@ -137,10 +138,10 @@ class BuildsContentTest {
         Shown.Area area = (Shown.Area) content(read.model());
         assertEquals(ContentArea.BUILDS, area.area());
         assertEquals("Builds: main · reading, 25 commits so far", area.title());
-        assertEquals(
-                new ContentView.Body.Builds(
-                        List.of(BUILD), HashMap.empty(), Option.of(new BuildsView.Pipeline("Build", "push"))),
-                area.body());
+        BuildsShown drawn = ((ContentView.Body.Builds) area.body()).shown();
+        assertEquals(new BuildsView.Pipeline("Build", "push"), drawn.shown());
+        assertEquals(new Loadable.Loaded<>(List.of(BUILD)), drawn.builds());
+        assertEquals(Option.none(), drawn.baseline());
     }
 
     @Test
@@ -339,7 +340,7 @@ class BuildsContentTest {
                         ORIGIN_MAIN, Option.of("c25"), Option.of(new BuildsPage(List.empty(), 25, Option.none()))));
 
         FileAt publish = new FileAt("abcdef0", ".github/workflows/publish.yml");
-        assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.of("c25")), new ReadWorkflows(publish)), read.cmds());
+        assertEquals(List.of(new ReadWorkflows(publish), new LoadBuilds(ORIGIN_MAIN, Option.of("c25"))), read.cmds());
         assertTrue(again.cmds().isEmpty());
     }
 
@@ -372,13 +373,15 @@ class BuildsContentTest {
 
         Model known = Update.update(
                         read,
-                        new BuildsMsg.WorkflowsRead(HashMap.of(
+                        new BuildsViewMsg.WorkflowsRead(HashMap.of(
                                 publish, Workflow.parse("jobs:\n  verify: {}\n  package:\n    needs: verify\n"))))
                 .model();
 
         assertEquals(
                 HashMap.of(1L, HashMap.of("package", HashSet.of("verify"))),
-                ((ContentView.Body.Builds) ((Shown.Area) content(known)).body()).needs());
+                ((ContentView.Body.Builds) ((Shown.Area) content(known)).body())
+                        .shown()
+                        .needs());
     }
 
     @Test
@@ -397,8 +400,8 @@ class BuildsContentTest {
                 }),
                 StubGitHub.of());
 
-        BuildsMsg.WorkflowsRead read =
-                (BuildsMsg.WorkflowsRead) new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
+        BuildsViewMsg.WorkflowsRead read = (BuildsViewMsg.WorkflowsRead)
+                new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
 
         assertEquals(2, read.workflows().size());
         assertEquals(
@@ -416,7 +419,8 @@ class BuildsContentTest {
         Env env = new Env(StubGit.of(), StubGitHub.of());
         FileAt file = new FileAt("abcdef0123456789abcdef0123456789abcdef01", ".github/workflows/gone.yml");
 
-        assertEquals(new BuildsMsg.WorkflowsRead(HashMap.of(file, Option.none())), new ReadWorkflows(file).run(env));
+        assertEquals(
+                new BuildsViewMsg.WorkflowsRead(HashMap.of(file, Option.none())), new ReadWorkflows(file).run(env));
     }
 
     @Test
@@ -434,6 +438,8 @@ class BuildsContentTest {
                 Option.of(new AheadMsg.Toggled()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('b'), Option.none()));
         assertEquals(
                 Option.of(new BuildsMsg.Closed()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('B'), Option.none()));
+        assertEquals(
+                Option.of(new BuildsMsg.AllToggled()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('a'), Option.none()));
     }
 
     @Test
@@ -441,7 +447,7 @@ class BuildsContentTest {
         Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
         BuildsView.Pipeline lint = new BuildsView.Pipeline("Markdown", "pull_request");
 
-        Model clicked = Update.update(shown, new ViewMsg.BuildsTabClicked(lint)).model();
+        Model clicked = Update.update(shown, new BuildsViewMsg.TabClicked(lint)).model();
         Model closed = Update.update(clicked, new BuildsMsg.Closed()).model();
 
         assertEquals(Option.of(lint), clicked.repoView().builds().get().selected());
@@ -462,7 +468,11 @@ class BuildsContentTest {
                 .model();
         BuildsView.Pipeline build = new BuildsView.Pipeline("Build", "push");
         BuildsView.Pipeline lint = new BuildsView.Pipeline("Markdown", "pull_request");
-        assertEquals(Option.of(build), ((ContentView.Body.Builds) ((Shown.Area) content(read)).body()).pipeline());
+        assertEquals(
+                build,
+                ((ContentView.Body.Builds) ((Shown.Area) content(read)).body())
+                        .shown()
+                        .shown());
 
         Model asked = Update.update(read, new BuildsMsg.PickRequested()).model();
         assertEquals(
@@ -471,13 +481,18 @@ class BuildsContentTest {
 
         Model picked = Update.update(asked, new BuildsMsg.Picked(lint)).model();
         assertTrue(picked.popup(BuildsPopup.class).isEmpty());
-        assertEquals(Option.of(lint), ((ContentView.Body.Builds) ((Shown.Area) content(picked)).body()).pipeline());
         assertEquals(
-                Option.of(build),
+                lint,
+                ((ContentView.Body.Builds) ((Shown.Area) content(picked)).body())
+                        .shown()
+                        .shown());
+        assertEquals(
+                build,
                 ((ContentView.Body.Builds) ((Shown.Area) content(Update.update(picked, new BuildsMsg.Stepped(1))
                                         .model()))
                                 .body())
-                        .pipeline());
+                        .shown()
+                        .shown());
 
         Model again = Update.update(picked, new BuildsMsg.Toggled(LOCAL)).model();
         assertEquals(Option.of(lint), again.repoView().builds().get().selected());

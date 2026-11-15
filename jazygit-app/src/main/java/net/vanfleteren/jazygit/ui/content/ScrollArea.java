@@ -48,6 +48,7 @@ import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Found;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.FileStepMsg;
@@ -518,11 +519,10 @@ public final class ScrollArea {
             // A click on a tab of the builds of a branch shows its workflow (ADR 131).
             Option<Msg> tab = Option.of(element.renderedArea())
                     .filter(drawn -> state.scrollRow() + event.y() - drawn.top() - 1 == 0)
-                    .flatMap(drawn -> styled.flatMap(shown -> shown.body()
-                                    instanceof Body.Builds(var builds, var needs, var pipeline)
-                            ? BuildsText.tabAt(builds, pipeline, shown.width(), column + event.x() - drawn.left() - 1)
+                    .flatMap(drawn -> styled.flatMap(shown -> shown.body() instanceof Body.Builds(var builds)
+                            ? BuildsText.tabAt(builds, shown.width(), column + event.x() - drawn.left() - 1)
                             : Option.none()))
-                    .map(ViewMsg.BuildsTabClicked::new);
+                    .map(BuildsViewMsg.TabClicked::new);
             if (tab.isDefined()) {
                 tab.forEach(dispatch);
                 return EventResult.HANDLED;

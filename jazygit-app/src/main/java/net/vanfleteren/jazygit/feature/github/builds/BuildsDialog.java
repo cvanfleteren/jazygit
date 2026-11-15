@@ -36,15 +36,19 @@ public final class BuildsDialog {
         return new PickDialog.Row<>(
                 choice.pipeline(),
                 List.of(
-                        switch (choice.last()) {
-                            case PASSED -> Cell.styled("✓", Theme.Classes.CHECKS_PASSED);
-                            case FAILED -> Cell.styled("✗", Theme.Classes.CHECKS_FAILED);
-                            case CANCELLED -> Cell.styled("⊘", Theme.Classes.DIM);
-                            case RUNNING -> Cell.styled("○", Theme.Classes.CHECKS_RUNNING);
-                        },
+                        choice.last()
+                                .map(last -> switch (last) {
+                                    case PASSED -> Cell.styled("✓", Theme.Classes.CHECKS_PASSED);
+                                    case FAILED -> Cell.styled("✗", Theme.Classes.CHECKS_FAILED);
+                                    case CANCELLED -> Cell.styled("⊘", Theme.Classes.DIM);
+                                    case RUNNING -> Cell.styled("○", Theme.Classes.CHECKS_RUNNING);
+                                })
+                                .getOrElse(() -> Cell.styled("·", Theme.Classes.DIM)),
                         Cell.of(choice.label()),
                         Cell.styled(
-                                Messages.get("dialog.builds.count", String.valueOf(choice.builds())),
+                                choice.builds()
+                                        .map(count -> Messages.get("dialog.builds.count", String.valueOf(count)))
+                                        .getOrElse(""),
                                 Theme.Classes.DIM)));
     }
 }

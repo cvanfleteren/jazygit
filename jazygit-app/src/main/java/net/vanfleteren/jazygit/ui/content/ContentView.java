@@ -2,8 +2,6 @@ package net.vanfleteren.jazygit.ui.content;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
-import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -41,6 +39,7 @@ import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.Preview;
@@ -446,34 +445,34 @@ public final class ContentView {
                                     ? Messages.get("panel.builds.stopped", branch, commits)
                                     : Messages.get("panel.builds.title", branch, commits);
                     // Only the builds of the commits not on the base show: the title says how many there are.
-                    String title = ahead.only() ? ahead.title(read) : read;
+                    String ofBranch = ahead.only() ? ahead.title(read) : read;
+                    String title = view.allBranches() ? Messages.get("panel.builds.everyBranch", ofBranch) : ofBranch;
                     return whenLoaded(
                             title,
                             view.builds(),
                             builds -> view.onGitHub()
-                                    .map(remote -> builds.isEmpty()
-                                            ? view.reading()
-                                                    ? loading(title)
-                                                    : view.commits() == 0
-                                                            ? dim(
-                                                                    title,
-                                                                    Messages.get(
-                                                                            "content.builds.notOnGitHub",
-                                                                            remote.shortName()))
-                                                            : dim(
-                                                                    title,
-                                                                    Messages.get(
-                                                                            "content.builds.none",
-                                                                            remote.shortName(),
-                                                                            String.valueOf(view.commits())))
-                                            : shown.isEmpty()
-                                                    ? dim(title, Messages.get("content.builds.noneAhead"))
-                                                    : new Shown.Area(
-                                                            ContentArea.BUILDS,
-                                                            title,
-                                                            new ScrolledContent.Builds(view.branch()),
-                                                            new Body.Builds(
-                                                                    shown, view.needs(), view.shownPipeline(shown))))
+                                    .map(remote -> view.shownOf(shown)
+                                            .<Shown>map(drawn -> new Shown.Area(
+                                                    ContentArea.BUILDS,
+                                                    title,
+                                                    new ScrolledContent.Builds(view.branch()),
+                                                    new Body.Builds(drawn)))
+                                            .getOrElse(() -> builds.isEmpty()
+                                                    ? view.reading()
+                                                            ? loading(title)
+                                                            : view.commits() == 0
+                                                                    ? dim(
+                                                                            title,
+                                                                            Messages.get(
+                                                                                    "content.builds.notOnGitHub",
+                                                                                    remote.shortName()))
+                                                                    : dim(
+                                                                            title,
+                                                                            Messages.get(
+                                                                                    "content.builds.none",
+                                                                                    remote.shortName(),
+                                                                                    String.valueOf(view.commits())))
+                                                    : dim(title, Messages.get("content.builds.noneAhead"))))
                                     .getOrElse(() -> dim(title, Messages.get("content.builds.offGitHub", branch))));
                 });
     }
@@ -740,9 +739,7 @@ public final class ContentView {
         /**
          * The builds of a branch, of the newest commit first (ADR 131).
          */
-        record Builds(
-                List<Build> builds, Map<Long, Map<String, Set<String>>> needs, Option<BuildsView.Pipeline> pipeline)
-                implements Body {}
+        record Builds(BuildsShown shown) implements Body {}
 
         /**
          * A commit and what it changed, drawn as {@code look} says.

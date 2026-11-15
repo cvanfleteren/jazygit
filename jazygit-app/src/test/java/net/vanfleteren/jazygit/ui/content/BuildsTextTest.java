@@ -4,13 +4,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import net.vanfleteren.jazygit.gh.model.Build;
+import net.vanfleteren.jazygit.gh.model.BuildsPage;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
@@ -52,8 +55,17 @@ class BuildsTextTest {
         return List.ofAll(line.spans()).map(Span::content).mkString();
     }
 
+    /**
+     * What the builds of a branch with {@code builds} show, {@code chosen} the tab chosen.
+     */
+    static BuildsShown shown(List<Build> builds, Option<BuildsView.Pipeline> chosen) {
+        BuildsView view = BuildsView.reading(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")))
+                .read(Option.of(new BuildsPage(builds, 1, Option.none())));
+        return chosen.map(view::withSelected).getOrElse(view).shownOf(builds).get();
+    }
+
     private static List<String> drawn(List<Build> builds) {
-        return BuildsText.lines(builds, HashMap.empty(), Option.none(), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+        return BuildsText.lines(shown(builds, Option.none()), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
                 .map(BuildsTextTest::text);
     }
 
@@ -76,9 +88,7 @@ class BuildsTextTest {
         assertFalse(lines.exists(line -> line.startsWith("Publish · push")), lines.mkString("\n"));
 
         List<String> publish = BuildsText.lines(
-                        builds,
-                        HashMap.empty(),
-                        Option.of(new BuildsView.Pipeline("Publish", "push")),
+                        shown(builds, Option.of(new BuildsView.Pipeline("Publish", "push"))),
                         ZoneOffset.UTC,
                         Theme.SpanStyles.NONE,
                         80)

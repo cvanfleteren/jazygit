@@ -54,6 +54,23 @@ issue (`issue_comment`, `issues`) are on the main branch too, as GitHub runs tho
 - With only the commits not on the base listed (`b`, ADR 20), only their builds show, and the title says so as the
   log's does: a pull request's branch then shows only the builds of its own commits. `b` in the builds switches it
   too: it is the one switch of the logs, not one of the builds' own.
+- A workflow that only runs for pull requests has a build or two on a branch: too few to tell how long it takes.
+  `a` in the builds shows the runs of the workflow of the tab on every branch instead, and back:
+  - GraphQL lists the runs of a workflow on every branch, from its id (`node(id:) { ... on Workflow { runs } }`),
+    which the builds of the branch give (`workflowRun { workflow { id } }`). 50 runs with their jobs took 1.8 s; they
+    are read 25 a call, up to 100, once a view, when their tab first shows. A run gives its branch, none for a branch
+    deleted since, as most of a pull request's are once it is merged, and its pull request.
+  - The tabs are then the workflows of the repository, those the branch ran first, in the same order, then the others
+    that run, by name, each of any event. GraphQL has no list of them; REST does (`actions/workflows`), read once a
+    view. A tab whose runs are not read yet shows `·` for how its last one ended.
+  - The runs of the branch are marked `◆`, under the chart and in the list, which says what each ran for: its pull
+    request, else its branch. The chart, the jobs and the last build are of every branch.
+  - The builds of the branch say how long their workflow takes on every branch next to their own median: `every
+    branch 4m18 (96 runs)`, the median of its runs of the same event that passed, read when the tab first shows.
+    Even one build then has something to be held against.
+  - Whether the builds show every branch stays for another branch, as the tab does. Not: a panel of the workflows of
+    the repository of its own, apart from the branches: on every branch the tabs are those workflows already, and the
+    branch's runs stay marked in them.
 - The builds take the focus once `B` shows them, so that their keys work at once; `B` in them shows the log again,
   and gives the focus back to the branches.
 - The builds of a workflow show:

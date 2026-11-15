@@ -36,6 +36,18 @@ public interface Checks {
     Either<GhError, Option<BuildsPage>> builds(String branch, Option<String> after);
 
     /**
+     * The runs of the workflow {@code workflowId} on every branch, some at a time, the newest first: from
+     * {@code after}, where the runs read before end, or from the newest without (ADR 131). None when it is no
+     * workflow.
+     */
+    Either<GhError, Option<WorkflowRunsPage>> workflowRuns(String workflowId, Option<String> after);
+
+    /**
+     * The workflows of GitHub Actions of the repository (ADR 131).
+     */
+    Either<GhError, List<RepoWorkflow>> workflows();
+
+    /**
      * The names of the protected branches of the repository (ADR 72).
      */
     Either<GhError, List<GhBranch>> protectedBranches();

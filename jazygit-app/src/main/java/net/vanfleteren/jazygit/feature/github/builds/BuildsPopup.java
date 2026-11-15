@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.builds;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
@@ -17,8 +18,8 @@ public record BuildsPopup(List<BuildsPopup.Choice> choices) implements Popup {
      *
      * @param pipeline the workflow, and the event it runs for
      * @param label    how its tab names it
-     * @param last     how its last build ended
-     * @param builds   how many builds it has
+     * @param last     how its last build ended, as far as that is read
+     * @param builds   how many builds it has, as far as they are read
      */
-    public record Choice(Pipeline pipeline, String label, Build.Outcome last, int builds) {}
+    public record Choice(Pipeline pipeline, String label, Option<Build.Outcome> last, Option<Integer> builds) {}
 }
