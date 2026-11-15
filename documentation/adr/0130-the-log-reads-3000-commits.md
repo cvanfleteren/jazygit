@@ -44,5 +44,5 @@ costs about half a second, on the render thread, so it waits for a layout that d
 - Scrolling reaches ten times further back before a search is needed; a search finds up to 3000 commits, and the
   title then says `(first 3000)`, and the commits pane says `3000+ ahead`.
 - The graph of a long history with many merges can be wide: hundreds of rails, cut off by the pane.
-- `CommitGraph` and `LogGraph` keep a slow, plain version of themselves in their tests, which the fast one is checked against on random
-  histories.
+- `CommitGraph` and `LogGraph` keep a slow, plain version of themselves in their tests, which the fast ones are
+  checked against on random histories.
