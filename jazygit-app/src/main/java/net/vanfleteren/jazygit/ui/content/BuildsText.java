@@ -405,7 +405,7 @@ final class BuildsText {
             Duration high = passed.max().getOrElse(Duration.ZERO);
             List<Span> results = runs.map(run -> run.map(done -> switch (done._1()) {
                         case PASSED -> span("▆", Theme.Classes.CHECKS_PASSED);
-                        case FAILED -> span("█", Theme.Classes.CHECKS_FAILED);
+                        case FAILED -> span("▆", Theme.Classes.CHECKS_FAILED);
                         case CANCELLED, RUNNING -> dim("▁");
                     })
                     .getOrElse(() -> Span.raw(" ")));

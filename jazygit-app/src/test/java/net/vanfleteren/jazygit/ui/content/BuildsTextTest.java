@@ -167,4 +167,13 @@ class BuildsTextTest {
         assertEquals(Option.of(Duration.ofSeconds(1)), BuildsText.percentile(tens, 0.0));
         assertEquals(Option.none(), BuildsText.percentile(List.empty(), 0.9));
     }
+
+    @Test
+    void aJobThatFailedIsAsHighInTheStripAsOneThatPassed() {
+        // acceptance failed in build 20 of the 30; the strip of the last 30 starts after the names.
+        String acceptance =
+                drawn(PUBLISH).find(line -> line.startsWith("acceptance ")).get();
+
+        assertEquals("▆".repeat(30), acceptance.substring("acceptance ".length(), "acceptance ".length() + 30));
+    }
 }
