@@ -455,6 +455,14 @@ public final class ContentText {
     }
 
     /**
+     * Whether {@code body} is drawn for the width of its area, so drawn anew when that changes: a version of a file
+     * rendered (ADR 103), or the builds of a branch, whose chart has a column for as many builds as fit (ADR 130).
+     */
+    public static boolean drawnToWidth(Body body) {
+        return body instanceof Body.Builds || rendering(body);
+    }
+
+    /**
      * Whether {@code body} shows a version of a file rendered (ADR 103), which is drawn as wide as its area.
      */
     public static boolean rendering(Body body) {

@@ -22,11 +22,15 @@ issue (`issue_comment`, `issues`) are on the main branch too, as GitHub runs tho
 - `B` on a local branch shows the builds of the branch it follows on GitHub in the content panel, in place of its log;
   `B` again shows the log again. It shows while that branch is highlighted, and the pane lists the local branches;
   another branch highlighted shows its log. Not: a popup, which would hide the branches, nor a screen of its own.
+- A branch that follows none, or one on a remote that is not on GitHub, says so, and nothing is read: gh reads the
+  repository it finds for the working tree, where a branch of the same name would show builds that are not its own.
 - A build is a workflow run on one of the commits: its check runs are its jobs. The runs of an event that does not
   build the code are left out: only `push`, `pull_request`, `pull_request_target`, `merge_group`, `workflow_dispatch`
   and `schedule` count. A re-run counts once, at its last attempt, as the rollup gives only that.
 - The builds are read 25 commits a call, up to 100 commits, one call after the other, in the background: the first
-  builds show after one call, and each call stays far from the 10 s. Not: 100 a call, which is close to it.
+  builds show after one call, and each call stays far from the 10 s. Not: 100 a call, which is close to it. A call
+  that fails after some were read keeps those, and the title says no more could be read, so that fewer commits do not
+  pass for the whole history.
 - They are read each time `B` shows them; not kept in a file. Not yet: keeping them, so that more than 100 commits can
   be looked back on, and reading only what is new.
 - How a build ended: running while one of its jobs runs; else failed when one failed, timed out or could not start;

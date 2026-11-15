@@ -143,4 +143,14 @@ class BuildsTextTest {
                         Duration.ofSeconds(5))));
         assertEquals(Option.none(), BuildsText.median(List.empty()));
     }
+
+    @Test
+    void aPercentileIsTheNearestRank() {
+        List<Duration> tens = List.range(1, 11).map(Duration::ofSeconds);
+
+        assertEquals(Option.of(Duration.ofSeconds(9)), BuildsText.percentile(tens, 0.9));
+        assertEquals(Option.of(Duration.ofSeconds(10)), BuildsText.percentile(tens, 0.95));
+        assertEquals(Option.of(Duration.ofSeconds(1)), BuildsText.percentile(tens, 0.0));
+        assertEquals(Option.none(), BuildsText.percentile(List.empty(), 0.9));
+    }
 }

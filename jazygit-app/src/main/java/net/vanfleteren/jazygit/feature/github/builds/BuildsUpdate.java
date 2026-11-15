@@ -55,13 +55,16 @@ public final class BuildsUpdate {
     }
 
     /**
-     * The branch on GitHub whose builds {@code branch} shows: the one it follows; none when it follows none.
+     * The branch on GitHub whose builds {@code branch} shows: the one it follows; none when it follows none, or one
+     * on a remote that is not on GitHub, as the builds are read from the repository gh finds, which would show those
+     * of another branch of that name.
      */
     private static Option<RemoteBranch> onGitHub(Model model, BranchName branch) {
         return model.repo()
                 .branches()
                 .toOption()
                 .flatMap(branches -> branches.find(local -> local.name().equals(branch)))
-                .flatMap(Branch::remoteUpstream);
+                .flatMap(Branch::remoteUpstream)
+                .filter(remote -> model.gitHub().mayBeOnGitHub(remote));
     }
 }

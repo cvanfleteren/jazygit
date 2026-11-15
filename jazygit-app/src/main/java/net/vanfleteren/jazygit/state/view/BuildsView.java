@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.Loadable;
  * @param commits  how many commits of the branch were read, with or without builds
  * @param after    where the commits still to be read start; none at the tip
  * @param reading  whether more commits are being read
+ * @param stopped  why reading more failed, after some were read; none while it did not
  */
 public record BuildsView(
         BranchName branch,
@@ -25,7 +26,8 @@ public record BuildsView(
         Loadable<List<Build>> builds,
         int commits,
         Option<String> after,
-        boolean reading) {
+        boolean reading,
+        Option<Failure> stopped) {
 
     /**
      * How many commits are read, at most (ADR 130).
@@ -36,14 +38,15 @@ public record BuildsView(
      * The builds of {@code branch}, which follows {@code onGitHub}, before any is read.
      */
     public static BuildsView reading(BranchName branch, RemoteBranch onGitHub) {
-        return new BuildsView(branch, Option.of(onGitHub), Loadable.loading(), 0, Option.none(), true);
+        return new BuildsView(branch, Option.of(onGitHub), Loadable.loading(), 0, Option.none(), true, Option.none());
     }
 
     /**
      * The builds of {@code branch}, which follows no branch on GitHub, so has none.
      */
     public static BuildsView offGitHub(BranchName branch) {
-        return new BuildsView(branch, Option.none(), new Loadable.Loaded<>(List.empty()), 0, Option.none(), false);
+        return new BuildsView(
+                branch, Option.none(), new Loadable.Loaded<>(List.empty()), 0, Option.none(), false, Option.none());
     }
 
     /**
@@ -67,13 +70,22 @@ public record BuildsView(
                         .appendAll(page.map(BuildsPage::builds).getOrElse(List.empty()))),
                 read,
                 next,
-                read < COMMITS && next.isDefined());
+                read < COMMITS && next.isDefined(),
+                Option.none());
     }
 
     /**
-     * This, done reading as it failed for {@code failure}: what was read stays.
+     * This, done reading as it failed for {@code failure}: what was read stays, stopped for it; with nothing read yet,
+     * the builds failed.
      */
     public BuildsView failed(Failure failure) {
-        return new BuildsView(branch, onGitHub, builds.failed(failure), commits, after, false);
+        return new BuildsView(
+                branch,
+                onGitHub,
+                builds.failed(failure),
+                commits,
+                after,
+                false,
+                builds.toOption().map(read -> failure));
     }
 }

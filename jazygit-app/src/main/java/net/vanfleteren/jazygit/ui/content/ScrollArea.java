@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.ui.content;
 
 import static dev.tamboui.toolkit.Toolkit.*;
+import static net.vanfleteren.jazygit.ui.content.ContentText.drawnToWidth;
 import static net.vanfleteren.jazygit.ui.content.ContentText.markedHunk;
-import static net.vanfleteren.jazygit.ui.content.ContentText.rendering;
 import static net.vanfleteren.jazygit.ui.content.ContentText.window;
 import static net.vanfleteren.jazygit.ui.content.ContentText.windowed;
 
@@ -171,10 +171,12 @@ public final class ScrollArea {
                 before -> before.theme() == theme && shownAt.content().sameChanges(content));
         shownAt = known;
         Body body = shown.body();
-        // A version rendered is drawn as wide as the area, which it learns while it draws (ADR 80, 103).
+        // A version rendered, or the builds, are drawn as wide as the area, which it learns while it draws (ADR 80,
+        // 103, 130).
         int width = element.state().viewportWidth() > 0 ? element.state().viewportWidth() : RichDiff.RENDERED_WIDTH;
-        Option<Styled> last = styled.filter(before ->
-                before.body().equals(body) && before.theme() == theme && (!rendering(body) || before.width() == width));
+        Option<Styled> last = styled.filter(before -> before.body().equals(body)
+                && before.theme() == theme
+                && (!drawnToWidth(body) || before.width() == width));
         // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
         // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
         // The stop the cursor was on, which the stops of the cursor and the range are looked for from.

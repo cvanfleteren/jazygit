@@ -112,7 +112,7 @@ final class BuildsText {
     static Option<Duration> percentile(List<Duration> durations, double share) {
         List<Duration> sorted = durations.sorted();
         return Option.when(
-                !sorted.isEmpty(), () -> sorted.get(Math.min(sorted.size() - 1, (int) (share * sorted.size()))));
+                !sorted.isEmpty(), () -> sorted.get(Math.max(0, (int) Math.ceil(share * sorted.size()) - 1)));
     }
 
     /**
@@ -275,8 +275,10 @@ final class BuildsText {
 
         private String scale(int row, long top) {
             long seconds = top * (row + 1) / CHART_ROWS;
-            String label =
-                    seconds >= 60 && seconds % 60 == 0 ? seconds / 60 + "m" : duration(Duration.ofSeconds(seconds));
+            // A whole number of minutes under an hour says only those: "8m", not "8m00".
+            String label = seconds >= 60 && seconds < 3600 && seconds % 60 == 0
+                    ? seconds / 60 + "m"
+                    : duration(Duration.ofSeconds(seconds));
             return (row + 1) % 2 == 0 ? padLeft(label, SCALE - 1) + "┤" : " ".repeat(SCALE - 1) + "│";
         }
 

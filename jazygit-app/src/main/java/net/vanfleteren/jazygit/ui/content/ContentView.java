@@ -414,9 +414,12 @@ public final class ContentView {
                                 .exists(log -> log.key().equals(new BranchRef.Local(view.branch()))))
                 .map(view -> {
                     String branch = view.branch().value();
-                    String title = view.reading() && view.builds().toOption().isDefined()
-                            ? Messages.get("panel.builds.reading", branch, String.valueOf(view.commits()))
-                            : Messages.get("panel.builds.title", branch, String.valueOf(view.commits()));
+                    String commits = String.valueOf(view.commits());
+                    String title = view.reading()
+                            ? Messages.get("panel.builds.reading", branch, commits)
+                            : view.stopped().isDefined()
+                                    ? Messages.get("panel.builds.stopped", branch, commits)
+                                    : Messages.get("panel.builds.title", branch, commits);
                     return whenLoaded(
                             title,
                             view.builds(),
@@ -424,12 +427,18 @@ public final class ContentView {
                                     .map(remote -> builds.isEmpty()
                                             ? view.reading()
                                                     ? loading(title)
-                                                    : dim(
-                                                            title,
-                                                            Messages.get(
-                                                                    "content.builds.none",
-                                                                    remote.shortName(),
-                                                                    String.valueOf(view.commits())))
+                                                    : view.commits() == 0
+                                                            ? dim(
+                                                                    title,
+                                                                    Messages.get(
+                                                                            "content.builds.notOnGitHub",
+                                                                            remote.shortName()))
+                                                            : dim(
+                                                                    title,
+                                                                    Messages.get(
+                                                                            "content.builds.none",
+                                                                            remote.shortName(),
+                                                                            String.valueOf(view.commits())))
                                             : new Shown.Area(
                                                     ContentArea.BUILDS,
                                                     title,

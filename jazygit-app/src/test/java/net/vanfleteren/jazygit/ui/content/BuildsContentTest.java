@@ -2,6 +2,9 @@ package net.vanfleteren.jazygit.ui.content;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -15,6 +18,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.Failure;
@@ -23,10 +27,14 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.BranchChecksMsg;
+import net.vanfleteren.jazygit.state.github.GitHubChecks;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BuildsView;
+import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.content.ContentView.Shown;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -90,7 +98,7 @@ class BuildsContentTest {
                 Option.of(BuildsView.reading(MAIN, ORIGIN_MAIN)),
                 asked.model().repoView().builds());
         assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.none())), asked.cmds());
-        assertInstanceOf(Shown.Message.class, content(asked.model()));
+        assertEquals("Builds: main · reading, 0 commits so far", ((Shown.Message) content(asked.model())).title());
     }
 
     @Test
@@ -167,9 +175,7 @@ class BuildsContentTest {
 
         assertEquals(
                 new Shown.Message(
-                        "Builds: main · last 0 commits",
-                        "No builds on the last 0 commits of origin/main on GitHub",
-                        ContentView.Tone.DIM),
+                        "Builds: main · last 0 commits", "origin/main is not on GitHub", ContentView.Tone.DIM),
                 content(read));
     }
 
@@ -218,7 +224,7 @@ class BuildsContentTest {
         assertEquals(
                 List.of(BUILD),
                 failed.model().repoView().builds().get().builds().getOrElse(List.empty()));
-        assertEquals("Builds: main · last 25 commits", ((Shown.Area) content(failed.model())).title());
+        assertEquals("Builds: main · 25 commits, could not read more", ((Shown.Area) content(failed.model())).title());
     }
 
     @Test
@@ -233,5 +239,81 @@ class BuildsContentTest {
                 .model();
 
         assertEquals(ContentArea.LOG, ((Shown.Area) content(other)).area());
+    }
+
+    @Test
+    void aBranchOnARemoteNotOnGitHubSaysSoWithoutReading() {
+        RemoteBranch elsewhere = new RemoteBranch("gitlab", LOCAL);
+        Model read = TestModels.localBranchesRead(
+                        model(),
+                        List.of(
+                                branch(MAIN, Option.of(new Upstream(new BranchRef.Remote(ORIGIN_MAIN), 0, 0))),
+                                branch(LOCAL, Option.of(new Upstream(new BranchRef.Remote(elsewhere), 0, 0)))))
+                .model();
+        Model known = Update.update(
+                        read,
+                        new BranchChecksMsg.Loaded(
+                                new GitHubChecks(HashSet.of(new RemoteName("origin")), HashMap.empty())))
+                .model();
+        Model local = Update.update(known, new SelectionMsg.BranchSelected(new BranchRef.Local(LOCAL)))
+                .model();
+        local = Update.update(local, TestModels.branchLogLoaded(new BranchRef.Local(LOCAL), List.empty()))
+                .model();
+
+        Next asked = Update.update(local, new BuildsMsg.Toggled(LOCAL));
+
+        assertTrue(asked.cmds().isEmpty());
+        assertEquals(
+                "local follows no branch on GitHub, so it has no builds to show",
+                ((Shown.Message) content(asked.model())).text());
+    }
+
+    @Test
+    void theChartIsDrawnAnewForTheWidthItGets() throws Exception {
+        List<Build> builds = List.range(0, 150)
+                .map(index -> new Build(
+                        "Build",
+                        "push",
+                        index,
+                        1,
+                        "abcdef" + index,
+                        "Commit " + index,
+                        Instant.parse("2026-11-14T00:00:00Z").plusSeconds(600L * index),
+                        BUILD.jobs()
+                                .map(job -> new Build.Job(
+                                        job.name(),
+                                        job.conclusion(),
+                                        job.startedAt().map(at -> at.plusSeconds(600L * index - 82800)),
+                                        job.completedAt().map(at -> at.plusSeconds(600L * index - 82800))))))
+                .reverse();
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+        Model read = Update.update(
+                        shown,
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN, Option.none(), Option.of(new BuildsPage(builds, 25, Option.none()))))
+                .model();
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, BranchesPanel.ID))) {
+            int narrow = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.ID), 60, 40));
+            int wide = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.ID), 120, 40));
+            int again = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.ID), 60, 40));
+            assertTrue(narrow > 0 && narrow < 60, String.valueOf(narrow));
+            assertTrue(wide > narrow + 40, "the chart follows the width of the area: " + narrow + " then " + wide);
+            assertEquals(narrow, again);
+        }
+    }
+
+    /**
+     * How many builds the chart on {@code screen} has a column for: the bars of its lowest row.
+     */
+    private static int bars(String screen) {
+        return List.of(screen.split("\n"))
+                .filter(line -> line.contains("│█"))
+                .last()
+                .chars()
+                .filter(c -> c == '█')
+                .map(c -> 1)
+                .sum();
     }
 }
