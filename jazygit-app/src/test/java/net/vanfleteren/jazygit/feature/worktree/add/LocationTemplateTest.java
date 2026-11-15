@@ -120,7 +120,8 @@ class LocationTemplateTest {
                 .model();
 
         assertEquals(
-                Option.of(new NewWorktreePopup(PULL_REQUEST, "/reviews/octo-repo/app-9-patch-1", true)), read.popup());
+                Option.of(new NewWorktreePopup(PULL_REQUEST, "/reviews/octo-repo/app-9-patch-1", true, true)),
+                read.popup());
     }
 
     @Test
@@ -137,7 +138,7 @@ class LocationTemplateTest {
                         .popup());
         // A branch has no number: that variable is left as it is written.
         assertEquals(
-                Option.of(new NewWorktreePopup(BRANCH, "/repos/feature-login-{number}")),
+                Option.of(new NewWorktreePopup(BRANCH, "/repos/feature-login-{number}", false, true)),
                 LocationAsked.located(AddWorktreeUpdate.ask(model(), BRANCH), Option.of("{branch}-{number}"))
                         .model()
                         .popup());

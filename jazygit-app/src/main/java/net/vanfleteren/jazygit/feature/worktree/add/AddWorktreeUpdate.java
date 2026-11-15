@@ -64,8 +64,8 @@ public final class AddWorktreeUpdate {
             // The read may wait behind other git commands: a popup that opened meanwhile, or the same one asked for
             // twice, is not taken away, and an error shown meanwhile stays.
             case LocationTemplateRead(WorktreeSource source, boolean switching, Option<String> template) ->
-                Next.of(model.openPopupIfFree(
-                        new NewWorktreePopup(source, location(model, source, template), switching)));
+                Next.of(model.openPopupIfFree(new NewWorktreePopup(
+                        source, location(model, source, template), switching, template.isDefined())));
             case NameConfirmed() -> nameConfirmed(model);
             case Added(var cmd, String location, var commands) -> added(model, cmd, location, commands);
             case Informed(var notice) -> Next.of(model.inform(notice));
