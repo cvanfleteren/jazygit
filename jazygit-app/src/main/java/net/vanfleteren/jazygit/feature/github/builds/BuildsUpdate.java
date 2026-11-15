@@ -69,10 +69,11 @@ public final class BuildsUpdate {
                 model.repoView()
                         .branches()
                         .builds()
-                        .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(model, view))
-                                .flatMap(shown -> shown.builds().toOption())
+                        .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(model, view)))
+                        .flatMap(shown -> shown.builds()
+                                .toOption()
                                 .filter(builds -> !builds.isEmpty())
-                                .map(builds -> PopupUpdate.ask(model, new BuildPickPopup(builds, view.picked()))))
+                                .map(builds -> PopupUpdate.ask(model, new BuildPickPopup(builds, shown.picked()))))
                         .getOrElse(() -> Next.of(model));
             case BuildsMsg.BuildPicked(Option<Long> run) ->
                 BuildsReads.next(

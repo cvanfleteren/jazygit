@@ -629,6 +629,49 @@ class BuildsContentTest {
     }
 
     @Test
+    void aBuildPickedThatDoesNotShowLeavesTheLastBuildMarkedInThePopup() {
+        Build before = new Build(
+                "Build", "push", 2, 1, "1234567", "Before", BUILD.createdAt().minusSeconds(3600), BUILD.jobs());
+        Build lint =
+                new Build("Markdown", "pull_request", 3, 1, "abcdef0", "A commit", BUILD.createdAt(), BUILD.jobs());
+        Model read = Update.update(
+                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN,
+                                Option.none(),
+                                Option.of(new BuildsPage(List.of(BUILD, lint, before), 2, Option.none()))))
+                .model();
+        Model picked = Update.update(
+                        Update.update(read, new BuildsViewMsg.TabClicked(new BuildsView.Pipeline("Build", "push")))
+                                .model(),
+                        new BuildsViewMsg.BuildClicked(2))
+                .model();
+        assertEquals(
+                Option.of(new BuildPickPopup(List.of(BUILD, before), Option.of(2L))),
+                Update.update(picked, new BuildsMsg.BuildPickRequested())
+                        .model()
+                        .popup(BuildPickPopup.class));
+
+        // On another tab, the time line shows its last build: the popup marks that.
+        Model otherTab = Update.update(
+                        picked, new BuildsViewMsg.TabClicked(new BuildsView.Pipeline("Markdown", "pull_request")))
+                .model();
+        assertEquals(
+                Option.of(new BuildPickPopup(List.of(lint), Option.none())),
+                Update.update(otherTab, new BuildsMsg.BuildPickRequested())
+                        .model()
+                        .popup(BuildPickPopup.class));
+
+        // Nor once fewer builds show than the one picked.
+        Model fewer =
+                Update.update(picked, new BuildsMsg.WindowPicked(Option.of(1))).model();
+        assertEquals(
+                Option.of(new BuildPickPopup(List.of(BUILD), Option.none())),
+                Update.update(fewer, new BuildsMsg.BuildPickRequested()).model().popup(BuildPickPopup.class));
+        assertEquals(Option.of(2L), fewer.repoView().branches().builds().get().picked());
+    }
+
+    @Test
     void pPicksTheBuildWhoseJobsShowOnTheTimeLineReadingItsWorkflowAtItsCommit() {
         String older = "1234567".repeat(5) + "12345";
         Build tip = withFile(BUILD);

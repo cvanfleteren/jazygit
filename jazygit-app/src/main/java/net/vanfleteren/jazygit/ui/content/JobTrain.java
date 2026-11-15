@@ -91,7 +91,9 @@ final class JobTrain {
                         name,
                         width,
                         new Numbers(
-                                waited(row._1(), groups, start),
+                                // A re-run keeps the jobs of the attempt before that passed, with their times: a
+                                // wait after one of them would be the time between the attempts (ADR 133).
+                                build.attempt() == 1 ? waited(row._1(), groups, start) : Option.none(),
                                 medians.get(row._1().name()),
                                 critical.contains(row._1().name())),
                         styles))

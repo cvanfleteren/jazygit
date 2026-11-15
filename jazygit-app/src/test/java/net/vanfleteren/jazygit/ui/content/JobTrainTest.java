@@ -206,6 +206,45 @@ class JobTrainTest {
     }
 
     @Test
+    void aReRunSaysNothingOfHowLongItsJobsWaited() {
+        // build passed in the first attempt; snapshot ran again hours later, in the second.
+        Build reRun = new Build(
+                "Publish",
+                "push",
+                1,
+                2,
+                "b17c669",
+                "A sealed Focus",
+                START,
+                BUILD.jobs()
+                        .map(job -> job.name().equals("snapshot")
+                                ? new Build.Job(
+                                        "snapshot",
+                                        "SUCCESS",
+                                        Option.of(START.plusSeconds(3 * 3600)),
+                                        Option.of(START.plusSeconds(3 * 3600 + 12)))
+                                : job));
+
+        List<String> rows = text(JobTrain.lines(reRun, NEEDS, HashMap.empty(), PANEL, Theme.SpanStyles.NONE))
+                .tail();
+
+        assertTrue(rows.forAll(row -> row.endsWith("       –")), rows.mkString("\n"));
+    }
+
+    @Test
+    void aJobNotMatchedInTheWorkflowIsNotSaidToHaveWaitedButTheOthersAre() {
+        // One shard of acceptance, and snapshot, matched no job of the workflow: what they need is not known.
+        List<String> rows = drawn(NEEDS.remove("verify / acceptance (2/2)").remove("snapshot"));
+
+        assertTrue(rows.find(row -> row.startsWith("verify / acceptance")).get().endsWith("–"), rows.mkString("\n"));
+        assertTrue(rows.find(row -> row.startsWith("snapshot")).get().endsWith("–"), rows.mkString("\n"));
+        assertTrue(
+                rows.find(row -> row.startsWith("verify / package")).get().endsWith("1m18      2s"),
+                rows.mkString("\n"));
+        assertTrue(rows.find(row -> row.startsWith("build")).get().endsWith("4m01      2s"), rows.mkString("\n"));
+    }
+
+    @Test
     void aBuildStillRunningHasNoJobThatDecidedAndARunningJobNoTimeAgainstItsMedian() {
         Build running = new Build(
                 "Publish",

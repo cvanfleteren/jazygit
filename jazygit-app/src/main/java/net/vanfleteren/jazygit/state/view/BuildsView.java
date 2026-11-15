@@ -458,17 +458,21 @@ public record BuildsView(
             Loadable<List<Build>> ofTab = allBranches
                     ? runsOf(tab.workflow()).map(WorkflowRuns::builds).getOrElse(Loadable::loading)
                     : new Loadable.Loaded<>(builds.filter(tab::ran));
+            Loadable<List<Build>> windowed =
+                    ofTab.map(read -> window.map(read::take).getOrElse(read));
             return new BuildsShown(
                     all,
                     all.map(each -> lastOf(each, builds)),
                     all.indexOf(tab),
                     allBranches,
-                    ofTab.map(read -> window.map(read::take).getOrElse(read)),
+                    windowed,
                     ofTab.toOption().map(List::size).getOrElse(0),
                     allBranches ? mine : HashSet.empty(),
                     allBranches ? Option.none() : baseline(tab),
                     needs(),
-                    picked);
+                    // The build picked, while it is among those that show: else the last that is done shows.
+                    picked.filter(run ->
+                            windowed.toOption().exists(shown -> shown.exists(build -> build.runId() == run))));
         });
     }
 

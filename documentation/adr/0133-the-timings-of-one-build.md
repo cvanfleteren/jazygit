@@ -24,7 +24,7 @@ ended, and the run when it was created; what each job waits for comes from the f
 - The build picked is marked `▸` in the list, with its title in bold, and the time line says `the build picked` where
   it says `the last build`. A mark at the end of the row is cut off with a long title.
 - It stays picked while it is among the builds that show; when it no longer is, as with another tab, `n` (ADR 131) or
-  every branch, the last build shows again. It does not stay for another branch, whose builds are others.
+  every branch, the last build shows again, and `p` marks that one. It does not stay for another branch, whose builds are others.
 - The file of its workflow is read at its commit, as that of a last build is (ADR 131), so that what each job waits
   for is as it was then.
 - The time line says, for any build:
@@ -38,6 +38,8 @@ ended, and the run when it was created; what each job waits for comes from the f
     minutes for a runner. Nor for a job that needs one that did not run, as one skipped, whose end is not known: what
     each job needs (ADR 131) now keeps those by their key, and a job that needs none as needing an empty set, so that
     one that needs none is told apart from one whose needs are not known.
+  - no waits for a re-run: it keeps the jobs of the attempt before that passed, with their times, and a wait after
+    one of them would be the time between the attempts, as `queued` would be.
   - a job still running has `–` against its median: its time is not known yet.
   - the jobs that decided how long the build took, in bold: the last to end, the job of those it needs that ended
     last, and so on. Not while the file of the workflow is not read, or could not be: without what each job needs,
