@@ -65,6 +65,19 @@ public final class BuildsUpdate {
                                                 count(model, tab._1()))))))
                         .getOrElse(() -> Next.of(model));
             case BuildsMsg.MoreRequested() -> more(model);
+            case BuildsMsg.BuildPickRequested() ->
+                model.repoView()
+                        .branches()
+                        .builds()
+                        .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(model, view)))
+                        .flatMap(shown -> shown.builds()
+                                .toOption()
+                                .filter(builds -> !builds.isEmpty())
+                                .map(builds -> PopupUpdate.ask(model, new BuildPickPopup(builds, shown.picked()))))
+                        .getOrElse(() -> Next.of(model));
+            case BuildsMsg.BuildPicked(Option<Long> run) ->
+                BuildsReads.next(
+                        changed(model.withoutPopup(BuildPickPopup.class), (view, builds) -> view.withPicked(run)));
             case BuildsMsg.WindowRequested() ->
                 PopupUpdate.ask(
                         model, model.repoView().branches().builds().map(view -> new BuildsWindowPopup(view.window())));

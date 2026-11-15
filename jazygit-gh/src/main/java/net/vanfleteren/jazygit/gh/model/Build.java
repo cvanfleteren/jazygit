@@ -93,6 +93,17 @@ public record Build(
     }
 
     /**
+     * How long it waited from its run's start to its first job's start, for a runner; none for a re-run, whose run
+     * keeps the first attempt's start, or before a job started (ADR 133).
+     */
+    public Option<Duration> queued() {
+        return Option.when(attempt == 1, () -> jobs.flatMap(Job::startedAt).minBy(Comparator.naturalOrder()))
+                .flatMap(first -> first)
+                .map(first -> Duration.between(createdAt, first))
+                .filter(waited -> !waited.isNegative());
+    }
+
+    /**
      * How long it took, from its start to its last job's end; none while it runs.
      */
     public Option<Duration> duration() {

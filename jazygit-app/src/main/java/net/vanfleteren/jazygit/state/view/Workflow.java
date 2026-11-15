@@ -55,8 +55,10 @@ public record Workflow(List<Workflow.Job> jobs) {
      * waits for directly, not those it waits for through another. A name is matched to the job it is written as, else
      * to the job whose name it fits with the most written out, the least expressions: {@code build (17)} fits both
      * {@code build} with its matrix and a job named only by {@code ${{ matrix.os }}}, and is {@code build}'s. One that
-     * fits none, or two as well, is left out, as is a job that needs none. {@code called} gives the workflows its jobs call, by path;
-     * the jobs of one it does not give are left out too.
+     * fits none, or two as well, is left out, as what it needs is not known; {@code called} gives the workflows its
+     * jobs call, by path, and the jobs of one it does not give are left out too. A job that needs none needs an empty
+     * set, and a job it needs that did not run, as one skipped, is in its set by its key, which names none of
+     * {@code names}: when that one was done is not known (ADR 133).
      */
     public Map<String, Set<String>> needs(List<String> names, Function<String, Option<Workflow>> called) {
         List<Node> nodes = nodes(called);
@@ -68,11 +70,12 @@ public record Workflow(List<Workflow.Job> jobs) {
             return (written.size() == 1 ? written : likeliest).singleOption().map(node -> Tuple.of(name, node));
         }));
         // What a job needs is the names matched to the jobs it needs, not the names those jobs' patterns match.
-        Map<String, Set<String>> direct = matched.mapValues(node -> HashSet.ofAll(names.filter(
-                other -> matched.get(other).exists(needed -> node.needs().contains(needed.key())))));
-        return direct.mapValues(needed -> needed.filter(
-                        one -> !needed.exists(other -> !other.equals(one) && waitsFor(direct, other, one, 0))))
-                .filterValues(needed -> !needed.isEmpty());
+        Set<String> ran = HashSet.ofAll(matched.values().map(Node::key));
+        Map<String, Set<String>> direct = matched.mapValues(node -> HashSet.ofAll(names.filter(other ->
+                        matched.get(other).exists(needed -> node.needs().contains(needed.key()))))
+                .addAll(node.needs().filter(key -> !ran.contains(key))));
+        return direct.mapValues(needed ->
+                needed.filter(one -> !needed.exists(other -> !other.equals(one) && waitsFor(direct, other, one, 0))));
     }
 
     /**

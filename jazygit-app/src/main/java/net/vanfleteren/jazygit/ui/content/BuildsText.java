@@ -11,6 +11,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.regex.Pattern;
@@ -23,6 +24,7 @@ import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
+import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
@@ -43,6 +45,8 @@ final class BuildsText {
     private static final Duration STEADY = Duration.ofSeconds(10);
     private static final String EIGHTHS = " ▁▂▃▄▅▆▇█";
     private static final String SPARKS = "▁▂▃▄▅▆▇█";
+    // What marks the build picked in the list, whose jobs show on one time line (ADR 133).
+    private static final String PICKED = "▸";
     // What marks a run of the branch among those of every branch.
     private static final String MINE = "◆";
     // The widest the column of what a run on every branch ran for is: its pull request, else its branch.
@@ -66,6 +70,7 @@ final class BuildsText {
                 shown.allBranches(),
                 shown.baseline(),
                 shown.of(),
+                shown.picked(),
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.dayPattern"))
                         .withZone(zone),
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.whenPattern"))
@@ -94,6 +99,34 @@ final class BuildsText {
         return TabStrip.at(tabs(shown), shown.index(), width, column).map(shown.tabs()::get);
     }
 
+    /**
+     * The run of the build at {@code row} and {@code column} of the lines {@link #lines} draws of {@code shown},
+     * {@code width} columns wide: one in the list, or the column of one in the chart, or the marks under it; none
+     * elsewhere (ADR 133).
+     */
+    static Option<Long> buildAt(BuildsShown shown, int width, int row, int column) {
+        return shown.builds().toOption().filter(builds -> !builds.isEmpty()).flatMap(builds -> {
+            List<Line> lines = lines(shown, ZoneOffset.UTC, Theme.SpanStyles.NONE, width);
+            // The list of the builds ends the lines, a row each.
+            int list = lines.size() - builds.size();
+            if (row >= list && row < lines.size()) {
+                return Option.of(builds.get(row - list).runId());
+            }
+            // The chart comes after the tabs, a blank line, the title, the summary and a blank line, with the axis,
+            // the days and the marks under it.
+            int chart = Math.max(10, width - SCALE - 1);
+            List<Build> charted = builds.take(chart).reverse();
+            int each = Math.max(1, Math.min(WIDEST, chart / charted.size()));
+            int top = 5;
+            boolean drawn = charted.exists(build -> build.duration().isDefined()
+                    && (build.outcome() == Outcome.PASSED || build.outcome() == Outcome.FAILED));
+            int at = (column - SCALE) / each;
+            return Option.when(
+                    drawn && row >= top && row < top + CHART_ROWS + 3 && column >= SCALE && at < charted.size(),
+                    () -> charted.get(at).runId());
+        });
+    }
+
     private static List<TabStrip.Tab> tabs(BuildsShown shown) {
         return shown.tabs()
                 .zip(shown.lasts())
@@ -104,13 +137,7 @@ final class BuildsText {
      * {@code took} as the builds show it: {@code 45s}, {@code 4m08}, {@code 1h02}.
      */
     static String duration(Duration took) {
-        long seconds = Math.max(0, took.toSeconds());
-        if (seconds < 60) {
-            return seconds + "s";
-        }
-        return seconds < 3600
-                ? "%dm%02d".formatted(seconds / 60, seconds % 60)
-                : "%dh%02d".formatted(seconds / 3600, seconds % 3600 / 60);
+        return TimeText.took(took);
     }
 
     /**
@@ -189,6 +216,7 @@ final class BuildsText {
      * @param allBranches whether the builds are the runs of their workflow on every branch
      * @param baseline how long the runs of the workflow that passed took on every branch
      * @param of     how many builds of the tab are read, of which some show
+     * @param picked the run of the build whose jobs show on one time line; none for the last that is done
      * @param day    how a day is written
      * @param when   how a day and a time are written
      * @param chart  the builds the chart has room for
@@ -200,6 +228,7 @@ final class BuildsText {
             boolean allBranches,
             Option<BuildsShown.Baseline> baseline,
             int of,
+            Option<Long> picked,
             DateTimeFormatter day,
             DateTimeFormatter when,
             int chart) {
@@ -213,7 +242,7 @@ final class BuildsText {
                     .appendAll(chart(builds.take(chart).reverse(), median))
                     .append(Line.from(""))
                     .appendAll(jobs(builds.take(JOB_BUILDS).reverse()))
-                    .appendAll(lastBuild(builds))
+                    .appendAll(timeLine(builds))
                     .append(Line.from(""))
                     .appendAll(list(builds, median));
         }
@@ -532,32 +561,66 @@ final class BuildsText {
         }
 
         /**
-         * The jobs of the last build that is done on one time line, each hanging off the jobs it waits for (ADR 131).
+         * The build of {@code builds} whose jobs show on one time line: the one picked, else the last that is done
+         * (ADR 131, 133).
          */
-        private List<Line> lastBuild(List<Build> builds) {
-            return BuildsView.lastDoneOf(builds)
+        Option<Build> onTimeLine(List<Build> builds) {
+            return picked.flatMap(run -> builds.find(build -> build.runId() == run))
+                    .orElse(() -> BuildsView.lastDoneOf(builds));
+        }
+
+        /**
+         * The jobs of the build picked, else of the last build that is done, on one time line, each hanging off the
+         * jobs it waits for (ADR 131): with how long it waited for a runner, and how long it took against its median
+         * over the builds of the jobs above (ADR 133).
+         */
+        private List<Line> timeLine(List<Build> builds) {
+            return onTimeLine(builds)
                     .map(build -> {
-                        Line header = Line.from(
-                                outcome(build.outcome()),
-                                Span.raw(" "),
-                                span(
-                                        build.sha()
-                                                .substring(
-                                                        0,
-                                                        Math.min(7, build.sha().length())),
-                                        Theme.Classes.SHA),
-                                Span.raw(" " + build.title()),
-                                dim(Messages.get(
-                                        "content.builds.lastBuild",
-                                        build.duration()
-                                                .map(BuildsText::duration)
-                                                .getOrElse("–"))));
+                        boolean chosen = picked.contains(build.runId());
+                        Line header = Line.from(List.of(
+                                        outcome(build.outcome()),
+                                        Span.raw(" "),
+                                        span(
+                                                build.sha()
+                                                        .substring(
+                                                                0,
+                                                                Math.min(
+                                                                        7,
+                                                                        build.sha()
+                                                                                .length())),
+                                                Theme.Classes.SHA),
+                                        Span.raw(" " + build.title()),
+                                        dim(Messages.get(
+                                                chosen ? "content.builds.pickedBuild" : "content.builds.lastBuild",
+                                                build.duration()
+                                                        .map(BuildsText::duration)
+                                                        .getOrElse("–"),
+                                                when.format(build.createdAt()))))
+                                .appendAll(build.queued()
+                                        .map(queued -> dim(Messages.get("content.builds.queued", duration(queued))))
+                                        .toList())
+                                .toJavaList());
                         Map<String, Set<String>> ofBuild =
                                 needs.get(build.runId()).getOrElse(HashMap.empty());
-                        return JobTrain.lines(build, ofBuild, chart + SCALE + 1, styles)
+                        return JobTrain.lines(
+                                        build, ofBuild, jobMedians(builds.take(JOB_BUILDS)), chart + SCALE + 1, styles)
                                 .prepend(header);
                     })
                     .getOrElse(List.empty());
+        }
+
+        /**
+         * Of each job of {@code builds}, by its name without its shard, how long it took in the middle of the builds it
+         * passed in, of its slowest shard: as the jobs above show it.
+         */
+        private Map<String, Duration> jobMedians(List<Build> builds) {
+            return HashMap.ofEntries(builds.flatMap(build -> build.ran().map(job -> jobName(job.name())))
+                    .distinct()
+                    .flatMap(name -> median(builds.flatMap(build -> ofJob(build, name))
+                                    .filter(run -> run._1() == Outcome.PASSED)
+                                    .map(Tuple2::_2))
+                            .map(middle -> Tuple.of(name, middle))));
         }
 
         /**
@@ -595,7 +658,12 @@ final class BuildsText {
                                                         ? Theme.Classes.CHECKS_PASSED
                                                         : Theme.Classes.DIM))
                                 .getOrElse(() -> Span.raw(" ".repeat(8)));
-                        return Line.from(List.of(outcome(build.outcome()), Span.raw(" "))
+                        // The build picked is marked after how it ended, and its title is in bold: a mark at the
+                        // end of its row would be cut off with a long title (ADR 133).
+                        boolean chosen = picked.contains(build.runId());
+                        return Line.from(List.of(
+                                        outcome(build.outcome()),
+                                        chosen ? span(PICKED, Theme.Classes.BOLD) : Span.raw(" "))
                                 .appendAll(forWhat)
                                 .appendAll(List.of(
                                         span(
@@ -611,7 +679,9 @@ final class BuildsText {
                                         Span.raw(padLeft(
                                                 took.map(BuildsText::duration).getOrElse("–"), 5)),
                                         vsMedian,
-                                        Span.raw("  " + build.title())))
+                                        chosen
+                                                ? span("  " + build.title(), Theme.Classes.BOLD)
+                                                : Span.raw("  " + build.title())))
                                 .toJavaList());
                     })
                     .prepend(Line.from(dim("  " + (allBranches ? "  " + pad(forLabel, forWidth) : "")

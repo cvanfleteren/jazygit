@@ -9,7 +9,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 /**
- * How a build ended and how long it took (ADR 131).
+ * How a build ended, how long it took (ADR 131) and how long it queued (ADR 133).
  */
 class BuildTest {
 
@@ -71,5 +71,18 @@ class BuildTest {
     void itRanTheJobsThatWereNotSkipped() {
         assertEquals(
                 1, build(1, job("SUCCESS", 2, 60), job("SKIPPED", 61, 61)).ran().size());
+    }
+
+    @Test
+    void itQueuedFromItsRunsStartToItsFirstJobsStart() {
+        assertEquals(
+                Option.of(Duration.ofSeconds(12)),
+                build(1, job("SUCCESS", 30, 60), job("SUCCESS", 12, 40)).queued());
+    }
+
+    @Test
+    void aReRunSaysNothingOfItsQueue() {
+        // Its run keeps the first attempt's start, so the wait until its first job would count the first attempt.
+        assertEquals(Option.none(), build(2, job("SUCCESS", 600, 660)).queued());
     }
 }

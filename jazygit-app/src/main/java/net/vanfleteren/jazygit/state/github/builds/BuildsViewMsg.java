@@ -29,6 +29,12 @@ public sealed interface BuildsViewMsg extends Msg {
     record TabClicked(Pipeline pipeline) implements BuildsViewMsg {}
 
     /**
+     * The user clicked the build of the run {@code run}, in the chart or the list: its jobs show on one time line, or
+     * those of the last build again when it already did (ADR 133).
+     */
+    record BuildClicked(long run) implements BuildsViewMsg {}
+
+    /**
      * The files of workflows were read at the commit of a build, each as its workflow, or none when it could not be.
      */
     record WorkflowsRead(Map<FileAt, Option<Workflow>> workflows) implements BuildsViewMsg {}
