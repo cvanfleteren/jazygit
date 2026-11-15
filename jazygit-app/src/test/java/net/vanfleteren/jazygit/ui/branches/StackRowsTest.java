@@ -87,9 +87,9 @@ class StackRowsTest {
     void eachRowShowsTheLogOfItsBranchAndAPullRequestWithNoneSaysSo() throws Exception {
         BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
         java.util.List<Option<Msg>> shown = new java.util.ArrayList<>();
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(OPEN, BranchesPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(OPEN, BranchesPanel.PANE))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
-            RenderedText.of(testRunner, () -> panel.render(OPEN, BranchesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(OPEN, BranchesPanel.PANE));
             for (int row = 0; row < 6; row++) {
                 shown.add(panel.selectionChange(OPEN));
                 SettledPilot.of(testRunner).press(KeyCode.DOWN);
@@ -131,9 +131,9 @@ class StackRowsTest {
     void enterOnAHeaderOpensOrClosesTheStackAndTheKeysOfABranchDoNothingThere() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(OPEN, BranchesPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(OPEN, BranchesPanel.PANE))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
-            RenderedText.of(testRunner, () -> panel.render(OPEN, BranchesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(OPEN, BranchesPanel.PANE));
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).press(' ');
             SettledPilot.of(testRunner).press('P');
@@ -150,12 +150,12 @@ class StackRowsTest {
     void aHighlightedHeaderStaysHighlightedAsTheStackClosesAndOpens() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(OPEN, BranchesPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(OPEN, BranchesPanel.PANE))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
-            RenderedText.of(testRunner, () -> panel.render(OPEN, BranchesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(OPEN, BranchesPanel.PANE));
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             for (Model shown : List.of(closed(OPEN), OPEN)) {
-                RenderedText.of(testRunner, () -> panel.render(shown, BranchesPanel.ID));
+                RenderedText.of(testRunner, () -> panel.render(shown, BranchesPanel.PANE));
                 SettledPilot.of(testRunner).press(KeyCode.ENTER);
             }
             SettledPilot.of(testRunner).pause();
@@ -172,11 +172,11 @@ class StackRowsTest {
         Model before = closed(OPEN);
         Model after = closed(model(FEAT_A, List.of(FEAT_A, MAIN, FEAT_B)));
         Option<Msg> shown;
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, BranchesPanel.PANE))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
-            RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(before, BranchesPanel.PANE));
             // main is highlighted; feat/a, which the closed stack holds, is checked out.
-            RenderedText.of(testRunner, () -> panel.render(after, BranchesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(after, BranchesPanel.PANE));
             shown = panel.selectionChange(after);
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).pause();

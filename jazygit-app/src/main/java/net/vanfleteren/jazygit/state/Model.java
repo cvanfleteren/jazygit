@@ -89,10 +89,10 @@ public record Model(
     }
 
     /**
-     * The id of the element of the screen shown, outside the popups, that had the focus last, which a closing popup
-     * gives it back to; none before one had it.
+     * The pane or area of the screen shown, outside the popups, that had the focus last, which a closing popup gives
+     * it back to; none before one had it.
      */
-    public Option<String> shownPane() {
+    public Option<Focus.OnScreen> shownPane() {
         return switch (screen) {
             case REPOSITORY -> repoView.focusedPane();
             case PULL_REQUESTS -> prOverview.focusedPane();
@@ -100,22 +100,20 @@ public record Model(
     }
 
     /**
-     * This model with {@code id} as the element of the screen shown that had the focus last.
-     *
-     * @param content whether {@code id} is an area of the content panel, rather than a pane whose highlighted row
-     *                it shows
+     * This model with {@code focus} as the pane or area of the screen shown that had the focus last.
      */
-    public Model withShownPane(String id, boolean content) {
+    public Model withShownPane(Focus.OnScreen focus) {
         return switch (screen) {
             // The files of a commit close when another pane gets the focus, as Escape closes them (ADR 44).
             case REPOSITORY ->
-                withRepoView(repoView.withFocusedPane(Option.of(id))
+                withRepoView(repoView.withFocusedPane(Option.of(focus))
                         .withCommitFiles(repoView.commitFiles()
-                                .filter(view -> content || view.listedIn().equals(new PaneId(id)))));
+                                .filter(view -> focus instanceof AreaId
+                                        || view.listedIn().equals(focus))));
             case PULL_REQUESTS ->
                 withPrOverview(prOverview
-                        .withFocusedPane(Option.of(id))
-                        .withListPane(content ? prOverview.listPane() : Option.of(new PaneId(id))));
+                        .withFocusedPane(Option.of(focus))
+                        .withListPane(focus instanceof PaneId pane ? Option.of(pane) : prOverview.listPane()));
         };
     }
 

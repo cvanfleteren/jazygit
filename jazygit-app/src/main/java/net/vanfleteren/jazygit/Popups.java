@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.Features;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
@@ -32,17 +33,15 @@ final class Popups {
      * The popup {@code model} has open, and where the focus goes now that the frame is drawn with {@code focus}: the
      * open popup takes it, and gives it back to where it was opened from once it closes.
      */
-    Rendered render(Model model, Option<String> focus) {
+    Rendered render(Model model, Option<Focus> focus) {
         List<Shown> shown = slots.map(slot -> new Shown(
                 slot.view().render(model), slot.view().ids(), slot.returnTo().apply(model), slot.dimsBehind()));
         Option<Shown> open = shown.find(p -> p.element().isDefined());
-        Option<String> moveTo = open.fold(
+        Option<Focus> moveTo = open.fold(
                 // A popup that just closed gives the focus back.
-                () -> shown.find(p -> focus.exists(p.ids()::contains)).map(Shown::returnTo),
+                () -> shown.find(p -> p.has(focus)).map(Shown::returnTo),
                 // A popup that just opened takes the focus.
-                p -> focus.exists(p.ids()::contains)
-                        ? Option.<String>none()
-                        : p.ids().headOption());
+                p -> p.has(focus) ? Option.none() : p.ids().headOption().map(Focus.Aside::new));
         return new Rendered(open.flatMap(Shown::element), open.exists(Shown::dimsBehind), moveTo);
     }
 
@@ -53,10 +52,18 @@ final class Popups {
      * @param dimsBehind whether what is behind the open popup is dimmed; never for none
      * @param moveTo where the focus goes, if it moves
      */
-    record Rendered(Option<Element> dialog, boolean dimsBehind, Option<String> moveTo) {}
+    record Rendered(Option<Element> dialog, boolean dimsBehind, Option<Focus> moveTo) {}
 
     /**
      * A popup as rendered: its dialog while it is open.
      */
-    private record Shown(Option<Element> element, List<String> ids, String returnTo, boolean dimsBehind) {}
+    private record Shown(Option<Element> element, List<String> ids, Focus.OnScreen returnTo, boolean dimsBehind) {
+
+        /**
+         * Whether {@code focus} is on an element of the popup.
+         */
+        boolean has(Option<Focus> focus) {
+            return focus.exists(on -> ids.contains(on.id()));
+        }
+    }
 }

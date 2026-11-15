@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -82,12 +83,12 @@ class WorktreeBranchUpdateTest {
                 Option.of(new SwitchWorktreePopup(FEATURE, "/repos/linked")),
                 asked.model().popup());
 
-        Model focused = asked.model().mapRepoView(view -> view.withFocusedPane(Option.of("branches")));
+        Model focused = asked.model().mapRepoView(view -> view.withFocusedPane(Option.of(new PaneId("branches"))));
         Next confirmed = Update.update(focused, new CheckoutMsg.SwitchWorktreeConfirmed());
         // It is shown as a checkout here shows it: on the local branches, the focus staying where it was.
         assertEquals(
                 List.of(new RecentReposCmd.SwitchTo(
-                        "/repos/linked", new Landing(BranchesTab.LOCAL, Option.of("branches")))),
+                        "/repos/linked", new Landing(BranchesTab.LOCAL, Option.of(new PaneId("branches"))))),
                 confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(

@@ -32,6 +32,6 @@ public final class CherryPickDialogs {
      * The popups of this feature, which send what the user does to {@code dispatch}.
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(PICK, dispatch)));
+        return List.of(PopupSlot.returningTo(CommitsPanel.PANE, new ConfirmDialog<>(PICK, dispatch)));
     }
 }

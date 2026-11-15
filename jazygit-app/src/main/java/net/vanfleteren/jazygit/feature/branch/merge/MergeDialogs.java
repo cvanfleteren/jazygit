@@ -41,6 +41,6 @@ public final class MergeDialogs {
     private MergeDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(MERGE, dispatch)));
+        return List.of(PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(MERGE, dispatch)));
     }
 }

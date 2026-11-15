@@ -24,6 +24,9 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Focus;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.load.*;
@@ -223,7 +226,7 @@ class ContentViewTest {
 
         Model cycled = Update.update(model, new VersionMsg.FilesCycled()).model();
 
-        Shown.Stacked shown = (Shown.Stacked) ContentView.of(cycled, FilesPanel.ID);
+        Shown.Stacked shown = (Shown.Stacked) ContentView.of(cycled, FilesPanel.PANE);
         assertEquals(
                 List.of("Staged changes · new version (reading)", "Unstaged changes · new version (reading)"),
                 shown.areas().map(Shown.Area::title));
@@ -231,30 +234,30 @@ class ContentViewTest {
 
     @Test
     void withoutChangedFilesTheFilesSaySoInsteadOfLoading() {
-        assertEquals(note("Diff", "No changed files"), ContentView.of(TestModels.loaded(), FilesPanel.ID));
+        assertEquals(note("Diff", "No changed files"), ContentView.of(TestModels.loaded(), FilesPanel.PANE));
     }
 
     @Test
     void eachPaneShowsLoadingWhileTheRepositoryLoads() {
         Model loading = TestModels.loading("repo");
 
-        assertEquals(note("Diff", Placeholders.loading()), ContentView.of(loading, FilesPanel.ID));
-        assertEquals(loading("Log"), ContentView.of(loading, BranchesPanel.ID));
-        assertEquals(loading("Commit"), ContentView.of(loading, CommitsPanel.ID));
-        assertEquals(loading("Stash"), ContentView.of(loading, StashPanel.ID));
+        assertEquals(note("Diff", Placeholders.loading()), ContentView.of(loading, FilesPanel.PANE));
+        assertEquals(loading("Log"), ContentView.of(loading, BranchesPanel.PANE));
+        assertEquals(loading("Commit"), ContentView.of(loading, CommitsPanel.PANE));
+        assertEquals(loading("Stash"), ContentView.of(loading, StashPanel.PANE));
     }
 
     @Test
     void anUnknownFocusOrNoneYetShowsTheFiles() {
-        Shown files = ContentView.of(model, FilesPanel.ID);
+        Shown files = ContentView.of(model, FilesPanel.PANE);
 
-        assertEquals(files, ContentView.of(model, "unknown"));
-        assertEquals(files, ContentView.of(model, null));
+        assertEquals(files, ContentView.of(model, new PaneId("unknown")));
+        assertEquals(files, ContentView.of(model, Option.none()));
     }
 
     @Test
     void theBranchesShowTheLogOfTheSelectedBranch() {
-        Shown.Area log = area(ContentView.of(model, BranchesPanel.ID));
+        Shown.Area log = area(ContentView.of(model, BranchesPanel.PANE));
 
         assertEquals(ContentArea.LOG, log.area());
         assertEquals("Log: feature/initial-layout", log.title());
@@ -264,12 +267,12 @@ class ContentViewTest {
 
     @Test
     void theBranchesShowLoadingBeforeABranchIsSelected() {
-        assertEquals(loading("Log"), ContentView.of(TestModels.loaded(SampleData.git()), BranchesPanel.ID));
+        assertEquals(loading("Log"), ContentView.of(TestModels.loaded(SampleData.git()), BranchesPanel.PANE));
     }
 
     @Test
     void theBranchesKeepShowingThePreviousLogWhileTheNewOneLoads() {
-        Shown.Area log = area(ContentView.of(TestModels.switchingBranch(model, "other"), BranchesPanel.ID));
+        Shown.Area log = area(ContentView.of(TestModels.switchingBranch(model, "other"), BranchesPanel.PANE));
 
         assertEquals("Log: feature/initial-layout", log.title());
         assertTrue(shortShas(log).contains("0a1b2c3"), log.toString());
@@ -278,32 +281,33 @@ class ContentViewTest {
     @Test
     void aPopupThatJustClosedKeepsShowingTheBranchLogUntilTheFocusIsBack() {
         // The popup is gone from the model, but has the focus until the render gives it back.
-        Model closed = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.ID)));
+        Model closed = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.PANE)));
 
         assertEquals(
                 "Log: feature/initial-layout",
-                area(ContentView.of(closed, "new-branch")).title());
+                area(ContentView.of(closed, new Focus.Aside("new-branch"))).title());
     }
 
     @Test
     void aPopupOpenedFromTheBranchesKeepsShowingTheBranchLog() {
-        Model withPopup = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.ID)))
+        Model withPopup = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.PANE)))
                 .openPopup(new HelpPopup(BranchesPanel.ID, List.empty()));
 
         assertEquals(
                 "Log: feature/initial-layout",
-                area(ContentView.of(withPopup, "help")).title());
+                area(ContentView.of(withPopup, new Focus.Aside("help"))).title());
     }
 
     @Test
     void aPopupOpenedFromTheCommitChangesKeepsShowingTheCommit() {
         // The area had the focus when the popup opened, so that is what the focus goes back to.
         Model withPopup = showingCommit(DiffOptions.DEFAULT, "")
-                .mapRepoView(repoView -> repoView.withFocusedPane(
-                        Option.of(ContentArea.COMMIT.id().value())))
+                .mapRepoView(repoView -> repoView.withFocusedPane(Option.of(ContentArea.COMMIT.id())))
                 .openPopup(new HelpPopup(ContentArea.COMMIT.id().value(), List.empty()));
 
-        assertEquals("Commit: aaaa", area(ContentView.of(withPopup, "help")).title());
+        assertEquals(
+                "Commit: aaaa",
+                area(ContentView.of(withPopup, new Focus.Aside("help"))).title());
     }
 
     @Test
@@ -317,7 +321,7 @@ class ContentViewTest {
                         "Commit: aaaa",
                         new ScrolledContent.CommitChanges(commit, DiffText.of("+added line\n")),
                         new Body.CommitChanges(commit, whole("+added line\n"), PLAIN_LOOK)),
-                ContentView.of(selected, CommitsPanel.ID));
+                ContentView.of(selected, CommitsPanel.PANE));
     }
 
     @Test
@@ -345,8 +349,8 @@ class ContentViewTest {
                         "aaaa · src/a.txt",
                         new ScrolledContent.FileChanges(of, List.of(file), DiffText.of("+a\n")),
                         new Body.Diff(whole("+a\n"), RICH_LOOK)),
-                ContentView.of(selected, FilesPanel.ID));
-        assertEquals(note("Files of aaaa", Placeholders.loading()), ContentView.of(open, FilesPanel.ID));
+                ContentView.of(selected, FilesPanel.PANE));
+        assertEquals(note("Files of aaaa", Placeholders.loading()), ContentView.of(open, FilesPanel.PANE));
     }
 
     @Test
@@ -367,10 +371,10 @@ class ContentViewTest {
                 .model();
         Model unresolved =
                 Update.update(selected, new CommitFilesMsg.ListedCycled()).model();
-        assertInstanceOf(Shown.Area.class, ContentView.of(selected, FilesPanel.ID));
+        assertInstanceOf(Shown.Area.class, ContentView.of(selected, FilesPanel.PANE));
 
         // While the remarks are read.
-        assertEquals(note("Files of #7", Placeholders.loading()), ContentView.of(unresolved, FilesPanel.ID));
+        assertEquals(note("Files of #7", Placeholders.loading()), ContentView.of(unresolved, FilesPanel.PANE));
 
         Model none = Update.update(
                         unresolved,
@@ -381,11 +385,11 @@ class ContentViewTest {
                                 HashSet.empty(),
                                 0))
                 .model();
-        assertEquals(note("Files of #7", "No file has unresolved remarks"), ContentView.of(none, FilesPanel.ID));
+        assertEquals(note("Files of #7", "No file has unresolved remarks"), ContentView.of(none, FilesPanel.PANE));
         assertEquals(
                 note("Files of #7", "No file has remarks"),
                 ContentView.of(
-                        Update.update(none, new CommitFilesMsg.ListedCycled()).model(), FilesPanel.ID));
+                        Update.update(none, new CommitFilesMsg.ListedCycled()).model(), FilesPanel.PANE));
 
         Failure failure = new Failure.Bug(new Exception("no network"));
         assertEquals(
@@ -395,7 +399,7 @@ class ContentViewTest {
                                         unresolved,
                                         new CommitFilesMsg.RemarksFailed(new PrNumber(7), failure, HashSet.empty(), 0))
                                 .model(),
-                        FilesPanel.ID));
+                        FilesPanel.PANE));
     }
 
     @Test
@@ -414,10 +418,10 @@ class ContentViewTest {
 
         assertEquals(
                 note("Diff · ignoring whitespace", "No changes besides whitespace"),
-                ContentView.of(blank, FilesPanel.ID));
+                ContentView.of(blank, FilesPanel.PANE));
         assertEquals(
                 List.of("Unstaged changes · ignoring whitespace"),
-                ContentView.of(changed, FilesPanel.ID).areas().map(Shown.Area::title));
+                ContentView.of(changed, FilesPanel.PANE).areas().map(Shown.Area::title));
     }
 
     @Test
@@ -446,7 +450,7 @@ class ContentViewTest {
                         new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
                         new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
 
-        Shown.Stacked diffs = assertInstanceOf(Shown.Stacked.class, ContentView.of(selected, FilesPanel.ID));
+        Shown.Stacked diffs = assertInstanceOf(Shown.Stacked.class, ContentView.of(selected, FilesPanel.PANE));
         assertEquals(
                 List.of(ContentArea.STAGED, ContentArea.UNSTAGED), diffs.areas().map(Shown.Area::area));
         assertEquals(
@@ -465,13 +469,13 @@ class ContentViewTest {
 
         assertEquals(
                 List.of(PLAIN_LOOK, PLAIN_LOOK),
-                ContentView.of(selected, FilesPanel.ID)
+                ContentView.of(selected, FilesPanel.PANE)
                         .areas()
                         .map(area ->
                                 assertInstanceOf(Body.Diff.class, area.body()).look()));
         assertEquals(
                 List.of(RICH_LOOK, RICH_LOOK),
-                ContentView.of(rich, FilesPanel.ID)
+                ContentView.of(rich, FilesPanel.PANE)
                         .areas()
                         .map(area ->
                                 assertInstanceOf(Body.Diff.class, area.body()).look()));
@@ -480,7 +484,7 @@ class ContentViewTest {
     @Test
     void aCommitThatOnlyChangedWhitespaceSaysSoWhileIgnoringIt() {
         Shown.Area commit = area(
-                ContentView.of(showingCommit(DiffOptions.DEFAULT.withIgnoreWhitespace(true), ""), CommitsPanel.ID));
+                ContentView.of(showingCommit(DiffOptions.DEFAULT.withIgnoreWhitespace(true), ""), CommitsPanel.PANE));
 
         assertEquals("Commit: aaaa · ignoring whitespace", commit.title());
         assertEquals(
@@ -504,17 +508,17 @@ class ContentViewTest {
                         "Commit: cccc",
                         new ScrolledContent.CommitChanges(plain("cccc"), DiffText.of("+added line")),
                         new Body.CommitChanges(plain("cccc"), whole("+added line"), PLAIN_LOOK)),
-                ContentView.of(selected, BranchesPanel.ID));
+                ContentView.of(selected, BranchesPanel.PANE));
     }
 
     @Test
     void theDivergenceShowsLoadingWhileItsCommitIsReadAndOnlyOnTheLocalTab() {
         Model loading = divergenceHighlighted();
 
-        assertEquals(loading("Commit"), ContentView.of(loading, BranchesPanel.ID));
+        assertEquals(loading("Commit"), ContentView.of(loading, BranchesPanel.PANE));
         Model remoteTab = loading.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE));
         // The remote branches show the log of the branch, which none is selected for here.
-        assertEquals(loading("Log"), ContentView.of(remoteTab, BranchesPanel.ID));
+        assertEquals(loading("Log"), ContentView.of(remoteTab, BranchesPanel.PANE));
     }
 
     @Test
@@ -528,7 +532,7 @@ class ContentViewTest {
                                 new Divergence(new Divergence.Side(List.of(), 0), new Divergence.Side(List.of(), 0))),
                         Option.none()))));
 
-        assertEquals(dim("Commit", "The branches have not diverged"), ContentView.of(diverged, BranchesPanel.ID));
+        assertEquals(dim("Commit", "The branches have not diverged"), ContentView.of(diverged, BranchesPanel.PANE));
     }
 
     @Test
@@ -543,8 +547,8 @@ class ContentViewTest {
                                 new Sha("ffff"), DiffOptions.DEFAULT, DiffText.of("+added line")))
                 .model();
 
-        assertEquals(loading("Commit"), ContentView.of(loading, BranchesPanel.ID));
-        Shown.Area commit = area(ContentView.of(selected, BranchesPanel.ID));
+        assertEquals(loading("Commit"), ContentView.of(loading, BranchesPanel.PANE));
+        Shown.Area commit = area(ContentView.of(selected, BranchesPanel.PANE));
         assertEquals(ContentArea.BRANCH_COMMIT, commit.area());
         assertEquals("Commit: ffff", commit.title());
         assertEquals(
@@ -558,12 +562,12 @@ class ContentViewTest {
     void withoutCommitsTheCommitsSaySoDimmed() {
         Model empty = TestModels.loaded().mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.empty())));
 
-        assertEquals(dim("Commit", "No commits"), ContentView.of(empty, CommitsPanel.ID));
+        assertEquals(dim("Commit", "No commits"), ContentView.of(empty, CommitsPanel.PANE));
     }
 
     @Test
     void aBranchWithoutCommitsSaysSoDimmed() {
-        assertEquals(dim("Commit", "No commits"), ContentView.of(branchCommitsOpen(List.empty()), BranchesPanel.ID));
+        assertEquals(dim("Commit", "No commits"), ContentView.of(branchCommitsOpen(List.empty()), BranchesPanel.PANE));
     }
 
     @Test
@@ -584,7 +588,7 @@ class ContentViewTest {
                         "Stash: stash@{0}",
                         new ScrolledContent.StashChanges(stash.sha(), DiffText.of("+added line\n")),
                         new Body.StashChanges(stash, whole("+added line\n"), PLAIN_LOOK)),
-                ContentView.of(selected, StashPanel.ID));
+                ContentView.of(selected, StashPanel.PANE));
     }
 
     @Test
@@ -592,13 +596,13 @@ class ContentViewTest {
         Model clean = Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of()))
                 .model();
 
-        assertEquals(dim("Stash", "No stash entries"), ContentView.of(clean, StashPanel.ID));
-        assertEquals(List.empty(), ContentView.of(clean, StashPanel.ID).areas());
+        assertEquals(dim("Stash", "No stash entries"), ContentView.of(clean, StashPanel.PANE));
+        assertEquals(List.empty(), ContentView.of(clean, StashPanel.PANE).areas());
     }
 
     @Test
     void withoutAHighlightedPullRequestThePullRequestsScreenSaysSo() {
-        Shown shown = ContentView.of(pullRequests(Option.none()), PullRequestsPanel.FIRST_PANE_ID);
+        Shown shown = ContentView.of(pullRequests(Option.none()), PullRequestsPanel.FIRST_PANE);
 
         assertEquals(dim("Pull request", "No pull request highlighted"), shown);
         assertEquals(List.empty(), shown.areas());
@@ -612,12 +616,12 @@ class ContentViewTest {
                 loading("Pull request"),
                 ContentView.of(
                         pullRequests(Option.of(new Preview<>(PULL_REQUEST, Loadable.loading()))),
-                        PullRequestsPanel.FIRST_PANE_ID));
+                        PullRequestsPanel.FIRST_PANE));
         assertEquals(
                 new Shown.Message("Pull request", Placeholders.error(failure), Tone.ERROR),
                 ContentView.of(
                         pullRequests(Option.of(new Preview<>(PULL_REQUEST, new Loadable.Failed<>(failure)))),
-                        PullRequestsPanel.FIRST_PANE_ID));
+                        PullRequestsPanel.FIRST_PANE));
     }
 
     @Test
@@ -630,13 +634,13 @@ class ContentViewTest {
                         "Pull request: owner/repo#42",
                         new ScrolledContent.PullRequest(PULL_REQUEST, READ),
                         new Body.PullRequest(PULL_REQUEST, READ)),
-                ContentView.of(read, PullRequestsPanel.FIRST_PANE_ID));
+                ContentView.of(read, PullRequestsPanel.FIRST_PANE));
     }
 
     @Test
     void thePullRequestsScreenShowsThePullRequestWhicheverPaneHasTheFocus() {
         Model read = pullRequests(Option.of(new Preview<>(PULL_REQUEST, new Loadable.Loaded<>(READ))));
 
-        assertEquals(ContentView.of(read, PullRequestsPanel.FIRST_PANE_ID), ContentView.of(read, FilesPanel.ID));
+        assertEquals(ContentView.of(read, PullRequestsPanel.FIRST_PANE), ContentView.of(read, FilesPanel.PANE));
     }
 }

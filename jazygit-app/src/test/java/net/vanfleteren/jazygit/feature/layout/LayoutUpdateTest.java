@@ -13,7 +13,9 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -191,11 +193,12 @@ class LayoutUpdateTest {
     }
 
     private static Model focused(Model model, String id) {
-        return Update.update(model, new ViewMsg.Focused(id, false)).model();
+        return Update.update(model, new ViewMsg.Focused(new PaneId(id))).model();
     }
 
     private static Model content(Model model) {
-        return Update.update(model, new ViewMsg.Focused("diff-unstaged", true)).model();
+        return Update.update(model, new ViewMsg.Focused(new AreaId("diff-unstaged")))
+                .model();
     }
 
     private static Model measured(Model model, int rows) {

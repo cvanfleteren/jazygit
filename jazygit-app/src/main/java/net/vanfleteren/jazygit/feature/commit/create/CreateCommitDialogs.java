@@ -28,7 +28,7 @@ public final class CreateCommitDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(FilesPanel.ID, new ConfirmDialog<>(STAGE_ALL, dispatch)),
-                PopupSlot.returningTo(FilesPanel.ID, new CommitDialog(dispatch)));
+                PopupSlot.returningTo(FilesPanel.PANE, new ConfirmDialog<>(STAGE_ALL, dispatch)),
+                PopupSlot.returningTo(FilesPanel.PANE, new CommitDialog(dispatch)));
     }
 }

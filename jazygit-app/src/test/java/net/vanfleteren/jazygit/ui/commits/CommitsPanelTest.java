@@ -316,13 +316,13 @@ class CommitsPanelTest {
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
             model.set(model.get().mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log.prepend(commit("s2"))))));
-            RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
+            RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), CommitsPanel.PANE));
 
             assertEquals(commit("s0").sha(), panel.selectedCommit().get().sha());
 
@@ -338,11 +338,11 @@ class CommitsPanelTest {
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
             SettledPilot.of(testRunner).pause();
             model.set(model.get().mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log.prepend(commit("s2"))))));
-            RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
+            RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), CommitsPanel.PANE));
 
             assertEquals(commit("s2").sha(), panel.selectedCommit().get().sha());
 
@@ -356,7 +356,7 @@ class CommitsPanelTest {
         Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
             SettledPilot.of(testRunner).pause();
             for (int i = 0; i < 45; i++) {
@@ -364,7 +364,7 @@ class CommitsPanelTest {
             }
             SettledPilot.of(testRunner).pause();
 
-            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, CommitsPanel.ID));
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, CommitsPanel.PANE));
             assertEquals(45, panel.selectedIndex());
             assertTrue(screen.contains("msg s45"), screen);
             assertFalse(screen.contains("msg s0 "), screen);
@@ -379,7 +379,7 @@ class CommitsPanelTest {
         Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             // The border, s1, then s0.
             SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, 5, 2);
 
@@ -424,7 +424,7 @@ class CommitsPanelTest {
                 () -> {});
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
             SettledPilot.of(testRunner).pause();
             SettledPilot.of(testRunner).press('/');
@@ -432,7 +432,7 @@ class CommitsPanelTest {
             // The keys of the commits, like d to drop, are letters of the search meanwhile.
             SettledPilot.of(testRunner).press('d');
             SettledPilot.of(testRunner).pause();
-            assertTrue(RenderedText.of(testRunner, () -> panel.render(model.get(), CommitsPanel.ID))
+            assertTrue(RenderedText.of(testRunner, () -> panel.render(model.get(), CommitsPanel.PANE))
                     .contains("/ d"));
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).pause();
@@ -449,7 +449,7 @@ class CommitsPanelTest {
                             new LoadMsg.CommitSearchLoaded(
                                     CommitQuery.parse("d"), Option.none(), List.of(commit("s0"))))
                     .model());
-            String shown = RenderedText.of(testRunner, () -> panel.render(model.get(), CommitsPanel.ID));
+            String shown = RenderedText.of(testRunner, () -> panel.render(model.get(), CommitsPanel.PANE));
             assertTrue(shown.contains("Commits: /d"), shown);
             assertTrue(shown.contains("msg s0"), shown);
             assertFalse(shown.contains("msg s1"), shown);
@@ -475,7 +475,7 @@ class CommitsPanelTest {
                 () -> {});
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
             // Without the search line, a paste does nothing: its letters are no keys of the commits.
             SettledPilot.paste(testRunner, "dd");
@@ -497,8 +497,8 @@ class CommitsPanelTest {
                                 .withResults(new Loadable.Loaded<>(List.empty())))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
-            assertTrue(RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.ID))
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
+            assertTrue(RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE))
                     .contains("No commits match"));
 
             SettledPilot.of(testRunner).quit();
@@ -514,9 +514,10 @@ class CommitsPanelTest {
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0")))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
-        panel.render(model, CommitsPanel.ID);
+        panel.render(model, CommitsPanel.PANE);
         List<Option<String>> before = shaClasses(panel);
-        panel.render(model.mapRepoView(repoView -> repoView.withCherryPick(Option.of(commit("s0")))), CommitsPanel.ID);
+        panel.render(
+                model.mapRepoView(repoView -> repoView.withCherryPick(Option.of(commit("s0")))), CommitsPanel.PANE);
 
         assertEquals(List.of(Option.none(), Option.none()), before);
         assertEquals(List.of(Option.none(), Option.of(Theme.Classes.COPIED)), shaClasses(panel));
@@ -542,11 +543,11 @@ class CommitsPanelTest {
         Model only = all.mapRepoView(repoView -> repoView.withOnlyAhead(true));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
-        panel.render(all, CommitsPanel.ID);
+        panel.render(all, CommitsPanel.PANE);
         List<String> first = panel.shownRows().map(LoadableList.Row::text);
-        panel.render(only, CommitsPanel.ID);
+        panel.render(only, CommitsPanel.PANE);
         List<String> ahead = panel.shownRows().map(LoadableList.Row::text);
-        panel.render(all, CommitsPanel.ID);
+        panel.render(all, CommitsPanel.PANE);
 
         assertEquals(4, first.size());
         assertEquals(List.of("msg c2", "msg c1", "⑂ origin/main msg f0"), ahead.map(CommitsPanelTest::afterGraph));
@@ -569,11 +570,11 @@ class CommitsPanelTest {
                 Option.of(CommitSearch.loading("a", Option.none()).withResults(log))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
-        panel.render(listed, CommitsPanel.ID);
+        panel.render(listed, CommitsPanel.PANE);
         String first = panel.shownRows().head().text();
-        panel.render(found, CommitsPanel.ID);
+        panel.render(found, CommitsPanel.PANE);
         String searched = panel.shownRows().head().text();
-        panel.render(listed, CommitsPanel.ID);
+        panel.render(listed, CommitsPanel.PANE);
 
         assertEquals("mmmmmmm Ad ◎─╮ msg mmmmmmm", first);
         assertEquals("mmmmmmm Ad ◎ msg mmmmmmm", searched);

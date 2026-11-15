@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.settings.UnseenPullRequests;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PaneId;
@@ -370,26 +371,26 @@ class PrOverviewUpdateTest {
 
     @Test
     void theContentKeepsTheListWhosePullRequestItShows() {
-        Model authored = Update.update(toggled(loaded()).model(), new ViewMsg.Focused("prAuthored", false))
+        Model authored = Update.update(toggled(loaded()).model(), new ViewMsg.Focused(new PaneId("prAuthored")))
                 .model();
-        Model inContent = Update.update(authored, new ViewMsg.Focused("pull-request-preview", true))
+        Model inContent = Update.update(authored, new ViewMsg.Focused(new AreaId("pull-request-preview")))
                 .model();
 
-        assertEquals(Option.of("pull-request-preview"), inContent.shownPane());
+        assertEquals(Option.of(AreaId.PULL_REQUEST), inContent.shownPane());
         assertEquals(Option.of(new PaneId("prAuthored")), inContent.prOverview().listPane());
     }
 
     @Test
     void eachScreenKeepsWhereItsFocusWas() {
-        Model files =
-                Update.update(loaded(), new ViewMsg.Focused("files", false)).model();
-        Model prs = Update.update(toggled(files).model(), new ViewMsg.Focused("prAuthored", false))
+        Model files = Update.update(loaded(), new ViewMsg.Focused(new PaneId("files")))
+                .model();
+        Model prs = Update.update(toggled(files).model(), new ViewMsg.Focused(new PaneId("prAuthored")))
                 .model();
 
-        assertEquals(Option.of("prAuthored"), prs.shownPane());
+        assertEquals(Option.of(new PaneId("prAuthored")), prs.shownPane());
         Model back = toggled(prs).model();
-        assertEquals(Option.of("files"), back.shownPane());
-        assertEquals(Option.of("prAuthored"), toggled(back).model().shownPane());
+        assertEquals(Option.of(new PaneId("files")), back.shownPane());
+        assertEquals(Option.of(new PaneId("prAuthored")), toggled(back).model().shownPane());
     }
 
     @Test

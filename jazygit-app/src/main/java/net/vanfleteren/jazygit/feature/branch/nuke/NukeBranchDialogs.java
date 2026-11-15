@@ -26,7 +26,7 @@ public final class NukeBranchDialogs {
     private NukeBranchDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(NUKE_BRANCH, dispatch)));
+        return List.of(PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(NUKE_BRANCH, dispatch)));
     }
 
     private static String message(NukeBranchPopup popup) {

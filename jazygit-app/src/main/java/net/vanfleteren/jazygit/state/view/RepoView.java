@@ -10,6 +10,7 @@ import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
@@ -37,9 +38,8 @@ import net.vanfleteren.jazygit.state.diff.Version;
  *                     keyed by its sha, which stays as stashes are added and dropped, once one is highlighted
  * @param commitFiles  the files a commit or a stash changed, which the files pane lists in place of the changed
  *                     files of the working tree while it is open
- * @param focusedPane  the id of the element of the screen, outside the popups, that had the focus last, which a
- *                     closing popup gives it back to; none before the view reported one. It is a pane's id or
- *                     an {@link AreaId}'s value, so not a {@link net.vanfleteren.jazygit.state.PaneId}
+ * @param focusedPane  the pane or area of the screen, outside the popups, that had the focus last, which a
+ *                     closing popup gives it back to; none before the view reported one
  * @param cherryPick   the commit copied to be cherry-picked onto the branch checked out later, if one is
  * @param searchLine   the text of the line above the commits pane to type a search in, while it is open
  * @param commitSearch the search of the log of HEAD that was run last, which the commits pane lists in place of
@@ -72,7 +72,7 @@ public record RepoView(
         Option<Preview<List<FileEntry>, Diffs>> fileDiff,
         Option<Preview<Sha, DiffText>> stashDetail,
         Option<CommitFilesView> commitFiles,
-        Option<String> focusedPane,
+        Option<Focus.OnScreen> focusedPane,
         Option<Commit> cherryPick,
         Option<String> searchLine,
         Option<CommitSearch> commitSearch,

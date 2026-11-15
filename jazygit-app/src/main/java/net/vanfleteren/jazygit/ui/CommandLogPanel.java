@@ -29,6 +29,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.operation.Outcome;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
@@ -57,6 +58,11 @@ public final class CommandLogPanel {
      * The id the panel has the focus by.
      */
     public static final String ID = "command-log";
+
+    /**
+     * The log, as the focus is on it.
+     */
+    public static final Focus.Aside FOCUS = new Focus.Aside(ID);
 
     /**
      * How many lines of commands fit in the panel at most; the oldest ones scroll off.

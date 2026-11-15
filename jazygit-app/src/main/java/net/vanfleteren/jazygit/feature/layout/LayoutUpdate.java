@@ -128,9 +128,7 @@ public final class LayoutUpdate {
      */
     private static Option<Integer> focusedPane(Model model) {
         List<PaneId> panes = Scopes.leftPanes(model.screen());
-        return model.shownPane()
-                .map(id -> panes.indexWhere(pane -> pane.value().equals(id)))
-                .filter(pane -> pane >= 0);
+        return model.shownPane().map(focus -> panes.indexWhere(focus::equals)).filter(pane -> pane >= 0);
     }
 
     /**

@@ -31,7 +31,7 @@ public final class CreatePullRequestDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(PUSH_FIRST, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new NewPullRequestDialog(dispatch)));
+                PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(PUSH_FIRST, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.PANE, new NewPullRequestDialog(dispatch)));
     }
 }

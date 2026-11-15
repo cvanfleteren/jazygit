@@ -25,6 +25,6 @@ public final class SquashDialogs {
     private SquashDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(CommitsPanel.ID, new ConfirmDialog<>(SQUASH, dispatch)));
+        return List.of(PopupSlot.returningTo(CommitsPanel.PANE, new ConfirmDialog<>(SQUASH, dispatch)));
     }
 }

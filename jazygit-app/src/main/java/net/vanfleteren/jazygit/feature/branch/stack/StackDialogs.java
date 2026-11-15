@@ -139,9 +139,9 @@ public final class StackDialogs {
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
                 PopupSlot.returningToFocus(new ChoiceDialog<>(MENU, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new StackPickDialog(dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new KeyedConfirmDialog<>(LINK, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new PickDialog<>(STACK_ON, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.PANE, new StackPickDialog(dispatch)),
+                PopupSlot.returningTo(BranchesPanel.PANE, new KeyedConfirmDialog<>(LINK, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.PANE, new PickDialog<>(STACK_ON, dispatch)),
                 PopupSlot.returningToFocus(new ConfirmDialog<>(UNSTACK, dispatch)),
                 PopupSlot.returningToFocus(new KeyedConfirmDialog<>(REBASE, dispatch)),
                 PopupSlot.returningToFocus(new StackCheckoutDialog(dispatch)));
