@@ -111,6 +111,20 @@ class AheadViewTest {
     }
 
     @Test
+    void theItemsOfALogBuildTheRowsItsGraphHas() {
+        AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
+        Option<Sha> copied = Option.of(MIDDLE.sha());
+
+        List<LoadableList.Item> items = CommitsPanel.graphed(only.shown(LOG), copied, only);
+
+        assertEquals(
+                CommitsPanel.marked(
+                        CommitsPanel.rows(CommitGraph.layout(only.shown(LOG)), copied), only.shown(LOG), only),
+                items.map(LoadableList.Item::row));
+        assertTrue(items.forAll(item -> item.height() == 1));
+    }
+
+    @Test
     void theBranchLogDimsTheCommitsOnTheBaseAndMarksTheForkPointAfterItsSha() {
         Style dimmed = Style.EMPTY.dim();
         Theme.SpanStyles styles = cssClass -> cssClass.equals(Theme.Classes.DIM) ? dimmed : Style.EMPTY;

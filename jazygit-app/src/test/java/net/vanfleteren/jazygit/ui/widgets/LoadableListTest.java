@@ -132,6 +132,26 @@ class LoadableListTest {
     }
 
     @Test
+    void aRowMadeLaterIsOnlyBuiltOnceItIsDrawn() {
+        java.util.Set<Integer> built = new java.util.TreeSet<>();
+        Loadable<List<String>> items = new Loadable.Loaded<>(List.range(0, 20).map(i -> "item " + i));
+        Function<List<String>, List<LoadableList.Item>> later =
+                all -> all.zipWithIndex((text, at) -> LoadableList.Item.later(1, () -> {
+                    built.add(at);
+                    return LoadableList.Row.of(text);
+                }));
+
+        dev.tamboui.buffer.Buffer top = drawn(items, later);
+        assertEquals(java.util.Set.of(0, 1, 2, 3, 4, 5), built);
+        list.select(19);
+        dev.tamboui.buffer.Buffer end = drawn(items, later);
+
+        assertEquals(java.util.Set.of(0, 1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19), built);
+        assertTrue(line(top, 1).contains("item 0"), line(top, 1));
+        assertTrue(line(end, 6).contains("item 19"), line(end, 6));
+    }
+
+    @Test
     void theRightBorderOfAListThatFitsIsLeftAsItIs() {
         String border = rightBorder(drawn(new Loadable.Loaded<>(List.of("first", "second"))));
 
@@ -207,6 +227,14 @@ class LoadableListTest {
      * {@code items} drawn in the list, focused, in the dark theme, on the screen of these tests.
      */
     private dev.tamboui.buffer.Buffer drawn(Loadable<List<String>> items) {
+        return drawn(items, all -> all.map(LoadableList.Row::of).map(LoadableList.Item::of));
+    }
+
+    /**
+     * {@code items} drawn as {@code rows} has them in the list, focused, in the dark theme, on the screen of these tests.
+     */
+    private dev.tamboui.buffer.Buffer drawn(
+            Loadable<List<String>> items, Function<List<String>, List<LoadableList.Item>> rows) {
         dev.tamboui.toolkit.focus.FocusManager focus = new dev.tamboui.toolkit.focus.FocusManager();
         focus.setFocus(ID);
         dev.tamboui.toolkit.element.DefaultRenderContext context = new dev.tamboui.toolkit.element.DefaultRenderContext(
@@ -215,9 +243,16 @@ class LoadableListTest {
         context.setStyleEngine(Theme.createEngine().get());
         dev.tamboui.layout.Rect area = new dev.tamboui.layout.Rect(0, 0, SCREEN.width(), SCREEN.height());
         dev.tamboui.buffer.Buffer buffer = dev.tamboui.buffer.Buffer.empty(area);
-        list.render(items, all -> all.map(LoadableList.Row::of), true, true)
+        list.renderItems(items, rows, true, true, Pane.title("Items"), Option.none(), event -> {})
                 .render(dev.tamboui.terminal.Frame.forTesting(buffer), area, context);
         return buffer;
+    }
+
+    /**
+     * The text on line {@code y} of what {@code buffer} shows.
+     */
+    private static String line(dev.tamboui.buffer.Buffer buffer, int y) {
+        return List.range(0, SCREEN.width()).map(x -> buffer.get(x, y).symbol()).mkString();
     }
 
     /**

@@ -7,6 +7,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple3;
 import io.vavr.Tuple4;
 import io.vavr.collection.List;
+import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -66,7 +67,7 @@ public class CommitsPanel {
     // keeps what it built from them, and the graph is not laid out on every render.
     private final Memo<Tuple3<Boolean, Loadable<List<Commit>>, AheadView>, Loadable<List<Commit>>> listed =
             new Memo<>();
-    private final Memo<Tuple4<List<Commit>, Boolean, Option<Sha>, AheadView>, List<LoadableList.Row>> drawn =
+    private final Memo<Tuple4<List<Commit>, Boolean, Option<Sha>, AheadView>, List<LoadableList.Item>> drawn =
             new Memo<>();
 
     /**
@@ -125,11 +126,36 @@ public class CommitsPanel {
     }
 
     /**
+     * The items of {@code commits}, a log, on the rails of its graph, with the commits on the base dimmed and the
+     * fork point marked, as {@link #marked} has them. Each row, and the graph down to it, is only worked out once the
+     * list draws it: a log of thousands of commits then lays out only what is scrolled to. A row is one line.
+     *
+     * @param copied the commit copied to cherry-pick, whose sha stands out
+     */
+    public static List<LoadableList.Item> graphed(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
+        Stream<CommitGraph.Node> nodes = CommitGraph.laidOut(commits);
+        return commits.zipWithIndex((commit, at) -> LoadableList.Item.later(
+                1, () -> marked(row(nodes.get(at), copied.contains(commit.sha())), commit.sha(), ahead)));
+    }
+
+    /**
+     * The items of the commits a search found, as {@link #foundRows} has them, each row worked out once it is drawn.
+     */
+    private static List<LoadableList.Item> foundItems(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
+        return commits.map(commit ->
+                LoadableList.Item.later(1, () -> marked(foundRow(commit, copied), commit.sha(), ahead)));
+    }
+
+    /**
      * The rows of the commits a search found, without the rails of merges: with commits left out, they no longer
      * join up. A merge is still a {@code ◎}.
      */
     static List<LoadableList.Row> foundRows(List<Commit> commits, Option<Sha> copied) {
-        return commits.map(commit -> row(commit, commit.isMerge() ? "◎ " : "○ ", copied.contains(commit.sha())));
+        return commits.map(commit -> foundRow(commit, copied));
+    }
+
+    private static LoadableList.Row foundRow(Commit commit, Option<Sha> copied) {
+        return row(commit, commit.isMerge() ? "◎ " : "○ ", copied.contains(commit.sha()));
     }
 
     /**
@@ -252,14 +278,11 @@ public class CommitsPanel {
         list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));
         Loadable<List<Commit>> source =
                 search.map(CommitSearch::results).getOrElse(() -> model.repo().commits());
-        return list.render(
+        return list.renderItems(
                 listed.get(Tuple.of(searching, source, ahead), key -> searching ? source : source.map(ahead::shown)),
                 commits -> drawn.get(
                         Tuple.of(commits, searching, copied, ahead),
-                        key -> marked(
-                                searching ? foundRows(commits, copied) : rows(CommitGraph.layout(commits), copied),
-                                commits,
-                                ahead)),
+                        key -> searching ? foundItems(commits, copied, ahead) : graphed(commits, copied, ahead)),
                 focus.contains(PANE),
                 inUse.contains(PANE),
                 Pane.title(ahead.title(

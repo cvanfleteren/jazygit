@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.*;
 import io.vavr.control.Option;
 import java.util.Arrays;
@@ -192,12 +193,26 @@ public final class CommitGraph {
      * a rail, so a list of part of the history, as a range, has no rails waiting for commits it does not show.
      */
     public static List<Node> layout(List<Commit> arranged) {
+        return laidOut(arranged).toList();
+    }
+
+    /**
+     * The nodes of {@link #layout}, each laid out only once it is asked for, and kept: a row only depends on the rows
+     * above it, so a list that shows the first rows of a long log lays out only those, and those it is scrolled to.
+     */
+    public static Stream<Node> laidOut(List<Commit> arranged) {
         Set<Sha> listed = arranged.map(Commit::sha).toSet();
-        return arranged.foldLeft(
-                        new Laid(Array.empty(), List.empty()),
-                        (laid, commit) -> laid.next(commit, commit.parents().filter(listed::contains)))
-                .latestFirst()
-                .reverse();
+        return laidOut(new Laid(Array.empty()), arranged, listed);
+    }
+
+    /**
+     * The nodes of {@code rest}, laid out below the rails of {@code laid}.
+     */
+    private static Stream<Node> laidOut(Laid laid, List<Commit> rest, Set<Sha> listed) {
+        return rest.headOption()
+                .map(commit -> laid.next(commit, commit.parents().filter(listed::contains)))
+                .map(next -> Stream.cons(next._1, () -> laidOut(next._2, rest.tail(), listed)))
+                .getOrElse(Stream::empty);
     }
 
     /**
@@ -225,16 +240,17 @@ public final class CommitGraph {
     public record Meet(int rail, int into) {}
 
     /**
-     * The rails below the nodes laid out so far, by column, with the commit each waits for, and those nodes, last
-     * laid out first. The rails are an {@link Array}, as they are looked up by column; a row is worked out on arrays
+     * The rails below the nodes laid out so far, by column, with the commit each waits for. The rails are an {@link Array}, as they are looked up by column; a row is worked out on arrays
      * of its own, as a graph can be hundreds of rails wide and each row looks at all of them.
      */
-    private record Laid(Array<Option<Sha>> rails, List<Node> latestFirst) {
+    private record Laid(Array<Option<Sha>> rails) {
 
         /**
+         * The node of {@code commit}, and the rails below it.
+         *
          * @param parents the parents of {@code commit} that get a rail
          */
-        Laid next(Commit commit, List<Sha> parents) {
+        Tuple2<Node, Laid> next(Commit commit, List<Sha> parents) {
             Option<Sha> sha = Option.of(commit.sha());
             String own = commit.sha().value();
             int waiting = rails.indexOf(sha);
@@ -280,15 +296,15 @@ public final class CommitGraph {
                                     && rails.get(at).equals(next.get(at))))
                     .mapToObj(at -> new Meet(at, leftBelow[at]))
                     .toList());
-            return new Laid(
-                    next,
-                    latestFirst.prepend(new Node(
+            return Tuple.of(
+                    new Node(
                             commit,
                             column,
                             List.ofAll(passing.build().toArray()),
                             List.ofAll(joins.build().toArray()),
                             List.ofAll(opens.build().toArray()),
-                            meets)));
+                            meets),
+                    new Laid(next));
         }
 
         /**
