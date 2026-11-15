@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.Pathed;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;

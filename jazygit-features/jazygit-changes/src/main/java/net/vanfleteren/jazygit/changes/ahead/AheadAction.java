@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.changes.ahead;
 
 import net.vanfleteren.jazygit.state.load.AheadMsg;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.changes.cherrypick;
 
-import net.vanfleteren.jazygit.ui.keys.Feature;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.Feature;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 
 /**
  * Copying commits and cherry-picking them onto the branch checked out.

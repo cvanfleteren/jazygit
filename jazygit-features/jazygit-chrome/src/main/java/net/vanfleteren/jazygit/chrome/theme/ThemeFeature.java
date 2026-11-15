@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.chrome.theme;
 
-import net.vanfleteren.jazygit.ui.keys.Feature;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.Feature;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 
 /**
  * Picking the theme.

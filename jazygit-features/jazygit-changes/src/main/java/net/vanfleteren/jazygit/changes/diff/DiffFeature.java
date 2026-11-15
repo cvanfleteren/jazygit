@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.changes.diff;
 
-import net.vanfleteren.jazygit.ui.keys.Feature;
+import net.vanfleteren.jazygit.ui.Feature;
 
 /**
  * The diffs: the files of a commit or stash, expanding and folding the context, the versions of a file shown, and

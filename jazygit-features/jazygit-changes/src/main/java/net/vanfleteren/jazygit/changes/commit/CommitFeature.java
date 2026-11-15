@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.changes.commit.revert.RevertAction;
 import net.vanfleteren.jazygit.changes.commit.reword.RewordAction;
 import net.vanfleteren.jazygit.changes.commit.search.CommitSearchAction;
 import net.vanfleteren.jazygit.changes.commit.squash.SquashAction;
-import net.vanfleteren.jazygit.ui.keys.Feature;
+import net.vanfleteren.jazygit.ui.Feature;
 
 /**
  * The commit operations: committing, amending (the last or any commit), rewording, squashing, fixing up, dropping,

@@ -33,7 +33,7 @@ Two things cross them the wrong way:
    | `jazygit-image` | `image` | `Picture`, `Png`, `Gif`, `Raster` | — |
    | `jazygit-settings` | `settings` | the settings and their files | lens, night-config |
    | `jazygit-state` | `state` | the model, its messages, updates and commands | lens, image, settings, process, git, gh, json, yaml |
-   | `jazygit-ui` | `ui` | the views, `ui.keys` (`Keymap`, `Scopes`, `Feature`, `FeatureAction`), `ui.i18n`, `MarkdownImage` in `ui.markdown` | state, syntax, TamboUI, commonmark |
+   | `jazygit-ui` | `ui` | the views, `Feature` and `FeatureAction` in the shell, `ui.keys` (`Keymap`, `Scopes`), `ui.i18n`, `MarkdownImage` in `ui.markdown` | state, syntax, TamboUI, commonmark |
    | `jazygit-changes` | `changes` | `stage`, `files`, `discard`, `commit`, `ahead`, `cherrypick`, `stash`, `edit`, `copy`, `diff`, `fetch`, `inprogress` | ui |
    | `jazygit-branches` | `branches` | `branch`, `worktree`, `forcedelete`, `repos`, `start` | changes |
    | `jazygit-github` | `github` | what was `feature.github` | branches, changes |
@@ -58,16 +58,23 @@ Two things cross them the wrong way:
    module uses goes to the lowest of them; one used by the widgets of `ui` alone stays without a prefix. A test of
    each module checks that every key its code names is in its bundle, and that no key is in two.
 5. **The tests go with the code they test**, with three exceptions:
-   - the tests of `state` and `ui` that send the messages of a feature (29 of them, as `ProgramTest` and
-     `BranchesPanelTest`) move to `jazygit-app`, which sees every feature; they keep their package;
-   - what tests of several modules share is in a test-jar of `jazygit-state` (`TestModels`, `CursorFeedback`) and of
-     `jazygit-ui` (`RenderedText`, `SettledPilot`, `ThemedBorders`); JUnit is configured through surefire's
-     `configurationParameters`, never a `junit-platform.properties` that a test-jar would pass on;
+   - a test that needs what its module cannot see moves to `jazygit-app`, which sees everything, and keeps its
+     package: the tests of `state` and `ui` that send the messages of a feature (as `ProgramTest` and
+     `BranchesPanelTest`), those of a feature that use a group beside it (as `HelpDialogTest`), and those that read
+     the keys of the standard keymap, which only the app has (as `CommitsPanelTest` and `KeymapTest`); 37 in all;
+   - what tests of several modules share is in a test-jar of `jazygit-state` (`TestModels`, `CursorFeedback`), of
+     `jazygit-ui` (`RenderedText`, `SettledPilot`, `ThemedBorders`) and of `jazygit-branches` (`CheckoutModels`,
+     `NameAsked`, `LocationAsked`). A helper of `TestModels` that used a feature or a view moves next to it
+     (`ErrorTexts` in `ui`, `CheckoutModels` in `branches`, `CommitModels` in `changes`). JUnit is configured through
+     surefire's `configurationParameters`, never a `junit-platform.properties` that a test-jar would pass on;
    - the acceptance tests do not change: the fat jar is still built in `jazygit-app/target`.
 6. **The rules follow the modules.** A rule the module graph now keeps is dropped (the settings, the lens, the command
-   line and the state knowing nothing of what is above them). The others are `AppRules`, in the test-jar of
-   `jazygit-state`, which each module above it runs on its own classes from its `*ArchitectureTest`, as the core runs
-   `CoreRules`. A rule that names a class of a higher module names it as text. `FeaturesTest` is in `jazygit-app`
+   line and the state knowing nothing of what is above them). The others are `AppRules`, in `jazygit-test-support`,
+   which each module of the application, from `jazygit-lens` up, runs on its own classes from its
+   `*ArchitectureTest`, as the core runs `CoreRules`. They name the types of the state and of the core as text, as
+   test-support is below them. The cycle rules of the parts of `state`, of `ui` and of a group of features are in that
+   module's test. The keys the views declare and `MarkdownImage` count as no effect in an update, as when they were
+   `keys` and `image`. `FeaturesTest` is in `jazygit-app`
    and looks at the four groups.
 
 ### Not

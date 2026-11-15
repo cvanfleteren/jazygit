@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.changes.stash;
 
-import net.vanfleteren.jazygit.ui.keys.Feature;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.Feature;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 
 /**
  * Stashing the changes, and popping and dropping a stash.

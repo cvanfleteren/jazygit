@@ -1,11 +1,11 @@
-package net.vanfleteren.jazygit.ui.keys;
+package net.vanfleteren.jazygit.ui;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.keys.Keymap;
 
 /**
  * What an operation of a feature adds to the app: its keys, and its popups. Each operation declares its own, in

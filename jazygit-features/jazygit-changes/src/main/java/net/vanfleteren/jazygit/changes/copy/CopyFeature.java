@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.changes.copy;
 
-import net.vanfleteren.jazygit.ui.keys.Feature;
+import net.vanfleteren.jazygit.ui.Feature;
 
 /**
  * Copying what a diff shows.

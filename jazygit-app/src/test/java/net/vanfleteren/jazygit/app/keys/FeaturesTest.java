@@ -15,7 +15,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Try;
 import java.lang.reflect.Field;
-import net.vanfleteren.jazygit.ui.keys.Feature;
+import net.vanfleteren.jazygit.ui.Feature;
 import org.junit.jupiter.api.Test;
 
 /**

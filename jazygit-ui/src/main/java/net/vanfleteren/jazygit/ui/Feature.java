@@ -1,9 +1,9 @@
-package net.vanfleteren.jazygit.ui.keys;
+package net.vanfleteren.jazygit.ui;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.keys.Keymap;
 
 /**
  * A feature, as the app knows it: its actions, which bring its keys and its popups. Each feature package declares

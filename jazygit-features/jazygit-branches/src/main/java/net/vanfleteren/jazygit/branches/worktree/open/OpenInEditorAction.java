@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.branches.worktree.open;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 import net.vanfleteren.jazygit.ui.PopupSlot;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;

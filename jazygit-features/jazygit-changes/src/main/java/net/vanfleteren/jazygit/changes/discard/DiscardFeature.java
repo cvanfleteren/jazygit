@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.changes.discard;
 
-import net.vanfleteren.jazygit.ui.keys.Feature;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.Feature;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 
 /**
  * Discarding the changes to files.

@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.branches.worktree.open.OpenInEditorAction;
 import net.vanfleteren.jazygit.branches.worktree.prune.PruneWorktreesAction;
 import net.vanfleteren.jazygit.branches.worktree.remove.RemoveWorktreeAction;
 import net.vanfleteren.jazygit.branches.worktree.switchto.SwitchWorktreeAction;
-import net.vanfleteren.jazygit.ui.keys.Feature;
+import net.vanfleteren.jazygit.ui.Feature;
 
 /**
  * The worktree operations: adding one for a branch, switching to one, removing one, pruning the ones whose

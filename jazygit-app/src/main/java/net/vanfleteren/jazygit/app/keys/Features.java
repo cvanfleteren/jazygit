@@ -21,7 +21,7 @@ import net.vanfleteren.jazygit.chrome.help.HelpFeature;
 import net.vanfleteren.jazygit.chrome.settings.SettingsFeature;
 import net.vanfleteren.jazygit.chrome.theme.ThemeFeature;
 import net.vanfleteren.jazygit.github.GitHubFeature;
-import net.vanfleteren.jazygit.ui.keys.Feature;
+import net.vanfleteren.jazygit.ui.Feature;
 
 /**
  * The features of the app, which the standard keymap and the popups are made of (ADR 127). Adding a feature is

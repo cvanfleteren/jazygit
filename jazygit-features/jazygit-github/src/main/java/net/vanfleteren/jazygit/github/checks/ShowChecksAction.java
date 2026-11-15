@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.github.checks;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 import net.vanfleteren.jazygit.ui.PopupSlot;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;

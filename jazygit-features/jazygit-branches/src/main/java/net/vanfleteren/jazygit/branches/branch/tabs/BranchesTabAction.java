@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.branches.branch.tabs;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 

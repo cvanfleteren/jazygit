@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.branches.branch.stack;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;

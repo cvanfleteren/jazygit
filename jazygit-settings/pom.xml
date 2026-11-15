@@ -28,5 +28,10 @@
             <groupId>com.electronwill.night-config</groupId>
             <artifactId>toml</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

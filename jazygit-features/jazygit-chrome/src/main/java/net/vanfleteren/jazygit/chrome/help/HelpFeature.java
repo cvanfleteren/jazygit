@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.chrome.help;
 
-import net.vanfleteren.jazygit.ui.keys.Feature;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.Feature;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 
 /**
  * The help, which lists the keys of the panel that has the focus.

@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.github.review.ReviewAction;
 import net.vanfleteren.jazygit.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.github.verdict.VerdictAction;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
-import net.vanfleteren.jazygit.ui.keys.Feature;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.Feature;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 

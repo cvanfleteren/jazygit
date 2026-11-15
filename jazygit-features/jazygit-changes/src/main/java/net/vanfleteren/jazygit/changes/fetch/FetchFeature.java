@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.changes.fetch;
 
-import net.vanfleteren.jazygit.ui.keys.Feature;
+import net.vanfleteren.jazygit.ui.Feature;
 
 /**
  * Fetching from the remotes.

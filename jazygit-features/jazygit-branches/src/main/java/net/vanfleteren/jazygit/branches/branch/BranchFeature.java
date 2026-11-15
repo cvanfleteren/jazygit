@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.branches.branch.stack.StackAction;
 import net.vanfleteren.jazygit.branches.branch.tabs.BranchesTabAction;
 import net.vanfleteren.jazygit.branches.branch.upstream.UpstreamAction;
 import net.vanfleteren.jazygit.changes.ahead.AheadAction;
-import net.vanfleteren.jazygit.ui.keys.Feature;
+import net.vanfleteren.jazygit.ui.Feature;
 
 /**
  * The branch operations: checking out, pushing, pulling, creating, moving commits to a new branch, merging, rebasing, renaming, deleting, nuking, the

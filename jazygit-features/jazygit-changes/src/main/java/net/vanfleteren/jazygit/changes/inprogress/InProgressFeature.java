@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.changes.inprogress;
 
-import net.vanfleteren.jazygit.ui.keys.Feature;
-import net.vanfleteren.jazygit.ui.keys.FeatureAction;
+import net.vanfleteren.jazygit.ui.Feature;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 
 /**
  * Continuing or aborting the merge, rebase, cherry-pick or revert the repository is in the middle of.
