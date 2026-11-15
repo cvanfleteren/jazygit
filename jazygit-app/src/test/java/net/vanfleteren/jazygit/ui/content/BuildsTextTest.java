@@ -163,7 +163,7 @@ class BuildsTextTest {
         assertTrue(header.contains("the build picked, 20m00, 14 Nov 01:00"), header);
         assertFalse(lines.exists(line -> line.contains("· the last build")), lines.mkString("\n"));
         assertEquals(
-                List.of("✓▸abcdef0  14 Nov 01:00  20m00     +16m00  Commit 25"),
+                List.of("✓▸abcdef0  14 Nov 01:00  20m00      5s     +16m00  Commit 25"),
                 lines.filter(line -> line.startsWith("✓▸")));
     }
 
@@ -198,9 +198,58 @@ class BuildsTextTest {
         List<String> lines = drawn(PUBLISH);
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
-        assertEquals("✓ abcdef0  14 Nov 05:00   4m00        +0s  Commit 29", lines.get(header + 1));
+        assertEquals("✓ abcdef0  14 Nov 05:00   4m00      5s        +0s  Commit 29", lines.get(header + 1));
         assertTrue(
                 lines.exists(line -> line.startsWith("✗ abcdef0  13 Nov 20:00   5m00") && line.endsWith("Commit 20")));
+    }
+
+    @Test
+    void howLongABuildWaitedForItsFirstJobIsListedButNotOfARerun() {
+        // The newest waited 2m48 for its first job, as when another run of its workflow held it back; the one
+        // before is a re-run, whose run keeps when its first attempt started.
+        Build held = new Build(
+                "Publish",
+                "push",
+                2,
+                1,
+                "abcdef02",
+                "Commit 2",
+                MIDNIGHT.plusSeconds(7200),
+                List.of(job("package", "SUCCESS", 7200 + 168, 7200 + 413)));
+        Build rerun = new Build(
+                "Publish",
+                "push",
+                1,
+                2,
+                "abcdef01",
+                "Commit 1",
+                MIDNIGHT.plusSeconds(3600),
+                List.of(job("package", "SUCCESS", 5000, 5240)));
+        List<String> lines = drawn(List.of(held, rerun));
+        int header = lines.indexWhere(line -> line.contains("commit   when"));
+
+        assertEquals("✓ abcdef0  13 Nov 02:00   6m53    2m48      +1m26  Commit 2", lines.get(header + 1));
+        assertEquals("✓ abcdef0  13 Nov 01:00   4m00              −1m26  Commit 1", lines.get(header + 2));
+    }
+
+    @Test
+    void aBuildWhoseJobsWaitForARunnerIsNotTakenForARerun() {
+        // Its only job has no runner yet: how long it waits is not known yet, unlike a re-run's, which never is.
+        Build waiting = new Build(
+                "Publish",
+                "push",
+                3,
+                1,
+                "abcdef03",
+                "Commit 3",
+                MIDNIGHT.plusSeconds(10800),
+                List.of(new Build.Job("package", "", Option.none(), Option.none())));
+        List<String> lines = drawn(List.of(waiting, build("Publish", 1, "SUCCESS", 240)));
+        int header = lines.indexWhere(line -> line.contains("commit   when"));
+
+        assertTrue(
+                lines.get(header + 1).endsWith("abcdef0  13 Nov 03:00      –       –             Commit 3"),
+                lines.get(header + 1));
     }
 
     @Test
@@ -210,9 +259,9 @@ class BuildsTextTest {
                 drawn(List.of(build("Publish", 1, "SUCCESS", 240), build("Publish", -240, "SUCCESS", 300)));
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
-        assertEquals("  commit   when           time  vs median  title", lines.get(header));
-        assertEquals("✓ abcdef0  13 Nov 01:00   4m00       −30s  Commit 1", lines.get(header + 1));
-        assertEquals("✓ abcdef0   3 Nov 00:00   5m00       +30s  Commit -240", lines.get(header + 2));
+        assertEquals("  commit   when           time  queued  vs median  title", lines.get(header));
+        assertEquals("✓ abcdef0  13 Nov 01:00   4m00      5s       −30s  Commit 1", lines.get(header + 1));
+        assertEquals("✓ abcdef0   3 Nov 00:00   5m00      5s       +30s  Commit -240", lines.get(header + 2));
     }
 
     @Test
@@ -229,7 +278,7 @@ class BuildsTextTest {
                 .map(BuildsTextTest::text);
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
-        assertEquals("  commit   when           time  vs median  title", lines.get(header));
+        assertEquals("  commit   when           time  queued  vs median  title", lines.get(header));
         assertTrue(lines.get(header + 1).startsWith("✓ abcdef0   3 Nov 13:00   4m00"), lines.get(header + 1));
         assertTrue(lines.get(header + 2).startsWith("✓ abcdef0   3 Nov 03:00   5m00"), lines.get(header + 2));
     }
@@ -239,7 +288,7 @@ class BuildsTextTest {
         // Builds of a few minutes: their titles start where those of builds of twenty minutes do.
         List<String> quick = drawn(List.of(build("Publish", 1, "SUCCESS", 120), build("Publish", 0, "SUCCESS", 180)));
         List<String> slow = drawn(PUBLISH);
-        String title = "  vs median  title";
+        String title = "  queued  vs median  title";
 
         assertEquals(
                 slow.find(line -> line.contains(title)).get(),
@@ -289,9 +338,9 @@ class BuildsTextTest {
                 drawnOnEveryBranch(PUBLISH, new Build.Origin(Option.none(), Option.none(), Option.of(501)));
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
-        assertEquals("    for  commit   when           time  vs median  title", lines.get(header));
-        assertEquals("✓   #501 abcdef0  14 Nov 05:00   4m00        +0s  Commit 29", lines.get(header + 1));
-        assertEquals("✓   –    abcdef0  14 Nov 04:00   4m00        +0s  Commit 28", lines.get(header + 2));
+        assertEquals("    for  commit   when           time  queued  vs median  title", lines.get(header));
+        assertEquals("✓   #501 abcdef0  14 Nov 05:00   4m00      5s        +0s  Commit 29", lines.get(header + 1));
+        assertEquals("✓   –    abcdef0  14 Nov 04:00   4m00      5s        +0s  Commit 28", lines.get(header + 2));
     }
 
     @Test
@@ -300,7 +349,7 @@ class BuildsTextTest {
                 PUBLISH, new Build.Origin(Option.none(), Option.of("feature/a-long-branch"), Option.none()));
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
-        assertEquals("    for           commit   when           time  vs median  title", lines.get(header));
+        assertEquals("    for           commit   when           time  queued  vs median  title", lines.get(header));
         assertTrue(lines.get(header + 1).startsWith("✓   feature/a-lo… abcdef0"), lines.get(header + 1));
     }
 

@@ -249,7 +249,7 @@ final class BuildsText {
     /**
      * The widths of the columns of the list of builds, each as wide as its widest value or its header.
      */
-    private record ListColumns(int commit, int when, int time, int vsMedian) {}
+    private record ListColumns(int commit, int when, int time, int queued, int vsMedian) {}
 
     /**
      * How the builds are drawn.
@@ -668,8 +668,8 @@ final class BuildsText {
         }
 
         /**
-         * The builds one by one, the newest first: how it ended, its commit, when, how long it took, against the
-         * median, and the commit's title.
+         * The builds one by one, the newest first: how it ended, its commit, when, how long it took, how long of that
+         * it waited for its first job to start, against the median, and the commit's title.
          */
         private List<Line> list(List<Build> builds, Option<Duration> median) {
             String forLabel = Messages.get("content.builds.for");
@@ -694,6 +694,10 @@ final class BuildsText {
                                             .getOrElse("–"))
                                     .append(duration(Duration.ofMinutes(59))),
                             "content.builds.time"),
+                    // As wide as its header, which is wider than a wait below an hour.
+                    widest(
+                            builds.flatMap(build -> build.queued().map(BuildsText::duration)),
+                            "content.builds.queuedHeader"),
                     widest(
                             builds.flatMap(build -> difference(build, median)).map(BuildsText::signed),
                             "content.builds.vsMedian"));
@@ -731,7 +735,13 @@ final class BuildsText {
                                                         .map(BuildsText::duration)
                                                         .getOrElse("–"),
                                                 columns.time())),
-                                        Span.raw(GAP),
+                                        dim(GAP
+                                                + padLeft(
+                                                        build.queued()
+                                                                .map(BuildsText::duration)
+                                                                .getOrElse(build.attempt() == 1 ? "–" : ""),
+                                                        columns.queued())
+                                                + GAP),
                                         vsMedian,
                                         chosen
                                                 ? span(GAP + build.title(), Theme.Classes.BOLD)
@@ -744,6 +754,8 @@ final class BuildsText {
                             + padRight(Messages.get("content.builds.when"), columns.when())
                             + GAP
                             + padLeft(Messages.get("content.builds.time"), columns.time())
+                            + GAP
+                            + padLeft(Messages.get("content.builds.queuedHeader"), columns.queued())
                             + GAP
                             + padLeft(Messages.get("content.builds.vsMedian"), columns.vsMedian())
                             + GAP
