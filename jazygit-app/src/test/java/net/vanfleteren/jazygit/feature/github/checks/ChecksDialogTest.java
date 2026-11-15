@@ -648,6 +648,64 @@ class ChecksDialogTest {
         return read(List.range(0, 20).map(i -> check("check" + (char) ('a' + i), Checks.PASSING, 300, Option.of(60))));
     }
 
+    @Test
+    void rAsksToRunTheFailedChecksAgain() throws Exception {
+        Model model = TestModels.loaded().withNow(NOW).openPopup(read(List.empty()));
+        try (ToolkitTestRunner runner = start(model)) {
+            SettledPilot.of(runner).press('r');
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new ChecksMsg.RerunRequested()), dispatched);
+    }
+
+    @Test
+    void whileARunAskedToRunAgainIsWaitedForTheTitleSaysWhenItWasAskedAndTheLineAboveTheChecksHowItWent()
+            throws Exception {
+        RerunPlan.Run build = new RerunPlan.Run(1, "Build", "push", 1);
+        RerunPlan.Run e2e = new RerunPlan.Run(2, "E2E", "push", 1);
+        ChecksPopup popup = read(List.of(check("verify", Checks.FAILING, 300, Option.of(200))))
+                .withRerun(RerunNote.Asked.at(NOW.minusSeconds(20), List.of(1L, 2L))
+                        .answered(List.of(
+                                new RerunCmd.Outcome(build, Option.none()),
+                                new RerunCmd.Outcome(e2e, Option.of(refused("HTTP 403"))))));
+
+        String screen = screen(popup);
+
+        assertTrue(screen.contains("Checks of main · rerun asked 11:59:40"), screen);
+        assertTrue(screen.contains("Rerun 1 of 2 · E2E: HTTP 403"), screen);
+        assertFalse(screen(popup.withRerun(RerunNote.Asked.at(NOW.minusSeconds(60), List.of(1L))))
+                .contains("rerun asked"));
+    }
+
+    @Test
+    void withNothingToRunAgainTheLineAboveTheChecksSaysWhy() throws Exception {
+        String screen = screen(read(List.of(check("verify", Checks.PASSING, 300, Option.of(200))))
+                .withRerun(new RerunNote.Nothing(RerunPlan.Why.NONE_FAILED)));
+
+        assertTrue(screen.contains("Nothing to rerun: no check failed"), screen);
+    }
+
+    @Test
+    void askingNamesEachRunRunAgainAndWhatIsNotWithWhy() {
+        assertEquals(
+                """
+                Rerun the failed jobs of:
+                  ✗ Build (push): 2 failed jobs
+                  ✗ E2E (pull_request): 1 failed job
+
+                Not rerun:
+                  Markdown: still running
+                  codecov/patch: not a GitHub Actions workflow""",
+                RerunDialog.message(new RerunPlan(
+                        List.of(
+                                new RerunPlan.Run(1, "Build", "push", 2),
+                                new RerunPlan.Run(2, "E2E", "pull_request", 1)),
+                        List.of(
+                                new RerunPlan.Skipped("Markdown", RerunPlan.Why.RUNNING),
+                                new RerunPlan.Skipped("codecov/patch", RerunPlan.Why.NOT_ACTIONS)))));
+    }
+
     /**
      * The first check shown after each key in {@code keys}, each pressed on {@code model} as it is.
      */

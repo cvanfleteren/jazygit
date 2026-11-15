@@ -11,6 +11,8 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -19,11 +21,14 @@ import net.vanfleteren.jazygit.state.github.CheckTimesUpdate;
 import net.vanfleteren.jazygit.state.github.FromGitHub;
 import net.vanfleteren.jazygit.state.github.PendingChecks;
 import net.vanfleteren.jazygit.state.github.Reading;
+import net.vanfleteren.jazygit.state.operation.CommandLog;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Showing the checks on the tip of a branch one by one, with how long they took or run, and reading them again by
- * hand and by itself, as the pull request dialog does (ADR 19, ADR 32, ADR 34).
+ * hand and by itself, as the pull request dialog does (ADR 19, ADR 32, ADR 34); running the failed ones again
+ * (ADR 135).
  */
 public final class ChecksUpdate {
 
@@ -66,14 +71,84 @@ public final class ChecksUpdate {
                         checks.of(branch.branch()));
             case ChecksMsg.Failed(RemoteBranch branch, Failure failure) ->
                 Next.of(shown(model, branch, Either.left(failure)));
-            // R while it reads by itself shows that read as asked for, rather than starting a second one.
-            case ChecksMsg.RefreshChosen() ->
-                model.popup(ChecksPopup.class)
-                        .filter(popup -> popup.reading() == Reading.BY_ITSELF)
-                        .map(popup -> Next.of(model.openPopup(popup.readingAgain(Reading.ASKED, popup.readAt()))))
-                        .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
+            case ChecksMsg.RefreshChosen() -> refresh(model);
             case ChecksMsg.Tick() -> readAgain(model, popup -> popup.dueByItself(model.now()), Reading.BY_ITSELF);
+            case ChecksMsg.RerunRequested() -> rerunRequested(model);
+            case ChecksMsg.RerunCancelled() ->
+                Next.of(model.popup(RerunPopup.class)
+                        .map(asking -> model.openPopup(asking.checks()))
+                        .getOrElse(model));
+            case ChecksMsg.RerunConfirmed() -> rerunConfirmed(model);
+            case ChecksMsg.Rerun(RerunCmd cmd, List<RerunCmd.Outcome> outcomes, var commands) ->
+                rerun(model, cmd, outcomes, commands);
         };
+    }
+
+    /**
+     * The checks shown read again as the user asked; while they are read by themselves, that read is shown as asked
+     * for, rather than starting a second one.
+     */
+    private static Next refresh(Model model) {
+        return model.popup(ChecksPopup.class)
+                .filter(popup -> popup.reading() == Reading.BY_ITSELF)
+                .map(popup -> Next.of(model.openPopup(popup.readingAgain(Reading.ASKED, popup.readAt()))))
+                .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
+    }
+
+    /**
+     * Asks to run the failed checks shown again, once they were read; or says why nothing would be (ADR 135).
+     */
+    private static Next rerunRequested(Model model) {
+        return Next.of(model.popup(ChecksPopup.class)
+                .filter(ChecksPopup::wasRead)
+                .map(popup -> {
+                    RerunPlan plan = RerunPlan.of(popup.checksRead());
+                    return plan.runs().isEmpty()
+                            ? model.openPopup(popup.withRerun(new RerunNote.Nothing(plan.nothing())))
+                            : model.openPopup(new RerunPopup(popup, plan));
+                })
+                .getOrElse(model));
+    }
+
+    /**
+     * Back to the checks, which say the failed ones were asked to run again, while GitHub is asked to.
+     */
+    private static Next rerunConfirmed(Model model) {
+        return model.popup(RerunPopup.class)
+                .map(asking -> {
+                    List<RerunPlan.Run> runs = asking.plan().runs();
+                    ChecksPopup checks =
+                            asking.checks().withRerun(RerunNote.Asked.at(model.now(), runs.map(RerunPlan.Run::runId)));
+                    return OperationUpdate.start(model.openPopup(checks), new RerunCmd(checks.onGitHub(), runs));
+                })
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Once GitHub was asked to run the failed jobs again: the commands are logged, a run it refused is shown as an
+     * error, and the checks popup, when it still shows that branch, says how it went and reads the checks again at
+     * once, as {@code R} does. The branches read their checks again too, when a run was run again.
+     */
+    private static Next rerun(
+            Model model, RerunCmd cmd, List<RerunCmd.Outcome> outcomes, List<ExecutedCommand> commands) {
+        Model logged = CommandLog.append(model, RerunCmd.RERUN, commands);
+        List<RerunCmd.Outcome> refused =
+                outcomes.filter(outcome -> outcome.refused().isDefined());
+        Model told = refused.flatMap(outcome -> outcome.refused())
+                .headOption()
+                .map(failure -> logged.fail(new AppError.OperationFailed(
+                        RerunCmd.RERUN,
+                        Option.of(refused.map(outcome -> outcome.run().workflow())
+                                .distinct()
+                                .mkString(", ")),
+                        failure)))
+                .getOrElse(logged::clearError);
+        Next answered = told.popup(ChecksPopup.class)
+                .filter(popup -> popup.onGitHub().equals(cmd.branch()))
+                .flatMap(popup ->
+                        popup.asked().map(asked -> refresh(told.openPopup(popup.withRerun(asked.answered(outcomes))))))
+                .getOrElse(() -> Next.of(told));
+        return refused.size() < outcomes.size() ? BranchChecksUpdate.loadAnyway(answered) : answered;
     }
 
     /**
@@ -147,6 +222,10 @@ public final class ChecksUpdate {
         return model.popup(ChecksPopup.class)
                 .filter(popup -> popup.onGitHub().equals(branch))
                 .map(popup -> model.openPopup(popup.with(read, model)))
+                .orElse(() -> model.popup(RerunPopup.class)
+                        .filter(asking -> asking.checks().onGitHub().equals(branch))
+                        .map(asking ->
+                                model.openPopup(asking.over(asking.checks().with(read, model)))))
                 .getOrElse(model);
     }
 }

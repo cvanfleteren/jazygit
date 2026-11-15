@@ -5,7 +5,9 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.process.GhError;
+import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.gh.process.GhProcess;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * {@link Checks} through gh, of the repository gh finds from the git remotes of its working tree (ADR 114).
@@ -51,5 +53,10 @@ public final class CliChecks implements Checks {
     @Override
     public Either<GhError, List<GhBranch>> protectedBranches() {
         return process.readJson(ProtectedBranchesQuery.COMMAND, ProtectedBranchesQuery.DECODER);
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> rerunFailedJobs(long runId) {
+        return process.log(RerunFailedJobs.command(runId));
     }
 }

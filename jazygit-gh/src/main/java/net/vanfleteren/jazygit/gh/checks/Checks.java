@@ -5,6 +5,8 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.process.GhError;
+import net.vanfleteren.jazygit.gh.process.GhFailure;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * How the CI checks are doing on the branches of the repository, how long they take, and which branches are
@@ -51,4 +53,10 @@ public interface Checks {
      * The names of the protected branches of the repository (ADR 72).
      */
     Either<GhError, List<GhBranch>> protectedBranches();
+
+    /**
+     * Runs the failed jobs of the workflow run {@code runId} of the repository again, and the jobs that need them
+     * (ADR 135); the commands it ran.
+     */
+    Either<GhFailure, List<ExecutedCommand>> rerunFailedJobs(long runId);
 }

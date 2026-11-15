@@ -47,7 +47,8 @@ Features to consider, roughly most valuable first.
 
 13. **Create a PR** from the current branch, with base selection and draft or ready status (`gh pr create`).
 14. **Check out someone else's PR** (`gh pr checkout`), possibly into a new worktree.
-15. **CI check details and logs** for a failing check, and a rerun action.
+15. **CI check details and logs** for a failing check (`r` in the checks popup reruns the failed jobs, ADR 135; left:
+    rerunning one job, and from the builds of a branch).
     - **More of the review remarks** in the diff of a pull request (ADR 55, ADR 60): a pending review, gathering
       comments to submit them with an approval or a request for changes (ADR 100 approves and asks for changes on their
       own; what is left: reading the viewer's pending review and showing its comments, writing the comments of the

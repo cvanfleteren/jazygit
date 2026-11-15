@@ -6,6 +6,8 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.process.GhError;
+import net.vanfleteren.jazygit.gh.process.GhFailure;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * {@link Checks} for tests: a repository {@code owner/repo} without branches, checks or protected branches. Fakes
@@ -66,6 +68,14 @@ public interface StubChecks extends Checks {
      */
     @Override
     default Either<GhError, List<GhBranch>> protectedBranches() {
+        return Either.right(List.empty());
+    }
+
+    /**
+     * Runs nothing again, and says it did.
+     */
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> rerunFailedJobs(long runId) {
         return Either.right(List.empty());
     }
 }

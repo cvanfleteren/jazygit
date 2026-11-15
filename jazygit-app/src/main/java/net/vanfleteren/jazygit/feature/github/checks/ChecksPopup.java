@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Showing the checks on the tip of a branch one by one, with how long they took or run (ADR 32), read again every so
- * often (ADR 34), with how far they are together (ADR 89).
+ * often (ADR 34), with how far they are together (ADR 89), and running the failed ones again (ADR 135).
  *
  * @param branch        the branch the user asked for the checks of, local or remote
  * @param onGitHub      the branch on GitHub whose checks those are: the one a local branch follows
@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.state.popup.Popup;
  *                      than before; nothing before that, or once they were done
  * @param from          the pull request dialog they were opened from, which Escape goes back to; kept up to date as
  *                      its details are read meanwhile
+ * @param rerun         what it says of running failed checks again; nothing before {@code r} was pressed
  */
 public record ChecksPopup(
         BranchRef branch,
@@ -42,7 +43,8 @@ public record ChecksPopup(
         Option<Failure> refreshFailed,
         Instant readAt,
         Option<ChecksReached> reached,
-        Option<PullRequestPopup> from)
+        Option<PullRequestPopup> from,
+        Option<RerunNote> rerun)
         implements Popup {
 
     /**
@@ -50,7 +52,15 @@ public record ChecksPopup(
      */
     public static ChecksPopup loading(BranchRef branch, RemoteBranch onGitHub, Instant now) {
         return new ChecksPopup(
-                branch, onGitHub, Option.none(), Reading.NOT, Option.none(), now, Option.none(), Option.none());
+                branch,
+                onGitHub,
+                Option.none(),
+                Reading.NOT,
+                Option.none(),
+                now,
+                Option.none(),
+                Option.none(),
+                Option.none());
     }
 
     /**
@@ -59,25 +69,55 @@ public record ChecksPopup(
      */
     public static ChecksPopup loading(BranchRef branch, RemoteBranch onGitHub, Instant now, PullRequestPopup from) {
         return new ChecksPopup(
-                branch, onGitHub, Option.none(), Reading.NOT, Option.none(), now, Option.none(), Option.of(from));
+                branch,
+                onGitHub,
+                Option.none(),
+                Reading.NOT,
+                Option.none(),
+                now,
+                Option.none(),
+                Option.of(from),
+                Option.none());
     }
 
     /**
      * The popup going back to {@code dialog}, the pull request dialog it was opened from.
      */
     public ChecksPopup withFrom(PullRequestPopup dialog) {
-        return new ChecksPopup(branch, onGitHub, checks, reading, refreshFailed, readAt, reached, Option.of(dialog));
+        return new ChecksPopup(
+                branch, onGitHub, checks, reading, refreshFailed, readAt, reached, Option.of(dialog), rerun);
+    }
+
+    /**
+     * The popup saying {@code note} of running failed checks again.
+     */
+    public ChecksPopup withRerun(RerunNote note) {
+        return new ChecksPopup(
+                branch, onGitHub, checks, reading, refreshFailed, readAt, reached, from, Option.of(note));
     }
 
     /**
      * The popup showing {@code read}: the checks, or why reading them failed. Checks that were read already stay
-     * shown when reading them again fails, marked stale.
+     * shown when reading them again fails, marked stale. Failed checks asked to run again are seen to, once one of
+     * them is read not done.
      */
     public ChecksPopup with(Either<Failure, PendingChecks> read) {
-        return read.isLeft() && wasRead()
-                ? new ChecksPopup(
-                        branch, onGitHub, checks, Reading.NOT, Option.of(read.getLeft()), readAt, reached, from)
-                : new ChecksPopup(branch, onGitHub, Option.of(read), Reading.NOT, Option.none(), readAt, reached, from);
+        if (read.isLeft() && wasRead()) {
+            return new ChecksPopup(
+                    branch, onGitHub, checks, Reading.NOT, Option.of(read.getLeft()), readAt, reached, from, rerun);
+        }
+        List<Check> checksRead =
+                read.map(pending -> pending.of(onGitHub.branch())).getOrElse(List.empty());
+        return new ChecksPopup(
+                branch,
+                onGitHub,
+                Option.of(read),
+                Reading.NOT,
+                Option.none(),
+                readAt,
+                reached,
+                from,
+                rerun.map(note -> note instanceof RerunNote.Asked asked ? asked.reading(checksRead) : note));
     }
 
     /**
@@ -92,7 +132,7 @@ public record ChecksPopup(
      * shown to be in it stays reached, as when they are read again; in the pull request dialog it goes back to too.
      */
     @Override
-    public Popup checkTimesChanging(Model before) {
+    public ChecksPopup checkTimesChanging(Model before) {
         ChecksPopup reaching = reaching(before);
         return from.map(dialog -> reaching.withFrom(dialog.reaching(before))).getOrElse(reaching);
     }
@@ -116,14 +156,15 @@ public record ChecksPopup(
                 refreshFailed,
                 readAt,
                 ChecksReached.keeping(all, progress(model)),
-                from);
+                from,
+                rerun);
     }
 
     /**
      * The popup while its checks are read again from {@code now}, as {@code reading} tells.
      */
     public ChecksPopup readingAgain(Reading reading, Instant now) {
-        return new ChecksPopup(branch, onGitHub, checks, reading, refreshFailed, now, reached, from);
+        return new ChecksPopup(branch, onGitHub, checks, reading, refreshFailed, now, reached, from, rerun);
     }
 
     /**
@@ -142,13 +183,28 @@ public record ChecksPopup(
 
     /**
      * Whether the checks are due to be read again by themselves at {@code now}: one of them is not done, as far as the
-     * last read that did not fail tells, or the last read started {@link CheckTimings#READ_WHEN_DONE} ago or more.
-     * After a read failed, the checks shown are stale, so they are read every minute, as ADR 19 has a failing read do
-     * (ADR 34).
+     * last read that did not fail tells, or failed ones were asked to run again and are not seen to yet (ADR 135), or
+     * the last read started {@link CheckTimings#READ_WHEN_DONE} ago or more. After a read failed, the checks shown are
+     * stale, so they are read every minute, as ADR 19 has a failing read do (ADR 34).
      */
     public boolean dueByItself(Instant now) {
         return refreshFailed.isEmpty() && checksRead().exists(check -> !check.done())
+                || rerunAwaited(now)
                 || !now.isBefore(readAt.plus(CheckTimings.READ_WHEN_DONE));
+    }
+
+    /**
+     * Whether failed checks were asked to run again, and are not seen to yet at {@code now}, for a minute at most.
+     */
+    public boolean rerunAwaited(Instant now) {
+        return asked().exists(asked -> asked.awaited(now));
+    }
+
+    /**
+     * What it says of failed checks asked to run again; nothing when they were not.
+     */
+    public Option<RerunNote.Asked> asked() {
+        return rerun.filter(RerunNote.Asked.class::isInstance).map(RerunNote.Asked.class::cast);
     }
 
     /**
@@ -180,7 +236,10 @@ public record ChecksPopup(
         return ChecksReached.progress(reached, checksRead(), times(model), model.now());
     }
 
-    private boolean wasRead() {
+    /**
+     * Whether its checks were read, though they may since have failed to be read again.
+     */
+    public boolean wasRead() {
         return checks.exists(Either::isRight);
     }
 }
