@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.CatchUp;
+import net.vanfleteren.jazygit.feature.worktree.add.LocationAsked;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreeBranchPopup;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
@@ -89,7 +90,7 @@ class RemoteWorktreeUpdateTest {
     }
 
     private static Option<Popup> asked(Model model) {
-        return Update.update(model, new CheckoutMsg.RemoteInNewWorktreeRequested(ORIGIN_FEAT))
+        return LocationAsked.located(Update.update(model, new CheckoutMsg.RemoteInNewWorktreeRequested(ORIGIN_FEAT)))
                 .model()
                 .popup();
     }
@@ -114,8 +115,8 @@ class RemoteWorktreeUpdateTest {
     @Test
     void aFollowerThatIsOnlyBehindIsFastForwardedFirst() {
         WorktreeSource source = new WorktreeSource.Existing(MINE, new CatchUp.FastForward(ORIGIN_FEAT));
-        Model asked = Update.update(
-                        shown(idleFollower(MINE, 0, 2)), new CheckoutMsg.RemoteInNewWorktreeRequested(ORIGIN_FEAT))
+        Model asked = LocationAsked.located(Update.update(
+                        shown(idleFollower(MINE, 0, 2)), new CheckoutMsg.RemoteInNewWorktreeRequested(ORIGIN_FEAT)))
                 .model();
 
         assertEquals(Option.of(new NewWorktreePopup(source, "/repos/app-mine")), asked.popup());
@@ -240,10 +241,10 @@ class RemoteWorktreeUpdateTest {
     void anUnknownRemoteBranchDoesNothing() {
         assertEquals(
                 Option.none(),
-                Update.update(
+                LocationAsked.located(Update.update(
                                 shown(),
                                 new CheckoutMsg.RemoteInNewWorktreeRequested(
-                                        new RemoteBranch("origin", new BranchName("nowhere"))))
+                                        new RemoteBranch("origin", new BranchName("nowhere")))))
                         .model()
                         .popup());
     }

@@ -28,7 +28,8 @@ public final class AddWorktreeDialogs {
             .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
     /**
-     * Asks where the new worktree goes, starting out next to the main worktree. A blank location keeps it open.
+     * Asks where the new worktree goes, starting out where a template leads, or next to the main worktree (ADR 134).
+     * Without a template, it says which key of the git configuration would set one. A blank location keeps it open.
      */
     public static final TextInputDialog.Spec<NewWorktreePopup> NEW_WORKTREE = TextInputDialog.Spec.confirming(
                     "new-worktree",
@@ -36,7 +37,10 @@ public final class AddWorktreeDialogs {
                     popup -> Messages.get(
                             "dialog.newWorktree.title", popup.source().label()),
                     Option.of(Messages.get("dialog.newWorktree.placeholder")))
-            .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
+            .withWidth(TextInputDialog.BRANCH_NAME_WIDTH)
+            .withDetails(popup -> popup.templated()
+                    ? Option.none()
+                    : Option.of(Messages.get("dialog.newWorktree.template.details", popup.templateKey())));
 
     /**
      * Asks for the name of the new branch to check out in a new worktree. A name that is no branch name keeps it

@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
+import net.vanfleteren.jazygit.feature.worktree.add.LocationAsked;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.GitHub;
@@ -2841,7 +2842,7 @@ class PullRequestUpdateTest {
                 Update.update(asked, new CheckoutMsg.MainChosen()).cmds());
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.PullRequest(pr), "/repos/app-pr-9", true)),
-                Update.update(asked, new CheckoutMsg.NewWorktreeChosen())
+                LocationAsked.located(Update.update(asked, new CheckoutMsg.NewWorktreeChosen()))
                         .model()
                         .popup());
         // There, which repository it is of is not asked again: the pull requests may not be read yet.
@@ -3002,7 +3003,8 @@ class PullRequestUpdateTest {
     void aPullRequestIsCheckedOutInANewWorktreeNamedAfterItsBranchOrForAForkItsNumberChangesOrNot() {
         PullRequestSummary fork = summary("owner/repo");
 
-        Next asked = Update.update(withMainWorktree(DIRTY), new CheckoutPullRequestMsg.WorktreeRequested(fork));
+        Next asked = LocationAsked.located(
+                Update.update(withMainWorktree(DIRTY), new CheckoutPullRequestMsg.WorktreeRequested(fork)));
 
         assertEquals(List.empty(), asked.cmds());
         assertEquals(
@@ -3019,7 +3021,8 @@ class PullRequestUpdateTest {
         PullRequestSummary own = own("feature/login");
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.PullRequest(own), "/repos/app-feature-login")),
-                Update.update(withMainWorktree(changed), new CheckoutPullRequestMsg.WorktreeRequested(own))
+                LocationAsked.located(Update.update(
+                                withMainWorktree(changed), new CheckoutPullRequestMsg.WorktreeRequested(own)))
                         .model()
                         .popup());
     }
@@ -3031,14 +3034,15 @@ class PullRequestUpdateTest {
                         List.of(Fixtures.branch(new BranchName("patch-1"), true, new Sha("bbbb"))))
                 .model();
 
-        Next here = Update.update(onPatch, new CheckoutPullRequestMsg.WorktreeRequested(own("patch-1")));
+        Next here = LocationAsked.located(
+                Update.update(onPatch, new CheckoutPullRequestMsg.WorktreeRequested(own("patch-1"))));
         assertEquals(Option.none(), here.model().popup(NewWorktreePopup.class));
         assertEquals(
                 Option.of(new GitHubError.PullRequestCheckedOutHere("owner/repo#9")),
                 here.model().outcome().error());
 
-        Next other = Update.update(
-                withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(summary("other/repo")));
+        Next other = LocationAsked.located(Update.update(
+                withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(summary("other/repo"))));
         assertEquals(Option.none(), other.model().popup(NewWorktreePopup.class));
         assertEquals(
                 Option.of(new BranchError.OtherRepository("other/repo#9")),
@@ -3064,7 +3068,8 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 Option.of(new SwitchWorktreePopup(patch, "/repos/linked")),
-                Update.update(elsewhere, new CheckoutPullRequestMsg.WorktreeRequested(own("patch-1")))
+                LocationAsked.located(
+                                Update.update(elsewhere, new CheckoutPullRequestMsg.WorktreeRequested(own("patch-1"))))
                         .model()
                         .popup());
     }
@@ -3072,7 +3077,8 @@ class PullRequestUpdateTest {
     @Test
     void whileTheWorktreeOfAPullRequestIsBeingAddedItsBranchIsBusyAndAnotherIsNotAsked() {
         PullRequestSummary own = own("feature/login");
-        Model asked = Update.update(withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(own))
+        Model asked = LocationAsked.located(
+                        Update.update(withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(own)))
                 .model();
 
         Next adding = TestModels.stepped(asked, new PopupMsg.Confirmed(NewWorktreePopup.class));
@@ -3081,7 +3087,8 @@ class PullRequestUpdateTest {
                 Option.of(AddWorktreeCmd.ADD_WORKTREE),
                 adding.model().jobs().busy().get(login));
 
-        Next again = Update.update(adding.model(), new CheckoutPullRequestMsg.WorktreeRequested(own));
+        Next again =
+                LocationAsked.located(Update.update(adding.model(), new CheckoutPullRequestMsg.WorktreeRequested(own)));
         assertEquals(Option.none(), again.model().popup(NewWorktreePopup.class));
         assertEquals(List.empty(), again.cmds());
 

@@ -183,7 +183,7 @@ class CliWorktreesTest {
     }
 
     @Test
-    void aNewWorktreeGoesNextToThisOneNamedAfterItAndTheBranch() {
+    void aWorktreeIsNamedAfterItsDirectory() {
         Worktree app = new Worktree(
                 Path.of("/repos/app"),
                 Option.of(new Head.OnBranch(new BranchName("main"), Option.none())),
@@ -192,10 +192,7 @@ class CliWorktreesTest {
                 Option.none(),
                 false);
 
-        assertEquals("/repos/app-feature-login", app.siblingFor(new BranchName("feature/login")));
         assertEquals("app", app.name());
-        // Next to a bare repository, worktrees are named after their branch only.
-        assertEquals("/repos/feature-login", app.nextTo(new BranchName("feature/login")));
     }
 
     @Test

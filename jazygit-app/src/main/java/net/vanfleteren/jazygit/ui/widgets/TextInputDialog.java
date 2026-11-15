@@ -68,9 +68,12 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
                 input.setText(open.text());
                 input.moveCursorToEnd();
             }
-            return DialogFrame.of(spec.title().apply(open), spec.width(), field())
+            Element dialog = DialogFrame.of(spec.title().apply(open), spec.width(), field())
                     .onConfirm(this::confirm)
                     .onCancel(this::cancel);
+            // The details go in a box of their own under it, as those of the options of a choice do.
+            Option<String> details = spec.details().apply(open);
+            return details.isEmpty() ? dialog : new WithDetails(dialog, details, details.toList());
         });
     }
 
@@ -106,6 +109,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
      *                    closes
      * @param onCancel    the message for Escape; by default a {@link PopupMsg.Dismissed}
      * @param width       the width of the dialog, borders included; by default {@value #WIDTH}
+     * @param details     what is said in a box under the dialog, from the popup, if anything; by default nothing
      */
     public record Spec<P extends Popup>(
             String id,
@@ -114,7 +118,8 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
             Option<String> placeholder,
             Supplier<Msg> onConfirm,
             Supplier<Msg> onCancel,
-            int width) {
+            int width,
+            Function<P, Option<String>> details) {
 
         public Spec(
                 String id,
@@ -123,7 +128,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
                 Option<String> placeholder,
                 Supplier<Msg> onConfirm,
                 Supplier<Msg> onCancel) {
-            this(id, popupType, title, placeholder, onConfirm, onCancel, WIDTH);
+            this(id, popupType, title, placeholder, onConfirm, onCancel, WIDTH, popup -> Option.none());
         }
 
         /**
@@ -151,14 +156,21 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
          * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
          */
         public Spec<P> cancelledBy(Supplier<Msg> onCancel) {
-            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width);
+            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width, details);
         }
 
         /**
          * This dialog, {@code width} wide, borders included.
          */
         public Spec<P> withWidth(int width) {
-            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width);
+            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width, details);
+        }
+
+        /**
+         * This dialog, saying what {@code details} gives for the open popup, if anything, in a box under it.
+         */
+        public Spec<P> withDetails(Function<P, Option<String>> details) {
+            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width, details);
         }
     }
 }

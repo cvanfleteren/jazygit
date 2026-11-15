@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.feature.worktree.add.LocationAsked;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.add.SwitchToAddedPopup;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
@@ -189,7 +190,8 @@ class CheckoutWhereUpdateTest {
         Model asked =
                 Update.update(inLinked(), new CheckoutMsg.Requested(FEATURE)).model();
 
-        Model where = Update.update(asked, new CheckoutMsg.NewWorktreeChosen()).model();
+        Model where = LocationAsked.located(Update.update(asked, new CheckoutMsg.NewWorktreeChosen()))
+                .model();
         assertEquals(
                 Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/app-feature", true)),
                 where.popup());
@@ -227,7 +229,7 @@ class CheckoutWhereUpdateTest {
                         new WorktreeSource.Created(ORIGIN_TOPIC.branch(), new NewBranchStart.Following(ORIGIN_TOPIC)),
                         "/repos/app-topic",
                         true)),
-                Update.update(asked, new CheckoutMsg.NewWorktreeChosen())
+                LocationAsked.located(Update.update(asked, new CheckoutMsg.NewWorktreeChosen()))
                         .model()
                         .popup());
         assertEquals(new CheckoutMsg.RemoteRequested(ORIGIN_TOPIC), request.again());
@@ -257,7 +259,7 @@ class CheckoutWhereUpdateTest {
                                 new NewBranchStart.From(new BranchRef.Local(FEATURE), Option.of(FEATURE))),
                         "/repos/app-topic",
                         true)),
-                Update.update(asked, new CheckoutMsg.NewWorktreeChosen())
+                LocationAsked.located(Update.update(asked, new CheckoutMsg.NewWorktreeChosen()))
                         .model()
                         .popup());
     }
