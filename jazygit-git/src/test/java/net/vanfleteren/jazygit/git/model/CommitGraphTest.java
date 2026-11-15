@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import java.time.Instant;
+import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 class CommitGraphTest {
@@ -228,5 +229,17 @@ class CommitGraphTest {
                         node(g, 1, List.of(0)),
                         node(f, 0, List.empty())),
                 CommitGraph.layout(CommitGraph.arrange(List.of(m, g, f))));
+    }
+
+    @Test
+    void arrangesAndLaysOutRandomHistoriesAsTheReferenceDoes() {
+        // Histories of all shapes, as git log lists them (every commit before its parents), and with commits out of
+        // that order, as git log lists them when clocks were off; some merges have a parent the list leaves out.
+        List.range(0, 400).forEach(seed -> {
+            List<Commit> log = Fixtures.randomLog(new Random(seed), seed % 3 == 2);
+            List<Commit> arranged = CommitGraph.arrange(log);
+            assertEquals(CommitGraphReference.arrange(log), arranged, "seed " + seed);
+            assertEquals(CommitGraphReference.layout(arranged), CommitGraph.layout(arranged), "seed " + seed);
+        });
     }
 }

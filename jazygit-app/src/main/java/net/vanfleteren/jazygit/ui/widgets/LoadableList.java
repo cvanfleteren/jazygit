@@ -133,7 +133,7 @@ public final class LoadableList<T> {
     }
 
     private void show(List<Row> rows) {
-        elements = rows.map(Row::element);
+        elements = rows.map(row -> new KnownHeight(row.element(), row.height()));
         list.elements(elements.toJavaArray(StyledElement[]::new));
     }
 
@@ -355,9 +355,8 @@ public final class LoadableList<T> {
          */
         private static StyledElement<?> line(List<Seg> pieces, Option<String> plain, boolean ellipsis) {
             List<StyledElement<?>> texts = pieces.map(seg -> {
-                // Clipped as no style says otherwise, but said so here: TamboUI measures every row of a list on every
-                // frame, the rows scrolled out of sight too, and a text without an overflow of its own looks it up
-                // in the styles each time.
+                // Clipped as no style says otherwise, but said so here: TamboUI measures each text of a row it draws
+                // on every frame, and a text without an overflow of its own looks it up in the styles each time.
                 TextElement text = ellipsis
                         ? Toolkit.text(seg.text()).ellipsis()
                         : Toolkit.text(seg.text()).overflow(Overflow.CLIP);

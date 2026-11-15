@@ -11,6 +11,8 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.git.history.History;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
@@ -160,20 +162,37 @@ public class CommitsPanel {
         List<Integer> line = node.joins().appendAll(node.opens()).append(node.column());
         int reach = line.max().get();
         int width = line.appendAll(node.passing()).max().get() + 1;
-        return List.range(0, width)
-                .map(at -> rail(node, reach, at) + (at >= node.column() && at < reach ? "─" : " "))
-                .mkString();
+        // Which columns have a rail going up and which one going down, looked up once for the row rather than in
+        // the rails for each column: a graph can be hundreds of rails wide.
+        boolean[] up = columns(width, node.passing().appendAll(node.joins()));
+        boolean[] down = columns(width, node.passing().appendAll(node.opens()));
+        return IntStream.range(0, width)
+                .mapToObj(
+                        at -> rail(node, reach, at, up[at], down[at]) + (at >= node.column() && at < reach ? "─" : " "))
+                .collect(Collectors.joining());
+    }
+
+    /**
+     * For each of the {@code width} columns, whether it is one of {@code rails}.
+     */
+    private static boolean[] columns(int width, List<Integer> rails) {
+        boolean[] on = new boolean[width];
+        for (int at : rails) {
+            on[at] = true;
+        }
+        return on;
     }
 
     /**
      * The rail in column {@code at} of the row of {@code node}, whose line reaches to the column {@code reach}.
+     *
+     * @param up   whether a rail comes in from above in the column
+     * @param down whether a rail goes on below in the column
      */
-    private static String rail(CommitGraph.Node node, int reach, int at) {
+    private static String rail(CommitGraph.Node node, int reach, int at, boolean up, boolean down) {
         if (at == node.column()) {
             return node.commit().isMerge() ? "◎" : "○";
         }
-        boolean up = node.passing().contains(at) || node.joins().contains(at);
-        boolean down = node.passing().contains(at) || node.opens().contains(at);
         if (at < node.column() || at > reach) {
             return up ? "│" : " ";
         }
@@ -278,7 +297,7 @@ public class CommitsPanel {
      */
     static String title(CommitSearch search) {
         return search.results().toOption().exists(found -> found.size() >= History.MAX_COMMITS)
-                ? Messages.get("panel.commits.titleSearchCapped", search.text(), History.MAX_COMMITS)
+                ? Messages.get("panel.commits.titleSearchCapped", search.text(), String.valueOf(History.MAX_COMMITS))
                 : Messages.get("panel.commits.titleSearch", search.text());
     }
 

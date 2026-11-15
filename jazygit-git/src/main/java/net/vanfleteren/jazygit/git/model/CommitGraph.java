@@ -1,7 +1,11 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.Tuple;
 import io.vavr.collection.*;
 import io.vavr.control.Option;
+import java.util.Arrays;
+import java.util.PriorityQueue;
+import java.util.stream.IntStream;
 
 /**
  * Lays out a commit log with its merges: the commits a merge brought in follow it, so they can be shown
@@ -9,37 +13,175 @@ import io.vavr.control.Option;
  */
 public final class CommitGraph {
 
+    // What a commit is reached from in the walk down from a merge: its first parent, its other ones, or both.
+    private static final byte FIRST = 1;
+    private static final byte OTHER = 2;
+    // The position of a parent the list leaves out.
+    private static final int GONE = -1;
+
     private CommitGraph() {}
 
     /**
      * The commits with every merge directly followed by the commits it brought in, i.e. those reachable
      * from its other parents but not from its first one; the rest keeps its order. Only commits in the
      * list are considered.
+     *
+     * <p>A commit is known by its position in the list here, and the work is done on arrays local to the call, as
+     * this runs on every log read: with persistent sets, walking all the commits below each merge cost seconds for
+     * ten thousand commits of a repository with many merges. Nothing of it escapes the call.
      */
     public static List<Commit> arrange(List<Commit> commits) {
-        Map<Sha, Commit> bySha = index(commits);
-        return commits.foldLeft(
-                        new Placed(HashSet.empty(), List.empty()),
-                        (state, commit) -> place(commit, commits, bySha, state))
-                .latestFirst()
-                .reverse();
-    }
-
-    private static Placed place(Commit commit, List<Commit> commits, Map<Sha, Commit> bySha, Placed state) {
-        Placed placed =
-                new Placed(state.shas().add(commit.sha()), state.latestFirst().prepend(commit));
-        return state.shas().contains(commit.sha())
-                ? state
-                : !commit.isMerge() ? placed : placeBroughtIn(commit, commits, bySha, placed);
+        Vector<Commit> listed = commits.toVector();
+        int[][] parents = parentPositions(listed);
+        int[] down = topologically(parents);
+        int[] rank = new int[down.length];
+        for (int at = 0; at < down.length; at++) {
+            rank[down[at]] = at;
+        }
+        byte[] marks = new byte[listed.size()];
+        boolean[] placed = new boolean[listed.size()];
+        int[] order = new int[listed.size()];
+        int count = 0;
+        for (int at = 0; at < listed.size(); at++) {
+            count = place(at, listed, parents, down, rank, marks, placed, order, count);
+        }
+        return List.ofAll(Arrays.stream(order, 0, count).mapToObj(listed::get));
     }
 
     /**
-     * Places the commits the merge {@code merge} brought in.
+     * For each commit, the positions of its parents, in their order: {@link #GONE} for one the list leaves out.
      */
-    private static Placed placeBroughtIn(Commit merge, List<Commit> commits, Map<Sha, Commit> bySha, Placed state) {
-        Set<Sha> brought = broughtIn(merge, bySha);
-        return commits.filter(candidate -> brought.contains(candidate.sha()))
-                .foldLeft(state, (next, candidate) -> place(candidate, commits, bySha, next));
+    private static int[][] parentPositions(Vector<Commit> listed) {
+        Map<Sha, Integer> position =
+                listed.zipWithIndex((commit, at) -> Tuple.of(commit.sha(), at)).toMap(entry -> entry);
+        return listed.map(commit -> commit.parents()
+                        .map(parent -> position.get(parent).getOrElse(GONE))
+                        .toJavaStream()
+                        .mapToInt(Integer::intValue)
+                        .toArray())
+                .toJavaArray(int[][]::new);
+    }
+
+    /**
+     * The positions of the commits, each before its parents: in the order of the list, as {@code git log} lists them
+     * so, but where clocks were off and it lists a parent before a child, the parent comes once all its children
+     * did, as early as it can.
+     */
+    private static int[] topologically(int[][] parents) {
+        int[] children = new int[parents.length];
+        for (int[] own : parents) {
+            for (int parent : own) {
+                if (parent != GONE) {
+                    children[parent]++;
+                }
+            }
+        }
+        PriorityQueue<Integer> ready = new PriorityQueue<>();
+        for (int at = 0; at < parents.length; at++) {
+            if (children[at] == 0) {
+                ready.add(at);
+            }
+        }
+        int[] order = new int[parents.length];
+        int count = 0;
+        while (!ready.isEmpty()) {
+            int at = ready.poll();
+            order[count++] = at;
+            for (int parent : parents[at]) {
+                if (parent != GONE && --children[parent] == 0) {
+                    ready.add(parent);
+                }
+            }
+        }
+        return order;
+    }
+
+    /**
+     * Places the commit at {@code at}, unless it is placed already, and when it is a merge the commits it brought
+     * in after it.
+     *
+     * @return how many commits are placed now
+     */
+    private static int place(
+            int at,
+            Vector<Commit> listed,
+            int[][] parents,
+            int[] down,
+            int[] rank,
+            byte[] marks,
+            boolean[] placed,
+            int[] order,
+            int count) {
+        if (placed[at]) {
+            return count;
+        }
+        placed[at] = true;
+        order[count] = at;
+        int next = count + 1;
+        if (listed.get(at).isMerge()) {
+            for (int brought : broughtIn(at, parents, down, rank, marks)) {
+                next = place(brought, listed, parents, down, rank, marks, placed, order, next);
+            }
+        }
+        return next;
+    }
+
+    /**
+     * The positions of the commits the merge at {@code merge} brought in, in order: those reachable from its other
+     * parents, but not from its first one. One pass down from the merge, each commit before its parents, marks each
+     * commit with whether the first parent, the others or both reach it. A commit only the others reach is final once
+     * the pass gets to it, as all that reach it came before it; the pass stops when none is waiting, much as git
+     * finds a merge base. So a merge costs about as much as the branch it brought in, not as the whole list.
+     *
+     * @param down  the positions of the commits, each before its parents
+     * @param rank  for each position, where it is in {@code down}
+     * @param marks all zero, as they are left again
+     */
+    private static int[] broughtIn(int merge, int[][] parents, int[] down, int[] rank, byte[] marks) {
+        int[] own = parents[merge];
+        int waiting = 0;
+        int from = marks.length;
+        int to = rank[merge];
+        for (int parent = 0; parent < own.length; parent++) {
+            if (own[parent] != GONE) {
+                waiting += mark(marks, own[parent], parent == 0 ? FIRST : OTHER);
+                from = Math.min(from, rank[own[parent]]);
+                to = Math.max(to, rank[own[parent]]);
+            }
+        }
+        IntStream.Builder brought = IntStream.builder();
+        for (int step = from; step < marks.length && waiting > 0; step++) {
+            int at = down[step];
+            byte mark = marks[at];
+            if (mark == OTHER) {
+                waiting--;
+                brought.add(at);
+            }
+            if (mark != 0) {
+                for (int parent : parents[at]) {
+                    if (parent != GONE) {
+                        waiting += mark(marks, parent, mark);
+                        to = Math.max(to, rank[parent]);
+                    }
+                }
+            }
+        }
+        for (int step = from; step <= to; step++) {
+            marks[down[step]] = 0;
+        }
+        return brought.build().sorted().toArray();
+    }
+
+    /**
+     * Adds {@code mark} to the marks of the commit at {@code at}.
+     *
+     * @return by how much that changes the number of commits that only the other parents reach
+     */
+    private static int mark(byte[] marks, int at, byte mark) {
+        byte before = marks[at];
+        byte after = (byte) (before | mark);
+        marks[at] = after;
+        return (after == OTHER ? 1 : 0) - (before == OTHER ? 1 : 0);
     }
 
     /**
@@ -52,39 +194,10 @@ public final class CommitGraph {
     public static List<Node> layout(List<Commit> arranged) {
         Set<Sha> listed = arranged.map(Commit::sha).toSet();
         return arranged.foldLeft(
-                        new Laid(Vector.empty(), List.empty()),
+                        new Laid(Array.empty(), List.empty()),
                         (laid, commit) -> laid.next(commit, commit.parents().filter(listed::contains)))
                 .latestFirst()
                 .reverse();
-    }
-
-    /**
-     * The first column from {@code from} on without a rail.
-     */
-    private static int free(Vector<Option<Sha>> rails, int from) {
-        return List.range(from, rails.size())
-                .find(at -> rails.get(at).isEmpty())
-                .getOrElse(Math.max(from, rails.size()));
-    }
-
-    private static Map<Sha, Commit> index(List<Commit> commits) {
-        return commits.toMap(Commit::sha, commit -> commit);
-    }
-
-    /**
-     * The shas of the commits in the list reachable from the other parents of {@code merge}, but not from
-     * its first parent.
-     */
-    private static Set<Sha> broughtIn(Commit merge, Map<Sha, Commit> bySha) {
-        return reachable(merge.parents().drop(1), bySha)
-                .removeAll(reachable(merge.parents().take(1), bySha));
-    }
-
-    private static Set<Sha> reachable(List<Sha> from, Map<Sha, Commit> bySha) {
-        return Iterator.iterate(new Walk(from, HashSet.empty()), walk -> walk.step(bySha))
-                .find(walk -> walk.todo().isEmpty())
-                .map(Walk::seen)
-                .getOrElse(HashSet.empty());
     }
 
     /**
@@ -113,73 +226,106 @@ public final class CommitGraph {
 
     /**
      * The rails below the nodes laid out so far, by column, with the commit each waits for, and those nodes, last
-     * laid out first. The rails are a {@link Vector}, as they are looked up by column.
+     * laid out first. The rails are an {@link Array}, as they are looked up by column; a row is worked out on arrays
+     * of its own, as a graph can be hundreds of rails wide and each row looks at all of them.
      */
-    private record Laid(Vector<Option<Sha>> rails, List<Node> latestFirst) {
+    private record Laid(Array<Option<Sha>> rails, List<Node> latestFirst) {
 
         /**
          * @param parents the parents of {@code commit} that get a rail
          */
         Laid next(Commit commit, List<Sha> parents) {
             Option<Sha> sha = Option.of(commit.sha());
-            int column = rails.contains(sha) ? rails.indexOf(sha) : free(rails, 0);
-            List<Integer> joins = List.range(column + 1, rails.size())
-                    .filter(at -> rails.get(at).equals(sha));
-            List<Integer> passing = List.range(0, rails.size())
-                    .filter(at -> at != column && rails.get(at).isDefined() && !joins.contains(at));
-            Vector<Option<Sha>> kept = Vector.range(0, Math.max(rails.size(), column + 1))
-                    .map(at -> at == column
-                            ? parents.headOption()
-                            : joins.contains(at) ? Option.<Sha>none() : rails.get(at));
-            Opened opened = parents.drop(1)
-                    .foldLeft(new Opened(kept, List.empty()), (state, parent) -> state.open(parent, column));
-            Vector<Option<Sha>> below = opened.rails().dropRightWhile(Option::isEmpty);
-            List<Meet> meets = List.range(0, below.size())
-                    .filter(at -> doubled(below, at)
-                            && !(doubled(rails, at) && rails.get(at).equals(below.get(at))))
-                    .map(at -> new Meet(at, below.indexOf(below.get(at))));
+            String own = commit.sha().value();
+            int waiting = rails.indexOf(sha);
+            int column = waiting >= 0 ? waiting : free(rails.toJavaArray(), 0, rails.size());
+            int width = Math.max(rails.size(), column + 1);
+            @SuppressWarnings("unchecked")
+            Option<Sha>[] below = (Option<Sha>[]) new Option<?>[width + parents.size()];
+            Arrays.fill(below, Option.none());
+            IntStream.Builder joins = IntStream.builder();
+            IntStream.Builder passing = IntStream.builder();
+            for (int at = 0; at < rails.size(); at++) {
+                Option<Sha> rail = rails.get(at);
+                // The rails that wait for the commit are its own and those that join it; all others pass it. The
+                // shas are compared by their text, which is quicker than as records.
+                if (rail.isDefined() && !rail.get().value().equals(own)) {
+                    passing.add(at);
+                    below[at] = rail;
+                } else if (rail.isDefined() && at != column) {
+                    joins.add(at);
+                }
+            }
+            below[column] = parents.headOption();
+            boolean[] opened = new boolean[below.length];
+            IntStream.Builder opens = IntStream.builder();
+            for (Sha parent : parents.drop(1)) {
+                int at = opening(below, opened, parent, column, width);
+                below[at] = Option.of(parent);
+                opened[at] = true;
+                opens.add(at);
+                width = Math.max(width, at + 1);
+            }
+            int size = width;
+            while (size > 0 && below[size - 1].isEmpty()) {
+                size--;
+            }
+            Array<Option<Sha>> next = Array.of(Arrays.copyOf(below, size));
+            int[] leftAbove = leftmost(rails);
+            int[] leftBelow = leftmost(next);
+            List<Meet> meets = List.ofAll(IntStream.range(0, next.size())
+                    .filter(at -> leftBelow[at] < at
+                            && !(at < rails.size()
+                                    && leftAbove[at] < at
+                                    && rails.get(at).equals(next.get(at))))
+                    .mapToObj(at -> new Meet(at, leftBelow[at]))
+                    .toList());
             return new Laid(
-                    below, latestFirst.prepend(new Node(commit, column, passing, joins, opened.opens(), meets)));
+                    next,
+                    latestFirst.prepend(new Node(
+                            commit,
+                            column,
+                            List.ofAll(passing.build().toArray()),
+                            List.ofAll(joins.build().toArray()),
+                            List.ofAll(opens.build().toArray()),
+                            meets)));
         }
 
         /**
-         * Whether the rail {@code at} waits for the same commit as a rail to its left.
+         * The column that the rail to {@code parent}, another parent of the merge in {@code column}, goes on in: one
+         * to its right already waiting for that parent, and not opened for it, else the first free one to its right.
+         *
+         * @param width how many of {@code rails} are in use
          */
-        private static boolean doubled(Vector<Option<Sha>> rails, int at) {
-            return at < rails.size() && rails.get(at).isDefined() && rails.indexOf(rails.get(at)) < at;
+        private static int opening(Option<Sha>[] rails, boolean[] opened, Sha parent, int column, int width) {
+            return IntStream.range(column + 1, width)
+                    .filter(at ->
+                            !opened[at] && rails[at].exists(rail -> rail.value().equals(parent.value())))
+                    .findFirst()
+                    .orElseGet(() -> free(rails, column + 1, width));
         }
-    }
 
-    /**
-     * The rails while the other parents of a merge get theirs, and the columns they got so far.
-     */
-    private record Opened(Vector<Option<Sha>> rails, List<Integer> opens) {
-
-        Opened open(Sha parent, int column) {
-            int at = List.range(column + 1, rails.size())
-                    .find(waiting -> rails.get(waiting).contains(parent) && !opens.contains(waiting))
-                    .getOrElse(() -> free(rails, column + 1));
-            return new Opened(rails.padTo(at + 1, Option.none()).update(at, Option.of(parent)), opens.append(at));
+        /**
+         * The first column from {@code from} on without a rail, of the first {@code width} of {@code rails}.
+         */
+        private static int free(Object[] rails, int from, int width) {
+            return IntStream.range(from, width)
+                    .filter(at -> ((Option<?>) rails[at]).isEmpty())
+                    .findFirst()
+                    .orElse(Math.max(from, width));
         }
-    }
 
-    /**
-     * The shas placed so far, and the commits in the order they were placed, last placed first.
-     */
-    private record Placed(Set<Sha> shas, List<Commit> latestFirst) {}
-
-    /**
-     * A depth-first walk through the parents: the shas still to visit, and those visited.
-     */
-    private record Walk(List<Sha> todo, Set<Sha> seen) {
-
-        Walk step(Map<Sha, Commit> bySha) {
-            return todo.pop2Option()
-                    .map(next -> bySha.get(next._1)
-                            .filter(commit -> !seen.contains(next._1))
-                            .map(commit -> new Walk(next._2.prependAll(commit.parents()), seen.add(next._1)))
-                            .getOrElse(() -> new Walk(next._2, seen)))
-                    .getOrElse(this);
+        /**
+         * For each column, the leftmost one whose rail waits for the same commit, worked out once for a row, as looking
+         * it up for each rail made a row cost the square of its rails. A column without a rail is its own.
+         */
+        private static int[] leftmost(Array<Option<Sha>> rails) {
+            var first = new java.util.HashMap<Sha, Integer>();
+            return IntStream.range(0, rails.size())
+                    .map(at -> rails.get(at)
+                            .map(sha -> first.computeIfAbsent(sha, key -> at))
+                            .getOrElse(at))
+                    .toArray();
         }
     }
 }

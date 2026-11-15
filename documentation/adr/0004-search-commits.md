@@ -76,3 +76,5 @@ log is read again, the search runs again, so the pane stays right after an opera
 - One line with prefixes, not a menu or a form: fast to type, combining for free, and each maps onto one git flag.
 - On Enter, not as you type: each run is a git process, `-S` over a long history takes seconds, and a half-typed
   `path:` means nothing.
+
+Amended by ADR 130: the log and a search read up to 3000 commits.
