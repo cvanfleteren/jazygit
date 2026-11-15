@@ -53,9 +53,8 @@ public final class BuildsDialog {
                                     .getOrElse('a')))),
             BuildsMsg.WindowPicked::new);
 
-    private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern(
-                    Messages.get("content.builds.whenPattern"))
-            .withZone(ZoneId.systemDefault());
+    private static final DateTimeFormatter WHEN =
+            DateTimeFormatter.ofPattern(Messages.get("builds.whenPattern")).withZone(ZoneId.systemDefault());
 
     /**
      * Which build's jobs show on one time line: the last that is done, then each build of the tab, the newest first,

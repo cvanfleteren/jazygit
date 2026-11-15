@@ -331,7 +331,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule viewsOnlySendMessages = noClasses()
             .that()
-            .resideInAnyPackage("..jazygit.ui..", "..jazygit.app.keys..")
+            .resideInAnyPackage("..jazygit.ui..", "..jazygit.content..", "..jazygit.app.keys..")
             .or()
             .haveNameMatching(DIALOGS)
             .or()
@@ -488,7 +488,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule viewsDoNotRunGitOrGh = noClasses()
             .that()
-            .resideInAnyPackage("..jazygit.ui..", "..jazygit.app.keys..")
+            .resideInAnyPackage("..jazygit.ui..", "..jazygit.content..", "..jazygit.app.keys..")
             .or()
             .haveNameMatching(DIALOGS)
             .should()
@@ -501,7 +501,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule onlyViewsUseI18nOrTamboUi = noClasses()
             .that()
-            .resideOutsideOfPackages("..jazygit.ui..", "..jazygit.app.keys..")
+            .resideOutsideOfPackages("..jazygit.ui..", "..jazygit.content..", "..jazygit.app.keys..")
             .and()
             .resideOutsideOfPackage(ROOT + ".app")
             .and()
@@ -617,6 +617,7 @@ public final class AppRules {
                 .or(resideInAnyPackage(
                                 "..jazygit.process..",
                                 "..jazygit.ui..",
+                                "..jazygit.content..",
                                 "dev.tamboui..",
                                 "java.io..",
                                 "java.nio.file..")

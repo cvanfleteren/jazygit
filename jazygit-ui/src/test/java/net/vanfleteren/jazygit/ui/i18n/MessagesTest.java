@@ -12,9 +12,7 @@ class MessagesTest {
 
     @Test
     void substitutesParameters() {
-        assertEquals(
-                "Ada <ada@example.com>",
-                Messages.forLocale(Locale.ENGLISH).format("content.author", "Ada", "ada@example.com"));
+        assertEquals("2h 5m", Messages.forLocale(Locale.ENGLISH).format("checks.hours", "2", "5"));
     }
 
     @Test

@@ -25,7 +25,7 @@ public final class DeleteCommentDialog {
 
     private static String message(DeleteCommentPopup popup) {
         String author = popup.comment().author().isEmpty()
-                ? Messages.get("content.remarks.ghost")
+                ? Messages.get("remarks.ghost")
                 : popup.comment().author();
         return Messages.get(
                 "github.dialog.deleteComment.message",

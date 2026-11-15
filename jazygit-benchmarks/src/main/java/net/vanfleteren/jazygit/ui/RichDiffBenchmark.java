@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.bench.WordDiffBenchmark.Shape;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
-import net.vanfleteren.jazygit.ui.diff.RichDiff;
+import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;

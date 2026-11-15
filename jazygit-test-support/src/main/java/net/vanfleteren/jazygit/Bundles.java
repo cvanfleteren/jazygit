@@ -19,7 +19,8 @@ import java.util.stream.Stream;
 public final class Bundles {
 
     private static final String PACKAGE = "net.vanfleteren.jazygit.";
-    private static final Pattern LITERAL = Pattern.compile("\"((?:[^\"\\\\]|\\\\.)*)\"");
+    // Possessive, so a long text does not overflow the stack with a step of backtracking for every character.
+    private static final Pattern LITERAL = Pattern.compile("\"((?:[^\"\\\\]++|\\\\.)*+)\"");
 
     private Bundles() {}
 

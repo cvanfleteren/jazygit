@@ -20,10 +20,10 @@
             <groupId>net.vanfleteren</groupId>
             <artifactId>jazygit-git</artifactId>
         </dependency>
-        <!-- For what drawing a diff costs where the views style it (RichDiffBenchmark): the views, not the whole app. -->
+        <!-- For what drawing a diff costs where the views style it (RichDiffBenchmark): the content, not the whole app. -->
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-ui</artifactId>
+            <artifactId>jazygit-content</artifactId>
         </dependency>
         <dependency>
             <groupId>io.vavr</groupId>

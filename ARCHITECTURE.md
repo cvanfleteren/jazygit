@@ -30,13 +30,14 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | `jazygit-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
 | `jazygit-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
 | `jazygit-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, and a subpackage per part of the model. | lens, image, settings, git, gh, json, yaml |
-| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), and `Feature`, `FeatureAction` in the shell. | state, syntax, TamboUI, commonmark |
+| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), and `Feature`, `FeatureAction` in the shell. | state, TamboUI, commonmark |
+| `jazygit-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | ui |
 | ↳ `jazygit-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress. | ui |
 | ↳ `jazygit-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
 | ↳ `jazygit-github` | `github.*`: pull requests, reviews, checks, builds. | branches, changes |
 | ↳ `jazygit-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
-| `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `Features`). Builds the fat jar and the native image. | the four groups, TamboUI's backend, picocli |
+| `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `Features`). Builds the fat jar and the native image. | the four groups, content, TamboUI's backend, picocli |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, ui, JMH |
 
@@ -61,6 +62,7 @@ graph TD
     Github["github.*<br/><i>pull requests, reviews, checks, builds</i>"]
     Branches["branches.*<br/><i>branch, worktree, ...</i>"]
     Changes["changes.*<br/><i>stage, commit, stash, diff, ...</i>"]
+    Content["content.*<br/><i>content panel, rich diff</i>"]
     UI["ui.*<br/><i>panels and widgets: render a Model;<br/>ui.keys: Keymap; ui.i18n: Messages</i>"]
     State["state.*<br/><i>Model, Msg, Update, Cmd, Program,<br/>and a subpackage per part of the Model</i>"]
     Settings["settings<br/><i>config.toml, state.toml</i>"]
@@ -76,6 +78,8 @@ graph TD
     Branches --> Changes
     Chrome --> Changes
     Changes --> UI
+    App --> Content
+    Content --> UI
     UI --> State
     State --> Settings
     State --> Git
@@ -94,8 +98,9 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   subpackages of `state` (`diff`, `view`, `load`, `github`, `operation`, `popup`, `compose`, `index`, `preferences`;
   `state` itself uses them all, and they all use it, as the `Model` holds them), and those of `ui`.
 - **The subpackages of `ui` follow the panes**: the shell (`ui` itself: `LeftColumn`, the status and command log
-  panels, `Feature`) → `content` → the panes (`branches`, `commits`, `files`, `stash`, `github`) and `diff` →
-  `markdown`, `widgets`, `edit` → `keys`, `text`, `theme`, `i18n`. Nothing in them uses the shell
+  panels, `Feature`) → the panes (`branches`, `commits`, `files`, `stash`, `github`) → `markdown`, `widgets`,
+  `edit` → `keys`, `text`, `theme`, `i18n`. The content panel, which uses the panes, and the rich diff are
+  `jazygit-content`, beside the features: no feature draws them. Nothing in them uses the shell
   (`UiArchitectureTest`).
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
@@ -275,8 +280,8 @@ sequenceDiagram
 ## Testing
 
 - **The tests go with their module**, but for those that need what it cannot see (a feature's messages or text, the
-  app's keymap): those are in `jazygit-app`, in the package of what they test. `jazygit-state`, `jazygit-ui` and
-  `jazygit-branches` share their test helpers as test-jars.
+  app's keymap): those are in `jazygit-app`, in the package of what they test. `jazygit-state`, `jazygit-ui`,
+  `jazygit-branches` and `jazygit-github` share their test helpers as test-jars.
 - **Update functions** are pure: build a `Model` (`TestModels`), apply a `Msg`, assert on the next model and its
   commands. No git involved.
 - **`ProgramTest`** runs the real loop with queue executors and `StubGit`.

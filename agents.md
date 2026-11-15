@@ -79,7 +79,7 @@ The updates, messages, popups and the model are pure. Pure code:
   (`SubmittableTextArea`). Tab and Shift+Tab only move focus; a popup's "switch" key is a free Ctrl chord.
 - The standard binding set is in use: `Actions.MOVE_UP/DOWN` match the arrows only, so a widget that wants j/k checks
   `event.isChar` itself.
-- `RichTextAreaElement` ignores its horizontal scroll; `ScrollArea` (`ui.content`) cuts the columns off the lines
+- `RichTextAreaElement` ignores its horizontal scroll; `ScrollArea` (`content`) cuts the columns off the lines
   itself.
 - A click focuses the clicked pane through the app's global mouse handler (`FocusKeeper.clicked`), since the router
   stops at the container that forwards the click.
@@ -121,8 +121,8 @@ The updates, messages, popups and the model are pure. Pure code:
 - A rendering or scrolling test asserts on the rendered screen, not only on the message it dispatched. Click behaviour
   is tested at app level (`JazygitAppReportsTest`), where the full layout routes the click.
 - Per-module JUnit configuration goes in that module's surefire `configurationParameters`. jazygit-git, jazygit-gh,
-  jazygit-state, jazygit-ui and jazygit-branches ship test-jars, so their `src/test/resources` lands on the test
-  classpath of the modules above them.
+  jazygit-state, jazygit-ui, jazygit-branches and jazygit-github ship test-jars, so their `src/test/resources`
+  lands on the test classpath of the modules above them.
 - A test goes in the module of what it tests, unless it needs what that module cannot see: a feature's messages or
   text, or the app's keymap (`Keymap.standard()` is empty without the app). Then it goes in `jazygit-app`, in the
   package of what it tests.

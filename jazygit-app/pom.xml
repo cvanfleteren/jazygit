@@ -37,6 +37,11 @@
             <groupId>net.vanfleteren</groupId>
             <artifactId>jazygit-chrome</artifactId>
         </dependency>
+        <!-- The content panel and the rich diff, which no feature draws. -->
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-content</artifactId>
+        </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>jazygit-ui</artifactId>
@@ -97,6 +102,12 @@
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>jazygit-branches</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-github</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

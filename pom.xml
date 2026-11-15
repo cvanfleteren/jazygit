@@ -14,8 +14,8 @@
 
     <!-- json reads JSON as values; syntax lexes a line of code; process runs a program; git and gh run git and gh,
          each knowing nothing of the other or of the application. On top of them the application, in layers
-         (ADR 136): lens, image and settings; state, the model; ui, the views; features, the groups of features;
-         app, which wires them together. test-support holds what the architecture tests share. -->
+         (ADR 136): lens, image and settings; state, the model; ui, the views; content, the content panel and the
+         rich diff, beside features, the groups of features; app, which wires them together. test-support holds what the architecture tests share. -->
     <modules>
         <module>jazygit-test-support</module>
         <module>jazygit-json</module>
@@ -29,6 +29,7 @@
         <module>jazygit-settings</module>
         <module>jazygit-state</module>
         <module>jazygit-ui</module>
+        <module>jazygit-content</module>
         <module>jazygit-features</module>
         <module>jazygit-app</module>
     </modules>
@@ -160,6 +161,11 @@
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-content</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
                 <artifactId>jazygit-changes</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -178,6 +184,12 @@
                 <groupId>net.vanfleteren</groupId>
                 <artifactId>jazygit-github</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-github</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>

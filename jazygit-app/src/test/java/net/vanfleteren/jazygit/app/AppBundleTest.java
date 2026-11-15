@@ -33,7 +33,7 @@ class AppBundleTest {
      */
     @Test
     void noKeyIsInTwoBundles() {
-        List<String> roots = List.of("ui", "state", "changes", "branches", "github", "chrome", "app");
+        List<String> roots = List.of("ui", "state", "content", "changes", "branches", "github", "chrome", "app");
         List<String> all = roots.flatMap(Bundles::keys);
         assertEquals(
                 List.empty(),

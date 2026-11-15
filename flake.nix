@@ -33,6 +33,7 @@
           ./jazygit-settings
           ./jazygit-state
           ./jazygit-ui
+          ./jazygit-content
           ./jazygit-features
           ./jazygit-app
         ];

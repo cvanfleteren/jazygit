@@ -7,6 +7,7 @@ import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.content.ContentPanel;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Focus;
@@ -20,7 +21,6 @@ import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
-import net.vanfleteren.jazygit.ui.content.ContentPanel;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**

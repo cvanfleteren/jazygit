@@ -33,13 +33,16 @@ Two things cross them the wrong way:
    | `jazygit-image` | `image` | `Picture`, `Png`, `Gif`, `Raster` | — |
    | `jazygit-settings` | `settings` | the settings and their files | lens, night-config |
    | `jazygit-state` | `state` | the model, its messages, updates and commands | lens, image, settings, process, git, gh, json, yaml |
-   | `jazygit-ui` | `ui` | the views, `Feature` and `FeatureAction` in the shell, `ui.keys` (`Keymap`, `Scopes`), `ui.i18n`, `MarkdownImage` in `ui.markdown` | state, syntax, TamboUI, commonmark |
+   | `jazygit-ui` | `ui` | the views, `Feature` and `FeatureAction` in the shell, `ui.keys` (`Keymap`, `Scopes`), `ui.i18n`, `MarkdownImage` in `ui.markdown` | state, TamboUI, commonmark |
+   | `jazygit-content` | `content` | the content panel (was `ui.content`) and the rich diff, `content.diff` (was `ui.diff`) | ui, syntax |
    | `jazygit-changes` | `changes` | `stage`, `files`, `discard`, `commit`, `ahead`, `cherrypick`, `stash`, `edit`, `copy`, `diff`, `fetch`, `inprogress` | ui |
    | `jazygit-branches` | `branches` | `branch`, `worktree`, `forcedelete`, `repos`, `start` | changes |
    | `jazygit-github` | `github` | what was `feature.github` | branches, changes |
    | `jazygit-chrome` | `chrome` | `help`, `error`, `theme`, `layout`, `settings` (the panel) | changes |
-   | `jazygit-app` | `app` | the root package, `app.cli`, `app.keys` (`GlobalKeys`, `Standard`, `Features`) | the four groups |
+   | `jazygit-app` | `app` | the root package, `app.cli`, `app.keys` (`GlobalKeys`, `Standard`, `Features`) | the four groups, content |
 
+   No feature draws the content panel or the rich diff: only the app uses them, so `jazygit-content` is beside the
+   groups of features, not below them, and a change to how the content is drawn builds no feature again.
    A feature package keeps its name under its group's root: `feature.stage` becomes `changes.stage`,
    `feature.github.review` becomes `github.review`. The packages of the others keep theirs.
 2. **`jazygit-features` gathers the four groups**: a pom that is both their aggregator and their parent, which gives
@@ -64,12 +67,13 @@ Two things cross them the wrong way:
    - a test that needs what its module cannot see moves to `jazygit-app`, which sees everything, and keeps its
      package: the tests of `state` and `ui` that send the messages of a feature (as `ProgramTest` and
      `BranchesPanelTest`), those of a feature that use a group beside it (as `HelpDialogTest`), and those that read
-     the keys of the standard keymap, which only the app has (as `CommitsPanelTest` and `KeymapTest`); 37 in all;
+     the keys of the standard keymap, which only the app has (as `CommitsPanelTest` and `KeymapTest`); 38 in all;
    - what tests of several modules share is in a test-jar of `jazygit-state` (`TestModels`, `CursorFeedback`), of
-     `jazygit-ui` (`RenderedText`, `SettledPilot`, `ThemedBorders`) and of `jazygit-branches` (`CheckoutModels`,
-     `NameAsked`, `LocationAsked`). A helper of `TestModels` that used a feature or a view moves next to it
-     (`ErrorTexts` in `ui`, `CheckoutModels` in `branches`, `CommitModels` in `changes`). JUnit is configured through
-     surefire's `configurationParameters`, never a `junit-platform.properties` that a test-jar would pass on;
+     `jazygit-ui` (`RenderedText`, `SettledPilot`, `ThemedBorders`), of `jazygit-branches` (`CheckoutModels`,
+     `NameAsked`, `LocationAsked`) and of `jazygit-github` (`ReviewFixtures`). A helper of `TestModels` that used
+     a feature or a view moves next to it (`ErrorTexts` in `ui`, `CheckoutModels` in `branches`, `CommitModels`
+     in `changes`). JUnit is configured through surefire's `configurationParameters`, never a
+     `junit-platform.properties` that a test-jar would pass on;
    - the acceptance tests do not change: the fat jar is still built in `jazygit-app/target`.
 6. **The rules follow the modules.** A rule the module graph now keeps is dropped (the settings, the lens, the command
    line and the state knowing nothing of what is above them). The others are `AppRules`, in `jazygit-test-support`,
@@ -97,6 +101,8 @@ Two things cross them the wrong way:
 
 - The compiler keeps the layers: `state` cannot see TamboUI, `ui` no feature, `changes` neither `branches` nor
   `github`.
+- A change to the content panel or the rich diff builds and tests only `jazygit-content` and the app: of the 100
+  commits to the app's code before this one, 10 changed them and neither the state nor a feature.
 - A feature changes its own module, and `jazygit-state` when the model gets a part, `jazygit-ui` when it draws
   something new, git or gh for an operation of theirs, and `jazygit-app` for a new top-level feature or a global key.
 - A pull request that changes only a group of features leaves the modules below it to the build cache; one that
