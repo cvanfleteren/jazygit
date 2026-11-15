@@ -299,6 +299,33 @@ class BuildsContentTest {
     }
 
     @Test
+    void mReadsAgainFromTheTipWhenTheFirstReadFailed() {
+        Model failed = Update.update(
+                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
+                        new BuildsMsg.Failed(
+                                ORIGIN_MAIN, Option.none(), Failure.of(new GhError.UnexpectedOutput("timeout"))))
+                .model();
+        assertEquals("Builds: main · last 0 commits · m to try again", ((Shown.Message) content(failed)).title());
+
+        Next again = Update.update(failed, new BuildsMsg.MoreRequested());
+
+        assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.none())), again.cmds());
+        BuildsView view = again.model().repoView().branches().builds().get();
+        assertTrue(view.reading());
+        assertInstanceOf(Loadable.Loading.class, view.builds());
+        assertTrue(Update.update(again.model(), new BuildsMsg.MoreRequested())
+                .cmds()
+                .isEmpty());
+        Model read = Update.update(
+                        again.model(),
+                        new BuildsMsg.Read(ORIGIN_MAIN, Option.none(), Option.of(page(3, Option.none()))))
+                .model();
+        assertEquals(
+                new Loadable.Loaded<>(List.of(BUILD)),
+                read.repoView().branches().builds().get().builds());
+    }
+
+    @Test
     void aFailedLaterReadKeepsWhatWasRead() {
         Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
         Model first = Update.update(

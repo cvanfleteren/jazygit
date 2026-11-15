@@ -180,15 +180,23 @@ public record BuildsView(
     }
 
     /**
-     * Whether more commits can be asked for: older ones are left, and none are being read (ADR 132).
+     * Whether more commits can be asked for: older ones are left, or reading the first ones failed, and none are
+     * being read (ADR 132).
      */
     public boolean hasMore() {
-        return !reading && after.isDefined();
+        return !reading && (after.isDefined() || builds.isFailed());
     }
 
     /**
-     * This, reading {@link #COMMITS} more commits from where those read end, or again from where reading them failed;
-     * none when no older ones are left, or they are being read (ADR 132).
+     * Whether reading the commits failed: the first ones, or more after some were read.
+     */
+    public boolean hasFailed() {
+        return builds.isFailed() || stopped.isDefined();
+    }
+
+    /**
+     * This, reading {@link #COMMITS} more commits from where those read end, or again from where reading them failed,
+     * from the tip when it failed at the first; none when no older ones are left, or they are being read (ADR 132).
      */
     public Option<BuildsView> more() {
         return Option.when(
@@ -196,7 +204,7 @@ public record BuildsView(
                 () -> new BuildsView(
                         branch,
                         onGitHub,
-                        builds,
+                        builds.isFailed() ? Loadable.loading() : builds,
                         commits,
                         commits + COMMITS,
                         after,

@@ -76,17 +76,33 @@ public record WorkflowRuns(
     }
 
     /**
-     * Whether more runs can be asked for: older ones are left, and none are being read (ADR 132).
+     * Whether more runs can be asked for: older ones are left, or reading the first ones failed, and none are being
+     * read (ADR 132).
      */
     public boolean hasMore() {
-        return !reading && after.isDefined();
+        return !reading && (after.isDefined() || builds.isFailed());
     }
 
     /**
-     * These, reading {@link #RUNS} more runs from where those read end, or again from where reading them failed; none
-     * when no older ones are left, or they are being read (ADR 132).
+     * Whether reading the runs failed: the first ones, or more after some were read.
+     */
+    public boolean hasFailed() {
+        return builds.isFailed() || stopped.isDefined();
+    }
+
+    /**
+     * These, reading {@link #RUNS} more runs from where those read end, or again from where reading them failed, from
+     * the newest when it failed at the first; none when no older ones are left, or they are being read (ADR 132).
      */
     public Option<WorkflowRuns> more() {
-        return Option.when(hasMore(), () -> new WorkflowRuns(builds, count, count + RUNS, after, true, Option.none()));
+        return Option.when(
+                hasMore(),
+                () -> new WorkflowRuns(
+                        builds.isFailed() ? Loadable.loading() : builds,
+                        count,
+                        count + RUNS,
+                        after,
+                        true,
+                        Option.none()));
     }
 }

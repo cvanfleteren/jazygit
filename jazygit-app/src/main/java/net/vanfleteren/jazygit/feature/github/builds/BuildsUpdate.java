@@ -85,23 +85,31 @@ public final class BuildsUpdate {
         return model.repoView()
                 .branches()
                 .builds()
-                .flatMap(view -> view.allBranches()
-                        ? view.shownTab(BuildsReads.shownBuilds(model, view))
-                                .flatMap(tab -> view.workflowId(tab.workflow()))
-                                .flatMap(id -> view.runs()
-                                        .get(id)
-                                        .flatMap(WorkflowRuns::more)
-                                        .map(runs -> Next.of(
-                                                shown(
-                                                        model,
-                                                        Option.of(view.withRuns(
-                                                                view.runs().put(id, runs)))),
-                                                new LoadWorkflowRuns(id, runs.after()))))
-                        : view.onGitHub()
-                                .flatMap(remote -> view.more()
-                                        .map(more -> Next.of(
-                                                shown(model, Option.of(more)), new LoadBuilds(remote, more.after())))))
+                .flatMap(view -> view.allBranches() ? moreRuns(model, view) : moreCommits(model, view))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * {@code model}, reading more runs on every branch of the workflow of the tab {@code view} shows.
+     */
+    private static Option<Next> moreRuns(Model model, BuildsView view) {
+        return view.shownTab(BuildsReads.shownBuilds(model, view))
+                .flatMap(tab -> view.workflowId(tab.workflow()))
+                .flatMap(id -> view.runs()
+                        .get(id)
+                        .flatMap(WorkflowRuns::more)
+                        .map(runs -> Next.of(
+                                shown(model, Option.of(view.withRuns(view.runs().put(id, runs)))),
+                                new LoadWorkflowRuns(id, runs.after()))));
+    }
+
+    /**
+     * {@code model}, reading more commits of the branch {@code view} shows the builds of.
+     */
+    private static Option<Next> moreCommits(Model model, BuildsView view) {
+        return view.onGitHub()
+                .flatMap(remote -> view.more()
+                        .map(more -> Next.of(shown(model, Option.of(more)), new LoadBuilds(remote, more.after()))));
     }
 
     /**

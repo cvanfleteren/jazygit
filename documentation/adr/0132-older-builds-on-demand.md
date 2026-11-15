@@ -16,10 +16,11 @@ it is told to. A call for 25 commits costs about 3 of the 5,000 points an hour, 
 - `m` in the builds reads 100 more: of the branch, 100 more commits; with every branch shown (`a`), 100 more runs of
   the workflow of the tab. They are read 25 a call, as the first 100 are, from where those read end, and show as they
   come in.
-- After reading failed, `m` reads again from where it failed, instead of having to read everything again with `B`;
-  the title then says `m to try again`.
+- After reading failed, `m` reads again from where it failed, or from the start when the first call failed, instead
+  of having to read everything again with `B`; the title then says `m to try again`.
 - While more can be read, the title says so: `Builds: main · last 100 commits · m for more`. At the oldest commit or
-  run, or while reading, it does not, and `m` does nothing.
+  run, or while reading, it does not, and `m` does nothing. While more runs are read on every branch, the title says
+  so, as it does for the commits: `every branch · reading, 125 runs so far`.
 - Not: reading more once the list is scrolled to its end. The builds are text to scroll, with the summary, the chart
   and the jobs above the list, and each `m` costs points and seconds: it is asked for, not stumbled into.
 - Not: reading every commit at once. A branch of years has thousands, read in minutes, and kept in memory as long as

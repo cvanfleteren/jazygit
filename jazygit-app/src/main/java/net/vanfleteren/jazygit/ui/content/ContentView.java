@@ -455,14 +455,19 @@ public final class ContentView {
                                     : Messages.get("panel.builds.title", branch, commits);
                     // Only the builds of the commits not on the base show: the title says how many there are.
                     String ofBranch = ahead.only() ? ahead.title(read) : read;
-                    String every = view.allBranches() ? Messages.get("panel.builds.everyBranch", ofBranch) : ofBranch;
+                    Option<WorkflowRuns> runs = view.shownTab(shown).flatMap(tab -> view.runsOf(tab.workflow()));
+                    // On every branch, the title says when more runs of the tab are being read, as m asked: the
+                    // first ones say so in the body.
+                    String every = view.allBranches()
+                            ? runs.filter(ofTab -> ofTab.reading() && ofTab.count() > 0)
+                                    .map(ofTab -> Messages.get(
+                                            "panel.builds.everyBranchReading", ofBranch, String.valueOf(ofTab.count())))
+                                    .getOrElse(() -> Messages.get("panel.builds.everyBranch", ofBranch))
+                            : ofBranch;
                     // Older builds can be read with m, or read again after failing: of the branch, or on every
                     // branch, of the tab (ADR 132).
-                    Option<WorkflowRuns> runs = view.shownTab(shown).flatMap(tab -> view.runsOf(tab.workflow()));
                     boolean more = view.allBranches() ? runs.exists(WorkflowRuns::hasMore) : view.hasMore();
-                    boolean failed = view.allBranches()
-                            ? runs.exists(ofTab -> ofTab.stopped().isDefined())
-                            : view.stopped().isDefined();
+                    boolean failed = view.allBranches() ? runs.exists(WorkflowRuns::hasFailed) : view.hasFailed();
                     String title =
                             more ? Messages.get(failed ? "panel.builds.retry" : "panel.builds.more", every) : every;
                     return whenLoaded(
