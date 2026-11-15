@@ -1,10 +1,12 @@
 package net.vanfleteren.jazygit.feature.github.checks;
 
+import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -12,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.BranchChecksUpdate;
 import net.vanfleteren.jazygit.state.github.CheckTimesUpdate;
 import net.vanfleteren.jazygit.state.github.FromGitHub;
 import net.vanfleteren.jazygit.state.github.PendingChecks;
@@ -52,10 +55,13 @@ public final class ChecksUpdate {
                         .flatMap(ChecksPopup::from)
                         .map(model::openPopup)
                         .getOrElse(() -> model.withoutPopup(ChecksPopup.class)));
-            // How long checks take is learned from them too.
+            // How long checks take is learned from them too, and the branch catches up when it shows them otherwise.
             case ChecksMsg.Loaded(RemoteBranch branch, PendingChecks checks) ->
                 CheckTimesUpdate.read(
-                        Next.of(shown(model, branch, Either.right(checks))),
+                        caughtUp(
+                                Next.of(shown(model, branch, Either.right(checks))),
+                                branch,
+                                checks.of(branch.branch())),
                         checks.repository(),
                         checks.of(branch.branch()));
             case ChecksMsg.Failed(RemoteBranch branch, Failure failure) ->
@@ -114,6 +120,23 @@ public final class ChecksUpdate {
                     case BranchRef.Remote(RemoteBranch remote) -> Option.of(remote);
                 })
                 .filter(remote -> model.gitHub().checks(remote).exists(state -> state != Checks.NONE));
+    }
+
+    /**
+     * {@code next}, also reading the checks of the branches again when {@code read}, the checks on {@code branch} just
+     * read one by one, together do otherwise than the branch shows; unchanged when none were read, or {@code branch} is
+     * not on GitHub. The branch takes how they do from that read rather than from {@code read}: the reads of the
+     * branch checks run one at a time, so a later one cannot be replaced by an earlier one, while {@code read} may
+     * have started before the read the branch shows, and be of a tip since pushed over.
+     */
+    private static Next caughtUp(Next next, RemoteBranch branch, List<Check> read) {
+        return read.isEmpty()
+                        || next.model()
+                                .gitHub()
+                                .checks(branch)
+                                .forAll(shown -> shown == Checks.combined(read.map(Check::state)))
+                ? next
+                : BranchChecksUpdate.loadAnyway(next);
     }
 
     /**
