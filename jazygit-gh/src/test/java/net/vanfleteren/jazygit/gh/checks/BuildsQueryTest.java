@@ -39,7 +39,8 @@ class BuildsQueryTest {
                 { "__typename": "CheckRun", "databaseId": %d, "name": "%s", "status": "COMPLETED",
                   "conclusion": %s, "startedAt": "2026-11-14T23:00:10Z", "completedAt": "2026-11-14T23:04:00Z",
                   "checkSuite": { "workflowRun": { "databaseId": %d, "createdAt": "2026-11-14T23:00:00Z",
-                    "runAttempt": %d, "event": "%s", "workflow": { "name": "Publish" } } } }""".formatted(id, name, conclusion == null ? "null" : "\"" + conclusion + "\"", runId, attempt, event);
+                    "runAttempt": %d, "event": "%s", "workflow": { "name": "Publish" },
+                    "file": { "path": ".github/workflows/publish.yml" } } } }""".formatted(id, name, conclusion == null ? "null" : "\"" + conclusion + "\"", runId, attempt, event);
     }
 
     @Test
@@ -66,6 +67,7 @@ class BuildsQueryTest {
         assertEquals(Instant.parse("2026-11-14T23:00:00Z"), build.createdAt());
         assertEquals(List.of("build", "verify / acceptance (1/6)"), build.jobs().map(Build.Job::name));
         assertEquals(Build.Outcome.FAILED, build.outcome());
+        assertEquals(Option.of(".github/workflows/publish.yml"), build.file());
         assertEquals(3, page.commits());
         assertEquals(Option.of("abc 25"), page.next());
     }

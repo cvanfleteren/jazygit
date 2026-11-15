@@ -41,6 +41,14 @@ final class CliTreeFiles {
     }
 
     /**
+     * The text of the file at {@code path} in the commit {@code sha}, as {@code git show <sha>:<path>} prints it.
+     */
+    static Either<GitError, String> text(Path worktree, Sha sha, String path) {
+        return GitProcess.read(
+                worktree, GitCommand.reading("show", sha.value() + ":" + path).withTimeout(TIMEOUT), Either::right);
+    }
+
+    /**
      * What the file at {@code path} holds in the commit {@code sha}: a link, a submodule, a binary file, or text up to
      * {@code limit}.
      */

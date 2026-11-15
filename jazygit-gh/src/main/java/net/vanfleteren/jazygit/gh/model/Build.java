@@ -19,6 +19,8 @@ import java.util.Comparator;
  * @param title     the first line of the commit's message
  * @param createdAt when its run was created: of a re-run, when its first attempt was
  * @param jobs      its jobs, the check runs of its run
+ * @param file      the path of the file of its workflow, which says which job needs which (ADR 131); none when GitHub
+ *                  does not say
  */
 public record Build(
         String workflow,
@@ -28,9 +30,25 @@ public record Build(
         String sha,
         String title,
         Instant createdAt,
-        List<Job> jobs) {
+        List<Job> jobs,
+        Option<String> file) {
 
     private static final Set<String> FAILED = HashSet.of("FAILURE", "TIMED_OUT", "STARTUP_FAILURE", "ACTION_REQUIRED");
+
+    /**
+     * A build without the file of its workflow.
+     */
+    public Build(
+            String workflow,
+            String event,
+            long runId,
+            int attempt,
+            String sha,
+            String title,
+            Instant createdAt,
+            List<Job> jobs) {
+        this(workflow, event, runId, attempt, sha, title, createdAt, jobs, Option.none());
+    }
 
     /**
      * How it ended: running while one of its jobs runs; else failed when one failed, timed out or could not start;

@@ -109,6 +109,11 @@ public final class CliDiffs implements Diffs {
         return CliTreeFiles.content(worktree, sha, path, LIMIT);
     }
 
+    @Override
+    public Either<GitError, String> treeText(Sha sha, String path) {
+        return CliTreeFiles.text(worktree, sha, path);
+    }
+
     /**
      * What the commit {@code sha} changed in {@code files}, a merge against its first parent, read with
      * {@code options}. Long output is cut off. Without files, nothing is read: git would show every file.

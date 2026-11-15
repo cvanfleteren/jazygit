@@ -6,13 +6,18 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.feature.github.builds.LoadBuilds;
+import net.vanfleteren.jazygit.feature.github.builds.ReadWorkflows;
+import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.gh.process.GhError;
+import net.vanfleteren.jazygit.git.StubGit;
+import net.vanfleteren.jazygit.git.files.StubDiffs;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -21,6 +26,8 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -31,6 +38,8 @@ import net.vanfleteren.jazygit.state.github.BranchChecksMsg;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BuildsView;
+import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
+import net.vanfleteren.jazygit.state.view.Workflow;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.content.ContentView.Shown;
@@ -122,7 +131,7 @@ class BuildsContentTest {
         Shown.Area area = (Shown.Area) content(read.model());
         assertEquals(ContentArea.BUILDS, area.area());
         assertEquals("Builds: main · reading, 25 commits so far", area.title());
-        assertEquals(new ContentView.Body.Builds(List.of(BUILD)), area.body());
+        assertEquals(new ContentView.Body.Builds(List.of(BUILD), HashMap.empty()), area.body());
     }
 
     @Test
@@ -302,6 +311,116 @@ class BuildsContentTest {
             assertTrue(wide > narrow + 40, "the chart follows the width of the area: " + narrow + " then " + wide);
             assertEquals(narrow, again);
         }
+    }
+
+    @Test
+    void theFileOfTheWorkflowOfTheLastBuildIsReadAtItsCommitOnce() {
+        Build withFile = withFile(BUILD);
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+
+        Next read = Update.update(
+                shown,
+                new BuildsMsg.Read(
+                        ORIGIN_MAIN,
+                        Option.none(),
+                        Option.of(new BuildsPage(List.of(withFile), 25, Option.of("c25")))));
+        Next again = Update.update(
+                read.model(),
+                new BuildsMsg.Read(
+                        ORIGIN_MAIN, Option.of("c25"), Option.of(new BuildsPage(List.empty(), 25, Option.none()))));
+
+        FileAt publish = new FileAt("abcdef0", ".github/workflows/publish.yml");
+        assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.of("c25")), new ReadWorkflows(publish)), read.cmds());
+        assertTrue(again.cmds().isEmpty());
+    }
+
+    @Test
+    void theWorkflowReadSaysWhichJobOfTheLastBuildNeedsWhich() {
+        Build withFile = withFile(new Build(
+                "Build",
+                "push",
+                1,
+                1,
+                "abcdef0",
+                "A commit",
+                Instant.parse("2026-11-14T23:00:00Z"),
+                List.of(
+                        BUILD.jobs().head(),
+                        new Build.Job(
+                                "package",
+                                "SUCCESS",
+                                Option.of(Instant.parse("2026-11-14T23:04:01Z")),
+                                Option.of(Instant.parse("2026-11-14T23:05:00Z"))))));
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+        Model read = Update.update(
+                        shown,
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN,
+                                Option.none(),
+                                Option.of(new BuildsPage(List.of(withFile), 3, Option.none()))))
+                .model();
+        FileAt publish = new FileAt("abcdef0", ".github/workflows/publish.yml");
+
+        Model known = Update.update(
+                        read,
+                        new BuildsMsg.WorkflowsRead(HashMap.of(
+                                publish, Workflow.parse("jobs:\n  verify: {}\n  package:\n    needs: verify\n"))))
+                .model();
+
+        assertEquals(
+                HashMap.of(1L, HashMap.of("package", HashSet.of("verify"))),
+                ((ContentView.Body.Builds) ((Shown.Area) content(known)).body()).needs());
+    }
+
+    @Test
+    void readingTheWorkflowsReadsTheFileAndThoseItCallsAtTheCommit() {
+        String sha = "abcdef0123456789abcdef0123456789abcdef01";
+        Env env = new Env(
+                StubGit.of().withDiffs(new StubDiffs() {
+                    @Override
+                    public Either<GitError, String> treeText(Sha at, String path) {
+                        return at.value().equals(sha) && path.equals(".github/workflows/publish.yml")
+                                ? Either.right("jobs:\n  verify:\n    uses: ./.github/workflows/build.yml\n")
+                                : at.value().equals(sha) && path.equals(".github/workflows/build.yml")
+                                        ? Either.right("jobs:\n  test: {}\n")
+                                        : Either.left(new GitError.Unreadable(path, "not there"));
+                    }
+                }),
+                StubGitHub.of());
+
+        BuildsMsg.WorkflowsRead read =
+                (BuildsMsg.WorkflowsRead) new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
+
+        assertEquals(2, read.workflows().size());
+        assertEquals(
+                List.of("test"),
+                read.workflows()
+                        .get(new FileAt(sha, ".github/workflows/build.yml"))
+                        .get()
+                        .get()
+                        .jobs()
+                        .map(Workflow.Job::key));
+    }
+
+    @Test
+    void aWorkflowThatCannotBeReadIsNone() {
+        Env env = new Env(StubGit.of(), StubGitHub.of());
+        FileAt file = new FileAt("abcdef0123456789abcdef0123456789abcdef01", ".github/workflows/gone.yml");
+
+        assertEquals(new BuildsMsg.WorkflowsRead(HashMap.of(file, Option.none())), new ReadWorkflows(file).run(env));
+    }
+
+    private static Build withFile(Build build) {
+        return new Build(
+                build.workflow(),
+                build.event(),
+                build.runId(),
+                build.attempt(),
+                build.sha(),
+                build.title(),
+                build.createdAt(),
+                build.jobs(),
+                Option.of(".github/workflows/publish.yml"));
     }
 
     /**

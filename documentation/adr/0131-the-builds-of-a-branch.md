@@ -46,8 +46,29 @@ issue (`issue_comment`, `issues`) are on the main branch too, as GitHub runs tho
   - each job: how it ended and how long it took over the last 40 builds, its median, its last time, and its trend, the
     median of the newer half of those against that of the older half; the jobs named `name (1/6)` are one job, of its
     slowest shard;
-  - the jobs of its last build that is done, as bars on one time line, so that which job the build waits for shows;
+  - the jobs of its last build that is done, as bars on one time line, each hanging off the jobs it waits for, as a
+    merge train (below);
   - the builds, the newest first: how it ended, the commit, when, how long, against the median, and the commit's title.
+- The jobs of the last build that is done show which job waits for which, which GitHub does not tell: neither GraphQL
+  nor REST gives a job's `needs`. The file of its workflow does:
+  - GraphQL gives the path of the file of a workflow run (`workflowRun { file { path } }`). It is read at the commit
+    of the build, with `git show <sha>:<path>`, from the repository on disk, as are the workflows of this repository
+    its jobs call (`uses: ./.github/workflows/build.yml`). At the build's commit, not as it is now: a workflow
+    changes, as jazygit's did twice in the last 100 commits of its main branch, and a build is drawn as it ran. A file
+    of each workflow is read once a view, in the background, for its last build that is done.
+  - A job of a workflow is matched by the name GitHub gives its run: its `name`, an expression in it matching
+    anything (`acceptance (${{ matrix.shard }}/6)`), or its key, followed by the values of its matrix. A job of a
+    called workflow is named after the job that calls it (`verify / package`); a job that needs a calling job waits
+    for the last jobs of the workflow it calls. A job needs only what it waits for directly: `build-ok`, which needs
+    `changes` and `package` as well as what needs them, hangs off `verify` and `acceptance` only.
+  - A file that cannot be read (its commit not fetched, a workflow of another repository), that is no workflow, or a
+    job that does not match, shows without lines: none drawn rather than one that is wrong. Not: guessing from when
+    the jobs started and ended, which draws a job after another that only happened to end just before it.
+  - The rows show a job after all it needs, as close under the last of those as can be, so that the lines stay short.
+    A line drops from the end of a job and runs along the row of each job that needs it to an arrow before its bar; a
+    bar starts two columns after the jobs it needs at the earliest, to leave room for that.
+  - The shards of a job (`acceptance (1/6)` to `(6/6)`) are one row, `acceptance ×6`: solid until the first shard
+    ends, shaded until the last one does, with the quickest and the slowest time.
 - Nothing is selected in it: it is text to scroll. Not yet: a cursor on a build, to see its jobs, open it in the
   browser or run it again.
 
@@ -55,4 +76,6 @@ issue (`issue_comment`, `issues`) are on the main branch too, as GitHub runs tho
 
 - The content panel shows something read from GitHub for a branch, next to its log.
 - What GitHub said of the checks of the last 100 commits is in memory while the builds show, and read anew each time.
+- The files of workflows are read from git at a build's commit, and a little of what GitHub Actions makes of them
+  (names, matrices, calls) is redone to match the jobs.
 - Left for later: the builds kept, more than 100, a build selected, and the builds of a remote branch.

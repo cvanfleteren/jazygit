@@ -167,8 +167,8 @@ public final class ContentPanel {
                 ContentText.diffDrawn(diff, look, remarks, asGiven, styles, width);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 plain(ContentText.logText(commits, ZoneId.systemDefault(), ahead, styles));
-            case Body.Builds(List<Build> builds) ->
-                RichDiff.Drawn.plain(BuildsText.lines(builds, ZoneId.systemDefault(), styles, width));
+            case Body.Builds(List<Build> builds, var needs) ->
+                RichDiff.Drawn.plain(BuildsText.lines(builds, needs, ZoneId.systemDefault(), styles, width));
             case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
                 ContentText.commitDrawn(commit, changes, look, styles, width);
             case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->

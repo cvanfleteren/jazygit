@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.state.view;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
@@ -12,13 +15,15 @@ import net.vanfleteren.jazygit.state.Loadable;
 /**
  * The builds of a local branch on GitHub, which the content panel shows in place of its log (ADR 131).
  *
- * @param branch   the local branch
- * @param onGitHub the branch on GitHub it follows, whose builds are read; none when it follows none
- * @param builds   the builds read so far, of the newest commit first
- * @param commits  how many commits of the branch were read, with or without builds
- * @param after    where the commits still to be read start; none at the tip
- * @param reading  whether more commits are being read
- * @param stopped  why reading more failed, after some were read; none while it did not
+ * @param branch    the local branch
+ * @param onGitHub  the branch on GitHub it follows, whose builds are read; none when it follows none
+ * @param builds    the builds read so far, of the newest commit first
+ * @param commits   how many commits of the branch were read, with or without builds
+ * @param after     where the commits still to be read start; none at the tip
+ * @param reading   whether more commits are being read
+ * @param stopped   why reading more failed, after some were read; none while it did not
+ * @param workflows the files of the workflows read, at the commit of a build, which say which job needs which; none
+ *                  for one being read, or that could not be
  */
 public record BuildsView(
         BranchName branch,
@@ -27,7 +32,8 @@ public record BuildsView(
         int commits,
         Option<String> after,
         boolean reading,
-        Option<Failure> stopped) {
+        Option<Failure> stopped,
+        Map<BuildsView.FileAt, Option<Workflow>> workflows) {
 
     /**
      * How many commits are read, at most (ADR 131).
@@ -38,7 +44,15 @@ public record BuildsView(
      * The builds of {@code branch}, which follows {@code onGitHub}, before any is read.
      */
     public static BuildsView reading(BranchName branch, RemoteBranch onGitHub) {
-        return new BuildsView(branch, Option.of(onGitHub), Loadable.loading(), 0, Option.none(), true, Option.none());
+        return new BuildsView(
+                branch,
+                Option.of(onGitHub),
+                Loadable.loading(),
+                0,
+                Option.none(),
+                true,
+                Option.none(),
+                HashMap.empty());
     }
 
     /**
@@ -46,7 +60,22 @@ public record BuildsView(
      */
     public static BuildsView offGitHub(BranchName branch) {
         return new BuildsView(
-                branch, Option.none(), new Loadable.Loaded<>(List.empty()), 0, Option.none(), false, Option.none());
+                branch,
+                Option.none(),
+                new Loadable.Loaded<>(List.empty()),
+                0,
+                Option.none(),
+                false,
+                Option.none(),
+                HashMap.empty());
+    }
+
+    /**
+     * The last of {@code builds}, the newest first, that is done and ran a job: the one whose jobs show on one time
+     * line.
+     */
+    public static Option<Build> lastDoneOf(List<Build> builds) {
+        return builds.find(build -> build.duration().isDefined() && !build.ran().isEmpty());
     }
 
     /**
@@ -71,7 +100,8 @@ public record BuildsView(
                 read,
                 next,
                 read < COMMITS && next.isDefined(),
-                Option.none());
+                Option.none(),
+                workflows);
     }
 
     /**
@@ -86,6 +116,62 @@ public record BuildsView(
                 commits,
                 after,
                 false,
-                builds.toOption().map(read -> failure));
+                builds.toOption().map(read -> failure),
+                workflows);
     }
+
+    /**
+     * Of each workflow and event, the last build that is done: those whose jobs show on one time line.
+     */
+    public List<Build> lastDone() {
+        List<Build> read = builds.getOrElse(List.empty());
+        return read.map(build -> io.vavr.Tuple.of(build.workflow(), build.event()))
+                .distinct()
+                .flatMap(workflow -> lastDoneOf(read.filter(build ->
+                        build.workflow().equals(workflow._1()) && build.event().equals(workflow._2()))));
+    }
+
+    /**
+     * The files of the workflows of the last builds that are done, that are not read yet, nor being read.
+     */
+    public List<FileAt> unread() {
+        return lastDone()
+                .flatMap(build -> build.file().map(path -> new FileAt(build.sha(), path)))
+                .distinct()
+                .filter(file -> !workflows.containsKey(file));
+    }
+
+    /**
+     * This, with {@code read} of the files of workflows; a file being read is in it as none.
+     */
+    public BuildsView withWorkflows(Map<FileAt, Option<Workflow>> read) {
+        return new BuildsView(
+                branch, onGitHub, builds, commits, after, reading, stopped, workflows.merge(read, (was, now) -> now));
+    }
+
+    /**
+     * Of each of the last builds that are done, by the id of its run, which of its jobs each job needs, as the file of
+     * its workflow says at its commit; a build is left out while that is not read, or when it could not be.
+     */
+    public Map<Long, Map<String, Set<String>>> needs() {
+        return HashMap.ofEntries(lastDone()
+                .flatMap(build -> build.file()
+                        .flatMap(path -> workflow(build.sha(), path))
+                        .map(workflow -> io.vavr.Tuple.of(
+                                build.runId(),
+                                workflow.needs(
+                                        build.ran().map(Build.Job::name), called -> workflow(build.sha(), called))))));
+    }
+
+    private Option<Workflow> workflow(String sha, String path) {
+        return workflows.get(new FileAt(sha, path)).flatMap(read -> read);
+    }
+
+    /**
+     * A file at a commit.
+     *
+     * @param sha  the commit
+     * @param path its path
+     */
+    public record FileAt(String sha, String path) {}
 }

@@ -52,7 +52,33 @@ final class BuildsQuery {
             ... on Commit { history(first: $count, after: $after) { pageInfo { hasNextPage endCursor } \
             nodes { oid message %s } } } } } } }""".formatted(
                     "statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { %s } } } }"
-                            .formatted(CheckFragment.CHECK_RUN_FIELDS));
+                            .formatted(CheckFragment.CHECK_RUN_FIELDS.replace(
+                                    "workflow { name }", "workflow { name } file { path }")));
+
+    // A check run, with the path of the file of its workflow, which says which job needs which (ADR 131); a commit
+    // status answers only its __typename, and is left out.
+    static final Decoder<Option<Tuple2<Check, Option<String>>>> CHECK_RUN = byField(
+            "__typename",
+            HashMap.of(
+                    "CheckRun",
+                    map2(
+                                    CheckFragment.CHECK,
+                                    field(
+                                                    "checkSuite",
+                                                    nullable(field(
+                                                            "workflowRun",
+                                                            nullable(
+                                                                    field("file", nullable(field("path", string())))))))
+                                            .map(suite ->
+                                                    suite.flatMap(run -> run).flatMap(file -> file)),
+                                    Tuple::of)
+                            .map(Option::some)),
+            succeed(Option.none()));
+
+    // The check runs on a commit.
+    static final Decoder<List<Tuple2<Check, Option<String>>>> CHECKS = field(
+                    "statusCheckRollup", nullable(at("contexts.nodes", list(CHECK_RUN))))
+            .map(checks -> checks.toList().flatMap(nodes -> nodes).flatMap(check -> check));
 
     // The builds on one commit, the newest first. Its title is the first line of its message, as GitHub's
     // messageHeadline cuts it off at 72 characters with an ellipsis.
@@ -60,7 +86,7 @@ final class BuildsQuery {
             field("oid", string()),
             field("message", string())
                     .map(message -> message.lines().findFirst().orElse("")),
-            RecentChecksQuery.COMMIT,
+            CHECKS,
             BuildsQuery::builds);
 
     // The page of commits of a branch; none in a repository without a commit.
@@ -116,10 +142,12 @@ final class BuildsQuery {
      * The builds on the commit {@code sha} titled {@code title} that {@code checks} tell, the newest first: its check
      * runs grouped by their workflow run, of an event that builds the code.
      */
-    private static List<Build> builds(String sha, String title, List<Check> checks) {
+    private static List<Build> builds(String sha, String title, List<Tuple2<Check, Option<String>>> checks) {
         List<Tuple2<String, CheckRun>> runs = checks.flatMap(
-                        check -> check.run().map(run -> Tuple.of(check.name(), run)))
+                        check -> check._1().run().map(run -> Tuple.of(check._1().name(), run)))
                 .filter(named -> EVENTS.contains(named._2().event()));
+        List<Tuple2<Long, String>> files = checks.flatMap(check ->
+                check._1().run().flatMap(run -> check._2().map(path -> Tuple.of(run.runId(), path))));
         return runs.map(named -> named._2().runId())
                 .distinct()
                 .map(runId -> runs.filter(named -> named._2().runId() == runId))
@@ -137,7 +165,8 @@ final class BuildsQuery {
                                     named._1(),
                                     named._2().conclusion(),
                                     named._2().startedAt(),
-                                    named._2().completedAt())));
+                                    named._2().completedAt())),
+                            files.find(file -> file._1() == first.runId()).map(Tuple2::_2));
                 })
                 .sorted(Comparator.comparing(Build::createdAt).reversed());
     }

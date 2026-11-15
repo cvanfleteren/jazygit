@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
@@ -51,7 +52,7 @@ class BuildsTextTest {
     }
 
     private static List<String> drawn(List<Build> builds) {
-        return BuildsText.lines(builds, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+        return BuildsText.lines(builds, HashMap.empty(), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
                 .map(BuildsTextTest::text);
     }
 
@@ -110,7 +111,7 @@ class BuildsTextTest {
         int header = lines.indexWhere(line -> line.contains("· the last build, 4m00"));
 
         assertTrue(lines.get(header).startsWith("✓ abcdef0 Commit 29"), lines.get(header));
-        assertTrue(lines.get(header + 1).startsWith("package          │"), lines.get(header + 1));
+        assertTrue(lines.get(header + 1).startsWith("package       │ █"), lines.get(header + 1));
         assertTrue(lines.get(header + 1).endsWith("55s"), lines.get(header + 1));
     }
 

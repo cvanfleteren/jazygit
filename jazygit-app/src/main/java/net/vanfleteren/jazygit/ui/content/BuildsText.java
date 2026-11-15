@@ -4,7 +4,10 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.ZoneId;
@@ -14,6 +17,7 @@ import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.Build.Outcome;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
@@ -42,11 +46,18 @@ final class BuildsText {
 
     /**
      * The lines that draw {@code builds}, the newest first, in {@code zone}, the chart as wide as {@code width}
-     * allows.
+     * allows; {@code needs} says, of the builds whose jobs show on one time line, by the id of their run, which of
+     * their jobs each job needs, as far as that is known (ADR 131).
      */
-    static List<Line> lines(List<Build> builds, ZoneId zone, Theme.SpanStyles styles, int width) {
+    static List<Line> lines(
+            List<Build> builds,
+            Map<Long, Map<String, Set<String>>> needs,
+            ZoneId zone,
+            Theme.SpanStyles styles,
+            int width) {
         Drawing drawing = new Drawing(
                 styles,
+                needs,
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.dayPattern"))
                         .withZone(zone),
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.whenPattern"))
@@ -146,11 +157,17 @@ final class BuildsText {
      * How the builds are drawn.
      *
      * @param styles the styles of the theme
+     * @param needs  which jobs each job needs, by the id of the run of a build whose jobs show on one time line
      * @param day    how a day is written
      * @param when   how a day and a time are written
      * @param chart  the builds the chart has room for
      */
-    private record Drawing(Theme.SpanStyles styles, DateTimeFormatter day, DateTimeFormatter when, int chart) {
+    private record Drawing(
+            Theme.SpanStyles styles,
+            Map<Long, Map<String, Set<String>>> needs,
+            DateTimeFormatter day,
+            DateTimeFormatter when,
+            int chart) {
 
         /**
          * The lines that draw the builds of one workflow, the newest first.
@@ -418,25 +435,11 @@ final class BuildsText {
         }
 
         /**
-         * The jobs of the last build that is done, as bars on one time line from its start to its end.
+         * The jobs of the last build that is done on one time line, each hanging off the jobs it waits for (ADR 131).
          */
         private List<Line> lastBuild(List<Build> builds) {
-            return builds.find(build ->
-                            build.duration().isDefined() && !build.ran().isEmpty())
+            return BuildsView.lastDoneOf(builds)
                     .map(build -> {
-                        Duration took = build.duration().get();
-                        long whole = Math.max(1, took.toMillis());
-                        List<Build.Job> jobs = build.ran()
-                                .sorted(Comparator.comparing((Build.Job job) ->
-                                                job.startedAt().get())
-                                        .thenComparing(Build.Job::name));
-                        int width = Math.min(
-                                        NAME,
-                                        jobs.map(job -> TextWidth.of(job.name()))
-                                                .max()
-                                                .getOrElse(0))
-                                + 1;
-                        int line = Math.max(10, Math.min(48, chart - width));
                         Line header = Line.from(
                                 outcome(build.outcome()),
                                 Span.raw(" "),
@@ -447,36 +450,14 @@ final class BuildsText {
                                                         Math.min(7, build.sha().length())),
                                         Theme.Classes.SHA),
                                 Span.raw(" " + build.title()),
-                                dim(Messages.get("content.builds.lastBuild", duration(took))));
-                        return jobs.map(job -> {
-                                    long from = Duration.between(
-                                                    build.started(),
-                                                    job.startedAt().get())
-                                            .toMillis();
-                                    long length = job.duration()
-                                            .map(Duration::toMillis)
-                                            .getOrElse(0L);
-                                    int start = (int) Math.min(line - 1, Math.max(0, from * line / whole));
-                                    int bar = (int) Math.max(
-                                            1, Math.min(line - start, Math.round(1.0 * length * line / whole)));
-                                    Outcome ended = job.conclusion().equals("SUCCESS")
-                                            ? Outcome.PASSED
-                                            : job.running()
-                                                    ? Outcome.RUNNING
-                                                    : job.conclusion().equals("CANCELLED")
-                                                            ? Outcome.CANCELLED
-                                                            : Outcome.FAILED;
-                                    return Line.from(
-                                            Span.raw(pad(job.name(), width)),
-                                            dim("│" + "·".repeat(start)),
-                                            span("█".repeat(bar), style(ended)),
-                                            dim("·".repeat(line - start - bar) + "│"),
-                                            Span.raw(padLeft(
-                                                    job.duration()
-                                                            .map(BuildsText::duration)
-                                                            .getOrElse("–"),
-                                                    6)));
-                                })
+                                dim(Messages.get(
+                                        "content.builds.lastBuild",
+                                        build.duration()
+                                                .map(BuildsText::duration)
+                                                .getOrElse("–"))));
+                        Map<String, Set<String>> ofBuild =
+                                needs.get(build.runId()).getOrElse(HashMap.empty());
+                        return JobTrain.lines(build, ofBuild, Math.max(10, Math.min(60, chart - NAME)), styles)
                                 .prepend(header);
                     })
                     .getOrElse(List.empty());

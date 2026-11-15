@@ -1,14 +1,19 @@
 package net.vanfleteren.jazygit.feature.github.builds;
 
+import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.view.BuildsView;
+import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
+import net.vanfleteren.jazygit.state.view.Workflow;
 
 /**
  * Showing the builds of a local branch on GitHub, and reading them some commits at a time (ADR 131).
@@ -31,6 +36,11 @@ public final class BuildsUpdate {
                 awaited(model, branch, after, view -> view.read(page));
             case BuildsMsg.Failed(RemoteBranch branch, Option<String> after, Failure failure) ->
                 awaited(model, branch, after, view -> view.failed(failure));
+            case BuildsMsg.WorkflowsRead(var workflows) ->
+                Next.of(model.repoView()
+                        .builds()
+                        .map(view -> shown(model, Option.of(view.withWorkflows(workflows))))
+                        .getOrElse(model));
         };
     }
 
@@ -44,9 +54,17 @@ public final class BuildsUpdate {
                 .builds()
                 .filter(view -> view.awaits(branch, after))
                 .map(read)
-                .map(view -> view.reading()
-                        ? Next.of(shown(model, Option.of(view)), new LoadBuilds(branch, view.after()))
-                        : Next.of(shown(model, Option.of(view))))
+                .map(view -> {
+                    // The file of the workflow of the last build that is done, once there is one, says which of its
+                    // jobs needs which (ADR 131).
+                    List<FileAt> unread = view.unread();
+                    BuildsView asked = view.withWorkflows(
+                            HashMap.ofEntries(unread.map(file -> io.vavr.Tuple.of(file, Option.<Workflow>none()))));
+                    List<Cmd> cmds = List.<Cmd>empty()
+                            .appendAll(Option.when(view.reading(), () -> new LoadBuilds(branch, view.after())))
+                            .appendAll(unread.map(ReadWorkflows::new));
+                    return new Next(shown(model, Option.of(asked)), cmds);
+                })
                 .getOrElse(() -> Next.of(model));
     }
 

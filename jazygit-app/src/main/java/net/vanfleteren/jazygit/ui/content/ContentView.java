@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.ui.content;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -458,7 +460,7 @@ public final class ContentView {
                                                     ContentArea.BUILDS,
                                                     title,
                                                     new ScrolledContent.Builds(view.branch()),
-                                                    new Body.Builds(builds)))
+                                                    new Body.Builds(builds, view.needs())))
                                     .getOrElse(() -> dim(title, Messages.get("content.builds.offGitHub", branch))));
                 });
     }
@@ -725,7 +727,7 @@ public final class ContentView {
         /**
          * The builds of a branch, of the newest commit first (ADR 131).
          */
-        record Builds(List<Build> builds) implements Body {}
+        record Builds(List<Build> builds, Map<Long, Map<String, Set<String>>> needs) implements Body {}
 
         /**
          * A commit and what it changed, drawn as {@code look} says.
