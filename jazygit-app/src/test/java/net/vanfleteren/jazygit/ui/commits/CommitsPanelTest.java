@@ -38,6 +38,16 @@ import org.junit.jupiter.api.Test;
 
 class CommitsPanelTest {
 
+    // A log without a base: no commit is dimmed or marked.
+    private static final AheadView NO_BASE = new AheadView(Option.none(), Option.none(), false);
+
+    /**
+     * The rows of {@code log} as the pane draws them.
+     */
+    private static List<LoadableList.Row> drawn(List<Commit> log) {
+        return CommitsPanel.graphed(log, Option.none(), NO_BASE).map(LoadableList.Item::row);
+    }
+
     private static Commit commit(String sha, String... parents) {
         return Fixtures.commit(
                 new Sha(sha + "0000"),
@@ -58,7 +68,7 @@ class CommitsPanelTest {
                 commit("fffff01", "aaaaaaa"),
                 commit("aaaaaaa")));
 
-        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+        List<LoadableList.Row> rows = drawn(log);
 
         assertEquals(
                 List.of(
@@ -86,7 +96,7 @@ class CommitsPanelTest {
                 commit("rrrrrrr", "aaaaaaa"),
                 commit("aaaaaaa")));
 
-        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+        List<LoadableList.Row> rows = drawn(log);
 
         assertEquals(
                 List.of(
@@ -117,7 +127,7 @@ class CommitsPanelTest {
                 commit("bbbbbbb", "aaaaaaa"),
                 commit("aaaaaaa")));
 
-        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+        List<LoadableList.Row> rows = drawn(log);
 
         assertEquals(
                 List.of(
@@ -148,7 +158,7 @@ class CommitsPanelTest {
                 commit("bbbbbbb", "aaaaaaa"),
                 commit("aaaaaaa")));
 
-        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+        List<LoadableList.Row> rows = drawn(log);
 
         assertEquals(
                 List.of(
@@ -175,7 +185,7 @@ class CommitsPanelTest {
                 commit("ggggggg", "bbbbbbb"),
                 commit("bbbbbbb")));
 
-        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+        List<LoadableList.Row> rows = drawn(log);
 
         assertEquals(
                 List.of(
@@ -197,7 +207,7 @@ class CommitsPanelTest {
                 commit("ggggggg", "bbbbbbb"),
                 commit("bbbbbbb")));
 
-        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+        List<LoadableList.Row> rows = drawn(log);
 
         assertEquals(
                 List.of(
@@ -221,7 +231,7 @@ class CommitsPanelTest {
                 commit("bbbbbbb", "aaaaaaa"),
                 commit("aaaaaaa")));
 
-        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+        List<LoadableList.Row> rows = drawn(log);
 
         assertEquals(
                 List.of(
@@ -249,9 +259,7 @@ class CommitsPanelTest {
                         "bbbbbbb Ad │ ○ │ msg bbbbbbb",
                         "ccccccc Ad │ │ ○ msg ccccccc",
                         "aaaaaaa Ad ○─┴─╯ msg aaaaaaa"),
-                CommitsPanel.rows(CommitGraph.layout(log))
-                        .map(LoadableList.Row::text)
-                        .toList());
+                drawn(log).map(LoadableList.Row::text).toList());
     }
 
     @Test
@@ -262,9 +270,7 @@ class CommitsPanelTest {
 
         assertEquals(
                 List.of("ffff003 Ad ○ msg ffff003", "ffff002 Ad ◎ msg ffff002", "ffff001 Ad ○ msg ffff001"),
-                CommitsPanel.rows(CommitGraph.layout(log))
-                        .map(LoadableList.Row::text)
-                        .toList());
+                drawn(log).map(LoadableList.Row::text).toList());
     }
 
     @Test
@@ -393,8 +399,9 @@ class CommitsPanelTest {
 
     @Test
     void theCommitsFoundAreListedWithoutRails() {
-        List<LoadableList.Row> rows = CommitsPanel.foundRows(
-                List.of(commit("mmmmmmm", "bbbbbbb", "fffff02"), commit("aaaaaaa")), Option.none());
+        List<LoadableList.Row> rows = CommitsPanel.foundItems(
+                        List.of(commit("mmmmmmm", "bbbbbbb", "fffff02"), commit("aaaaaaa")), Option.none(), NO_BASE)
+                .map(LoadableList.Item::row);
 
         assertEquals(
                 List.of("mmmmmmm Ad ◎ msg mmmmmmm", "aaaaaaa Ad ○ msg aaaaaaa"),

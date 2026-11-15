@@ -18,10 +18,12 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import dev.tamboui.tui.event.PasteEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
+import io.vavr.Lazy;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
@@ -41,9 +43,9 @@ public final class LoadableList<T> {
     private final Theme.Highlights highlights;
     // TamboUI's default, which indents every row.
     private String highlightSymbol = "> ";
-    // The value the last render showed, and its rows.
+    // The value the last render showed, and its items.
     private Option<Loadable<T>> shown = Option.none();
-    private List<Row> shownRows = List.of();
+    private List<Item> shownItems = List.of();
     // What the list draws the rows as.
     private List<StyledElement<?>> elements = List.of();
     private Option<Integer> count = Option.none();
@@ -97,16 +99,33 @@ public final class LoadableList<T> {
             Line title,
             Option<StyledElement<?>> above,
             Consumer<PasteEvent> paste) {
+        return renderItems(value, loaded -> items.apply(loaded).map(Item::of), focused, active, title, above, paste);
+    }
+
+    /**
+     * The list of {@code items}, which can build their rows only once they are drawn: a list of thousands of rows,
+     * as a long log, then only builds those it shows.
+     *
+     * @param items the items of the loaded value; given on every render, so they can depend on more than the value
+     */
+    public Panel renderItems(
+            Loadable<T> value,
+            Function<T, List<Item>> items,
+            boolean focused,
+            boolean active,
+            Line title,
+            Option<StyledElement<?>> above,
+            Consumer<PasteEvent> paste) {
         this.focused = focused;
         list.highlightStyle(highlights.of(active))
                 .highlightSymbol(active ? highlightSymbol : " ".repeat(highlightSymbol.length()));
-        List<Row> itemRows = value.toOption().map(items).getOrElse(List.empty());
-        List<Row> rows = switch (value) {
-            case Loadable.Loading<T>() -> List.of(Row.of(Placeholders.loading()));
-            case Loadable.Failed<T>(Failure failure) -> List.of(Row.of(Placeholders.error(failure)));
+        List<Item> itemRows = value.toOption().map(items).getOrElse(List.empty());
+        List<Item> rows = switch (value) {
+            case Loadable.Loading<T>() -> List.of(Item.of(Row.of(Placeholders.loading())));
+            case Loadable.Failed<T>(Failure failure) -> List.of(Item.of(Row.of(Placeholders.error(failure))));
             case Loadable.Loaded<T>(T loaded)
             when itemRows.isEmpty() ->
-                empty.map(text -> List.of(Row.of(Seg.styled(text, Theme.Classes.DIM))))
+                empty.map(text -> List.of(Item.of(Row.of(Seg.styled(text, Theme.Classes.DIM)))))
                         .getOrElse(itemRows);
             case Loadable.Loaded<T>(T loaded) -> itemRows;
         };
@@ -120,11 +139,11 @@ public final class LoadableList<T> {
                 list.selected(Math.max(0, rows.size() - 1));
             }
             count = value.toOption().map(loaded -> itemRows.size());
-        } else if (!rows.equals(shownRows)) {
+        } else if (!rows.equals(shownItems)) {
             // The rows can depend on more than the value, e.g. on the time.
             show(rows);
         }
-        shownRows = rows;
+        shownItems = rows;
         // Only the list has its scrollbar on the right border: a line above it keeps the width inside it.
         Element bordered = BorderBar.of(list);
         Element content = above.<Element>map(line -> new PasteTarget(column(line, bordered), list.id(), paste))
@@ -132,8 +151,8 @@ public final class LoadableList<T> {
         return Pane.bordered(title, content, focused, selectedIndex(), count);
     }
 
-    private void show(List<Row> rows) {
-        elements = rows.map(row -> new KnownHeight(row.element(), row.height()));
+    private void show(List<Item> rows) {
+        elements = rows.map(item -> new KnownHeight(Lazy.of(() -> item.row().element()), item.height()));
         list.elements(elements.toJavaArray(StyledElement[]::new));
     }
 
@@ -148,7 +167,7 @@ public final class LoadableList<T> {
             return EventResult.UNHANDLED;
         }
         int selected = selectedIndex();
-        List<Integer> tops = shownRows.map(Row::height).scanLeft(0, Integer::sum);
+        List<Integer> tops = shownItems.map(Item::height).scanLeft(0, Integer::sum);
         return elements.asPartialFunction()
                 .lift()
                 .apply(selected)
@@ -156,7 +175,7 @@ public final class LoadableList<T> {
                 .map(Rect::top)
                 .map(top -> event.y() - top + tops.get(selected))
                 .map(line -> tops.lastIndexWhere(top -> top <= line))
-                .filter(index -> index >= 0 && index < shownRows.size())
+                .filter(index -> index >= 0 && index < shownItems.size())
                 .fold(() -> EventResult.UNHANDLED, index -> {
                     list.selected(index);
                     return EventResult.HANDLED;
@@ -164,10 +183,10 @@ public final class LoadableList<T> {
     }
 
     /**
-     * The rows the last render showed.
+     * The rows the last render showed, all of them built.
      */
     public List<Row> shownRows() {
-        return shownRows;
+        return shownItems.map(Item::row);
     }
 
     /**
@@ -257,6 +276,73 @@ public final class LoadableList<T> {
          * @return the index to select in {@code next}
          */
         int apply(T previous, T next, int selected);
+    }
+
+    /**
+     * An item of the list: a row, which an item made {@link #later} only builds once it is drawn, or asked for.
+     */
+    public sealed interface Item permits Ready, Later {
+
+        /**
+         * The item of {@code row}, built already.
+         */
+        static Item of(Row row) {
+            return new Ready(row);
+        }
+
+        /**
+         * The item whose row {@code row} builds the first time it is drawn or asked for, which then is kept.
+         *
+         * @param height the number of lines the row takes, known before it is built
+         */
+        static Item later(int height, Supplier<Row> row) {
+            return new Later(height, Lazy.of(row));
+        }
+
+        /**
+         * The number of lines the row takes.
+         */
+        int height();
+
+        /**
+         * The row, built now if it was not yet.
+         */
+        Row row();
+    }
+
+    /**
+     * An item whose row was built when it was made: equal to another of an equal row.
+     */
+    record Ready(Row row) implements Item {
+
+        @Override
+        public int height() {
+            return row.height();
+        }
+    }
+
+    /**
+     * An item that builds its row once it is drawn. It is only equal to itself: comparing rows would build them all.
+     */
+    static final class Later implements Item {
+
+        private final int height;
+        private final Lazy<Row> row;
+
+        Later(int height, Lazy<Row> row) {
+            this.height = height;
+            this.row = row;
+        }
+
+        @Override
+        public int height() {
+            return height;
+        }
+
+        @Override
+        public Row row() {
+            return row.get();
+        }
     }
 
     /**

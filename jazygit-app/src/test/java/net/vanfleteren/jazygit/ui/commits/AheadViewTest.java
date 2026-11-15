@@ -102,12 +102,24 @@ class AheadViewTest {
         AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
 
         List<LoadableList.Row> rows =
-                CommitsPanel.marked(CommitsPanel.rows(CommitGraph.layout(only.shown(LOG))), only.shown(LOG), only);
+                CommitsPanel.graphed(only.shown(LOG), Option.none(), only).map(LoadableList.Item::row);
 
         assertEquals("aaaaaaa Ad ○ ⑂ origin/main msg a", rows.last().text());
         assertTrue(rows.last().segs().forAll(seg -> seg.cssClass().contains(Theme.Classes.DIM)));
         assertTrue(rows.head().segs().forAll(seg -> seg.cssClass().isEmpty()));
         assertFalse(new AheadView(Option.of(MORE), Option.none(), false).dimmed(OLD.sha()));
+    }
+
+    @Test
+    void eachRowOfALogIsOneLineWithTheCopiedShaStandingOutAndTheForkPointDimmed() {
+        AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
+
+        List<LoadableList.Item> items = CommitsPanel.graphed(only.shown(LOG), Option.of(MIDDLE.sha()), only);
+
+        assertTrue(items.forAll(item -> item.height() == 1 && item.row().height() == 1));
+        assertEquals(
+                List.of(Option.none(), Option.of(Theme.Classes.COPIED), Option.of(Theme.Classes.DIM)),
+                items.map(item -> item.row().segs().head().cssClass()));
     }
 
     @Test
