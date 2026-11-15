@@ -24,7 +24,8 @@ ended, and the run when it was created; what each job waits for comes from the f
 - The build picked is marked `▸` in the list, with its title in bold, and the time line says `the build picked` where
   it says `the last build`. A mark at the end of the row is cut off with a long title.
 - It stays picked while it is among the builds that show; when it no longer is, as with another tab, `n` (ADR 131) or
-  every branch, the last build shows again, and `p` marks that one. It does not stay for another branch, whose builds are others.
+  every branch, the last build shows again, and `p` marks that one. It does not stay for another branch, whose builds
+  are others.
 - The file of its workflow is read at its commit, as that of a last build is (ADR 131), so that what each job waits
   for is as it was then.
 - The time line says, for any build:
