@@ -38,9 +38,9 @@ public final class AddWorktreeDialogs {
                             "dialog.newWorktree.title", popup.source().label()),
                     Option.of(Messages.get("dialog.newWorktree.placeholder")))
             .withWidth(TextInputDialog.BRANCH_NAME_WIDTH)
-            .withHint(popup -> popup.templated()
+            .withDetails(popup -> popup.templated()
                     ? Option.none()
-                    : Option.of(Messages.get("dialog.newWorktree.templateHint", popup.templateKey())));
+                    : Option.of(Messages.get("dialog.newWorktree.template.details", popup.templateKey())));
 
     /**
      * Asks for the name of the new branch to check out in a new worktree. A name that is no branch name keeps it

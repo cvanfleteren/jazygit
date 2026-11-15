@@ -1,11 +1,9 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
-import static dev.tamboui.toolkit.Toolkit.text;
 import static dev.tamboui.toolkit.Toolkit.textInput;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
-import dev.tamboui.toolkit.elements.DialogElement;
 import dev.tamboui.toolkit.elements.TextInputElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.widgets.input.TextInputState;
@@ -21,7 +19,6 @@ import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.popup.TextPopup;
 import net.vanfleteren.jazygit.ui.edit.LineEditInput;
-import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * The standard popup asking for one line of text. Enter confirms it, Escape cancels. Whether it is open, and the
@@ -42,11 +39,6 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
      * The width of the dialog, borders included, unless its spec asks for another.
      */
     private static final int WIDTH = 50;
-
-    /**
-     * The lines a hint below the input wraps over at most.
-     */
-    private static final int HINT_LINES = 2;
 
     private final Spec<P> spec;
     private final Consumer<Msg> dispatch;
@@ -76,27 +68,13 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
                 input.setText(open.text());
                 input.moveCursorToEnd();
             }
-            Option<String> hint = spec.hint().apply(open);
-            DialogElement dialog = DialogFrame.of(spec.title().apply(open), spec.width(), content(hint))
+            Element dialog = DialogFrame.of(spec.title().apply(open), spec.width(), field())
                     .onConfirm(this::confirm)
                     .onCancel(this::cancel);
-            // A hint wraps over more lines than the dialog would make room for by itself.
-            return hint.map(text -> dialog.length(
-                            2 + DialogFrame.wrappedHeight(text, spec.width(), HINT_LINES) + DialogFrame.FRAME))
-                    .getOrElse(dialog);
+            // The details go in a box of their own under it, as those of the options of a choice do.
+            Option<String> details = spec.details().apply(open);
+            return details.isEmpty() ? dialog : new WithDetails(dialog, details, details.toList());
         });
-    }
-
-    /**
-     * The input, and below it, after a blank line, {@code hint}, if any: wrapped, at most {@value #HINT_LINES} lines.
-     */
-    private Element[] content(Option<String> hint) {
-        return hint.map(text -> List.<Element>of(
-                        field(),
-                        text(""),
-                        DialogFrame.wrapped(text, spec.width(), HINT_LINES).addClass(Theme.Classes.DIM)))
-                .getOrElse(() -> List.of(field()))
-                .toJavaArray(Element[]::new);
     }
 
     private StyledElement<?> field() {
@@ -131,7 +109,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
      *                    closes
      * @param onCancel    the message for Escape; by default a {@link PopupMsg.Dismissed}
      * @param width       the width of the dialog, borders included; by default {@value #WIDTH}
-     * @param hint        what is said, dimmed, below the input, from the popup, if anything; by default nothing
+     * @param details     what is said in a box under the dialog, from the popup, if anything; by default nothing
      */
     public record Spec<P extends Popup>(
             String id,
@@ -141,7 +119,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
             Supplier<Msg> onConfirm,
             Supplier<Msg> onCancel,
             int width,
-            Function<P, Option<String>> hint) {
+            Function<P, Option<String>> details) {
 
         public Spec(
                 String id,
@@ -178,21 +156,21 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
          * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
          */
         public Spec<P> cancelledBy(Supplier<Msg> onCancel) {
-            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width, hint);
+            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width, details);
         }
 
         /**
          * This dialog, {@code width} wide, borders included.
          */
         public Spec<P> withWidth(int width) {
-            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width, hint);
+            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width, details);
         }
 
         /**
-         * This dialog, saying what {@code hint} gives, dimmed, below the input.
+         * This dialog, saying what {@code details} gives for the open popup, if anything, in a box under it.
          */
-        public Spec<P> withHint(Function<P, Option<String>> hint) {
-            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width, hint);
+        public Spec<P> withDetails(Function<P, Option<String>> details) {
+            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width, details);
         }
     }
 }
