@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -43,7 +44,7 @@ public sealed interface ScrolledContent {
             case StashChanges(var sha, DiffText changes) -> Option.of(changes);
             case FileChanges(var of, var files, DiffText diff) -> Option.of(diff);
             case Unchanged(var path, DiffText asDiff, var commit) -> Option.of(asDiff);
-            case BranchLog _, PullRequest _, Note _ -> Option.none();
+            case BranchLog _, Builds _, PullRequest _, Note _ -> Option.none();
         };
     }
 
@@ -78,6 +79,11 @@ public sealed interface ScrolledContent {
      * The log of a branch.
      */
     record BranchLog(List<Commit> commits) implements ScrolledContent {}
+
+    /**
+     * The builds of the local branch {@code branch} (ADR 130): it keeps where it is scrolled to while more are read.
+     */
+    record Builds(BranchName branch) implements ScrolledContent {}
 
     /**
      * A commit and what it changed, in the commits pane or in a divergence.

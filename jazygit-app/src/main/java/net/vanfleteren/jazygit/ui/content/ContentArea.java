@@ -35,7 +35,9 @@ public enum ContentArea {
     PULL_REQUEST(
             AreaId.PULL_REQUEST,
             model -> model.prOverview().listPane().getOrElse(() -> new PaneId(PullRequestsPanel.FIRST_PANE_ID))),
-    LOG(AreaId.LOG, BranchesPanel.ID);
+    LOG(AreaId.LOG, BranchesPanel.ID),
+    // The builds of the branch highlighted in the branches pane, in place of its log (ADR 130).
+    BUILDS(AreaId.BUILDS, BranchesPanel.ID);
 
     private final AreaId id;
     private final Function<Model, PaneId> pane;

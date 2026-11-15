@@ -59,6 +59,8 @@ import net.vanfleteren.jazygit.state.diff.Version;
  *                     (ADR 108); a reload then lists them too
  * @param unchanged    the node highlighted in the files pane while it lists all files, when nothing under it has
  *                     changed: the content panel shows it in place of a diff (ADR 108)
+ * @param builds       the builds of a local branch on GitHub, which the content panel shows in place of its log
+ *                     while that branch is highlighted (ADR 130)
  */
 @With
 public record RepoView(
@@ -83,7 +85,8 @@ public record RepoView(
         Map<AreaId, Expansion> expanded,
         Map<AreaId, Version> versions,
         boolean allFiles,
-        Option<UnchangedNode> unchanged) {
+        Option<UnchangedNode> unchanged,
+        Option<BuildsView> builds) {
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
@@ -107,6 +110,7 @@ public record RepoView(
             HashMap.empty(),
             HashMap.empty(),
             false,
+            Option.none(),
             Option.none());
 
     /**

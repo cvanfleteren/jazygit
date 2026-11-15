@@ -6,9 +6,11 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffContext;
@@ -396,7 +398,45 @@ public final class ContentView {
                                 sha -> model.branchCommit(view, sha),
                                 Option.when(
                                         view.commits(model).toOption().exists(List::isEmpty), "content.noCommits"))))
+                .orElse(() -> builds(model))
                 .getOrElse(() -> branchLog(model));
+    }
+
+    /**
+     * The builds of the local branch highlighted in the branches pane, while they are shown for it (ADR 130).
+     */
+    private static Option<Shown> builds(Model model) {
+        return model.repoView()
+                .builds()
+                .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL
+                        && model.repoView()
+                                .branchLog()
+                                .exists(log -> log.key().equals(new BranchRef.Local(view.branch()))))
+                .map(view -> {
+                    String branch = view.branch().value();
+                    String title = view.reading() && view.builds().toOption().isDefined()
+                            ? Messages.get("panel.builds.reading", branch, String.valueOf(view.commits()))
+                            : Messages.get("panel.builds.title", branch, String.valueOf(view.commits()));
+                    return whenLoaded(
+                            title,
+                            view.builds(),
+                            builds -> view.onGitHub()
+                                    .map(remote -> builds.isEmpty()
+                                            ? view.reading()
+                                                    ? loading(title)
+                                                    : dim(
+                                                            title,
+                                                            Messages.get(
+                                                                    "content.builds.none",
+                                                                    remote.shortName(),
+                                                                    String.valueOf(view.commits())))
+                                            : new Shown.Area(
+                                                    ContentArea.BUILDS,
+                                                    title,
+                                                    new ScrolledContent.Builds(view.branch()),
+                                                    new Body.Builds(builds)))
+                                    .getOrElse(() -> dim(title, Messages.get("content.builds.offGitHub", branch))));
+                });
     }
 
     private static Shown branchLog(Model model) {
@@ -657,6 +697,11 @@ public final class ContentView {
          * The log of a branch, as far as {@code ahead} shows it.
          */
         record BranchLog(List<Commit> commits, AheadView ahead) implements Body {}
+
+        /**
+         * The builds of a branch, of the newest commit first (ADR 130).
+         */
+        record Builds(List<Build> builds) implements Body {}
 
         /**
          * A commit and what it changed, drawn as {@code look} says.

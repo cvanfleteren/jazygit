@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh.checks;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.process.GhError;
 
@@ -34,6 +35,14 @@ public interface StubChecks extends Checks {
     @Override
     default Either<GhError, RecentChecks> recent() {
         return Either.right(new RecentChecks("owner/repo", List.empty()));
+    }
+
+    /**
+     * A repository without the branch.
+     */
+    @Override
+    default Either<GhError, Option<BuildsPage>> builds(String branch, Option<String> after) {
+        return Either.right(Option.none());
     }
 
     /**

@@ -1,0 +1,34 @@
+package net.vanfleteren.jazygit.feature.github.builds;
+
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.BuildsPage;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Update;
+
+/**
+ * Showing the builds of a local branch on GitHub (ADR 130).
+ */
+public sealed interface BuildsMsg extends Msg {
+
+    @Override
+    default Update.Next apply(Model model) {
+        return BuildsUpdate.update(model, this);
+    }
+
+    /**
+     * The user asked for the builds of {@code branch}, or, while they show, for its log again.
+     */
+    record Toggled(BranchName branch) implements BuildsMsg {}
+
+    /**
+     * The commits of {@code branch} on GitHub from {@code after} on were read, with their builds; none when it is
+     * not on GitHub.
+     */
+    record Read(RemoteBranch branch, Option<String> after, Option<BuildsPage> page) implements BuildsMsg {}
+
+    record Failed(RemoteBranch branch, Option<String> after, Failure failure) implements BuildsMsg {}
+}

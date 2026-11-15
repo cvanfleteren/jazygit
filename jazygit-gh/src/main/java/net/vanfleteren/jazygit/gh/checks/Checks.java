@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.gh.checks;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.process.GhError;
 
@@ -26,6 +27,13 @@ public interface Checks {
      * last and on the last commits of its default branch.
      */
     Either<GhError, RecentChecks> recent();
+
+    /**
+     * The builds on the commits of {@code branch} of the repository, some commits at a time, the newest first: from
+     * {@code after}, where the commits read before end, or from its tip without (ADR 130). None when the branch is not
+     * on GitHub.
+     */
+    Either<GhError, Option<BuildsPage>> builds(String branch, Option<String> after);
 
     /**
      * The names of the protected branches of the repository (ADR 72).

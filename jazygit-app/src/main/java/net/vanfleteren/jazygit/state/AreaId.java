@@ -64,4 +64,9 @@ public record AreaId(String value) {
      * The area of the log of the branch highlighted in the branches pane.
      */
     public static final AreaId LOG = new AreaId("branch-log");
+
+    /**
+     * The area of the builds of the branch highlighted in the branches pane (ADR 130).
+     */
+    public static final AreaId BUILDS = new AreaId("branch-builds");
 }

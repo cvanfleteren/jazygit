@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.gh.checks;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhProcess;
@@ -30,6 +31,11 @@ public final class CliChecks implements Checks {
     @Override
     public Either<GhError, RecentChecks> recent() {
         return process.readJson(RecentChecksQuery.COMMAND, RecentChecksQuery.DECODER);
+    }
+
+    @Override
+    public Either<GhError, Option<BuildsPage>> builds(String branch, Option<String> after) {
+        return process.readJson(BuildsQuery.command(branch, after), BuildsQuery.DECODER);
     }
 
     @Override

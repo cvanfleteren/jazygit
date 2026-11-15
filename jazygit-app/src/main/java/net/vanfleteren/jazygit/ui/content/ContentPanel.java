@@ -13,6 +13,7 @@ import io.vavr.control.Option;
 import java.time.ZoneId;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -161,6 +162,8 @@ public final class ContentPanel {
                 ContentText.diffDrawn(diff, look, remarks, asGiven, styles, width);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 plain(ContentText.logText(commits, ZoneId.systemDefault(), ahead, styles));
+            case Body.Builds(List<Build> builds) ->
+                RichDiff.Drawn.plain(BuildsText.lines(builds, ZoneId.systemDefault(), styles, width));
             case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
                 ContentText.commitDrawn(commit, changes, look, styles, width);
             case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
