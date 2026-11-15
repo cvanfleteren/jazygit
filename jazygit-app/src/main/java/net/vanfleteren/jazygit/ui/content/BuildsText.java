@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
- * The builds of a branch as the content panel draws them (ADR 130): for each workflow, a summary, a chart of how long
+ * The builds of a branch as the content panel draws them (ADR 131): for each workflow, a summary, a chart of how long
  * its builds took, how each job did, the jobs of its last build on one time line, and the builds one by one.
  */
 final class BuildsText {

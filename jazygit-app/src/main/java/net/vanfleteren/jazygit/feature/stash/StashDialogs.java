@@ -41,7 +41,7 @@ public final class StashDialogs {
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(StashPanel.ID, new ConfirmDialog<>(DROP, dispatch)),
-                PopupSlot.returningTo(FilesPanel.ID, new TextInputDialog<>(STASH, dispatch)));
+                PopupSlot.returningTo(StashPanel.PANE, new ConfirmDialog<>(DROP, dispatch)),
+                PopupSlot.returningTo(FilesPanel.PANE, new TextInputDialog<>(STASH, dispatch)));
     }
 }

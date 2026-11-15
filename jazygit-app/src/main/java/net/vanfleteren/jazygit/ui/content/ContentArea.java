@@ -32,11 +32,9 @@ public enum ContentArea {
     // The commit highlighted in the commits of a branch the branches pane lists.
     BRANCH_COMMIT(AreaId.BRANCH_COMMIT, BranchesPanel.ID),
     // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
-    PULL_REQUEST(
-            AreaId.PULL_REQUEST,
-            model -> model.prOverview().listPane().getOrElse(() -> new PaneId(PullRequestsPanel.FIRST_PANE_ID))),
+    PULL_REQUEST(AreaId.PULL_REQUEST, model -> model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE)),
     LOG(AreaId.LOG, BranchesPanel.ID),
-    // The builds of the branch highlighted in the branches pane, in place of its log (ADR 130).
+    // The builds of the branch highlighted in the branches pane, in place of its log (ADR 131).
     BUILDS(AreaId.BUILDS, BranchesPanel.ID);
 
     private final AreaId id;
@@ -60,6 +58,13 @@ public enum ContentArea {
      */
     static Option<ContentArea> focusable(String id) {
         return List.of(values()).find(area -> area.id.value().equals(id));
+    }
+
+    /**
+     * The area {@code id} is the id of, if it is one.
+     */
+    static Option<ContentArea> of(AreaId id) {
+        return List.of(values()).find(area -> area.id.equals(id));
     }
 
     /**

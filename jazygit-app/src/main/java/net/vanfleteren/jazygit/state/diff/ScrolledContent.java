@@ -81,7 +81,7 @@ public sealed interface ScrolledContent {
     record BranchLog(List<Commit> commits) implements ScrolledContent {}
 
     /**
-     * The builds of the local branch {@code branch} (ADR 130): it keeps where it is scrolled to while more are read.
+     * The builds of the local branch {@code branch} (ADR 131): it keeps where it is scrolled to while more are read.
      */
     record Builds(BranchName branch) implements ScrolledContent {}
 

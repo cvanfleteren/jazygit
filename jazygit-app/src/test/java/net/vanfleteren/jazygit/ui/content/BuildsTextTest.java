@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 /**
- * The builds of a branch as the content panel draws them (ADR 130).
+ * The builds of a branch as the content panel draws them (ADR 131).
  */
 class BuildsTextTest {
 

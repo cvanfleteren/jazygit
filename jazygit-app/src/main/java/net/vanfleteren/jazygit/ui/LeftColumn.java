@@ -12,8 +12,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
@@ -53,24 +55,24 @@ public final class LeftColumn {
     /**
      * @param styleEngine     the active theme, which highlights the selected rows
      * @param clock           tells the time the branches are drawn at
-     * @param openContent     moves the focus to the content shown for the pane with the id given
+     * @param openContent     moves the focus to the content shown for the pane given
      * @param showBranchesTab moves the focus to the branches pane, and shows the list given in it
      */
     public LeftColumn(
             Consumer<Msg> dispatch,
             StyleEngine styleEngine,
             Clock clock,
-            Consumer<String> openContent,
+            Consumer<PaneId> openContent,
             Consumer<BranchesTab> showBranchesTab) {
         this.dispatch = dispatch;
         this.styleEngine = styleEngine;
         // How the active theme highlights the selected row of a pane, in use or not.
         Theme.Highlights highlight = active -> Theme.highlights(styleEngine).of(active);
-        this.filesPanel = new FilesPanel(dispatch, () -> openContent.accept(FilesPanel.ID), highlight);
+        this.filesPanel = new FilesPanel(dispatch, () -> openContent.accept(FilesPanel.PANE), highlight);
         this.branchesPanel = new BranchesPanel(
-                dispatch, showBranchesTab, () -> openContent.accept(BranchesPanel.ID), clock, highlight);
-        this.commitsPanel = new CommitsPanel(dispatch, () -> openContent.accept(CommitsPanel.ID), highlight);
-        this.stashPanel = new StashPanel(dispatch, () -> openContent.accept(StashPanel.ID), highlight);
+                dispatch, showBranchesTab, () -> openContent.accept(BranchesPanel.PANE), clock, highlight);
+        this.commitsPanel = new CommitsPanel(dispatch, () -> openContent.accept(CommitsPanel.PANE), highlight);
+        this.stashPanel = new StashPanel(dispatch, () -> openContent.accept(StashPanel.PANE), highlight);
         this.pullRequestsPanels = PullRequestsPanel.all(dispatch, openContent, highlight);
     }
 
@@ -79,16 +81,16 @@ public final class LeftColumn {
      * drags: {@code rows} tall each if the rows of the column are known (ADR 92), else their share of it. A collapsed
      * column shows none of them: it is an empty panel with a mark at its top right (ADR 104).
      *
-     * @param focusedId the element with the focus, if any
-     * @param activeId  the pane in use, whose highlighted row shows
+     * @param focus what has the focus, if anything
+     * @param inUse the pane in use, whose highlighted row shows
      */
-    public Rendered render(Model model, String focusedId, String activeId, Option<List<Integer>> rows) {
+    public Rendered render(Model model, Option<Focus> focus, Option<PaneId> inUse, Option<List<Integer>> rows) {
         if (model.preferences().leftCollapsed(model.screen())) {
             return new Rendered(column(collapsed()), List.empty());
         }
         List<Panel> shown = model.screen() == Screen.PULL_REQUESTS
-                ? pullRequestsPanels.map(pane -> pane.render(model, focusedId, activeId))
-                : repositoryPanes(model, focusedId, activeId);
+                ? pullRequestsPanels.map(pane -> pane.render(model, focus, inUse))
+                : repositoryPanes(model, focus, inUse);
         List<Integer> heights = model.preferences().leftHeights(model.screen());
         List<Panel> panes = rows.fold(
                 () -> shown.init()
@@ -110,13 +112,13 @@ public final class LeftColumn {
 
     /**
      * What the panes highlight that the model, which they were last rendered from, does not know: the item the
-     * content panel shows the preview of. On the pull requests screen, only the pane in use, {@code activeId}, says.
+     * content panel shows the preview of. On the pull requests screen, only the pane in use, {@code inUse}, says.
      */
-    public List<Msg> selectionChanges(Model model, String activeId) {
+    public List<Msg> selectionChanges(Model model, Option<PaneId> inUse) {
         return model.screen() == Screen.PULL_REQUESTS
                 // The content panel shows the pull request highlighted in the pane in use.
                 ? pullRequestsPanels
-                        .filter(pane -> pane.id().equals(activeId))
+                        .filter(pane -> inUse.contains(pane.pane()))
                         .flatMap(pane -> pane.selectionChange(model))
                 : List.of(
                                 branchesPanel.selectionChange(model),
@@ -129,12 +131,12 @@ public final class LeftColumn {
     /**
      * The panes of the repository screen under the status: the files, the branches, the commits and the stashes.
      */
-    private List<Panel> repositoryPanes(Model model, String focusedId, String activeId) {
+    private List<Panel> repositoryPanes(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         return List.of(
-                filesPanel.render(model, focusedId, activeId),
-                branchesPanel.render(model, focusedId, activeId),
-                commitsPanel.render(model, focusedId, activeId),
-                stashPanel.render(model, focusedId, activeId));
+                filesPanel.render(model, focus, inUse),
+                branchesPanel.render(model, focus, inUse),
+                commitsPanel.render(model, focus, inUse),
+                stashPanel.render(model, focus, inUse));
     }
 
     /**

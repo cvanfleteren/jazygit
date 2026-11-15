@@ -9,7 +9,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 /**
- * How a build ended and how long it took (ADR 130).
+ * How a build ended and how long it took (ADR 131).
  */
 class BuildTest {
 

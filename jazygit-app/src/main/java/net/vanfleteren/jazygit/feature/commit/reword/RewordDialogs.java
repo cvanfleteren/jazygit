@@ -15,6 +15,6 @@ public final class RewordDialogs {
     private RewordDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(CommitsPanel.ID, CommitDialog.reword(dispatch)));
+        return List.of(PopupSlot.returningTo(CommitsPanel.PANE, CommitDialog.reword(dispatch)));
     }
 }

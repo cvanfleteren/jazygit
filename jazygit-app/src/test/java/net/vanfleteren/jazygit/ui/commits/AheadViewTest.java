@@ -52,7 +52,7 @@ class AheadViewTest {
                 "Commits · 2 ahead of origin/main",
                 new AheadView(Option.of(AHEAD), Option.none(), true).title("Commits"));
         assertEquals(
-                "Commits · 300+ ahead of origin/main",
+                "Commits · 3000+ ahead of origin/main",
                 new AheadView(Option.of(MORE), Option.none(), false).title("Commits"));
         assertEquals("Commits", new AheadView(Option.none(), Option.none(), true).title("Commits"));
     }
@@ -138,8 +138,8 @@ class AheadViewTest {
                 .mapRepoView(repoView -> repoView.withOnlyAhead(true));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
-            String shown = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.ID));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
+            String shown = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE));
 
             assertTrue(shown.contains("Commits · 2 ahead of origin/main"), shown);
             assertTrue(shown.contains("⑂ origin/main msg a"), shown);

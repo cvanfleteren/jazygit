@@ -133,7 +133,7 @@ class JazygitAppFileStepTest {
             pilot.press(KeyCode.RIGHT);
             pilot.pause();
             String area = onRenderThread(testRunner, () -> focusedId(testRunner));
-            assertTrue(ContentPanel.isArea(area), area);
+            assertTrue(ContentPanel.areaWithId(area).isDefined(), area);
             Option<List<String>> files = onRenderThread(testRunner, () -> shownFiles(app.model()));
 
             pilot.press('J');
@@ -405,7 +405,7 @@ class JazygitAppFileStepTest {
 
     private static void assertInContent(ToolkitTestRunner testRunner) throws Exception {
         String focused = onRenderThread(testRunner, () -> focusedId(testRunner));
-        assertTrue(ContentPanel.isArea(focused), focused);
+        assertTrue(ContentPanel.areaWithId(focused).isDefined(), focused);
     }
 
     private static Option<List<String>> shownFiles(Model model) {

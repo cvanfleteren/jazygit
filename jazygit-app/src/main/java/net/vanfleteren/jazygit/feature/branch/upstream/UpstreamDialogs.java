@@ -50,7 +50,7 @@ public final class UpstreamDialogs {
     private UpstreamDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(UPSTREAM, dispatch)));
+        return List.of(PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(UPSTREAM, dispatch)));
     }
 
     private static String upstreamName(Option<Branch> branch) {

@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 
 /**
- * The builds of a local branch on GitHub, which the content panel shows in place of its log (ADR 130).
+ * The builds of a local branch on GitHub, which the content panel shows in place of its log (ADR 131).
  *
  * @param branch   the local branch
  * @param onGitHub the branch on GitHub it follows, whose builds are read; none when it follows none
@@ -30,7 +30,7 @@ public record BuildsView(
         Option<Failure> stopped) {
 
     /**
-     * How many commits are read, at most (ADR 130).
+     * How many commits are read, at most (ADR 131).
      */
     public static final int COMMITS = 100;
 

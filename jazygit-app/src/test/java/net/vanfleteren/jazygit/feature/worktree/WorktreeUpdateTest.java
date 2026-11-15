@@ -611,7 +611,7 @@ class WorktreeUpdateTest {
         assertEquals(
                 // It is shown on the worktrees, focused.
                 List.of(new RecentReposCmd.SwitchTo(
-                        "/repos/app-taken", new Landing(BranchesTab.WORKTREES, Option.of(Scopes.BRANCHES.id())))),
+                        "/repos/app-taken", new Landing(BranchesTab.WORKTREES, Option.of(Scopes.BRANCHES.pane())))),
                 Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/app-taken"))
                         .cmds());
         Next shown = Update.update(model(), new SwitchWorktreeMsg.Requested("/repos/app"));

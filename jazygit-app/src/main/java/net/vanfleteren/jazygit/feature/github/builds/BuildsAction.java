@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
 
 /**
- * Showing the builds of the selected local branch on GitHub in the content panel, in place of its log (ADR 130).
+ * Showing the builds of the selected local branch on GitHub in the content panel, in place of its log (ADR 131).
  */
 public final class BuildsAction {
 

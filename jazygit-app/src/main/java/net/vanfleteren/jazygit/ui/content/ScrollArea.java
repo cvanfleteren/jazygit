@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.Anchor;
@@ -87,7 +88,7 @@ public final class ScrollArea {
     private final String id;
     private final RichTextAreaElement element;
     private final BooleanSupplier leaveScrollArea;
-    private final Consumer<String> focus;
+    private final Consumer<Focus> focus;
     private final Consumer<Msg> dispatch;
     // The body last shown, the theme it was styled in and its text: a frame that shows the same, like one drawn
     // only to turn a spinner, or a move of the cursor, does not style it again.
@@ -118,7 +119,7 @@ public final class ScrollArea {
     private Option<String> notice = Option.none();
 
     public ScrollArea(
-            ContentArea area, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
+            ContentArea area, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
         this.area = area;
         this.id = area.id().value();
         this.leaveScrollArea = leaveScrollArea;
@@ -140,11 +141,12 @@ public final class ScrollArea {
      * The area as {@code shown}, its body as {@code style} styles it, where the model has it scrolled to, its lines
      * fitted to the size it is drawn in (ADR 80).
      */
-    public Element show(Model model, String focusedId, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
-        Element fitted = new Fitted(
-                fit(model, focusedId, shown, style, styles), () -> fit(model, focusedId, shown, style, styles));
+    public Element show(Model model, Option<Focus> focus, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
+        boolean focused = focus.contains(area.id());
+        Element fitted =
+                new Fitted(fit(model, focused, shown, style, styles), () -> fit(model, focused, shown, style, styles));
         // The line to type the query of a search in, above the area that has the focus, which keeps it (ADR 126).
-        return typing.filter(ignored -> id.equals(focusedId))
+        return typing.filter(ignored -> focused)
                 .<Element>map(text ->
                         new PasteTarget(column(searchLine.field(text), fitted).fill(), id, this::pasted))
                 .getOrElse(fitted);
@@ -159,7 +161,7 @@ public final class ScrollArea {
      * in, which the text area only learns while it draws.
      */
     private RichTextAreaElement fit(
-            Model model, String focusedId, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
+            Model model, boolean focused, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
         ThemeName theme = model.preferences().theme();
         ScrolledContent content = shown.content();
         Scrolled known = model.scrolled(area.id(), content);
@@ -172,7 +174,7 @@ public final class ScrollArea {
         shownAt = known;
         Body body = shown.body();
         // A version rendered, or the builds, are drawn as wide as the area, which it learns while it draws (ADR 80,
-        // 103, 130).
+        // 103, 131).
         int width = element.state().viewportWidth() > 0 ? element.state().viewportWidth() : RichDiff.RENDERED_WIDTH;
         Option<Styled> last = styled.filter(before -> before.body().equals(body)
                 && before.theme() == theme
@@ -224,7 +226,6 @@ public final class ScrollArea {
                 at.cursor(),
                 at.mark());
         review = shown.body() instanceof Body.Diff(var diff, var look, var remarks) && remarks.isDefined();
-        boolean focused = id.equals(focusedId);
         // What the title said of the search lasts until the next key in the area: the area losing the focus, or
         // showing another body, is past that too (ADR 126).
         if (!focused || last.isEmpty()) {
@@ -507,7 +508,7 @@ public final class ScrollArea {
     private EventResult mouse(MouseEvent event, ScrolledContent content) {
         RichTextState state = element.state();
         if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
-            focus.accept(id);
+            focus.accept(area.id());
             // The text starts a line below the top of the area, under its border.
             return cursor.flatMap(on ->
                             Option.of(element.renderedArea()).flatMap(drawn -> on.clicked(event.y() - drawn.top() - 1)))

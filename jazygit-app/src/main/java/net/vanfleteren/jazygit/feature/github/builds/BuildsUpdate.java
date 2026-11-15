@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 
 /**
- * Showing the builds of a local branch on GitHub, and reading them some commits at a time (ADR 130).
+ * Showing the builds of a local branch on GitHub, and reading them some commits at a time (ADR 131).
  */
 public final class BuildsUpdate {
 

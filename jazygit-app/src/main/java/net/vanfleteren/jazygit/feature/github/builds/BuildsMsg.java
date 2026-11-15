@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 
 /**
- * Showing the builds of a local branch on GitHub (ADR 130).
+ * Showing the builds of a local branch on GitHub (ADR 131).
  */
 public sealed interface BuildsMsg extends Msg {
 

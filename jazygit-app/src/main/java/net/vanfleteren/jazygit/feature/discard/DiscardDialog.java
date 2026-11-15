@@ -35,6 +35,6 @@ public final class DiscardDialog {
      * The popups of this feature, which send what the user does to {@code dispatch}.
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(FilesPanel.ID, new ChoiceDialog<>(SPEC, dispatch)));
+        return List.of(PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(SPEC, dispatch)));
     }
 }

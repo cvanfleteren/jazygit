@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.Comparator;
 
 /**
- * A workflow run on a commit of a branch, with its jobs: one build of the branch (ADR 130).
+ * A workflow run on a commit of a branch, with its jobs: one build of the branch (ADR 131).
  *
  * @param workflow  the name of its workflow
  * @param event     what started it, like {@code push}

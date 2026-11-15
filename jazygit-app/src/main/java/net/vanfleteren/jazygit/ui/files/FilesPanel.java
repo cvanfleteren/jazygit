@@ -20,6 +20,8 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Focus;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.*;
@@ -43,6 +45,11 @@ import net.vanfleteren.jazygit.ui.widgets.PasteTarget;
 public class FilesPanel {
 
     public static final String ID = Scopes.FILES.id();
+
+    /**
+     * The pane, as the focus is on it.
+     */
+    public static final PaneId PANE = Scopes.FILES.pane();
 
     private final FileTreeList<FileEntry> statusTree;
     // All files of the working tree, kept apart from its changed files, so that each keeps its highlight and the
@@ -465,20 +472,20 @@ public class FilesPanel {
     }
 
     /**
-     * @param focusedId the id of the currently focused left pane, as reported by
-     *                  {@code runner().focusManager().focusedId()}
+     * The pane while {@code pane} has the focus, and is in use.
      */
-    public Panel render(Model model, String focusedId) {
-        return render(model, focusedId, focusedId);
+    public Panel render(Model model, PaneId pane) {
+        return render(model, Option.of(pane), Option.of(pane));
     }
 
     /**
-     * @param activeId the id of the left pane in use, whose highlighted node shows, as it is again when it
-     *                 is back in use
+     * @param focus what has the focus, if anything
+     * @param inUse the left pane in use, whose highlighted node shows, as it is again when it
+     *              is back in use
      */
-    public Panel render(Model model, String focusedId, String activeId) {
-        focused = ID.equals(focusedId);
-        boolean active = ID.equals(activeId);
+    public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
+        focused = focus.contains(PANE);
+        boolean active = inUse.contains(PANE);
         threads = ThreadsByPath.of(
                 model.repoView().commitFiles().map(CommitFilesView::threads).getOrElse(List.empty()));
         filter = FileFilterUpdate.shown(model);

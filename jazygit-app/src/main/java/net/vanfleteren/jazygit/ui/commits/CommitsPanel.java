@@ -11,6 +11,8 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.git.history.History;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
@@ -18,9 +20,11 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
@@ -41,6 +45,12 @@ import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
 public class CommitsPanel {
 
     public static final String ID = Scopes.COMMITS.id();
+
+    /**
+     * The pane, as the focus is on it.
+     */
+    public static final PaneId PANE = Scopes.COMMITS.pane();
+
     private static final int INITIALS_WIDTH = 2;
     private static final Pattern LETTER = Pattern.compile("\\X");
 
@@ -160,20 +170,37 @@ public class CommitsPanel {
         List<Integer> line = node.joins().appendAll(node.opens()).append(node.column());
         int reach = line.max().get();
         int width = line.appendAll(node.passing()).max().get() + 1;
-        return List.range(0, width)
-                .map(at -> rail(node, reach, at) + (at >= node.column() && at < reach ? "─" : " "))
-                .mkString();
+        // Which columns have a rail going up and which one going down, looked up once for the row rather than in
+        // the rails for each column: a graph can be hundreds of rails wide.
+        boolean[] up = columns(width, node.passing().appendAll(node.joins()));
+        boolean[] down = columns(width, node.passing().appendAll(node.opens()));
+        return IntStream.range(0, width)
+                .mapToObj(
+                        at -> rail(node, reach, at, up[at], down[at]) + (at >= node.column() && at < reach ? "─" : " "))
+                .collect(Collectors.joining());
+    }
+
+    /**
+     * For each of the {@code width} columns, whether it is one of {@code rails}.
+     */
+    private static boolean[] columns(int width, List<Integer> rails) {
+        boolean[] on = new boolean[width];
+        for (int at : rails) {
+            on[at] = true;
+        }
+        return on;
     }
 
     /**
      * The rail in column {@code at} of the row of {@code node}, whose line reaches to the column {@code reach}.
+     *
+     * @param up   whether a rail comes in from above in the column
+     * @param down whether a rail goes on below in the column
      */
-    private static String rail(CommitGraph.Node node, int reach, int at) {
+    private static String rail(CommitGraph.Node node, int reach, int at, boolean up, boolean down) {
         if (at == node.column()) {
             return node.commit().isMerge() ? "◎" : "○";
         }
-        boolean up = node.passing().contains(at) || node.joins().contains(at);
-        boolean down = node.passing().contains(at) || node.opens().contains(at);
         if (at < node.column() || at > reach) {
             return up ? "│" : " ";
         }
@@ -203,17 +230,17 @@ public class CommitsPanel {
     }
 
     /**
-     * @param focusedId the id of the currently focused left pane, as reported by
-     *                  {@code runner().focusManager().focusedId()}
+     * The pane while {@code pane} has the focus, and is in use.
      */
-    public Panel render(Model model, String focusedId) {
-        return render(model, focusedId, focusedId);
+    public Panel render(Model model, PaneId pane) {
+        return render(model, Option.of(pane), Option.of(pane));
     }
 
     /**
-     * @param activeId the id of the left pane in use, whose highlighted row shows
+     * @param focus what has the focus, if anything
+     * @param inUse the left pane in use, whose highlighted row shows
      */
-    public Panel render(Model model, String focusedId, String activeId) {
+    public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
         Option<CommitSearch> search = model.repoView().commitSearch();
         AheadView ahead = new AheadView(
@@ -233,8 +260,8 @@ public class CommitsPanel {
                                 searching ? foundRows(commits, copied) : rows(CommitGraph.layout(commits), copied),
                                 commits,
                                 ahead)),
-                ID.equals(focusedId),
-                ID.equals(activeId),
+                focus.contains(PANE),
+                inUse.contains(PANE),
                 Pane.title(ahead.title(
                         search.map(CommitsPanel::title).getOrElse(() -> Messages.get("panel.commits.title")))),
                 typing.map(searchLine::field),
@@ -278,7 +305,7 @@ public class CommitsPanel {
      */
     static String title(CommitSearch search) {
         return search.results().toOption().exists(found -> found.size() >= History.MAX_COMMITS)
-                ? Messages.get("panel.commits.titleSearchCapped", search.text(), History.MAX_COMMITS)
+                ? Messages.get("panel.commits.titleSearchCapped", search.text(), String.valueOf(History.MAX_COMMITS))
                 : Messages.get("panel.commits.titleSearch", search.text());
     }
 

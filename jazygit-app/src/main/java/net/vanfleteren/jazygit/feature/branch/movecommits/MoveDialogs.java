@@ -117,9 +117,9 @@ public final class MoveDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(CommitsPanel.ID, new PickDialog<>(TARGET, dispatch)),
-                PopupSlot.returningTo(CommitsPanel.ID, new TextInputDialog<>(NAME, dispatch)),
-                PopupSlot.returningTo(CommitsPanel.ID, new PickDialog<>(BASE, dispatch)),
-                PopupSlot.returningTo(CommitsPanel.ID, new ChoiceDialog<>(PUSHED, dispatch)));
+                PopupSlot.returningTo(CommitsPanel.PANE, new PickDialog<>(TARGET, dispatch)),
+                PopupSlot.returningTo(CommitsPanel.PANE, new TextInputDialog<>(NAME, dispatch)),
+                PopupSlot.returningTo(CommitsPanel.PANE, new PickDialog<>(BASE, dispatch)),
+                PopupSlot.returningTo(CommitsPanel.PANE, new ChoiceDialog<>(PUSHED, dispatch)));
     }
 }

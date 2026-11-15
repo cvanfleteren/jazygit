@@ -30,7 +30,7 @@ public interface Checks {
 
     /**
      * The builds on the commits of {@code branch} of the repository, some commits at a time, the newest first: from
-     * {@code after}, where the commits read before end, or from its tip without (ADR 130). None when the branch is not
+     * {@code after}, where the commits read before end, or from its tip without (ADR 131). None when the branch is not
      * on GitHub.
      */
     Either<GhError, Option<BuildsPage>> builds(String branch, Option<String> after);

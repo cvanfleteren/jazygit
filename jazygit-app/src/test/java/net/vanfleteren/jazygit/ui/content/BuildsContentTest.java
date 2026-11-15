@@ -38,7 +38,7 @@ import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 /**
- * Showing the builds of a local branch on GitHub in place of its log, read some commits at a time (ADR 130).
+ * Showing the builds of a local branch on GitHub in place of its log, read some commits at a time (ADR 131).
  */
 class BuildsContentTest {
 
@@ -87,7 +87,7 @@ class BuildsContentTest {
     }
 
     private static Shown content(Model model) {
-        return ContentView.of(model, BranchesPanel.ID);
+        return ContentView.of(model, BranchesPanel.PANE);
     }
 
     @Test
@@ -294,10 +294,10 @@ class BuildsContentTest {
                 .model();
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, BranchesPanel.ID))) {
-            int narrow = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.ID), 60, 40));
-            int wide = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.ID), 120, 40));
-            int again = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.ID), 60, 40));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, BranchesPanel.PANE))) {
+            int narrow = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.PANE), 60, 40));
+            int wide = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.PANE), 120, 40));
+            int again = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.PANE), 60, 40));
             assertTrue(narrow > 0 && narrow < 60, String.valueOf(narrow));
             assertTrue(wide > narrow + 40, "the chart follows the width of the area: " + narrow + " then " + wide);
             assertEquals(narrow, again);

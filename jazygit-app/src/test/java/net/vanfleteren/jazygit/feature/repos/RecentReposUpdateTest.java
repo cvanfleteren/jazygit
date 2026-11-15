@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -139,7 +140,7 @@ class RecentReposUpdateTest {
         Path current = repo("current");
         Path other = repo("other");
         InMemory recent = new InMemory(current, other);
-        Landing landing = new Landing(BranchesTab.WORKTREES, Option.of("branches"));
+        Landing landing = new Landing(BranchesTab.WORKTREES, Option.of(new PaneId("branches")));
         java.util.List<Tuple2<Path, Landing>> switched = new ArrayList<>();
 
         Object msg = new RecentReposCmd.SwitchTo(other.toString(), landing)

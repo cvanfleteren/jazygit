@@ -19,6 +19,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.settings.DiffLook;
+import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
@@ -54,9 +56,9 @@ public final class ContentPanel {
     }
 
     /**
-     * @param focus called with the id of a focusable area that is clicked, to give it the focus
+     * @param focus called with a focusable area that is clicked, to give it the focus
      */
-    public ContentPanel(Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<String> focus) {
+    public ContentPanel(Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<Focus> focus) {
         this(styles, leaveScrollArea, focus, msg -> {});
     }
 
@@ -64,76 +66,80 @@ public final class ContentPanel {
      * @param dispatch receives where the user scrolled an area to, on the render thread
      */
     public ContentPanel(
-            Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
+            Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
         this.styles = styles;
         areas = List.of(ContentArea.values())
                 .toLinkedMap(area -> area, area -> new ScrollArea(area, leaveScrollArea, focus, dispatch));
     }
 
     /**
-     * Whether {@code id} is an area of the content panel that can have the focus, rather than a pane.
+     * The area of the content panel with id {@code id}, which can have the focus, if it is one rather than a pane.
      */
-    public static boolean isArea(String id) {
-        return ContentArea.focusable(id).isDefined();
+    public static Option<AreaId> areaWithId(String id) {
+        return ContentArea.focusable(id).map(ContentArea::id);
     }
 
     /**
-     * The pane that gets the focus back when Escape, or Left at its left edge, is pressed in the area with id
-     * {@code areaId}, if that is an area: the pane whose highlighted row it shows.
+     * The pane that gets the focus back when Escape, or Left at its left edge, is pressed in the area {@code focus},
+     * if that is an area: the pane whose highlighted row it shows.
      */
-    public Option<PaneId> paneOfArea(Model model, String areaId) {
-        return ContentArea.focusable(areaId).map(area -> area.pane(model));
+    public Option<PaneId> paneOfArea(Model model, Focus focus) {
+        return focus instanceof AreaId area ? ContentArea.of(area).map(shown -> shown.pane(model)) : Option.none();
     }
 
     /**
-     * The id of the area that shows what the pane {@code paneId} has highlighted, to move the focus into:
-     * the staged diff if it shows anything, else the unstaged one, the commit or the log; none while it shows nothing,
-     * or only a note, which the focus is not moved into (ADR 117).
+     * The area that shows what the pane {@code pane} has highlighted, to move the focus into: the staged diff if it
+     * shows anything, else the unstaged one, the commit or the log; none while it shows nothing, or only a note, which
+     * the focus is not moved into (ADR 117).
      */
-    public Option<String> areaOfPane(Model model, String paneId) {
-        return shownOf(model, paneId)
-                .find(area -> area != ContentArea.FILE_NOTE)
-                .map(area -> area.id().value());
+    public Option<AreaId> areaOfPane(Model model, PaneId pane) {
+        return shownOf(model, pane).find(area -> area != ContentArea.FILE_NOTE).map(ContentArea::id);
     }
 
     /**
-     * The area to give the focus to when the area with id {@code areaId} has it but no longer shows: the area that shows
-     * what the same pane has highlighted now, as the unstaged diff of a file in place of the staged one of the file
+     * The area to give the focus to when the area {@code focus} has it but no longer shows: the area that shows what
+     * the same pane has highlighted now, as the unstaged diff of a file in place of the staged one of the file
      * highlighted before, or a note in place of a diff (ADR 117). None while the area still shows, or nothing takes its
-     * place.
+     * place, or {@code focus} is not an area.
      */
-    public Option<String> replacing(Model model, String areaId) {
-        return paneOfArea(model, areaId)
-                .filter(pane -> !shownOf(model, pane.value())
-                        .exists(area -> area.id().value().equals(areaId)))
-                .flatMap(pane -> shownOf(model, pane.value()).headOption())
-                .map(area -> area.id().value());
+    public Option<AreaId> replacing(Model model, Focus focus) {
+        return paneOfArea(model, focus)
+                .filter(pane -> !shownOf(model, pane).exists(area -> area.id().equals(focus)))
+                .flatMap(pane -> shownOf(model, pane).headOption())
+                .map(ContentArea::id);
     }
 
     /**
-     * The areas that show what the pane {@code paneId} has highlighted, top to bottom.
+     * The areas that show what the pane {@code pane} has highlighted, top to bottom.
      */
-    private static List<ContentArea> shownOf(Model model, String paneId) {
-        return ContentView.of(model, paneId)
+    private static List<ContentArea> shownOf(Model model, PaneId pane) {
+        return ContentView.of(model, pane)
                 .areas()
                 .map(Shown.Area::area)
-                .filter(area -> area.pane(model).value().equals(paneId));
+                .filter(area -> area.pane(model).equals(pane));
     }
 
     /**
-     * What goes with the pane that has the focus, {@code focusedId}; while a popup has it, what goes with the
-     * pane the popup was opened from. That holds also in the frame a popup closes in, as it still has the focus
-     * until the focus is given back.
+     * What goes with the pane that has the focus, {@code focus}, as {@link #render(Model, Option)} says.
      */
-    public StyledElement<?> render(Model model, String focusedId) {
-        tabbableWhileIn(focusedId, model);
-        return column(element(ContentView.of(model, focusedId), model, focusedId));
+    public StyledElement<?> render(Model model, Focus focus) {
+        return render(model, Option.of(focus));
+    }
+
+    /**
+     * What goes with the pane that has the focus, {@code focus}; while a popup has it, what goes with the pane the
+     * popup was opened from. That holds also in the frame a popup closes in, as it still has the focus until the focus
+     * is given back. Nothing has the focus before the first frame.
+     */
+    public StyledElement<?> render(Model model, Option<Focus> focus) {
+        tabbableWhileIn(focus, model);
+        return column(element(ContentView.of(model, focus), model, focus));
     }
 
     /**
      * How {@code shown} is drawn: a message in a panel, or the areas, where the model has them scrolled to.
      */
-    private Element element(Shown shown, Model model, String focusedId) {
+    private Element element(Shown shown, Model model, Option<Focus> focus) {
         return switch (shown) {
             case Shown.Message(String title, String content, Tone tone) ->
                 panel(
@@ -143,10 +149,9 @@ public final class ContentPanel {
                                     case ERROR -> text(content).addClass(Theme.Classes.ERROR);
                                 })
                         .fill();
-            case Shown.Area area -> area(area.area()).show(model, focusedId, area, this::bodyDrawn, styles);
+            case Shown.Area area -> area(area.area()).show(model, focus, area, this::bodyDrawn, styles);
             case Shown.Stacked(List<Shown.Area> stacked) ->
-                column(stacked.<Element>map(area -> element(area, model, focusedId))
-                                .toJavaArray(Element[]::new))
+                column(stacked.<Element>map(area -> element(area, model, focus)).toJavaArray(Element[]::new))
                         .fill();
         };
     }
@@ -187,12 +192,13 @@ public final class ContentPanel {
     }
 
     /**
-     * Lets Tab move between the areas only while one of them, {@code focusedId}, has the focus, or had it
+     * Lets Tab move between the areas only while one of them, {@code focus}, has the focus, or had it
      * before a popup took it: the area then takes the focus back when the popup closes, as from the popup of a review
      * comment (ADR 60).
      */
-    private void tabbableWhileIn(String focusedId, Model model) {
-        boolean inContent = isArea(focusedId) || model.shownPane().exists(ContentPanel::isArea);
+    private void tabbableWhileIn(Option<Focus> focus, Model model) {
+        boolean inContent =
+                focus.exists(AreaId.class::isInstance) || model.shownPane().exists(AreaId.class::isInstance);
         areas.values().forEach(area -> area.tabbable(inContent));
     }
 

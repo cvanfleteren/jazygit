@@ -28,6 +28,9 @@ import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Focus;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -157,13 +160,14 @@ class JazygitAppPilotTest {
         ContentPanel content =
                 new ContentPanel(Theme.SpanStyles.NONE, () -> keeper.get().leaveScrollArea());
         keeper.set(new FocusKeeper(() -> runner.get().runner(), () -> model, content, new Popups(msg -> {}), () -> {}));
-        FilesPanel filesPanel = new FilesPanel(msg -> {}, () -> keeper.get().openContent(FilesPanel.ID));
+        FilesPanel filesPanel = new FilesPanel(msg -> {}, () -> keeper.get().openContent(FilesPanel.PANE));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> {
-            String focusedId = runner.get() == null ? null : keeper.get().focusedId();
+            Option<Focus> focus =
+                    runner.get() == null ? Option.none() : keeper.get().focus();
             return row(
-                    filesPanel.render(model, focusedId).percent(30),
-                    content.render(model, focusedId).fill());
+                    filesPanel.render(model, focus, panes(focus)).percent(30),
+                    content.render(model, focus).fill());
         })) {
             runner.set(testRunner);
             SettledPilot.focus(testRunner, FilesPanel.ID);
@@ -173,11 +177,12 @@ class JazygitAppPilotTest {
             pilot.press(KeyCode.RIGHT);
             pilot.pause();
             assertTrue(
-                    ContentPanel.isArea(keeper.get().focusedId()), keeper.get().focusedId());
+                    keeper.get().focus().exists(AreaId.class::isInstance),
+                    keeper.get().focus().toString());
 
             pilot.press(KeyCode.LEFT);
             pilot.pause();
-            assertEquals(FilesPanel.ID, keeper.get().focusedId());
+            assertEquals(Option.of(FilesPanel.PANE), keeper.get().focus());
 
             pilot.quit();
         }
@@ -192,7 +197,7 @@ class JazygitAppPilotTest {
                 .model();
 
         assertRightEntersAndLeftLeaves(
-                model, CommitsPanel.ID, new CommitsPanel(msg -> {}, () -> {})::render, "commit-changes");
+                model, CommitsPanel.PANE, new CommitsPanel(msg -> {}, () -> {})::render, AreaId.COMMIT);
     }
 
     @Test
@@ -200,7 +205,7 @@ class JazygitAppPilotTest {
         Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
         assertRightEntersAndLeftLeaves(
-                model, BranchesPanel.ID, new BranchesPanel(msg -> {}, tab -> {})::render, "branch-log");
+                model, BranchesPanel.PANE, new BranchesPanel(msg -> {}, tab -> {})::render, AreaId.LOG);
     }
 
     @Test
@@ -218,15 +223,16 @@ class JazygitAppPilotTest {
 
         // The collapsed column draws no pane: only the content, as JazygitApp settles the focus before drawing it.
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> {
-            String focusedId = runner.get() == null ? null : keeper.get().settle(model);
-            return content.render(model, focusedId).fill();
+            Option<Focus> focus =
+                    runner.get() == null ? Option.none() : keeper.get().settle(model);
+            return content.render(model, focus).fill();
         })) {
             runner.set(testRunner);
             SettledPilot.focus(testRunner, CommitsPanel.ID);
             Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
 
-            assertEquals("commit-changes", keeper.get().focusedId());
+            assertEquals(Option.of(AreaId.COMMIT), keeper.get().focus());
 
             pilot.quit();
         }
@@ -236,8 +242,7 @@ class JazygitAppPilotTest {
      * Right in the pane {@code paneId}, which no list in it takes, moves the focus to the area {@code areaId}, as the
      * app's global key handler does, and Left gives it back to the pane.
      */
-    private static void assertRightEntersAndLeftLeaves(
-            Model model, String paneId, java.util.function.BiFunction<Model, String, Panel> pane, String areaId)
+    private static void assertRightEntersAndLeftLeaves(Model model, PaneId paneId, Drawn pane, AreaId areaId)
             throws Exception {
         AtomicReference<ToolkitTestRunner> runner = new AtomicReference<>();
         AtomicReference<FocusKeeper> keeper = new AtomicReference<>();
@@ -246,10 +251,11 @@ class JazygitAppPilotTest {
         keeper.set(new FocusKeeper(() -> runner.get().runner(), () -> model, content, new Popups(msg -> {}), () -> {}));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> {
-            String focusedId = runner.get() == null ? null : keeper.get().focusedId();
+            Option<Focus> focus =
+                    runner.get() == null ? Option.none() : keeper.get().focus();
             return row(
-                    pane.apply(model, focusedId).percent(30),
-                    content.render(model, focusedId).fill());
+                    pane.render(model, focus, panes(focus)).percent(30),
+                    content.render(model, focus).fill());
         })) {
             runner.set(testRunner);
             testRunner
@@ -260,20 +266,35 @@ class JazygitAppPilotTest {
                                     && keeper.get().openFocusedContent()
                             ? EventResult.HANDLED
                             : EventResult.UNHANDLED);
-            SettledPilot.focus(testRunner, paneId);
+            SettledPilot.focus(testRunner, paneId.id());
             Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
 
             pilot.press(KeyCode.RIGHT);
             pilot.pause();
-            assertEquals(areaId, keeper.get().focusedId());
+            assertEquals(Option.of(areaId), keeper.get().focus());
 
             pilot.press(KeyCode.LEFT);
             pilot.pause();
-            assertEquals(paneId, keeper.get().focusedId());
+            assertEquals(Option.of(paneId), keeper.get().focus());
 
             pilot.quit();
         }
+    }
+
+    /**
+     * The pane {@code focus} is on, as the pane in use, if it is on one.
+     */
+    private static Option<PaneId> panes(Option<Focus> focus) {
+        return focus.flatMap(on -> on instanceof PaneId pane ? Option.of(pane) : Option.none());
+    }
+
+    /**
+     * A pane drawn while {@code focus} has the focus, and {@code inUse} is in use.
+     */
+    @FunctionalInterface
+    private interface Drawn {
+        Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse);
     }
 
     @Test
@@ -544,18 +565,21 @@ class JazygitAppPilotTest {
         Supplier<Element> renderer() {
             return () -> {
                 FocusManager focusManager = focusManagerRef.get();
-                String focusedId = focusManager == null ? null : focusManager.focusedId();
-                Panel branchesPane = branches.render(model, focusedId);
+                Option<Focus> focus = focusManager == null
+                        ? Option.none()
+                        : Option.of(focusManager.focusedId()).map(id -> FocusKeeper.focusOf(id, ignored -> false));
+                Option<PaneId> inUse = panes(focus);
+                Panel branchesPane = branches.render(model, focus, inUse);
                 branches.selectionChange(model).forEach(selections::add);
                 return row(
                         column(
                                         StatusPanel.render(model),
-                                        files.render(model, focusedId).percent(25),
+                                        files.render(model, focus, inUse).percent(25),
                                         branchesPane.percent(20),
-                                        commits.render(model, focusedId).percent(30),
-                                        stash.render(model, focusedId).fill())
+                                        commits.render(model, focus, inUse).percent(30),
+                                        stash.render(model, focus, inUse).fill())
                                 .percent(30),
-                        CONTENT.render(model, focusedId).fill());
+                        CONTENT.render(model, focus).fill());
             };
         }
     }

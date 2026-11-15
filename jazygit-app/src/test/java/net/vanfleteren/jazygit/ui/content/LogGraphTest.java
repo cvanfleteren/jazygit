@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import java.time.Instant;
+import java.util.Random;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Fixtures;
@@ -133,5 +134,14 @@ class LogGraphTest {
         assertEquals(
                 List.of(List.of("* first", "| Merge", "| second"), List.of("* first", "| second")),
                 drawn(List.of(commit("f2", "f1", "mm"), commit("f1", "base")), List.of("first", "second")));
+    }
+
+    @Test
+    void drawsRandomHistoriesAsTheReferenceDoes() {
+        List.range(0, 300).forEach(seed -> {
+            List<CommitGraph.Node> nodes =
+                    CommitGraph.layout(CommitGraph.arrange(Fixtures.randomLog(new Random(seed), seed % 3 == 2)));
+            assertEquals(LogGraphReference.gutters(nodes), LogGraph.gutters(nodes), "seed " + seed);
+        });
     }
 }

@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.state.Msg;
 
 /**
  * Reads the builds on some commits of {@code branch} on GitHub, from {@code after} on, or from its tip without (ADR
- * 130). It runs in the background, as it talks to GitHub, which takes seconds.
+ * 131). It runs in the background, as it talks to GitHub, which takes seconds.
  */
 public record LoadBuilds(RemoteBranch branch, Option<String> after) implements Cmd {
 

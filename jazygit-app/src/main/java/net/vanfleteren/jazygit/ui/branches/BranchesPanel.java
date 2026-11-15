@@ -15,6 +15,8 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Focus;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -35,6 +37,11 @@ import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
 public class BranchesPanel {
 
     public static final String ID = Scopes.BRANCHES.id();
+
+    /**
+     * The pane, as the focus is on it.
+     */
+    public static final PaneId PANE = Scopes.BRANCHES.pane();
 
     private static final String TITLE_SEPARATOR = " │ ";
 
@@ -131,19 +138,19 @@ public class BranchesPanel {
     }
 
     /**
-     * @param focusedId the id of the currently focused left pane, as reported by
-     *                  {@code runner().focusManager().focusedId()}
+     * The pane while {@code pane} has the focus, and is in use.
      */
-    public Panel render(Model model, String focusedId) {
-        return render(model, focusedId, focusedId);
+    public Panel render(Model model, PaneId pane) {
+        return render(model, Option.of(pane), Option.of(pane));
     }
 
     /**
-     * @param activeId the id of the left pane in use, whose highlighted row shows
+     * @param focus what has the focus, if anything
+     * @param inUse the left pane in use, whose highlighted row shows
      */
-    public Panel render(Model model, String focusedId, String activeId) {
-        boolean focused = ID.equals(focusedId);
-        boolean active = ID.equals(activeId);
+    public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
+        boolean focused = focus.contains(PANE);
+        boolean active = inUse.contains(PANE);
         // Both are rendered also when they are not shown, to know when they are opened again.
         Option<Panel> divergence = divergenceList.render(divergence(model), focused, active);
         Option<Panel> branchCommits = branchCommitsList.render(model, focused, active);
