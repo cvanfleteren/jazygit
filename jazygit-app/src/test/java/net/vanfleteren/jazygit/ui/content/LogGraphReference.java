@@ -79,13 +79,16 @@ final class LogGraphReference {
      */
     private static String opening(CommitGraph.Node node, List<Integer> rails, int width) {
         int reach = node.opens().max().getOrElse(node.column());
-        return line(
-                width,
-                at -> node.opens().contains((at + 1) / 2) && at % 2 == 1
-                        ? "\\"
-                        : rails.contains(at / 2) && at % 2 == 0
-                                ? "|"
-                                : at > 2 * node.column() && at < 2 * reach - 1 ? "-" : " ");
+        return line(width, at -> {
+            boolean across = at > 2 * node.column() && at < 2 * reach - 1;
+            if (node.opens().contains((at + 1) / 2) && at % 2 == 1) {
+                return "\\";
+            }
+            if (rails.contains(at / 2) && at % 2 == 0) {
+                return across ? "┼" : "|";
+            }
+            return across ? "─" : " ";
+        });
     }
 
     private static String rail(List<Integer> rails, int at) {
