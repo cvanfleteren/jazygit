@@ -162,7 +162,7 @@ class BuildsTextTest {
         assertTrue(header.contains("the build picked, 20m00, 14 Nov 01:00"), header);
         assertFalse(lines.exists(line -> line.contains("· the last build")), lines.mkString("\n"));
         assertEquals(
-                List.of("✓▸abcdef0  14 Nov 01:00  20m00  +16m00  Commit 25"),
+                List.of("✓▸abcdef0  14 Nov 01:00  20m00     +16m00  Commit 25"),
                 lines.filter(line -> line.startsWith("✓▸")));
     }
 
@@ -197,9 +197,21 @@ class BuildsTextTest {
         List<String> lines = drawn(PUBLISH);
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
-        assertEquals("✓ abcdef0  14 Nov 05:00   4m00     +0s  Commit 29", lines.get(header + 1));
+        assertEquals("✓ abcdef0  14 Nov 05:00   4m00        +0s  Commit 29", lines.get(header + 1));
         assertTrue(
                 lines.exists(line -> line.startsWith("✗ abcdef0  13 Nov 20:00   5m00") && line.endsWith("Commit 20")));
+    }
+
+    @Test
+    void aDayOfOneDigitIsAlignedWithOneOfTwo() {
+        // Builds on 13 and 3 November: the day of the second is padded, so the columns after it stay put.
+        List<String> lines =
+                drawn(List.of(build("Publish", 1, "SUCCESS", 240), build("Publish", -240, "SUCCESS", 300)));
+        int header = lines.indexWhere(line -> line.contains("commit   when"));
+
+        assertEquals("  commit   when           time  vs median  title", lines.get(header));
+        assertEquals("✓ abcdef0  13 Nov 01:00   4m00       −30s  Commit 1", lines.get(header + 1));
+        assertEquals("✓ abcdef0   3 Nov 00:00   5m00       +30s  Commit -240", lines.get(header + 2));
     }
 
     /**
@@ -241,9 +253,9 @@ class BuildsTextTest {
                 drawnOnEveryBranch(PUBLISH, new Build.Origin(Option.none(), Option.none(), Option.of(501)));
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
-        assertEquals("    for  commit   when            time  vs median  title", lines.get(header));
-        assertEquals("✓   #501 abcdef0  14 Nov 05:00   4m00     +0s  Commit 29", lines.get(header + 1));
-        assertEquals("✓   –    abcdef0  14 Nov 04:00   4m00     +0s  Commit 28", lines.get(header + 2));
+        assertEquals("    for  commit   when           time  vs median  title", lines.get(header));
+        assertEquals("✓   #501 abcdef0  14 Nov 05:00   4m00        +0s  Commit 29", lines.get(header + 1));
+        assertEquals("✓   –    abcdef0  14 Nov 04:00   4m00        +0s  Commit 28", lines.get(header + 2));
     }
 
     @Test
@@ -252,7 +264,7 @@ class BuildsTextTest {
                 PUBLISH, new Build.Origin(Option.none(), Option.of("feature/a-long-branch"), Option.none()));
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
-        assertEquals("    for           commit   when            time  vs median  title", lines.get(header));
+        assertEquals("    for           commit   when           time  vs median  title", lines.get(header));
         assertTrue(lines.get(header + 1).startsWith("✓   feature/a-lo… abcdef0"), lines.get(header + 1));
     }
 
