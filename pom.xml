@@ -440,12 +440,14 @@
             </modules>
         </profile>
         <!-- ErrorProne, on unless -Derrorprone.skip is given. CI's verify job leaves it out: the package job compiles
-             with it, and in verify it doubles the time the main sources take to compile. -->
+             with it, and in verify it doubles the time the main sources take to compile. On as well for
+             -Derrorprone.skip=false: only true switches it off. -->
         <profile>
             <id>errorprone</id>
             <activation>
                 <property>
-                    <name>!errorprone.skip</name>
+                    <name>errorprone.skip</name>
+                    <value>!true</value>
                 </property>
             </activation>
             <build>
