@@ -2,8 +2,9 @@
 <!-- A module whose sources, poms and dependencies are what an earlier build saw is taken from that build instead of
      built again: its classes, jars and the outcome of its tests and checks.
      Off unless -Dmaven.build.cache.enabled=true, which CI passes; locally Spotless rewrites the sources the cache
-     hashes. CI keeps the cache in ~/.m2/build-cache between runs, and starts a new one when flake.lock changes,
-     as that brings another git for the tests to run. -->
+     hashes. CI keeps the cache in ~/.m2/build-cache between runs, and starts a new one when what the modules don't
+     hash changes: flake.lock for the tests, which brings another git, and the ErrorProne exceptions for the
+     package job's compile. -->
 <cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.4.0"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.4.0 https://maven.apache.org/xsd/build-cache-config-1.4.0.xsd">

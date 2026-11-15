@@ -59,14 +59,14 @@ jobs:
           java-version: '25'
           cache: maven
 
-      # Each run keeps its build cache under a key of its own, and starts from the latest one with the same JDK, git
-      # (flake.lock) and checks; see .mvn/maven-build-cache-config.xml.
+      # Each run keeps its build cache under a key of its own, and starts from the latest one with the same JDK and the
+      # same git for the tests (flake.lock); see .mvn/maven-build-cache-config.xml.
       - name: Restore the build cache
         uses: actions/cache@v6
         with:
           path: ~/.m2/build-cache
-          key: build-cache-verify-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', 'checkstyle.xml', 'errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: build-cache-verify-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', 'checkstyle.xml', 'errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-
+          key: build-cache-verify-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', '.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: build-cache-verify-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', '.mvn/maven-build-cache-config.xml') }}-
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -102,13 +102,14 @@ jobs:
           java-version: '25'
           cache: maven
 
-      # As verify's, but a cache of its own: this build has ErrorProne and no tests.
+      # As verify's, but a cache of its own: this build has ErrorProne and no tests, so it's the ErrorProne exceptions
+      # rather than the git that start a new one.
       - name: Restore the build cache
         uses: actions/cache@v6
         with:
           path: ~/.m2/build-cache
-          key: build-cache-package-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', 'checkstyle.xml', 'errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: build-cache-package-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', 'checkstyle.xml', 'errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-
+          key: build-cache-package-${{ steps.java.outputs.version }}-${{ hashFiles('errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: build-cache-package-${{ steps.java.outputs.version }}-${{ hashFiles('errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-
 
       # Spotless checks the formatting and ErrorProne the main sources as they compile, of the modules the build
       # cache doesn't restore. shade makes the fat jar either way.
