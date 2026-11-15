@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>net.vanfleteren</groupId>
+        <artifactId>jazygit-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>jazygit-ui</artifactId>
+
+    <name>jazygit-ui</name>
+    <description>The views of jazygit, its keymap and its text, drawn with TamboUI</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-state</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-syntax</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.tamboui</groupId>
+            <artifactId>tamboui-toolkit</artifactId>
+        </dependency>
+        <!-- Renders the comments on a pull request. -->
+        <dependency>
+            <groupId>dev.tamboui</groupId>
+            <artifactId>tamboui-toolkit-markdown</artifactId>
+        </dependency>
+        <!-- Renders the review remarks in the diff of a pull request, as lines of text. -->
+        <dependency>
+            <groupId>dev.tamboui</groupId>
+            <artifactId>tamboui-markdown</artifactId>
+        </dependency>
+        <!-- Finds the code blocks of a review remark, which are drawn as wide as their lines. -->
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark</artifactId>
+        </dependency>
+        <!-- Finds the tables of a Markdown file rendered (ADR 103), as GitHub does, which jazygit draws itself.
+             tamboui-markdown brings it at runtime only; its version is commonmark.version, kept equal to tamboui's. -->
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-gfm-tables</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vavr</groupId>
+            <artifactId>vavr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-state</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-git</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-gh</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>dev.tamboui</groupId>
+            <artifactId>tamboui-toolkit</artifactId>
+            <classifier>test-fixtures</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>dev.tamboui</groupId>
+            <artifactId>tamboui-tui</artifactId>
+            <classifier>test-fixtures</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>dev.tamboui</groupId>
+            <artifactId>tamboui-core</artifactId>
+            <classifier>test-fixtures</classifier>
+            <scope>test</scope>
+        </dependency>
+        <!-- Keeps the tests' output free of SLF4J's "no provider" warning. -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- The views the tests draw are shared with the tests of the features and the app. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

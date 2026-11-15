@@ -20,6 +20,35 @@
     </properties>
 
     <dependencies>
+        <!-- The groups of features (ADR 136), and through them everything below. -->
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-changes</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-branches</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-github</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-chrome</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-ui</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-state</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-settings</artifactId>
+        </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>jazygit-process</artifactId>
@@ -33,10 +62,6 @@
             <artifactId>jazygit-gh</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-yaml</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.vavr</groupId>
             <artifactId>vavr</artifactId>
         </dependency>
@@ -44,34 +69,9 @@
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-toolkit</artifactId>
         </dependency>
-        <!-- Renders the comments on a pull request. -->
-        <dependency>
-            <groupId>dev.tamboui</groupId>
-            <artifactId>tamboui-toolkit-markdown</artifactId>
-        </dependency>
-        <!-- Renders the review remarks in the diff of a pull request, as lines of text. -->
-        <dependency>
-            <groupId>dev.tamboui</groupId>
-            <artifactId>tamboui-markdown</artifactId>
-        </dependency>
-        <!-- Finds the code blocks of a review remark, which are drawn as wide as their lines. -->
-        <dependency>
-            <groupId>org.commonmark</groupId>
-            <artifactId>commonmark</artifactId>
-        </dependency>
-        <!-- Finds the tables of a Markdown file rendered (ADR 103), as GitHub does, which jazygit draws itself.
-             tamboui-markdown brings it at runtime only; its version is commonmark.version, kept equal to tamboui's. -->
-        <dependency>
-            <groupId>org.commonmark</groupId>
-            <artifactId>commonmark-ext-gfm-tables</artifactId>
-        </dependency>
         <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-panama-backend</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.electronwill.night-config</groupId>
-            <artifactId>toml</artifactId>
         </dependency>
         <dependency>
             <groupId>info.picocli</groupId>
@@ -81,6 +81,24 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-state</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-ui</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-branches</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
