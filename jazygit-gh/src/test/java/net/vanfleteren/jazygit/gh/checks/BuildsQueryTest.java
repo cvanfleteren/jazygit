@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.gh.process.GhProcess;
 import org.junit.jupiter.api.Test;
 
 /**
- * The builds on the commits of a branch, read some commits at a time (ADR 130).
+ * The builds on the commits of a branch, read some commits at a time (ADR 131).
  */
 class BuildsQueryTest {
 
@@ -30,7 +30,7 @@ class BuildsQueryTest {
 
     private static String commit(String sha, String title, String checks) {
         return """
-                { "oid": "%s", "messageHeadline": "%s",
+                { "oid": "%s", "message": "%s",
                   "statusCheckRollup": { "contexts": { "nodes": [ %s ] } } }""".formatted(sha, title, checks);
     }
 
@@ -53,7 +53,7 @@ class BuildsQueryTest {
                                                 + job(2, "verify / acceptance (1/6)", "FAILURE", 10, 1, "push")
                                                 + ", { \"__typename\": \"StatusContext\" }")
                                 + ", " + commit("bbb", "Older", "")
-                                + ", { \"oid\": \"ccc\", \"messageHeadline\": \"No checks\", \"statusCheckRollup\": null }"))
+                                + ", { \"oid\": \"ccc\", \"message\": \"No checks\", \"statusCheckRollup\": null }"))
                 .get()
                 .get();
 
@@ -102,5 +102,16 @@ class BuildsQueryTest {
     @Test
     void theFirstCallStartsAtTheTip() {
         assertTrue(BuildsQuery.command("main", Option.none()).args().forAll(arg -> !arg.startsWith("after=")));
+    }
+
+    @Test
+    void theTitleIsTheWholeFirstLineOfTheMessage() {
+        String title = "ADR 129: the command log takes the focus, and shows when each operation was done (#488)";
+        BuildsPage page = page(history(
+                        false, commit("aaa", title + "\\n\\nThe body.", job(1, "build", "SUCCESS", 10, 1, "push"))))
+                .get()
+                .get();
+
+        assertEquals(title, page.builds().single().title());
     }
 }

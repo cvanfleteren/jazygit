@@ -30,17 +30,17 @@ import net.vanfleteren.jazygit.json.Decoder;
 
 /**
  * The builds on the commits of a branch, some commits at a time: the workflow runs on each, with their check runs as
- * jobs (ADR 42, 130).
+ * jobs (ADR 42, 131).
  */
 final class BuildsQuery {
 
     /**
-     * The commits read in one call: 100 take 7 to 9 s, close to the 10 s GitHub gives a call (ADR 130).
+     * The commits read in one call: 100 take 7 to 9 s, close to the 10 s GitHub gives a call (ADR 131).
      */
     static final int COMMITS = 25;
 
     /**
-     * The events whose runs build the code; a run started by a comment or an issue does not (ADR 130).
+     * The events whose runs build the code; a run started by a comment or an issue does not (ADR 131).
      */
     static final Set<String> EVENTS =
             HashSet.of("push", "pull_request", "pull_request_target", "merge_group", "workflow_dispatch", "schedule");
@@ -50,13 +50,18 @@ final class BuildsQuery {
             query($owner: String!, $name: String!, $branch: String!, $count: Int!, $after: String) { \
             repository(owner: $owner, name: $name) { ref(qualifiedName: $branch) { target { __typename \
             ... on Commit { history(first: $count, after: $after) { pageInfo { hasNextPage endCursor } \
-            nodes { oid messageHeadline %s } } } } } } }""".formatted(
+            nodes { oid message %s } } } } } } }""".formatted(
                     "statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { %s } } } }"
                             .formatted(CheckFragment.CHECK_RUN_FIELDS));
 
-    // The builds on one commit, the newest first.
+    // The builds on one commit, the newest first. Its title is the first line of its message, as GitHub's
+    // messageHeadline cuts it off at 72 characters with an ellipsis.
     static final Decoder<List<Build>> COMMIT = map3(
-            field("oid", string()), field("messageHeadline", string()), RecentChecksQuery.COMMIT, BuildsQuery::builds);
+            field("oid", string()),
+            field("message", string())
+                    .map(message -> message.lines().findFirst().orElse("")),
+            RecentChecksQuery.COMMIT,
+            BuildsQuery::builds);
 
     // The page of commits of a branch; none in a repository without a commit.
     static final Decoder<Option<BuildsPage>> HISTORY = byField(
