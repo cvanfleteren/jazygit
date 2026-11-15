@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.branches.branch;
 
+import static net.vanfleteren.jazygit.branches.branch.checkout.CheckoutModels.withCheckoutError;
 import static net.vanfleteren.jazygit.state.TestModels.*;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

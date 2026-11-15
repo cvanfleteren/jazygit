@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.branches.branch.merge;
 
+import static net.vanfleteren.jazygit.branches.branch.checkout.CheckoutModels.withCheckoutError;
 import static net.vanfleteren.jazygit.git.StubGit.executed;
 import static net.vanfleteren.jazygit.state.TestModels.*;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;

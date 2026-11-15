@@ -7,9 +7,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.concurrent.Executor;
-import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutCmd;
-import net.vanfleteren.jazygit.changes.commit.MessageEdited;
-import net.vanfleteren.jazygit.changes.commit.MessagePopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.StubGit;
@@ -37,7 +34,6 @@ import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.popup.TextPopup;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.view.Preview;
-import net.vanfleteren.jazygit.ui.text.ErrorText;
 
 /**
  * Builds models for tests: with fixed sample data through {@link Update}, or by running the real
@@ -246,13 +242,6 @@ public final class TestModels {
     }
 
     /**
-     * {@code model} showing that checking out {@code branch} failed, git saying {@code explanation}.
-     */
-    public static Model withCheckoutError(Model model, String branch, String explanation) {
-        return model.fail(new AppError.OperationFailed(CheckoutCmd.CHECKOUT, Option.of(branch), refused(explanation)));
-    }
-
-    /**
      * Git refusing with {@code explanation}.
      */
     public static Failure refused(String explanation) {
@@ -274,13 +263,6 @@ public final class TestModels {
     }
 
     /**
-     * The error {@code model} shows, as the user sees it.
-     */
-    public static Option<String> errorText(Model model) {
-        return model.outcome().error().map(ErrorText::of);
-    }
-
-    /**
      * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
      */
     public static Model switchingBranch(Model model, String branch) {
@@ -293,13 +275,6 @@ public final class TestModels {
      */
     public static Model typed(Model model, String text) {
         return Update.update(model, new PopupMsg.TextEdited(text)).model();
-    }
-
-    /**
-     * {@code model} after the user typed {@code message} in the open {@link MessagePopup}.
-     */
-    public static Model typed(Model model, CommitMessage message) {
-        return Update.update(model, new MessageEdited(message)).model();
     }
 
     /**

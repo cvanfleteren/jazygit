@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.ui.text.ErrorTexts;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -184,7 +185,7 @@ class ForceDeleteTest {
 
         assertEquals(Option.of(new ForceDeleteBranchPopup(FEATURE, 3, false)), asked.popup());
         assertEquals(Option.none(), asked.jobs().busy().get(new BranchRef.Local(FEATURE)));
-        assertEquals(Option.none(), TestModels.errorText(asked));
+        assertEquals(Option.none(), ErrorTexts.errorText(asked));
         assertEquals(
                 List.of("git push origin --delete feature", "git branch --delete -- feature"),
                 asked.outcome().commandLog().flatMap(entry -> entry.commands()).map(ExecutedCommand::line));

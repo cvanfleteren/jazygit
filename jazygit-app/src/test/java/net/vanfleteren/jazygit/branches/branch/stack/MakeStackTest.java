@@ -41,6 +41,7 @@ import net.vanfleteren.jazygit.state.github.StackChange;
 import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.state.operation.Notice;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
+import net.vanfleteren.jazygit.ui.text.ErrorTexts;
 import net.vanfleteren.jazygit.ui.text.NoticeText;
 import org.junit.jupiter.api.Test;
 
@@ -423,8 +424,8 @@ class MakeStackTest {
                 shown.cmds().exists(LoadRepositoryPullRequests.class::isInstance),
                 shown.cmds().toString());
         assertTrue(
-                TestModels.errorText(shown.model()).exists(text -> text.contains("HTTP 404: Not Found")),
-                TestModels.errorText(shown.model()).toString());
+                ErrorTexts.errorText(shown.model()).exists(text -> text.contains("HTTP 404: Not Found")),
+                ErrorTexts.errorText(shown.model()).toString());
     }
 
     @Test

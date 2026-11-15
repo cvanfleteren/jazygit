@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state.operation;
 
 import static net.vanfleteren.jazygit.git.StubGit.executed;
 import static net.vanfleteren.jazygit.state.TestModels.*;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
@@ -10,6 +11,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutModels;
 import net.vanfleteren.jazygit.branches.branch.merge.MergeCmd;
 import net.vanfleteren.jazygit.branches.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.branches.branch.push.PushCmd;
@@ -56,7 +58,7 @@ class OperationUpdateTest {
 
     @Test
     void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
-        Model pushing = TestModels.running(TestModels.withCheckoutError(loaded(), "foo", "boom"), PUSH);
+        Model pushing = TestModels.running(CheckoutModels.withCheckoutError(loaded(), "foo", "boom"), PUSH);
 
         Next next = TestModels.done(pushing, PUSH, succeeded(PUSH, "git push origin feature"));
 
@@ -187,7 +189,7 @@ class OperationUpdateTest {
         Notice.StoppedOnConflicts notice = new Notice.StoppedOnConflicts(Option.of(MERGING), 2);
 
         Next next = Update.update(
-                TestModels.withCheckoutError(loaded(), "foo", "boom"),
+                CheckoutModels.withCheckoutError(loaded(), "foo", "boom"),
                 new OperationMsg.Stopped(MERGE, executed("git merge feature"), notice));
 
         assertEquals(

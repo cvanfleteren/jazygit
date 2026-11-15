@@ -17,6 +17,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicReference;
+import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutModels;
 import net.vanfleteren.jazygit.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.changes.commit.create.CreateCommitCmd;
 import net.vanfleteren.jazygit.changes.stage.StageCmd;
@@ -39,7 +40,7 @@ class CommandLogPanelTest {
 
     @Test
     void showsTheLastOperationError() throws Exception {
-        Model model = TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom");
+        Model model = CheckoutModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom");
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> shown(model))) {
             String screen = RenderedText.of(testRunner, () -> shown(model));
@@ -135,7 +136,7 @@ class CommandLogPanelTest {
 
     @Test
     void keepsTheErrorWhileTheContentPanelIsMaximized() throws Exception {
-        Model model = collapsed(TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom"));
+        Model model = collapsed(CheckoutModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom"));
 
         assertEquals(3, CommandLogPanel.height(model, Option.none()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> shown(model))) {
@@ -176,7 +177,7 @@ class CommandLogPanelTest {
 
     @Test
     void showsTheNewestLinesAndTheErrorInTheRowsItTakes() throws Exception {
-        Model model = TestModels.withCheckoutError(
+        Model model = CheckoutModels.withCheckoutError(
                 TestModels.withLog(
                         TestModels.loaded(SampleData.git()),
                         entry(StageCmd.STAGE, executed("git add -- old.txt", "git add -- new.txt"))),
@@ -215,7 +216,7 @@ class CommandLogPanelTest {
 
     @Test
     void keepsARowForTheErrorWhenTheContentPanelSparesNone() {
-        Model model = TestModels.withCheckoutError(
+        Model model = CheckoutModels.withCheckoutError(
                 TestModels.withLog(
                         TestModels.loaded(SampleData.git()), entry(PushCmd.PUSH, executed("git push origin main"))),
                 "foo",
@@ -229,7 +230,7 @@ class CommandLogPanelTest {
      * wide: as tall as it wraps, and drawn so in that room.
      */
     private static void assertShowsTheEndOfTheError(String explanation, int columns) throws Exception {
-        Model model = TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", explanation);
+        Model model = CheckoutModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", explanation);
         Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, columns));
         int rows = CommandLogPanel.height(model, room);
 
@@ -323,7 +324,7 @@ class CommandLogPanelTest {
     @Test
     void withTheFocusShowsTheWholeErrorWrapped() throws Exception {
         CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
-        Model model = TestModels.withCheckoutError(
+        Model model = CheckoutModels.withCheckoutError(
                 TestModels.loaded(SampleData.git()), "foo", "a  b  c  d  e  f  g  h  i  j  k  l  m  n  o  p END");
         Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 16));
         int rows = panel.focusedHeight(model, room);

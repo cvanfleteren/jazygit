@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.branches.worktree;
 
-import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.typed;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,6 +63,7 @@ import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
+import net.vanfleteren.jazygit.ui.text.ErrorTexts;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import org.junit.jupiter.api.Test;
 
@@ -297,7 +298,7 @@ class WorktreeUpdateTest {
         assertEquals(Option.none(), next.model().popup());
         assertEquals(
                 Option.of("\"v1\" is not a branch, tag or commit"),
-                TestModels.errorText(Update.update(next.model(), new AddWorktreeMsg.StartResolved("v1", Option.none()))
+                ErrorTexts.errorText(Update.update(next.model(), new AddWorktreeMsg.StartResolved("v1", Option.none()))
                         .model()));
     }
 
@@ -340,7 +341,7 @@ class WorktreeUpdateTest {
         assertInstanceOf(AddWorktreeMsg.StartNotResolved.class, msg);
         assertEquals(
                 Option.of("Creating a worktree for v1 failed: fatal: not a git repository"),
-                TestModels.errorText(Update.update(model(), msg).model()));
+                ErrorTexts.errorText(Update.update(model(), msg).model()));
     }
 
     @Test

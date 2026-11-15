@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.branches.branch.rename;
 
-import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.localBranchesRead;
 import static net.vanfleteren.jazygit.state.TestModels.typed;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 

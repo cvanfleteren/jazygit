@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.ui.text.ErrorTexts;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -78,7 +79,7 @@ class InProgressUpdateTest {
 
         assertEquals(Option.none(), next.model().popup(InProgressPopup.class));
         assertEquals(List.of(), next.cmds());
-        assertEquals(Option.of("1 file still has conflicts"), TestModels.errorText(next.model()));
+        assertEquals(Option.of("1 file still has conflicts"), ErrorTexts.errorText(next.model()));
     }
 
     @Test
@@ -148,7 +149,7 @@ class InProgressUpdateTest {
         assertEquals(List.of(), next.cmds());
         assertEquals(
                 Option.of("Checkout of feature failed: a rebase is in progress; continue or abort it first (M)"),
-                TestModels.errorText(next.model()));
+                ErrorTexts.errorText(next.model()));
     }
 
     @Test
@@ -160,6 +161,6 @@ class InProgressUpdateTest {
         assertEquals(List.of(), next.cmds());
         assertEquals(
                 Option.of("Checkout of feature failed: 1 file still has conflicts"),
-                TestModels.errorText(next.model()));
+                ErrorTexts.errorText(next.model()));
     }
 }

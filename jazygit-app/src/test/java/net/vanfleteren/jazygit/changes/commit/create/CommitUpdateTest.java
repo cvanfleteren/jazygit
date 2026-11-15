@@ -1,8 +1,9 @@
 package net.vanfleteren.jazygit.changes.commit.create;
 
-import static net.vanfleteren.jazygit.state.TestModels.errorText;
+import static net.vanfleteren.jazygit.changes.commit.CommitModels.typed;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.typed;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;

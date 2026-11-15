@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutModels;
 import net.vanfleteren.jazygit.branches.branch.rename.RenameBranchPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
@@ -184,10 +185,10 @@ class LocationTemplateTest {
 
     @Test
     void anErrorShownWhileTheTemplateWasReadStays() {
-        Model asked = AddWorktreeUpdate.ask(TestModels.withCheckoutError(model(), "old", "stale"), BRANCH)
+        Model asked = AddWorktreeUpdate.ask(CheckoutModels.withCheckoutError(model(), "old", "stale"), BRANCH)
                 .model();
         assertEquals(Option.none(), asked.outcome().error());
-        Model failed = TestModels.withCheckoutError(asked, "feature", "boom");
+        Model failed = CheckoutModels.withCheckoutError(asked, "feature", "boom");
 
         Model read = Update.update(failed, new AddWorktreeMsg.LocationTemplateRead(BRANCH, false, Option.none()))
                 .model();

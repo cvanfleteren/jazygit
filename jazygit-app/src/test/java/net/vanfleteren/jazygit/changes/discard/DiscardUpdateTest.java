@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.changes.discard;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

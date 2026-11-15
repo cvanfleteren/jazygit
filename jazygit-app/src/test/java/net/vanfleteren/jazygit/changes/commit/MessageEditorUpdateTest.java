@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.changes.commit;
 
+import static net.vanfleteren.jazygit.changes.commit.CommitModels.typed;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;

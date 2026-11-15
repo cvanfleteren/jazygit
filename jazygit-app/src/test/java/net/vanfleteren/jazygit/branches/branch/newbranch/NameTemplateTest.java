@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutModels;
 import net.vanfleteren.jazygit.branches.branch.rename.RenameBranchPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.StubGit;
@@ -84,11 +85,11 @@ class NameTemplateTest {
     @Test
     void anErrorShownWhileTheTemplateWasReadStays() {
         Model requested = Update.update(
-                        TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "old", "stale"),
+                        CheckoutModels.withCheckoutError(TestModels.loaded(SampleData.git()), "old", "stale"),
                         new NewBranchMsg.Requested(MAIN))
                 .model();
         assertEquals(Option.none(), requested.outcome().error());
-        Model failed = TestModels.withCheckoutError(requested, "feature", "boom");
+        Model failed = CheckoutModels.withCheckoutError(requested, "feature", "boom");
 
         Model read = Update.update(failed, new NewBranchMsg.NameTemplateRead(ASKING, Option.of("ART-")))
                 .model();

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.changes.commit.fixup;
 
-import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.failed;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;

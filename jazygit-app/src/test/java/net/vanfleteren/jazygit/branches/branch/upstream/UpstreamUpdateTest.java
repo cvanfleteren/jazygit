@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.branches.branch.upstream;
 
 import static net.vanfleteren.jazygit.state.TestModels.branchesLoaded;
-import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;

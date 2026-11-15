@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.github;
 import static net.vanfleteren.jazygit.github.PullRequestFixtures.*;
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static net.vanfleteren.jazygit.state.TestModels.lastRead;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

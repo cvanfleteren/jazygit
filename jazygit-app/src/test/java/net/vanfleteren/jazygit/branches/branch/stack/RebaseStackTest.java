@@ -55,6 +55,7 @@ import net.vanfleteren.jazygit.state.operation.Notice;
 import net.vanfleteren.jazygit.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
+import net.vanfleteren.jazygit.ui.text.ErrorTexts;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -206,7 +207,7 @@ class RebaseStackTest {
         assertEquals(new StackMsg.StackBehindRemote(12, D, new RemoteBranch("origin", D)), read);
         assertEquals(
                 Option.of("Stack #12 is not rebased: feat/d is behind what was pushed to it; pull it first"),
-                TestModels.errorText(Update.update(behindOrigin(), read).model()));
+                ErrorTexts.errorText(Update.update(behindOrigin(), read).model()));
     }
 
     // feat/d was amended here after it was pushed: it is behind origin, but had what is there.
@@ -249,7 +250,7 @@ class RebaseStackTest {
         assertEquals(
                 Option.of("Stack #12 is not rebased: feat/d is behind what was pushed to it, which it does not follow;"
                         + " set that as its upstream, then pull it"),
-                TestModels.errorText(Update.update(model, read).model()));
+                ErrorTexts.errorText(Update.update(model, read).model()));
     }
 
     @Test
@@ -340,7 +341,7 @@ class RebaseStackTest {
         assertEquals(Option.of(StackRefusal.CHANGES), refusal(dirty, ENTRIES));
         assertEquals(
                 Option.of("Stack #12 is not rebased: the worktree has changes; commit or stash them first"),
-                TestModels.errorText(dirty.fail(plan(dirty, ENTRIES).getLeft())));
+                ErrorTexts.errorText(dirty.fail(plan(dirty, ENTRIES).getLeft())));
     }
 
     @Test
@@ -503,7 +504,7 @@ class RebaseStackTest {
         assertEquals(List.empty(), chosen.cmds());
         assertEquals(
                 Option.of("Stack #12 is not rebased: feat/d is in a merge queue"),
-                TestModels.errorText(chosen.model()));
+                ErrorTexts.errorText(chosen.model()));
     }
 
     // Records the branches it is asked to push.
@@ -604,6 +605,6 @@ class RebaseStackTest {
         assertEquals(List.empty(), chosen.cmds());
         assertEquals(
                 Option.of("Stack #12 is not pushed: #100 is not checked out here"),
-                TestModels.errorText(chosen.model()));
+                ErrorTexts.errorText(chosen.model()));
     }
 }

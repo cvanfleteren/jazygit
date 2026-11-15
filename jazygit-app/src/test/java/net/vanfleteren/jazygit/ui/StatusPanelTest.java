@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutModels;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -81,7 +82,7 @@ class StatusPanelTest {
 
     @Test
     void doesNotShowTheLastOperationError() throws Exception {
-        Model model = TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom");
+        Model model = CheckoutModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom");
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> StatusPanel.render(model));
