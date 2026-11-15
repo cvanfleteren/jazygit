@@ -20,8 +20,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
-import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.branches.branch.commits.BranchCommitsMsg;
+import net.vanfleteren.jazygit.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -29,7 +29,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
@@ -47,6 +46,7 @@ import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.github.PullRequestsPanel;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.stash.StashPanel;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.text.Rows;
@@ -177,14 +177,14 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
         }
 
-        List<net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked> asked = List.ofAll(dispatched)
-                .filter(net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked.class::isInstance)
-                .map(net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked.class::cast);
+        List<net.vanfleteren.jazygit.changes.diff.ExpandMsg.Asked> asked = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.changes.diff.ExpandMsg.Asked.class::isInstance)
+                .map(net.vanfleteren.jazygit.changes.diff.ExpandMsg.Asked.class::cast);
         assertEquals(
                 List.of(
-                        net.vanfleteren.jazygit.feature.diff.ExpandMsg.Toward.ALL,
-                        net.vanfleteren.jazygit.feature.diff.ExpandMsg.Toward.DOWN),
-                asked.map(net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked::toward));
+                        net.vanfleteren.jazygit.changes.diff.ExpandMsg.Toward.ALL,
+                        net.vanfleteren.jazygit.changes.diff.ExpandMsg.Toward.DOWN),
+                asked.map(net.vanfleteren.jazygit.changes.diff.ExpandMsg.Asked::toward));
         assertEquals(List.of(above, above), asked.map(msg -> msg.at().cursor()));
         assertEquals(List.of(area, area), asked.map(msg -> msg.at().area()));
     }
@@ -209,9 +209,9 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).press('o', dev.tamboui.tui.event.KeyModifiers.CTRL);
             SettledPilot.of(testRunner).pause();
         }
-        List<net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled> cycled = List.ofAll(dispatched)
-                .filter(net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled.class::isInstance)
-                .map(net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled.class::cast);
+        List<net.vanfleteren.jazygit.changes.diff.VersionMsg.Cycled> cycled = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.changes.diff.VersionMsg.Cycled.class::isInstance)
+                .map(net.vanfleteren.jazygit.changes.diff.VersionMsg.Cycled.class::cast);
         assertEquals(List.of(removed), cycled.map(msg -> msg.at().cursor()));
 
         Update.Next asked = Update.update(onLine, cycled.head());
@@ -280,7 +280,7 @@ class ContentPanelTest {
         DiffCursorAt at = new DiffCursorAt(
                 area, onBlank.scrolled(area, content), blank, Option.none(), Option.none(), Option.none());
         Update.Next asked =
-                Update.update(onBlank, new net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled(at));
+                Update.update(onBlank, new net.vanfleteren.jazygit.changes.diff.VersionMsg.RenderToggled(at));
         ReadVersion read = (ReadVersion) asked.cmds().head();
         DiffText whole = DiffText.of(header + "@@ -1,41 +1,41 @@\n"
                 + List.rangeClosed(1, 41).map(line::apply).mkString());
@@ -320,7 +320,7 @@ class ContentPanelTest {
         DiffCursorAt at = new DiffCursorAt(
                 area, onLine.scrolled(area, content), removed, Option.none(), Option.none(), Option.none());
         Update.Next asked =
-                Update.update(onLine, new net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled(at));
+                Update.update(onLine, new net.vanfleteren.jazygit.changes.diff.VersionMsg.RenderToggled(at));
         ReadVersion read = (ReadVersion) asked.cmds().head();
         Model rendered = TestModels.done(
                         TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, changes))
@@ -337,9 +337,9 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).press('t', dev.tamboui.tui.event.KeyModifiers.CTRL);
             SettledPilot.of(testRunner).pause();
         }
-        List<net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled> toggled = List.ofAll(dispatched)
-                .filter(net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled.class::isInstance)
-                .map(net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled.class::cast);
+        List<net.vanfleteren.jazygit.changes.diff.VersionMsg.RenderToggled> toggled = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.changes.diff.VersionMsg.RenderToggled.class::isInstance)
+                .map(net.vanfleteren.jazygit.changes.diff.VersionMsg.RenderToggled.class::cast);
         // With the bar of the file at the top, the first block, its first line.
         assertEquals(
                 List.of(new Anchor.OnLine("a.md", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1)),
@@ -365,7 +365,7 @@ class ContentPanelTest {
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(on), Option.none())));
         DiffCursorAt at =
                 new DiffCursorAt(area, onLine.scrolled(area, content), on, Option.none(), Option.none(), Option.none());
-        Update.Next asked = Update.update(onLine, new net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled(at));
+        Update.Next asked = Update.update(onLine, new net.vanfleteren.jazygit.changes.diff.VersionMsg.Cycled(at));
         ReadVersion read = (ReadVersion) asked.cmds().head();
         DiffText whole = DiffText.of(header + "@@ -1,60 +1,60 @@\n"
                 + List.rangeClosed(1, 60).map(line::apply).mkString());
@@ -416,9 +416,9 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
         }
 
-        List<net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked> asked = List.ofAll(dispatched)
-                .filter(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::isInstance)
-                .map(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::cast);
+        List<net.vanfleteren.jazygit.changes.copy.CopyMsg.Asked> asked = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.changes.copy.CopyMsg.Asked.class::isInstance)
+                .map(net.vanfleteren.jazygit.changes.copy.CopyMsg.Asked.class::cast);
         assertEquals(List.of(added), asked.map(msg -> msg.at().cursor()));
         assertEquals(List.of(area), asked.map(msg -> msg.at().area()));
         // v opens a range in the diff of a commit too, which y then copies.
@@ -1552,7 +1552,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
             assertEquals(
                     onThread,
-                    ((net.vanfleteren.jazygit.feature.github.review.ReviewMsg.ResolveAsked) dispatched.getLast())
+                    ((net.vanfleteren.jazygit.github.review.ReviewMsg.ResolveAsked) dispatched.getLast())
                             .at()
                             .cursor());
 
@@ -1564,7 +1564,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
             assertEquals(
                     new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1),
-                    ((net.vanfleteren.jazygit.feature.github.review.ReviewMsg.StartAsked) dispatched.getLast())
+                    ((net.vanfleteren.jazygit.github.review.ReviewMsg.StartAsked) dispatched.getLast())
                             .at()
                             .cursor());
         }
@@ -1593,8 +1593,8 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).press('v');
             SettledPilot.of(testRunner).pause();
             assertEquals(
-                    new net.vanfleteren.jazygit.feature.github.review.ReviewMsg.Refused(
-                            net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why.NOT_ON_LINE),
+                    new net.vanfleteren.jazygit.github.review.ReviewMsg.Refused(
+                            net.vanfleteren.jazygit.github.GitHubError.CannotReview.Why.NOT_ON_LINE),
                     dispatched.getLast());
 
             SettledPilot.of(testRunner).press('k');
@@ -1604,9 +1604,9 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
         }
 
-        List<net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked> asked = List.ofAll(dispatched)
-                .filter(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::isInstance)
-                .map(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::cast);
+        List<net.vanfleteren.jazygit.changes.copy.CopyMsg.Asked> asked = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.changes.copy.CopyMsg.Asked.class::isInstance)
+                .map(net.vanfleteren.jazygit.changes.copy.CopyMsg.Asked.class::cast);
         assertEquals(List.of(line), asked.map(msg -> msg.at().cursor()));
         assertEquals(List.of(area), asked.map(msg -> msg.at().area()));
     }
@@ -1794,7 +1794,7 @@ class ContentPanelTest {
                         Update.update(
                                         Update.update(
                                                         rich,
-                                                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.Opened(
+                                                        new net.vanfleteren.jazygit.changes.diff.CommitFilesMsg.Opened(
                                                                 of, Scopes.BRANCHES.pane()))
                                                 .model(),
                                         new LoadMsg.CommitFilesLoaded(of, List.of(file)))
@@ -1840,7 +1840,7 @@ class ContentPanelTest {
                 0,
                 new net.vanfleteren.jazygit.gh.model.ReviewThread.Id("T1"),
                 net.vanfleteren.jazygit.gh.model.ReviewThread.Rights.ALL);
-        return new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.RemarksLoaded(
+        return new net.vanfleteren.jazygit.changes.diff.CommitFilesMsg.RemarksLoaded(
                 new PrNumber(7),
                 new net.vanfleteren.jazygit.gh.model.ReviewRemarks(
                         net.vanfleteren.jazygit.gh.model.PullRequestDetails.State.OPEN,
@@ -1882,7 +1882,7 @@ class ContentPanelTest {
                                 new Loadable.Loaded<>(
                                         new PullRequestPreview(new GhBranch("main"), "Why", "+fixed\n", false))))));
         PaneId first = PullRequestsPanel.FIRST_PANE;
-        PaneId second = net.vanfleteren.jazygit.keys.Scopes.PR_REVIEW_REQUESTED.pane();
+        PaneId second = net.vanfleteren.jazygit.ui.keys.Scopes.PR_REVIEW_REQUESTED.pane();
 
         // Before a list had the focus, the pull request is that of the first list.
         assertEquals(Option.of(AreaId.PULL_REQUEST), content.areaOfPane(read, first));

@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.ui.text;
 import dev.tamboui.widgets.spinner.SpinnerStyle;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 
 /**
  * Text that depends on the time: how long ago something happened, and the spinner of something that runs.

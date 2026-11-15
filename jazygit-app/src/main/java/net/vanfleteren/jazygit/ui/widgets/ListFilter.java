@@ -7,7 +7,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.Array;
 import io.vavr.control.Option;
 import java.util.Locale;
-import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**

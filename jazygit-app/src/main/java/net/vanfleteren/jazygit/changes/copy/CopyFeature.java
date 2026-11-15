@@ -1,0 +1,16 @@
+package net.vanfleteren.jazygit.changes.copy;
+
+import net.vanfleteren.jazygit.ui.keys.Feature;
+
+/**
+ * Copying what a diff shows.
+ */
+public final class CopyFeature {
+
+    /**
+     * What the app knows of it: its keys and its popups.
+     */
+    public static final Feature FEATURE = Feature.of(CopyAction.ACTION);
+
+    private CopyFeature() {}
+}

@@ -7,7 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.StubGit;

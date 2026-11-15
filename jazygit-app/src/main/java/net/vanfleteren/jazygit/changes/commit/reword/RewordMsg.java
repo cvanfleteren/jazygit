@@ -1,0 +1,19 @@
+package net.vanfleteren.jazygit.changes.commit.reword;
+
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Update;
+
+public sealed interface RewordMsg extends Msg {
+
+    @Override
+    default Update.Next apply(Model model) {
+        return RewordUpdate.update(model, this);
+    }
+
+    /**
+     * The user asked to reword the commit {@code sha}; any commit can be.
+     */
+    record Requested(Sha sha) implements RewordMsg {}
+}

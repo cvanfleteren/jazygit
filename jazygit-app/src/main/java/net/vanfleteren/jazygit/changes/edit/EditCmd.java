@@ -1,0 +1,36 @@
+package net.vanfleteren.jazygit.changes.edit;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
+
+/**
+ * Opens {@code files}, relative to the working tree, in git's editor, with the terminal handed over to it. Once it
+ * is closed, the repository is read again, like after any operation.
+ */
+public record EditCmd(List<String> files) implements OperationCmd {
+
+    public static final Operation EDIT = Operation.of("log.title.edit", "error.edit.failed");
+
+    @Override
+    public Operation operation() {
+        return EDIT;
+    }
+
+    @Override
+    public Option<String> subject() {
+        return Option.of(files.mkString(", "));
+    }
+
+    @Override
+    public Msg run(Env env) {
+        return env.terminal()
+                .handOver(() -> env.git().editor().edit(files))
+                .mapLeft(Failure::of)
+                .fold(this::failed, this::succeeded);
+    }
+}

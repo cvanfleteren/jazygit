@@ -4,7 +4,7 @@ import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
+import net.vanfleteren.jazygit.changes.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import org.junit.jupiter.api.Test;
 

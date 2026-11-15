@@ -16,7 +16,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.Build.Outcome;
-import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 

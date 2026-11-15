@@ -1,0 +1,30 @@
+package net.vanfleteren.jazygit.changes.commit.reword;
+
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.Git;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.process.GitFailure;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.operation.GitOperationCmd;
+import net.vanfleteren.jazygit.state.operation.Operation;
+
+/**
+ * Replaces the message of a commit.
+ */
+public record RewordCmd(Sha sha, CommitMessage message) implements GitOperationCmd {
+
+    public static final Operation REWORD =
+            Operation.of("log.title.reword", "error.reword.failed").waitingForUnfinished();
+
+    @Override
+    public Operation operation() {
+        return REWORD;
+    }
+
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
+        return git.commits().reword(sha, message);
+    }
+}

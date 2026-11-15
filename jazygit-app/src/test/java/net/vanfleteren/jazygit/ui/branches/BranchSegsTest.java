@@ -7,7 +7,7 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
+import net.vanfleteren.jazygit.branches.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PrNumber;

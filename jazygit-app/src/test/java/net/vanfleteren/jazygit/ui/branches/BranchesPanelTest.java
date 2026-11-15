@@ -7,19 +7,18 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
-import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
-import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd;
-import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
-import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
-import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
-import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
-import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamMsg;
-import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
-import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg;
-import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
+import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.branches.branch.commits.BranchCommitsMsg;
+import net.vanfleteren.jazygit.branches.branch.delete.DeleteBranchCmd;
+import net.vanfleteren.jazygit.branches.branch.newbranch.NewBranchMsg;
+import net.vanfleteren.jazygit.branches.branch.pull.PullCmd;
+import net.vanfleteren.jazygit.branches.branch.push.PushCmd;
+import net.vanfleteren.jazygit.branches.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.branches.branch.upstream.UpstreamMsg;
+import net.vanfleteren.jazygit.branches.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.branches.worktree.remove.RemoveWorktreeMsg;
+import net.vanfleteren.jazygit.branches.worktree.switchto.SwitchWorktreeMsg;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.load.*;
@@ -27,6 +26,7 @@ import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -225,7 +225,7 @@ class BranchesPanelTest {
         }
 
         assertEquals(
-                java.util.List.of(new net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Requested(
+                java.util.List.of(new net.vanfleteren.jazygit.branches.branch.rename.RenameBranchMsg.Requested(
                         new BranchName("feature"))),
                 dispatched);
     }
@@ -261,7 +261,7 @@ class BranchesPanelTest {
 
         assertEquals(
                 java.util.List.of(
-                        new net.vanfleteren.jazygit.feature.branch.push.PushMsg.Requested(new BranchName("feature"))),
+                        new net.vanfleteren.jazygit.branches.branch.push.PushMsg.Requested(new BranchName("feature"))),
                 dispatched);
     }
 
@@ -280,7 +280,7 @@ class BranchesPanelTest {
 
         assertEquals(
                 java.util.List.of(
-                        new net.vanfleteren.jazygit.feature.branch.pull.PullMsg.Requested(new BranchName("feature"))),
+                        new net.vanfleteren.jazygit.branches.branch.pull.PullMsg.Requested(new BranchName("feature"))),
                 dispatched);
     }
 
@@ -300,8 +300,8 @@ class BranchesPanelTest {
         assertTrue(
                 dispatched.getFirst()
                                 instanceof
-                                net.vanfleteren.jazygit.feature.help.HelpMsg.Requested(String scopeId, var actions)
-                        && scopeId.equals(net.vanfleteren.jazygit.keys.Scopes.BRANCHES.id())
+                                net.vanfleteren.jazygit.chrome.help.HelpMsg.Requested(String scopeId, var actions)
+                        && scopeId.equals(net.vanfleteren.jazygit.ui.keys.Scopes.BRANCHES.id())
                         && actions.head().isDefined(),
                 dispatched.toString());
     }

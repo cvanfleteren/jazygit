@@ -8,7 +8,7 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.DialogElement;
 import dev.tamboui.widgets.paragraph.Paragraph;
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 

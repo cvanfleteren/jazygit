@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.ui.text;
 
-import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 
 /**
  * What a list shows for data that is still loading or failed to load.

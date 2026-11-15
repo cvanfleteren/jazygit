@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
+import net.vanfleteren.jazygit.changes.fetch.FetchMsg;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 

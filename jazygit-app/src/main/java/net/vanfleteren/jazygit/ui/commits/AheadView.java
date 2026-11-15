@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 
 /**
  * How a log shows which of its commits are not on the base of its branch: the others dimmed, and the count in the

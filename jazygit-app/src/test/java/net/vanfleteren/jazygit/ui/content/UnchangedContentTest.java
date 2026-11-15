@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.diff.VersionMsg;
+import net.vanfleteren.jazygit.changes.diff.VersionMsg;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileContent;

@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchError;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
+import net.vanfleteren.jazygit.branches.branch.BranchError;
+import net.vanfleteren.jazygit.branches.worktree.WorktreeError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;

@@ -13,8 +13,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.timing.CheckProgress;
 import net.vanfleteren.jazygit.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.gh.timing.Eta;
-import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.github.CheckTimes;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 

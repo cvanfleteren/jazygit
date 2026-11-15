@@ -8,7 +8,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.branch.merge.MergeCmd;
+import net.vanfleteren.jazygit.branches.branch.merge.MergeCmd;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.StubGit;

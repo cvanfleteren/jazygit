@@ -6,12 +6,12 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.process.GitError;
-import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Phrase;
 import net.vanfleteren.jazygit.state.preferences.SettingsError;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 
 /**
  * Describes errors to the user. The only place that turns them into text.

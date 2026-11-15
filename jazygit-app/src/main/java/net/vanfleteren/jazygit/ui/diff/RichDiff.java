@@ -30,7 +30,6 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
-import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Expansion;
@@ -39,6 +38,7 @@ import net.vanfleteren.jazygit.state.diff.PlacedRemarks.FileRemarks;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks.LineRemarks;
 import net.vanfleteren.jazygit.state.diff.Rendered;
 import net.vanfleteren.jazygit.syntax.Token;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 

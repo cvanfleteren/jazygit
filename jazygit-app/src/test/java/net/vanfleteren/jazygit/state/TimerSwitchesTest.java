@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
-import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
+import net.vanfleteren.jazygit.changes.fetch.FetchCmd;
+import net.vanfleteren.jazygit.changes.fetch.FetchMsg;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.LoadStatus;

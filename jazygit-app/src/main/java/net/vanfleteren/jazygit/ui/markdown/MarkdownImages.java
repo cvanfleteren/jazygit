@@ -8,9 +8,8 @@ import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.image.MarkdownImage;
 import net.vanfleteren.jazygit.image.Picture;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 
 /**
  * The images of Markdown, which the terminal does not show as such: a picture of one that was read, drawn in half

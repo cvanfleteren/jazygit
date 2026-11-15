@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.ui.text;
 
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.InProgress;
-import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.operation.Notice;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 
 /**
  * Describes notices to the user. The only place that turns them into text.

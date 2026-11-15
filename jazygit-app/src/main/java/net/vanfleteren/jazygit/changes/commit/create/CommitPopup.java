@@ -1,0 +1,29 @@
+package net.vanfleteren.jazygit.changes.commit.create;
+
+import io.vavr.control.Option;
+import lombok.With;
+import net.vanfleteren.jazygit.changes.commit.MessagePopup;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
+
+/**
+ * Asking for the message of a new commit.
+ *
+ * @param message the message as far as it was typed
+ */
+@With
+public record CommitPopup(CommitMessage message) implements MessagePopup {
+
+    /**
+     * Asking for it from scratch.
+     */
+    public CommitPopup() {
+        this(new CommitMessage("", ""));
+    }
+
+    @Override
+    public Option<CreateCommitCmd.Commit> confirm() {
+        // A blank summary keeps the dialog open.
+        CommitMessage stripped = message.stripped();
+        return Option.when(stripped.hasSummary(), () -> new CreateCommitCmd.Commit(stripped));
+    }
+}
