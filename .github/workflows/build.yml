@@ -13,8 +13,8 @@ on:
 permissions:
   contents: read
 
-# The Maven tests and checks run side by side with the acceptance tests, which run the jar built without tests, a
-# share of them on each of six machines.
+# The Maven tests run side by side with the acceptance tests, which run the jar built without tests, a share of them
+# on each of six machines. The job that builds that jar also checks the code: Spotless, ErrorProne and checkstyle.
 # verify doesn't wait for that jar: Maven can't take up a build from another job (the resources it copies again
 # make it compile the modules after them again), so it would only start later and build all the same.
 jobs:
@@ -68,10 +68,11 @@ jobs:
           nix profile install --inputs-from . nixpkgs#git
           echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
 
-      - name: Build, test and check
+      # The package job checks the code, so the tests here don't wait for ErrorProne, Spotless or checkstyle.
+      - name: Build and test
         run: |
           git --version
-          ./mvnw --batch-mode --no-transfer-progress verify
+          ./mvnw --batch-mode --no-transfer-progress verify -Derrorprone.skip -Dspotless.check.skip -Dcheckstyle.skip
 
   package:
     needs: changes
@@ -88,7 +89,8 @@ jobs:
           java-version: '25'
           cache: maven
 
-      - name: Build the jar
+      # Spotless checks the formatting and ErrorProne the main sources as they compile.
+      - name: Build and check the jar
         run: ./mvnw --batch-mode --no-transfer-progress -DskipTests package
 
       - name: Keep the fat jar
@@ -98,6 +100,10 @@ jobs:
           path: jazygit-app/target/jazygit-*-fat.jar
           if-no-files-found: error
           retention-days: 1
+
+      # Once the jar is on its way to the acceptance tests, so they don't wait for it.
+      - name: Checkstyle
+        run: ./mvnw --batch-mode --no-transfer-progress checkstyle:check
 
   acceptance:
     needs: package
