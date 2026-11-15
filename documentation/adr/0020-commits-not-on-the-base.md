@@ -75,3 +75,5 @@ all branches at once with `for-each-ref --format=%(ahead-behind:<base>)`.
 
 Amended by ADR 72: the base of a branch with an open pull request is the base of that pull request on GitHub, or
 the branch below it in its stack, before `gh-merge-base`.
+
+Amended by ADR 130: the log reads up to 3000 commits, and the title says `3000+ ahead` past that.

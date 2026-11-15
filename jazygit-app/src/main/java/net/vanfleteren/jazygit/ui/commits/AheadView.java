@@ -37,7 +37,8 @@ public record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance, bool
      * @param more whether there are more than {@code ahead} commits ahead
      */
     private static String title(String title, int ahead, boolean more, int behind, BranchRef base) {
-        String aheadText = more ? Messages.get("panel.ahead.more", History.MAX_COMMITS) : String.valueOf(ahead);
+        String aheadText =
+                more ? Messages.get("panel.ahead.more", String.valueOf(History.MAX_COMMITS)) : String.valueOf(ahead);
         if (behind == 0) {
             return Messages.get("panel.ahead", title, aheadText, base.name());
         }

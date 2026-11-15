@@ -406,7 +406,7 @@ class CommitsPanelTest {
 
         assertEquals("Commits: /fix", CommitsPanel.title(search));
         assertEquals(
-                "Commits: /fix (first 300)",
+                "Commits: /fix (first 3000)",
                 CommitsPanel.title(search.withResults(
                         new Loadable.Loaded<>(List.range(0, History.MAX_COMMITS).map(i -> commit("s" + i))))));
     }
