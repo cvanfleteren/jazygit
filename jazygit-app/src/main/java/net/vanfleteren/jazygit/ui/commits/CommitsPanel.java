@@ -114,21 +114,10 @@ public class CommitsPanel {
         return selected == 0 ? 0 : LoadableList.Reselect.following(Commit::sha).apply(previous, next, selected);
     }
 
-    public static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes) {
-        return rows(nodes, Option.none());
-    }
-
-    /**
-     * @param copied the commit copied to cherry-pick, whose sha stands out
-     */
-    public static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes, Option<Sha> copied) {
-        return nodes.map(node -> row(node, copied.contains(node.commit().sha())));
-    }
-
     /**
      * The items of {@code commits}, a log, on the rails of its graph, with the commits on the base dimmed and the
-     * fork point marked, as {@link #marked} has them. Each row, and the graph down to it, is only worked out once the
-     * list draws it: a log of thousands of commits then lays out only what is scrolled to. A row is one line.
+     * fork point marked. Each row, and the graph down to it, is only worked out once the list draws it: a log of
+     * thousands of commits then lays out only what is scrolled to. A row is one line.
      *
      * @param copied the commit copied to cherry-pick, whose sha stands out
      */
@@ -139,19 +128,12 @@ public class CommitsPanel {
     }
 
     /**
-     * The items of the commits a search found, as {@link #foundRows} has them, each row worked out once it is drawn.
+     * The items of the commits a search found, without the rails of merges: with commits left out, they no longer
+     * join up. A merge is still a {@code ◎}. Each row is worked out once it is drawn.
      */
-    private static List<LoadableList.Item> foundItems(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
+    static List<LoadableList.Item> foundItems(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
         return commits.map(commit ->
                 LoadableList.Item.later(1, () -> marked(foundRow(commit, copied), commit.sha(), ahead)));
-    }
-
-    /**
-     * The rows of the commits a search found, without the rails of merges: with commits left out, they no longer
-     * join up. A merge is still a {@code ◎}.
-     */
-    static List<LoadableList.Row> foundRows(List<Commit> commits, Option<Sha> copied) {
-        return commits.map(commit -> foundRow(commit, copied));
     }
 
     private static LoadableList.Row foundRow(Commit commit, Option<Sha> copied) {
@@ -299,12 +281,9 @@ public class CommitsPanel {
     }
 
     /**
-     * {@code rows}, those of {@code commits}, with the commits on the base dimmed and the fork point marked.
+     * {@code row}, that of the commit {@code sha}, dimmed when the commit is on the base, and marked when it is the
+     * fork point.
      */
-    public static List<LoadableList.Row> marked(List<LoadableList.Row> rows, List<Commit> commits, AheadView ahead) {
-        return rows.zipWith(commits, (row, commit) -> marked(row, commit.sha(), ahead));
-    }
-
     private static LoadableList.Row marked(LoadableList.Row row, Sha sha, AheadView ahead) {
         // The mark goes before the message, the last piece of the row.
         LoadableList.Row labelled = ahead.mark(sha)

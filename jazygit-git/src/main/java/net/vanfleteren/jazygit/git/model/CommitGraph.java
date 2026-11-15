@@ -240,8 +240,9 @@ public final class CommitGraph {
     public record Meet(int rail, int into) {}
 
     /**
-     * The rails below the nodes laid out so far, by column, with the commit each waits for. The rails are an {@link Array}, as they are looked up by column; a row is worked out on arrays
-     * of its own, as a graph can be hundreds of rails wide and each row looks at all of them.
+     * The rails below the nodes laid out so far, by column, with the commit each waits for. The rails are an
+     * {@link Array}, as they are looked up by column; a row is worked out on arrays of its own, as a graph can be
+     * hundreds of rails wide and each row looks at all of them.
      */
     private record Laid(Array<Option<Sha>> rails) {
 
