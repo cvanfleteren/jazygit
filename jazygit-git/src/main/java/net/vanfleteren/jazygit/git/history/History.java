@@ -24,7 +24,7 @@ public interface History {
     /**
      * How many commits a log or a search reads at most.
      */
-    int MAX_COMMITS = 300;
+    int MAX_COMMITS = 3000;
 
     /**
      * The log of HEAD, newest first, from {@code head}, the commit the status read last says it is at (ADR 49).

@@ -52,7 +52,7 @@ class AheadViewTest {
                 "Commits · 2 ahead of origin/main",
                 new AheadView(Option.of(AHEAD), Option.none(), true).title("Commits"));
         assertEquals(
-                "Commits · 300+ ahead of origin/main",
+                "Commits · 3000+ ahead of origin/main",
                 new AheadView(Option.of(MORE), Option.none(), false).title("Commits"));
         assertEquals("Commits", new AheadView(Option.none(), Option.none(), true).title("Commits"));
     }

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import java.time.Instant;
+import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 class CommitGraphTest {
@@ -228,5 +229,41 @@ class CommitGraphTest {
                         node(g, 1, List.of(0)),
                         node(f, 0, List.empty())),
                 CommitGraph.layout(CommitGraph.arrange(List.of(m, g, f))));
+    }
+
+    @Test
+    void arrangesAndLaysOutRandomHistoriesAsTheReferenceDoes() {
+        // Histories of all shapes, as git log lists them (every commit before its parents), and with commits out of
+        // that order, as git log lists them when clocks were off; some merges have a parent the list leaves out.
+        List.range(0, 400).forEach(seed -> {
+            List<Commit> log = randomLog(new Random(seed), seed % 3 == 2);
+            List<Commit> arranged = CommitGraph.arrange(log);
+            assertEquals(CommitGraphReference.arrange(log), arranged, "seed " + seed);
+            assertEquals(CommitGraphReference.layout(arranged), CommitGraph.layout(arranged), "seed " + seed);
+        });
+    }
+
+    /**
+     * A log of up to 60 commits, newest first, where about one in four is a merge.
+     *
+     * @param shuffled whether some commits come before one of their children
+     */
+    private static List<Commit> randomLog(Random random, boolean shuffled) {
+        int size = 1 + random.nextInt(60);
+        List<Commit> log = List.range(0, size).map(at -> {
+            int parents = at == size - 1 ? 0 : random.nextInt(4) == 0 ? 2 + random.nextInt(2) : 1;
+            List<String> shas = List.range(0, parents)
+                    .map(parent -> random.nextInt(10) == 0
+                            ? "gone" + at + "-" + parent
+                            : "c" + (at + 1 + random.nextInt(Math.min(size - at - 1, 1 + random.nextInt(12)))));
+            return commit("c" + at, shas.toJavaArray(String[]::new));
+        });
+        return shuffled
+                ? List.range(0, size / 4).foldLeft(log, (swapped, swap) -> {
+                    int at = random.nextInt(size);
+                    int other = random.nextInt(size);
+                    return swapped.update(at, swapped.get(other)).update(other, swapped.get(at));
+                })
+                : log;
     }
 }
