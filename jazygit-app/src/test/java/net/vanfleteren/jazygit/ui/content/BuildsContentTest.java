@@ -40,9 +40,11 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.BranchChecksMsg;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.state.load.AheadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
+import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.state.view.Workflow;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
@@ -428,6 +430,22 @@ class BuildsContentTest {
         assertEquals(
                 Option.of(new BuildsMsg.PickRequested()),
                 keys.handle(Scopes.BUILDS, KeyEvent.ofChar('w'), Option.none()));
+        assertEquals(
+                Option.of(new AheadMsg.Toggled()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('b'), Option.none()));
+        assertEquals(
+                Option.of(new BuildsMsg.Closed()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('B'), Option.none()));
+    }
+
+    @Test
+    void aTabClickedShowsItsWorkflowAndBInTheBuildsShowsTheLog() {
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+        BuildsView.Pipeline lint = new BuildsView.Pipeline("Markdown", "pull_request");
+
+        Model clicked = Update.update(shown, new ViewMsg.BuildsTabClicked(lint)).model();
+        Model closed = Update.update(clicked, new BuildsMsg.Closed()).model();
+
+        assertEquals(Option.of(lint), clicked.repoView().builds().get().selected());
+        assertEquals(Option.none(), closed.repoView().builds());
     }
 
     @Test

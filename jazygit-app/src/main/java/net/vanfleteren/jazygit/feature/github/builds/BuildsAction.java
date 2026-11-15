@@ -13,7 +13,8 @@ public final class BuildsAction {
             keys -> keys.add(Scopes.BRANCHES, Binding.onSelected("B", "help.branches.builds", BuildsMsg.Toggled::new))
                     .add(Scopes.BUILDS, Binding.always("[", "help.builds.previous", () -> new BuildsMsg.Stepped(-1)))
                     .add(Scopes.BUILDS, Binding.always("]", "help.builds.next", () -> new BuildsMsg.Stepped(1)))
-                    .add(Scopes.BUILDS, Binding.always("w", "help.builds.pick", BuildsMsg.PickRequested::new)),
+                    .add(Scopes.BUILDS, Binding.always("w", "help.builds.pick", BuildsMsg.PickRequested::new))
+                    .add(Scopes.BUILDS, Binding.always("B", "help.builds.close", BuildsMsg.Closed::new)),
             BuildsDialog::popups);
 
     private BuildsAction() {}

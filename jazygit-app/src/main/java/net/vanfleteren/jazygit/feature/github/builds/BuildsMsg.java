@@ -29,6 +29,11 @@ public sealed interface BuildsMsg extends Msg {
     record Toggled(BranchName branch) implements BuildsMsg {}
 
     /**
+     * The user asked, in the builds, for the log of the branch again.
+     */
+    record Closed() implements BuildsMsg {}
+
+    /**
      * The commits of {@code branch} on GitHub from {@code after} on were read, with their builds; none when it is
      * not on GitHub.
      */

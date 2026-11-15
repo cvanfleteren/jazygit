@@ -2,7 +2,10 @@ package net.vanfleteren.jazygit.ui.content;
 
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.Build.Outcome;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -37,6 +40,37 @@ final class TabStrip {
                 .map(index -> tab(tabs.get(index), index == shown, styles))
                 .intersperse(Span.styled(BETWEEN, styles.of(Theme.Classes.DIM)));
         return Line.from(left.appendAll(middle).appendAll(right).toJavaList());
+    }
+
+    /**
+     * The index of the tab at {@code column} of the line of {@code tabs}, {@code shown} the one highlighted, in
+     * {@code width} columns: of a tab, or of the first one left out past a count. None between the tabs.
+     */
+    static Option<Integer> at(List<Tab> tabs, int shown, int width, int column) {
+        Window window = fit(tabs, shown, width, new Window(shown, shown));
+        List<Tuple2<Integer, Option<Integer>>> left = window.from() > 0
+                ? List.of(
+                        Tuple.of(
+                                TextWidth.of(counted("‹ ", tabs.take(window.from()), "")),
+                                Option.of(window.from() - 1)),
+                        Tuple.of(BETWEEN.length(), Option.none()))
+                : List.empty();
+        List<Tuple2<Integer, Option<Integer>>> right = window.to() < tabs.size() - 1
+                ? List.of(
+                        Tuple.of(BETWEEN.length(), Option.none()),
+                        Tuple.of(
+                                TextWidth.of(counted("", tabs.drop(window.to() + 1), " ›")),
+                                Option.of(window.to() + 1)))
+                : List.empty();
+        List<Tuple2<Integer, Option<Integer>>> middle = List.range(window.from(), window.to() + 1)
+                .map(index -> Tuple.of(TextWidth.of(tabs.get(index).text()), Option.of(index)))
+                .intersperse(Tuple.of(BETWEEN.length(), Option.none()));
+        List<Tuple2<Integer, Option<Integer>>> parts = left.appendAll(middle).appendAll(right);
+        List<Integer> starts = parts.scanLeft(0, (at, part) -> at + part._1()).init();
+        return parts.zip(starts)
+                .find(part ->
+                        column >= part._2() && column < part._2() + part._1()._1())
+                .flatMap(part -> part._1()._2());
     }
 
     /**

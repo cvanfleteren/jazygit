@@ -39,6 +39,7 @@ public final class BuildsUpdate {
                                         new LoadBuilds(remote, Option.none())))
                                 .getOrElse(() ->
                                         Next.of(shown(model, Option.of(kept(model, BuildsView.offGitHub(branch))))));
+            case BuildsMsg.Closed() -> Next.of(shown(model, Option.none()));
             case BuildsMsg.Read(RemoteBranch branch, Option<String> after, var page) ->
                 awaited(model, branch, after, view -> view.read(page));
             case BuildsMsg.Failed(RemoteBranch branch, Option<String> after, Failure failure) ->

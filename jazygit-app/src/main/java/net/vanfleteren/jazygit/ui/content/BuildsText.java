@@ -67,10 +67,28 @@ final class BuildsText {
                 Math.max(10, width - SCALE - 1));
         List<Pipeline> all = BuildsView.pipelines(builds);
         Pipeline shown = pipeline.filter(all::contains).getOrElse(all::head);
-        List<TabStrip.Tab> tabs = all.map(each -> new TabStrip.Tab(
-                each.label(all), builds.find(each::ran).map(Build::outcome).getOrElse(Outcome.PASSED)));
-        return List.of(TabStrip.line(tabs, all.indexOf(shown), width, styles), Line.from(""))
+        return List.of(TabStrip.line(tabs(builds, all), all.indexOf(shown), width, styles), Line.from(""))
                 .appendAll(drawing.workflow(builds.filter(shown::ran)));
+    }
+
+    /**
+     * The workflow of the tab at {@code column} of the first line {@link #lines} draws of {@code builds}, with
+     * {@code pipeline} shown, {@code width} columns wide; none between the tabs.
+     */
+    static Option<Pipeline> tabAt(List<Build> builds, Option<Pipeline> pipeline, int width, int column) {
+        List<Pipeline> all = BuildsView.pipelines(builds);
+        return all.headOption()
+                .flatMap(first -> TabStrip.at(
+                                tabs(builds, all),
+                                all.indexOf(pipeline.filter(all::contains).getOrElse(first)),
+                                width,
+                                column)
+                        .map(all::get));
+    }
+
+    private static List<TabStrip.Tab> tabs(List<Build> builds, List<Pipeline> all) {
+        return all.map(each -> new TabStrip.Tab(
+                each.label(all), builds.find(each::ran).map(Build::outcome).getOrElse(Outcome.PASSED)));
     }
 
     /**

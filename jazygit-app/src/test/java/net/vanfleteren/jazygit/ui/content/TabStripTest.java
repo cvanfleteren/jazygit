@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.text.Span;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.Build.Outcome;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
@@ -43,5 +44,21 @@ class TabStripTest {
     @Test
     void theTabShownShowsHoweverNarrow() {
         assertTrue(line(3, 5).contains("○ Docker"), line(3, 5));
+    }
+
+    @Test
+    void aColumnIsOnATabOrBetweenThem() {
+        // "✓ Build │ ✗ Lint │ …": Build from 0 to 6, the line between, Lint from 10.
+        assertEquals(Option.of(0), TabStrip.at(TABS, 0, 80, 0));
+        assertEquals(Option.none(), TabStrip.at(TABS, 0, 80, 8));
+        assertEquals(Option.of(1), TabStrip.at(TABS, 0, 80, 10));
+    }
+
+    @Test
+    void aCountLeadsToTheFirstTabItLeavesOut() {
+        // "‹ 3 ✗1 │ ○ Docker │ ✓ Docs │ 1 ✗1 ›"
+        assertEquals(Option.of(2), TabStrip.at(TABS, 3, 36, 1));
+        assertEquals(Option.of(3), TabStrip.at(TABS, 3, 36, 9));
+        assertEquals(Option.of(5), TabStrip.at(TABS, 3, 36, 32));
     }
 }

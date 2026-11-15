@@ -45,13 +45,17 @@ issue (`issue_comment`, `issues`) are on the main branch too, as GitHub runs tho
   - The tab shown is the one chosen, while it has builds; else, of those on the newest commit with builds, one whose
     last build failed, else the one with the most builds. The choice stays for another branch with the same workflow.
   - `[` and `]` in the builds show the tab before and after, around from the last to the first; `w` lists every
-    workflow in a popup, to filter and pick from, for when there are many. Not yet: clicking a tab.
+    workflow in a popup, to filter and pick from, for when there are many. A click on a tab shows it; one on a count
+    of the tabs left out shows the first of those.
   - When the tabs do not fit, the line shows as many around the one shown as fit, and a count of those left out on
     either side, with how many of those failed: `‹ 4 ✗1 │ ✓ Build │ ✗ E2E │ 12 ›`. Not: a list of the workflows above
     the builds, a line each, nor a popup only, which hides how the others are doing.
   - Not: a list at the top to scroll to a workflow's part: the parts share nothing, and the list scrolls away.
 - With only the commits not on the base listed (`b`, ADR 20), only their builds show, and the title says so as the
-  log's does: a pull request's branch then shows only the builds of its own commits.
+  log's does: a pull request's branch then shows only the builds of its own commits. `b` in the builds switches it
+  too: it is the one switch of the logs, not one of the builds' own.
+- The builds take the focus once `B` shows them, so that their keys work at once; `B` in them shows the log again,
+  and gives the focus back to the branches.
 - The builds of a workflow show:
   - a summary: how many passed, failed, were cancelled and run; the median and p90 of those that passed, and the last
     one against the median;

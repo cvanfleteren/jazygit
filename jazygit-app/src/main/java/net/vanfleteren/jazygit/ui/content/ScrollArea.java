@@ -515,6 +515,18 @@ public final class ScrollArea {
         RichTextState state = element.state();
         if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
             focus.accept(area.id());
+            // A click on a tab of the builds of a branch shows its workflow (ADR 131).
+            Option<Msg> tab = Option.of(element.renderedArea())
+                    .filter(drawn -> state.scrollRow() + event.y() - drawn.top() - 1 == 0)
+                    .flatMap(drawn -> styled.flatMap(shown -> shown.body()
+                                    instanceof Body.Builds(var builds, var needs, var pipeline)
+                            ? BuildsText.tabAt(builds, pipeline, shown.width(), column + event.x() - drawn.left() - 1)
+                            : Option.none()))
+                    .map(ViewMsg.BuildsTabClicked::new);
+            if (tab.isDefined()) {
+                tab.forEach(dispatch);
+                return EventResult.HANDLED;
+            }
             // The text starts a line below the top of the area, under its border.
             return cursor.flatMap(on ->
                             Option.of(element.renderedArea()).flatMap(drawn -> on.clicked(event.y() - drawn.top() - 1)))
