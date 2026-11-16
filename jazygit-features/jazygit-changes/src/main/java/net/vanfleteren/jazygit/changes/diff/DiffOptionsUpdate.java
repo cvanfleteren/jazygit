@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
@@ -35,7 +36,8 @@ public final class DiffOptionsUpdate {
             case DiffOptionsMsg.WhitespaceToggled() ->
                 changed(model.mapPreferences(
                         preferences -> preferences.withIgnoreWhitespace(!preferences.ignoreWhitespace())));
-            case DiffOptionsMsg.StyleToggled() -> styleToggled(model);
+            case DiffOptionsMsg.StyleToggled() -> styled(model, DiffStyle::toggled);
+            case DiffOptionsMsg.SplitToggled() -> styled(model, DiffStyle::splitToggled);
             case DiffOptionsMsg.WordsToggled() -> wordsToggled(model);
             case DiffOptionsMsg.ContextWidened() -> stepped(model, DiffContext::wider);
             case DiffOptionsMsg.ContextNarrowed() -> stepped(model, DiffContext::narrower);
@@ -55,13 +57,18 @@ public final class DiffOptionsUpdate {
     }
 
     /**
-     * Draws the changes in the other style from now on, keeping it for the next session.
+     * Draws the changes in the style {@code next} takes the current one to from now on, keeping it for the next
+     * session. Between the plain view and a rich one the diffs are read again, as the plain view reads a merge
+     * otherwise (ADR 44); between the rich and the split view they are only drawn again (ADR 139).
      */
-    private static Next styleToggled(Model model) {
+    private static Next styled(Model model, UnaryOperator<DiffStyle> next) {
         Settings previous = model.preferences().settings();
-        Settings chosen = previous.withDiffStyle(previous.diffStyle().toggled());
-        return changed(model.mapPreferences(preferences -> preferences.withSettings(chosen)))
-                .and(new SaveSettings(previous, chosen));
+        Settings chosen = previous.withDiffStyle(next.apply(previous.diffStyle()));
+        Model styled = model.mapPreferences(preferences -> preferences.withSettings(chosen));
+        SaveSettings save = new SaveSettings(previous, chosen);
+        return chosen.diffStyle().rich() == previous.diffStyle().rich()
+                ? Next.of(styled, save)
+                : changed(styled).and(save);
     }
 
     /**

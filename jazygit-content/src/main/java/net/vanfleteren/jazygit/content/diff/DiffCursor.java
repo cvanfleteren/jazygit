@@ -3,9 +3,11 @@ package net.vanfleteren.jazygit.content.diff;
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.ui.text.Rows;
@@ -66,12 +68,12 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
         // A loop, not a recursion over how far away, which a stop missing from a long diff would take as deep as it
         // has stops; and four times as fast as an iterator of the indexes, for a jump across the diff.
         for (int away = 0; away < stops.size(); away++) {
-            if (from >= away && stops.get(from - away).mark().anchor().equals(anchor)) {
+            if (from >= away && stops.get(from - away).mark().is(anchor)) {
                 return Option.some(from - away);
             }
             if (away > 0
                     && from + away < stops.size()
-                    && stops.get(from + away).mark().anchor().equals(anchor)) {
+                    && stops.get(from + away).mark().is(anchor)) {
                 return Option.some(from + away);
             }
         }
@@ -98,19 +100,19 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
      */
     public DiffCursor down() {
         if (mark.isDefined()) {
-            return Vector.range(stop + 1, stops.size())
-                    .find(this::lineOfHunk)
+            return Iterator.range(stop + 1, stops.size())
+                    .find(index -> lineOfHunk(index) && keepsSide(index))
                     .map(next -> at(next, row).shown())
                     .getOrElse(this);
         }
         if (after(stop) > row + height) {
             return at(stop, row + 1);
         }
-        if (stop == stops.size() - 1) {
-            return this;
-        }
-        int next = stop + 1;
-        return at(next, Math.max(row, Math.min(start(next), after(next) - height)));
+        // In the split view, the next stop on the side of the cursor (ADR 139).
+        return Iterator.range(stop + 1, stops.size())
+                .find(this::keepsSide)
+                .map(next -> at(next, Math.max(row, Math.min(start(next), after(next) - height))))
+                .getOrElse(this);
     }
 
     /**
@@ -119,19 +121,64 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
      */
     public DiffCursor up() {
         if (mark.isDefined()) {
-            return Vector.range(0, stop)
-                    .findLast(this::lineOfHunk)
+            return Iterator.rangeBy(stop - 1, -1, -1)
+                    .find(index -> lineOfHunk(index) && keepsSide(index))
                     .map(before -> at(before, row).shown())
                     .getOrElse(this);
         }
         if (start(stop) < row) {
             return at(stop, row - 1);
         }
-        if (stop == 0) {
-            return this;
+        return Iterator.rangeBy(stop - 1, -1, -1)
+                .find(this::keepsSide)
+                .map(before -> at(before, Math.min(row, Math.max(start(before), after(before) - height))))
+                .getOrElse(this);
+    }
+
+    /**
+     * {@code [} or {@code ]} in the split view (ADR 139): the cursor to the line on {@code side} of its row, or the
+     * closest that has one there; while a range is open, of its hunk. None off a line, and in the unified view.
+     */
+    public Option<DiffCursor> toSide(ReviewThread.Side side) {
+        RichDiff.Mark on = stops.get(stop).mark();
+        if (on.side().isEmpty() || !(on.anchor() instanceof Anchor.OnLine)) {
+            return Option.none();
         }
-        int before = stop - 1;
-        return at(before, Math.min(row, Math.max(start(before), after(before) - height)));
+        if (on.side().contains(side)) {
+            return Option.some(this);
+        }
+        int at = start(stop);
+        return Iterator.range(0, stops.size())
+                .flatMap(away -> List.of(stop - away, stop + away))
+                .filter(index -> index >= 0 && index < stops.size())
+                .filter(index -> stops.get(index).mark().side().contains(side)
+                        && stops.get(index).mark().anchor() instanceof Anchor.OnLine
+                        && (mark.isEmpty() || lineOfHunk(index)))
+                // Outwards from the cursor, so the first found on a row as close is the closest by index too.
+                .take(4)
+                .toList()
+                .minBy(index -> Math.abs(start(index) - at))
+                .map(index -> at(index, row).shown());
+    }
+
+    /**
+     * The side of the split view the cursor is on: that of its stop, or of the last before it that has one, as it is
+     * on a bar or a marker as wide as the area; the new file before the first.
+     */
+    private ReviewThread.Side side() {
+        return Iterator.rangeBy(stop, -1, -1)
+                .flatMap(index -> stops.get(index).mark().side())
+                .headOption()
+                .getOrElse(ReviewThread.Side.RIGHT);
+    }
+
+    /**
+     * Whether the stop at {@code index} is one the cursor stops on as it moves: any in the unified view, and in the
+     * split view one as wide as the area, or on the side of the cursor (ADR 139).
+     */
+    private boolean keepsSide(int index) {
+        Option<ReviewThread.Side> its = stops.get(index).mark().side();
+        return its.isEmpty() || its.contains(side());
     }
 
     /**
@@ -202,9 +249,37 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
      * not show, or one past the end of the diff.
      */
     public Option<DiffCursor> clicked(int line) {
+        return clicked(line, 0, Option.none());
+    }
+
+    /**
+     * A click on column {@code column} of the {@code line}th line the view shows, as {@link #clicked(int)}: in the
+     * split view, whose halves meet at column {@code divider}, the line of the half clicked on a row, none on a half
+     * without a line (ADR 139).
+     */
+    public Option<DiffCursor> clicked(int line, int column, Option<Integer> divider) {
         return Option.when(line >= 0 && line < height && row + line < lines, () -> containing(row + line))
+                .flatMap(index -> divider.map(at ->
+                                half(index, row + line, column < at ? ReviewThread.Side.LEFT : ReviewThread.Side.RIGHT))
+                        .getOrElse(Option.some(index)))
                 .filter(index -> mark.isEmpty() || lineOfHunk(index))
                 .map(index -> at(index, row));
+    }
+
+    /**
+     * The stop of the half on {@code side} of the row {@code line}, whose last stop is at {@code index}: none when the
+     * half has no line; the stop at {@code index} itself when the row is no row of lines.
+     */
+    private Option<Integer> half(int index, int line, ReviewThread.Side side) {
+        boolean ofLines = start(index) == line
+                && stops.get(index).mark().side().isDefined()
+                && stops.get(index).mark().anchor() instanceof Anchor.OnLine;
+        return ofLines
+                ? List.of(index, index - 1)
+                        .find(at -> at >= 0
+                                && start(at) == line
+                                && stops.get(at).mark().side().contains(side))
+                : Option.some(index);
     }
 
     /**
@@ -252,9 +327,42 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
      * The indexes of the lines of the range, while one is open: those of its hunk from its first to its last.
      */
     private Vector<Integer> range() {
-        return mark.map(from -> Vector.rangeClosed(Math.min(from, stop), Math.max(from, stop))
-                        .filter(this::lineOfHunk))
+        return mark.map(from -> stops.get(from).mark().side().isDefined()
+                        ? splitRange(from)
+                        : Vector.rangeClosed(Math.min(from, stop), Math.max(from, stop))
+                                .filter(this::lineOfHunk))
                 .getOrElse(Vector.empty());
+    }
+
+    /**
+     * The indexes of the lines of a range of the split view from the line at {@code from} (ADR 139): those of its
+     * hunk from its first to its last in the order of the diff, of its side only when it starts and ends on one.
+     */
+    private Vector<Integer> splitRange(int from) {
+        RichDiff.Mark start = stops.get(from).mark();
+        RichDiff.Mark end = stops.get(stop).mark();
+        int low = Math.min(start.order(), end.order());
+        int high = Math.max(start.order(), end.order());
+        boolean oneSide = start.side().equals(end.side());
+        // The lines of a hunk lie between the bars and the markers around it.
+        int first = Iterator.rangeBy(Math.min(from, stop), -1, -1)
+                .find(this::bounds)
+                .getOrElse(0);
+        int last = Iterator.range(Math.max(from, stop), stops.size())
+                .find(this::bounds)
+                .getOrElse(stops.size() - 1);
+        return Vector.rangeClosed(first, last).filter(index -> {
+            RichDiff.Mark its = stops.get(index).mark();
+            return lineOfHunk(index)
+                    && its.order() >= low
+                    && its.order() <= high
+                    && (!oneSide || its.side().equals(start.side()));
+        });
+    }
+
+    private boolean bounds(int index) {
+        return stops.get(index).mark().anchor() instanceof Anchor.File
+                || stops.get(index).mark().anchor() instanceof Anchor.Gap;
     }
 
     private boolean lineOfHunk(int index) {
@@ -311,8 +419,16 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
         return stops.get(index).row();
     }
 
+    /**
+     * The line after the lines of the stop at {@code index}: where the next stop on a later line starts, as both
+     * halves of a row of the split view are stops on one line.
+     */
     private int after(int index) {
-        return index + 1 < stops.size() ? start(index + 1) : Math.max(lines, start(index) + 1);
+        int from = start(index);
+        return Iterator.range(index + 1, stops.size())
+                .map(this::start)
+                .find(next -> next > from)
+                .getOrElse(() -> Math.max(lines, from + 1));
     }
 
     /**
@@ -325,10 +441,18 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
         int first = on.row();
         int width = on.mark().width();
         return mark.isDefined()
-                ? range().foldLeft(
-                                lines,
-                                (done, index) ->
-                                        done.update(start(index), line -> tinted(gutterMarked(line), width, tint)))
+                ? range().foldLeft(lines, (done, index) -> {
+                    RichDiff.Mark its = stops.get(index).mark();
+                    return its.side().isDefined()
+                            ? done.update(
+                                    start(index),
+                                    line -> Halves.patched(
+                                            gutterMarked(line, its.column()),
+                                            its.column(),
+                                            its.column() + its.width(),
+                                            tint))
+                            : done.update(start(index), line -> tinted(gutterMarked(line, 0), width, tint));
+                })
                 : switch (on.mark().anchor()) {
                     case Anchor.Lead ignored -> lines;
                     case Anchor.Thread _, Anchor.Comment _ ->
@@ -338,7 +462,17 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
                                 .foldLeft(lines, (done, at) -> done.update(at, DiffCursor::ruled));
                     case Anchor.File ignored -> lines.update(first, line -> tinted(line, width, tint));
                     case Anchor.Gap ignored -> lines.update(first, line -> tinted(line, width, tint));
-                    case Anchor.OnLine ignored -> lines.update(first, line -> tinted(line, width, tint));
+                    // The half of its line in the split view (ADR 139), which the area pads in its tint.
+                    case Anchor.OnLine ignored ->
+                        on.mark().side().isDefined()
+                                ? lines.update(
+                                        first,
+                                        line -> Halves.patched(
+                                                line,
+                                                on.mark().column(),
+                                                on.mark().column() + width,
+                                                tint))
+                                : lines.update(first, line -> tinted(line, width, tint));
                     case Anchor.Node ignored -> lines.update(first, line -> tinted(line, width, tint));
                 };
     }
@@ -351,16 +485,24 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
     }
 
     /**
-     * {@code line} of a diff, the rule at the end of its gutter made the mark of a line a thread covers.
+     * {@code line} of a diff, the rule at the end of its gutter made the mark of a line a thread covers: the gutter
+     * that starts at column {@code from}, that of the half of a row of the split view (ADR 139).
      */
-    private static Line gutterMarked(Line line) {
+    private static Line gutterMarked(Line line, int from) {
         List<Span> spans = List.ofAll(line.spans());
-        return spans.headOption()
-                .filter(gutter -> gutter.content().contains("│"))
-                .map(gutter -> Line.from(spans.tail()
-                        .prepend(new Span(gutter.content().replace('│', '┃'), gutter.style()))
-                        .toJavaList()))
-                .getOrElse(line);
+        List<Integer> starts =
+                spans.scanLeft(0, (at, span) -> at + span.width()).init();
+        return starts.indexWhere(at -> at >= from) < 0
+                ? line
+                : Option.of(starts.indexWhere(at -> at >= from))
+                        .filter(at -> spans.get(at).content().contains("│"))
+                        .map(at -> Line.from(spans.update(
+                                        at,
+                                        new Span(
+                                                spans.get(at).content().replace('│', '┃'),
+                                                spans.get(at).style()))
+                                .toJavaList()))
+                        .getOrElse(line);
     }
 
     /**

@@ -55,6 +55,51 @@ public final class LinePairs {
     }
 
     /**
+     * The rows the split view shows the lines of a hunk, {@code lines}, in (ADR 139): a context line on both sides; a
+     * block of removed lines followed by added ones lined up first with first, as {@link WordDiff} compares them, the
+     * side with fewer lines blank to the end of the block. A note goes with the line it follows, on its side, or on
+     * both after a context line; one that follows no line has a row of its own, blank on both sides.
+     *
+     * @return the rows, in order, each with the indexes among {@code lines} of what it shows on each side
+     */
+    public static List<Row> rows(List<ParsedLine> lines) {
+        Vector<DiffLine> diffLines = lines.map(ParsedLine::line).toVector();
+        // Unfolded rather than recursive, as a hunk can be longer than the stack is deep.
+        return List.unfoldRight(
+                        0,
+                        at -> Option.when(at < diffLines.size(), () -> {
+                            DiffLine.Kind kind = diffLines.get(at).kind();
+                            if (kind == DiffLine.Kind.CONTEXT || kind == DiffLine.Kind.NOTE) {
+                                List<Integer> notes = Iterator.range(at + 1, diffLines.size())
+                                        .takeWhile(index -> diffLines.get(index).kind() == DiffLine.Kind.NOTE)
+                                        .toList();
+                                Row row = kind == DiffLine.Kind.CONTEXT
+                                        ? new Row(Option.some(at), Option.some(at), notes, notes)
+                                        : new Row(Option.none(), Option.none(), notes.prepend(at), notes.prepend(at));
+                                return Tuple.of(List.of(row), at + 1 + notes.size());
+                            }
+                            Vector<Integer> removedRun = run(diffLines, at, DiffLine.Kind.REMOVED);
+                            Vector<Integer> addedRun = run(diffLines, at + removedRun.size(), DiffLine.Kind.ADDED);
+                            Vector<List<Integer>> removed = noted(diffLines, removedRun);
+                            Vector<List<Integer>> added = noted(diffLines, addedRun);
+                            List<Row> block = List.range(0, Math.max(removed.size(), added.size()))
+                                    .map(index -> {
+                                        Option<List<Integer>> left =
+                                                Option.when(index < removed.size(), () -> removed.get(index));
+                                        Option<List<Integer>> right =
+                                                Option.when(index < added.size(), () -> added.get(index));
+                                        return new Row(
+                                                left.map(List::head),
+                                                right.map(List::head),
+                                                left.map(List::tail).getOrElse(List.empty()),
+                                                right.map(List::tail).getOrElse(List.empty()));
+                                    });
+                            return Tuple.of(block, at + removedRun.size() + addedRun.size());
+                        }))
+                .flatMap(rows -> rows);
+    }
+
+    /**
      * The indexes of the lines from {@code at} on that are of {@code kind}, with the notes among and after them; none
      * unless the line at {@code at} is of {@code kind}.
      */
@@ -108,4 +153,15 @@ public final class LinePairs {
                         ? done.update(done.size() - 1, done.last().append(at))
                         : done.append(List.of(at)));
     }
+
+    /**
+     * A row of the split view (ADR 139): the indexes among the lines of its hunk of the line on each side, if it has
+     * one, and of the notes after it.
+     *
+     * @param left       the removed or context line on the left, the old file
+     * @param right      the added or context line on the right, the new file
+     * @param leftNotes  the notes after the line on the left
+     * @param rightNotes the notes after the line on the right
+     */
+    public record Row(Option<Integer> left, Option<Integer> right, List<Integer> leftNotes, List<Integer> rightNotes) {}
 }

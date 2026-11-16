@@ -14,7 +14,11 @@ public enum DiffStyle {
     /**
      * A bar for each file, the numbers of the lines, and the words that changed in them highlighted (ADR 44).
      */
-    RICH("rich");
+    RICH("rich"),
+    /**
+     * The rich view with the old file on the left and the new one on the right (ADR 139).
+     */
+    SPLIT("split");
 
     private final String id;
 
@@ -37,9 +41,23 @@ public enum DiffStyle {
     }
 
     /**
-     * The other style.
+     * Whether a diff is drawn by the rich view, unified or split, rather than as git prints it.
+     */
+    public boolean rich() {
+        return this != PLAIN;
+    }
+
+    /**
+     * The style Ctrl+D switches to: the rich view from the plain one, else the plain one.
      */
     public DiffStyle toggled() {
         return this == PLAIN ? RICH : PLAIN;
+    }
+
+    /**
+     * The style {@code |} switches to (ADR 139): the rich view from the split one, else the split one.
+     */
+    public DiffStyle splitToggled() {
+        return this == SPLIT ? RICH : SPLIT;
     }
 }

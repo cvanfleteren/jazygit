@@ -367,4 +367,107 @@ class DiffCursorTest {
 
         assertEquals(text, on(LEAD, 0).tinted(text, tint));
     }
+
+    // The split view (ADR 139) of a hunk of a context line, a removed line beside an added one, another added line
+    // beside a blank half, and a context line: a bar, then a stop for each half of a row that holds a line.
+    private static final Anchor LEFT_ONE = new Anchor.OnLine("a.txt", Side.LEFT, 1);
+    private static final Anchor RIGHT_ONE = new Anchor.OnLine("a.txt", Side.RIGHT, 1);
+    private static final Anchor REMOVED = new Anchor.OnLine("a.txt", Side.LEFT, 2);
+    private static final Anchor ADDED = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+    private static final Anchor ALSO_ADDED = new Anchor.OnLine("a.txt", Side.RIGHT, 3);
+    private static final Anchor LEFT_LAST = new Anchor.OnLine("a.txt", Side.LEFT, 3);
+    private static final Anchor RIGHT_LAST = new Anchor.OnLine("a.txt", Side.RIGHT, 4);
+    private static final Vector<RichDiff.Stop> SPLIT = Vector.of(
+            stop(FILE, 1, 0),
+            half(LEFT_ONE, Side.LEFT, 1, 0),
+            half(RIGHT_ONE, Side.RIGHT, 1, 0),
+            half(REMOVED, Side.LEFT, 2, 1),
+            half(ADDED, Side.RIGHT, 2, 2),
+            half(ALSO_ADDED, Side.RIGHT, 3, 3),
+            half(LEFT_LAST, Side.LEFT, 4, 4),
+            half(RIGHT_LAST, Side.RIGHT, 4, 4));
+
+    private static RichDiff.Stop half(Anchor anchor, Side side, int row, int order) {
+        int column = side == Side.LEFT ? 0 : 6;
+        return new RichDiff.Stop(
+                new RichDiff.Mark(
+                        anchor,
+                        1,
+                        side == Side.LEFT ? 5 : 100,
+                        Option.of(new DiffStops.HunkAt(0, 0)),
+                        Option.of(side),
+                        column,
+                        Option.none(),
+                        order),
+                row);
+    }
+
+    private static DiffCursor split(Anchor anchor) {
+        return cursor(SPLIT, 5, 5, 0, Option.of(anchor), Option.none()).get();
+    }
+
+    @Test
+    void inTheSplitViewJAndKKeepToTheSideOfTheCursor() {
+        assertEquals(REMOVED, split(LEFT_ONE).down().anchor());
+        // The row with only an added line is passed over on the left.
+        assertEquals(LEFT_LAST, split(REMOVED).down().anchor());
+        assertEquals(ALSO_ADDED, split(ADDED).down().anchor());
+        assertEquals(REMOVED, split(LEFT_LAST).up().anchor());
+        // From the bar, which is as wide as the area, on the side of the new file.
+        assertEquals(RIGHT_ONE, split(FILE).down().anchor());
+    }
+
+    @Test
+    void theBracketsTakeTheCursorToTheOtherSideOfItsRowOrTheClosestRowWithALineThere() {
+        assertEquals(REMOVED, split(ADDED).toSide(Side.LEFT).get().anchor());
+        assertEquals(ADDED, split(REMOVED).toSide(Side.RIGHT).get().anchor());
+        assertEquals(ADDED, split(ADDED).toSide(Side.RIGHT).get().anchor());
+        Anchor closest = split(ALSO_ADDED).toSide(Side.LEFT).get().anchor();
+        assertTrue(closest.equals(REMOVED) || closest.equals(LEFT_LAST), closest.toString());
+        // Off a line, as on the bar, they do nothing here: on a marker they show more lines.
+        assertTrue(split(FILE).toSide(Side.LEFT).isEmpty());
+        assertTrue(on(ONE, 0).toSide(Side.LEFT).isEmpty());
+    }
+
+    @Test
+    void aClickPutsTheCursorOnTheHalfClickedAndABlankHalfDoesNothing() {
+        assertEquals(REMOVED, split(FILE).clicked(2, 3, Option.of(5)).get().anchor());
+        assertEquals(ADDED, split(FILE).clicked(2, 7, Option.of(5)).get().anchor());
+        assertTrue(split(FILE).clicked(3, 3, Option.of(5)).isEmpty());
+        assertEquals(FILE, split(FILE).clicked(0, 3, Option.of(5)).get().anchor());
+    }
+
+    @Test
+    void aRangeOnOneSideOfTheSplitViewTintsTheLinesOfThatSideOnly() {
+        Rows text =
+                Rows.of(Vector.range(0, 5).map(row -> Line.from(Span.raw("1 │ a"), Span.raw("│"), Span.raw("1 │ b"))));
+        Style tint = Style.EMPTY.reversed();
+
+        Rows tinted = split(RIGHT_ONE).marked().get().down().down().tinted(text, tint);
+
+        assertEquals(ALSO_ADDED, split(RIGHT_ONE).marked().get().down().down().anchor());
+        // The right half of each row from the first to the third, the gutter marked; never the left one.
+        assertEquals("1 │ a│1 ┃ b", tinted.get(2).rawContent());
+        assertFalse(reversed(tinted.get(2), 0));
+        assertTrue(reversed(tinted.get(2), 7));
+        assertEquals("1 │ a│1 │ b", tinted.get(4).rawContent());
+    }
+
+    @Test
+    void aRangeFromOneSideToTheOtherHoldsTheLinesBetweenInTheOrderOfTheDiff() {
+        Rows text =
+                Rows.of(Vector.range(0, 5).map(row -> Line.from(Span.raw("1 │ a"), Span.raw("│"), Span.raw("1 │ b"))));
+
+        Rows tinted = split(REMOVED).marked().get().toSide(Side.RIGHT).get().tinted(text, Style.EMPTY.reversed());
+
+        // The removed line and the added one beside it; not the added line after them, later in the diff.
+        assertTrue(reversed(tinted.get(2), 0));
+        assertTrue(reversed(tinted.get(2), 7));
+        assertFalse(reversed(tinted.get(3), 7));
+    }
+
+    private static boolean reversed(Line line, int column) {
+        return Halves.slice(List.ofAll(line.spans()), column, column + 1)
+                .forAll(span -> span.style().addModifiers().contains(Modifier.REVERSED));
+    }
 }

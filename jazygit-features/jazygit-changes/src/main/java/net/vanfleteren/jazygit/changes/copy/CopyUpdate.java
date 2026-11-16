@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.changes.copy;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Anchor;
@@ -39,11 +40,19 @@ public final class CopyUpdate {
             case Anchor.File(String path) -> Option.of(new CopyCmd(path, new Notice.PathCopied(path)));
             case Anchor.OnLine cursor ->
                 model.diffLines(at, at.at().content().richDiff())
-                        .between(from(at, cursor), cursor)
+                        .between(from(at, cursor), cursor, split(model))
                         .map(range -> new CopyCmd(
                                 range.map(line -> line.line().text()).mkString("\n"), new Notice.Copied(range.size())));
             default -> Option.none();
         };
+    }
+
+    /**
+     * Whether the diffs are drawn with the old and the new file side by side, where a range on one side holds the lines
+     * of that side only (ADR 139).
+     */
+    private static boolean split(Model model) {
+        return model.preferences().diffLook().style() == DiffStyle.SPLIT;
     }
 
     /**

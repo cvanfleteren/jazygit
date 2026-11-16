@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state.diff;
 
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.state.diff.DiffStops.HunkAt;
@@ -38,11 +39,32 @@ public record DiffLines(Vector<Line> lines) {
      * none unless both are lines of it.
      */
     public Option<Vector<Line>> between(Anchor.OnLine one, Anchor.OnLine other) {
-        int from = lines.indexWhere(line -> line.anchor().equals(one));
-        int to = lines.indexWhere(line -> line.anchor().equals(other));
-        return from < 0 || to < 0
-                ? Option.none()
-                : Option.some(lines.slice(Math.min(from, to), Math.max(from, to) + 1));
+        return between(one, other, false);
+    }
+
+    /**
+     * The lines from {@code one} to {@code other}, as {@link #between(Anchor.OnLine, Anchor.OnLine)} gives them; a
+     * context line found on the left side, as the split view has it a stop there (ADR 139). Each end keeps the anchor
+     * it was asked by. In the {@code split} view, a range from a line to a line of the same side holds that side's
+     * lines only, its context lines by their anchor on that side, as the column of that side shows them.
+     */
+    public Option<Vector<Line>> between(Anchor.OnLine one, Anchor.OnLine other, boolean split) {
+        int from = lines.indexWhere(line -> line.answers(one));
+        int to = lines.indexWhere(line -> line.answers(other));
+        if (from < 0 || to < 0) {
+            return Option.none();
+        }
+        Vector<Line> held = lines.slice(Math.min(from, to), Math.max(from, to) + 1);
+        Vector<Line> ends = held.update(
+                        from - Math.min(from, to),
+                        held.get(from - Math.min(from, to)).as(one))
+                .update(
+                        to - Math.min(from, to),
+                        held.get(to - Math.min(from, to)).as(other));
+        return Option.some(
+                split && one.side() == other.side()
+                        ? ends.filter(line -> line.on(one.side())).map(line -> line.onSide(one.side()))
+                        : ends);
     }
 
     /**
@@ -52,5 +74,41 @@ public record DiffLines(Vector<Line> lines) {
      * @param hunk   its hunk, which a range of lines stays in
      * @param line   the line of the diff
      */
-    public record Line(Anchor.OnLine anchor, HunkAt hunk, DiffLine line) {}
+    public record Line(Anchor.OnLine anchor, HunkAt hunk, DiffLine line) {
+
+        /**
+         * Whether the line is the stop {@code anchor}: by its own anchor, or, a context line, by its number in the
+         * old file on the left side, where the split view has it a stop too (ADR 139).
+         */
+        boolean answers(Anchor.OnLine anchor) {
+            return this.anchor.equals(anchor) || left().contains(anchor);
+        }
+
+        /**
+         * Whether the line shows on {@code side} of the split view: a context line on both.
+         */
+        boolean on(ReviewThread.Side side) {
+            return line.kind() == DiffLine.Kind.CONTEXT || anchor.side() == side;
+        }
+
+        /**
+         * The line with its anchor on {@code side}: a context line on the left by its number in the old file.
+         */
+        Line onSide(ReviewThread.Side side) {
+            return side == ReviewThread.Side.LEFT ? left().map(this::as).getOrElse(this) : this;
+        }
+
+        /**
+         * The line as the stop {@code anchor} it was found by.
+         */
+        Line as(Anchor.OnLine anchor) {
+            return new Line(anchor, hunk, line);
+        }
+
+        private Option<Anchor.OnLine> left() {
+            return Option.when(line.kind() == DiffLine.Kind.CONTEXT, line::oldNumber)
+                    .flatMap(number -> number)
+                    .map(number -> new Anchor.OnLine(anchor.path(), ReviewThread.Side.LEFT, number));
+        }
+    }
 }

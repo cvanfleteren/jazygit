@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -983,6 +984,79 @@ class ContentPanelTest {
         case Theme.Classes.DIFF_FILE_HEADER -> Style.EMPTY.bg(Color.BLUE);
         default -> Style.EMPTY;
     };
+
+    @Test
+    void theSplitViewShowsBothFilesSideBySideItsCursorOnASideAndScrollsTheirCodeKeepingTheGutters() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingSplitCommit(
+                        " same\n-int count = 1;\n+int count = 42; // " + "the answer ".repeat(10) + "\n same again"));
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
+
+        String before;
+        String scrolled;
+        // Wide enough for the split view, which the keys act on as it is drawn.
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(140, 30))) {
+            SettledPilot.focus(testRunner, area.id());
+            RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            before = RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            List.of('j', 'j', 'j', '[', ']')
+                    .forEach(key -> SettledPilot.of(testRunner).press(key));
+            List.of('l', 'l', 'l', 'l')
+                    .forEach(key -> SettledPilot.of(testRunner).press(key));
+            SettledPilot.of(testRunner).pause();
+            scrolled = RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+        }
+
+        int row = row(before, "int count = 1;");
+        String[] lines = before.split("\n");
+        // The removed line on the left, the added one beside it on the right, each numbered in its own file.
+        assertTrue(lines[row].contains("2 │ - int count = 1;"), before);
+        assertTrue(lines[row].contains("│2 │ + int count = 42;"), before);
+        assertTrue(
+                List.ofAll(dispatched)
+                        .filter(ViewMsg.ContentScrolled.class::isInstance)
+                        .map(msg -> ((ViewMsg.ContentScrolled) msg).to().cursor())
+                        .containsAll(List.of(
+                                Option.of(new Anchor.OnLine("schema.sql", ReviewThread.Side.LEFT, 2)),
+                                Option.of(new Anchor.OnLine("schema.sql", ReviewThread.Side.RIGHT, 2)))),
+                List.ofAll(dispatched)
+                        .filter(ViewMsg.ContentScrolled.class::isInstance)
+                        .map(msg -> ((ViewMsg.ContentScrolled) msg).to().cursor())
+                        .toString());
+        // Scrolled sideways, each half keeps its gutter, and marks the code cut off before it.
+        String[] after = scrolled.split("\n");
+        assertTrue(after[row].contains("2 │ - ‹count = 1;"), scrolled);
+        assertTrue(after[row].contains("│2 │ + ‹count = 42;"), scrolled);
+    }
+
+    /**
+     * The model with a commit selected that changes {@code schema.sql} as {@code lines} say, drawn split (ADR 139).
+     */
+    private static Model showingSplitCommit(String lines) {
+        Model split = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.SPLIT)));
+        return Update.update(
+                        Update.update(split, new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha("aaaa"),
+                                split.preferences().diffOptions(),
+                                DiffText.of(String.join(
+                                        "\n",
+                                        "diff --git a/schema.sql b/schema.sql",
+                                        "--- a/schema.sql",
+                                        "+++ b/schema.sql",
+                                        "@@ -1,3 +1,3 @@",
+                                        lines))))
+                .model();
+    }
 
     /**
      * The model with a commit selected that adds {@code schema.sql} with {@code lines}, drawn rich.

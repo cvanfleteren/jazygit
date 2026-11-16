@@ -10,7 +10,6 @@ import lombok.With;
 import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.settings.DiffLook;
-import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.settings.SettingsStore;
@@ -77,7 +76,7 @@ public record Preferences(
      * rich, as the rich view does not draw git's combined diff (ADR 44).
      */
     public DiffOptions diffOptions() {
-        return new DiffOptions(ignoreWhitespace, settings.diffStyle() == DiffStyle.RICH, context);
+        return new DiffOptions(ignoreWhitespace, settings.diffStyle().rich(), context);
     }
 
     /**

@@ -72,6 +72,41 @@ class DiffLinesTest {
     }
 
     @Test
+    void aContextLineIsFoundByItsNumberInTheOldFileOnTheLeftAndKeepsThatAnchor() {
+        assertEquals(
+                Option.of(List.of(line(Side.LEFT, 1), line(Side.LEFT, 2))),
+                LINES.between(line(Side.LEFT, 1), line(Side.LEFT, 2))
+                        .map(lines -> lines.map(DiffLines.Line::anchor).toList()));
+    }
+
+    @Test
+    void inTheSplitViewARangeOnOneSideHoldsTheLinesOfThatSideOnly() {
+        // From line 1 to line 3 of the new file: the removed line between them is on the other side.
+        assertEquals(
+                Option.of(List.of("one", "TWO", "three")),
+                LINES.between(line(Side.RIGHT, 1), line(Side.RIGHT, 3), true)
+                        .map(lines -> lines.map(held -> held.line().text()).toList()));
+        // On the left, the context lines by their numbers in the old file.
+        assertEquals(
+                Option.of(List.of(line(Side.LEFT, 1), line(Side.LEFT, 2), line(Side.LEFT, 3))),
+                LINES.between(line(Side.LEFT, 1), line(Side.LEFT, 3), true)
+                        .map(lines -> lines.map(DiffLines.Line::anchor).toList()));
+        // The unified view holds every line between them, as it shows them.
+        assertEquals(
+                Option.of(List.of("one", "two", "TWO", "three")),
+                LINES.between(line(Side.RIGHT, 1), line(Side.RIGHT, 3), false)
+                        .map(lines -> lines.map(held -> held.line().text()).toList()));
+    }
+
+    @Test
+    void inTheSplitViewARangeFromOneSideToTheOtherHoldsEveryLineBetween() {
+        assertEquals(
+                Option.of(List.of(line(Side.LEFT, 1), line(Side.LEFT, 2), line(Side.RIGHT, 2))),
+                LINES.between(line(Side.LEFT, 1), line(Side.RIGHT, 2), true)
+                        .map(lines -> lines.map(DiffLines.Line::anchor).toList()));
+    }
+
+    @Test
     void noRangeUnlessBothEndsAreLines() {
         assertEquals(Option.none(), LINES.between(line(Side.LEFT, 2), line(Side.LEFT, 40)));
         assertEquals(Option.none(), LINES.between(new OnLine("b.png", Side.RIGHT, 1), line(Side.LEFT, 2)));

@@ -147,6 +147,35 @@ class RemarkLinesTest {
     }
 
     @Test
+    void inTheSplitViewAThreadGoesUnderItsRowInTheHalfOfItsSide() {
+        RichDiff.Drawn drawn = RichDiff.drawn(
+                Expansion.Folded.of(ParsedDiff.of(PAIRS)),
+                false,
+                true,
+                Option.of(shown(Collapsed.NONE, onLines(Side.RIGHT, 1, Side.RIGHT, 1))),
+                Option.none(),
+                Theme.SpanStyles.NONE,
+                101,
+                true);
+        List<String> lines = text(drawn.lines()).map(String::stripTrailing);
+
+        // The right half starts after the rule at column 50: the thread is as far into it as the code.
+        String indent = " ".repeat(50) + "│" + " ".repeat(6);
+        assertEquals(
+                List.of(indent + "┏━ bob · 2h ago", indent + "┃  Why?", indent + "┗━"),
+                lines.drop(2).take(3));
+        // The gutter of the right half marks where the thread ends; the left one does not.
+        assertTrue(lines.get(1).startsWith("1 │ - int count = 1;"), lines.get(1));
+        assertTrue(lines.get(1).contains("│1 ● + int count = 42;"), lines.get(1));
+        // Its stop is on the right side, which j keeps to there.
+        assertEquals(
+                Option.of(Side.RIGHT),
+                drawn.stops()
+                        .find(stop -> stop.mark().anchor() instanceof Anchor.Thread)
+                        .flatMap(stop -> stop.mark().side()));
+    }
+
+    @Test
     void aThreadOnALineOfAPairGoesAfterThePair() {
         List<String> lines = rich(PAIRS, shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.LEFT, 1)));
 

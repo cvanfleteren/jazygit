@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.github.review.ReviewCmd.Send;
 import net.vanfleteren.jazygit.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.compose.ComposeUpdate;
@@ -174,7 +175,7 @@ public final class ReviewUpdate {
             return Either.left(Why.NOT_ON_LINE);
         }
         return diffLines(model, view, at)
-                .between(from, cursor)
+                .between(from, cursor, model.preferences().diffLook().style() == DiffStyle.SPLIT)
                 .filter(range -> range.head().hunk().equals(range.last().hunk()))
                 .toEither(Why.NOT_ONE_HUNK)
                 .map(range -> startOn(view, at, commit, range));
