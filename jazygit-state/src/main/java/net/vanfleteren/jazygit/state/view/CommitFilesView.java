@@ -53,6 +53,8 @@ import net.vanfleteren.jazygit.state.diff.Collapsed;
  *                 asked for: they are read once
  * @param unchanged the node highlighted while all files are listed, when nothing under it changed: the content panel
  *                  shows it in place of a diff (ADR 128)
+ * @param followed whether they follow the highlight of the list that has the focus, rather than being asked for with
+ *                 {@code F}: they are then listed without the focus moving into them (ADR 141)
  */
 @With
 public record CommitFilesView(
@@ -72,7 +74,8 @@ public record CommitFilesView(
         Option<FileFilter> filter,
         boolean allFiles,
         Option<Loadable<List<CommitFile>>> tree,
-        Option<UnchangedNode> unchanged) {
+        Option<UnchangedNode> unchanged,
+        boolean followed) {
 
     /**
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
@@ -96,7 +99,8 @@ public record CommitFilesView(
                 Option.none(),
                 false,
                 Option.none(),
-                Option.none());
+                Option.none(),
+                false);
     }
 
     /**

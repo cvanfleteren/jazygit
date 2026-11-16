@@ -1,13 +1,16 @@
 package net.vanfleteren.jazygit.state.load;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.view.NoLog;
 
 /**
@@ -73,4 +76,11 @@ public sealed interface SelectionMsg extends Msg {
      * The user highlighted the stash {@code sha} in the stash pane.
      */
     record StashSelected(Sha sha) implements SelectionMsg {}
+
+    /**
+     * The files pane is to list the files of {@code of}, highlighted in the list of the pane {@code from} that has the
+     * focus, in the pane {@code listedIn}; none when the focus is on a pane whose highlight lists nothing, and the
+     * files of the working tree come back (ADR 141).
+     */
+    record FilesFollowed(Option<Changes> of, PaneId from, PaneId listedIn) implements SelectionMsg {}
 }

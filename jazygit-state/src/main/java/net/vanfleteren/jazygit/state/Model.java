@@ -104,12 +104,8 @@ public record Model(
      */
     public Model withShownPane(Focus.OnScreen focus) {
         return switch (screen) {
-            // The files of a commit close when another pane gets the focus, as Escape closes them (ADR 44).
-            case REPOSITORY ->
-                withRepoView(repoView.withFocusedPane(Option.of(focus))
-                        .mapFiles(files -> files.withCommitFiles(files.commitFiles()
-                                .filter(view -> focus instanceof AreaId
-                                        || view.listedIn().equals(focus)))));
+            // Which files the files pane lists for the pane that has the focus is the panes' to say (ADR 141).
+            case REPOSITORY -> withRepoView(repoView.withFocusedPane(Option.of(focus)));
             case PULL_REQUESTS ->
                 withPrOverview(prOverview
                         .withFocusedPane(Option.of(focus))

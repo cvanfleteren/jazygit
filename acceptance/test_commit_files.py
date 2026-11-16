@@ -24,8 +24,34 @@ def test_the_files_of_a_commit_show_in_the_files_pane_each_with_its_own_diff(rep
 
     ui.app.press("escape")
 
-    ui.app.wait_in("Files", "work.txt")
+    # Back on the commits, the files still follow the highlighted one (ADR 141).
     ui.app.eventually(lambda: ui.app.focused_pane() == "Commits", "the focus back on the commits")
+    assert f"Files of {short}" in ui.app.text()
+    assert "work.txt" not in ui.app.pane_text("Files")
+
+
+def test_the_files_follow_the_highlighted_commit_without_taking_the_focus(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo.write("work.txt", "work\n")
+    ui = jazygit()
+
+    ui.commits.select("Add two")
+
+    ui.app.wait_in("Files", "two.txt")
+    assert f"Files of {repo.short('HEAD')}" in ui.app.text()
+    assert ui.app.focused_pane() == "Commits"
+
+    ui.commits.select("Add one")
+
+    ui.app.wait_in("Files", "one.txt")
+    assert "two.txt" not in ui.app.pane_text("Files")
+    assert ui.app.focused_pane() == "Commits"
+
+    # The branches themselves list nothing yet: the files of the working tree come back.
+    ui.app.focus("Branches")
+
+    ui.app.wait_in("Files", "work.txt")
 
 
 def test_the_files_of_a_stash_include_its_untracked_files(repo, jazygit):

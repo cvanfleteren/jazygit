@@ -303,6 +303,14 @@ public class FilesPanel {
     }
 
     /**
+     * The message to send when the pane lists other files than those the pane in use, {@code inUse}, follows (ADR
+     * 141).
+     */
+    public Option<Msg> followChange(Model model, Option<PaneId> inUse) {
+        return FollowedFiles.change(model, inUse);
+    }
+
+    /**
      * The message to send when the highlighted node is not the one whose diff {@code model} holds: of the files of
      * the commit while they are open, else of the working tree.
      */

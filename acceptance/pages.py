@@ -52,8 +52,18 @@ class Jazygit:
         return (git_dir / "index.lock").exists() or (rebasing and not (git_dir / "REBASE_HEAD").exists())
 
     def _shows_repo(self) -> bool:
+        # While a list of commits has the focus, the files pane lists the files of the one highlighted (ADR 141): the
+        # status line still shows the conflicts read.
         return (self._shows_in_progress() and self.commits.shows_history() and self.branches.shows_branches()
-                and self.files.shows_changes())
+                and (self._shows_conflicts() if self.files.lists_a_commit() else self.files.shows_changes()))
+
+    def _shows_conflicts(self) -> bool:
+        """Whether the status line counts the conflicts git has, or shows none when there are none."""
+        conflicts = self.repo.conflicts()
+        # `CONFLICTS (1)` on a line of its own, or `· 1 conflict` after the operation, which may be cut off after `conf`.
+        found = re.findall(r"CONFLICTS \((\d+)\)|(\d+) conf", self.app.pane_text("Repo"))
+        shown = [int(own_line or after) for own_line, after in found]
+        return shown == [len(conflicts)] if conflicts else not shown
 
     def _shows_in_progress(self) -> bool:
         """Whether the status line names the operation in progress, and no other. Its conflicts can be cut off, past
@@ -213,6 +223,10 @@ class FilesPane:
         self.ui = ui
         self.app = ui.app
         self.repo = ui.repo
+
+    def lists_a_commit(self) -> bool:
+        """Whether the pane lists the files of a commit, a stash or a branch, not those of the working tree."""
+        return "╭Files of " in self.app.text()
 
     def shows_changes(self) -> bool:
         rows = self.app.pane_text("Files").splitlines()

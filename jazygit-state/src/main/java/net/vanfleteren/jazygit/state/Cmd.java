@@ -86,6 +86,10 @@ public interface Cmd {
          */
         COMMIT_FILE_DIFF,
         /**
+         * The files of the commit, the stash or the branch the files pane lists, which follow the highlight (ADR 141).
+         */
+        COMMIT_FILES,
+        /**
          * The diff of the files highlighted.
          */
         FILE_DIFF

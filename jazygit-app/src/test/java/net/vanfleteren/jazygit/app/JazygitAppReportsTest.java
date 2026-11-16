@@ -46,7 +46,6 @@ import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
-import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
 
@@ -96,10 +95,11 @@ class JazygitAppReportsTest {
             assertEquals(CommitsPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(1)));
 
-            Rect files = pilot.findElement(FilesPanel.ID);
-            pilot.mousePress(MouseButton.LEFT, files.left() + 3, files.top());
+            // The branches: the files pane lists the files of the commit highlighted now, which may be none (ADR 141).
+            Rect branches = pilot.findElement(BranchesPanel.ID);
+            pilot.mousePress(MouseButton.LEFT, branches.left() + 3, branches.top());
 
-            assertEquals(FilesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+            assertEquals(BranchesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
         } finally {
             app.onStop();
         }

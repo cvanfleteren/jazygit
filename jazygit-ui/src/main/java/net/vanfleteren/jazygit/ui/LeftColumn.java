@@ -112,7 +112,7 @@ public final class LeftColumn {
 
     /**
      * What the panes highlight that the model, which they were last rendered from, does not know: the item the
-     * content panel shows the preview of. On the pull requests screen, only the pane in use, {@code inUse}, says.
+     * content panel shows the preview of, and whose files the files pane lists (ADR 141). On the pull requests screen, only the pane in use, {@code inUse}, says.
      */
     public List<Msg> selectionChanges(Model model, Option<PaneId> inUse) {
         return model.screen() == Screen.PULL_REQUESTS
@@ -124,7 +124,8 @@ public final class LeftColumn {
                                 branchesPanel.selectionChange(model),
                                 commitsPanel.selectionChange(model),
                                 filesPanel.selectionChange(model),
-                                stashPanel.selectionChange(model))
+                                stashPanel.selectionChange(model),
+                                filesPanel.followChange(model, inUse))
                         .flatMap(change -> change);
     }
 

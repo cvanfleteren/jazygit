@@ -104,28 +104,33 @@ class CommitFilesUpdateTest {
     }
 
     @Test
-    void anotherPaneGettingTheFocusClosesThemButTheirDiffDoesNot() {
+    void theFocusMovingLeavesThemListed() {
+        // Which files are listed for the pane that gets the focus is the panes' to say (ADR 141).
         Model open = withFiles(opened());
 
-        assertTrue(Update.update(open, new ViewMsg.Focused(Scopes.FILES.pane()))
-                .model()
-                .repoView()
-                .files()
-                .commitFiles()
-                .isDefined());
-        assertTrue(Update.update(open, new ViewMsg.Focused(new AreaId("commit-file-changes")))
-                .model()
-                .repoView()
-                .files()
-                .commitFiles()
-                .isDefined());
+        for (var focus : List.of(Scopes.FILES.pane(), new AreaId("commit-file-changes"), Scopes.COMMITS.pane())) {
+            assertTrue(Update.update(open, new ViewMsg.Focused(focus))
+                    .model()
+                    .repoView()
+                    .files()
+                    .commitFiles()
+                    .isDefined());
+        }
+    }
+
+    @Test
+    void fOnTheCommitWhoseFilesFollowTheHighlightKeepsThemAndNoLongerFollows() {
+        Model following = Update.update(
+                        loaded(),
+                        new SelectionMsg.FilesFollowed(Option.of(COMMIT), Scopes.COMMITS.pane(), Scopes.FILES.pane()))
+                .model();
+
+        Next next = Update.update(following, new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.pane()));
+
         assertEquals(
-                Option.none(),
-                Update.update(open, new ViewMsg.Focused(Scopes.COMMITS.pane()))
-                        .model()
-                        .repoView()
-                        .files()
-                        .commitFiles());
+                following.repoView().files().commitFiles().map(view -> view.withFollowed(false)),
+                next.model().repoView().files().commitFiles());
+        assertEquals(List.of(), next.cmds());
     }
 
     @Test

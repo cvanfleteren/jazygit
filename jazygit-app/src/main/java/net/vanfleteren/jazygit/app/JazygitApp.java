@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.branches.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.changes.files.step.FileStepEnded;
 import net.vanfleteren.jazygit.chrome.help.HelpMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpPopup;
@@ -155,6 +156,13 @@ public class JazygitApp extends ToolkitApp {
             }
             // The focus is the app's, not the model's: it moves it into the command log itself (ADR 129).
             case CommandLogFocused() -> focus.moveToCommandLog();
+            // Escape in the files of a commit is back to the list they were listed from, where they follow the
+            // highlight; the list says which files the pane lists then (ADR 141).
+            case CommitFilesMsg.Closed()
+            when model().repoView().files().commitFiles().isDefined() -> {
+                model().repoView().files().commitFiles().forEach(view -> focus.moveTo(view.pane()));
+                requestRedraw();
+            }
             // The help gives the focus back as it closes, so the log takes it in the frame after.
             case HelpMsg.Chosen(CommandLogFocused()) -> {
                 logAfterPopup = true;

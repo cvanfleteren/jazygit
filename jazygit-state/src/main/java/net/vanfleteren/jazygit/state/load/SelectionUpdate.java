@@ -10,17 +10,21 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.BranchCommitSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.BranchSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.CommitFilesSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.CommitSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.DivergenceCommitSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.FilesFollowed;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.FilesSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.NoLogSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.StashSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedDirectorySelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedFileSelected;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.NoLog;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
@@ -44,6 +48,7 @@ public final class SelectionUpdate {
             case UnchangedDirectorySelected(String path, int files) -> unchangedDirectorySelected(model, path, files);
             case CommitFilesSelected(var files) -> commitFilesSelected(model, files);
             case StashSelected(var sha) -> stashSelected(model, sha);
+            case FilesFollowed(var of, var from, var listedIn) -> followed(model, of, from, listedIn);
         };
     }
 
@@ -208,6 +213,33 @@ public final class SelectionUpdate {
                 detail ->
                         model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withStashDetail(detail))),
                 stash -> new LoadStashDetail(stash, model.preferences().diffOptions()));
+    }
+
+    /**
+     * Lists the files of {@code of}, highlighted in the pane {@code from}, in the pane {@code listedIn}, without moving
+     * the focus; with none, the files of the working tree again. Those already listed stay, read or being read, also
+     * when {@code F} asked for them: they then follow the highlight again. The filter goes along to the next; all files and the collapsed directories do not
+     * (ADR 141).
+     */
+    private static Next followed(Model model, Option<Changes> of, PaneId from, PaneId listedIn) {
+        Option<CommitFilesView> shown = model.repoView().files().commitFiles();
+        if (of.isEmpty()) {
+            return Next.of(
+                    model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.none()))));
+        }
+        if (shown.exists(view -> view.of().sameAs(of.get()))) {
+            // Those F asked for follow the highlight again once their list has the focus back.
+            return shown.exists(CommitFilesView::followed)
+                    ? Next.of(model)
+                    : Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(
+                            shown.map(view -> view.withFollowed(true).withPane(from))))));
+        }
+        CommitFilesView view = CommitFilesView.of(of.get(), from, listedIn)
+                .withFollowed(true)
+                .withFilter(shown.flatMap(CommitFilesView::filter));
+        return Next.of(
+                model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(view)))),
+                LoadCommitFiles.of(view));
     }
 
     private static Function<Sha, Load> detail(Model model, Cmd.Slot slot) {
