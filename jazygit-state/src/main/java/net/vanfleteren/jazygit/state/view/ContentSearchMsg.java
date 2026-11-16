@@ -13,7 +13,7 @@ public sealed interface ContentSearchMsg extends Msg {
 
     @Override
     default Update.Next apply(Model model) {
-        return Update.Next.of(model.withContentSearch(next(model.contentSearch())));
+        return Update.Next.of(model.map(ContentSearch.SLICE, this::next));
     }
 
     /**

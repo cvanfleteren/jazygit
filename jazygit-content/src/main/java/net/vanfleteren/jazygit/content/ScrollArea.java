@@ -186,8 +186,8 @@ public final class ScrollArea {
         int near = cursor.map(DiffCursor::stop).getOrElse(0);
         Option<DiffStops.HunkAt> asGiven = told.mark()
                 .flatMap(mark -> last.map(before -> before.hunk(mark, near)).getOrElse(() -> markedHunk(body, mark)));
-        Option<String> query = ContentSearch.query(model.contentSearch());
-        typing = model.contentSearch().filter(ContentSearch::typing).map(ContentSearch::text);
+        Option<String> query = ContentSearch.query(model.get(ContentSearch.SLICE));
+        typing = model.get(ContentSearch.SLICE).filter(ContentSearch::typing).map(ContentSearch::text);
         // The matches are found once per body and query, not per frame (ADR 126).
         Styled current = last.filter(before -> before.asGiven().equals(asGiven))
                 .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width))

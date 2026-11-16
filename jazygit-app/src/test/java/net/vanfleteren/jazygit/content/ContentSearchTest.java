@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Found;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -112,7 +113,7 @@ class ContentSearchTest {
             driven.press(testRunner, KeyCode.ESCAPE);
 
             assertInstanceOf(ContentSearchMsg.Cleared.class, driven.dispatched.getLast());
-            assertTrue(driven.model.get().contentSearch().isEmpty());
+            assertTrue(driven.model.get().get(ContentSearch.SLICE).isEmpty());
             assertFalse(driven.screen(testRunner).contains("/foo"), driven.screen(testRunner));
         }
     }
@@ -128,7 +129,8 @@ class ContentSearchTest {
             driven.type(testRunner, "/x");
             driven.press(testRunner, KeyCode.ESCAPE);
 
-            assertEquals("foo", driven.model.get().contentSearch().get().text());
+            assertEquals(
+                    "foo", driven.model.get().get(ContentSearch.SLICE).get().text());
             assertTrue(driven.screen(testRunner).contains("/foo"), driven.screen(testRunner));
         }
     }
@@ -221,7 +223,7 @@ class ContentSearchTest {
             // Escape drops the range before it clears the search.
             driven.press(testRunner, KeyCode.ESCAPE);
             assertEquals(Option.none(), driven.lastScrolled().mark());
-            assertTrue(driven.model.get().contentSearch().isDefined());
+            assertTrue(driven.model.get().get(ContentSearch.SLICE).isDefined());
         }
     }
 

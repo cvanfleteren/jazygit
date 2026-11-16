@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state.view;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.state.Slice;
 
 /**
  * The search of the content panel (ADR 126): one for the panel, whichever area shows it, kept while other items are
@@ -10,6 +11,11 @@ import io.vavr.control.Option;
  * @param before the query from before the line was opened, empty when there was none, while the line is open
  */
 public record ContentSearch(String text, Option<String> before) {
+
+    /**
+     * The search of the content panel, if there is one, in the model.
+     */
+    public static final Slice<Option<ContentSearch>> SLICE = Slice.of("content.search", Option.none());
 
     /**
      * The search {@code current} with the line to type it in opened, showing its query.

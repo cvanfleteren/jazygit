@@ -26,7 +26,6 @@ import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
-import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
@@ -43,9 +42,9 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * @param popup          the popup that is open, if any; only one can be
  * @param listCursor     where the user is in the list of the popup, if it has one
  * @param scrolled       where the areas of the content panel were scrolled to, by the id of the area
- * @param contentSearch  the search of the content panel, if there is one (ADR 126)
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
  * @param now            the time the last message was handled at, which tells how long ago things happened
+ * @param slices         what the features keep in the model, each under its own {@link Slice}
  */
 @With
 public record Model(
@@ -60,9 +59,9 @@ public record Model(
         Option<Popup> popup,
         ListCursor listCursor,
         Map<AreaId, Scrolled> scrolled,
-        Option<ContentSearch> contentSearch,
         Preferences preferences,
-        Instant now) {
+        Instant now,
+        Slices slices) {
 
     /**
      * How often a time shown moves on at most while the terminal does not have the focus: a frame every 5 s rather
@@ -83,9 +82,23 @@ public record Model(
                 Option.none(),
                 ListCursor.START,
                 HashMap.empty(),
-                Option.none(),
                 Preferences.DEFAULT,
-                Instant.EPOCH);
+                Instant.EPOCH,
+                Slices.NONE);
+    }
+
+    /**
+     * What the feature that owns {@code slice} keeps in this model.
+     */
+    public <T> T get(Slice<T> slice) {
+        return slices.get(slice);
+    }
+
+    /**
+     * This model with {@code f} applied to what the feature that owns {@code slice} keeps in it.
+     */
+    public <T> Model map(Slice<T> slice, UnaryOperator<T> f) {
+        return withSlices(slices.map(slice, f));
     }
 
     /**

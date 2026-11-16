@@ -25,10 +25,10 @@ class ContentSearchMsgTest {
     @Test
     void nothingIsSearchedWhileTheLineIsOpenAndEnterKeepsWhatItHolds() {
         Model typing = after(TestModels.loaded(), new ContentSearchMsg.Opened(), new ContentSearchMsg.Edited("foo"));
-        assertEquals(Option.none(), ContentSearch.query(typing.contentSearch()));
+        assertEquals(Option.none(), ContentSearch.query(typing.get(ContentSearch.SLICE)));
 
         Model kept = after(typing, new ContentSearchMsg.Submitted());
-        assertEquals(Option.of("foo"), ContentSearch.query(kept.contentSearch()));
+        assertEquals(Option.of("foo"), ContentSearch.query(kept.get(ContentSearch.SLICE)));
     }
 
     @Test
@@ -40,10 +40,10 @@ class ContentSearchMsgTest {
                 new ContentSearchMsg.Submitted());
 
         Model reopened = after(kept, new ContentSearchMsg.Opened());
-        assertEquals("foo", reopened.contentSearch().get().text());
+        assertEquals("foo", reopened.get(ContentSearch.SLICE).get().text());
 
         Model cancelled = after(reopened, new ContentSearchMsg.Edited("bar"), new ContentSearchMsg.Cancelled());
-        assertEquals(Option.of("foo"), ContentSearch.query(cancelled.contentSearch()));
+        assertEquals(Option.of("foo"), ContentSearch.query(cancelled.get(ContentSearch.SLICE)));
     }
 
     @Test
@@ -51,7 +51,7 @@ class ContentSearchMsgTest {
         assertEquals(
                 Option.none(),
                 after(TestModels.loaded(), new ContentSearchMsg.Opened(), new ContentSearchMsg.Submitted())
-                        .contentSearch());
+                        .get(ContentSearch.SLICE));
         assertEquals(
                 Option.none(),
                 after(
@@ -59,7 +59,7 @@ class ContentSearchMsgTest {
                                 new ContentSearchMsg.Opened(),
                                 new ContentSearchMsg.Edited("x"),
                                 new ContentSearchMsg.Cancelled())
-                        .contentSearch());
+                        .get(ContentSearch.SLICE));
     }
 
     @Test
@@ -71,6 +71,6 @@ class ContentSearchMsgTest {
                 new ContentSearchMsg.Submitted(),
                 new ContentSearchMsg.Cleared());
 
-        assertEquals(Option.none(), kept.contentSearch());
+        assertEquals(Option.none(), kept.get(ContentSearch.SLICE));
     }
 }
