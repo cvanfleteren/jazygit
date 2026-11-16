@@ -38,7 +38,10 @@ directories collapsed, about 90 ms more by ADR 108's measure.
   tree; no error is shown.
 - The main branch lists the files its tip commit changed. Not: all its files (ADR 128), which would be an `ls-tree` at
   each move.
-- The other rows of the branches: a detached HEAD (ADR 137) lists the files of its commit. A stack of pull requests,
+- What is checked out here, a branch or a detached HEAD (ADR 137), lists the files of the working tree, its changes
+  staged or not, as the files pane does now. Not: the files of its last commit, or what it changed against its base:
+  what the user works on is what is not committed yet. It is also the way back to the working tree from the lists.
+- The other rows of the branches: a stack of pull requests,
   and a pull request of a stack whose branch is not here, say there is nothing to list, in place of the tree, as a
   branch without a base does. Not: the files of the branch highlighted before, which would show one while another is
   highlighted (ADR 44).
@@ -54,13 +57,14 @@ directories collapsed, about 90 ms more by ADR 108's measure.
 
 ### Going back
 
-- The files of the working tree come back when the focus moves to a pane that is none of the lists above, not the
-  files pane and not the content panel: the status, the remote branches, the worktrees. From a list into the files
+- The files of the working tree come back when the branch checked out is highlighted, or when the focus moves to a
+  pane that is none of the lists above, not the files pane and not the content panel: the remote branches, the
+  worktrees. From a list into the files
   pane, and from there into the content panel, they stay (ADR 44); back into the list, they follow again.
 - `Esc` in the files pane moves the focus back to the list they were listed from, where they keep following: it is
   "back", as `Esc` in the content panel is back to the tree. Not: `Esc` listing the working tree in the files pane,
-  which the files of the list would replace again as soon as it had the focus back. The working tree is the files pane
-  from the status.
+  which the files of the list would replace again as soon as it had the focus back. The working tree is the branch
+  checked out.
 - While they are not listed, the changes of the working tree are not counted anywhere in the pane. Not: a count in the
   title.
 
