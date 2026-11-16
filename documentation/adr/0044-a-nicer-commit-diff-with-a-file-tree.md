@@ -129,4 +129,4 @@ Amended by ADR 80: a changed line, the bar and the tint of the cursor go on to t
 Amended by ADR 83: a removed line is followed by the line it became, where the words of each pair were compared.
 
 Amended by ADR 141: the files pane lists the files of the highlighted commit or stash while a list of them has the
-focus, without `F`.
+focus, without `F`: going through history file by file was `F`, `Esc`, `j`, `F` for every commit.
