@@ -21,8 +21,11 @@ the highlight. Measured on nixpkgs (50 000 files, 910 000 commits), warm cache:
 
 Git limits rename detection itself (`diff.renameLimit`), so `-M` does not blow up. Building the tree is linear in the
 files; ADR 108 measured 100 000 paths at about 100 ms to filter and 80 ms to find the directories to start collapsed.
-Reading what a commit changed costs a fraction of what is read for it already; its tree costs little but for the
-largest commits. All files of a commit cost too much to read at each move.
+Reading what a commit changed costs a fraction of the diff read for it already; its tree costs little but for the
+largest commits. A branch has no diff read for it, the content panel shows its log: the files against its base are a
+new read at each move, small but for a branch far from its base. All files of a commit are not too much for git to
+list, 120 ms, less than that branch; what costs is 2.3 MB at each move, and a tree of 50 000 paths built and its
+directories collapsed, about 90 ms more by ADR 108's measure.
 
 ## Decision
 
@@ -35,6 +38,12 @@ largest commits. All files of a commit cost too much to read at each move.
   tree; no error is shown.
 - The main branch lists the files its tip commit changed. Not: all its files (ADR 128), which would be an `ls-tree` at
   each move.
+- The other rows of the branches: a detached HEAD (ADR 137) lists the files of its commit. A stack of pull requests,
+  and a pull request of a stack whose branch is not here, say there is nothing to list, in place of the tree, as a
+  branch without a base does. Not: the files of the branch highlighted before, which would show one while another is
+  highlighted (ADR 44).
+- The remote branches do not follow: they list the files of the working tree, as now. `F` on a remote branch is still
+  left for later (ADR 61, 128).
 - The focus stays in the list. The arrows move it into the files, as into any pane.
 
 ### `F`
@@ -45,10 +54,13 @@ largest commits. All files of a commit cost too much to read at each move.
 
 ### Going back
 
-- The files of the working tree come back when the focus moves to a pane that is none of the lists above and not the
-  files pane: the status, the content panel. From a list into the files pane they stay; back into the list, they follow
-  again.
-- `Esc` in the files pane still goes back to the files of the working tree.
+- The files of the working tree come back when the focus moves to a pane that is none of the lists above, not the
+  files pane and not the content panel: the status, the remote branches, the worktrees. From a list into the files
+  pane, and from there into the content panel, they stay (ADR 44); back into the list, they follow again.
+- `Esc` in the files pane moves the focus back to the list they were listed from, where they keep following: it is
+  "back", as `Esc` in the content panel is back to the tree. Not: `Esc` listing the working tree in the files pane,
+  which the files of the list would replace again as soon as it had the focus back. The working tree is the files pane
+  from the status.
 - While they are not listed, the changes of the working tree are not counted anywhere in the pane. Not: a count in the
   title.
 
@@ -78,7 +90,8 @@ largest commits. All files of a commit cost too much to read at each move.
 
 - History is read file by file with the highlight and the arrows; `F` goes from a key to see the files to one to see
   more of them.
-- A git read more at each move of the highlight in those lists, smaller than the diff already read.
+- A git read more at each move of the highlight in those lists: smaller than the diff already read for a commit, and
+  a read of its own for a branch, which costs only for one far from its base.
 - The changes of the working tree are not in sight while history is looked through.
 - The files of a pull request and all files of the main branch stay behind `F`: they cost the network, or a tree of
   the whole repository.
