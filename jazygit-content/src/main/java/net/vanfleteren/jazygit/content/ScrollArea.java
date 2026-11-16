@@ -136,8 +136,9 @@ public final class ScrollArea {
     private Option<String> number = Option.none();
     // Whether the area shows the original of a file whole, whose lines are numbered in the old file (ADR 102, 140).
     private boolean original = false;
-    // The number of the line asked for that a marker leaves out, while the area waits for it to show (ADR 140).
-    private Option<Integer> wanted = Option.none();
+    // The number of the line asked for that a marker leaves out, and what the area showed when it was asked for, while
+    // the area waits for it to show (ADR 140).
+    private Option<Tuple2<ScrolledContent, Integer>> wanted = Option.none();
 
     public ScrollArea(
             ContentArea area, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
@@ -271,9 +272,11 @@ public final class ScrollArea {
             notice = Option.none();
         }
         // A line asked for that a marker left out, once it shows, or what showed instead says it is not there, as past
-        // the end of the file, which is only known once the file is read whole (ADR 140).
+        // the end of the file, which is only known once the file is read whole (ADR 140). Only while the area keeps
+        // the focus and shows what it was asked in: reading the file whole does not change that, another file does.
+        wanted = wanted.filter(asked -> focused && asked._1().equals(content));
         if (last.isEmpty()) {
-            wanted = wanted.filter(line -> cursor.exists(on -> waitedFor(on, current, line)));
+            wanted = wanted.filter(asked -> cursor.exists(on -> waitedFor(on, current, asked._2())));
         }
         // The size the element was last drawn in, which a frame in another size draws it in first (ADR 80).
         columns = Math.max(0, current.widest() - state.viewportWidth());
@@ -535,7 +538,7 @@ public final class ScrollArea {
             return EventResult.HANDLED;
         }
         notice = Option.none();
-        this.wanted = Option.of(wanted.number());
+        this.wanted = Option.of(Tuple.of(content, wanted.number()));
         DiffCursor near = on.toLine(closest.row(), closest.mark().side()).getOrElse(on);
         cursor = Option.of(near);
         RichTextState state = element.state();

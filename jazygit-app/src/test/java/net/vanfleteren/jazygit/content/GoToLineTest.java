@@ -170,6 +170,51 @@ class GoToLineTest {
     }
 
     @Test
+    void aLineAskedForInOneFileIsNotWaitedForInTheNextOneShown() throws Exception {
+        Driven driven = new Driven(commit(DiffStyle.RICH, CHANGED));
+        try (ToolkitTestRunner testRunner = driven.run()) {
+            driven.type(testRunner, ":99");
+            driven.press(testRunner, KeyCode.ENTER);
+            ReadWholeFile read = driven.cmds.stream()
+                    .filter(ReadWholeFile.class::isInstance)
+                    .map(ReadWholeFile.class::cast)
+                    .findFirst()
+                    .orElseThrow();
+
+            // Other changes show before the file is read, as the commit read again, in the same area, which keeps the
+            // focus.
+            driven.model.set(Update.update(
+                            driven.model.get(),
+                            new LoadMsg.CommitDetailLoaded(
+                                    new Sha("aaaa"),
+                                    driven.model.get().preferences().diffOptions(),
+                                    // An added file, whole: no marker after it, so line 99 is past its end.
+                                    DiffText.of("""
+                                            diff --git a/b.txt b/b.txt
+                                            new file mode 100644
+                                            --- /dev/null
+                                            +++ b/b.txt
+                                            @@ -0,0 +1,3 @@
+                                            +one
+                                            +two
+                                            +three
+                                            """)))
+                    .model());
+            String shown = driven.screen(testRunner);
+            assertTrue(shown.contains("three"), shown);
+            assertFalse(shown.contains("is not shown"), shown);
+
+            // The read of the first file landing later says nothing of the file shown.
+            driven.model.set(TestModels.done(
+                            TestModels.running(driven.model.get(), read),
+                            read,
+                            new LoadMsg.WholeFileRead(read, DiffText.of(whole())))
+                    .model());
+            assertFalse(driven.screen(testRunner).contains("is not shown"), driven.screen(testRunner));
+        }
+    }
+
+    @Test
     void escapeClosesTheLineAndGoesNowhere() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH, SMALL));
         try (ToolkitTestRunner testRunner = driven.run()) {
@@ -401,7 +446,6 @@ class GoToLineTest {
 
         Driven(Model start, PaneId pane, Option<AreaId> focused, int width) {
             this.pane = pane;
-            this.focused = focused;
             this.width = width;
             model = new AtomicReference<>(start);
             panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
@@ -410,6 +454,8 @@ class GoToLineTest {
                 cmds.addAll(next.cmds().toJavaList());
                 model.set(next.model());
             });
+            // The area the pane shows its content in at the start, which keeps showing what the pane shows next.
+            this.focused = focused.orElse(() -> panel.areaOfPane(start, pane));
         }
 
         ToolkitTestRunner run() throws Exception {
@@ -420,7 +466,7 @@ class GoToLineTest {
         }
 
         AreaId area() {
-            return focused.getOrElse(() -> panel.areaOfPane(model.get(), pane).get());
+            return focused.get();
         }
 
         dev.tamboui.toolkit.element.StyledElement<?> render() {
