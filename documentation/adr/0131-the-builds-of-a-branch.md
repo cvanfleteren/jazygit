@@ -122,3 +122,6 @@ issue (`issue_comment`, `issues`) are on the main branch too, as GitHub runs tho
 - The files of workflows are read from git at a build's commit, and a little of what GitHub Actions makes of them
   (names, matrices, calls) is redone to match the jobs.
 - Left for later: the builds kept, more than 100, a build selected, and the builds of a remote branch.
+
+Amended by ADR 138: a file of a workflow git does not have at the commit of a build is read from GitHub at that
+commit.

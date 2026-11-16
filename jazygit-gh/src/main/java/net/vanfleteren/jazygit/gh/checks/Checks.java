@@ -50,6 +50,12 @@ public interface Checks {
     Either<GhError, List<RepoWorkflow>> workflows();
 
     /**
+     * The file at {@code path} of the commit {@code sha} of the repository, as GitHub has it: the file of a workflow of
+     * a build whose commit is not fetched (ADR 138).
+     */
+    Either<GhError, String> workflowFile(String sha, String path);
+
+    /**
      * The names of the protected branches of the repository (ADR 72).
      */
     Either<GhError, List<GhBranch>> protectedBranches();

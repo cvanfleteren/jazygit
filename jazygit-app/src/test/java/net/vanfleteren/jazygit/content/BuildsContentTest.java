@@ -10,8 +10,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import java.util.ArrayList;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.checks.StubChecks;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.gh.process.GhError;
@@ -513,6 +515,63 @@ class BuildsContentTest {
                         .get()
                         .jobs()
                         .map(Workflow.Job::key));
+    }
+
+    @Test
+    void aWorkflowGitDoesNotHaveIsReadFromGitHubAtTheCommit() {
+        // The head commit of a pull request merged and deleted since is not fetched; GitHub still has it (ADR 138).
+        String sha = "abcdef0123456789abcdef0123456789abcdef01";
+        ArrayList<String> asked = new ArrayList<>();
+        Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
+            @Override
+            public Either<GhError, String> workflowFile(String at, String path) {
+                asked.add(path);
+                return at.equals(sha) && path.equals(".github/workflows/publish.yml")
+                        ? Either.right("jobs:\n  verify:\n    uses: ./.github/workflows/build.yml\n")
+                        : at.equals(sha) && path.equals(".github/workflows/build.yml")
+                                ? Either.right("jobs:\n  test: {}\n")
+                                : StubChecks.super.workflowFile(at, path);
+            }
+        }));
+
+        BuildsViewMsg.WorkflowsRead read = (BuildsViewMsg.WorkflowsRead)
+                new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
+
+        assertEquals(
+                List.of("test"),
+                read.workflows()
+                        .get(new FileAt(sha, ".github/workflows/build.yml"))
+                        .get()
+                        .get()
+                        .jobs()
+                        .map(Workflow.Job::key));
+        assertEquals(List.of(".github/workflows/publish.yml", ".github/workflows/build.yml"), List.ofAll(asked));
+    }
+
+    @Test
+    void aWorkflowGitHasIsNotAskedOfGitHub() {
+        String sha = "abcdef0123456789abcdef0123456789abcdef01";
+        Env env = new Env(
+                StubGit.of().withDiffs(new StubDiffs() {
+                    @Override
+                    public Either<GitError, String> treeText(Sha at, String path) {
+                        return Either.right("jobs:\n  test: {}\n");
+                    }
+                }),
+                StubGitHub.of().withChecks(new StubChecks() {
+                    @Override
+                    public Either<GhError, String> workflowFile(String at, String path) {
+                        throw new AssertionError("asked GitHub for " + path);
+                    }
+                }));
+
+        BuildsViewMsg.WorkflowsRead read = (BuildsViewMsg.WorkflowsRead)
+                new ReadWorkflows(new FileAt(sha, ".github/workflows/build.yml")).run(env);
+
+        assertTrue(read.workflows()
+                .get(new FileAt(sha, ".github/workflows/build.yml"))
+                .get()
+                .isDefined());
     }
 
     @Test
