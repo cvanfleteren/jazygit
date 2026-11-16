@@ -99,14 +99,6 @@ class DiffLinesTest {
     }
 
     @Test
-    void inTheSplitViewARangeFromOneSideToTheOtherHoldsEveryLineBetween() {
-        assertEquals(
-                Option.of(List.of(line(Side.LEFT, 1), line(Side.LEFT, 2), line(Side.RIGHT, 2))),
-                LINES.between(line(Side.LEFT, 1), line(Side.RIGHT, 2), true)
-                        .map(lines -> lines.map(DiffLines.Line::anchor).toList()));
-    }
-
-    @Test
     void noRangeUnlessBothEndsAreLines() {
         assertEquals(Option.none(), LINES.between(line(Side.LEFT, 2), line(Side.LEFT, 40)));
         assertEquals(Option.none(), LINES.between(new OnLine("b.png", Side.RIGHT, 1), line(Side.LEFT, 2)));

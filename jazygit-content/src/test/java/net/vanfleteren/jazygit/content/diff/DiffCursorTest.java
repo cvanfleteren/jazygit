@@ -525,6 +525,31 @@ class DiffCursorTest {
     }
 
     @Test
+    void theBracketsLeaveTheCursorWhereItIsInAHunkWithoutALineOnThatSide() {
+        // An added file, then a file with a removed line in a hunk of its own.
+        Vector<RichDiff.Stop> stops = Vector.of(
+                stop(FILE, 1, 0),
+                half(RIGHT_ONE, Side.RIGHT, 1, 0),
+                stop(OTHER_FILE, 1, 2),
+                new RichDiff.Stop(
+                        new RichDiff.Mark(
+                                OTHER_LEFT,
+                                1,
+                                5,
+                                Option.of(new DiffStops.HunkAt(1, 0)),
+                                Option.of(Side.LEFT),
+                                0,
+                                Option.none(),
+                                0),
+                        3));
+
+        DiffCursor added =
+                cursor(stops, 4, 4, 0, Option.of(RIGHT_ONE), Option.none()).get();
+
+        assertEquals(RIGHT_ONE, added.toSide(Side.LEFT).get().anchor());
+    }
+
+    @Test
     void aMatchOfASearchTakesTheCursorToItsHalf() {
         assertEquals(REMOVED, split(FILE).toLine(2, Option.of(Side.LEFT)).get().anchor());
         assertEquals(ADDED, split(FILE).toLine(2, Option.of(Side.RIGHT)).get().anchor());

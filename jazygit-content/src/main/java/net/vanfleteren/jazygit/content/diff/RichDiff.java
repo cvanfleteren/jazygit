@@ -243,7 +243,8 @@ public final class RichDiff {
         if (split.isDefined()
                 && version.isEmpty()
                 && parsed.hunks().forAll(hunk -> hunk.hunk().numbered())) {
-            return SplitRows.file(parsed, remarks, index, fold, syntax, words, style, styles, split.get());
+            return SplitRows.file(parsed, remarks, index, fold, syntax, words, style, styles, split.get())
+                    .map(pending -> () -> pending.draw().map(Marked::pin));
         }
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
         // A version keeps the gutter of the diff it is shown in place of, as wide, so its code does not move sideways
@@ -868,7 +869,8 @@ public final class RichDiff {
      * known without drawing it: a line of a diff is no wider than its file, so a long diff is measured without drawing
      * each of its lines only to throw it away. With what it is searched in (ADR 126): the code of a line of a diff,
      * without drawing it; all the text of any other line, drawn already. A row of the split view has a stop for each
-     * of its halves that holds a line, and where its halves are (ADR 139).
+     * of its halves that holds a line, and where its halves are (ADR 139); a row of a file drawn split that is as wide
+     * as the area, as its bar, is pinned: it does not scroll sideways, as the halves scroll each on their own.
      */
     record Marked(
             Supplier<Line> line,
@@ -876,7 +878,18 @@ public final class RichDiff {
             List<Anchor> places,
             Option<Integer> width,
             Supplier<Rows.Source> source,
-            Option<Halves> halves) {
+            Option<Halves> halves,
+            boolean pinned) {
+
+        Marked(
+                Supplier<Line> line,
+                List<Mark> marks,
+                List<Anchor> places,
+                Option<Integer> width,
+                Supplier<Rows.Source> source,
+                Option<Halves> halves) {
+            this(line, marks, places, width, source, halves, false);
+        }
 
         Marked(Supplier<Line> line, Option<Mark> mark) {
             this(line, mark, List.empty());
@@ -908,14 +921,22 @@ public final class RichDiff {
         Marked mapped(UnaryOperator<Line> change) {
             Supplier<Line> drawn = line;
             Supplier<Line> changed = () -> change.apply(drawn.get());
-            return new Marked(changed, marks, places, Option.none(), () -> Rows.Source.of(changed.get()), halves);
+            return new Marked(
+                    changed, marks, places, Option.none(), () -> Rows.Source.of(changed.get()), halves, pinned);
         }
 
         /**
          * This line with its stops on {@code side} (ADR 139).
          */
         Marked onSide(ReviewThread.Side side) {
-            return new Marked(line, marks.map(mark -> mark.onSide(side)), places, width, source, halves);
+            return new Marked(line, marks.map(mark -> mark.onSide(side)), places, width, source, halves, pinned);
+        }
+
+        /**
+         * This line pinned, when it has no halves: a row of a file drawn split, as wide as the area (ADR 139).
+         */
+        Marked pin() {
+            return new Marked(line, marks, places, width, source, halves, halves.isEmpty());
         }
 
         static Marked plain(Line line) {
@@ -995,6 +1016,9 @@ public final class RichDiff {
      *                halves scroll sideways
      * @param halves  where the halves of each row of the split view are, by the index of the row; none for a row as
      *                wide as the area, and none at all in the unified view (ADR 139)
+     * @param pinned  the rows of the split view that do not scroll sideways, by their index: those as wide as the area
+     *                of a file drawn split. A line of a file the split view draws unified scrolls as in the unified
+     *                view (ADR 139)
      * @param divider the column of the area the rule between the halves of the split view is at
      * @param note    what the title of the area says of how the diff is drawn: that the area is too narrow for the
      *                split view
@@ -1005,11 +1029,12 @@ public final class RichDiff {
             List<Place> places,
             IntSupplier widest,
             Vector<Option<Halves>> halves,
+            Vector<Boolean> pinned,
             Option<Integer> divider,
             Option<String> note) {
 
         Drawn(Rows rows, List<Stop> stops) {
-            this(rows, stops, List.empty(), rows::widest, Vector.empty(), Option.none(), Option.none());
+            this(rows, stops, List.empty(), rows::widest, Vector.empty(), Vector.empty(), Option.none(), Option.none());
         }
 
         private static Drawn of(List<Marked> marked) {
@@ -1026,6 +1051,7 @@ public final class RichDiff {
                     marked.exists(line -> line.halves().isDefined())
                             ? marked.map(Marked::halves).toVector()
                             : Vector.empty(),
+                    marked.exists(Marked::pinned) ? marked.map(Marked::pinned).toVector() : Vector.empty(),
                     Option.none(),
                     Option.none());
         }
@@ -1066,6 +1092,13 @@ public final class RichDiff {
         }
 
         /**
+         * Whether row {@code row} of the split view does not scroll sideways (ADR 139).
+         */
+        public boolean pinnedAt(int row) {
+            return row >= 0 && row < pinned.size() && pinned.get(row);
+        }
+
+        /**
          * These lines after {@code before}, their stops moved down by as many lines.
          */
         public Drawn after(List<Line> before) {
@@ -1080,6 +1113,9 @@ public final class RichDiff {
                             ? halves
                             : Vector.<Option<Halves>>fill(before.size(), Option::none)
                                     .appendAll(halves),
+                    pinned.isEmpty()
+                            ? pinned
+                            : Vector.fill(before.size(), () -> false).appendAll(pinned),
                     divider,
                     note);
         }
@@ -1096,6 +1132,7 @@ public final class RichDiff {
                             places,
                             widest,
                             halves,
+                            pinned,
                             divider,
                             note))
                     .getOrElse(this);
@@ -1105,14 +1142,14 @@ public final class RichDiff {
          * These lines with the rule between the halves of the split view at column {@code column} of the area.
          */
         Drawn withDivider(int column) {
-            return new Drawn(rows, stops, places, widest, halves, Option.some(column), note);
+            return new Drawn(rows, stops, places, widest, halves, pinned, Option.some(column), note);
         }
 
         /**
          * These lines with {@code says} in the title of the area.
          */
         Drawn withNote(String says) {
-            return new Drawn(rows, stops, places, widest, halves, divider, Option.some(says));
+            return new Drawn(rows, stops, places, widest, halves, pinned, divider, Option.some(says));
         }
     }
 

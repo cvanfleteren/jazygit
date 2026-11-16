@@ -226,13 +226,14 @@ public final class ContentText {
      * ({@link Rows}).
      */
     public static Text windowed(Rows lines, int column, int row, int height, int width, IntPredicate filling) {
-        return windowed(lines, column, row, height, width, filling, ignored -> Option.none(), false);
+        return windowed(lines, column, row, height, width, filling, ignored -> Option.none(), ignored -> false);
     }
 
     /**
      * {@code lines} as {@link #windowed(Rows, int, int, int, int, IntPredicate)} shows them, but those of the split
-     * view, if {@code split}: each half of a row its {@code halves} say it has cut to its width from {@code column},
-     * its gutter staying; any other row, as wide as the area, not scrolled (ADR 139).
+     * view: each half of a row its {@code halves} say it has cut to its width from {@code column}, its gutter staying;
+     * a row {@code pinned}, as wide as the area, not scrolled. Any other row, as a line of a file the split view draws
+     * unified, scrolls as in the unified view (ADR 139).
      */
     public static Text windowed(
             Rows lines,
@@ -242,7 +243,7 @@ public final class ContentText {
             int width,
             IntPredicate filling,
             IntFunction<Option<Halves>> halves,
-            boolean split) {
+            IntPredicate pinned) {
         Tuple2<Integer, Integer> window = window(lines.size(), row, height);
         int top = window._1();
         int bottom = window._2();
@@ -254,10 +255,12 @@ public final class ContentText {
                     return BLANK;
                 }
                 Line drawn = lines.get(index);
-                if (split) {
-                    return halves.apply(index)
-                            .map(cut -> cut.shown(drawn, column))
-                            .getOrElse(() -> filling.test(index) ? filled(drawn, width) : drawn);
+                Option<Halves> cut = halves.apply(index);
+                if (cut.isDefined()) {
+                    return cut.get().shown(drawn, column);
+                }
+                if (pinned.test(index)) {
+                    return filling.test(index) ? filled(drawn, width) : drawn;
                 }
                 Line line = filling.test(index) ? filled(drawn, column + width) : drawn;
                 return column == 0 ? line : sideways(line, column);
@@ -541,7 +544,8 @@ public final class ContentText {
         return body instanceof Body.Diff(ShownDiff diff, var look, var remarks)
                 ? DiffLines.of(diff.folded().diff().diff())
                         .lines()
-                        .find(line -> line.anchor().equals(mark))
+                        // A context line by either anchor, as the split view has it a stop on both sides (ADR 139).
+                        .find(line -> mark instanceof Anchor.OnLine on && line.answers(on))
                         .map(DiffLines.Line::hunk)
                 : Option.none();
     }

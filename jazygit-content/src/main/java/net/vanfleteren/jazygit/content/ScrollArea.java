@@ -273,7 +273,7 @@ public final class ScrollArea {
                         state.viewportWidth(),
                         current::filling,
                         drawn::halvesOf,
-                        drawn.split()))
+                        drawn::pinnedAt))
                 .title(shown.title()
                         + drawn.note()
                                 .map(says -> Messages.get("content.search.notice", says))
@@ -518,7 +518,8 @@ public final class ScrollArea {
                 acting,
                 cursor.nextThread().map(next -> movedTo(next, content)),
                 cursor.previousThread().map(previous -> movedTo(previous, content)),
-                cursor.marked().map(marked -> movedTo(marked, content)));
+                cursor.marked().map(marked -> movedTo(marked, content)),
+                cursor.onHalf());
     }
 
     /**

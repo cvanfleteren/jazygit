@@ -116,6 +116,15 @@ public record DiffCursor(
     }
 
     /**
+     * Whether the cursor is on a half of a row of the split view (ADR 139): as the diff was drawn, not as its style
+     * asked, as the split view draws a file unified where it cannot pair its lines, and all of them where it is too
+     * narrow.
+     */
+    public boolean onHalf() {
+        return stops.get(stop).mark().side().isDefined();
+    }
+
+    /**
      * The anchor of the line the range was started on, while one is open.
      */
     public Option<Anchor> markAnchor() {
@@ -165,8 +174,8 @@ public record DiffCursor(
 
     /**
      * {@code [} or {@code ]} in the split view (ADR 139): the cursor to the line on {@code side} of its row, or the
-     * closest that has one there; where it is while a range is open, which keeps to its side. None off a line, and in
-     * the unified view.
+     * closest row of its hunk that has one there; where it is when its hunk has none, and while a range is open,
+     * which keeps to its side. None off a line, and in the unified view.
      */
     public Option<DiffCursor> toSide(ReviewThread.Side side) {
         RichDiff.Mark on = stops.get(stop).mark();
@@ -177,16 +186,22 @@ public record DiffCursor(
             return Option.some(this);
         }
         int at = start(stop);
-        return Iterator.range(0, stops.size())
+        // Only within its hunk, between the bars and the markers around it: a row pairs lines of one hunk only.
+        int first = Iterator.rangeBy(stop, -1, -1).find(this::bounds).getOrElse(0);
+        int last = Iterator.range(stop, stops.size()).find(this::bounds).getOrElse(stops.size() - 1);
+        return Option.some(Iterator.rangeClosed(0, Math.max(stop - first, last - stop))
                 .flatMap(away -> List.of(stop - away, stop + away))
-                .filter(index -> index >= 0 && index < stops.size())
+                .filter(index -> index >= first && index <= last)
                 .filter(index -> stops.get(index).mark().side().contains(side)
-                        && stops.get(index).mark().anchor() instanceof Anchor.OnLine)
+                        && stops.get(index).mark().anchor() instanceof Anchor.OnLine
+                        && sameHunk(index))
                 // Outwards from the cursor, so the first found on a row as close is the closest by index too.
                 .take(4)
                 .toList()
                 .minBy(index -> Math.abs(start(index) - at))
-                .map(index -> at(index, row).shown());
+                .map(index -> at(index, row).shown())
+                // A hunk without a line on that side, as that of an added file: the cursor stays.
+                .getOrElse(this));
     }
 
     /**

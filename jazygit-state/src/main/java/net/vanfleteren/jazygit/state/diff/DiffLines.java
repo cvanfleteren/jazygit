@@ -45,7 +45,7 @@ public record DiffLines(Vector<Line> lines) {
     /**
      * The lines from {@code one} to {@code other}, as {@link #between(Anchor.OnLine, Anchor.OnLine)} gives them; a
      * context line found on the left side, as the split view has it a stop there (ADR 139). Each end keeps the anchor
-     * it was asked by. In the {@code split} view, a range from a line to a line of the same side holds that side's
+     * it was asked by. A range on the halves of the {@code split} view, which keeps to one side, holds that side's
      * lines only, its context lines by their anchor on that side, as the column of that side shows them.
      */
     public Option<Vector<Line>> between(Anchor.OnLine one, Anchor.OnLine other, boolean split) {
@@ -80,7 +80,7 @@ public record DiffLines(Vector<Line> lines) {
          * Whether the line is the stop {@code anchor}: by its own anchor, or, a context line, by its number in the
          * old file on the left side, where the split view has it a stop too (ADR 139).
          */
-        boolean answers(Anchor.OnLine anchor) {
+        public boolean answers(Anchor.OnLine anchor) {
             return this.anchor.equals(anchor) || left().contains(anchor);
         }
 

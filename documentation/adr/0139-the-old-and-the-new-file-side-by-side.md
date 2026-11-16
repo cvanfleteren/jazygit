@@ -55,6 +55,9 @@ leaves out (ADR 77), and the arrows only leave the panel (ADR 118).
 
 - Both halves scroll sideways together, by as many columns, and their gutters stay. A `‹` at the start of a half, and
   a `›` at its end, mark code cut off there.
+- The bar of a file drawn split, its markers and its threads stay where they are. A file drawn as the rich view draws
+  it, as a conflicted one, and what comes before the files, as the header of a commit, scroll as in the rich view, so
+  their long lines can be read too.
 - A row is drawn with the whole code of each half, and the area cuts each half to its width, from the column it is
   scrolled to, when it shows (`Halves`). The tint of the cursor and of the matches of a search patch the line drawn
   before it is cut, so they move with the code. Not: drawing the rows again for each column.
@@ -62,7 +65,8 @@ leaves out (ADR 77), and the arrows only leave the panel (ADR 118).
 ### The cursor
 
 - The cursor of the split view is on one side: only the half of its line is tinted. `[` takes it to the old side and
-  `]` to the new one, on the same row, or the closest that has a line on that side. On a marker of lines left out,
+  `]` to the new one, on the same row, or the closest row of its hunk that has a line on that side; in a hunk
+  without one, as that of an added file, the cursor stays. On a marker of lines left out,
   `[` and `]` show more lines, as they did. `h` and `l` still scroll sideways in every view.
 - A context line on the left is a stop by its number in the old file: its anchor is on the left side. The unified
   view finds the stop of that line by either anchor, so the cursor keeps its line when the style changes: a removed
@@ -77,7 +81,9 @@ leaves out (ADR 77), and the arrows only leave the panel (ADR 118).
 - A click on a half puts the cursor on its line; on a blank half it does nothing.
 - A range (`v`, ADR 60) keeps to the side it was started on, and holds the lines of that side between its ends, as
   the column shows them. While it is open, `[` and `]` do nothing, and a click or a match on the other side is
-  outside it. The tint, a copy (`y`, ADR 94) and a thread started on it hold what the range holds. A range over the
+  outside it. The tint, a copy (`y`, ADR 94) and a thread started on it hold what the range holds: whether the
+  range is on a side is what the area drew, not the style asked for, as a narrow area or a conflicted file is drawn
+  unified. A range over the
   old and the new lines of a change is made in the unified view. Not: a range from one side to the other holding
   every line between its ends in the order of the diff, which the cursor would have to cross the screen for. The
   hunk a range is open in is not shown as git gives it: the split view puts no pair together that a range would have
