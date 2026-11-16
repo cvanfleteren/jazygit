@@ -1,0 +1,388 @@
+package net.vanfleteren.jazygit.state;
+
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.concurrent.Executor;
+import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Git;
+import net.vanfleteren.jazygit.git.StubGit;
+import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.settings.Settings;
+import net.vanfleteren.jazygit.settings.SettingsStore;
+import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
+import net.vanfleteren.jazygit.state.load.LoadBranchLog;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadCommits;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.LoadStashes;
+import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.load.LoadWorktrees;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.operation.LogEntry;
+import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
+import net.vanfleteren.jazygit.state.operation.OperationMsg;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
+import net.vanfleteren.jazygit.state.view.Preview;
+
+/**
+ * Builds models for tests: with fixed sample data through {@link Update}, or by running the real
+ * {@link Program} synchronously.
+ */
+public final class TestModels {
+
+    public static final RepoStatus CLEAN =
+            new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), List.of());
+    public static final RepoStatus DIRTY = new RepoStatus(
+            Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+            List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED)));
+    public static final RepoStatus MOVED =
+            new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("bbbb")), List.of());
+    public static final List<Branch> BRANCHES = List.of(
+            Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+            Fixtures.branch(new BranchName("feature"), false, new Sha("ffff")));
+    public static final List<Commit> COMMITS =
+            List.of(Fixtures.commit(new Sha("aaaa"), "Ada", "ada@example.com", Instant.EPOCH, "First", ""));
+    public static final List<Commit> FEATURE_COMMITS =
+            List.of(Fixtures.commit(new Sha("ffff"), "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
+
+    /**
+     * The default settings but for the diffs, drawn plain: the style most tests were written against, before
+     * the rich one became the default.
+     */
+    public static final SettingsStore.Loaded PLAIN =
+            new SettingsStore.Loaded(Settings.DEFAULT.withDiffStyle(DiffStyle.PLAIN), Option.none());
+
+    // The time of the programs started without one: it stands still.
+    private static final Clock STILL = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);
+
+    private TestModels() {}
+
+    /**
+     * The program over {@code env}, started with the {@link #PLAIN} settings at a time that stands still, telling no one
+     * about bugs, changes to the model or the app stopping.
+     */
+    public static Program program(Env env, Executor io, Executor background, Executor ui) {
+        return program(env, io, background, ui, () -> {});
+    }
+
+    /**
+     * As above, telling {@code modelChanged} whenever the model draws differently.
+     */
+    public static Program program(Env env, Executor io, Executor background, Executor ui, Runnable modelChanged) {
+        return Program.start(
+                env,
+                PLAIN,
+                Option.none(),
+                RepositoryTheme.NONE,
+                Landing.START,
+                io,
+                background,
+                ui,
+                bug -> {},
+                modelChanged,
+                () -> {},
+                STILL);
+    }
+
+    /**
+     * The id of the last read of the details of a pull request given out in {@code model}: the one a dialog that just
+     * started a read waits for (ADR 34).
+     */
+    public static long lastRead(Model model) {
+        return model.gitHub().nextRead() - 1;
+    }
+
+    /**
+     * A model with the sample status, branches and commits loaded and nothing running.
+     */
+    public static Model loaded() {
+        Model read = branchesRead();
+        // The log was asked for when the status came, before the branches were known.
+        Cmd commits = runningCmds(read).find(LoadCommits.class::isInstance).getOrElse(TestModels::loadCommits);
+        return done(read, commits, commitsLoaded(COMMITS)).model();
+    }
+
+    /**
+     * The model after all of the repository's data has been loaded.
+     */
+    public static Model loaded(Git git) {
+        return program(new Env(git, StubGitHub.of()), Runnable::run, Runnable::run, Runnable::run)
+                .model();
+    }
+
+    /**
+     * The model after all of the repository's data, and the log of {@code branch}, has been loaded.
+     */
+    public static Model loaded(Git git, String branch) {
+        Program program = program(new Env(git, StubGitHub.of()), Runnable::run, Runnable::run, Runnable::run);
+        program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName(branch))));
+        return program.model();
+    }
+
+    /**
+     * The sample model before its log is read, as {@link Program} has it.
+     */
+    private static Model branchesRead() {
+        Model model = started(init("repo", PLAIN)).model();
+        model = done(model, new LoadStatus(), new LoadMsg.StatusLoaded(CLEAN)).model();
+        model = done(model, LoadBranches.LISTED, branchesLoaded(new AllBranches(BRANCHES, List.empty())))
+                .model();
+        model = done(model, new LoadStashes(), new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
+                .model();
+        return done(model, new LoadWorktrees(), new LoadMsg.WorktreesLoaded(io.vavr.collection.List.of()))
+                .model();
+    }
+
+    /**
+     * The load of the log of HEAD of the sample model.
+     */
+    public static LoadCommits loadCommits() {
+        return new LoadCommits(AheadUpdate.ofHead(branchesRead()));
+    }
+
+    /**
+     * The log of HEAD of the sample model read as {@code commits}, which has no base to compare with.
+     */
+    public static LoadMsg.CommitsLoaded commitsLoaded(List<Commit> commits) {
+        return new LoadMsg.CommitsLoaded(commits, loadCommits().ahead(), Either.right(Option.none()));
+    }
+
+    /**
+     * The load of the log of {@code branch} of the sample model.
+     */
+    public static LoadBranchLog loadBranchLog(BranchRef branch) {
+        return new LoadBranchLog(branch, AheadUpdate.of(branchesRead(), branch));
+    }
+
+    /**
+     * The load of the log of {@code branch} as {@code model} has it.
+     */
+    public static LoadBranchLog loadBranchLog(Model model, BranchRef branch) {
+        return new LoadBranchLog(branch, AheadUpdate.of(model, branch));
+    }
+
+    /**
+     * The log of {@code branch} of the sample model read as {@code commits}, which has no base to compare with.
+     */
+    public static LoadMsg.BranchLogLoaded branchLogLoaded(BranchRef branch, List<Commit> commits) {
+        return new LoadMsg.BranchLogLoaded(
+                branch, commits, loadBranchLog(branch).ahead(), Either.right(Option.none()));
+    }
+
+    /**
+     * {@code branches} read, with the parents and the counts the model had before, as when those could not be read.
+     */
+    public static LoadMsg.BranchesLoaded branchesLoaded(AllBranches branches) {
+        return new LoadMsg.BranchesLoaded(LoadBranches.LISTED, branches, Option.none());
+    }
+
+    /**
+     * {@code model} after the branches were read again, finding the local branches {@code local} and the
+     * remote-tracking branches it had, for a test about the local ones.
+     */
+    public static Update.Next localBranchesRead(Model model, List<Branch> local) {
+        return Update.update(
+                model,
+                branchesLoaded(
+                        new AllBranches(local, model.repo().remoteBranches().getOrElse(List.empty()))));
+    }
+
+    /**
+     * {@code model} after the branches were read again, finding the local branches it had and the remote-tracking
+     * branches {@code remote}, for a test about the remote ones.
+     */
+    public static Update.Next remoteBranchesRead(Model model, List<RemoteRef> remote) {
+        return Update.update(
+                model, branchesLoaded(new AllBranches(model.repo().branches().getOrElse(List.empty()), remote)));
+    }
+
+    /**
+     * {@code model} listing what the search {@code text} found: {@code found}.
+     */
+    public static Model searched(Model model, String text, List<Commit> found) {
+        model = Update.update(model, new CommitSearchMsg.Opened()).model();
+        model = Update.update(model, new CommitSearchMsg.Edited(text)).model();
+        model = Update.update(model, new CommitSearchMsg.Submitted()).model();
+        return Update.update(model, new LoadMsg.CommitSearchLoaded(CommitQuery.parse(text), Option.none(), found))
+                .model();
+    }
+
+    /**
+     * The model after all of the repository's data, and the diff of {@code files}, has been loaded.
+     */
+    public static Model withFilesSelected(Git git, io.vavr.collection.List<FileEntry> files) {
+        Program program = program(new Env(git, StubGitHub.of()), Runnable::run, Runnable::run, Runnable::run);
+        program.dispatch(new SelectionMsg.FilesSelected(files));
+        return program.model();
+    }
+
+    /**
+     * The model before anything has been loaded.
+     */
+    public static Model loading(String repositoryName) {
+        return Model.initial(repositoryName);
+    }
+
+    /**
+     * {@code model} with {@code entries} in its command log.
+     */
+    public static Model withLog(Model model, LogEntry... entries) {
+        return model.mapOutcome(outcome -> outcome.withCommandLog(List.of(entries)));
+    }
+
+    /**
+     * Git refusing with {@code explanation}.
+     */
+    public static Failure refused(String explanation) {
+        return new Failure.Git(new GitError.CommandFailed(explanation, 1));
+    }
+
+    /**
+     * {@code cmd} having run {@code commands}.
+     */
+    public static OperationMsg succeeded(OperationCmd cmd, String... commands) {
+        return new OperationMsg.Succeeded(cmd, StubGit.executed(commands));
+    }
+
+    /**
+     * {@code cmd} having been refused by git, which said {@code explanation}.
+     */
+    public static OperationMsg failed(OperationCmd cmd, String explanation) {
+        return new OperationMsg.Failed(cmd, refused(explanation));
+    }
+
+    /**
+     * {@code model} with the log of {@code branch} still loading, while the log it replaced stays visible.
+     */
+    public static Model switchingBranch(Model model, String branch) {
+        return model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withBranchLog(
+                Option.of(Preview.loading(new BranchRef.Local(new BranchName(branch)), preview.branchLog())))));
+    }
+
+    /**
+     * {@code model} after the user typed {@code text} in the open {@link TextPopup}.
+     */
+    public static Model typed(Model model, String text) {
+        return Update.update(model, new PopupMsg.TextEdited(text)).model();
+    }
+
+    /**
+     * {@code model} with {@code cmds} running, asked for at its time: what {@link Update#step} makes of the commands
+     * a message asks for.
+     */
+    public static Model running(Model model, Cmd... cmds) {
+        return model.mapJobs(jobs -> jobs.withStarted(List.of(cmds), model.now()));
+    }
+
+    /**
+     * {@code model} with {@code operation} running on {@code branch}, which is busy until it is done.
+     */
+    public static Model busy(Model model, BranchRef branch, Operation operation) {
+        return running(model, new Busy(branch, operation));
+    }
+
+    /**
+     * What {@code msg} makes of {@code model} as {@link Program} handles it: the commands it asks for run.
+     */
+    public static Update.Next stepped(Model model, Msg msg) {
+        return started(Update.update(model, msg));
+    }
+
+    /**
+     * {@code next} as {@link Program} applies it: the commands it asks for run.
+     */
+    public static Update.Next started(Update.Next next) {
+        return new Update.Next(
+                next.model()
+                        .mapJobs(jobs ->
+                                jobs.withStarted(next.cmds(), next.model().now())),
+                next.cmds(),
+                next.quit());
+    }
+
+    /**
+     * The commands that run in {@code model}.
+     */
+    public static io.vavr.collection.Set<Cmd> runningCmds(Model model) {
+        return model.jobs().running().values().map(Jobs.Running::cmd).toSet();
+    }
+
+    /**
+     * {@code model} with the command {@code cmd} that runs done, as {@link Program} reports it, with what it
+     * reported; the commands that asks for run.
+     */
+    public static Update.Next done(Model model, Cmd cmd, Msg result) {
+        return done(model, cmd, Option.of(result));
+    }
+
+    /**
+     * {@code model} with the command {@code cmd} that runs done, as {@link Program} reports it, with what it
+     * reported, if anything: one that a newer one for its slot cancelled reports nothing.
+     */
+    public static Update.Next done(Model model, Cmd cmd, Option<Msg> result) {
+        long id = model.jobs()
+                .running()
+                .find(running -> running._2().cmd().equals(cmd))
+                .map(running -> running._1())
+                .getOrElseThrow(() -> new AssertionError(cmd + " does not run"));
+        return stepped(model, new Msg.Done(id, result));
+    }
+
+    /**
+     * An operation that keeps {@code branch} busy while it runs, like a push.
+     */
+    public record Busy(BranchRef branch, Operation operation) implements OperationCmd {
+
+        @Override
+        public Option<BranchRef> busyBranch() {
+            return Option.of(branch);
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return succeeded(List.empty());
+        }
+    }
+
+    /**
+     * The start of a session in {@code repositoryName}, with the default settings.
+     */
+    public static Update.Next init(String repositoryName) {
+        return init(repositoryName, SettingsStore.Loaded.DEFAULT);
+    }
+
+    /**
+     * The start of a session with {@code settings}.
+     */
+    public static Update.Next init(String repositoryName, SettingsStore.Loaded settings) {
+        return init(repositoryName, settings, Option.none());
+    }
+
+    /**
+     * The start of a session with {@code settings}, drawn in {@code themeOverride} if there is one.
+     */
+    public static Update.Next init(
+            String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
+        return init(repositoryName, settings, themeOverride, Landing.START);
+    }
+
+    /**
+     * The start of a session as {@link #init(String, SettingsStore.Loaded, Option)} starts it, shown where
+     * {@code landing} says.
+     */
+    public static Update.Next init(
+            String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
+        return Update.init(Model.initial(repositoryName), settings, themeOverride, RepositoryTheme.NONE, landing);
+    }
+}

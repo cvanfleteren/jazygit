@@ -64,3 +64,6 @@ order of the popups decides nothing.
   must stand elsewhere in a panel than its feature does is a reason to move the feature in the list, not to split it.
 - `GlobalKeys` still names the features whose keys work everywhere; spreading those over their features is left for
   later.
+
+Amended by ADR 136: the keymap names no feature, and `GlobalKeys`, `Standard` and `Features` are in `app.keys`, so
+`keys` depending on `feature` is no longer the exception of decision 3.

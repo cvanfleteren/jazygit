@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
+import net.vanfleteren.jazygit.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;

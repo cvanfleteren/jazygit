@@ -28,6 +28,13 @@
           ./jazygit-process
           ./jazygit-git
           ./jazygit-gh
+          ./jazygit-lens
+          ./jazygit-image
+          ./jazygit-settings
+          ./jazygit-state
+          ./jazygit-ui
+          ./jazygit-content
+          ./jazygit-features
           ./jazygit-app
         ];
       };

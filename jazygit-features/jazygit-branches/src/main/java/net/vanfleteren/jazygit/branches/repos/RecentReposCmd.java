@@ -1,0 +1,106 @@
+package net.vanfleteren.jazygit.branches.repos;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.files.RepositoryIdentity;
+import net.vanfleteren.jazygit.git.process.HeadFile;
+import net.vanfleteren.jazygit.settings.RecentRepositories;
+import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Landing;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
+import org.slf4j.LoggerFactory;
+
+/**
+ * The IO of switching to a recent repository. That the recent repositories could not be kept is not worth
+ * telling: they are only a convenience.
+ */
+public sealed interface RecentReposCmd extends Cmd {
+
+    /**
+     * Writes to the debug log that the recent repositories could not be kept, as the user is not told.
+     */
+    private static void notKept(Throwable failed) {
+        LoggerFactory.getLogger(RecentReposCmd.class).debug("The recent repositories could not be kept", failed);
+    }
+
+    /**
+     * The recent repositories in {@code recent}, with what their HEAD points to, the last one opened first. The ones
+     * whose directory is gone are not kept anymore.
+     */
+    static List<RecentRepo> existing(RecentRepositories recent) {
+        List<Path> kept = recent.load();
+        List<Path> gone = kept.filter(directory -> !Files.isDirectory(directory));
+        if (gone.nonEmpty()) {
+            recent.forget(gone).onFailure(RecentReposCmd::notKept);
+        }
+        return kept.removeAll(gone)
+                .map(directory -> new RecentRepo(
+                        directory.toString(), RepositoryIdentity.labelOf(directory), HeadFile.read(directory)));
+    }
+
+    /**
+     * Reads the recent repositories but the one shown, with what their HEAD points to. The ones whose directory
+     * is gone are not kept anymore.
+     */
+    record ListRecent() implements RecentReposCmd {
+
+        @Override
+        public Msg run(Env env) {
+            String shown = env.git().worktree().toString();
+            return new RecentReposMsg.Listed(
+                    existing(env.recent()).filter(repo -> !repo.directory().equals(shown)));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new RecentReposMsg.Listed(List.empty());
+        }
+    }
+
+    /**
+     * Opens the repository at {@code directory} instead of the one shown, shown where {@code landing} says, which
+     * makes it the last one opened. One that cannot be opened is not kept anymore.
+     */
+    record SwitchTo(String directory, Landing landing) implements RecentReposCmd {
+
+        /**
+         * Where another worktree of the repository is shown: on the worktrees, focused, as switching to one is
+         * done from there.
+         */
+        public static final Landing WORKTREES = new Landing(BranchesTab.WORKTREES, Option.of(Scopes.BRANCHES.pane()));
+
+        /**
+         * Opens the worktree at {@code location}, shown on the worktrees.
+         */
+        public static SwitchTo worktree(String location) {
+            return new SwitchTo(location, WORKTREES);
+        }
+
+        @Override
+        public Msg run(Env env) {
+            Path chosen = Path.of(directory);
+            return env.repositories()
+                    .switchTo(chosen, landing)
+                    .fold(
+                            error -> {
+                                env.recent().forget(List.of(chosen)).onFailure(RecentReposCmd::notKept);
+                                return failed(Failure.of(error));
+                            },
+                            worktree -> {
+                                env.recent().opened(worktree).onFailure(RecentReposCmd::notKept);
+                                return new RecentReposMsg.Switched(worktree.toString());
+                            });
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new RecentReposMsg.NotSwitched(directory, failure);
+        }
+    }
+}

@@ -1,0 +1,296 @@
+package net.vanfleteren.jazygit.github.create;
+
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.branches.branch.BranchCmd;
+import net.vanfleteren.jazygit.branches.branch.push.PushCmd;
+import net.vanfleteren.jazygit.branches.branch.stack.StackCmd;
+import net.vanfleteren.jazygit.gh.model.NewPullRequest;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.git.Git;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
+import net.vanfleteren.jazygit.github.OnGitHub;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.operation.*;
+
+/**
+ * Creating the pull request of a branch: pushing it first when it is not on its remote, reading the branch it came
+ * from, reading the title it starts out with for a base, and creating it.
+ */
+public sealed interface CreatePullRequestCmd extends Cmd {
+
+    Operation CREATE_PR = Operation.of("github.log.title.createPr", "github.error.createPr.failed")
+            .labelledWhenBusy("github.branches.busy.pullRequest");
+
+    /**
+     * The subject of the oldest commit of {@code branch} that is not on {@code baseRef}, if it could be read.
+     */
+    private static Option<String> firstSubject(Env env, BranchName branch, BranchRef baseRef) {
+        return env.git()
+                .history()
+                .firstSubject(new BranchRef.Local(branch), baseRef)
+                .getOrElse(Option.none());
+    }
+
+    /**
+     * A branch a pull request can merge into, as {@code name}, and {@code ref}, the branch it is on its remote.
+     */
+    record Base(BranchName name, BranchRef ref) {
+
+        /**
+         * The name the branch has on its remote, which is what gh and the recorded parent call it; its own name
+         * when it is not on one.
+         */
+        BranchName remoteName() {
+            return remote().branch();
+        }
+
+        /**
+         * The branch on its remote, which gh merges into: the one it is, or the one of its name on the default
+         * remote when it is not on one.
+         */
+        RemoteBranch remote() {
+            return ref instanceof BranchRef.Remote(RemoteBranch remote)
+                    ? remote
+                    : new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name);
+        }
+    }
+
+    /**
+     * Where a new pull request goes in a stack once it is created (ADR 73): on pull request {@code below}, a new stack
+     * of the two, or on the top of its stack {@code stack}.
+     */
+    record Stacking(PrNumber below, Option<Integer> stack) {
+
+        /**
+         * Puts the pull request {@code number} on {@code below}.
+         */
+        StackCmd.MakeStack cmd(PrNumber number) {
+            return new StackCmd.MakeStack(
+                    List.empty(), stack.isDefined() ? List.of(number) : List.of(below, number), stack);
+        }
+    }
+
+    /**
+     * Why a new pull request cannot be stacked on pull request {@code below}: it is in stack {@code stack}, but not on
+     * its top, where only GitHub adds.
+     */
+    record NotTop(PrNumber below, int stack) {}
+
+    /**
+     * Reads which of {@code bases} the branch {@code branch} was made from: the one recorded as such, or else the
+     * one the fewest of its commits are not on. On a tie, the earliest of {@code bases} wins. Without it, the user
+     * still gets to choose.
+     */
+    record ReadParent(BranchName branch, List<Base> bases) implements CreatePullRequestCmd {
+
+        // Further away than this, a base is too far to tell apart from the others; it also bounds the walk.
+        public static final int MAX_DISTANCE = 1000;
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("github.work.base", branch.value()));
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.git()
+                    .branches()
+                    .parent(branch)
+                    .map(recorded -> recorded.flatMap(this::base))
+                    .flatMap(recorded -> recorded.isDefined() ? Either.right(recorded) : closest(env))
+                    .fold(error -> read(Option.none()), this::read);
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return read(Option.none());
+        }
+
+        // The recorded parent is a name on the remote, or a local one when the branch was made from a local branch.
+        private Option<BranchName> base(BranchName recorded) {
+            return bases.find(base -> base.remoteName().equals(recorded))
+                    .orElse(() -> bases.find(base -> base.name().equals(recorded)))
+                    .map(Base::name);
+        }
+
+        private Either<GitError, Option<BranchName>> closest(Env env) {
+            BranchRef local = new BranchRef.Local(branch);
+            return Either.sequenceRight(bases.map(base -> env.git()
+                            .history()
+                            .countNotOn(local, base.ref(), MAX_DISTANCE)
+                            .map(distance -> Tuple.of(base.name(), distance))))
+                    .map(distances -> distances
+                            .filter(distance -> distance._2 < MAX_DISTANCE)
+                            // minBy keeps the first of equals, which is the earliest base.
+                            .minBy(Tuple2::_2)
+                            .map(Tuple2::_1));
+        }
+
+        private Msg read(Option<BranchName> parent) {
+            return new CreatePullRequestMsg.ParentRead(branch, parent);
+        }
+    }
+
+    /**
+     * Reads the title a new pull request of {@code branch} starts out with, to ask what it says: the subject of its
+     * oldest commit that is not on {@code baseRef}, the branch the first of {@code bases} is on its remote. Without
+     * it, the user still gets to enter one.
+     *
+     * @param head  the name the branch has on its remote
+     * @param bases the branches it can merge into, the one it is read for first
+     */
+    record ReadTitle(BranchName branch, RemoteBranch head, List<BranchName> bases, BranchRef baseRef)
+            implements CreatePullRequestCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("github.work.title", branch.value()));
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return read(firstSubject(env, branch, baseRef));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return read(Option.none());
+        }
+
+        private Msg read(Option<String> subject) {
+            return new CreatePullRequestMsg.TitleRead(branch, head, bases, subject);
+        }
+    }
+
+    /**
+     * Reads the title a new pull request of {@code branch} starts out with again, for {@code base}, which the user
+     * picked instead, as {@link ReadTitle} does.
+     */
+    record RereadTitle(BranchName branch, BranchName base, BranchRef baseRef) implements CreatePullRequestCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("github.work.title", branch.value()));
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return read(firstSubject(env, branch, baseRef));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return read(Option.none());
+        }
+
+        private Msg read(Option<String> subject) {
+            return new CreatePullRequestMsg.BaseTitleRead(branch, base, subject);
+        }
+    }
+
+    /**
+     * Pushes a branch as {@code push} does, before its pull request is created, which its success leads to.
+     */
+    record PushFirst(PushCmd push) implements CreatePullRequestCmd, BranchCmd.KeepsBranchBusy {
+
+        @Override
+        public BranchName branch() {
+            return push.branch();
+        }
+
+        @Override
+        public Operation operation() {
+            return push.operation();
+        }
+
+        @Override
+        public boolean changesGitHub() {
+            return push.changesGitHub();
+        }
+
+        @Override
+        public Option<Guard> guard() {
+            return push.guard();
+        }
+
+        @Override
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
+            return push.perform(git);
+        }
+
+        @Override
+        public Msg succeeded(List<ExecutedCommand> commands) {
+            return new CreatePullRequestMsg.Pushed(this, commands);
+        }
+    }
+
+    /**
+     * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
+     * {@code base}, the name that branch has on its remote, as {@code pullRequest} says.
+     */
+    record CreatePullRequest(
+            BranchName branch,
+            RemoteBranch head,
+            RemoteBranch base,
+            NewPullRequest pullRequest,
+            Option<Stacking> stacking)
+            implements CreatePullRequestCmd, OperationCmd {
+
+        /**
+         * One that is stacked on nothing.
+         */
+        public CreatePullRequest(BranchName branch, RemoteBranch head, RemoteBranch base, NewPullRequest pullRequest) {
+            this(branch, head, base, pullRequest, Option.none());
+        }
+
+        @Override
+        public Operation operation() {
+            return CREATE_PR;
+        }
+
+        @Override
+        public Option<String> subject() {
+            return Option.of(branch.value());
+        }
+
+        @Override
+        public Option<BranchRef> busyBranch() {
+            return Option.of(new BranchRef.Local(branch));
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.gitHub()
+                    .pullRequests()
+                    .create(OnGitHub.branch(head), OnGitHub.branch(base), pullRequest)
+                    .mapLeft(Failure::of)
+                    .fold(
+                            this::failed,
+                            created -> new CreatePullRequestMsg.Created(
+                                    this,
+                                    created.number()
+                                            .map(number -> new PullRequest(
+                                                    number,
+                                                    OnGitHub.branch(head),
+                                                    Option.some(OnGitHub.branch(base)),
+                                                    pullRequest.draft(),
+                                                    Checks.NONE,
+                                                    Review.NONE,
+                                                    Option.none(),
+                                                    Option.none())),
+                                    created.commands()));
+        }
+    }
+}

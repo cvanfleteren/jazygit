@@ -10,13 +10,13 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
-import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd;
+import net.vanfleteren.jazygit.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
+import net.vanfleteren.jazygit.github.create.CreatePullRequestCmd;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Freshness;
 import net.vanfleteren.jazygit.state.Jobs;
@@ -178,7 +178,7 @@ class FetchLineTest {
                 FetchLine.labelText(new FetchCmd.Fetch(new RemoteName("origin"), List.empty())
                         .label()
                         .get()));
-        assertEquals("Reading pull request #12345", FetchLine.labelText(Label.of("work.pullRequest", "12345")));
+        assertEquals("Reading pull request #12345", FetchLine.labelText(Label.of("state.work.pullRequest", "12345")));
         BranchName feature = new BranchName("feature");
         BranchRef base = new BranchRef.Local(new BranchName("main"));
         assertEquals(
@@ -193,7 +193,8 @@ class FetchLineTest {
                         .label()
                         .get()));
         assertEquals(
-                "Push feature", FetchLine.labelText(Label.of("work.operation", Label.of("log.title.push"), "feature")));
+                "Push feature",
+                FetchLine.labelText(Label.of("state.work.operation", Label.of("branches.log.title.push"), "feature")));
     }
 
     private static final Instant NOW = Instant.parse("2026-10-17T12:00:00Z");

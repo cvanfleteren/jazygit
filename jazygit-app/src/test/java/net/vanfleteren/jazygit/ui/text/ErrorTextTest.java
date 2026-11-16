@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.feature.branch.BranchError;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
+import net.vanfleteren.jazygit.branches.branch.BranchError;
+import net.vanfleteren.jazygit.branches.worktree.WorktreeError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -39,7 +39,8 @@ class ErrorTextTest {
     }
 
     // An operation whose error takes a subject and a reason: "Moving commits to {0} failed: {1}".
-    private static final Operation MOVE = Operation.of("log.title.moveCommits", "error.moveCommits.failed");
+    private static final Operation MOVE =
+            Operation.of("branches.log.title.moveCommits", "branches.error.moveCommits.failed");
 
     @Test
     void aCountInsideAPhraseInsideAnotherIsStillFormattedByItsChoice() {
@@ -94,6 +95,6 @@ class ErrorTextTest {
     void verbatimTextIsAnArgumentNotAPattern() {
         assertEquals(
                 "Moving commits to it's {0} failed: x",
-                ErrorText.of(Phrase.of("error.moveCommits.failed", "it's {0}", "x")));
+                ErrorText.of(Phrase.of("branches.error.moveCommits.failed", "it's {0}", "x")));
     }
 }

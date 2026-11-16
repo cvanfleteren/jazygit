@@ -1,0 +1,30 @@
+package net.vanfleteren.jazygit.changes.commit.squash;
+
+import io.vavr.collection.List;
+import java.util.function.Consumer;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
+import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
+
+/**
+ * The popup of squashing a commit.
+ */
+public final class SquashDialogs {
+
+    /**
+     * Asks to squash a commit into the one below it.
+     */
+    public static final ConfirmDialog.Spec<SquashPopup> SQUASH = ConfirmDialog.Spec.confirming(
+            "squash-commit",
+            SquashPopup.class,
+            popup -> Messages.get("changes.dialog.squash.title"),
+            popup -> Messages.get("changes.dialog.squash.message"));
+
+    private SquashDialogs() {}
+
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(PopupSlot.returningTo(CommitsPanel.PANE, new ConfirmDialog<>(SQUASH, dispatch)));
+    }
+}

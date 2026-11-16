@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>net.vanfleteren</groupId>
+        <artifactId>jazygit-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>jazygit-settings</artifactId>
+
+    <name>jazygit-settings</name>
+    <description>The settings of jazygit and the files they are kept in</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-lens</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vavr</groupId>
+            <artifactId>vavr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.electronwill.night-config</groupId>
+            <artifactId>toml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

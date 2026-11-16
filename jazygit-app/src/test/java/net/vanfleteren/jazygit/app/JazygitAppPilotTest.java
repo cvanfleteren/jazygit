@@ -1,0 +1,586 @@
+package net.vanfleteren.jazygit.app;
+
+import static dev.tamboui.toolkit.Toolkit.column;
+import static dev.tamboui.toolkit.Toolkit.row;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.toolkit.focus.FocusManager;
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyModifiers;
+import dev.tamboui.tui.pilot.Pilot;
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
+import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.changes.commit.create.CommitMsg;
+import net.vanfleteren.jazygit.changes.commit.reword.RewordMsg;
+import net.vanfleteren.jazygit.changes.stage.StageMsg;
+import net.vanfleteren.jazygit.content.ContentPanel;
+import net.vanfleteren.jazygit.git.Git;
+import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Focus;
+import net.vanfleteren.jazygit.state.PaneId;
+import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.preferences.*;
+import net.vanfleteren.jazygit.state.view.*;
+import net.vanfleteren.jazygit.ui.*;
+import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.ui.stash.StashPanel;
+import net.vanfleteren.jazygit.ui.theme.Theme;
+import org.junit.jupiter.api.Test;
+
+/**
+ * Pilot-driven integration tests exercising the same layout/composition as
+ * {@link JazygitApp#render()}: focus cycling across the three left panes (Tab/Shift+Tab),
+ * in-list Up/Down selection navigation clamped to list boundaries, and Space checking out the
+ * highlighted branch.
+ *
+ * <p>These tests build the layout directly from the real {@code ui} panels (rather than
+ * running {@link JazygitApp} itself) because {@link dev.tamboui.toolkit.app.ToolkitApp#run()}
+ * always opens a real terminal; {@link ToolkitTestRunner} is the headless entry point instead.
+ */
+class JazygitAppPilotTest {
+
+    private static final ContentPanel CONTENT = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+
+    @Test
+    void tabCyclesFocusThroughAllFourPanesAndWrapsAround() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+            assertEquals(FilesPanel.ID, focusManager.focusedId());
+
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(BranchesPanel.ID, focusManager.focusedId());
+
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(CommitsPanel.ID, focusManager.focusedId());
+
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(StashPanel.ID, focusManager.focusedId());
+
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(FilesPanel.ID, focusManager.focusedId(), "Tab should wrap back to Files");
+
+            pilot.press(KeyCode.TAB, KeyModifiers.SHIFT);
+            pilot.pause();
+            assertEquals(StashPanel.ID, focusManager.focusedId(), "Shift+Tab should cycle in reverse");
+
+            pilot.press(KeyCode.TAB, KeyModifiers.SHIFT);
+            pilot.pause();
+            assertEquals(CommitsPanel.ID, focusManager.focusedId());
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void theDiffAreasAreOnlyPartOfTheTabCycleOnceTheyHaveTheFocus() throws Exception {
+        Git data = SampleData.git();
+        Model loaded = TestModels.loaded(data);
+        io.vavr.collection.List<FileEntry> files =
+                loaded.repo().status().toOption().get().files();
+        Model model = Update.update(
+                        Update.update(loaded, new SelectionMsg.FilesSelected(files))
+                                .model(),
+                        new LoadMsg.FileDiffLoaded(files, DiffOptions.DEFAULT, new Diffs("+staged\n", "+unstaged\n")))
+                .model();
+        java.util.List<Msg> dispatched = new ArrayList<>();
+        Fixture fixture = new Fixture(
+                data,
+                model,
+                dispatched,
+                new ArrayList<>(),
+                new FilesPanel(dispatched::add, () -> {}),
+                new BranchesPanel(dispatched::add, tab -> {}),
+                new CommitsPanel(dispatched::add, () -> {}),
+                new StashPanel(dispatched::add),
+                new AtomicReference<>());
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            SettledPilot.focus(testRunner, StashPanel.ID);
+
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(FilesPanel.ID, focusManager.focusedId(), "Tab from the last pane should skip the diffs");
+
+            // As Enter on a file does; the key after it renders the diffs with the focus.
+            SettledPilot.focus(testRunner, "diff-staged");
+            pilot.press(KeyCode.DOWN);
+            pilot.pause();
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals("diff-unstaged", focusManager.focusedId(), "Tab should go from one diff to the other");
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void rightMovesFromTheFilesPaneIntoItsDiffAndLeftGivesTheFocusBack() throws Exception {
+        Git data = SampleData.git();
+        Model loaded = TestModels.loaded(data);
+        io.vavr.collection.List<FileEntry> files =
+                loaded.repo().status().toOption().get().files();
+        Model model = Update.update(
+                        Update.update(loaded, new SelectionMsg.FilesSelected(files))
+                                .model(),
+                        new LoadMsg.FileDiffLoaded(files, DiffOptions.DEFAULT, new Diffs("+staged\n", "+unstaged\n")))
+                .model();
+        AtomicReference<ToolkitTestRunner> runner = new AtomicReference<>();
+        AtomicReference<FocusKeeper> keeper = new AtomicReference<>();
+        ContentPanel content =
+                new ContentPanel(Theme.SpanStyles.NONE, () -> keeper.get().leaveScrollArea());
+        keeper.set(new FocusKeeper(() -> runner.get().runner(), () -> model, content, new Popups(msg -> {}), () -> {}));
+        FilesPanel filesPanel = new FilesPanel(msg -> {}, () -> keeper.get().openContent(FilesPanel.PANE));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> {
+            Option<Focus> focus =
+                    runner.get() == null ? Option.none() : keeper.get().focus();
+            return row(
+                    filesPanel.render(model, focus, panes(focus)).percent(30),
+                    content.render(model, focus).fill());
+        })) {
+            runner.set(testRunner);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+
+            pilot.press(KeyCode.RIGHT);
+            pilot.pause();
+            assertTrue(
+                    keeper.get().focus().exists(AreaId.class::isInstance),
+                    keeper.get().focus().toString());
+
+            pilot.press(KeyCode.LEFT);
+            pilot.pause();
+            assertEquals(Option.of(FilesPanel.PANE), keeper.get().focus());
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void rightMovesFromTheCommitsPaneIntoItsCommitAndLeftGivesTheFocusBack() throws Exception {
+        Model model = Update.update(
+                        Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("+a\n")))
+                .model();
+
+        assertRightEntersAndLeftLeaves(
+                model, CommitsPanel.PANE, new CommitsPanel(msg -> {}, () -> {})::render, AreaId.COMMIT);
+    }
+
+    @Test
+    void rightMovesFromTheBranchesPaneIntoTheLogAndLeftGivesTheFocusBack() throws Exception {
+        Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
+
+        assertRightEntersAndLeftLeaves(
+                model, BranchesPanel.PANE, new BranchesPanel(msg -> {}, tab -> {})::render, AreaId.LOG);
+    }
+
+    @Test
+    void aPaneOfACollapsedLeftColumnGivesTheFocusToItsContent() throws Exception {
+        Model model = Update.update(
+                        Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("+a\n")))
+                .model()
+                .mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+        AtomicReference<ToolkitTestRunner> runner = new AtomicReference<>();
+        AtomicReference<FocusKeeper> keeper = new AtomicReference<>();
+        ContentPanel content = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+        keeper.set(new FocusKeeper(() -> runner.get().runner(), () -> model, content, new Popups(msg -> {}), () -> {}));
+
+        // The collapsed column draws no pane: only the content, as JazygitApp settles the focus before drawing it.
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> {
+            Option<Focus> focus =
+                    runner.get() == null ? Option.none() : keeper.get().settle(model);
+            return content.render(model, focus).fill();
+        })) {
+            runner.set(testRunner);
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+
+            assertEquals(Option.of(AreaId.COMMIT), keeper.get().focus());
+
+            pilot.quit();
+        }
+    }
+
+    /**
+     * Right in the pane {@code paneId}, which no list in it takes, moves the focus to the area {@code areaId}, as the
+     * app's global key handler does, and Left gives it back to the pane.
+     */
+    private static void assertRightEntersAndLeftLeaves(Model model, PaneId paneId, Drawn pane, AreaId areaId)
+            throws Exception {
+        AtomicReference<ToolkitTestRunner> runner = new AtomicReference<>();
+        AtomicReference<FocusKeeper> keeper = new AtomicReference<>();
+        ContentPanel content =
+                new ContentPanel(Theme.SpanStyles.NONE, () -> keeper.get().leaveScrollArea());
+        keeper.set(new FocusKeeper(() -> runner.get().runner(), () -> model, content, new Popups(msg -> {}), () -> {}));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> {
+            Option<Focus> focus =
+                    runner.get() == null ? Option.none() : keeper.get().focus();
+            return row(
+                    pane.render(model, focus, panes(focus)).percent(30),
+                    content.render(model, focus).fill());
+        })) {
+            runner.set(testRunner);
+            testRunner
+                    .runner()
+                    .eventRouter()
+                    .addGlobalHandler(event -> event instanceof KeyEvent key
+                                    && key.code() == KeyCode.RIGHT
+                                    && keeper.get().openFocusedContent()
+                            ? EventResult.HANDLED
+                            : EventResult.UNHANDLED);
+            SettledPilot.focus(testRunner, paneId.id());
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+
+            pilot.press(KeyCode.RIGHT);
+            pilot.pause();
+            assertEquals(Option.of(areaId), keeper.get().focus());
+
+            pilot.press(KeyCode.LEFT);
+            pilot.pause();
+            assertEquals(Option.of(paneId), keeper.get().focus());
+
+            pilot.quit();
+        }
+    }
+
+    /**
+     * The pane {@code focus} is on, as the pane in use, if it is on one.
+     */
+    private static Option<PaneId> panes(Option<Focus> focus) {
+        return focus.flatMap(on -> on instanceof PaneId pane ? Option.of(pane) : Option.none());
+    }
+
+    /**
+     * A pane drawn while {@code focus} has the focus, and {@code inUse} is in use.
+     */
+    @FunctionalInterface
+    private interface Drawn {
+        Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse);
+    }
+
+    @Test
+    void theRemoteBranchesAreOneStopOfTheTabCycleAndTheirKeysWorkThere() throws Exception {
+        Git data = SampleData.git();
+        java.util.List<Msg> dispatched = new ArrayList<>();
+        RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
+        Model remote = TestModels.loaded(data)
+                .mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)))
+                .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.of(
+                        new RemoteRef(feature, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH)))));
+        Fixture fixture = new Fixture(
+                data,
+                remote,
+                dispatched,
+                new ArrayList<>(),
+                new FilesPanel(dispatched::add, () -> {}),
+                new BranchesPanel(dispatched::add, tab -> {}),
+                new CommitsPanel(dispatched::add, () -> {}),
+                new StashPanel(dispatched::add),
+                new AtomicReference<>());
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(BranchesPanel.ID, focusManager.focusedId());
+            assertEquals(
+                    new SelectionMsg.BranchSelected(new BranchRef.Remote(feature)),
+                    fixture.selections().getLast());
+
+            pilot.press(' ');
+            pilot.press(KeyCode.TAB);
+            pilot.pause();
+            assertEquals(CommitsPanel.ID, focusManager.focusedId());
+
+            pilot.quit();
+        }
+        assertEquals(java.util.List.of(new CheckoutMsg.RemoteRequested(feature)), dispatched);
+    }
+
+    @Test
+    void upDownNavigatesSelectionWithinFocusedPaneAndClampsAtBoundaries() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+            assertEquals(fixture.selecting(0), fixture.branches().selectionChange(fixture.model()));
+
+            pilot.press(KeyCode.UP);
+            pilot.pause();
+            assertEquals(
+                    fixture.selecting(0),
+                    fixture.branches().selectionChange(fixture.model()),
+                    "selection should not go below the first item");
+
+            pilot.press(KeyCode.DOWN);
+            pilot.pause();
+            assertEquals(fixture.selecting(1), fixture.branches().selectionChange(fixture.model()));
+
+            int branchCount = fixture.data().branches().all().get().local().size();
+            for (int i = 0; i < branchCount + 5; i++) {
+                pilot.press(KeyCode.DOWN);
+            }
+            pilot.pause();
+            assertEquals(
+                    fixture.selecting(branchCount - 1),
+                    fixture.branches().selectionChange(fixture.model()),
+                    "selection should clamp at the last item");
+
+            assertEquals(0, fixture.commits().selectedIndex(), "an unfocused pane's selection should be unaffected");
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void movingTheHighlightSelectsTheBranchWhoseLogIsShown() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+            assertEquals(
+                    new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("main"))),
+                    fixture.selections().getLast());
+
+            pilot.press(KeyCode.DOWN);
+            pilot.pause();
+            assertEquals(
+                    new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature/initial-layout"))),
+                    fixture.selections().getLast());
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void spaceRequestsCheckoutOfTheHighlightedBranch() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+            pilot.press(KeyCode.DOWN);
+            pilot.press(' ');
+            pilot.pause();
+            assertEquals(
+                    java.util.List.of(new CheckoutMsg.Requested(new BranchName("feature/initial-layout"))),
+                    fixture.dispatched());
+
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            pilot.pause();
+            pilot.press(' ');
+            pilot.pause();
+            assertEquals(1, fixture.dispatched().size(), "Space outside the branches pane should not check out");
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void rRequestsARewordFromTheCommitsPane() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+            // Moving re-renders, which is how the panel learns it has focus.
+            pilot.press(KeyCode.DOWN);
+            pilot.press(KeyCode.UP);
+            pilot.pause();
+            pilot.press('r');
+            pilot.pause();
+
+            assertTrue(fixture.dispatched()
+                    .contains(new RewordMsg.Requested(
+                            SampleData.headLog().get().head().sha())));
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void cRequestsACommitFromTheFilesPane() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+            // Moving re-renders, which is how the panel learns it has focus.
+            pilot.press(KeyCode.DOWN);
+            pilot.press(KeyCode.UP);
+            pilot.pause();
+            pilot.press('c');
+            pilot.pause();
+
+            assertTrue(fixture.dispatched().contains(new CommitMsg.Requested()));
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void spaceTogglesStagingOfTheSelectedFilesNode() throws Exception {
+        Fixture fixture = new Fixture();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
+            FocusManager focusManager = testRunner.runner().focusManager();
+            fixture.focusManagerRef().set(focusManager);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+            // Moving re-renders, which is how the panel learns it has focus.
+            pilot.press(KeyCode.DOWN);
+            pilot.press(KeyCode.UP);
+            pilot.pause();
+            pilot.press(' ');
+            pilot.pause();
+
+            assertEquals(1, fixture.dispatched().size());
+            StageMsg.Requested all = (StageMsg.Requested) fixture.dispatched().get(0);
+            // The virtual root is selected first, so every changed file is requested.
+            assertEquals(
+                    fixture.data().status().read().get().files().toSet(),
+                    all.files().toSet());
+
+            // Directories come before files: the merged src/... directory, then its "model" directory.
+            for (int i = 0; i < 2; i++) {
+                pilot.press(KeyCode.DOWN);
+            }
+            pilot.press(' ');
+            pilot.pause();
+
+            StageMsg.Requested requested =
+                    (StageMsg.Requested) fixture.dispatched().get(1);
+            // Only the file in the highlighted "model" directory is requested.
+            assertEquals(
+                    List.of("src/main/java/net/vanfleteren/jazygit/model/SampleData.java"),
+                    requested.files().map(f -> f.path()).toList());
+
+            pilot.quit();
+        }
+    }
+
+    private record Fixture(
+            Git data,
+            Model model,
+            java.util.List<Msg> dispatched,
+            java.util.List<Msg> selections,
+            FilesPanel files,
+            BranchesPanel branches,
+            CommitsPanel commits,
+            StashPanel stash,
+            AtomicReference<FocusManager> focusManagerRef) {
+
+        private Fixture() {
+            this(SampleData.git(), new ArrayList<>());
+        }
+
+        private Fixture(Git data, java.util.List<Msg> dispatched) {
+            this(
+                    data,
+                    TestModels.loaded(data),
+                    dispatched,
+                    new ArrayList<>(),
+                    new FilesPanel(dispatched::add, () -> {}),
+                    new BranchesPanel(dispatched::add, tab -> {}),
+                    new CommitsPanel(dispatched::add, () -> {}),
+                    new StashPanel(dispatched::add),
+                    new AtomicReference<>());
+        }
+
+        /**
+         * What the branches pane sends when the {@code index}th branch gets highlighted.
+         */
+        Option<Msg> selecting(int index) {
+            return Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(
+                    data.branches().all().get().local().get(index).name())));
+        }
+
+        Supplier<Element> renderer() {
+            return () -> {
+                FocusManager focusManager = focusManagerRef.get();
+                Option<Focus> focus = focusManager == null
+                        ? Option.none()
+                        : Option.of(focusManager.focusedId()).map(id -> FocusKeeper.focusOf(id, ignored -> false));
+                Option<PaneId> inUse = panes(focus);
+                Panel branchesPane = branches.render(model, focus, inUse);
+                branches.selectionChange(model).forEach(selections::add);
+                return row(
+                        column(
+                                        StatusPanel.render(model),
+                                        files.render(model, focus, inUse).percent(25),
+                                        branchesPane.percent(20),
+                                        commits.render(model, focus, inUse).percent(30),
+                                        stash.render(model, focus, inUse).fill())
+                                .percent(30),
+                        CONTENT.render(model, focus).fill());
+            };
+        }
+    }
+}

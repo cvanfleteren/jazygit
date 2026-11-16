@@ -30,10 +30,10 @@ class ChoiceDialogTest {
                     PickPopup.class,
                     popup -> "Pick one",
                     List.of(
-                            new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
+                            new Choice<>('a', "changes.dialog.discard.all", () -> new Picked("a")),
                             new Choice<>(
                                     'b',
-                                    "dialog.discard.unstaged",
+                                    "changes.dialog.discard.unstaged",
                                     () -> new Picked("b"),
                                     (model, popup) -> popup.second()))),
             cursor);
@@ -64,9 +64,9 @@ class ChoiceDialogTest {
     @Test
     void twoOptionsWithTheSameLetterAreRefused() {
         List<Choice<PickPopup>> choices = List.of(
-                new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
-                new Choice<>('b', "dialog.discard.unstaged", () -> new Picked("b")),
-                new Choice<>('a', "dialog.discard.all", () -> new Picked("again")));
+                new Choice<>('a', "changes.dialog.discard.all", () -> new Picked("a")),
+                new Choice<>('b', "changes.dialog.discard.unstaged", () -> new Picked("b")),
+                new Choice<>('a', "changes.dialog.discard.all", () -> new Picked("again")));
 
         IllegalArgumentException refused = assertThrows(
                 IllegalArgumentException.class,
@@ -119,8 +119,8 @@ class ChoiceDialogTest {
                         PickPopup.class,
                         popup -> "Pick one",
                         List.of(
-                                new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
-                                new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
+                                new Choice<>('a', "changes.dialog.discard.all", () -> new Picked("a")),
+                                new Choice<PickPopup>('b', "changes.dialog.discard.unstaged", () -> new Picked("b"))
                                         .shownWhen((model, popup) -> popup.second()))),
                 cursor);
         Supplier<Element> view = () ->
@@ -177,10 +177,10 @@ class ChoiceDialogTest {
                         PickPopup.class,
                         popup -> "Pick one",
                         List.of(
-                                new Choice<>('m', "dialog.reset.mixed", () -> new Picked("m")),
-                                new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
-                                new Choice<>('b', "dialog.discard.unstaged", () -> new Picked("b")),
-                                new Choice<>('c', "dialog.discard.title", () -> new Picked("c")))),
+                                new Choice<>('m', "changes.dialog.reset.mixed", () -> new Picked("m")),
+                                new Choice<>('a', "changes.dialog.discard.all", () -> new Picked("a")),
+                                new Choice<>('b', "changes.dialog.discard.unstaged", () -> new Picked("b")),
+                                new Choice<>('c', "changes.dialog.discard.title", () -> new Picked("c")))),
                 cursor);
         Supplier<Element> view = () ->
                 stack(text("background"), four.render(cursor.on(open(true))).get());
@@ -284,10 +284,10 @@ class ChoiceDialogTest {
                         PickPopup.class,
                         popup -> "Pick one",
                         List.of(
-                                new Choice<PickPopup>('a', "dialog.discard.all", () -> new Picked("a"))
-                                        .withHeading("dialog.help.global"),
-                                new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
-                                        .withHeading("dialog.help.legend")
+                                new Choice<PickPopup>('a', "changes.dialog.discard.all", () -> new Picked("a"))
+                                        .withHeading("chrome.dialog.help.global"),
+                                new Choice<PickPopup>('b', "changes.dialog.discard.unstaged", () -> new Picked("b"))
+                                        .withHeading("chrome.dialog.help.legend")
                                         .withPreview(() -> new Picked("preview b")))),
                 cursor);
         Supplier<Element> view = () ->
@@ -315,10 +315,10 @@ class ChoiceDialogTest {
                         PickPopup.class,
                         popup -> "Pick one",
                         List.of(
-                                new Choice<PickPopup>('a', "dialog.discard.all", () -> new Picked("a"))
-                                        .withHeading("dialog.help.global"),
-                                new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
-                                        .withHeading("dialog.help.legend"))),
+                                new Choice<PickPopup>('a', "changes.dialog.discard.all", () -> new Picked("a"))
+                                        .withHeading("chrome.dialog.help.global"),
+                                new Choice<PickPopup>('b', "changes.dialog.discard.unstaged", () -> new Picked("b"))
+                                        .withHeading("chrome.dialog.help.legend"))),
                 cursor);
         Supplier<Element> view = () ->
                 stack(text("background"), grouped.render(cursor.on(open(true))).get());
@@ -349,11 +349,11 @@ class ChoiceDialogTest {
                         PickPopup.class,
                         popup -> "Pick one",
                         List.of(
-                                new Choice<PickPopup>('a', "dialog.discard.all", () -> new Picked("a"))
+                                new Choice<PickPopup>('a', "changes.dialog.discard.all", () -> new Picked("a"))
                                         .withDetails(popup -> "Throws everything away."),
-                                new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
+                                new Choice<PickPopup>('b', "changes.dialog.discard.unstaged", () -> new Picked("b"))
                                         .withDetails(popup -> "Keeps what is staged."),
-                                new Choice<>('c', "dialog.reset.mixed", () -> new Picked("c")))),
+                                new Choice<>('c', "changes.dialog.reset.mixed", () -> new Picked("c")))),
                 cursor);
         return () ->
                 stack(text("background"), telling.render(cursor.on(open(true))).get());

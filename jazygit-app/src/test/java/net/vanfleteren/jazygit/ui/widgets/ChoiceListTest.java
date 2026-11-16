@@ -36,11 +36,11 @@ import org.junit.jupiter.api.Test;
 class ChoiceListTest {
 
     private static final List<Choice<PickPopup>> FIVE = List.of(
-            new Choice<>('a', "dialog.discard.all", () -> new Picked("a")),
-            new Choice<>('b', "dialog.discard.unstaged", () -> new Picked("b")),
-            new Choice<>('c', "dialog.discard.title", () -> new Picked("c")),
-            new Choice<>('d', "dialog.reset.mixed", () -> new Picked("d")),
-            new Choice<>('e', "dialog.reset.soft", () -> new Picked("e")));
+            new Choice<>('a', "changes.dialog.discard.all", () -> new Picked("a")),
+            new Choice<>('b', "changes.dialog.discard.unstaged", () -> new Picked("b")),
+            new Choice<>('c', "changes.dialog.discard.title", () -> new Picked("c")),
+            new Choice<>('d', "changes.dialog.reset.mixed", () -> new Picked("d")),
+            new Choice<>('e', "changes.dialog.reset.soft", () -> new Picked("e")));
     // Half of it fits the widest option, "(d) Mixed reset: keep changes, unstaged".
     private static final int WIDE = 90;
 
@@ -142,7 +142,7 @@ class ChoiceListTest {
 
     @Test
     void headingsAreRefusedInTwoColumns() {
-        List<Choice<PickPopup>> grouped = FIVE.update(3, FIVE.get(3).withHeading("dialog.help.global"));
+        List<Choice<PickPopup>> grouped = FIVE.update(3, FIVE.get(3).withHeading("chrome.dialog.help.global"));
 
         IllegalArgumentException refused =
                 assertThrows(IllegalArgumentException.class, () -> inTwoColumns(grouped, WIDE));

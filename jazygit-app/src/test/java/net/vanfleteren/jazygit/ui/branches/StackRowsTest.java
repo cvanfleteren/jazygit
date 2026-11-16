@@ -9,7 +9,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.feature.branch.stack.StackMsg;
+import net.vanfleteren.jazygit.branches.branch.stack.StackMsg;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;

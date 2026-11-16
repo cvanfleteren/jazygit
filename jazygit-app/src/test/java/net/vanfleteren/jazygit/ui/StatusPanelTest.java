@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutModels;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Conflict;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -12,13 +13,13 @@ import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
@@ -81,7 +82,7 @@ class StatusPanelTest {
 
     @Test
     void doesNotShowTheLastOperationError() throws Exception {
-        Model model = TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom");
+        Model model = CheckoutModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom");
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> StatusPanel.render(model));

@@ -1,0 +1,74 @@
+package net.vanfleteren.jazygit.changes.discard;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.util.function.Predicate;
+import net.vanfleteren.jazygit.changes.discard.DiscardCmd.Discard;
+import net.vanfleteren.jazygit.changes.discard.DiscardMsg.Chosen;
+import net.vanfleteren.jazygit.changes.discard.DiscardMsg.Requested;
+import net.vanfleteren.jazygit.changes.discard.DiscardMsg.Scope;
+import net.vanfleteren.jazygit.changes.files.FilesError;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.DiscardPlan;
+import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
+
+/**
+ * Discarding changes.
+ */
+public final class DiscardUpdate {
+
+    private DiscardUpdate() {}
+
+    public static Next update(Model model, DiscardMsg msg) {
+        return switch (msg) {
+            case Requested(List<FileEntry> files) -> requested(model, files);
+            case Chosen(Scope scope) -> chosen(model, scope);
+        };
+    }
+
+    /**
+     * Asks to discard the changes of {@code files}: of those that have changes, as the files without changes listed
+     * with all files of the working tree have nothing to discard, and the dialog names what it touches. When none of
+     * them has changes, that is said (ADR 108).
+     */
+    private static Next requested(Model model, List<FileEntry> files) {
+        List<FileEntry> changed = files.filter(FileEntry::changed);
+        return !files.isEmpty() && changed.isEmpty()
+                ? Next.of(model.fail(FilesError.Unchanged.of(files, Option.none())))
+                : PopupUpdate.ask(model, Option.when(!changed.isEmpty(), () -> new DiscardPopup(changed)));
+    }
+
+    private static Next chosen(Model model, Scope scope) {
+        // Without unstaged changes there is nothing to discard of that kind.
+        return PopupUpdate.confirm(
+                model,
+                DiscardPopup.class,
+                popup -> Option.of(popup)
+                        .filter(open -> scope == Scope.ALL || open.hasUnstaged())
+                        .map(open -> new Discard(plan(open.files(), scope))));
+    }
+
+    /**
+     * How each file has to be treated to discard it: untracked ones are deleted, tracked ones are checked
+     * out again, and files that were only just added are removed altogether. A renamed file is removed, and
+     * its origin checked out again.
+     */
+    static DiscardPlan plan(List<FileEntry> files, Scope scope) {
+        Predicate<FileEntry> affected = scope == Scope.ALL ? f -> true : FileEntry::unstaged;
+        List<FileEntry> picked = files.filter(affected);
+        List<String> untracked = FileEntry.paths(picked, f -> f.type() == ChangeType.UNTRACKED);
+        List<FileEntry> tracked = picked.filter(f -> f.type() != ChangeType.UNTRACKED);
+        Predicate<FileEntry> removed =
+                f -> f.type() == ChangeType.RENAMED || f.type() == ChangeType.ADDED && f.staged();
+        return scope == Scope.UNSTAGED
+                ? new DiscardPlan(untracked, FileEntry.paths(tracked, f -> true), List.empty(), List.empty())
+                : new DiscardPlan(
+                        untracked,
+                        List.empty(),
+                        FileEntry.paths(tracked, removed.negate()).appendAll(tracked.flatMap(FileEntry::origin)),
+                        FileEntry.paths(tracked, removed));
+    }
+}

@@ -1,0 +1,177 @@
+package net.vanfleteren.jazygit.branches.branch.delete;
+
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.List;
+import java.util.ArrayList;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.DeleteScope;
+import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Upstream;
+import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.popup.*;
+import net.vanfleteren.jazygit.ui.RenderedText;
+import net.vanfleteren.jazygit.ui.SettledPilot;
+import org.junit.jupiter.api.Test;
+
+/**
+ * The popup asking where to delete a branch.
+ */
+class DeleteBranchDialogTest {
+
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
+    private final CursorFeedback cursor = new CursorFeedback(dispatched::add);
+    private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DeleteBranchPopup> dialog =
+            new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(DeleteBranchDialogs.DELETE_BRANCH, cursor);
+    private final Model open = Update.update(
+                    TestModels.loaded(SampleData.git()),
+                    new DeleteBranchMsg.Requested(new BranchName("feature/initial-layout")))
+            .model();
+
+    @Test
+    void lettersChooseAnOption() throws Exception {
+        assertEquals(
+                List.of(new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)),
+                pressing(r -> SettledPilot.of(r).press('d')));
+    }
+
+    @Test
+    void bDeletesLocalAndRemote() throws Exception {
+        assertEquals(
+                List.of(new DeleteBranchMsg.Chosen(DeleteScope.BOTH)),
+                pressing(r -> SettledPilot.of(r).press('b')));
+    }
+
+    @Test
+    void arrowsAndEnterChooseTheSelectedLine() throws Exception {
+        assertEquals(List.of(new DeleteBranchMsg.Chosen(DeleteScope.REMOTE)), pressing(r -> {
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
+        }));
+    }
+
+    @Test
+    void escapeCancels() throws Exception {
+        assertEquals(
+                List.of(new PopupMsg.Dismissed(DeleteBranchPopup.class)),
+                pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
+    }
+
+    @Test
+    void remoteOptionsAreNotActionableForALocalOnlyBranch() throws Exception {
+        Model localOnly = Update.update(
+                        TestModels.loaded(SampleData.git()),
+                        new DeleteBranchMsg.Requested(new BranchName("feature/jgit-backend")))
+                .model();
+
+        assertEquals(List.of(), pressing(localOnly, r -> {
+            SettledPilot.of(r).press('r');
+            SettledPilot.of(r).press('b');
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
+            SettledPilot.of(r).press(KeyCode.DOWN);
+            SettledPilot.of(r).press(KeyCode.ENTER);
+        }));
+        dispatched.clear();
+        assertEquals(
+                List.of(new DeleteBranchMsg.Chosen(DeleteScope.LOCAL)),
+                pressing(localOnly, r -> SettledPilot.of(r).press('d')));
+    }
+
+    @Test
+    void remoteOptionsAreNotActionableForTheDefaultBranch() throws Exception {
+        Model model = TestModels.localBranchesRead(
+                        TestModels.loaded(SampleData.git()),
+                        List.of(
+                                Fixtures.branch(new BranchName("x"), true, new Sha("1")),
+                                Fixtures.branch(
+                                        new BranchName("trunk"),
+                                        false,
+                                        new Sha("2"),
+                                        java.time.Instant.EPOCH,
+                                        true,
+                                        true)))
+                .model();
+        Model open = Update.update(model, new DeleteBranchMsg.Requested(new BranchName("trunk")))
+                .model();
+
+        assertEquals(List.of(), pressing(open, r -> {
+            SettledPilot.of(r).press('r');
+            SettledPilot.of(r).press('b');
+        }));
+    }
+
+    @Test
+    void listsAllOptionsWithCancelAndTheKeyHint() throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
+            String screen = RenderedText.ofLarge(runner, () -> view(open));
+            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(d) delete local branch"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    screen.contains("(r) delete remote branch origin/feature/initial-layout"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    screen.contains("(b) delete local branch and remote branch origin/feature/initial-layout"), screen);
+            org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
+        }
+    }
+
+    @Test
+    void aRemoteBranchUnderAnotherNameIsSaidToBeAnotherBranch() throws Exception {
+        Model model = TestModels.localBranchesRead(
+                        TestModels.loaded(SampleData.git()),
+                        List.of(
+                                Fixtures.branch(new BranchName("x"), true, new Sha("1")),
+                                Fixtures.branch(
+                                        new BranchName("mine"),
+                                        false,
+                                        new Sha("2"),
+                                        java.time.Instant.EPOCH,
+                                        true,
+                                        false,
+                                        io.vavr.control.Option.of(new Upstream(
+                                                new BranchRef.Remote(
+                                                        new RemoteBranch("origin", new BranchName("develop"))),
+                                                0,
+                                                0)))))
+                .model();
+        Model asked = Update.update(model, new DeleteBranchMsg.Requested(new BranchName("mine")))
+                .model();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(asked))) {
+            String screen = RenderedText.ofLarge(runner, () -> view(asked));
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    screen.contains("(r) delete remote branch origin/develop, which is not named mine"), screen);
+        }
+    }
+
+    private List<Msg> pressing(Keys keys) throws Exception {
+        return pressing(open, keys);
+    }
+
+    private List<Msg> pressing(Model model, Keys keys) throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model))) {
+            SettledPilot.focus(runner, DeleteBranchDialogs.DELETE_BRANCH.id());
+            RenderedText.of(runner, () -> view(model));
+            keys.press(runner);
+            SettledPilot.of(runner).pause();
+        }
+        return List.ofAll(dispatched);
+    }
+
+    private Element view(Model model) {
+        return stack(text("background"), dialog.render(cursor.on(model)).get());
+    }
+
+    @FunctionalInterface
+    private interface Keys {
+        void press(ToolkitTestRunner runner) throws Exception;
+    }
+}

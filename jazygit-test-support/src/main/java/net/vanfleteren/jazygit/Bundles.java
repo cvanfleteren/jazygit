@@ -1,0 +1,144 @@
+package net.vanfleteren.jazygit;
+
+import io.vavr.collection.HashSet;
+import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
+import io.vavr.control.Try;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Locale;
+import java.util.ResourceBundle;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+/**
+ * What the tests of each module check of its bundle of text (ADR 136): that it holds the keys its code names, and
+ * that they start with its root.
+ */
+public final class Bundles {
+
+    private static final String PACKAGE = "net.vanfleteren.jazygit.";
+    // Possessive, so a long text does not overflow the stack with a step of backtracking for every character.
+    // A text shaped as a key, or as the start of one that the code finishes at run time.
+    private static final Pattern KEY = Pattern.compile("[a-z][A-Za-z0-9]*+(\\.[A-Za-z0-9]++)++\\.?+");
+    private static final Pattern LITERAL = Pattern.compile("\"((?:[^\"\\\\]++|\\\\.)*+)\"");
+
+    private Bundles() {}
+
+    /**
+     * The keys of the bundle of the module whose root is {@code root}, in English.
+     */
+    public static Set<String> keys(String root) {
+        return HashSet.ofAll(bundle(root).keySet());
+    }
+
+    /**
+     * The keys of the bundle of {@code root} whose text is blank.
+     */
+    public static List<String> blank(String root) {
+        ResourceBundle bundle = bundle(root);
+        return List.ofAll(bundle.keySet())
+                .filter(key -> bundle.getString(key).isBlank())
+                .sorted();
+    }
+
+    /**
+     * The keys of the bundle of {@code root} that do not start with it.
+     */
+    public static List<String> unprefixed(String root) {
+        return keys(root).filter(key -> !key.startsWith(root + ".")).toList().sorted();
+    }
+
+    /**
+     * The texts in the main sources of this module ({@code src/main/java}) that start with {@code root} and a dot, but
+     * are not a key of its bundle, nor the start of one: a key made at run time from such a text and the rest of it, as
+     * {@code "github.error.review." + why}.
+     */
+    public static List<String> missing(String root) {
+        Set<String> keys = keys(root);
+        return literals(Path.of("src", "main", "java"))
+                .filter(text -> text.startsWith(root + ".") && text.length() > root.length() + 1)
+                .filter(text -> !keys.contains(text) && keys.forAll(key -> !key.startsWith(text)))
+                .distinct()
+                .sorted();
+    }
+
+    /**
+     * The texts in the main sources of the modules under {@code project} with a bundle of {@code roots} that name a
+     * key, but no key the views would find: a text whose first part is that of a key of one of those bundles, which is
+     * neither a key of the bundle it is looked up in, nor the start of one, and is not one of {@code notKeys}. As
+     * {@code Messages} does, a text is looked up in the bundle its first part names, and otherwise in that of the views,
+     * {@code ui}. This also checks the keys of the views, which start with no root, and the keys of a module named
+     * from another.
+     *
+     * @param notKeys texts shaped as a key that this cannot check: a text that names something else, as a host, or
+     *                the start of a key that the code finishes inside its last part
+     */
+    public static List<String> unknown(Path project, List<String> roots, Set<String> notKeys) {
+        Map<String, Set<String>> bundles = roots.toMap(root -> root, Bundles::keys);
+        Set<String> views = bundles.get("ui").getOrElseThrow(() -> new IllegalArgumentException("no ui in " + roots));
+        Set<String> firsts =
+                bundles.values().flatMap(keys -> keys).map(Bundles::first).toSet();
+        return mainSources(project, roots)
+                .flatMap(Bundles::literals)
+                .filter(text -> KEY.matcher(text).matches() && firsts.contains(first(text)))
+                .filter(text -> !notKeys.contains(text))
+                .filter(text ->
+                        !known(bundles.get(first(text)).getOrElse(HashSet.empty()), text) && !known(views, text))
+                .distinct()
+                .sorted();
+    }
+
+    // A key, or the start of one that the code finishes at run time: up to a dot, so a key cut short is not known.
+    private static boolean known(Set<String> keys, String text) {
+        String start = text.endsWith(".") ? text : text + ".";
+        return keys.contains(text) || keys.exists(key -> key.startsWith(start));
+    }
+
+    private static String first(String key) {
+        int dot = key.indexOf('.');
+        return dot < 0 ? key : key.substring(0, dot);
+    }
+
+    // The main sources of each module whose root is one of roots: a module of a group is one level deeper.
+    private static List<Path> mainSources(Path project, List<String> roots) {
+        Path main = Path.of("src", "main", "java");
+        return Try.of(() -> {
+                    try (Stream<Path> paths = Files.walk(project, 5)) {
+                        return List.ofAll(paths.filter(path -> path.endsWith(main)
+                                        && roots.exists(root ->
+                                                Files.isDirectory(path.resolve(PACKAGE.replace('.', '/') + root))))
+                                .toList());
+                    }
+                })
+                .get();
+    }
+
+    private static ResourceBundle bundle(String root) {
+        return ResourceBundle.getBundle(PACKAGE + root + ".messages", Locale.ROOT);
+    }
+
+    private static List<String> literals(Path sources) {
+        return Try.of(() -> {
+                    try (Stream<Path> files = Files.walk(sources)) {
+                        return List.ofAll(files.filter(file -> file.toString().endsWith(".java"))
+                                .toList());
+                    }
+                })
+                .get()
+                .flatMap(file -> List.ofAll(LITERAL.matcher(read(file))
+                        .results()
+                        .map(found -> found.group(1))
+                        .toList()));
+    }
+
+    private static String read(Path file) {
+        return Try.of(() -> Files.readString(file))
+                .recover(IOException.class, failure -> {
+                    throw new IllegalStateException("cannot read " + file, failure);
+                })
+                .get();
+    }
+}

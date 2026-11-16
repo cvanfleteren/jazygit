@@ -1,0 +1,173 @@
+package net.vanfleteren.jazygit.changes.cherrypick;
+
+import static net.vanfleteren.jazygit.state.TestModels.failed;
+import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.time.Instant;
+import net.vanfleteren.jazygit.git.StubGit;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import org.junit.jupiter.api.Test;
+
+/**
+ * Copying a commit and cherry-picking it onto another branch.
+ */
+class CherryPickUpdateTest {
+
+    private static final Commit FIRST = TestModels.COMMITS.head();
+    private static final Commit MERGE = Fixtures.commit(
+            new Sha("mmmm"),
+            "Ada",
+            "ada@example.com",
+            Instant.EPOCH,
+            "Merge",
+            "",
+            List.of(new Sha("aaaa"), new Sha("ffff")));
+
+    private static Model copied() {
+        return Update.update(TestModels.loaded(), new CherryPickMsg.Copied(FIRST.sha()))
+                .model();
+    }
+
+    /**
+     * {@code model} once the branch feature is checked out.
+     */
+    private static Model onFeature(Model model) {
+        Model branches = TestModels.localBranchesRead(
+                        model,
+                        List.of(
+                                Fixtures.branch(new BranchName("main"), false, new Sha("aaaa")),
+                                Fixtures.branch(new BranchName("feature"), true, new Sha("ffff"))))
+                .model();
+        return Update.update(branches, TestModels.commitsLoaded(TestModels.FEATURE_COMMITS))
+                .model();
+    }
+
+    private static Model asked() {
+        return Update.update(onFeature(copied()), new CherryPickMsg.Requested()).model();
+    }
+
+    @Test
+    void copyingKeepsTheCommit() {
+        assertEquals(Option.of(FIRST), copied().repoView().commits().cherryPick());
+    }
+
+    @Test
+    void copyingAnotherCommitReplacesTheCopy() {
+        Model model = Update.update(
+                        TestModels.loaded(),
+                        TestModels.commitsLoaded(TestModels.FEATURE_COMMITS.appendAll(TestModels.COMMITS)))
+                .model();
+        model = Update.update(model, new CherryPickMsg.Copied(FIRST.sha())).model();
+
+        Model next =
+                Update.update(model, new CherryPickMsg.Copied(new Sha("ffff"))).model();
+
+        assertEquals(
+                Option.of(TestModels.FEATURE_COMMITS.head()),
+                next.repoView().commits().cherryPick());
+    }
+
+    @Test
+    void aMergeCannotBeCopied() {
+        Model model = Update.update(TestModels.loaded(), TestModels.commitsLoaded(List.of(MERGE)))
+                .model();
+
+        assertEquals(
+                Option.none(),
+                Update.update(model, new CherryPickMsg.Copied(MERGE.sha()))
+                        .model()
+                        .repoView()
+                        .commits()
+                        .cherryPick());
+    }
+
+    @Test
+    void droppingLetsGoOfTheCopy() {
+        assertEquals(
+                Option.none(),
+                Update.update(copied(), new CherryPickMsg.Dropped())
+                        .model()
+                        .repoView()
+                        .commits()
+                        .cherryPick());
+    }
+
+    @Test
+    void theCopyStaysWhenAnotherBranchIsCheckedOut() {
+        assertEquals(Option.of(FIRST), onFeature(copied()).repoView().commits().cherryPick());
+    }
+
+    @Test
+    void requestingAsksToPickTheCopyOntoTheCheckedOutBranch() {
+        assertEquals(
+                Option.of(new CherryPickPopup(FIRST, Option.of(new BranchName("feature")))),
+                asked().popup(CherryPickPopup.class));
+    }
+
+    @Test
+    void requestingWithoutACopyDoesNothing() {
+        Model model = onFeature(TestModels.loaded());
+
+        assertEquals(model, Update.update(model, new CherryPickMsg.Requested()).model());
+    }
+
+    @Test
+    void aCommitTheBranchHasIsNotPickedAgain() {
+        Next next = Update.update(copied(), new CherryPickMsg.Requested());
+
+        assertEquals(Option.none(), next.model().popup(CherryPickPopup.class));
+        assertEquals(Option.of("aaaa is already on the checked out branch"), errorText(next.model()));
+    }
+
+    @Test
+    void confirmingPicksTheCopy() {
+        Next next = Update.update(asked(), new PopupMsg.Confirmed(CherryPickPopup.class));
+
+        assertEquals(Option.none(), next.model().popup(CherryPickPopup.class));
+        assertEquals(new CherryPickCmd(FIRST.sha()), next.cmds().head());
+    }
+
+    @Test
+    void cancellingClosesThePopupAndKeepsTheCopy() {
+        Next next = Update.update(asked(), new PopupMsg.Dismissed(CherryPickPopup.class));
+
+        assertEquals(Option.none(), next.model().popup(CherryPickPopup.class));
+        assertEquals(Option.of(FIRST), next.model().repoView().commits().cherryPick());
+        assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void pickingLetsGoOfTheCopy() {
+        Model running = Update.update(asked(), new PopupMsg.Confirmed(CherryPickPopup.class))
+                .model();
+        CherryPickCmd cmd = new CherryPickCmd(FIRST.sha());
+
+        Model next = Update.update(running, cmd.succeeded(StubGit.executed("git cherry-pick aaaa")))
+                .model();
+
+        assertEquals(Option.none(), next.repoView().commits().cherryPick());
+    }
+
+    @Test
+    void aFailureShowsTheErrorAndKeepsTheCopy() {
+        Model running = Update.update(asked(), new PopupMsg.Confirmed(CherryPickPopup.class))
+                .model();
+
+        Model next = Update.update(running, failed(new CherryPickCmd(FIRST.sha()), "conflict"))
+                .model();
+
+        assertEquals(Option.of("Cherry-pick of aaaa failed: conflict"), errorText(next));
+        assertEquals(Option.of(FIRST), next.repoView().commits().cherryPick());
+    }
+}
