@@ -2,7 +2,9 @@ package net.vanfleteren.jazygit.app;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.Bundles;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +13,9 @@ import org.junit.jupiter.api.Test;
  * (ADR 136).
  */
 class AppBundleTest {
+
+    private static final List<String> ROOTS =
+            List.of("ui", "state", "content", "changes", "branches", "github", "chrome", "app");
 
     @Test
     void everyKeyStartsWithTheRootOfTheModule() {
@@ -28,13 +33,22 @@ class AppBundleTest {
     }
 
     /**
+     * Every key the code of any module names is found where {@code Messages} looks for it: the test of each module
+     * checks only the keys that start with its root, so this is the check of the keys of the views, which start with
+     * none, wherever they are named.
+     */
+    @Test
+    void everyKeyTheCodeOfAnyModuleNamesIsFound() {
+        assertEquals(List.empty(), Bundles.unknown(Path.of(".."), ROOTS, HashSet.of("github.com")));
+    }
+
+    /**
      * A key is in one bundle only: the views look a key up in the bundle its root names, and a key of the views in
      * their own, so a key in two would show one text where the other was meant.
      */
     @Test
     void noKeyIsInTwoBundles() {
-        List<String> roots = List.of("ui", "state", "content", "changes", "branches", "github", "chrome", "app");
-        List<String> all = roots.flatMap(Bundles::keys);
+        List<String> all = ROOTS.flatMap(Bundles::keys);
         assertEquals(
                 List.empty(),
                 all.groupBy(key -> key)

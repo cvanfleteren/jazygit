@@ -103,10 +103,13 @@ app stops.
 
 ### 4. Where the keys are declared
 
-`Keymap.standard()` returns `Standard.KEYMAP`, which is built by folding each feature's `register` over
-`Keymap.empty()`: `StageKeys`, `CommitFeature`, `CherryPickKeys`, `DiscardKeys`, `EditKeys`, `StashKeys`,
-`BranchFeature`, `GitHubFeature`, `WorktreeFeature` and `GlobalKeys`. An `XxxFeature` registers the keys of each
-of its operations, in the order it lists them. A feature adds its panel keys with `Keymap.add(scope, bindings...)`,
+`Keymap.standard()` returns the keymap of the `Keymap.Source` service on the classpath, so the views in
+`jazygit-ui` ask for it without naming the app (ADR 136). The app gives it: `app.keys.Standard`, listed in
+`META-INF/services`, folds each feature's `keys` over `Keymap.withHelp(HelpMsg.Requested::new)`, in the order of
+`Features.ALL`, and then adds `GlobalKeys`. `withHelp` is what makes `?` ask for the help of the panel; in
+`Keymap.empty()` it does nothing. Without the service, as in the tests of the views, `Keymap.standard()` is empty, and
+`Launcher` refuses to start. Each `XxxFeature` registers the keys of each of its operations, in the order it lists
+them. A feature adds its panel keys with `Keymap.add(scope, bindings...)`,
 which refuses a key bound
 twice in the same panel, and adds its global keys with `Keymap.global(...)`. The panels and the help dialog read
 the same keymap, so the help always lists the keys that work.

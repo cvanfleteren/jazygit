@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
+import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.slf4j.LoggerFactory;
@@ -48,9 +49,11 @@ final class Launcher {
     private static void start(StartupOptions options) {
         Path start = options.path().getOrElse(Path.of("")).toAbsolutePath();
         Option<Path> debugLog = Option.when(options.debug(), SettingsPaths::debugLog);
-        Either<String, Option<JazygitApp>> app = DebugLog.start(debugLog)
-                .toEither()
-                .mapLeft(failed -> Messages.get("app.debugLog.failed", debugLog.get(), ErrorText.reason(failed)))
+        Either<String, Option<JazygitApp>> app = keymap(Keymap.standard())
+                .flatMap(keys -> DebugLog.start(debugLog)
+                        .toEither()
+                        .mapLeft(failed ->
+                                Messages.get("app.debugLog.failed", debugLog.get(), ErrorText.reason(failed))))
                 .flatMap(logging -> Theme.createEngine()
                         .mapLeft(failed ->
                                 Messages.get("app.theme.loadFailed", failed.theme(), ErrorText.reason(failed.cause()))))
@@ -92,6 +95,16 @@ final class Launcher {
                     System.exit(1);
                 });
         debugLog.forEach(log -> System.err.println(Messages.get("app.debugLog.written", log)));
+    }
+
+    /**
+     * The keymap of the app, or why it has none: the views find it as a service ({@link Keymap.Source}), and without
+     * it they would start with no key that works. A services file lost in packaging shows here, not as a dead UI.
+     */
+    static Either<String, Keymap> keymap(Keymap standard) {
+        return standard.globals().isEmpty()
+                ? Either.left(Messages.get("app.keymap.missing", Keymap.Source.class.getName()))
+                : Either.right(standard);
     }
 
     /**

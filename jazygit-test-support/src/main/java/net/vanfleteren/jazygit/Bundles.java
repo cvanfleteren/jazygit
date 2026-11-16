@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Try;
 import java.io.IOException;
@@ -20,6 +21,8 @@ public final class Bundles {
 
     private static final String PACKAGE = "net.vanfleteren.jazygit.";
     // Possessive, so a long text does not overflow the stack with a step of backtracking for every character.
+    // A text shaped as a key, or as the start of one that the code finishes at run time.
+    private static final Pattern KEY = Pattern.compile("[a-z][A-Za-z0-9]*+(\\.[A-Za-z0-9]++)++\\.?+");
     private static final Pattern LITERAL = Pattern.compile("\"((?:[^\"\\\\]++|\\\\.)*+)\"");
 
     private Bundles() {}
@@ -60,6 +63,55 @@ public final class Bundles {
                 .filter(text -> !keys.contains(text) && keys.forAll(key -> !key.startsWith(text)))
                 .distinct()
                 .sorted();
+    }
+
+    /**
+     * The texts in the main sources of the modules under {@code project} with a bundle of {@code roots} that name a
+     * key, but no key the views would find: a text whose first part is that of a key of one of those bundles, which is
+     * neither a key of the bundle it is looked up in, nor the start of one, and is not one of {@code notKeys}. As
+     * {@code Messages} does, a text is looked up in the bundle its first part names, and otherwise in that of the views,
+     * {@code ui}. This also checks the keys of the views, which start with no root, and the keys of a module named
+     * from another.
+     *
+     * @param notKeys texts shaped as a key that name something else, as a host
+     */
+    public static List<String> unknown(Path project, List<String> roots, Set<String> notKeys) {
+        Map<String, Set<String>> bundles = roots.toMap(root -> root, Bundles::keys);
+        Set<String> views = bundles.get("ui").getOrElseThrow(() -> new IllegalArgumentException("no ui in " + roots));
+        Set<String> firsts =
+                bundles.values().flatMap(keys -> keys).map(Bundles::first).toSet();
+        return mainSources(project, roots)
+                .flatMap(Bundles::literals)
+                .filter(text -> KEY.matcher(text).matches() && firsts.contains(first(text)))
+                .filter(text -> !notKeys.contains(text))
+                .filter(text ->
+                        !known(bundles.get(first(text)).getOrElse(HashSet.empty()), text) && !known(views, text))
+                .distinct()
+                .sorted();
+    }
+
+    // As missing has it: a key, or the start of one that the code finishes at run time.
+    private static boolean known(Set<String> keys, String text) {
+        return keys.contains(text) || keys.exists(key -> key.startsWith(text));
+    }
+
+    private static String first(String key) {
+        int dot = key.indexOf('.');
+        return dot < 0 ? key : key.substring(0, dot);
+    }
+
+    // The main sources of each module whose root is one of roots: a module of a group is one level deeper.
+    private static List<Path> mainSources(Path project, List<String> roots) {
+        Path main = Path.of("src", "main", "java");
+        return Try.of(() -> {
+                    try (Stream<Path> paths = Files.walk(project, 5)) {
+                        return List.ofAll(paths.filter(path -> path.endsWith(main)
+                                        && roots.exists(root ->
+                                                Files.isDirectory(path.resolve(PACKAGE.replace('.', '/') + root))))
+                                .toList());
+                    }
+                })
+                .get();
     }
 
     private static ResourceBundle bundle(String root) {
