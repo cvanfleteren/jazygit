@@ -16,6 +16,7 @@ import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.bindings.Actions;
@@ -38,9 +39,11 @@ import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
 import net.vanfleteren.jazygit.content.diff.Halves;
+import net.vanfleteren.jazygit.content.diff.LineGoal;
 import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
@@ -51,6 +54,7 @@ import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Found;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
@@ -88,6 +92,9 @@ public final class ScrollArea {
     // The keys that take the cursor of the split view to the old and the new side of its row (ADR 139).
     private static final char OLD_SIDE = '[';
     private static final char NEW_SIDE = ']';
+    // The key that opens the line to type a line number in, and how many digits go in it (ADR 140).
+    private static final char GO_TO_LINE = ':';
+    private static final int MOST_DIGITS = 9;
     private static final Keymap KEYMAP = Keymap.standard();
 
     private final ContentArea area;
@@ -123,6 +130,12 @@ public final class ScrollArea {
     private Option<Integer> currentMatch = Option.none();
     // What the title says until the next key: that n went past the last match, or could not go to one (ADR 126).
     private Option<String> notice = Option.none();
+    // The line to type a line number in to go to, and its text while it is open (ADR 140): kept by the area, as nothing
+    // of it lasts past Enter.
+    private final FilterLine numberLine = new FilterLine(GO_TO_LINE);
+    private Option<String> number = Option.none();
+    // Whether the area shows the original of a file whole, whose lines are numbered in the old file (ADR 102, 140).
+    private boolean original = false;
 
     public ScrollArea(
             ContentArea area, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
@@ -151,15 +164,21 @@ public final class ScrollArea {
         boolean focused = focus.contains(area.id());
         Element fitted =
                 new Fitted(fit(model, focused, shown, style, styles), () -> fit(model, focused, shown, style, styles));
-        // The line to type the query of a search in, above the area that has the focus, which keeps it (ADR 126).
-        return typing.filter(ignored -> focused)
-                .<Element>map(text ->
-                        new PasteTarget(column(searchLine.field(text), fitted).fill(), id, this::pasted))
+        // The line to type the query of a search in, or a line number, above the area that has the focus, which keeps
+        // it (ADR 126, 140).
+        Option<StyledElement<?>> line = typing.filter(ignored -> focused)
+                .<StyledElement<?>>map(searchLine::field)
+                .orElse(() -> number.filter(ignored -> focused).map(numberLine::field));
+        return line.<Element>map(field -> new PasteTarget(column(field, fitted).fill(), id, this::pasted))
                 .getOrElse(fitted);
     }
 
     private void pasted(PasteEvent event) {
         typing.forEach(text -> dispatch.accept(new ContentSearchMsg.Edited(searchLine.paste(text, event))));
+        number.filter(ignored -> typing.isEmpty())
+                .map(text -> numberLine.paste(text, event))
+                .filter(ScrollArea::isNumber)
+                .forEach(text -> number = Option.of(text));
     }
 
     /**
@@ -198,6 +217,12 @@ public final class ScrollArea {
                 .flatMap(mark -> last.map(before -> before.hunk(mark, near)).getOrElse(() -> markedHunk(body, mark)));
         Option<String> query = ContentSearch.query(model.contentSearch());
         typing = model.contentSearch().filter(ContentSearch::typing).map(ContentSearch::text);
+        // The line to type a line number in closes as the area loses the focus (ADR 140).
+        number = number.filter(ignored -> focused && typing.isEmpty());
+        original = model.repoView()
+                .version(area.id(), content)
+                .flatMap(Version::showing)
+                .contains(FileVersion.ORIGINAL);
         // The matches are found once per body and query, not per frame (ADR 126).
         Styled current = last.filter(before -> before.asGiven().equals(asGiven))
                 .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width))
@@ -295,6 +320,9 @@ public final class ScrollArea {
         if (focused && typing.isDefined()) {
             return typed(typing.get(), event, content);
         }
+        if (focused && number.isDefined()) {
+            return numbered(number.get(), event, content);
+        }
         if (focused) {
             notice = Option.none();
         }
@@ -316,6 +344,8 @@ public final class ScrollArea {
                 // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
                 .orElse(() -> Option.when(leaving && leaveScrollArea.getAsBoolean(), EventResult.HANDLED))
                 .orElse(() -> Option.when(!focused, EventResult.UNHANDLED))
+                .orElse(() ->
+                        Option.when(event.isChar(GO_TO_LINE) && !event.hasCtrl() && !event.hasAlt(), this::lineOpened))
                 .orElse(() -> searchStep(event, content))
                 .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(to, content)))
                 .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(
@@ -355,6 +385,128 @@ public final class ScrollArea {
                     .getOrElse(EventResult.HANDLED);
         }
         searchLine.edit(text, event).map(ContentSearchMsg.Edited::new).forEach(dispatch);
+        return EventResult.HANDLED;
+    }
+
+    /**
+     * {@code :} (ADR 140): opens the line to type a line number in, where the area shows lines of a file; elsewhere
+     * the title says there are none.
+     */
+    private EventResult lineOpened() {
+        boolean numbered = cursor.exists(
+                on -> styled.exists(shown -> LineGoal.numbered(shown.stops(), shown.places(), on.stop())));
+        if (numbered) {
+            number = Option.of("");
+        } else {
+            notice = Option.of(Messages.get("content.line.none"));
+        }
+        return EventResult.HANDLED;
+    }
+
+    /**
+     * What {@code event} does while the line to type a line number in is open with {@code text} (ADR 140): the keys
+     * that edit it do, as long as it holds only digits; Escape closes it; Enter closes it and goes to the line typed.
+     * The other keys do nothing.
+     */
+    private EventResult numbered(String text, KeyEvent event, ScrolledContent content) {
+        if (event.isCancel()) {
+            number = Option.none();
+            return EventResult.HANDLED;
+        }
+        if (event.isConfirm()) {
+            number = Option.none();
+            return text.isEmpty()
+                    ? EventResult.HANDLED
+                    : cursor.flatMap(on -> styled.map(shown -> toLine(on, shown, Integer.parseInt(text), content)))
+                            .getOrElse(EventResult.HANDLED);
+        }
+        numberLine.edit(text, event).filter(ScrollArea::isNumber).forEach(edited -> number = Option.of(edited));
+        return EventResult.HANDLED;
+    }
+
+    /**
+     * Whether {@code text} can be in the line to type a line number in: digits only, no more than fit a number.
+     */
+    private static boolean isNumber(String text) {
+        return text.length() <= MOST_DIGITS && text.chars().allMatch(c -> c >= '0' && c <= '9');
+    }
+
+    /**
+     * Goes to line {@code line} of the file of the cursor {@code on} in {@code shown} (ADR 140), numbered in the file
+     * of the side of the cursor in the split view, in the old file in the original, else in the new file.
+     */
+    private EventResult toLine(DiffCursor on, Styled shown, int line, ScrolledContent content) {
+        ReviewThread.Side side =
+                original ? ReviewThread.Side.LEFT : shown.split().split() ? on.side() : ReviewThread.Side.RIGHT;
+        currentMatch = Option.none();
+        return switch (LineGoal.of(shown.stops(), shown.places(), on.stop(), side, line)) {
+            case LineGoal.OnStop(int index, boolean exact, int at) -> {
+                RichDiff.Stop stop = shown.stops().get(index);
+                yield lineReached(
+                        on.toLine(stop.row(), stop.mark().side()),
+                        Option.when(!exact, () -> Messages.get("content.line.notShown", line, at)),
+                        content);
+            }
+            case LineGoal.Hidden(Anchor.OnLine wanted, Anchor.Gap lines, int closest) ->
+                hidden(on, wanted, lines, shown.stops().get(closest), content);
+            case LineGoal.InRow(int row, boolean exact, int at) -> {
+                Option<String> says = Option.when(!exact, () -> Messages.get("content.line.notShown", line, at));
+                // A row of JSON or YAML rendered is a stop; a block of Markdown is scrolled to the top, as Ctrl+T
+                // leaves it, which a key then acts on (ADR 103).
+                if (shown.stops().exists(stop -> stop.row() == row)) {
+                    yield lineReached(on.toLine(row), says, content);
+                }
+                notice = says;
+                RichTextState state = element.state();
+                state.scrollToTop();
+                state.scrollDown(row);
+                yield scrolled(content);
+            }
+            case LineGoal.Nowhere _ -> {
+                notice = Option.of(Messages.get("content.line.none"));
+                yield EventResult.HANDLED;
+            }
+        };
+    }
+
+    /**
+     * Moves the cursor {@code to} the line gone to, the title saying {@code says}; nowhere when a range is open and
+     * the line is outside its hunk, the title saying so.
+     */
+    private EventResult lineReached(Option<DiffCursor> to, Option<String> says, ScrolledContent content) {
+        if (to.isEmpty()) {
+            notice = Option.of(Messages.get("content.line.outsideRange"));
+            return EventResult.HANDLED;
+        }
+        notice = says;
+        return moved(to.get(), content);
+    }
+
+    /**
+     * Goes to the line {@code wanted}, which a marker leaves out (ADR 140): shows {@code lines}, those around it, as
+     * Enter on the marker shows its lines (ADR 77), and tells the model the cursor is on it, which the area finds once
+     * it shows; until then the cursor is on {@code closest}. Refused while a range is open: the line is in no hunk.
+     */
+    private EventResult hidden(
+            DiffCursor on, Anchor.OnLine wanted, Anchor.Gap lines, RichDiff.Stop closest, ScrolledContent content) {
+        if (on.mark().isDefined()) {
+            notice = Option.of(Messages.get("content.line.outsideRange"));
+            return EventResult.HANDLED;
+        }
+        notice = Option.none();
+        DiffCursor near = on.toLine(closest.row(), closest.mark().side()).getOrElse(on);
+        cursor = Option.of(near);
+        RichTextState state = element.state();
+        state.scrollToTop();
+        state.scrollDown(near.row());
+        Scrolled to = new Scrolled(content, state.scrollRow(), column, Option.of(wanted), Option.none());
+        told(to);
+        dispatch.accept(new ViewMsg.ContentScrolled(area.id(), to));
+        KEYMAP.handle(
+                        Scopes.DIFF,
+                        KeyEvent.ofKey(KeyCode.ENTER),
+                        Option.of(new DiffCursorAt(area.id(), to, lines, Option.none(), Option.none(), Option.none())))
+                .forEach(dispatch);
         return EventResult.HANDLED;
     }
 

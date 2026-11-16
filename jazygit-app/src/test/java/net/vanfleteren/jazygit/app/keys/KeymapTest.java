@@ -272,6 +272,7 @@ class KeymapTest {
                         "changes.help.diff.search",
                         "changes.help.diff.nextMatch",
                         "changes.help.diff.previousMatch",
+                        "changes.help.diff.goToLine",
                         "changes.help.diff.copy",
                         "changes.help.diff.range"),
                 descriptions(Scopes.DIFF));
@@ -286,6 +287,7 @@ class KeymapTest {
                         "changes.help.diff.version",
                         "changes.help.diff.render",
                         "changes.help.diff.search",
+                        "changes.help.diff.goToLine",
                         "changes.help.diff.copy"),
                 descriptions(Scopes.PULL_REQUEST_DIFF).filter(key -> key.startsWith("changes.help.diff.")));
         assertEquals(
