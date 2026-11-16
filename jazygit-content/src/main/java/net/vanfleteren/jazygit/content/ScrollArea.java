@@ -136,6 +136,8 @@ public final class ScrollArea {
     private Option<String> number = Option.none();
     // Whether the area shows the original of a file whole, whose lines are numbered in the old file (ADR 102, 140).
     private boolean original = false;
+    // The number of the line asked for that a marker leaves out, while the area waits for it to show (ADR 140).
+    private Option<Integer> wanted = Option.none();
 
     public ScrollArea(
             ContentArea area, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
@@ -268,6 +270,11 @@ public final class ScrollArea {
         if (!focused || last.isEmpty()) {
             notice = Option.none();
         }
+        // A line asked for that a marker left out, once it shows, or what showed instead says it is not there, as past
+        // the end of the file, which is only known once the file is read whole (ADR 140).
+        if (last.isEmpty()) {
+            wanted = wanted.filter(line -> cursor.exists(on -> waitedFor(on, current, line)));
+        }
         // The size the element was last drawn in, which a frame in another size draws it in first (ADR 80).
         columns = Math.max(0, current.widest() - state.viewportWidth());
         column = Math.clamp(at.column(), 0, columns);
@@ -325,6 +332,7 @@ public final class ScrollArea {
         }
         if (focused) {
             notice = Option.none();
+            wanted = Option.none();
         }
         // Only the arrow leaves: h scrolls, as j and k move, without going to another panel.
         boolean atLeftEdge = focused && event.matches(Actions.MOVE_LEFT) && !event.hasShift() && column == 0;
@@ -393,14 +401,38 @@ public final class ScrollArea {
      * the title says there are none.
      */
     private EventResult lineOpened() {
-        boolean numbered = cursor.exists(
-                on -> styled.exists(shown -> LineGoal.numbered(shown.stops(), shown.places(), on.stop())));
-        if (!numbered) {
+        if (!cursor.exists(this::numbered)) {
             notice = Option.of(Messages.get("content.line.none"));
             return EventResult.HANDLED;
         }
         number = Option.of("");
         return sending(new LineNumberMsg.Opened());
+    }
+
+    /**
+     * Whether the area still waits for line {@code line} of the new file to show in {@code shown}, its cursor
+     * {@code on} (ADR 140): while a marker leaves it out, as while the file is read whole. Once it shows, the cursor
+     * is on it, as the model has it there; when it is not there, the title says so, and which line the cursor is on.
+     */
+    private boolean waitedFor(DiffCursor on, Styled shown, int line) {
+        return switch (LineGoal.of(shown.stops(), shown.places(), on.stop(), ReviewThread.Side.RIGHT, line)) {
+            case LineGoal.Hidden _ -> true;
+            case LineGoal.OnStop(var _, boolean exact, int at) -> {
+                if (!exact) {
+                    notice = Option.of(Messages.get("content.line.notShown", line, at));
+                }
+                yield false;
+            }
+            case LineGoal.InRow _, LineGoal.Nowhere _ -> false;
+        };
+    }
+
+    /**
+     * Whether the area, its cursor {@code on}, shows lines of a file to go to by their number (ADR 140): what
+     * {@code :} acts on, and the help lists it as acting on.
+     */
+    private boolean numbered(DiffCursor on) {
+        return styled.exists(shown -> LineGoal.numbered(shown.stops(), shown.places(), on.stop()));
     }
 
     /**
@@ -503,6 +535,7 @@ public final class ScrollArea {
             return EventResult.HANDLED;
         }
         notice = Option.none();
+        this.wanted = Option.of(wanted.number());
         DiffCursor near = on.toLine(closest.row(), closest.mark().side()).getOrElse(on);
         cursor = Option.of(near);
         RichTextState state = element.state();
@@ -708,7 +741,8 @@ public final class ScrollArea {
                         ? toMatch(cursor, false, content)
                         : cursor.previousThread().map(previous -> movedTo(previous, content)),
                 cursor.marked().map(marked -> movedTo(marked, content)),
-                cursor.onHalf());
+                cursor.onHalf(),
+                Option.when(numbered(cursor), LineNumberMsg.Opened::new));
     }
 
     /**

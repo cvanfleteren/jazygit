@@ -56,6 +56,15 @@ class LineGoalTest {
     }
 
     @Test
+    void aLinePastTheEndOfAFileWhoseLengthIsKnownIsTheClosestLineShown() {
+        // The file read whole: the marker after the last hunk knows the file ends at line 30.
+        Vector<RichDiff.Stop> read = DIFF.update(7, stop(new Anchor.Gap("a.txt", 13, Option.some(31)), 7));
+
+        assertEquals(new LineGoal.OnStop(6, false, 12), LineGoal.of(read, Vector.empty(), 6, Side.RIGHT, 99));
+        assertInstanceOf(LineGoal.Hidden.class, LineGoal.of(read, Vector.empty(), 6, Side.RIGHT, 30));
+    }
+
+    @Test
     void aLineOfTheOldFileAMarkerLeavesOutIsTheClosestLineShown() {
         assertEquals(new LineGoal.OnStop(3, false, 10), LineGoal.of(DIFF, Vector.empty(), 4, Side.LEFT, 3));
     }

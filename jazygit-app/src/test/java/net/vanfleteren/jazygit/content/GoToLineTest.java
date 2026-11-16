@@ -91,39 +91,81 @@ class GoToLineTest {
     }
 
     @Test
-    void colonActsWhereTheAreaHasACursorSoTheHelpListsItAndRunsIt() throws Exception {
-        net.vanfleteren.jazygit.ui.keys.Keymap keys = net.vanfleteren.jazygit.ui.keys.Keymap.standard();
-        dev.tamboui.tui.event.KeyEvent colon = dev.tamboui.tui.event.KeyEvent.ofChar(':');
-        net.vanfleteren.jazygit.state.diff.DiffCursorAt at = new net.vanfleteren.jazygit.state.diff.DiffCursorAt(
-                ContentArea.FILE_CONTENT.id(),
-                Scrolled.top(new net.vanfleteren.jazygit.state.diff.ScrolledContent.Diff(DiffText.of(SMALL))),
-                onNew(1),
-                Option.none(),
-                Option.none(),
-                Option.none());
-        for (var scope : List.of(
-                net.vanfleteren.jazygit.ui.keys.Scopes.DIFF,
-                net.vanfleteren.jazygit.ui.keys.Scopes.PULL_REQUEST_DIFF)) {
-            assertEquals(
-                    Option.<Msg>of(new net.vanfleteren.jazygit.state.view.LineNumberMsg.Opened()),
-                    keys.handle(scope, colon, Option.of(at)));
-            // Without a cursor, as in the plain diff, it does nothing, and the help shows it disabled.
-            assertEquals(Option.none(), keys.handle(scope, colon, Option.none()));
-        }
-
-        // Run from the help, the line opens above the area.
+    void theHelpListsColonAsActingWhereThereAreLinesOfAFileAndRunsIt() throws Exception {
+        int colon = net.vanfleteren.jazygit.ui.keys.Keymap.standard()
+                .bindings(net.vanfleteren.jazygit.ui.keys.Scopes.DIFF.id())
+                .map(net.vanfleteren.jazygit.ui.keys.Keymap.Binding::key)
+                .indexOf(":");
         Driven driven = new Driven(commit(DiffStyle.RICH, SMALL));
         try (ToolkitTestRunner testRunner = driven.run()) {
-            driven.model.set(
-                    Update.update(driven.model.get(), new net.vanfleteren.jazygit.state.view.LineNumberMsg.Opened())
-                            .model());
-            // The help closing draws a frame, with the line open.
+            driven.type(testRunner, "?");
+            Option<Msg> action = driven.help().actions().get(colon);
+            assertEquals(Option.<Msg>of(new net.vanfleteren.jazygit.state.view.LineNumberMsg.Opened()), action);
+
+            // Run from the help, the line opens above the area; the help closing draws a frame.
+            driven.model.set(Update.update(
+                            driven.model.get(), new net.vanfleteren.jazygit.chrome.help.HelpMsg.Chosen(action.get()))
+                    .model());
             driven.screen(testRunner);
             driven.type(testRunner, "3");
             assertTrue(driven.screen(testRunner).contains(": 3"), driven.screen(testRunner));
             driven.press(testRunner, KeyCode.ENTER);
             assertEquals(Option.of(onNew(3)), driven.lastScrolled().cursor());
             assertTrue(driven.model.get().lineNumber().isEmpty());
+        }
+    }
+
+    @Test
+    void onABinaryFileTheHelpListsColonAsDisabledAsTheKeyDoesNothing() throws Exception {
+        int colon = net.vanfleteren.jazygit.ui.keys.Keymap.standard()
+                .bindings(net.vanfleteren.jazygit.ui.keys.Scopes.DIFF.id())
+                .map(net.vanfleteren.jazygit.ui.keys.Keymap.Binding::key)
+                .indexOf(":");
+        String binary = """
+                diff --git a/logo.png b/logo.png
+                index 1111111..2222222 100644
+                Binary files a/logo.png and b/logo.png differ
+                """;
+        Driven driven = new Driven(commit(DiffStyle.RICH, binary));
+        try (ToolkitTestRunner testRunner = driven.run()) {
+            driven.type(testRunner, "?");
+            assertEquals(Option.none(), driven.help().actions().get(colon));
+
+            driven.type(testRunner, ":");
+            String screen = driven.screen(testRunner);
+            assertTrue(screen.contains("no line numbers to go to here"), screen);
+            assertTrue(driven.model.get().lineNumber().isEmpty());
+        }
+    }
+
+    @Test
+    void aNumberPastTheEndOfAFileAMarkerFollowsSaysItIsNotShownOnceTheFileIsRead() throws Exception {
+        Driven driven = new Driven(commit(DiffStyle.RICH, CHANGED));
+        try (ToolkitTestRunner testRunner = driven.run()) {
+            driven.type(testRunner, ":99");
+            driven.press(testRunner, KeyCode.ENTER);
+            // How many lines follow the last hunk is not known until the file is read whole.
+            ExpandMsg.Asked asked = List.ofAll(driven.dispatched)
+                    .filter(ExpandMsg.Asked.class::isInstance)
+                    .map(ExpandMsg.Asked.class::cast)
+                    .single();
+            assertEquals(
+                    new Anchor.Gap("a.txt", 94, Option.some(105)), asked.at().cursor());
+
+            ReadWholeFile read = driven.cmds.stream()
+                    .filter(ReadWholeFile.class::isInstance)
+                    .map(ReadWholeFile.class::cast)
+                    .findFirst()
+                    .orElseThrow();
+            driven.model.set(TestModels.done(
+                            TestModels.running(driven.model.get(), read),
+                            read,
+                            new LoadMsg.WholeFileRead(read, DiffText.of(whole())))
+                    .model());
+
+            String screen = driven.screen(testRunner);
+            // The closest line shown: those after the hunk are still left out.
+            assertTrue(screen.contains("line 99 is not shown · at 23"), screen);
         }
     }
 
@@ -401,6 +443,16 @@ class GoToLineTest {
             SettledPilot.of(testRunner).press(key);
             SettledPilot.of(testRunner).pause();
             screen(testRunner);
+        }
+
+        /**
+         * The help the area asked for last, with the actions of its keys.
+         */
+        net.vanfleteren.jazygit.chrome.help.HelpMsg.Requested help() {
+            return List.ofAll(dispatched)
+                    .filter(net.vanfleteren.jazygit.chrome.help.HelpMsg.Requested.class::isInstance)
+                    .map(net.vanfleteren.jazygit.chrome.help.HelpMsg.Requested.class::cast)
+                    .last();
         }
 
         Scrolled lastScrolled() {

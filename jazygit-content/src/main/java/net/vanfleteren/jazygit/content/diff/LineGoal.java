@@ -36,10 +36,12 @@ public sealed interface LineGoal {
 
     /**
      * Whether what has {@code stops} and {@code places}, the cursor on the stop at {@code at}, has line numbers to go
-     * to: lines of a file, on either side.
+     * to: lines of a file, on either side. Asked for each key the area hands on, so it looks no further than the
+     * first line it finds.
      */
     static boolean numbered(Vector<RichDiff.Stop> stops, Vector<RichDiff.Place> places, int at) {
-        return !(of(stops, places, at, Side.RIGHT, 1) instanceof Nowhere);
+        return pathAt(stops, at)
+                .exists(path -> hasLines(stops, places, path, Side.RIGHT) || hasLines(stops, places, path, Side.LEFT));
     }
 
     /**
