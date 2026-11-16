@@ -97,11 +97,10 @@ class CommitFilesUpdateTest {
     }
 
     @Test
-    void escapeClosesThem() {
-        Model closed =
-                Update.update(withFiles(opened()), new CommitFilesMsg.Closed()).model();
+    void escapeLeavesThemListedAsTheAppMovesTheFocusBack() {
+        Model open = withFiles(opened());
 
-        assertEquals(Option.none(), closed.repoView().files().commitFiles());
+        assertSame(open, Update.update(open, new CommitFilesMsg.Closed()).model());
     }
 
     @Test

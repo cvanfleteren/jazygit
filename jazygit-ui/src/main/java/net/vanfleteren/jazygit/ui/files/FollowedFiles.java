@@ -36,18 +36,21 @@ final class FollowedFiles {
         }
         return inUse.filter(pane -> !pane.equals(FilesPanel.PANE))
                 .flatMap(pane -> followed(model, pane, branches)
-                        .filter(wanted -> !lists(model.repoView().files(), wanted))
+                        .filter(wanted -> !lists(model.repoView().files(), wanted, pane))
                         .map(wanted -> new SelectionMsg.FilesFollowed(wanted, pane, FilesPanel.PANE)));
     }
 
     /**
-     * Whether {@code files} list what is {@code wanted}: the same files, as they follow the highlight; those {@code F}
-     * asked for follow it again.
+     * Whether {@code files} list what is {@code wanted} for the pane {@code from}: the same files, as they follow the
+     * highlight of that pane. Those {@code F} asked for follow it again, and those another list highlights the same
+     * commit of follow this one: {@code Esc} goes back to it.
      */
-    private static boolean lists(FilesView files, Followed wanted) {
+    private static boolean lists(FilesView files, Followed wanted, PaneId from) {
         return wanted instanceof Followed.Files(Changes of)
                 ? files.commitFiles()
-                        .exists(view -> view.followed() && view.of().sameAs(of))
+                        .exists(view -> view.followed()
+                                && view.pane().equals(from)
+                                && view.of().sameAs(of))
                 : files.followed().equals(wanted);
     }
 

@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.Unlisted;
@@ -61,6 +62,34 @@ class FollowedFilesTest {
     }
 
     @Test
+    void theDivergenceListsTheFilesOfTheHighlightedCommit() {
+        Model model = MODEL.mapRepoView(view ->
+                view.mapBranches(branches -> branches.withDivergence(Option.of(DivergenceView.loading(
+                                new BranchName("feature"),
+                                new BranchRef.Local(new BranchName("main")),
+                                DivergenceView.Against.UPSTREAM)
+                        .withDetail(Option.of(Preview.loading(BRANCH_COMMIT, Option.none())))))));
+
+        assertEquals(
+                Option.of(followed(new Followed.Files(new Changes.OfCommit(BRANCH_COMMIT)), Scopes.BRANCHES.pane())),
+                change(model, Scopes.BRANCHES.pane(), new Followed.Files(BRANCH)));
+    }
+
+    @Test
+    void theSameCommitHighlightedInAnotherListFollowsThatList() {
+        // Escape goes back to the list the files are of (ADR 141): the commits of the branch, not the commits.
+        Model model = listing(MODEL)
+                .mapRepoView(view ->
+                        view.mapBranches(branches -> branches.withBranchCommits(Option.of(new BranchCommitsView(
+                                new BranchRef.Local(new BranchName("feature")),
+                                Option.of(Preview.loading(COMMIT, Option.none())))))));
+
+        assertEquals(
+                Option.of(followed(new Followed.Files(new Changes.OfCommit(COMMIT)), Scopes.BRANCHES.pane())),
+                change(model, Scopes.BRANCHES.pane(), new Followed.Files(BRANCH)));
+    }
+
+    @Test
     void theBranchesListWhatTheirHighlightedRowFollows() {
         assertEquals(
                 Option.of(followed(new Followed.Files(BRANCH), Scopes.BRANCHES.pane())),
@@ -92,6 +121,16 @@ class FollowedFilesTest {
         assertEquals(
                 Option.of(followed(new Followed.Files(new Changes.OfCommit(COMMIT)), Scopes.COMMITS.pane())),
                 change(asked, Scopes.COMMITS.pane()));
+    }
+
+    @Test
+    void theFilesFAskedForStayWhileTheFocusIsInThem() {
+        // F on a branch with a pull request lists those of the pull request, though the branch follows its own.
+        Model asked = listing(MODEL)
+                .mapRepoView(view -> view.mapFiles(
+                        files -> files.withCommitFiles(files.commitFiles().map(open -> open.withFollowed(false)))));
+
+        assertEquals(Option.none(), change(asked, FilesPanel.PANE, new Followed.Files(BRANCH)));
     }
 
     @Test

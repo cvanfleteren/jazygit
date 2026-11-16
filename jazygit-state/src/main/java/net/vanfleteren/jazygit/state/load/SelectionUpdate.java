@@ -240,8 +240,9 @@ public final class SelectionUpdate {
     private static Next filesFollowed(Model model, Changes of, PaneId from, PaneId listedIn) {
         Option<CommitFilesView> shown = model.repoView().files().commitFiles();
         if (shown.exists(view -> view.of().sameAs(of))) {
-            // Those F asked for follow the highlight again once their list has the focus back.
-            return shown.exists(CommitFilesView::followed)
+            // Those F asked for follow the highlight again once their list has the focus back, and those another
+            // list highlights too follow this one, which Escape goes back to.
+            return shown.exists(view -> view.followed() && view.pane().equals(from))
                     ? Next.of(model)
                     : Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(
                             shown.map(view -> view.withFollowed(true).withPane(from))))));

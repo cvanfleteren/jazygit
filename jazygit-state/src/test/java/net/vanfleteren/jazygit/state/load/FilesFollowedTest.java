@@ -115,6 +115,20 @@ class FilesFollowedTest {
     }
 
     @Test
+    void theSameCommitFollowedFromAnotherListIsOfThatListKeepingWhatWasRead() {
+        PaneId branches = new PaneId("branches");
+        Model fromCommits = followed(loaded(), FIRST).model();
+
+        Next fromBranches =
+                Update.update(fromCommits, new SelectionMsg.FilesFollowed(new Followed.Files(FIRST), branches, FILES));
+
+        assertEquals(
+                fromCommits.repoView().files().commitFiles().map(view -> view.withPane(branches)),
+                fromBranches.model().repoView().files().commitFiles());
+        assertEquals(List.of(), fromBranches.cmds());
+    }
+
+    @Test
     void theFilterGoesAlongToTheNextButAllFilesDoNot() {
         Model listed = followed(loaded(), FIRST)
                 .model()

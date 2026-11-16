@@ -46,9 +46,8 @@ public final class CommitFilesUpdate {
     public static Next update(Model model, CommitFilesMsg msg) {
         return switch (msg) {
             case CommitFilesMsg.Opened(var of, var pane) -> opened(model, of, pane);
-            case CommitFilesMsg.Closed() ->
-                Next.of(model.mapRepoView(
-                        repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.none()))));
+            // Escape moves the focus back to the list the files are of, which the app does: they stay (ADR 141).
+            case CommitFilesMsg.Closed() -> Next.of(model);
             case CommitFilesMsg.RemarksLoaded(PrNumber number, var remarks, var settled, int version) ->
                 remarksRead(model, number, remarks, settled, version);
             // The review threads read before stay shown; what was sent is done with all the same. A failed read

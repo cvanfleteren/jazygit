@@ -165,9 +165,6 @@ public class BranchesPanel {
     }
 
     /**
-     * The list {@code tab} shows.
-     */
-    /**
      * What the files pane lists while the list of the tab shown has the focus, rather than a divergence or the commits
      * of a branch (ADR 141); none while that is not known yet.
      */
@@ -175,6 +172,9 @@ public class BranchesPanel {
         return list(model.repoView().branches().tab()).followed(model);
     }
 
+    /**
+     * The list {@code tab} shows.
+     */
     private BranchesTabList list(BranchesTab tab) {
         return switch (tab) {
             case LOCAL -> localList;
