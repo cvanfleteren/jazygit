@@ -104,3 +104,6 @@ the object database, whatever is checked out and in whichever worktree.
 - `F` works on every local branch; on the main branch it shows the branch rather than what it changed.
 - `a` means all files in both trees of files: the working tree, and the files of a commit.
 - Left for later: `F` on a remote branch (ADR 61 left it out), which `a` would then show as committed too.
+
+Amended by ADR 141: while the files follow the highlight, `a` goes back to the files changed at each move, and the
+main branch lists what its tip changed; `F` on it still lists all its files.
