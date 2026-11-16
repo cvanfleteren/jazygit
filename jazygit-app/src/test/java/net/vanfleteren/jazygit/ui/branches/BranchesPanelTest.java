@@ -156,6 +156,72 @@ class BranchesPanelTest {
         assertEquals(java.util.List.of(), dispatched);
     }
 
+    @Test
+    void noDetachedHeadIsListedWhileARebaseDetachesIt() throws Exception {
+        Sha at = new Sha("89eeda75aaaaaaaa");
+        Model rebasing = Update.update(
+                        detachedAt(at),
+                        new LoadMsg.StatusLoaded(new RepoStatus(
+                                new Head.Detached(at),
+                                List.empty(),
+                                Option.of(new InProgress.Rebasing(
+                                        Option.of(new BranchName("main")), new Sha("2"), 1, 2)))))
+                .model();
+
+        String screen;
+        Option<Msg> selected;
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(rebasing, BranchesPanel.PANE))) {
+            screen = RenderedText.ofLarge(testRunner, () -> panel.render(rebasing, BranchesPanel.PANE));
+            selected = panel.selectionChange(rebasing);
+            SettledPilot.of(testRunner).quit();
+        }
+
+        List<String> rows = List.of(screen.split("\n")).filter(line -> line.startsWith("│"));
+        assertFalse(screen.contains("HEAD detached"), screen);
+        assertTrue(rows.head().contains("main"), screen);
+        assertEquals(selecting("main"), selected);
+    }
+
+    @Test
+    void onceABranchIsCheckedOutAgainItTakesTheHighlightAndItsLogShows() throws Exception {
+        Sha at = new Sha("89eeda75aaaaaaaa");
+        Model detached = detachedAt(at);
+        Model onFeature = Update.update(
+                        with(
+                                detached,
+                                // Not first, where the detached HEAD was: the highlight has to move to it.
+                                List.of(
+                                        Fixtures.branch(new BranchName("main"), false, new Sha("1")),
+                                        Fixtures.branch(new BranchName("feature"), true, new Sha("2")),
+                                        OLD)),
+                        new LoadMsg.StatusLoaded(
+                                new RepoStatus(Head.onBranch(new BranchName("feature"), new Sha("2")), List.empty())))
+                .model();
+
+        Option<Msg> selected;
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(detached, BranchesPanel.PANE))) {
+            RenderedText.of(testRunner, () -> panel.render(detached, BranchesPanel.PANE));
+            assertEquals(
+                    Option.of(new SelectionMsg.NoLogSelected(new NoLog.Detached(at))), panel.selectionChange(detached));
+            RenderedText.of(testRunner, () -> panel.render(onFeature, BranchesPanel.PANE));
+            selected = panel.selectionChange(onFeature);
+            SettledPilot.of(testRunner).quit();
+        }
+
+        assertEquals(selecting("feature"), selected);
+        Model saidNoLog = Update.update(onFeature, new SelectionMsg.NoLogSelected(new NoLog.Detached(at)))
+                .model();
+        assertEquals(
+                Option.none(),
+                Update.update(saidNoLog, selected.get())
+                        .model()
+                        .repoView()
+                        .branches()
+                        .noLog());
+    }
+
     /**
      * {@link #before} once HEAD was detached at {@code at}: no branch is checked out.
      */
