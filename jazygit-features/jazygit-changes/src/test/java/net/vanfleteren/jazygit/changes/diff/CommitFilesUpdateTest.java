@@ -41,6 +41,7 @@ import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.FileFilter;
+import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
@@ -96,36 +97,41 @@ class CommitFilesUpdateTest {
     }
 
     @Test
-    void escapeClosesThem() {
-        Model closed =
-                Update.update(withFiles(opened()), new CommitFilesMsg.Closed()).model();
+    void escapeLeavesThemListedAsTheAppMovesTheFocusBack() {
+        Model open = withFiles(opened());
 
-        assertEquals(Option.none(), closed.repoView().files().commitFiles());
+        assertSame(open, Update.update(open, new CommitFilesMsg.Closed()).model());
     }
 
     @Test
-    void anotherPaneGettingTheFocusClosesThemButTheirDiffDoesNot() {
+    void theFocusMovingLeavesThemListed() {
+        // Which files are listed for the pane that gets the focus is the panes' to say (ADR 141).
         Model open = withFiles(opened());
 
-        assertTrue(Update.update(open, new ViewMsg.Focused(Scopes.FILES.pane()))
-                .model()
-                .repoView()
-                .files()
-                .commitFiles()
-                .isDefined());
-        assertTrue(Update.update(open, new ViewMsg.Focused(new AreaId("commit-file-changes")))
-                .model()
-                .repoView()
-                .files()
-                .commitFiles()
-                .isDefined());
+        for (var focus : List.of(Scopes.FILES.pane(), new AreaId("commit-file-changes"), Scopes.COMMITS.pane())) {
+            assertTrue(Update.update(open, new ViewMsg.Focused(focus))
+                    .model()
+                    .repoView()
+                    .files()
+                    .commitFiles()
+                    .isDefined());
+        }
+    }
+
+    @Test
+    void fOnTheCommitWhoseFilesFollowTheHighlightKeepsThemAndNoLongerFollows() {
+        Model following = Update.update(
+                        loaded(),
+                        new SelectionMsg.FilesFollowed(
+                                new Followed.Files(COMMIT), Scopes.COMMITS.pane(), Scopes.FILES.pane()))
+                .model();
+
+        Next next = Update.update(following, new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.pane()));
+
         assertEquals(
-                Option.none(),
-                Update.update(open, new ViewMsg.Focused(Scopes.COMMITS.pane()))
-                        .model()
-                        .repoView()
-                        .files()
-                        .commitFiles());
+                following.repoView().files().commitFiles().map(view -> view.withFollowed(false)),
+                next.model().repoView().files().commitFiles());
+        assertEquals(List.of(), next.cmds());
     }
 
     @Test

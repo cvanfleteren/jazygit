@@ -16,16 +16,20 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ThreadsByPath;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.*;
+import net.vanfleteren.jazygit.state.view.Followed;
+import net.vanfleteren.jazygit.state.view.Unlisted;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.BorderBar;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
@@ -303,6 +307,29 @@ public class FilesPanel {
     }
 
     /**
+     * When what the pane lists in {@code model} changes as time goes by (ADR 124): the files listed before stop being
+     * listed in place of those still read, which the pane then says it reads (ADR 141).
+     */
+    public static List<ShownTime> shownTimes(Model model) {
+        return model.repoView()
+                .files()
+                .commitFiles()
+                .filter(view -> view.files() instanceof Loadable.Loading<List<CommitFile>>)
+                .flatMap(CommitFilesView::before)
+                .map(kept -> (ShownTime) (now, before) ->
+                        Option.of(kept.until()).filter(until -> until.isAfter(now) && before.isAfter(until)))
+                .toList();
+    }
+
+    /**
+     * The message to send when the pane lists other files than those the pane in use, {@code inUse}, follows (ADR
+     * 141); {@code branches} is what the branches follow.
+     */
+    public Option<Msg> followChange(Model model, Option<PaneId> inUse, Option<Followed> branches) {
+        return FollowedFiles.change(model, inUse, branches);
+    }
+
+    /**
      * The message to send when the highlighted node is not the one whose diff {@code model} holds: of the files of
      * the commit while they are open, else of the working tree.
      */
@@ -319,6 +346,11 @@ public class FilesPanel {
      * its diff, or, among all files of the commit, the file or the directory it did not change (ADR 128).
      */
     private Option<Msg> commitSelectionChange(CommitFilesView view) {
+        // While they are read, the files listed before may still be listed in their place: nothing of these is
+        // highlighted yet.
+        if (view.listedFiles() instanceof Loadable.Loading<List<CommitFile>>) {
+            return Option.none();
+        }
         Option<FileTree<CommitFile>> selected = commitTreeOf(view).selected();
         if (selected.exists(node -> view.allFiles() && !hasChanges(node, FilesPanel::changed))) {
             return unchangedSelection(selected.get()).filter(msg -> !shows(view.unchanged(), msg));
@@ -499,6 +531,8 @@ public class FilesPanel {
         return model.repoView()
                 .files()
                 .commitFiles()
+                // The files listed before stay listed a moment while the next are read (ADR 141).
+                .map(open -> open.shown(model.now()))
                 .map(view -> Pane.bordered(
                         view.ended()
                                         .map(state -> Messages.get(
@@ -516,6 +550,7 @@ public class FilesPanel {
                         focused,
                         commitTreeOf(view).selectedRow(),
                         commitTreeOf(view).count(view.listedFiles())))
+                .orElse(() -> model.repoView().files().unlisted().map(this::unlisted))
                 .getOrElse(() -> {
                     boolean all = model.repoView().files().shown().all();
                     Loadable<List<FileEntry>> files = workingFiles(model.repo(), all);
@@ -529,6 +564,36 @@ public class FilesPanel {
                             tree.selectedRow(),
                             tree.count(files));
                 });
+    }
+
+    /**
+     * The pane while the row highlighted in the pane with the focus has no files to list, saying why (ADR 141).
+     */
+    private Panel unlisted(Unlisted why) {
+        Loadable<List<CommitFile>> none = new Loadable.Loaded<>(List.empty());
+        return Pane.bordered(
+                switch (why) {
+                    case Unlisted.NoBase(var branch) -> Messages.get("panel.commitFiles.titleFor", branch.value());
+                    case Unlisted.Stack() -> Messages.get("panel.files.title");
+                    case Unlisted.NotHere() -> Messages.get("panel.files.title");
+                },
+                withLine(commitTree.render(
+                        why,
+                        none,
+                        false,
+                        new FileTreeList.Placeholder(Placeholders.loading(), Option.of(unlistedText(why))),
+                        Option.none())),
+                focused,
+                commitTree.selectedRow(),
+                commitTree.count(none));
+    }
+
+    private static String unlistedText(Unlisted why) {
+        return switch (why) {
+            case Unlisted.NoBase(var branch) -> Messages.get("panel.files.unlisted.noBase", branch.value());
+            case Unlisted.Stack() -> Messages.get("panel.files.unlisted.stack");
+            case Unlisted.NotHere() -> Messages.get("panel.files.unlisted.notHere");
+        };
     }
 
     /**

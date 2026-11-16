@@ -24,8 +24,63 @@ def test_the_files_of_a_commit_show_in_the_files_pane_each_with_its_own_diff(rep
 
     ui.app.press("escape")
 
-    ui.app.wait_in("Files", "work.txt")
+    # Back on the commits, the files still follow the highlighted one (ADR 141).
     ui.app.eventually(lambda: ui.app.focused_pane() == "Commits", "the focus back on the commits")
+    assert f"Files of {short}" in ui.app.text()
+    assert "work.txt" not in ui.app.pane_text("Files")
+
+
+def test_the_files_follow_the_highlighted_commit_without_taking_the_focus(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo.write("work.txt", "work\n")
+    ui = jazygit()
+
+    ui.commits.select("Add two")
+
+    ui.app.wait_in("Files", "two.txt")
+    assert f"Files of {repo.short('HEAD')}" in ui.app.text()
+    assert ui.app.focused_pane() == "Commits"
+
+    ui.commits.select("Add one")
+
+    ui.app.wait_in("Files", "one.txt")
+    assert "two.txt" not in ui.app.pane_text("Files")
+    assert ui.app.focused_pane() == "Commits"
+
+    # The branch checked out lists the files of the working tree.
+    ui.branches.select("main")
+
+    ui.app.wait_in("Files", "work.txt")
+    assert "Files of" not in ui.app.text()
+
+
+def test_the_files_follow_the_highlighted_branch_against_its_base(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("checkout", "-q", "-b", "feature")
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo("checkout", "-q", "main")
+    ui = jazygit()
+
+    ui.branches.select("feature")
+
+    ui.app.wait_in("Files", "two.txt")
+    assert "Files of feature · vs main" in ui.app.text()
+    assert "one.txt" not in ui.app.pane_text("Files")
+    assert ui.app.focused_pane() == "Branches"
+
+
+def test_the_main_branch_not_checked_out_lists_what_its_tip_changed(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo("checkout", "-q", "-b", "feature")
+    ui = jazygit()
+
+    ui.branches.select("main")
+
+    ui.app.wait_in("Files", "two.txt")
+    assert f"Files of main · {repo.short('main')}" in ui.app.text()
+    assert "one.txt" not in ui.app.pane_text("Files")
 
 
 def test_the_files_of_a_stash_include_its_untracked_files(repo, jazygit):

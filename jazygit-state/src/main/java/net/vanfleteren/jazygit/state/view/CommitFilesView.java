@@ -6,6 +6,8 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.function.Function;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
@@ -53,6 +55,10 @@ import net.vanfleteren.jazygit.state.diff.Collapsed;
  *                 asked for: they are read once
  * @param unchanged the node highlighted while all files are listed, when nothing under it changed: the content panel
  *                  shows it in place of a diff (ADR 128)
+ * @param followed whether they follow the highlight of the list that has the focus, rather than being asked for with
+ *                 {@code F}: they are then listed without the focus moving into them (ADR 141)
+ * @param before   the files listed before, read, which the pane keeps listing while these are read, until a moment:
+ *                 most are read before then, and the pane does not flash a placeholder for them (ADR 141)
  */
 @With
 public record CommitFilesView(
@@ -72,7 +78,14 @@ public record CommitFilesView(
         Option<FileFilter> filter,
         boolean allFiles,
         Option<Loadable<List<CommitFile>>> tree,
-        Option<UnchangedNode> unchanged) {
+        Option<UnchangedNode> unchanged,
+        boolean followed,
+        Option<Before> before) {
+
+    /**
+     * How long the files listed before stay listed while the next are read, before the pane says they are read.
+     */
+    public static final Duration KEPT_WHILE_READ = Duration.ofMillis(200);
 
     /**
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
@@ -96,6 +109,8 @@ public record CommitFilesView(
                 Option.none(),
                 false,
                 Option.none(),
+                Option.none(),
+                false,
                 Option.none());
     }
 
@@ -257,6 +272,33 @@ public record CommitFilesView(
                 FilesView::withCommitFiles,
                 view -> view.of().equals(of)));
     }
+
+    /**
+     * These, to be listed in place of {@code shown}, the files listed until now, at {@code now}: those stay listed while
+     * these are read, until {@link #KEPT_WHILE_READ} from now, or the files those kept in their place, until their
+     * moment, while they were still read.
+     */
+    public CommitFilesView after(Option<CommitFilesView> shown, Instant now) {
+        return withBefore(shown.flatMap(view -> view.files() instanceof Loadable.Loaded<List<CommitFile>>
+                ? Option.of(new Before(view.withBefore(Option.none()), now.plus(KEPT_WHILE_READ)))
+                : view.before()));
+    }
+
+    /**
+     * What the pane lists at {@code now}: the files listed before while these are read, until their moment, else these.
+     */
+    public CommitFilesView shown(Instant now) {
+        return files instanceof Loadable.Loading<List<CommitFile>>
+                ? before.filter(kept -> now.isBefore(kept.until()))
+                        .map(Before::view)
+                        .getOrElse(this)
+                : this;
+    }
+
+    /**
+     * The files listed before, kept while the next are read, until {@code until}.
+     */
+    public record Before(CommitFilesView view, Instant until) {}
 
     /**
      * Which of the files the tree lists (ADR 57).

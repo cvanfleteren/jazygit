@@ -185,7 +185,10 @@ def test_a_pop_that_conflicts_keeps_the_stash_and_leaves_the_conflicts_to_resolv
     assert repo.stashes() == ["work"]
     assert repo.conflicts() == ["one.txt"]
     assert "CONFLICTS (1)" in ui.app.pane_text("Repo")
-    assert "UU one.txt" in ui.app.pane_text("Files")
+    # The stash kept has the focus, and the files pane lists its files: the branch checked out lists those of the
+    # working tree (ADR 141).
+    ui.branches.select("main")
+    ui.app.wait_in("Files", "UU one.txt")
     assert repo.subjects() == ["Change one", "Add one"]
 
 

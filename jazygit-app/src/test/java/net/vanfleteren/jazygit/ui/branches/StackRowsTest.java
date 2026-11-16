@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.load.BranchFiles;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -108,6 +109,34 @@ class StackRowsTest {
                         selecting(new BranchRef.Local(FEAT_B)),
                         selecting(new BranchRef.Remote(ORIGIN_FEAT_C))),
                 shown);
+    }
+
+    @Test
+    void eachRowSaysWhatTheFilesPaneListsForIt() throws Exception {
+        // ADR 141: the branch checked out the working tree, a branch its files against its base, a stack and a pull
+        // request of it not checked out here nothing.
+        BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
+        java.util.List<Option<Followed>> followed = new java.util.ArrayList<>();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(OPEN, BranchesPanel.PANE))) {
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            RenderedText.of(testRunner, () -> panel.render(OPEN, BranchesPanel.PANE));
+            for (int row = 0; row < 6; row++) {
+                followed.add(panel.followed(OPEN));
+                SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            }
+            SettledPilot.of(testRunner).quit();
+        }
+
+        Option<Followed> nothingHere = Option.of(new Followed.Nothing(new Unlisted.NotHere()));
+        assertEquals(
+                java.util.List.of(
+                        Option.of(new Followed.WorkingTree()),
+                        Option.of(new Followed.Nothing(new Unlisted.Stack())),
+                        nothingHere,
+                        BranchFiles.of(OPEN, FEAT_A),
+                        BranchFiles.of(OPEN, FEAT_B),
+                        nothingHere),
+                followed);
     }
 
     @Test

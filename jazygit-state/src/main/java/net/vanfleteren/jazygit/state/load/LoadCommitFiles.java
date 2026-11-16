@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.lens.Lens;
+import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
@@ -31,6 +32,14 @@ public record LoadCommitFiles(Changes of) implements Targeted<List<CommitFile>> 
     @Override
     public Option<Label> label() {
         return Option.of(Label.of("state.work.commitFiles", of.sha().shortSha()));
+    }
+
+    /**
+     * Only the files of the view open are kept: a newer read is of another one, and cancels this one (ADR 141).
+     */
+    @Override
+    public Option<Cmd.Slot> slot() {
+        return Option.of(Cmd.Slot.COMMIT_FILES);
     }
 
     @Override
