@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+import shards
 from harness import App, Git, eventually, isolated_env
 from pages import Jazygit
 
@@ -19,6 +20,11 @@ def pytest_addoption(parser):
     parser.addoption("--jar", help="the jazygit fat jar to test; defaults to the newest in jazygit-app/target")
     parser.addoption("--shard", type=shard, metavar="I/N",
                      help="runs only the I-th of N shares of the tests, so that N machines share them")
+    parser.addoption("--shard-durations", type=Path, metavar="FILE",
+                     help="splits the shares of --shard by the seconds each test took, from a file --save-durations "
+                          "wrote; every machine must be given the same file")
+    parser.addoption("--save-durations", type=Path, metavar="FILE",
+                     help="writes the seconds each test that ran took to FILE")
 
 
 def shard(value: str) -> tuple[int, int]:
@@ -41,13 +47,16 @@ def pytest_collection_modifyitems(config, items):
     worksteal hands each worker an even, contiguous slice of the tests, and an idle worker steals from the end of
     another's slice, so a slow test at the head of a slice runs first and the rest of the slice moves elsewhere.
 
-    A shard takes every N-th test, so that the tests of a file, and the slow ones next to each other, spread over
-    the shards."""
+    The shards take about as long as each other by the durations of --shard-durations; without them, a shard takes
+    every N-th test, so that the tests of a file, and the slow ones next to each other, spread over the shards."""
     shard = config.getoption("--shard")
     if shard:
         index, count = shard
-        config.hook.pytest_deselected(items=[item for i, item in enumerate(items) if i % count != index - 1])
-        items[:] = [item for i, item in enumerate(items) if i % count == index - 1]
+        path = config.getoption("--shard-durations")
+        durations = shards.read(path) if path else {}
+        mine = set(shards.shares([item.nodeid for item in items], durations, count)[index - 1])
+        config.hook.pytest_deselected(items=[item for item in items if item.nodeid not in mine])
+        items[:] = [item for item in items if item.nodeid in mine]
     workers = getattr(config, "workerinput", {}).get("workercount", 1)
     slow = [item for item in items if item.get_closest_marker("slow")]
     rest = [item for item in items if not item.get_closest_marker("slow")]
@@ -60,6 +69,31 @@ def pytest_collection_modifyitems(config, items):
         del rest[:fill]
         remaining -= size
     items[:] = ordered + rest
+
+
+def pytest_configure(config):
+    # In the process that hands out the tests: with xdist, the workers' reports reach it too.
+    path = config.getoption("--save-durations")
+    if path and not hasattr(config, "workerinput"):
+        config.pluginmanager.register(Durations(path), "durations")
+
+
+class Durations:
+    """Adds up how long the setup, call and teardown of each test took, and writes it to path at the end."""
+
+    def __init__(self, path: Path):
+        self.path = path
+        self.seconds: dict[str, float] = {}
+
+    # The setup of each worker's first test also counts making the class data archive, or waiting for it. Every shard
+    # pays that once per worker, so the shards still take as long as each other; which tests it lands on changes with
+    # the split, and moving only part of the way from the old durations soon evens it out.
+    def pytest_runtest_logreport(self, report):
+        self.seconds[report.nodeid] = self.seconds.get(report.nodeid, 0.0) + report.duration
+
+    def pytest_sessionfinish(self):
+        self.path.write_text(json.dumps({test: round(seconds, 2) for test, seconds in sorted(self.seconds.items())},
+                                        indent=1) + "\n")
 
 
 @pytest.fixture(scope="session")
