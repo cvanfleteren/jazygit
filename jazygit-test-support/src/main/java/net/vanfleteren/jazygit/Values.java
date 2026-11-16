@@ -28,6 +28,12 @@ public final class Values {
      */
     public static final String PACKED = "net.vanfleteren.jazygit.git.model.ParsedDiff$ParsedLine";
 
+    /**
+     * The one class of the model that is no record because it is the same as itself only: the key of a part of the
+     * model a feature owns. Its fields are final and hold values, so it is taken for a value.
+     */
+    public static final String SLICE = "net.vanfleteren.jazygit.state.Slice";
+
     // The JDK's types, outside java.time, that never change.
     private static final List<Class<?>> VALUES = List.of(
             String.class,
@@ -104,6 +110,7 @@ public final class Values {
                         || pkg.equals("java.util.function")
                         || VALUES.exists(raw::isEquivalentTo)
                         || raw.getName().equals(PACKED)
+                        || raw.getName().equals(SLICE)
                         || pkg.startsWith("net.vanfleteren.jazygit") && raw.isInterface())
                 && (!(type instanceof JavaParameterizedType parameterized)
                         || pkg.equals("java.util.function")
