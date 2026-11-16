@@ -64,6 +64,14 @@ public interface StubChecks extends Checks {
     }
 
     /**
+     * A repository without the file: GitHub answers 404.
+     */
+    @Override
+    default Either<GhError, String> workflowFile(String sha, String path) {
+        return Either.left(new GhError.CommandFailed(Option.of("gh: Not Found (HTTP 404)"), 1));
+    }
+
+    /**
      * A repository that protects no branch.
      */
     @Override

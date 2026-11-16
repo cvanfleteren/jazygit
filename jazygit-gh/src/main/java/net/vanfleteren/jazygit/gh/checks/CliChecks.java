@@ -51,6 +51,12 @@ public final class CliChecks implements Checks {
     }
 
     @Override
+    public Either<GhError, String> workflowFile(String sha, String path) {
+        return process.read(WorkflowFileQuery.command(sha, path), WorkflowFileQuery.LIMIT)
+                .flatMap(WorkflowFileQuery::text);
+    }
+
+    @Override
     public Either<GhError, List<GhBranch>> protectedBranches() {
         return process.readJson(ProtectedBranchesQuery.COMMAND, ProtectedBranchesQuery.DECODER);
     }
