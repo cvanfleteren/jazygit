@@ -3,9 +3,9 @@ package net.vanfleteren.jazygit.ui.branches;
 import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.view.NoLog;
 
 /**
  * One of the lists the branches pane shows a tab of: the local branches, the remote ones or the worktrees.
@@ -23,10 +23,10 @@ interface BranchesTabList {
     Option<BranchRef> selectedRef();
 
     /**
-     * The pull request the highlighted row shows when it has no log to show: one of a stack whose branch is neither
-     * checked out nor fetched (ADR 72).
+     * Why the highlighted row has no log to show, when it has none: a pull request of a stack whose branch is neither
+     * checked out nor fetched (ADR 72), or a detached HEAD.
      */
-    default Option<PrNumber> unfetched() {
+    default Option<NoLog> noLog() {
         return Option.none();
     }
 }

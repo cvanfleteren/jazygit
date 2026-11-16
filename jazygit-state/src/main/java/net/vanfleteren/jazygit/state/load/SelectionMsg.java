@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state.load;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -9,6 +8,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.view.NoLog;
 
 /**
  * The user moved the highlight in one of the panes.
@@ -26,10 +26,10 @@ public sealed interface SelectionMsg extends Msg {
     record BranchSelected(BranchRef branch) implements SelectionMsg {}
 
     /**
-     * The user highlighted a pull request of a stack in the branches pane whose branch is neither checked out nor
-     * fetched, so that it has no log (ADR 72).
+     * The user highlighted a row in the branches pane that has no log, as {@code noLog} says why: a pull request of a
+     * stack whose branch is neither checked out nor fetched (ADR 72), or a detached HEAD.
      */
-    record UnfetchedSelected(PrNumber pullRequest) implements SelectionMsg {}
+    record NoLogSelected(NoLog noLog) implements SelectionMsg {}
 
     /**
      * The user highlighted a commit in the commits pane.

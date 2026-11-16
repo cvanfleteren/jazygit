@@ -249,9 +249,8 @@ public class BranchesPanel {
         BranchesTabList tab = list(model.repoView().branches().tab());
         return PaneKeys.selectionChange(
                         tab.selectedRef(), model.repoView().preview().branchLog(), SelectionMsg.BranchSelected::new)
-                .orElse(() -> tab.unfetched()
-                        .filter(pullRequest ->
-                                !model.repoView().branches().unfetched().contains(pullRequest))
-                        .map(SelectionMsg.UnfetchedSelected::new));
+                .orElse(() -> tab.noLog()
+                        .filter(noLog -> !model.repoView().branches().noLog().contains(noLog))
+                        .map(SelectionMsg.NoLogSelected::new));
     }
 }

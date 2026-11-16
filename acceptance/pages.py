@@ -333,8 +333,15 @@ class BranchesPane:
             return False
         rows = self.app.pane_text("Branches").splitlines()
         current = self.repo.current_branch()
+        # A detached HEAD is listed first, as lazygit does; not while a rebase, which detaches it, goes on.
+        detached = not current and self.repo.has_head() and self.repo.in_progress() != "rebase"
         return (all(self._shows_sync(rows, branch) for branch in self.repo.branches())
-                and (not current or not self.repo.has_head() or current in self.app.bold_in("Branches")))
+                and (not current or not self.repo.has_head() or current in self.app.bold_in("Branches"))
+                and (not detached or bool(rows) and rows[0].strip() == self.detached_row()))
+
+    def detached_row(self) -> str:
+        """The row of the local branches that shows HEAD detached at the commit it is at."""
+        return f"(HEAD detached at {self.repo.short('HEAD')})"
 
     def _shows_sync(self, rows: list, branch: str) -> bool:
         """Whether a row shows branch, with the commits it has to push and to pull, and whether its upstream is

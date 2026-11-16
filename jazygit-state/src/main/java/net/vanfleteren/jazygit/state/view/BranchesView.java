@@ -4,7 +4,6 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.gh.model.PrNumber;
 
 /**
  * What the branches pane shows, apart from the previews read for the branch highlighted in it.
@@ -14,8 +13,8 @@ import net.vanfleteren.jazygit.gh.model.PrNumber;
  *                      in place of the local branches while it is open
  * @param branchCommits the commits of a branch, local or remote, which the pane lists in place of the branches while
  *                      it is open
- * @param unfetched     the pull request of a stack highlighted in the pane in place of a branch, whose branch is
- *                      neither checked out nor fetched, so that no log shows (ADR 72)
+ * @param noLog         the row highlighted in the pane in place of a branch that has no log, and why: a pull request
+ *                      of a stack whose branch is neither checked out nor fetched (ADR 72), or a detached HEAD
  * @param closedStacks  the numbers of the stacks the pane shows closed, as only their header; a stack starts open
  *                      (ADR 72)
  * @param stacking      whether the pane lists the branches of a stack under a header, or as any other branch (ADR 87)
@@ -27,7 +26,7 @@ public record BranchesView(
         BranchesTab tab,
         Option<DivergenceView> divergence,
         Option<BranchCommitsView> branchCommits,
-        Option<PrNumber> unfetched,
+        Option<NoLog> noLog,
         Set<Integer> closedStacks,
         Stacking stacking,
         Option<BuildsView> builds) {

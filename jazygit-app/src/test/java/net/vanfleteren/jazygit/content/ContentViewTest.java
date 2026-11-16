@@ -273,6 +273,18 @@ class ContentViewTest {
     }
 
     @Test
+    void aDetachedHeadHighlightedInTheBranchesSaysItsCommitsAreInTheCommitsPane() {
+        Model detached = Update.update(
+                        TestModels.loaded(SampleData.git()),
+                        new SelectionMsg.NoLogSelected(new NoLog.Detached(new Sha("89eeda75aaaa"))))
+                .model();
+
+        assertEquals(
+                dim("Log", "HEAD detached at 89eeda7: its commits are in the commits pane."),
+                ContentView.of(detached, BranchesPanel.PANE));
+    }
+
+    @Test
     void theBranchesKeepShowingThePreviousLogWhileTheNewOneLoads() {
         Shown.Area log = area(ContentView.of(TestModels.switchingBranch(model, "other"), BranchesPanel.PANE));
 

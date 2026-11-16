@@ -103,7 +103,7 @@ class StackRowsTest {
                         selecting(new BranchRef.Local(MAIN)),
                         // The header shows the highest branch of the stack, whose log holds all of it.
                         selecting(new BranchRef.Local(FEAT_B)),
-                        Option.of(new SelectionMsg.UnfetchedSelected(new PrNumber(95))),
+                        Option.of(new SelectionMsg.NoLogSelected(new NoLog.Unfetched(new PrNumber(95)))),
                         selecting(new BranchRef.Local(FEAT_A)),
                         selecting(new BranchRef.Local(FEAT_B)),
                         selecting(new BranchRef.Remote(ORIGIN_FEAT_C))),
@@ -115,19 +115,20 @@ class StackRowsTest {
         Model unfetched = Update.update(
                         Update.update(OPEN, new SelectionMsg.BranchSelected(new BranchRef.Local(MAIN)))
                                 .model(),
-                        new SelectionMsg.UnfetchedSelected(new PrNumber(95)))
+                        new SelectionMsg.NoLogSelected(new NoLog.Unfetched(new PrNumber(95))))
                 .model();
 
         assertEquals(Option.none(), unfetched.repoView().preview().branchLog());
         assertEquals(
-                Option.of(new PrNumber(95)), unfetched.repoView().branches().unfetched());
+                Option.of(new NoLog.Unfetched(new PrNumber(95))),
+                unfetched.repoView().branches().noLog());
         assertEquals(
                 Option.none(),
                 Update.update(unfetched, new SelectionMsg.BranchSelected(new BranchRef.Local(MAIN)))
                         .model()
                         .repoView()
                         .branches()
-                        .unfetched());
+                        .noLog());
     }
 
     @Test

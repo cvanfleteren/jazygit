@@ -49,6 +49,8 @@ def test_checkout_a_commit_of_another_branch_detached(repo, jazygit):
     ui.app.wait_in("feature", repo.short("feature"))
     ui.branches.close_commits()
     ui.caught_up()
+    # Back on the branches, the detached HEAD is listed first, highlighted.
+    assert ui.app.pane_text("Branches").splitlines()[0].strip() == ui.branches.detached_row()
 
 
 def test_rename_a_branch(repo, jazygit):

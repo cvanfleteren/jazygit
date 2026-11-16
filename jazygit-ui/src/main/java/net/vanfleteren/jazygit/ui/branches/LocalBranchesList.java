@@ -11,12 +11,12 @@ import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
-import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.view.NoLog;
 import net.vanfleteren.jazygit.state.view.Stacking;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
@@ -136,7 +136,8 @@ class LocalBranchesList implements BranchesTabList {
      */
     private static int reselect(List<BranchNode> previous, List<BranchNode> next, int selected) {
         Option<BranchName> before = current(previous);
-        Option<String> target = before.equals(current(next))
+        boolean detached = detached(next);
+        Option<String> target = before.equals(current(next)) && detached == detached(previous)
                 ? Option.of(selected)
                         .filter(i -> i < previous.size())
                         .map(previous::get)
@@ -146,13 +147,20 @@ class LocalBranchesList implements BranchesTabList {
                                         branches(next),
                                         leaf.branch().name()))
                                 : node.key())
-                : current(next)
-                        .map(name -> next.find(node -> holds(node, name))
-                                .map(BranchNode::key)
-                                .getOrElse(() -> leafKey(name)));
+                // Once HEAD is detached, it is what is checked out, listed first.
+                : detached
+                        ? next.find(BranchNode.Detached.class::isInstance).map(BranchNode::key)
+                        : current(next)
+                                .map(name -> next.find(node -> holds(node, name))
+                                        .map(BranchNode::key)
+                                        .getOrElse(() -> leafKey(name)));
         return target.map(key -> next.indexWhere(node -> node.key().equals(key)))
                 .filter(i -> i >= 0)
                 .getOrElse(selected);
+    }
+
+    private static boolean detached(List<BranchNode> nodes) {
+        return nodes.exists(BranchNode.Detached.class::isInstance);
     }
 
     private static String leafKey(BranchName name) {
@@ -169,6 +177,7 @@ class LocalBranchesList implements BranchesTabList {
                 !header.open()
                         && header.branches().exists(branch -> branch.name().equals(name));
             case BranchNode.Other other -> false;
+            case BranchNode.Detached detached -> false;
         };
     }
 
@@ -180,6 +189,7 @@ class LocalBranchesList implements BranchesTabList {
             case BranchNode.Leaf leaf -> List.of(leaf.branch());
             case BranchNode.Header header -> header.open() ? List.<Branch>empty() : header.branches();
             case BranchNode.Other other -> List.<Branch>empty();
+            case BranchNode.Detached detached -> List.<Branch>empty();
         });
     }
 
@@ -251,6 +261,14 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     /**
+     * A detached HEAD on one line, as the checked out branch is shown: no branch is checked out.
+     */
+    static LoadableList.Row detachedRow(BranchNode.Detached detached) {
+        return LoadableList.Row.of(LoadableList.Seg.styled(
+                Messages.get("branches.detached", detached.at().shortSha()), Theme.Classes.CURRENT));
+    }
+
+    /**
      * {@code row} indented under the header of its stack, both its lines.
      */
     static LoadableList.Row indented(LoadableList.Row row) {
@@ -284,7 +302,10 @@ class LocalBranchesList implements BranchesTabList {
                         model.gitHub()::pullRequest,
                         model.repoView().branches().stacking() == Stacking.STACKED,
                         model.repoView().branches().closedStacks(),
-                        head -> fetched(model, head)));
+                        head -> fetched(model, head)))
+                .map(branchNodes -> detachedHead(model)
+                        .map(at -> branchNodes.prepend(new BranchNode.Detached(at)))
+                        .getOrElse(branchNodes));
         nodes = read.equals(nodes) ? nodes : read;
         Function<Branch, LoadableList.Row> rowOf = b -> row(
                 b,
@@ -313,10 +334,24 @@ class LocalBranchesList implements BranchesTabList {
                                         .flatMap(b -> spinnerOf.apply(new BranchRef.Local(b.name())))
                                         .headOption());
                     case BranchNode.Other other -> other(other);
+                    case BranchNode.Detached detached -> detachedRow(detached);
                 }),
                 focused,
                 active,
                 title);
+    }
+
+    /**
+     * The commit HEAD is detached at, if it is. Not while a rebase goes on, which detaches HEAD meanwhile and which the
+     * status line names, as it leaves the branch it rebases out.
+     */
+    static Option<Sha> detachedHead(Model model) {
+        return model.repo()
+                .status()
+                .toOption()
+                .filter(status -> !status.inProgress().exists(InProgress.Rebasing.class::isInstance))
+                .map(RepoStatus::head)
+                .flatMap(head -> head instanceof Head.Detached(Sha at) ? Option.of(at) : Option.none());
     }
 
     /**
@@ -345,19 +380,23 @@ class LocalBranchesList implements BranchesTabList {
                 Option.<BranchRef>of(new BranchRef.Local(leaf.branch().name()));
             case BranchNode.Header header -> header.top().map(BranchRef.Local::new);
             case BranchNode.Other other -> other.fetched().map(BranchRef.Remote::new);
+            case BranchNode.Detached detached -> Option.<BranchRef>none();
         });
     }
 
     /**
-     * The highlighted pull request of a stack, whose branch is neither checked out nor fetched, so that it has no log.
+     * Why the highlighted row has no log: a pull request of a stack whose branch is neither checked out nor fetched, or
+     * a detached HEAD, whose log the commits pane shows.
      */
     @Override
-    public Option<PrNumber> unfetched() {
-        return selected()
-                .filter(BranchNode.Other.class::isInstance)
-                .map(node -> (BranchNode.Other) node)
-                .filter(other -> other.fetched().isEmpty())
-                .map(other -> other.entry().number());
+    public Option<NoLog> noLog() {
+        return selected().flatMap(node -> switch (node) {
+            case BranchNode.Other other
+            when other.fetched().isEmpty() ->
+                Option.<NoLog>of(new NoLog.Unfetched(other.entry().number()));
+            case BranchNode.Detached detached -> Option.<NoLog>of(new NoLog.Detached(detached.at()));
+            default -> Option.<NoLog>none();
+        });
     }
 
     /**

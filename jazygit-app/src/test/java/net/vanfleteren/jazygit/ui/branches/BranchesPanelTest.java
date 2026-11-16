@@ -120,6 +120,53 @@ class BranchesPanelTest {
     }
 
     @Test
+    void aDetachedHeadIsListedFirstAndHighlightedOnceDetachedWithoutALog() throws Exception {
+        Sha at = new Sha("89eeda75aaaaaaaa");
+        Model detached = detachedAt(at);
+
+        assertEquals(
+                Option.of(new SelectionMsg.NoLogSelected(new NoLog.Detached(at))),
+                highlightedAfterMovingTo(2, detached));
+        String screen;
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(detached, BranchesPanel.PANE))) {
+            screen = RenderedText.ofLarge(testRunner, () -> panel.render(detached, BranchesPanel.PANE));
+            SettledPilot.of(testRunner).quit();
+        }
+        List<String> rows = List.of(screen.split("\n")).filter(line -> line.startsWith("│"));
+        assertTrue(rows.head().contains("(HEAD detached at " + at.shortSha() + ")"), screen);
+    }
+
+    @Test
+    void theKeysOfABranchDoNothingOnADetachedHead() throws Exception {
+        Model detached = detachedAt(new Sha("89eeda75aaaaaaaa"));
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(detached, BranchesPanel.PANE))) {
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            RenderedText.of(testRunner, () -> panel.render(detached, BranchesPanel.PANE));
+            SettledPilot.of(testRunner).press('R');
+            SettledPilot.of(testRunner).press(' ');
+            SettledPilot.of(testRunner).press('d');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
+        }
+
+        assertEquals(java.util.List.of(), dispatched);
+    }
+
+    /**
+     * {@link #before} once HEAD was detached at {@code at}: no branch is checked out.
+     */
+    private Model detachedAt(Sha at) {
+        Model branches =
+                with(before, List.of(Fixtures.branch(new BranchName("main"), false, new Sha("1")), FEATURE, OLD));
+        return Update.update(branches, new LoadMsg.StatusLoaded(new RepoStatus(new Head.Detached(at), List.empty())))
+                .model();
+    }
+
+    @Test
     void aReorderingWithoutCheckoutKeepsTheSameBranchHighlighted() throws Exception {
         Model after = with(before, List.of(MAIN, OLD, FEATURE));
 
