@@ -224,9 +224,14 @@ class FilesPane:
         self.app = ui.app
         self.repo = ui.repo
 
+    # What the pane says in place of the files of a row of the branches that has none to list (ADR 141).
+    UNLISTED = ("has no base branch to compare it with", "A stack: its branches list their files",
+                "Not checked out here: no files to list")
+
     def lists_a_commit(self) -> bool:
-        """Whether the pane lists the files of a commit, a stash or a branch, not those of the working tree."""
-        return "╭Files of " in self.app.text()
+        """Whether the pane lists the files of a commit, a stash or a branch, or says why a row of the branches has
+        none, rather than the files of the working tree."""
+        return "╭Files of " in self.app.text() or any(text in self.app.pane_text("Files") for text in self.UNLISTED)
 
     def shows_changes(self) -> bool:
         rows = self.app.pane_text("Files").splitlines()

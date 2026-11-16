@@ -9,7 +9,8 @@ import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.FilesView;
+import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 
@@ -25,48 +26,61 @@ final class FollowedFiles {
 
     /**
      * The message that makes the files pane of {@code model} list what the pane in use, {@code inUse}, follows, when it
-     * lists something else. The pane in use is the one with the focus, or whose content has it: the focus, not the
-     * model, which learns where it is a frame later, as {@code F} moves it into the files it opens.
+     * lists something else; {@code branches} is what the branches follow while they list the branches themselves. The
+     * pane in use is the one with the focus, or whose content has it: the focus, not the model, which learns where it
+     * is a frame later, as {@code F} moves it into the files it opens.
      */
-    static Option<Msg> change(Model model, Option<PaneId> inUse) {
+    static Option<Msg> change(Model model, Option<PaneId> inUse, Option<Followed> branches) {
         if (model.screen() != Screen.REPOSITORY) {
             return Option.none();
         }
-        return inUse.filter(pane -> !pane.equals(FilesPanel.PANE)).flatMap(pane -> changeFor(model, pane));
-    }
-
-    private static Option<Msg> changeFor(Model model, PaneId from) {
-        Option<CommitFilesView> listed = model.repoView().files().commitFiles();
-        Option<Changes> wanted = followed(model, from);
-        boolean same = wanted.isEmpty()
-                ? listed.isEmpty()
-                : listed.exists(view -> view.followed() && view.of().sameAs(wanted.get()));
-        return same ? Option.none() : Option.of(new SelectionMsg.FilesFollowed(wanted, from, FilesPanel.PANE));
+        return inUse.filter(pane -> !pane.equals(FilesPanel.PANE))
+                .flatMap(pane -> followed(model, pane, branches)
+                        .filter(wanted -> !lists(model.repoView().files(), wanted))
+                        .map(wanted -> new SelectionMsg.FilesFollowed(wanted, pane, FilesPanel.PANE)));
     }
 
     /**
-     * What the list of the pane {@code from} highlights, whose files are listed: a commit of the commits, of a
-     * divergence or of the commits of a branch, or a stash. None for any other pane, and for the branches themselves.
+     * Whether {@code files} list what is {@code wanted}: the same files, as they follow the highlight; those {@code F}
+     * asked for follow it again.
      */
-    static Option<Changes> followed(Model model, PaneId from) {
-        if (from.equals(Scopes.COMMITS.pane())) {
-            return commit(model.repoView().preview().commitDetail());
-        }
-        if (from.equals(Scopes.STASH.pane())) {
-            return model.repoView().preview().stashDetail().map(Preview::key).map(Changes.OfStash::new);
-        }
-        if (from.equals(Scopes.BRANCHES.pane())) {
-            var branches = model.repoView().branches();
-            return branches.divergence()
-                    .filter(view -> branches.tab() == BranchesTab.LOCAL)
-                    .map(view -> commit(view.detail()))
-                    .orElse(() -> branches.branchCommits().map(view -> commit(view.detail())))
-                    .getOrElse(Option::none);
-        }
-        return Option.none();
+    private static boolean lists(FilesView files, Followed wanted) {
+        return wanted instanceof Followed.Files(Changes of)
+                ? files.commitFiles()
+                        .exists(view -> view.followed() && view.of().sameAs(of))
+                : files.followed().equals(wanted);
     }
 
-    private static Option<Changes> commit(Option<? extends Preview<Sha, ?>> detail) {
-        return detail.map(Preview::key).map(Changes.OfCommit::new);
+    /**
+     * What the list of the pane {@code from} highlights follows: a commit of the commits, of a divergence or of the
+     * commits of a branch, a stash, or what {@code branches} says the branches follow. Any other pane follows the
+     * working tree; none while that is not known yet.
+     */
+    static Option<Followed> followed(Model model, PaneId from, Option<Followed> branches) {
+        if (from.equals(Scopes.COMMITS.pane())) {
+            return Option.of(commit(model.repoView().preview().commitDetail()));
+        }
+        if (from.equals(Scopes.STASH.pane())) {
+            return Option.of(files(
+                    model.repoView().preview().stashDetail().map(Preview::key).map(Changes.OfStash::new)));
+        }
+        if (from.equals(Scopes.BRANCHES.pane())) {
+            var view = model.repoView().branches();
+            return view.divergence()
+                    .filter(divergence -> view.tab() == BranchesTab.LOCAL)
+                    .map(divergence -> commit(divergence.detail()))
+                    .orElse(() -> view.branchCommits().map(commits -> commit(commits.detail())))
+                    .map(Option::of)
+                    .getOrElse(branches);
+        }
+        return Option.of(new Followed.WorkingTree());
+    }
+
+    private static Followed commit(Option<? extends Preview<Sha, ?>> detail) {
+        return files(detail.map(Preview::key).map(Changes.OfCommit::new));
+    }
+
+    private static Followed files(Option<? extends Changes> of) {
+        return of.<Followed>map(Followed.Files::new).getOrElse(Followed.WorkingTree::new);
     }
 }

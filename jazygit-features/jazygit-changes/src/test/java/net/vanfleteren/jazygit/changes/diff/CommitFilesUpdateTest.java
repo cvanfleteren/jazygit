@@ -41,6 +41,7 @@ import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.FileFilter;
+import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
@@ -122,7 +123,8 @@ class CommitFilesUpdateTest {
     void fOnTheCommitWhoseFilesFollowTheHighlightKeepsThemAndNoLongerFollows() {
         Model following = Update.update(
                         loaded(),
-                        new SelectionMsg.FilesFollowed(Option.of(COMMIT), Scopes.COMMITS.pane(), Scopes.FILES.pane()))
+                        new SelectionMsg.FilesFollowed(
+                                new Followed.Files(COMMIT), Scopes.COMMITS.pane(), Scopes.FILES.pane()))
                 .model();
 
         Next next = Update.update(following, new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.pane()));

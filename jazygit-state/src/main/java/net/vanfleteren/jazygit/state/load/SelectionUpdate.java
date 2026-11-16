@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.state.load.SelectionMsg.StashSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedDirectorySelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedFileSelected;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.NoLog;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
@@ -216,29 +217,41 @@ public final class SelectionUpdate {
     }
 
     /**
-     * Lists the files of {@code of}, highlighted in the pane {@code from}, in the pane {@code listedIn}, without moving
-     * the focus; with none, the files of the working tree again. Those already listed stay, read or being read, also
-     * when {@code F} asked for them: they then follow the highlight again. The filter goes along to the next; all files and the collapsed directories do not
-     * (ADR 141).
+     * Lists what the row highlighted in the pane {@code from} follows in the pane {@code listedIn}, without moving the
+     * focus: its files, nothing, or the files of the working tree again (ADR 141).
      */
-    private static Next followed(Model model, Option<Changes> of, PaneId from, PaneId listedIn) {
+    private static Next followed(Model model, Followed followed, PaneId from, PaneId listedIn) {
+        return switch (followed) {
+            case Followed.Files(Changes of) -> filesFollowed(model, of, from, listedIn);
+            case Followed.Nothing(var why) ->
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(
+                        files -> files.withCommitFiles(Option.none()).withUnlisted(Option.of(why)))));
+            case Followed.WorkingTree() ->
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(
+                        files -> files.withCommitFiles(Option.none()).withUnlisted(Option.none()))));
+        };
+    }
+
+    /**
+     * Lists the files of {@code of}. Those already listed stay, read or being read, also when {@code F} asked for
+     * them: they then follow the highlight again. The filter goes along to the next; all files and the collapsed
+     * directories do not.
+     */
+    private static Next filesFollowed(Model model, Changes of, PaneId from, PaneId listedIn) {
         Option<CommitFilesView> shown = model.repoView().files().commitFiles();
-        if (of.isEmpty()) {
-            return Next.of(
-                    model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.none()))));
-        }
-        if (shown.exists(view -> view.of().sameAs(of.get()))) {
+        if (shown.exists(view -> view.of().sameAs(of))) {
             // Those F asked for follow the highlight again once their list has the focus back.
             return shown.exists(CommitFilesView::followed)
                     ? Next.of(model)
                     : Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(
                             shown.map(view -> view.withFollowed(true).withPane(from))))));
         }
-        CommitFilesView view = CommitFilesView.of(of.get(), from, listedIn)
+        CommitFilesView view = CommitFilesView.of(of, from, listedIn)
                 .withFollowed(true)
                 .withFilter(shown.flatMap(CommitFilesView::filter));
         return Next.of(
-                model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(view)))),
+                model.mapRepoView(repoView -> repoView.mapFiles(
+                        files -> files.withCommitFiles(Option.of(view)).withUnlisted(Option.none()))),
                 LoadCommitFiles.of(view));
     }
 

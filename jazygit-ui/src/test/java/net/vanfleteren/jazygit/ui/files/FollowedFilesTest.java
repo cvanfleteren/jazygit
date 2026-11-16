@@ -14,7 +14,9 @@ import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.state.view.Unlisted;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +28,7 @@ class FollowedFilesTest {
     private static final Sha COMMIT = new Sha("aaaa");
     private static final Sha STASH = new Sha("5555");
     private static final Sha BRANCH_COMMIT = new Sha("bbbb");
+    private static final Changes BRANCH = new Changes.OfTip(new BranchName("main"), new Sha("cccc"));
     private static final Model MODEL = TestModels.loaded()
             .mapRepoView(view -> view.mapPreview(
                     preview -> preview.withCommitDetail(Option.of(new Preview<>(COMMIT, new Loadable.Loading<>())))
@@ -34,27 +37,45 @@ class FollowedFilesTest {
     @Test
     void theCommitsListTheFilesOfTheHighlightedCommit() {
         assertEquals(
-                Option.of(followed(new Changes.OfCommit(COMMIT), Scopes.COMMITS.pane())),
+                Option.of(followed(new Followed.Files(new Changes.OfCommit(COMMIT)), Scopes.COMMITS.pane())),
                 change(MODEL, Scopes.COMMITS.pane()));
     }
 
     @Test
     void theStashesListTheFilesOfTheHighlightedStash() {
         assertEquals(
-                Option.of(followed(new Changes.OfStash(STASH), Scopes.STASH.pane())),
+                Option.of(followed(new Followed.Files(new Changes.OfStash(STASH)), Scopes.STASH.pane())),
                 change(MODEL, Scopes.STASH.pane()));
     }
 
     @Test
-    void theCommitsOfABranchListTheFilesOfTheHighlightedOne() {
+    void theCommitsOfABranchListTheFilesOfTheHighlightedOneRatherThanTheBranch() {
         Model model = MODEL.mapRepoView(view ->
                 view.mapBranches(branches -> branches.withBranchCommits(Option.of(new BranchCommitsView(
                         new BranchRef.Local(new BranchName("feature")),
                         Option.of(Preview.loading(BRANCH_COMMIT, Option.none())))))));
 
         assertEquals(
-                Option.of(followed(new Changes.OfCommit(BRANCH_COMMIT), Scopes.BRANCHES.pane())),
-                change(model, Scopes.BRANCHES.pane()));
+                Option.of(followed(new Followed.Files(new Changes.OfCommit(BRANCH_COMMIT)), Scopes.BRANCHES.pane())),
+                change(model, Scopes.BRANCHES.pane(), new Followed.Files(BRANCH)));
+    }
+
+    @Test
+    void theBranchesListWhatTheirHighlightedRowFollows() {
+        assertEquals(
+                Option.of(followed(new Followed.Files(BRANCH), Scopes.BRANCHES.pane())),
+                change(MODEL, Scopes.BRANCHES.pane(), new Followed.Files(BRANCH)));
+
+        Followed nothing = new Followed.Nothing(new Unlisted.Stack());
+        assertEquals(
+                Option.of(followed(nothing, Scopes.BRANCHES.pane())), change(MODEL, Scopes.BRANCHES.pane(), nothing));
+        assertEquals(Option.none(), change(unlisted(MODEL), Scopes.BRANCHES.pane(), nothing));
+    }
+
+    @Test
+    void aBranchNotKnownYetChangesNothing() {
+        assertEquals(
+                Option.none(), FollowedFiles.change(listing(MODEL), Option.of(Scopes.BRANCHES.pane()), Option.none()));
     }
 
     @Test
@@ -69,7 +90,7 @@ class FollowedFilesTest {
                         files -> files.withCommitFiles(files.commitFiles().map(open -> open.withFollowed(false)))));
 
         assertEquals(
-                Option.of(followed(new Changes.OfCommit(COMMIT), Scopes.COMMITS.pane())),
+                Option.of(followed(new Followed.Files(new Changes.OfCommit(COMMIT)), Scopes.COMMITS.pane())),
                 change(asked, Scopes.COMMITS.pane()));
     }
 
@@ -80,25 +101,28 @@ class FollowedFilesTest {
     }
 
     @Test
-    void anotherPaneListsTheWorkingTreeAgain() {
-        assertEquals(
-                Option.of(new SelectionMsg.FilesFollowed(Option.none(), Scopes.WORKTREES.pane(), FilesPanel.PANE)),
-                change(listing(MODEL), Scopes.WORKTREES.pane()));
+    void aPaneThatFollowsNothingListsTheWorkingTreeAgain() {
+        for (Model listed : java.util.List.of(listing(MODEL), unlisted(MODEL))) {
+            assertEquals(
+                    Option.of(followed(new Followed.WorkingTree(), Scopes.WORKTREES.pane())),
+                    change(listed, Scopes.WORKTREES.pane()));
+        }
         assertEquals(Option.none(), change(MODEL, Scopes.WORKTREES.pane()));
     }
 
     @Test
-    void theBranchesThemselvesFollowNothingYet() {
-        assertEquals(Option.none(), change(MODEL, Scopes.BRANCHES.pane()));
-    }
-
-    @Test
     void withNoPaneInUseNothingChanges() {
-        assertEquals(Option.none(), FollowedFiles.change(listing(MODEL), Option.none()));
+        assertEquals(
+                Option.none(),
+                FollowedFiles.change(listing(MODEL), Option.none(), Option.of(new Followed.WorkingTree())));
     }
 
     private static Option<?> change(Model model, PaneId inUse) {
-        return FollowedFiles.change(model, Option.of(inUse));
+        return change(model, inUse, new Followed.WorkingTree());
+    }
+
+    private static Option<?> change(Model model, PaneId inUse, Followed branches) {
+        return FollowedFiles.change(model, Option.of(inUse), Option.of(branches));
     }
 
     private static Model listing(Model model) {
@@ -107,7 +131,11 @@ class FollowedFilesTest {
                         .withFollowed(true)))));
     }
 
-    private static SelectionMsg.FilesFollowed followed(Changes of, PaneId from) {
-        return new SelectionMsg.FilesFollowed(Option.of(of), from, FilesPanel.PANE);
+    private static Model unlisted(Model model) {
+        return model.mapRepoView(view -> view.mapFiles(files -> files.withUnlisted(Option.of(new Unlisted.Stack()))));
+    }
+
+    private static SelectionMsg.FilesFollowed followed(Followed followed, PaneId from) {
+        return new SelectionMsg.FilesFollowed(followed, from, FilesPanel.PANE);
     }
 }

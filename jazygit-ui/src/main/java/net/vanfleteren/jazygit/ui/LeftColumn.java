@@ -125,7 +125,7 @@ public final class LeftColumn {
                                 commitsPanel.selectionChange(model),
                                 filesPanel.selectionChange(model),
                                 stashPanel.selectionChange(model),
-                                filesPanel.followChange(model, inUse))
+                                filesPanel.followChange(model, inUse, branchesPanel.followed(model)))
                         .flatMap(change -> change);
     }
 

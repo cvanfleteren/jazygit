@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
@@ -14,6 +15,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.FileFilter;
+import net.vanfleteren.jazygit.state.view.Followed;
+import net.vanfleteren.jazygit.state.view.Unlisted;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -87,16 +90,30 @@ class FilesFollowedTest {
     }
 
     @Test
-    void nothingFollowedListsTheWorkingTreeAgain() {
+    void theWorkingTreeFollowedListsItsFilesAgain() {
         Model listed = followed(loaded(), FIRST).model();
 
-        Next next = Update.update(listed, new SelectionMsg.FilesFollowed(Option.none(), COMMITS, FILES));
+        Next next = Update.update(listed, new SelectionMsg.FilesFollowed(new Followed.WorkingTree(), COMMITS, FILES));
 
-        assertEquals(Option.none(), next.model().repoView().files().commitFiles());
+        assertEquals(new Followed.WorkingTree(), next.model().repoView().files().followed());
         assertEquals(List.of(), next.cmds());
     }
 
+    @Test
+    void nothingToListSaysWhyInPlaceOfTheFilesUntilFilesAreFollowedAgain() {
+        Followed nothing = new Followed.Nothing(new Unlisted.NoBase(new BranchName("feature")));
+        Model unlisted = Update.update(
+                        followed(loaded(), FIRST).model(), new SelectionMsg.FilesFollowed(nothing, COMMITS, FILES))
+                .model();
+
+        assertEquals(nothing, unlisted.repoView().files().followed());
+
+        assertEquals(
+                new Followed.Files(SECOND),
+                followed(unlisted, SECOND).model().repoView().files().followed());
+    }
+
     private static Next followed(Model model, Changes of) {
-        return Update.update(model, new SelectionMsg.FilesFollowed(Option.of(of), COMMITS, FILES));
+        return Update.update(model, new SelectionMsg.FilesFollowed(new Followed.Files(of), COMMITS, FILES));
     }
 }

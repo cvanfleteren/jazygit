@@ -5,6 +5,7 @@ import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.NoLog;
 
 /**
@@ -28,5 +29,13 @@ interface BranchesTabList {
      */
     default Option<NoLog> noLog() {
         return Option.none();
+    }
+
+    /**
+     * What the files pane lists while the highlighted row of this list has the focus (ADR 141): the files of the
+     * working tree, unless the list follows its highlight; none while that is not known yet.
+     */
+    default Option<Followed> followed(Model model) {
+        return Option.of(new Followed.WorkingTree());
     }
 }
