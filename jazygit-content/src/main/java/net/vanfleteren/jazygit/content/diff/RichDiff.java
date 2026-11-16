@@ -390,8 +390,7 @@ public final class RichDiff {
                     .appendAll(Vector.range(after, block.first()))
                     .appendAll(Vector.rangeClosed(block.last() + 1, until))
                     .filter(line -> line < lines.size())
-                    .flatMap(line -> Anchor.of(path, lines.get(line)))
-                    .map(anchor -> (Anchor) anchor)
+                    .flatMap(line -> placedBy(path, lines.get(line)))
                     .toList();
             List<Marked> rows = block.rows()
                     .zipWithIndex()
@@ -435,9 +434,8 @@ public final class RichDiff {
                         number -> line.apply(number).exists(diffLine -> diffLine.kind() != DiffLine.Kind.CONTEXT))
                 ? changed
                 : unchanged;
-        Function<List<Integer>, List<Anchor>> placed = numbers -> numbers.flatMap(line::apply)
-                .flatMap(diffLine -> Anchor.of(path, diffLine))
-                .map(anchor -> (Anchor) anchor);
+        Function<List<Integer>, List<Anchor>> placed =
+                numbers -> numbers.flatMap(line::apply).flatMap(diffLine -> placedBy(path, diffLine));
         return RenderedTree.rows(
                         kind,
                         lines.map(DiffLine::text),
@@ -604,6 +602,14 @@ public final class RichDiff {
                                                     || row._2() < threaded.size() - 1,
                                             styles)));
         }));
+    }
+
+    /**
+     * The anchors {@code line} of a version rendered is placed by: its own, then for a context line the one by its
+     * number in the old file, which {@code :} goes to in the original (ADR 140).
+     */
+    private static List<Anchor> placedBy(String path, DiffLine line) {
+        return Anchor.of(path, line).<Anchor>map(anchor -> anchor).toList().appendAll(leftOfContext(path, line));
     }
 
     /**

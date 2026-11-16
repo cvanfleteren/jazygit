@@ -168,13 +168,19 @@ class RenderedMarkdownTest {
                 drawn.stops().map(stop -> stop.mark().anchor()));
         assertEquals(
                 List.of(
+                        // A context line is placed by its number in the old file too, after its own (ADR 140).
                         new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 1), 1),
+                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 1), 1),
                         new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 3), 3),
                         // A blank line goes with the block after it, after that block's own lines.
                         new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 2), 3),
+                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 2), 3),
                         new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 5), 5),
+                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 5), 5),
                         new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 4), 5),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 6), 6)),
+                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 4), 5),
+                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 6), 6),
+                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 6), 6)),
                 drawn.places());
     }
 

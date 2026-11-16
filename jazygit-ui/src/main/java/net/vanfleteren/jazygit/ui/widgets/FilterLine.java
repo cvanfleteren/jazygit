@@ -18,13 +18,28 @@ import net.vanfleteren.jazygit.ui.edit.LineEdit;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
- * The line above a list to type what it shows in, after a dimmed {@code /}. The list keeps the focus while the line
- * is open, and passes it the keys that edit it. Its text lives in the model; the line only keeps where its cursor
- * is.
+ * The line above a list to type what it shows in, after a dimmed {@code /} or another prompt. The list keeps the focus
+ * while the line is open, and passes it the keys that edit it. Its text lives with its owner; the line only keeps
+ * where its cursor is.
  */
 public final class FilterLine {
 
     private final TextInputState input = new TextInputState();
+    private final char prompt;
+
+    /**
+     * The line of a filter or a search, after a dimmed {@code /}.
+     */
+    public FilterLine() {
+        this(ListFilter.OPEN_KEY);
+    }
+
+    /**
+     * The line, after a dimmed {@code prompt}, as {@code :} to type a line number after (ADR 140).
+     */
+    public FilterLine(char prompt) {
+        this.prompt = prompt;
+    }
 
     /**
      * The text of the line, {@code text} before, after {@code event}, if it edits it: any character goes in it, the
@@ -54,9 +69,7 @@ public final class FilterLine {
     public StyledElement<?> field(String text) {
         sync(text);
         return row(
-                        text(ListFilter.OPEN_KEY + " ")
-                                .addClass(Theme.Classes.DIM)
-                                .length(2),
+                        text(prompt + " ").addClass(Theme.Classes.DIM).length(2),
                         textInput(input)
                                 .focusable(false)
                                 .cursorRequiresFocus(false)
