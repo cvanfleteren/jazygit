@@ -532,15 +532,39 @@ public final class ScrollArea {
         boolean forward = event.isChar(NEXT_MATCH);
         return styled.flatMap(Styled::hits)
                 .filter(ignored -> forward || event.isChar(PREVIOUS_MATCH))
-                .map(hits -> hits.isEmpty()
-                        ? EventResult.HANDLED
-                        : goTo(
-                                hits,
-                                currentMatch
-                                        .map(at -> hits.from(at, forward))
-                                        .getOrElse(() ->
-                                                forward ? hits.forwardFrom(position()) : hits.backwardFrom(position())),
-                                content));
+                .map(hits -> hits.isEmpty() ? EventResult.HANDLED : goTo(hits, step(hits, forward), content));
+    }
+
+    /**
+     * Which of {@code hits} {@code n}, or {@code N} unless {@code forward}, goes to: from the match gone to, else from
+     * the cursor, or the top of the screen without one.
+     */
+    private SearchHits.Step step(SearchHits hits, boolean forward) {
+        return currentMatch
+                .map(at -> hits.from(at, forward))
+                .getOrElse(() -> forward ? hits.forwardFrom(position()) : hits.backwardFrom(position()));
+    }
+
+    /**
+     * Where {@code n}, or {@code N} unless {@code forward}, takes the cursor {@code on} while a search is kept
+     * (ADR 126), as the message that takes it there, which the keys of the area send and the help runs: none when
+     * nothing matches, or a range is open and the match is outside its hunk. The wrap is not said in the title then.
+     */
+    private Option<Msg> toMatch(DiffCursor on, boolean forward, ScrolledContent content) {
+        return styled.flatMap(Styled::hits).filter(hits -> !hits.isEmpty()).flatMap(hits -> {
+            SearchHits.Step step = step(hits, forward);
+            SearchHits.Hit hit = hits.get(step.index());
+            return on.toLine(hit.row(), sideOf(hits, hit))
+                    .map(to -> new ViewMsg.ContentScrolled(
+                            area.id(),
+                            new Scrolled(
+                                    content,
+                                    to.row(),
+                                    shownColumn(hits, hit),
+                                    Option.of(to.anchor()),
+                                    to.markAnchor(),
+                                    Option.of(new Found.InStop(to.anchor(), hits.nth(step.index(), to.stopStart()))))));
+        });
     }
 
     /**
@@ -673,12 +697,16 @@ public final class ScrollArea {
      */
     private DiffCursorAt at(DiffCursor cursor, ScrolledContent content) {
         Anchor acting = acting(cursor);
+        // While a search is kept, n and N go to its matches rather than to the threads (ADR 126).
+        boolean searching = styled.exists(shown -> shown.hits().isDefined());
         return new DiffCursorAt(
                 area.id(),
                 new Scrolled(content, cursor.row(), column, Option.of(acting), cursor.markAnchor()),
                 acting,
-                cursor.nextThread().map(next -> movedTo(next, content)),
-                cursor.previousThread().map(previous -> movedTo(previous, content)),
+                searching ? toMatch(cursor, true, content) : cursor.nextThread().map(next -> movedTo(next, content)),
+                searching
+                        ? toMatch(cursor, false, content)
+                        : cursor.previousThread().map(previous -> movedTo(previous, content)),
                 cursor.marked().map(marked -> movedTo(marked, content)),
                 cursor.onHalf());
     }

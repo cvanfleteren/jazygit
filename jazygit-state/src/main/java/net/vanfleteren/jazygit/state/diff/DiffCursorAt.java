@@ -12,8 +12,9 @@ import net.vanfleteren.jazygit.state.Msg;
  * @param area     the id of the area of the content panel the diff is shown in
  * @param at       where the area is scrolled to, and its cursor and range
  * @param cursor   the stop the cursor is on
- * @param next     where {@code n} takes the cursor: to the next thread, if there is one
- * @param previous where {@code N} takes it: to the thread before
+ * @param next     where {@code n} takes the cursor: to the next match while a search is kept (ADR 126), else to the
+ *                 next thread, if there is one
+ * @param previous where {@code N} takes it: to the match, or else the thread, before
  * @param marked   where {@code v} takes it: a range started on its line, or dropped; none when it is not on a line
  * @param split    whether the cursor is on a half of a row of the split view (ADR 139), where a range holds the lines
  *                 of its side only: as the diff was drawn, which is unified where the split view does not fit, or

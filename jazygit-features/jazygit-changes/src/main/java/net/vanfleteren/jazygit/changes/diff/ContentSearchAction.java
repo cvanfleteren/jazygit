@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.changes.diff;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.ui.FeatureAction;
@@ -10,9 +9,9 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
  * Searching what the content panel shows (ADR 126). {@code /} opens the line to type the query in, in every view.
- * The area takes the keys of that line, {@code n} and {@code N} while a search is kept, and Escape to clear it itself,
- * as only it has the matches: {@code n} and {@code N} are listed here for the help, and in the diff of a pull request
- * they are those of its threads, which say they go to the matches while a search is kept.
+ * The area takes the keys of that line and Escape to clear the search itself. {@code n} and {@code N} go where the
+ * area worked out they go while a search is kept, as only it has the matches, so the help lists them as acting then;
+ * in the diff of a pull request they are those of its threads, which go to the matches the same way.
  */
 public final class ContentSearchAction {
 
@@ -24,15 +23,9 @@ public final class ContentSearchAction {
                             scope, Binding.always("/", "changes.help.diff.search", ContentSearchMsg.Opened::new)))
             .add(
                     Scopes.DIFF,
-                    inArea("n", "changes.help.diff.nextMatch"),
-                    inArea("N", "changes.help.diff.previousMatch")));
+                    new Binding<DiffCursorAt>("n", "changes.help.diff.nextMatch", at -> at.flatMap(DiffCursorAt::next)),
+                    new Binding<DiffCursorAt>(
+                            "N", "changes.help.diff.previousMatch", at -> at.flatMap(DiffCursorAt::previous))));
 
     private ContentSearchAction() {}
-
-    /**
-     * A key the area acts on itself, which sends nothing from here.
-     */
-    private static Binding<DiffCursorAt> inArea(String key, String descriptionKey) {
-        return new Binding<>(key, descriptionKey, at -> Option.none());
-    }
 }

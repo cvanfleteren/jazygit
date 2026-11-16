@@ -88,6 +88,42 @@ class ContentSearchTest {
     }
 
     @Test
+    void theHelpListsNAndShiftNAsActingOnlyWhileASearchIsKeptAndRunsThem() throws Exception {
+        List<String> keys = net.vanfleteren.jazygit.ui.keys.Keymap.standard()
+                .bindings(net.vanfleteren.jazygit.ui.keys.Scopes.DIFF.id())
+                .map(net.vanfleteren.jazygit.ui.keys.Keymap.Binding::key);
+        Driven driven = new Driven(commit(DiffStyle.RICH));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
+            SettledPilot.focus(testRunner, driven.area().id());
+            driven.screen(testRunner);
+            driven.type(testRunner, "?");
+            List<Option<Msg>> before = driven.help().actions();
+            assertTrue(before.get(keys.indexOf("n")).isEmpty());
+            assertTrue(before.get(keys.indexOf("N")).isEmpty());
+
+            driven.type(testRunner, "/foo");
+            driven.press(testRunner, KeyCode.ENTER);
+            driven.type(testRunner, "?");
+            List<Option<Msg>> searching = driven.help().actions();
+            assertTrue(searching.get(keys.indexOf("N")).isDefined());
+
+            // Run from the help, n goes to the next match, as the key does.
+            driven.model.set(Update.update(
+                            driven.model.get(),
+                            new net.vanfleteren.jazygit.chrome.help.HelpMsg.Chosen(
+                                    searching.get(keys.indexOf("n")).get()))
+                    .model());
+            assertTrue(driven.screen(testRunner).contains("/foo 2/3"), driven.screen(testRunner));
+            assertEquals(
+                    Option.of(onNew(2)),
+                    driven.model
+                            .get()
+                            .scrolled(driven.area(), driven.lastScrolled().content())
+                            .cursor());
+        }
+    }
+
+    @Test
     void anUppercaseLetterMakesTheSearchMatchCase() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
@@ -448,6 +484,16 @@ class ContentSearchTest {
             SettledPilot.of(testRunner).press(key);
             SettledPilot.of(testRunner).pause();
             screen(testRunner);
+        }
+
+        /**
+         * The help the area asked for last, with the actions of its keys.
+         */
+        net.vanfleteren.jazygit.chrome.help.HelpMsg.Requested help() {
+            return List.ofAll(dispatched)
+                    .filter(net.vanfleteren.jazygit.chrome.help.HelpMsg.Requested.class::isInstance)
+                    .map(net.vanfleteren.jazygit.chrome.help.HelpMsg.Requested.class::cast)
+                    .last();
         }
 
         net.vanfleteren.jazygit.state.diff.Scrolled lastScrolled() {
