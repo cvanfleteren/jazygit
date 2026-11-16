@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.github.show.PullRequestDialog;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.ui.FetchLine;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.github.PullRequestsPanel;
 import net.vanfleteren.jazygit.ui.text.ShownTime;
 
@@ -32,6 +33,7 @@ final class ShownClocks {
                 .appendAll(FetchLine.shownTimes(model))
                 .appendAll(ContentView.shownTimes(model))
                 .appendAll(BranchesPanel.shownTimes(model))
+                .appendAll(FilesPanel.shownTimes(model))
                 .appendAll(PullRequestsPanel.shownTimes(model));
         Instant soonest = model.jobs().away() ? now.plus(Model.AWAY_CLOCK) : now;
         return ShownTime.next(shown, now).map(next -> next.isBefore(soonest) ? soonest : next);

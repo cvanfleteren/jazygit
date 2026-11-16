@@ -5,9 +5,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update;
@@ -28,6 +32,8 @@ class FilesFollowedTest {
     private static final PaneId FILES = new PaneId("files");
     private static final Changes FIRST = new Changes.OfCommit(new Sha("aaaa"));
     private static final Changes SECOND = new Changes.OfCommit(new Sha("bbbb"));
+    private static final Changes THIRD = new Changes.OfCommit(new Sha("cccc"));
+    private static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
 
     @Test
     void theFilesOfTheHighlightedCommitAreListedWithoutTakingTheFocusAndRead() {
@@ -67,6 +73,45 @@ class FilesFollowedTest {
                 asked.repoView().files().commitFiles().map(view -> view.withFollowed(true)),
                 again.model().repoView().files().commitFiles());
         assertEquals(List.of(), again.cmds());
+    }
+
+    @Test
+    void theFilesReadBeforeStayListedAMomentWhileTheNextAreRead() {
+        Instant now = Instant.parse("2026-11-16T10:00:00Z");
+        Model read = Update.update(
+                        followed(loaded().withNow(now), FIRST).model(),
+                        new LoadMsg.CommitFilesLoaded(FIRST, List.of(A)))
+                .model();
+        CommitFilesView first = read.repoView().files().commitFiles().get();
+
+        CommitFilesView next =
+                followed(read, SECOND).model().repoView().files().commitFiles().get();
+
+        assertEquals(first, next.shown(now.plusMillis(199)));
+        assertEquals(next, next.shown(now.plus(CommitFilesView.KEPT_WHILE_READ)));
+        CommitFilesView nextRead = next.withFiles(new Loaded<>(List.of(A)));
+        assertEquals(nextRead, nextRead.shown(now));
+    }
+
+    @Test
+    void whileTheNextAreStillReadTheFilesReadBeforeKeepTheirMoment() {
+        Instant now = Instant.parse("2026-11-16T10:00:00Z");
+        Model read = Update.update(
+                        followed(loaded().withNow(now), FIRST).model(),
+                        new LoadMsg.CommitFilesLoaded(FIRST, List.of(A)))
+                .model();
+        CommitFilesView first = read.repoView().files().commitFiles().get();
+        Model reading = followed(read, SECOND).model();
+
+        CommitFilesView third = followed(reading.withNow(now.plusMillis(150)), THIRD)
+                .model()
+                .repoView()
+                .files()
+                .commitFiles()
+                .get();
+
+        assertEquals(first, third.shown(now.plusMillis(199)));
+        assertEquals(third, third.shown(now.plusMillis(200)));
     }
 
     @Test

@@ -235,7 +235,7 @@ public final class SelectionUpdate {
     /**
      * Lists the files of {@code of}. Those already listed stay, read or being read, also when {@code F} asked for
      * them: they then follow the highlight again. The filter goes along to the next; all files and the collapsed
-     * directories do not.
+     * directories do not. The files listed before stay listed a moment while these are read.
      */
     private static Next filesFollowed(Model model, Changes of, PaneId from, PaneId listedIn) {
         Option<CommitFilesView> shown = model.repoView().files().commitFiles();
@@ -248,7 +248,8 @@ public final class SelectionUpdate {
         }
         CommitFilesView view = CommitFilesView.of(of, from, listedIn)
                 .withFollowed(true)
-                .withFilter(shown.flatMap(CommitFilesView::filter));
+                .withFilter(shown.flatMap(CommitFilesView::filter))
+                .after(shown, model.now());
         return Next.of(
                 model.mapRepoView(repoView -> repoView.mapFiles(
                         files -> files.withCommitFiles(Option.of(view)).withUnlisted(Option.none()))),

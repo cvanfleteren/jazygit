@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.BorderBar;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
@@ -306,6 +307,21 @@ public class FilesPanel {
     }
 
     /**
+     * When what the pane lists in {@code model} changes as time goes by (ADR 124): the files listed before stop being
+     * listed in place of those still read, which the pane then says it reads (ADR 141).
+     */
+    public static List<ShownTime> shownTimes(Model model) {
+        return model.repoView()
+                .files()
+                .commitFiles()
+                .filter(view -> view.files() instanceof Loadable.Loading<List<CommitFile>>)
+                .flatMap(CommitFilesView::before)
+                .map(kept -> (ShownTime) (now, before) ->
+                        Option.of(kept.until()).filter(until -> until.isAfter(now) && before.isAfter(until)))
+                .toList();
+    }
+
+    /**
      * The message to send when the pane lists other files than those the pane in use, {@code inUse}, follows (ADR
      * 141); {@code branches} is what the branches follow.
      */
@@ -330,6 +346,11 @@ public class FilesPanel {
      * its diff, or, among all files of the commit, the file or the directory it did not change (ADR 128).
      */
     private Option<Msg> commitSelectionChange(CommitFilesView view) {
+        // While they are read, the files listed before may still be listed in their place: nothing of these is
+        // highlighted yet.
+        if (view.listedFiles() instanceof Loadable.Loading<List<CommitFile>>) {
+            return Option.none();
+        }
         Option<FileTree<CommitFile>> selected = commitTreeOf(view).selected();
         if (selected.exists(node -> view.allFiles() && !hasChanges(node, FilesPanel::changed))) {
             return unchangedSelection(selected.get()).filter(msg -> !shows(view.unchanged(), msg));
@@ -510,6 +531,8 @@ public class FilesPanel {
         return model.repoView()
                 .files()
                 .commitFiles()
+                // The files listed before stay listed a moment while the next are read (ADR 141).
+                .map(open -> open.shown(model.now()))
                 .map(view -> Pane.bordered(
                         view.ended()
                                         .map(state -> Messages.get(
