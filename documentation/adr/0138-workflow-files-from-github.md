@@ -24,7 +24,10 @@ of any commit it has with `GET repos/{owner}/{repo}/contents/{path}?ref={sha}`; 
 - Not: `git fetch origin <sha>`, which works as well but adds objects to the user's repository behind their back. Not:
   the file as it is now on the default branch, which draws a build with jobs it did not have, or without some it had.
 - What GitHub answers is read up to 1 MB or 20,000 lines; more is no workflow to draw. A file GitHub does not have
-  either, or a request that fails, shows the build without lines, as before.
+  either, or a request that fails, shows the build without lines, as before, until the builds are shown again: like
+  the builds and the runs, a file is read once a view, and a failed read is not tried again. Not: reading it again
+  on every update while GitHub cannot be reached, nor a state of its own for a read that failed, for a request that
+  follows one GitHub just answered.
 - Like the git read, it runs in the background, once a view for each file, and is not in the command log: it changes
   nothing.
 

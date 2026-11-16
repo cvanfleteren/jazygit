@@ -3,6 +3,9 @@ package net.vanfleteren.jazygit.gh.checks;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
+import net.vanfleteren.jazygit.gh.process.GhError;
+import net.vanfleteren.jazygit.process.Limited;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -23,6 +26,17 @@ class WorkflowFileQueryTest {
                 WorkflowFileQuery.command("868abc7105503ff12f23c6dfbad4e8cd9089c419", ".github/workflows/build.yml")
                         .executed()
                         .commandLine());
+    }
+
+    @Test
+    void aFileReadWholeIsItsText() {
+        assertEquals(Either.right("jobs: {}\n"), WorkflowFileQuery.text(new Limited("jobs: {}\n", false)));
+    }
+
+    @Test
+    void aFileCutOffIsTooMuchOutputOfApi() {
+        assertEquals(
+                Either.left(new GhError.TooMuchOutput("api")), WorkflowFileQuery.text(new Limited("jobs:\n", true)));
     }
 
     @Test

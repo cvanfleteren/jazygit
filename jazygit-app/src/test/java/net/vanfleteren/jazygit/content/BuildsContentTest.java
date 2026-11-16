@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -581,6 +582,39 @@ class BuildsContentTest {
 
         assertEquals(
                 new BuildsViewMsg.WorkflowsRead(HashMap.of(file, Option.none())), new ReadWorkflows(file).run(env));
+    }
+
+    @Test
+    void aWorkflowGitHubFailsToGiveIsNoneTillTheBuildsShowAgain() {
+        // Read once a view, as the builds and the runs are: not asked again on every update while GitHub cannot be
+        // reached (ADR 138).
+        Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
+            @Override
+            public Either<GhError, String> workflowFile(String at, String path) {
+                return Either.left(new GhError.TimedOut("api"));
+            }
+        }));
+        FileAt publish = new FileAt("abcdef0", ".github/workflows/publish.yml");
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+        Next read = Update.update(
+                shown,
+                new BuildsMsg.Read(
+                        ORIGIN_MAIN,
+                        Option.none(),
+                        Option.of(new BuildsPage(List.of(withFile(BUILD)), 25, Option.of("c25")))));
+
+        Msg failed = new ReadWorkflows(publish).run(env);
+        Next after = Update.update(read.model(), failed);
+        Next again = Update.update(
+                after.model(),
+                new BuildsMsg.Read(
+                        ORIGIN_MAIN, Option.of("c25"), Option.of(new BuildsPage(List.empty(), 25, Option.none()))));
+
+        assertEquals(new BuildsViewMsg.WorkflowsRead(HashMap.of(publish, Option.none())), failed);
+        assertTrue(after.cmds()
+                .appendAll(again.cmds())
+                .filter(ReadWorkflows.class::isInstance)
+                .isEmpty());
     }
 
     @Test

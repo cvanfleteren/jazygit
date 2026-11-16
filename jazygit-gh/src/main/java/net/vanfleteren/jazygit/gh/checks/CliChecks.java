@@ -53,7 +53,7 @@ public final class CliChecks implements Checks {
     @Override
     public Either<GhError, String> workflowFile(String sha, String path) {
         return process.read(WorkflowFileQuery.command(sha, path), WorkflowFileQuery.LIMIT)
-                .flatMap(read -> read.cut() ? Either.left(new GhError.TooMuchOutput(path)) : Either.right(read.text()));
+                .flatMap(WorkflowFileQuery::text);
     }
 
     @Override

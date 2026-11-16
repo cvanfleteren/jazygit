@@ -3,10 +3,13 @@ package net.vanfleteren.jazygit.gh.checks;
 import static net.vanfleteren.jazygit.gh.process.GhCommand.gh;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
+import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.process.Limit;
+import net.vanfleteren.jazygit.process.Limited;
 
 /**
  * The file of a workflow at a commit, as GitHub has it, over REST: for a build on a commit that is not fetched, as one
@@ -19,6 +22,14 @@ final class WorkflowFileQuery {
     static final Limit LIMIT = new Limit(20_000, 1_000_000);
 
     private WorkflowFileQuery() {}
+
+    /**
+     * The file {@code read} printed, or too much output when it was cut off at {@link #LIMIT}: half a workflow is no
+     * workflow.
+     */
+    static Either<GhError, String> text(Limited read) {
+        return read.cut() ? Either.left(new GhError.TooMuchOutput("api")) : Either.right(read.text());
+    }
 
     /**
      * The command that prints the file at {@code path} in the commit {@code sha}, as it is, not as JSON.

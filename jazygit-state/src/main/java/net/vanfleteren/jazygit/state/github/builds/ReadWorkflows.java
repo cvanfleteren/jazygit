@@ -14,9 +14,9 @@ import net.vanfleteren.jazygit.state.view.Workflow;
 
 /**
  * Reads the file of a workflow at the commit of a build, and those of the workflows of this repository it calls, to
- * learn which job needs which (ADR 131): from git, else from GitHub (ADR 138). A file that neither has, or that is no
- * workflow, is none: its build then shows
- * its jobs without what they wait for. It runs in the background, as nobody waits for it.
+ * learn which job needs which (ADR 131): from git, else from GitHub (ADR 138). A file neither has, or that is no
+ * workflow, is none: its build then shows its jobs without what they wait for. It runs in the background, as nobody
+ * waits for it.
  */
 public record ReadWorkflows(FileAt file) implements Cmd {
 
