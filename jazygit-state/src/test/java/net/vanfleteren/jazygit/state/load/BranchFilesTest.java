@@ -28,7 +28,7 @@ class BranchFilesTest {
 
     private static final Branch MAIN = Fixtures.branch(
             new BranchName("main"),
-            true,
+            false,
             new Sha("1111"),
             Instant.EPOCH,
             true,
@@ -53,6 +53,14 @@ class BranchFilesTest {
         assertEquals(
                 Option.of(new Followed.Files(new Changes.OfTip(MAIN.name(), MAIN.tip()))),
                 BranchFiles.of(model, MAIN.name()));
+    }
+
+    @Test
+    void theBranchCheckedOutListsTheFilesOfTheWorkingTree() {
+        Branch checkedOut = Fixtures.branch(new BranchName("work"), true, new Sha("5555"));
+        Model model = localBranchesRead(loaded(), List.of(checkedOut, MAIN)).model();
+
+        assertEquals(Option.of(new Followed.WorkingTree()), BranchFiles.of(model, checkedOut.name()));
     }
 
     @Test

@@ -15,7 +15,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.load.BranchFiles;
@@ -391,8 +390,8 @@ class LocalBranchesList implements BranchesTabList {
 
     /**
      * What the files pane lists for the highlighted row (ADR 141): a branch its files against its base, the main
-     * branch what its tip changed, a detached HEAD the files of its commit; a stack and a pull request of it whose
-     * branch is not checked out here have none.
+     * branch what its tip changed, what is checked out here, a branch or a detached HEAD, the files of the working
+     * tree; a stack and a pull request of it whose branch is not checked out here have none.
      */
     @Override
     public Option<Followed> followed(Model model) {
@@ -400,8 +399,7 @@ class LocalBranchesList implements BranchesTabList {
             case BranchNode.Leaf leaf -> BranchFiles.of(model, leaf.branch().name());
             case BranchNode.Header header -> Option.<Followed>of(new Followed.Nothing(new Unlisted.Stack()));
             case BranchNode.Other other -> Option.<Followed>of(new Followed.Nothing(new Unlisted.NotHere()));
-            case BranchNode.Detached detached ->
-                Option.<Followed>of(new Followed.Files(new Changes.OfCommit(detached.at())));
+            case BranchNode.Detached detached -> Option.<Followed>of(new Followed.WorkingTree());
         });
     }
 
