@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Revision;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -109,6 +110,33 @@ public interface CheckoutRequest {
             return branch.equals(upstream.branch())
                     ? new CheckoutMsg.RemoteRequested(upstream)
                     : new CheckoutMsg.Placed(this);
+        }
+    }
+
+    /**
+     * The commit {@code sha}, with HEAD detached at it (ADR 137); a new worktree starts detached at it.
+     */
+    record Commit(Sha sha) implements CheckoutRequest {
+
+        @Override
+        public String label() {
+            return sha.shortSha();
+        }
+
+        @Override
+        public Next here(Model model) {
+            return OperationUpdate.start(model, new CommitCheckoutCmd.CheckoutCommit(sha));
+        }
+
+        @Override
+        public Next inNewWorktree(Model model) {
+            return AddWorktreeUpdate.askSwitching(
+                    model, new WorktreeSource.Detached(new Revision.Commit(sha), sha.shortSha()));
+        }
+
+        @Override
+        public Msg again() {
+            return new CheckoutMsg.CommitRequested(sha);
         }
     }
 

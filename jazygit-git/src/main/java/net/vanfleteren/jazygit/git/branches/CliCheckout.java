@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.files.CliStashes;
 import net.vanfleteren.jazygit.git.history.CliHistory;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -75,10 +76,35 @@ public final class CliCheckout implements Checkout {
      */
     @Override
     public Either<GitFailure, List<ExecutedCommand>> branchWithStash(BranchName branch) {
+        return withStash(() -> checkout(worktree, branch));
+    }
+
+    /**
+     * Runs {@code git checkout --detach <sha>}: HEAD is detached at {@code sha} (ADR 137).
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> commit(Sha sha) {
+        return GitProcess.log(
+                        worktree,
+                        git("checkout", "--quiet", "--detach", GitArgs.revision(new Revision.Commit(sha)), "--"))
+                .mapLeft(failure -> failure.map(CliCheckout::classify));
+    }
+
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> commitWithStash(Sha sha) {
+        return withStash(() -> commit(sha));
+    }
+
+    /**
+     * Stashes the uncommitted changes, runs {@code checkout} and pops the stash again, as {@link #branchWithStash}
+     * tells.
+     */
+    private Either<GitFailure, List<ExecutedCommand>> withStash(
+            Supplier<Either<GitFailure, List<ExecutedCommand>>> checkout) {
         return CliStashes.pushQuietly(worktree)
                 .flatMap(stashed -> GitFailure.sequence(
                         () -> Either.right(stashed.commands()),
-                        () -> checkout(worktree, branch)
+                        () -> checkout.get()
                                 .mapLeft(failure ->
                                         stashed.any() ? failure.followedBy(CliStashes.popQuietly(worktree)) : failure),
                         () -> stashed.any() ? restore() : GitFailure.nothing()));

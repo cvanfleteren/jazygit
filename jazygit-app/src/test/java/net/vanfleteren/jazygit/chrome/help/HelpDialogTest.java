@@ -104,6 +104,12 @@ class HelpDialogTest {
     }
 
     @Test
+    void listsCheckingOutACommitAsDetached() throws Exception {
+        String screen = screen(Scopes.COMMITS.id());
+        assertTrue(screen.contains("       space Check out commit (detached)"), screen);
+    }
+
+    @Test
     void everyPanelListsTheGlobalKeysAfterItsOwn() throws Exception {
         for (String scope : List.of(Scopes.FILES.id(), Scopes.BRANCHES.id(), Scopes.COMMITS.id(), Scopes.STASH.id())) {
             String screen = screen(scope);

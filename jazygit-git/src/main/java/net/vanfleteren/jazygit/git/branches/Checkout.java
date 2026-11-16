@@ -31,6 +31,18 @@ public interface Checkout {
     Either<GitFailure, List<ExecutedCommand>> branchWithStash(BranchName branch);
 
     /**
+     * Checks out the commit {@code sha}, with HEAD detached at it (ADR 137). Fails with {@link GitError.LocalChanges}
+     * when uncommitted changes would be overwritten.
+     */
+    Either<GitFailure, List<ExecutedCommand>> commit(Sha sha);
+
+    /**
+     * Checks out the commit {@code sha}, with HEAD detached at it, taking the uncommitted changes along as
+     * {@link #branchWithStash} does.
+     */
+    Either<GitFailure, List<ExecutedCommand>> commitWithStash(Sha sha);
+
+    /**
      * Creates the local branch {@code name} at {@code startPoint} and checks it out; records {@code parent} as the
      * branch it came from, if given, as {@link Branches#parent} reads it. Whether it follows
      * {@code startPoint} is up to git's {@code branch.autoSetupMerge} (ADR 40).

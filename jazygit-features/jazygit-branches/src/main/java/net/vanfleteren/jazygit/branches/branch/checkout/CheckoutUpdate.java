@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
@@ -33,12 +35,13 @@ public final class CheckoutUpdate {
     public static Next update(Model model, CheckoutMsg msg) {
         return switch (msg) {
             case Requested(BranchName branch) -> requested(model, branch, new CatchUp.AsIs());
+            case CommitRequested(Sha sha) -> commitRequested(model, sha);
             case RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
             case RemoteInNewWorktreeRequested(RemoteBranch branch) -> remoteInNewWorktree(model, branch);
             // The checkout ran, and failed; the stash it needs is offered instead of the failure.
             case NeedsStash(var cmd, var commands) ->
-                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
-                        .openPopupIfFree(new StashCheckoutPopup(cmd.branch())));
+                RereadUpdate.refresh(
+                        OperationUpdate.done(model, cmd, commands).openPopupIfFree(new StashCheckoutPopup(cmd)));
             case CheckedOut(var cmd, var commands) ->
                 OperationUpdate.succeeded(
                         model.mapRepoView(
@@ -104,6 +107,16 @@ public final class CheckoutUpdate {
                             model, new CheckoutWherePopup(request, here, main, main.flatMap(model.repo()::hasChanges)));
                 })
                 .getOrElse(() -> request.here(model.clearError()));
+    }
+
+    /**
+     * Checks out the commit {@code sha} detached, where the user says in a linked worktree (ADR 137). On the commit
+     * HEAD is at, on a branch or detached, it does nothing: that is almost always a key pressed by mistake.
+     */
+    private static Next commitRequested(Model model, Sha sha) {
+        boolean atHead =
+                model.repo().status().toOption().flatMap(RepoStatus::headCommit).contains(sha);
+        return atHead ? Next.of(model) : place(model, new CheckoutRequest.Commit(sha));
     }
 
     /**

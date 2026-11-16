@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
- * Checking out the selected branch, local or remote.
+ * Checking out the selected branch, local or remote, or the selected commit, detached (ADR 137).
  */
 public final class CheckoutAction {
 
@@ -17,6 +17,19 @@ public final class CheckoutAction {
                             Scopes.REMOTE_BRANCHES,
                             Binding.onSelected(
                                     " ", "branches.help.remoteBranches.checkout", CheckoutMsg.RemoteRequested::new))
+                    // A commit, detached, in the commits pane and in the commits of a branch (ADR 137).
+                    .add(
+                            Scopes.COMMITS,
+                            Binding.onSelected(
+                                    " ",
+                                    "branches.help.commits.checkout",
+                                    commit -> new CheckoutMsg.CommitRequested(commit.sha())))
+                    .add(
+                            Scopes.BRANCH_COMMITS,
+                            Binding.onSelected(
+                                    " ",
+                                    "branches.help.commits.checkout",
+                                    commit -> new CheckoutMsg.CommitRequested(commit.sha())))
                     .add(
                             Scopes.REMOTE_BRANCHES,
                             Binding.onSelected(

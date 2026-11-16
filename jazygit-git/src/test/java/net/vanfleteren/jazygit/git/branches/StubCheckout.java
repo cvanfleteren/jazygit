@@ -29,6 +29,16 @@ public interface StubCheckout extends Checkout {
     }
 
     @Override
+    default Either<GitFailure, List<ExecutedCommand>> commit(Sha sha) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure, List<ExecutedCommand>> commitWithStash(Sha sha) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure, List<ExecutedCommand>> newBranch(
             BranchName name, Revision startPoint, Option<BranchName> parent) {
         return ran();

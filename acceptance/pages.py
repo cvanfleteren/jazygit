@@ -416,6 +416,27 @@ class BranchesPane:
         self.select(branch)
         self.ui.changing_repo(f"{branch} to be checked out", lambda: self.app.press("space"))
 
+    def checkout_commit(self, branch: str, subject: str):
+        """Lists the commits of the local branch in place of the branches (ADR 23), and checks out the one with this
+        subject, detached (ADR 137)."""
+        self.select(branch)
+        self.app.press("enter")
+        sha = self.repo.find(subject, branch)
+        short = self.repo.short(sha)
+        # The list is titled with the name of the branch, in place of the tabs.
+        self.app.move_cursor(branch, short)
+        self.app.wait_for(f"Commit: {short}")
+        self.app.press("space")
+        # The commits of the branch stay open, in place of the branches, which caught_up waits for: so it waits for
+        # git to have HEAD detached at the commit instead.
+        self.app.eventually(
+            lambda: not self.ui._busy() and self.repo.current_branch() == "" and self.repo("rev-parse", "HEAD") == sha,
+            f"{short} to be checked out")
+
+    def close_commits(self):
+        """Goes back from the commits of a branch to the branches."""
+        self.app.press("escape")
+
     def try_to_checkout(self, branch: str):
         """Asks to check out the branch, for when the app is to ask first, or git to refuse it: it does not wait
         for the repository to change."""
