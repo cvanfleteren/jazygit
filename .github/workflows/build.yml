@@ -14,7 +14,8 @@ permissions:
   contents: read
 
 # The Maven tests run side by side with the acceptance tests, which run the jar built without tests, a share of them
-# on each of six machines. The job that builds that jar also checks the code: Spotless, ErrorProne and checkstyle.
+# on each of six machines. The job that builds that jar checks nothing, so the acceptance tests don't wait for
+# ErrorProne: the checks job compiles once more with it, and runs Spotless and checkstyle, beside the others.
 # verify doesn't wait for that jar: Maven can't take up a build from another job (the resources it copies again
 # make it compile the modules after them again), so it would only start later and build all the same.
 jobs:
@@ -78,7 +79,7 @@ jobs:
           nix profile install --inputs-from . nixpkgs#git
           echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
 
-      # The package job checks the code, so the tests here don't wait for ErrorProne, Spotless or checkstyle. A module
+      # The checks job checks the code, so the tests here don't wait for ErrorProne, Spotless or checkstyle. A module
       # that didn't change since the build cache saw it is restored, its tests not run again.
       - name: Build and test
         run: |
@@ -86,7 +87,47 @@ jobs:
           ./mvnw --batch-mode --no-transfer-progress verify -Dmaven.build.cache.enabled=true \
             -Derrorprone.skip -Dspotless.check.skip -Dcheckstyle.skip
 
-  package:
+  # The fat jar for the acceptance tests, as soon as can be: no tests, and no checks, which the checks job does.
+  jar:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        id: java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      # A cache of its own, apart from the checks job's: a module this build restores was never checked, so the
+      # checks job must not restore it in turn. Neither the git nor the ErrorProne exceptions matter to it.
+      - name: Restore the build cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/build-cache
+          key: build-cache-jar-${{ steps.java.outputs.version }}-${{ hashFiles('.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: build-cache-jar-${{ steps.java.outputs.version }}-${{ hashFiles('.mvn/maven-build-cache-config.xml') }}-
+
+      # shade makes the fat jar, also when the build cache restores every module.
+      - name: Build the jar
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress -Dmaven.build.cache.enabled=true -DskipTests package \
+            -Derrorprone.skip -Dspotless.check.skip -Dcheckstyle.skip
+
+      - name: Keep the fat jar
+        uses: actions/upload-artifact@v7
+        with:
+          name: fat-jar
+          path: jazygit-app/target/jazygit-*-fat.jar
+          if-no-files-found: error
+          retention-days: 1
+
+  checks:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
@@ -108,29 +149,20 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.m2/build-cache
-          key: build-cache-package-${{ steps.java.outputs.version }}-${{ hashFiles('errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: build-cache-package-${{ steps.java.outputs.version }}-${{ hashFiles('errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-
+          key: build-cache-checks-${{ steps.java.outputs.version }}-${{ hashFiles('errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: build-cache-checks-${{ steps.java.outputs.version }}-${{ hashFiles('errorprone-ignorable-results.txt', '.mvn/maven-build-cache-config.xml') }}-
 
       # Spotless checks the formatting and ErrorProne the main sources as they compile, of the modules the build
-      # cache doesn't restore. shade makes the fat jar either way.
-      - name: Build and check the jar
+      # cache doesn't restore.
+      - name: Spotless and ErrorProne
         run: ./mvnw --batch-mode --no-transfer-progress -Dmaven.build.cache.enabled=true -DskipTests package
 
-      - name: Keep the fat jar
-        uses: actions/upload-artifact@v7
-        with:
-          name: fat-jar
-          path: jazygit-app/target/jazygit-*-fat.jar
-          if-no-files-found: error
-          retention-days: 1
-
-      # Once the jar is on its way to the acceptance tests, so they don't wait for it. Without the build cache, so it
-      # checks every module.
+      # Without the build cache, so it checks every module.
       - name: Checkstyle
         run: ./mvnw --batch-mode --no-transfer-progress checkstyle:check
 
   acceptance:
-    needs: package
+    needs: jar
     name: acceptance (${{ matrix.shard }}/6)
     strategy:
       fail-fast: false
@@ -177,7 +209,7 @@ jobs:
 
   # The one check main requires: passes when the jobs above passed, or were skipped as only documentation changed.
   build-ok:
-    needs: [changes, verify, package, acceptance]
+    needs: [changes, verify, jar, checks, acceptance]
     if: always()
     runs-on: ubuntu-latest
     steps:
