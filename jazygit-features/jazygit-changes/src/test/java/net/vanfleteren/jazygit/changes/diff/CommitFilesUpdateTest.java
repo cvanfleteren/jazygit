@@ -176,6 +176,39 @@ class CommitFilesUpdateTest {
                         .value());
     }
 
+    @Test
+    void theSplitKeyGoesFromThePlainViewToTheSplitOneAndBackToTheRichOneWithoutReadingAgain() {
+        Model open = Update.update(
+                        Update.update(withFiles(opened()), new SelectionMsg.CommitFilesSelected(List.of(A)))
+                                .model(),
+                        new LoadMsg.CommitFileDiffLoaded(COMMIT, List.of(A), DiffOptions.DEFAULT, DiffText.of("+a")))
+                .model();
+
+        Next split = Update.update(open, new DiffOptionsMsg.SplitToggled());
+
+        DiffOptions firstParent = DiffOptions.DEFAULT.withFirstParent(true);
+        assertEquals(DiffStyle.SPLIT, split.model().preferences().diffLook().style());
+        assertEquals(firstParent, split.model().preferences().diffOptions());
+        assertTrue(split.cmds().contains(new LoadCommitFileDiff(COMMIT, List.of(A), firstParent)));
+
+        Next rich = Update.update(split.model(), new DiffOptionsMsg.SplitToggled());
+
+        // Both are drawn of the same diff: it is only drawn again (ADR 139).
+        assertEquals(DiffStyle.RICH, rich.model().preferences().diffLook().style());
+        assertFalse(rich.cmds().exists(LoadCommitFileDiff.class::isInstance));
+        assertTrue(rich.cmds()
+                .contains(new SaveSettings(
+                        split.model().preferences().settings(),
+                        split.model().preferences().settings().withDiffStyle(DiffStyle.RICH))));
+        assertEquals(
+                DiffStyle.PLAIN,
+                Update.update(split.model(), new DiffOptionsMsg.StyleToggled())
+                        .model()
+                        .preferences()
+                        .diffLook()
+                        .style());
+    }
+
     private static final PullRequestCommits COMMITS =
             new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40)));
     private static final Changes PULL_REQUEST = new Changes.OfPullRequest(COMMITS);

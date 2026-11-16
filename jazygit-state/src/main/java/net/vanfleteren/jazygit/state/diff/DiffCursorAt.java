@@ -15,9 +15,26 @@ import net.vanfleteren.jazygit.state.Msg;
  * @param next     where {@code n} takes the cursor: to the next thread, if there is one
  * @param previous where {@code N} takes it: to the thread before
  * @param marked   where {@code v} takes it: a range started on its line, or dropped; none when it is not on a line
+ * @param split    whether the cursor is on a half of a row of the split view (ADR 139), where a range holds the lines
+ *                 of its side only: as the diff was drawn, which is unified where the split view does not fit, or
+ *                 for a file it cannot pair the lines of, whatever the style asked for
  */
 public record DiffCursorAt(
-        AreaId area, Scrolled at, Anchor cursor, Option<Msg> next, Option<Msg> previous, Option<Msg> marked) {
+        AreaId area,
+        Scrolled at,
+        Anchor cursor,
+        Option<Msg> next,
+        Option<Msg> previous,
+        Option<Msg> marked,
+        boolean split) {
+
+    /**
+     * Where the cursor of a diff drawn unified is.
+     */
+    public DiffCursorAt(
+            AreaId area, Scrolled at, Anchor cursor, Option<Msg> next, Option<Msg> previous, Option<Msg> marked) {
+        this(area, at, cursor, next, previous, marked, false);
+    }
 
     /**
      * The other end of the range, while one is open.

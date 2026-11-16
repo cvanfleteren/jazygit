@@ -22,6 +22,11 @@ public sealed interface DiffOptionsMsg extends Msg {
     record StyleToggled() implements DiffOptionsMsg {}
 
     /**
+     * The user asked to draw the diffs with the old and the new file side by side, or unified again (ADR 139).
+     */
+    record SplitToggled() implements DiffOptionsMsg {}
+
+    /**
      * The user asked for the rich view to highlight the words that changed in a changed line, or only the line.
      */
     record WordsToggled() implements DiffOptionsMsg {}

@@ -285,7 +285,7 @@ public final class SettingsPanelUpdate {
             // Shown again, the diffs are read with the settings as they are now, too.
             return Next.of(reported, new SettingsPanelCmd.Reopen(Landing.of(reported.repoView())));
         }
-        return settings.diffStyle() == before.settings().diffStyle()
+        return settings.diffStyle().rich() == before.settings().diffStyle().rich()
                 ? Next.of(reported)
                 : DiffOptionsUpdate.changed(reported);
     }

@@ -31,10 +31,9 @@ Features to consider, roughly most valuable first.
 11. **Diff options.** Ignoring whitespace is done (Ctrl+W, `DiffOptions`), and so is the rich view of the changes of
     the working tree, of a commit and of a stash, with line numbers and the changed words highlighted (Ctrl+D, ADR 44,
     ADR 47), its code coloured by its syntax (ADR 53), the amount of context (`{` and `}`, ADR 76), and more lines
-    around one hunk (`[`, `]` and Enter on a marker, ADR 77). Still to do:
-    side-by-side, as another field of `DiffOptions`; the rich
-    view for the diff of a pull request. The pull request diff (`gh pr diff`) shows all whitespace; it could be
-    filtered, or read with git when the branches are fetched.
+    around one hunk (`[`, `]` and Enter on a marker, ADR 77), and the old and the new file side by side (`|`,
+    ADR 139). Still to do: the rich view for the diff of a pull request. The pull request diff (`gh pr diff`) shows
+    all whitespace; it could be filtered, or read with git when the branches are fetched.
     - **More of the syntax** in the rich view (ADR 53): a table in the settings from paths to languages, for the
       extensions a team makes up; more languages; the code in a fenced block of Markdown in its own language; Rust's
       raw strings, nested block comments, shell heredocs, and the expressions in Python's f-strings and Kotlin's

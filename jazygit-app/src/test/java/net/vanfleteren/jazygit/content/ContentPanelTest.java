@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -983,6 +984,216 @@ class ContentPanelTest {
         case Theme.Classes.DIFF_FILE_HEADER -> Style.EMPTY.bg(Color.BLUE);
         default -> Style.EMPTY;
     };
+
+    @Test
+    void theSplitViewShowsBothFilesSideBySideItsCursorOnASideAndScrollsTheirCodeKeepingTheGutters() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingSplitCommit(
+                        " same\n-int count = 1;\n+int count = 42; // " + "the answer ".repeat(10) + "\n same again"));
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
+
+        String before;
+        String scrolled;
+        // Wide enough for the split view, which the keys act on as it is drawn.
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(140, 30))) {
+            SettledPilot.focus(testRunner, area.id());
+            RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            before = RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            List.of('j', 'j', 'j', '[', ']')
+                    .forEach(key -> SettledPilot.of(testRunner).press(key));
+            List.of('l', 'l', 'l', 'l')
+                    .forEach(key -> SettledPilot.of(testRunner).press(key));
+            SettledPilot.of(testRunner).pause();
+            scrolled = RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+        }
+
+        int row = row(before, "int count = 1;");
+        String[] lines = before.split("\n");
+        // The removed line on the left, the added one beside it on the right, each numbered in its own file.
+        assertTrue(lines[row].contains("2 │ - int count = 1;"), before);
+        assertTrue(lines[row].contains("│2 │ + int count = 42;"), before);
+        assertTrue(
+                List.ofAll(dispatched)
+                        .filter(ViewMsg.ContentScrolled.class::isInstance)
+                        .map(msg -> ((ViewMsg.ContentScrolled) msg).to().cursor())
+                        .containsAll(List.of(
+                                Option.of(new Anchor.OnLine("schema.sql", ReviewThread.Side.LEFT, 2)),
+                                Option.of(new Anchor.OnLine("schema.sql", ReviewThread.Side.RIGHT, 2)))),
+                List.ofAll(dispatched)
+                        .filter(ViewMsg.ContentScrolled.class::isInstance)
+                        .map(msg -> ((ViewMsg.ContentScrolled) msg).to().cursor())
+                        .toString());
+        // Scrolled sideways, each half keeps its gutter, and marks the code cut off before it.
+        String[] after = scrolled.split("\n");
+        assertTrue(after[row].contains("2 │ - ‹count = 1;"), scrolled);
+        assertTrue(after[row].contains("│2 │ + ‹count = 42;"), scrolled);
+    }
+
+    @Test
+    void aFileTheSplitViewDrawsUnifiedScrollsSidewaysAsInTheUnifiedView() throws Exception {
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingSplitCommit(String.join(
+                        "\n",
+                        " same",
+                        "-int count = 1;",
+                        "+int count = 42;",
+                        " same again",
+                        // A conflicted file, whose hunk has no numbers to pair its lines by.
+                        "diff --cc f.txt",
+                        "--- a/f.txt",
+                        "+++ b/f.txt",
+                        "@@@ -1,2 -1,2 +1,3 @@@",
+                        "  a",
+                        "++" + "wide ".repeat(40) + "END")));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
+
+        String before;
+        String scrolled;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(140, 30))) {
+            SettledPilot.focus(testRunner, area.id());
+            RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            before = RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            SettledPilot.of(testRunner).press('L');
+            SettledPilot.of(testRunner).pause();
+            scrolled = RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+        }
+
+        assertTrue(row(before, "END") < 0, before);
+        // The end of the long line of the conflicted file shows, as it would in the unified view.
+        assertTrue(row(scrolled, "END") >= 0, scrolled);
+        // The bar of the file drawn split stays where it is.
+        assertEquals(before.split("\n")[row(before, "schema.sql")], scrolled.split("\n")[row(before, "schema.sql")]);
+    }
+
+    @Test
+    void theCursorOfTheSplitViewKeepsItsSideOverTheBarOfAFileAndStartsOnTheNewSideInAnotherDiff() throws Exception {
+        String twoFiles = String.join(
+                "\n",
+                "diff --git a/a.sql b/a.sql",
+                "--- a/a.sql",
+                "+++ b/a.sql",
+                "@@ -1,2 +1,2 @@",
+                "-old a",
+                "+new a",
+                " same a",
+                "diff --git a/b.sql b/b.sql",
+                "--- a/b.sql",
+                "+++ b/b.sql",
+                "@@ -1,2 +1,2 @@",
+                "-old b",
+                "+new b",
+                " same b");
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(splitCommit(
+                        Update.update(
+                                        TestModels.loaded()
+                                                .mapPreferences(preferences -> preferences.withSettings(
+                                                        preferences.settings().withDiffStyle(DiffStyle.SPLIT))),
+                                        TestModels.commitsLoaded(TestModels.COMMITS.append(Fixtures.commit(
+                                                new Sha("bbbb"),
+                                                "Ada",
+                                                "ada@example.com",
+                                                Instant.EPOCH,
+                                                "Second",
+                                                ""))))
+                                .model(),
+                        "aaaa",
+                        twoFiles));
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        AreaId area = scrolling.areaOfPane(model.get(), CommitsPanel.PANE).get();
+
+        List<Option<Anchor>> kept;
+        List<Option<Anchor>> anew;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(140, 30))) {
+            SettledPilot.focus(testRunner, area.id());
+            RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            // To the first file's added line, the removed one beside it, then down past the bar of the second file.
+            List.of('j', 'j', '[', 'j', 'j', 'j', 'j')
+                    .forEach(key -> SettledPilot.of(testRunner).press(key));
+            SettledPilot.of(testRunner).pause();
+            kept = cursors(dispatched);
+            // Another commit, with another diff.
+            model.set(splitCommit(model.get(), "bbbb", twoFiles.replace("old", "older")));
+            RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            List.of('j', 'j', 'j').forEach(key -> SettledPilot.of(testRunner).press(key));
+            SettledPilot.of(testRunner).pause();
+            anew = cursors(dispatched).drop(kept.size());
+        }
+
+        // After the bar of the second file, the cursor goes on on the left, where it was.
+        Option<Anchor> bar = Option.of(new Anchor.File("b.sql"));
+        assertTrue(kept.contains(bar), kept.toString());
+        assertEquals(
+                Option.of(new Anchor.OnLine("b.sql", ReviewThread.Side.LEFT, 1)),
+                kept.get(kept.indexOf(bar) + 1),
+                kept.toString());
+        // In the other diff, its first line on the new side.
+        assertEquals(
+                Option.of(Option.of(new Anchor.OnLine("a.sql", ReviewThread.Side.RIGHT, 1))),
+                anew.find(cursor -> cursor.exists(Anchor.OnLine.class::isInstance)),
+                anew.toString());
+    }
+
+    /**
+     * Where each move of the cursor took it, as the area told the model, in order.
+     */
+    private static List<Option<Anchor>> cursors(java.util.List<Msg> dispatched) {
+        return List.ofAll(dispatched)
+                .filter(ViewMsg.ContentScrolled.class::isInstance)
+                .map(msg -> ((ViewMsg.ContentScrolled) msg).to().cursor());
+    }
+
+    /**
+     * {@code model} with the commit {@code sha} selected, whose diff is {@code diff}.
+     */
+    private static Model splitCommit(Model model, String sha, String diff) {
+        return Update.update(
+                        Update.update(model, new SelectionMsg.CommitSelected(new Sha(sha)))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha(sha), model.preferences().diffOptions(), DiffText.of(diff)))
+                .model();
+    }
+
+    /**
+     * The model with a commit selected that changes {@code schema.sql} as {@code lines} say, drawn split (ADR 139).
+     */
+    private static Model showingSplitCommit(String lines) {
+        Model split = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.SPLIT)));
+        return Update.update(
+                        Update.update(split, new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha("aaaa"),
+                                split.preferences().diffOptions(),
+                                DiffText.of(String.join(
+                                        "\n",
+                                        "diff --git a/schema.sql b/schema.sql",
+                                        "--- a/schema.sql",
+                                        "+++ b/schema.sql",
+                                        "@@ -1,3 +1,3 @@",
+                                        lines))))
+                .model();
+    }
 
     /**
      * The model with a commit selected that adds {@code schema.sql} with {@code lines}, drawn rich.

@@ -174,7 +174,7 @@ public final class ReviewUpdate {
             return Either.left(Why.NOT_ON_LINE);
         }
         return diffLines(model, view, at)
-                .between(from, cursor)
+                .between(from, cursor, at.split())
                 .filter(range -> range.head().hunk().equals(range.last().hunk()))
                 .toEither(Why.NOT_ONE_HUNK)
                 .map(range -> startOn(view, at, commit, range));

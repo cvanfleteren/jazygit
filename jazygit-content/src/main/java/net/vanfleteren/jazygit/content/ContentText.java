@@ -13,9 +13,11 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.AbstractList;
 import java.util.Locale;
+import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.ShownDiff;
+import net.vanfleteren.jazygit.content.diff.Halves;
 import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.content.diff.ShownRemarks;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
@@ -27,6 +29,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.settings.DiffLook;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffLines;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
@@ -124,7 +127,16 @@ public final class ContentText {
                         .map(lines ->
                                 RichDiff.Drawn.plain(Rows.of(lines, Rows.Source.ofDiff(lines.map(Line::rawContent)))))
                         .getOrElse(() -> changeDrawn(diff, look, styles, width));
-            case RICH -> RichDiff.drawn(diff.folded(), look.syntax(), look.words(), remarks, asGiven, styles, width);
+            case RICH, SPLIT ->
+                RichDiff.drawn(
+                        diff.folded(),
+                        look.syntax(),
+                        look.words(),
+                        remarks,
+                        asGiven,
+                        styles,
+                        width,
+                        look.style() == DiffStyle.SPLIT);
         };
         return drawn.after(failed).withLead();
     }
@@ -214,6 +226,24 @@ public final class ContentText {
      * ({@link Rows}).
      */
     public static Text windowed(Rows lines, int column, int row, int height, int width, IntPredicate filling) {
+        return windowed(lines, column, row, height, width, filling, ignored -> Option.none(), ignored -> false);
+    }
+
+    /**
+     * {@code lines} as {@link #windowed(Rows, int, int, int, int, IntPredicate)} shows them, but those of the split
+     * view: each half of a row its {@code halves} say it has cut to its width from {@code column}, its gutter staying;
+     * a row {@code pinned}, as wide as the area, not scrolled. Any other row, as a line of a file the split view draws
+     * unified, scrolls as in the unified view (ADR 139).
+     */
+    public static Text windowed(
+            Rows lines,
+            int column,
+            int row,
+            int height,
+            int width,
+            IntPredicate filling,
+            IntFunction<Option<Halves>> halves,
+            IntPredicate pinned) {
         Tuple2<Integer, Integer> window = window(lines.size(), row, height);
         int top = window._1();
         int bottom = window._2();
@@ -225,6 +255,13 @@ public final class ContentText {
                     return BLANK;
                 }
                 Line drawn = lines.get(index);
+                Option<Halves> cut = halves.apply(index);
+                if (cut.isDefined()) {
+                    return cut.get().shown(drawn, column);
+                }
+                if (pinned.test(index)) {
+                    return filling.test(index) ? filled(drawn, width) : drawn;
+                }
                 Line line = filling.test(index) ? filled(drawn, column + width) : drawn;
                 return column == 0 ? line : sideways(line, column);
             }
@@ -436,9 +473,16 @@ public final class ContentText {
                         lines.map(line -> () -> diffLine(line, styles)),
                         Rows.Source.ofDiff(lines).map(source -> () -> source)));
             }
-            case RICH ->
+            case RICH, SPLIT ->
                 RichDiff.drawn(
-                        changes.folded(), look.syntax(), look.words(), Option.none(), Option.none(), styles, width);
+                        changes.folded(),
+                        look.syntax(),
+                        look.words(),
+                        Option.none(),
+                        Option.none(),
+                        styles,
+                        width,
+                        look.style() == DiffStyle.SPLIT);
         };
     }
 
@@ -459,7 +503,21 @@ public final class ContentText {
      * rendered (ADR 103), or the builds of a branch, whose chart has a column for as many builds as fit (ADR 131).
      */
     public static boolean drawnToWidth(Body body) {
-        return body instanceof Body.Builds || rendering(body);
+        return body instanceof Body.Builds || rendering(body) || split(body);
+    }
+
+    /**
+     * Whether {@code body} is a diff drawn with the old and the new file side by side, which is drawn as wide as its
+     * area, its halves each half of it (ADR 139).
+     */
+    public static boolean split(Body body) {
+        Option<DiffLook> look = switch (body) {
+            case Body.Diff(var shown, DiffLook drawn, var remarks) -> Option.of(drawn);
+            case Body.CommitChanges(var commit, var changes, DiffLook drawn) -> Option.of(drawn);
+            case Body.StashChanges(var stash, var changes, DiffLook drawn) -> Option.of(drawn);
+            case Body.BranchLog _, Body.Builds _, Body.PullRequest _, Body.Note _ -> Option.none();
+        };
+        return look.exists(drawn -> drawn.style() == DiffStyle.SPLIT);
     }
 
     /**
@@ -486,7 +544,8 @@ public final class ContentText {
         return body instanceof Body.Diff(ShownDiff diff, var look, var remarks)
                 ? DiffLines.of(diff.folded().diff().diff())
                         .lines()
-                        .find(line -> line.anchor().equals(mark))
+                        // A context line by either anchor, as the split view has it a stop on both sides (ADR 139).
+                        .find(line -> mark instanceof Anchor.OnLine on && line.answers(on))
                         .map(DiffLines.Line::hunk)
                 : Option.none();
     }

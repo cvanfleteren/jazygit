@@ -11,7 +11,6 @@ import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -128,7 +127,7 @@ public final class VersionUpdate {
      */
     private static List<Tuple2<AreaId, Scrolled>> filesAreas(Model model) {
         RepoView view = model.repoView();
-        boolean rich = model.preferences().diffLook().style() == DiffStyle.RICH;
+        boolean rich = model.preferences().diffLook().style().rich();
         List<Tuple2<AreaId, ScrolledContent>> areas = view.files()
                 .commitFiles()
                 .map(files -> files.unchanged()

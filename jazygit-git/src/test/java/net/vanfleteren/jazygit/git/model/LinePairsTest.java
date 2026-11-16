@@ -147,6 +147,110 @@ class LinePairsTest {
         assertEquals(List.of(3 * blocks - 2, 3 * blocks - 1), groups.last());
     }
 
+    @Test
+    void linesUpAContextLineWithItself() {
+        List<ParsedLine> lines = lines("""
+                @@ -1,2 +1,2 @@
+                 int count = 1;
+                 int total = 2;
+                """);
+
+        assertEquals(List.of(row(0, 0), row(1, 1)), LinePairs.rows(lines));
+    }
+
+    @Test
+    void linesUpTheRemovedLinesOfABlockFirstWithFirst() {
+        List<ParsedLine> lines = lines("""
+                @@ -1,2 +1,2 @@
+                -<checkstyle>14.3.0</checkstyle>
+                -int count = 1;
+                +<checkstyle>14.4.0</checkstyle>
+                +return List.of(everything, else);
+                """);
+
+        // A rewritten pair is lined up too.
+        assertEquals(List.of(row(0, 2), row(1, 3)), LinePairs.rows(lines));
+    }
+
+    @Test
+    void leavesTheSideWithFewerLinesBlankToTheEndOfTheBlock() {
+        List<ParsedLine> lines = lines("""
+                @@ -1,3 +1,4 @@
+                -record DiffOptions(boolean ignoreWhitespace) {
+                +record DiffOptions(
+                +        boolean ignoreWhitespace,
+                +        boolean firstParent) {
+                 }
+                """);
+
+        assertEquals(
+                List.of(
+                        row(Option.some(0), Option.some(1)),
+                        row(Option.none(), Option.some(2)),
+                        row(Option.none(), Option.some(3)),
+                        row(4, 4)),
+                LinePairs.rows(lines));
+    }
+
+    @Test
+    void showsLinesOnlyRemovedOnTheLeft() {
+        List<ParsedLine> lines = lines("""
+                @@ -1,2 +1,1 @@
+                 int count = 1;
+                -int total = 2;
+                """);
+
+        assertEquals(List.of(row(0, 0), row(Option.some(1), Option.none())), LinePairs.rows(lines));
+    }
+
+    @Test
+    void putsANoteWithTheLineItFollowsOnItsSide() {
+        List<ParsedLine> lines = lines("""
+                @@ -1,1 +1,1 @@
+                -int count = 1;
+                \\ No newline at end of file
+                +int count = 42;
+                """);
+
+        assertEquals(
+                List.of(new LinePairs.Row(Option.some(0), Option.some(2), List.of(1), List.empty())),
+                LinePairs.rows(lines));
+    }
+
+    @Test
+    void putsANoteAfterAContextLineOnBothSides() {
+        List<ParsedLine> lines = lines("""
+                @@ -1,1 +1,1 @@
+                 int count = 1;
+                \\ No newline at end of file
+                """);
+
+        assertEquals(
+                List.of(new LinePairs.Row(Option.some(0), Option.some(0), List.of(1), List.of(1))),
+                LinePairs.rows(lines));
+    }
+
+    @Test
+    void aBlockOfTensOfThousandsOfLinesIsLinedUpQuickly() {
+        int pairs = 40_000;
+        List<ParsedLine> lines = List.range(0, pairs)
+                .map(at -> changed(DiffLine.Kind.REMOVED, at))
+                .appendAll(List.range(0, pairs).map(at -> changed(DiffLine.Kind.ADDED, at)));
+
+        List<LinePairs.Row> rows = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> LinePairs.rows(lines));
+
+        assertEquals(pairs, rows.size());
+        assertEquals(row(pairs - 1, 2 * pairs - 1), rows.last());
+    }
+
+    private static LinePairs.Row row(int left, int right) {
+        return row(Option.some(left), Option.some(right));
+    }
+
+    private static LinePairs.Row row(Option<Integer> left, Option<Integer> right) {
+        return new LinePairs.Row(left, right, List.empty(), List.empty());
+    }
+
     /**
      * A context line numbered {@code at}.
      */

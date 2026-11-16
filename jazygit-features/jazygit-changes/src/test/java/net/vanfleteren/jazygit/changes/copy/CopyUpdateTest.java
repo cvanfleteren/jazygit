@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.AreaId;
@@ -69,6 +70,41 @@ class CopyUpdateTest {
                 List.of(down),
                 Update.update(loaded(), new CopyMsg.Asked(at(right(9), Option.of(right(11)))))
                         .cmds());
+    }
+
+    @Test
+    void inTheSplitViewARangeOnOneSideCopiesTheLinesOfThatSide() {
+        Anchor.OnLine leftNine = new Anchor.OnLine("a.txt", Side.LEFT, 9);
+        Anchor.OnLine leftEleven = new Anchor.OnLine("a.txt", Side.LEFT, 11);
+
+        assertEquals(
+                List.of(new CopyCmd("line9\nchanged\nline11", new Notice.Copied(3))),
+                Update.update(loaded(), new CopyMsg.Asked(split(at(right(11), Option.of(right(9))))))
+                        .cmds());
+        // The old file's side, its context lines by their numbers there (ADR 139).
+        assertEquals(
+                List.of(new CopyCmd("line9\nline10\nline11", new Notice.Copied(3))),
+                Update.update(loaded(), new CopyMsg.Asked(split(at(leftEleven, Option.of(leftNine)))))
+                        .cmds());
+    }
+
+    @Test
+    void aRangeOfADiffTheSplitStyleDrewUnifiedCopiesEveryLineBetweenItsEnds() {
+        // The split style asked for, but the area too narrow for it: the range is tinted over every line between.
+        Model split = loaded().mapPreferences(preferences ->
+                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.SPLIT)));
+
+        assertEquals(
+                List.of(new CopyCmd("line9\nline10\nchanged\nline11", new Notice.Copied(4))),
+                Update.update(split, new CopyMsg.Asked(at(right(11), Option.of(right(9)))))
+                        .cmds());
+    }
+
+    /**
+     * {@code at} on a half of a row of the split view, as the area tells it (ADR 139).
+     */
+    private static DiffCursorAt split(DiffCursorAt at) {
+        return new DiffCursorAt(at.area(), at.at(), at.cursor(), at.next(), at.previous(), at.marked(), true);
     }
 
     @Test

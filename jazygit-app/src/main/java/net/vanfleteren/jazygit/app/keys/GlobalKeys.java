@@ -49,6 +49,11 @@ final class GlobalKeys {
                         "app.help.global.diffStyle",
                         GlobalKeys::isDiffStyleKey,
                         DiffOptionsMsg.StyleToggled::new))
+                .global(new Keymap.Global.Dispatching(
+                        "|",
+                        "app.help.global.diffSplit",
+                        event -> isChar(event, '|'),
+                        DiffOptionsMsg.SplitToggled::new))
                 // Not ctrl+i: a terminal sends it as Tab, which moves the focus before any handler sees it.
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+e",

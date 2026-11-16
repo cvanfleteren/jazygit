@@ -39,7 +39,7 @@ public final class CopyUpdate {
             case Anchor.File(String path) -> Option.of(new CopyCmd(path, new Notice.PathCopied(path)));
             case Anchor.OnLine cursor ->
                 model.diffLines(at, at.at().content().richDiff())
-                        .between(from(at, cursor), cursor)
+                        .between(from(at, cursor), cursor, at.split())
                         .map(range -> new CopyCmd(
                                 range.map(line -> line.line().text()).mkString("\n"), new Notice.Copied(range.size())));
             default -> Option.none();

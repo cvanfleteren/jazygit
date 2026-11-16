@@ -25,7 +25,8 @@ file](documentation/images/jazygit-diff.png)
   your own, to read, comment on, merge or check out.
 - **Worktrees:** a branch, or a pull request, in a new worktree in one key. Switch between them, lock and prune them.
 - **A rich diff view** with line numbers and the changed words highlighted (Ctrl+E turns that off), for the
-  working tree, commits and stashes. Ctrl+D switches to git's plain diff and back.
+  working tree, commits and stashes. Ctrl+D switches to git's plain diff and back, `|` to the old and the new file
+  side by side.
 - **One GitHub account per repository,** without switching gh's active account.
 - **Recent repositories** (Ctrl+R), and outside a repository it offers to `git init` it or open another one.
 

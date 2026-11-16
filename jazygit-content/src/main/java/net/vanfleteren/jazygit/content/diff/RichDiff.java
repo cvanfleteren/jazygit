@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileVersion;
@@ -53,22 +54,30 @@ public final class RichDiff {
      * How wide a version is rendered while the width of its area is not known yet (ADR 103).
      */
     public static final int RENDERED_WIDTH = 80;
+
+    /**
+     * How wide an area has to be for the split view (ADR 139): each half then shows about 40 columns of code.
+     */
+    public static final int SPLIT_WIDTH = 100;
+
     /**
      * The gutter of a version rendered: the bar beside a block that changed, and a space (ADR 103).
      */
     static final int RENDERED_GUTTER = 2;
 
-    private static final String GUTTER_END = " │ ";
-
-    private static final String RENDERED_BAR = "▎";
+    static final String GUTTER_END = " │ ";
+    // The rule between the halves of the split view.
+    static final String DIVIDER = "│";
     /**
      * What sets the text of a line apart from its marker, as GitHub does: {@code + - item} reads as a list item that
      * was added, where {@code +- item} reads as neither.
      */
-    private static final String MARGIN = " ";
+    static final String MARGIN = " ";
 
-    private static final LineRemarks NO_REMARKS = new LineRemarks(List.empty(), false);
-    private static final Pending BLANK = () -> List.of(Marked.plain(Line.from("")));
+    static final LineRemarks NO_REMARKS = new LineRemarks(List.empty(), false);
+    static final Pending BLANK = () -> List.of(Marked.plain(Line.from("")));
+
+    private static final String RENDERED_BAR = "▎";
 
     private RichDiff() {}
 
@@ -116,6 +125,40 @@ public final class RichDiff {
             Option<DiffStops.HunkAt> asGiven,
             Theme.SpanStyles styles,
             int width) {
+        return drawn(folded, syntax, words, remarks, asGiven, styles, width, false);
+    }
+
+    /**
+     * The lines of the diff of {@code folded}, as {@link #drawn(Expansion.Folded, boolean, boolean, Option, Option,
+     * Theme.SpanStyles, int)} draws them, with the old file and the new one side by side if {@code split} (ADR 139),
+     * the area {@code width} columns wide: unified, with a note that says why, when the area is narrower than
+     * {@link #SPLIT_WIDTH}.
+     */
+    public static Drawn drawn(
+            Expansion.Folded folded,
+            boolean syntax,
+            boolean words,
+            Option<ShownRemarks> remarks,
+            Option<DiffStops.HunkAt> asGiven,
+            Theme.SpanStyles styles,
+            int width,
+            boolean split) {
+        Option<Integer> sideBySide = Option.when(split && width >= SPLIT_WIDTH, width);
+        Drawn drawn = drawn(folded, syntax, words, remarks, asGiven, styles, width, sideBySide);
+        return split && sideBySide.isEmpty()
+                ? drawn.withNote(Messages.get("content.split.narrow", SPLIT_WIDTH))
+                : drawn;
+    }
+
+    private static Drawn drawn(
+            Expansion.Folded folded,
+            boolean syntax,
+            boolean words,
+            Option<ShownRemarks> remarks,
+            Option<DiffStops.HunkAt> asGiven,
+            Theme.SpanStyles styles,
+            int width,
+            Option<Integer> split) {
         ParsedDiff diff = folded.diff();
         UnifiedDiff parsed = diff.diff();
         Vector<Option<FileRemarks>> placed = remarks.map(
@@ -141,19 +184,21 @@ public final class RichDiff {
                                 words,
                                 style,
                                 styles,
-                                width))
+                                width,
+                                split))
                 .intersperse(List.of(BLANK))
                 .flatMap(file -> file);
-        return Drawn.of(parsed.preamble()
+        Drawn drawn = Drawn.of(parsed.preamble()
                 .map(line -> new Marked(() -> Line.from(Span.raw(line)), Option.none()))
                 .appendAll(inParallel(pending, Pending::draw).flatMap(lines -> lines)));
+        return split.map(area -> drawn.withDivider((area - 1) / 2)).getOrElse(drawn);
     }
 
     /**
      * What {@code draw} gives for each of {@code items}, in their order, each worked out on a thread of the common
      * pool. Drawing is pure, and the render thread waits for it, so nothing changes the theme while it runs.
      */
-    private static <T, R> List<R> inParallel(List<T> items, Function<T, R> draw) {
+    static <T, R> List<R> inParallel(List<T> items, Function<T, R> draw) {
         // Collected, not read through an iterator as List.ofAll and Stream.ofAll read a java.util.stream.Stream: that
         // runs a parallel stream on the calling thread only.
         return items.toJavaParallelStream().map(draw).collect(List.collector());
@@ -175,7 +220,8 @@ public final class RichDiff {
      * lines with those after it, once the width of its gutter and its lines is known, and the threads that cannot be
      * placed. The threads on a line are followed by a blank line, unless nothing follows them in the file. The lines of
      * its hunk {@code asGiven}, and of a block a thread on several lines covers, are shown as git gives them, else in
-     * pairs where they can be (ADR 83).
+     * pairs where they can be (ADR 83). With the old file and the new one side by side in an area {@code split}
+     * columns wide, if it is (ADR 139), but a version of it or a conflicted file.
      */
     private static List<Pending> file(
             ParsedFile parsed,
@@ -187,11 +233,18 @@ public final class RichDiff {
             boolean words,
             RemarkLines.RemarkStyle style,
             Theme.SpanStyles styles,
-            int rendering) {
+            int rendering,
+            Option<Integer> split) {
         FileDiff file = parsed.file();
         Option<FileVersion> version = fold.version();
         if (fold.rendered() && version.isDefined() && Rendered.of(file.path()).isDefined()) {
             return List.of(() -> rendered(parsed, version.get(), fold, rendering, styles));
+        }
+        if (split.isDefined()
+                && version.isEmpty()
+                && parsed.hunks().forAll(hunk -> hunk.hunk().numbered())) {
+            return SplitRows.file(parsed, remarks, index, fold, syntax, words, style, styles, split.get())
+                    .map(pending -> () -> pending.draw().map(Marked::pin));
         }
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
         // A version keeps the gutter of the diff it is shown in place of, as wide, so its code does not move sideways
@@ -439,7 +492,7 @@ public final class RichDiff {
     /**
      * What the bar of {@code file} says: what happened to it and its path, and how its mode changed if it did.
      */
-    private static String bar(FileDiff file) {
+    static String bar(FileDiff file) {
         String what = Messages.get(
                 switch (file.type()) {
                     case ADDED -> "content.file.added";
@@ -468,7 +521,7 @@ public final class RichDiff {
     /**
      * Why {@code file} has no lines to show, if it has none and that does not go without saying.
      */
-    private static Option<String> note(FileDiff file) {
+    static Option<String> note(FileDiff file) {
         return file.binary()
                 ? Option.of(Messages.get("content.file.binary"))
                 : Option.when(
@@ -520,13 +573,25 @@ public final class RichDiff {
         return header.appendAll(groups.zipWithIndex().<Pending>map(group -> () -> {
             List<Row> members = group._1().map(rows::get);
             List<Row> threaded = members.filter(row -> !row.remarks().threads().isEmpty());
-            return members.map(row -> new Marked(
-                            () -> line(row, layout),
-                            Anchor.of(layout.path(), row.parsed().line())
-                                    .map(on -> new Mark(on, 1, layout.fileWidth(), at)),
+            return group._1()
+                    .map(order -> Tuple.of(rows.get(order), order))
+                    .map(member -> new Marked(
+                            () -> line(member._1(), layout),
+                            Anchor.of(layout.path(), member._1().parsed().line())
+                                    .map(on -> new Mark(
+                                            on,
+                                            1,
+                                            layout.fileWidth(),
+                                            at,
+                                            Option.none(),
+                                            0,
+                                            leftOfContext(
+                                                    layout.path(),
+                                                    member._1().parsed().line()),
+                                            member._2())),
                             List.empty(),
                             within,
-                            () -> source(row, prefix, layout)))
+                            () -> source(member._1(), prefix, layout)))
                     .appendAll(threaded.zipWithIndex()
                             .flatMap(row -> layout.blocks()
                                     .threads(
@@ -539,6 +604,16 @@ public final class RichDiff {
                                                     || row._2() < threaded.size() - 1,
                                             styles)));
         }));
+    }
+
+    /**
+     * The anchor of {@code line} on the left side, by its number in the old file, if it is a context line: the split
+     * view has a stop for it there (ADR 139).
+     */
+    static Option<Anchor> leftOfContext(String path, DiffLine line) {
+        return Option.when(line.kind() == DiffLine.Kind.CONTEXT, line::oldNumber)
+                .flatMap(number -> number)
+                .map(number -> new Anchor.OnLine(path, ReviewThread.Side.LEFT, number));
     }
 
     /**
@@ -555,6 +630,15 @@ public final class RichDiff {
      * or is too long to be shown past where its read was cut, once the marker starts past it.
      */
     private static Pending marker(Folding.Gap gap, Expansion.Fold fold, Layout layout) {
+        return marker(gap, fold, layout.path(), rule(layout), layout.fileWidth(), layout.styles());
+    }
+
+    /**
+     * The marker of {@code gap} in the file with the path {@code path}, after {@code rule}, tinted {@code width} wide
+     * when the cursor is on it.
+     */
+    static Pending marker(
+            Folding.Gap gap, Expansion.Fold fold, String path, Span rule, int width, Theme.SpanStyles styles) {
         String says = switch (fold.read()) {
             case READING -> Messages.get("content.gap.reading");
             case FAILED -> Messages.get("content.gap.failed");
@@ -567,12 +651,8 @@ public final class RichDiff {
                                 Messages.get(fold.pastTheCut(gap.from()) ? "content.gap.tooLong" : "content.gap.more"));
         };
         return () -> List.of(new Marked(
-                Rows.kept(Line.from(rule(layout), styled(says + " ┄", Theme.Classes.DIFF_HUNK, layout.styles()))),
-                Option.of(new Mark(
-                        new Anchor.Gap(layout.path(), gap.from(), gap.until()),
-                        1,
-                        layout.fileWidth(),
-                        Option.none()))));
+                Rows.kept(Line.from(rule, styled(says + " ┄", Theme.Classes.DIFF_HUNK, styles))),
+                Option.of(new Mark(new Anchor.Gap(path, gap.from(), gap.until()), 1, width, Option.none()))));
     }
 
     /**
@@ -687,7 +767,7 @@ public final class RichDiff {
     /**
      * A piece of a context line: in the colour of its token, else plain.
      */
-    private static Span context(Piece piece, Theme.SpanStyles styles) {
+    static Span context(Piece piece, Theme.SpanStyles styles) {
         return piece.kind()
                 .map(kind -> styled(piece.text(), syntaxClass(kind), styles))
                 .getOrElse(() -> Span.raw(piece.text()));
@@ -698,7 +778,7 @@ public final class RichDiff {
      * token, or that of {@link Theme.Classes#SYNTAX_TEXT} outside a token, which is the plain colour unless the theme
      * gives it one.
      */
-    private static Span changedCode(Piece piece, String diffClass, Theme.SpanStyles styles) {
+    static Span changedCode(Piece piece, String diffClass, Theme.SpanStyles styles) {
         return Span.styled(
                 piece.text(),
                 styles.code(diffClass, piece.kind().map(RichDiff::syntaxClass).getOrElse(Theme.Classes.SYNTAX_TEXT)));
@@ -757,16 +837,16 @@ public final class RichDiff {
                         + " ".repeat(Math.max(0, width - Math.max(digits, text.length())));
     }
 
-    private static String number(Option<Integer> number, int digits) {
+    static String number(Option<Integer> number, int digits) {
         String text = number.map(String::valueOf).getOrElse("");
         return " ".repeat(digits - text.length()) + text;
     }
 
-    private static int width(String text) {
+    static int width(String text) {
         return Span.raw(text).width();
     }
 
-    private static Span styled(String text, String cssClass, Theme.SpanStyles styles) {
+    static Span styled(String text, String cssClass, Theme.SpanStyles styles) {
         return Span.styled(text, styles.of(cssClass));
     }
 
@@ -779,23 +859,37 @@ public final class RichDiff {
      * Lines still to be drawn: what a file is cut into once it is measured, so that its parts are drawn side by side.
      */
     @FunctionalInterface
-    private interface Pending {
+    interface Pending {
 
         List<Marked> draw();
     }
 
     /**
-     * What draws a line, the stop of the cursor that starts on it, if one does, and how wide it is at most, when that is
+     * What draws a line, the stops of the cursor that start on it, if any do, and how wide it is at most, when that is
      * known without drawing it: a line of a diff is no wider than its file, so a long diff is measured without drawing
      * each of its lines only to throw it away. With what it is searched in (ADR 126): the code of a line of a diff,
-     * without drawing it; all the text of any other line, drawn already.
+     * without drawing it; all the text of any other line, drawn already. A row of the split view has a stop for each
+     * of its halves that holds a line, and where its halves are (ADR 139); a row of a file drawn split that is as wide
+     * as the area, as its bar, is pinned: it does not scroll sideways, as the halves scroll each on their own.
      */
-    private record Marked(
+    record Marked(
             Supplier<Line> line,
-            Option<Mark> mark,
+            List<Mark> marks,
             List<Anchor> places,
             Option<Integer> width,
-            Supplier<Rows.Source> source) {
+            Supplier<Rows.Source> source,
+            Option<Halves> halves,
+            boolean pinned) {
+
+        Marked(
+                Supplier<Line> line,
+                List<Mark> marks,
+                List<Anchor> places,
+                Option<Integer> width,
+                Supplier<Rows.Source> source,
+                Option<Halves> halves) {
+            this(line, marks, places, width, source, halves, false);
+        }
 
         Marked(Supplier<Line> line, Option<Mark> mark) {
             this(line, mark, List.empty());
@@ -805,11 +899,44 @@ public final class RichDiff {
             this(line, mark, places, Option.none(), () -> Rows.Source.of(line.get()));
         }
 
+        Marked(
+                Supplier<Line> line,
+                Option<Mark> mark,
+                List<Anchor> places,
+                Option<Integer> width,
+                Supplier<Rows.Source> source) {
+            this(line, mark.toList(), places, width, source, Option.none());
+        }
+
         /**
          * How wide the line is, at most: drawn to be measured when that is not known.
          */
         int measured() {
             return width.getOrElse(() -> line.get().width());
+        }
+
+        /**
+         * This line changed by {@code change} when it is drawn.
+         */
+        Marked mapped(UnaryOperator<Line> change) {
+            Supplier<Line> drawn = line;
+            Supplier<Line> changed = () -> change.apply(drawn.get());
+            return new Marked(
+                    changed, marks, places, Option.none(), () -> Rows.Source.of(changed.get()), halves, pinned);
+        }
+
+        /**
+         * This line with its stops on {@code side} (ADR 139).
+         */
+        Marked onSide(ReviewThread.Side side) {
+            return new Marked(line, marks.map(mark -> mark.onSide(side)), places, width, source, halves, pinned);
+        }
+
+        /**
+         * This line pinned, when it has no halves: a row of a file drawn split, as wide as the area (ADR 139).
+         */
+        Marked pin() {
+            return new Marked(line, marks, places, width, source, halves, halves.isEmpty());
         }
 
         static Marked plain(Line line) {
@@ -823,10 +950,44 @@ public final class RichDiff {
      *
      * @param anchor what it is
      * @param lines  how many lines it has itself
-     * @param width  how many columns its tint covers: the width of its file
+     * @param width  how many columns its tint covers: the width of its file, or of its half in the split view
      * @param hunk   the hunk of a line, which a range stays in; none for what is not a line
+     * @param side   the side of the split view it is on, the half it is in (ADR 139); none for what is as wide as the
+     *               area, and in the unified view
+     * @param column the column of its line its tint starts at: that of its half in the split view
+     * @param also   the other anchor of a context line, which the stop is found by too: on the left side, by its number
+     *               in the old file, in the unified view, where the line is a stop on the right side only (ADR 139)
+     * @param order  the index of its line among the lines of its hunk, in the order of the diff; -1 for what is not a
+     *               line
      */
-    public record Mark(Anchor anchor, int lines, int width, Option<DiffStops.HunkAt> hunk) {}
+    public record Mark(
+            Anchor anchor,
+            int lines,
+            int width,
+            Option<DiffStops.HunkAt> hunk,
+            Option<ReviewThread.Side> side,
+            int column,
+            Option<Anchor> also,
+            int order) {
+
+        public Mark(Anchor anchor, int lines, int width, Option<DiffStops.HunkAt> hunk) {
+            this(anchor, lines, width, hunk, Option.none(), 0, Option.none(), -1);
+        }
+
+        /**
+         * Whether the stop is {@code anchor}, or a context line it is the other anchor of.
+         */
+        public boolean is(Anchor anchor) {
+            return this.anchor.equals(anchor) || also.contains(anchor);
+        }
+
+        /**
+         * This stop in the half of {@code side} (ADR 139).
+         */
+        Mark onSide(ReviewThread.Side side) {
+            return new Mark(anchor, lines, width, hunk, Option.some(side), column, also, order);
+        }
+    }
 
     /**
      * Where a stop of the cursor starts.
@@ -849,27 +1010,50 @@ public final class RichDiff {
      * The lines of a diff, each drawn when it shows ({@link Rows}), where each stop of the cursor in them starts, in
      * order, and what works out how wide the widest of them is.
      *
-     * @param widest how wide the widest line is, worked out when it is asked for: the lines of a diff are not drawn for
-     *               it, as each is no wider than its file ({@link Marked#width}); other lines are drawn to be measured,
-     *               as {@link Rows#widest} does
+     * @param widest  how wide the widest line is, worked out when it is asked for: the lines of a diff are not drawn
+     *                for it, as each is no wider than its file ({@link Marked#width}); other lines are drawn to be
+     *                measured, as {@link Rows#widest} does. In the split view, as wide as the area and as far as its
+     *                halves scroll sideways
+     * @param halves  where the halves of each row of the split view are, by the index of the row; none for a row as
+     *                wide as the area, and none at all in the unified view (ADR 139)
+     * @param pinned  the rows of the split view that do not scroll sideways, by their index: those as wide as the area
+     *                of a file drawn split. A line of a file the split view draws unified scrolls as in the unified
+     *                view (ADR 139)
+     * @param divider the column of the area the rule between the halves of the split view is at
+     * @param note    what the title of the area says of how the diff is drawn: that the area is too narrow for the
+     *                split view
      */
-    public record Drawn(Rows rows, List<Stop> stops, List<Place> places, IntSupplier widest) {
+    public record Drawn(
+            Rows rows,
+            List<Stop> stops,
+            List<Place> places,
+            IntSupplier widest,
+            Vector<Option<Halves>> halves,
+            Vector<Boolean> pinned,
+            Option<Integer> divider,
+            Option<String> note) {
 
         Drawn(Rows rows, List<Stop> stops) {
-            this(rows, stops, List.empty(), rows::widest);
+            this(rows, stops, List.empty(), rows::widest, Vector.empty(), Vector.empty(), Option.none(), Option.none());
         }
 
         private static Drawn of(List<Marked> marked) {
             return new Drawn(
                     Rows.drawn(marked.map(Marked::line), marked.map(Marked::source)),
-                    marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))),
+                    marked.zipWithIndex().flatMap(line -> line._1().marks().map(mark -> new Stop(mark, line._2()))),
                     marked.zipWithIndex()
                             .flatMap(line -> line._1().places().map(anchor -> new Place(anchor, line._2()))),
                     // On the threads of the common pool, as Rows.widest measures, for the lines that are drawn for it.
                     () -> marked.toJavaParallelStream()
                             .mapToInt(Marked::measured)
                             .max()
-                            .orElse(0));
+                            .orElse(0),
+                    marked.exists(line -> line.halves().isDefined())
+                            ? marked.map(Marked::halves).toVector()
+                            : Vector.empty(),
+                    marked.exists(Marked::pinned) ? marked.map(Marked::pinned).toVector() : Vector.empty(),
+                    Option.none(),
+                    Option.none());
         }
 
         /**
@@ -894,6 +1078,27 @@ public final class RichDiff {
         }
 
         /**
+         * Whether the diff is drawn with the old and the new file side by side (ADR 139).
+         */
+        public boolean split() {
+            return divider.isDefined();
+        }
+
+        /**
+         * Where the halves of row {@code row} of the split view are; none for a row as wide as the area.
+         */
+        public Option<Halves> halvesOf(int row) {
+            return row >= 0 && row < halves.size() ? halves.get(row) : Option.none();
+        }
+
+        /**
+         * Whether row {@code row} of the split view does not scroll sideways (ADR 139).
+         */
+        public boolean pinnedAt(int row) {
+            return row >= 0 && row < pinned.size() && pinned.get(row);
+        }
+
+        /**
          * These lines after {@code before}, their stops moved down by as many lines.
          */
         public Drawn after(List<Line> before) {
@@ -903,7 +1108,16 @@ public final class RichDiff {
                     stops.map(stop -> new Stop(stop.mark(), stop.row() + before.size())),
                     places.map(place -> new Place(place.anchor(), place.row() + before.size())),
                     () -> Math.max(
-                            inBody.getAsInt(), before.map(Line::width).max().getOrElse(0)));
+                            inBody.getAsInt(), before.map(Line::width).max().getOrElse(0)),
+                    halves.isEmpty()
+                            ? halves
+                            : Vector.<Option<Halves>>fill(before.size(), Option::none)
+                                    .appendAll(halves),
+                    pinned.isEmpty()
+                            ? pinned
+                            : Vector.fill(before.size(), () -> false).appendAll(pinned),
+                    divider,
+                    note);
         }
 
         /**
@@ -916,8 +1130,26 @@ public final class RichDiff {
                             rows,
                             stops.prepend(new Stop(new Mark(new Anchor.Lead(), first.row(), 0, Option.none()), 0)),
                             places,
-                            widest))
+                            widest,
+                            halves,
+                            pinned,
+                            divider,
+                            note))
                     .getOrElse(this);
+        }
+
+        /**
+         * These lines with the rule between the halves of the split view at column {@code column} of the area.
+         */
+        Drawn withDivider(int column) {
+            return new Drawn(rows, stops, places, widest, halves, pinned, Option.some(column), note);
+        }
+
+        /**
+         * These lines with {@code says} in the title of the area.
+         */
+        Drawn withNote(String says) {
+            return new Drawn(rows, stops, places, widest, halves, pinned, divider, Option.some(says));
         }
     }
 
@@ -949,7 +1181,7 @@ public final class RichDiff {
      * How a changed line is drawn: its marker and the class of the marker, the class of the line and that of its
      * changed words.
      */
-    private record Change(String marker, String markerClass, String lineClass, String wordClass) {
+    record Change(String marker, String markerClass, String lineClass, String wordClass) {
 
         static final Change ADDED =
                 new Change("+", Theme.Classes.DIFF_ADDED, Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.DIFF_ADDED_WORD);
@@ -961,7 +1193,7 @@ public final class RichDiff {
      * How the review threads of a file are drawn: as blocks that start {@code indent} columns in, two after the
      * gutter, and are {@code width} columns wide, as {@code style} says.
      */
-    private record Blocks(int indent, int width, RemarkLines.RemarkStyle style) {
+    record Blocks(int indent, int width, RemarkLines.RemarkStyle style) {
 
         /**
          * The lines of {@code threads}, after {@code line} if they are, each a stop of the cursor, then a blank line
