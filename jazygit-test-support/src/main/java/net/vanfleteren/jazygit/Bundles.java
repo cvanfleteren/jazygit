@@ -73,7 +73,8 @@ public final class Bundles {
      * {@code ui}. This also checks the keys of the views, which start with no root, and the keys of a module named
      * from another.
      *
-     * @param notKeys texts shaped as a key that name something else, as a host
+     * @param notKeys texts shaped as a key that this cannot check: a text that names something else, as a host, or
+     *                the start of a key that the code finishes inside its last part
      */
     public static List<String> unknown(Path project, List<String> roots, Set<String> notKeys) {
         Map<String, Set<String>> bundles = roots.toMap(root -> root, Bundles::keys);
@@ -90,9 +91,10 @@ public final class Bundles {
                 .sorted();
     }
 
-    // As missing has it: a key, or the start of one that the code finishes at run time.
+    // A key, or the start of one that the code finishes at run time: up to a dot, so a key cut short is not known.
     private static boolean known(Set<String> keys, String text) {
-        return keys.contains(text) || keys.exists(key -> key.startsWith(text));
+        String start = text.endsWith(".") ? text : text + ".";
+        return keys.contains(text) || keys.exists(key -> key.startsWith(start));
     }
 
     private static String first(String key) {

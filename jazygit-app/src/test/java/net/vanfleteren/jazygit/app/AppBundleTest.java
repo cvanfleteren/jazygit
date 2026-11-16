@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.Bundles;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,10 @@ import org.junit.jupiter.api.Test;
  * (ADR 136).
  */
 class AppBundleTest {
+
+    // A host, and the titles of ReviewDialog, which finish as ...titleLine, ...titleEditFile and so on.
+    private static final Set<String> NOT_KEYS =
+            HashSet.of("github.com", "github.dialog.review.title", "github.dialog.review.titleEdit");
 
     private static final List<String> ROOTS =
             List.of("ui", "state", "content", "changes", "branches", "github", "chrome", "app");
@@ -39,7 +44,7 @@ class AppBundleTest {
      */
     @Test
     void everyKeyTheCodeOfAnyModuleNamesIsFound() {
-        assertEquals(List.empty(), Bundles.unknown(Path.of(".."), ROOTS, HashSet.of("github.com")));
+        assertEquals(List.empty(), Bundles.unknown(Path.of(".."), ROOTS, NOT_KEYS));
     }
 
     /**
