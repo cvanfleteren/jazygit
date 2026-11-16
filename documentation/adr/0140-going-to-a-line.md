@@ -25,9 +25,10 @@ is gone.
 - `:` in an area of the content panel opens a line above it, after a dimmed `:`, to type a line number in, as vim's
   `:42`. The number typed shows as it is typed. Only digits go in: another character is left out.
 - Enter closes the line and goes to the line typed; Escape closes it and goes nowhere; an empty line goes nowhere.
-  The area losing the focus closes it too.
-- What is typed is kept by the area, not in the Model: unlike a search, nothing of it lasts past Enter, and no
-  update reads it. Not: `42G`, as less and vim also have, whose count is not seen while it is typed.
+- What is typed is kept in the Model while the line is open, as the query of a search is (ADR 126), and `:` sends a
+  message that opens it: so `?` lists the key as one that acts, and runs it, where the area has a cursor. A help lists
+  a key that sends nothing as disabled. Where the line shows and where the number goes is the area's to work out.
+  Not: `42G`, as less and vim also have, whose count is not seen while it is typed.
 
 ### Which line a number is
 
@@ -63,6 +64,6 @@ is gone.
 ## Consequences
 
 - `:` is taken in the content panel.
-- The area keeps a second line it can open above itself, beside that of a search.
+- The area has a second line it can open above itself, beside that of a search; the Model keeps what is typed in it.
 - Going to a hidden line reads the file whole, as expanding a marker does, and leaves those lines shown.
 - The old side of a split diff gets no lines shown for a number: its markers are numbered in the new file.

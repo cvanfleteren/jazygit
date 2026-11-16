@@ -59,6 +59,7 @@ import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.FileStepMsg;
+import net.vanfleteren.jazygit.state.view.LineNumberMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
@@ -130,8 +131,7 @@ public final class ScrollArea {
     private Option<Integer> currentMatch = Option.none();
     // What the title says until the next key: that n went past the last match, or could not go to one (ADR 126).
     private Option<String> notice = Option.none();
-    // The line to type a line number in to go to, and its text while it is open (ADR 140): kept by the area, as nothing
-    // of it lasts past Enter.
+    // The line to type a line number in to go to, and its text while it is open, as last shown (ADR 140).
     private final FilterLine numberLine = new FilterLine(GO_TO_LINE);
     private Option<String> number = Option.none();
     // Whether the area shows the original of a file whole, whose lines are numbered in the old file (ADR 102, 140).
@@ -178,7 +178,7 @@ public final class ScrollArea {
         number.filter(ignored -> typing.isEmpty())
                 .map(text -> numberLine.paste(text, event))
                 .filter(ScrollArea::isNumber)
-                .forEach(text -> number = Option.of(text));
+                .forEach(this::numberEdited);
     }
 
     /**
@@ -217,8 +217,8 @@ public final class ScrollArea {
                 .flatMap(mark -> last.map(before -> before.hunk(mark, near)).getOrElse(() -> markedHunk(body, mark)));
         Option<String> query = ContentSearch.query(model.contentSearch());
         typing = model.contentSearch().filter(ContentSearch::typing).map(ContentSearch::text);
-        // The line to type a line number in closes as the area loses the focus (ADR 140).
-        number = number.filter(ignored -> focused && typing.isEmpty());
+        // The line to type a line number in shows above the area with the focus, unless the line of a search does.
+        number = model.lineNumber().filter(ignored -> typing.isEmpty());
         original = model.repoView()
                 .version(area.id(), content)
                 .flatMap(Version::showing)
@@ -395,12 +395,12 @@ public final class ScrollArea {
     private EventResult lineOpened() {
         boolean numbered = cursor.exists(
                 on -> styled.exists(shown -> LineGoal.numbered(shown.stops(), shown.places(), on.stop())));
-        if (numbered) {
-            number = Option.of("");
-        } else {
+        if (!numbered) {
             notice = Option.of(Messages.get("content.line.none"));
+            return EventResult.HANDLED;
         }
-        return EventResult.HANDLED;
+        number = Option.of("");
+        return sending(new LineNumberMsg.Opened());
     }
 
     /**
@@ -411,17 +411,26 @@ public final class ScrollArea {
     private EventResult numbered(String text, KeyEvent event, ScrolledContent content) {
         if (event.isCancel()) {
             number = Option.none();
-            return EventResult.HANDLED;
+            return sending(new LineNumberMsg.Closed());
         }
         if (event.isConfirm()) {
             number = Option.none();
+            dispatch.accept(new LineNumberMsg.Closed());
             return text.isEmpty()
                     ? EventResult.HANDLED
                     : cursor.flatMap(on -> styled.map(shown -> toLine(on, shown, Integer.parseInt(text), content)))
                             .getOrElse(EventResult.HANDLED);
         }
-        numberLine.edit(text, event).filter(ScrollArea::isNumber).forEach(edited -> number = Option.of(edited));
+        numberLine.edit(text, event).filter(ScrollArea::isNumber).forEach(this::numberEdited);
         return EventResult.HANDLED;
+    }
+
+    /**
+     * Shows {@code text} in the line to type a line number in, and tells the model.
+     */
+    private void numberEdited(String text) {
+        number = Option.of(text);
+        dispatch.accept(new LineNumberMsg.Edited(text));
     }
 
     /**

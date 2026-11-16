@@ -91,6 +91,43 @@ class GoToLineTest {
     }
 
     @Test
+    void colonActsWhereTheAreaHasACursorSoTheHelpListsItAndRunsIt() throws Exception {
+        net.vanfleteren.jazygit.ui.keys.Keymap keys = net.vanfleteren.jazygit.ui.keys.Keymap.standard();
+        dev.tamboui.tui.event.KeyEvent colon = dev.tamboui.tui.event.KeyEvent.ofChar(':');
+        net.vanfleteren.jazygit.state.diff.DiffCursorAt at = new net.vanfleteren.jazygit.state.diff.DiffCursorAt(
+                ContentArea.FILE_CONTENT.id(),
+                Scrolled.top(new net.vanfleteren.jazygit.state.diff.ScrolledContent.Diff(DiffText.of(SMALL))),
+                onNew(1),
+                Option.none(),
+                Option.none(),
+                Option.none());
+        for (var scope : List.of(
+                net.vanfleteren.jazygit.ui.keys.Scopes.DIFF,
+                net.vanfleteren.jazygit.ui.keys.Scopes.PULL_REQUEST_DIFF)) {
+            assertEquals(
+                    Option.<Msg>of(new net.vanfleteren.jazygit.state.view.LineNumberMsg.Opened()),
+                    keys.handle(scope, colon, Option.of(at)));
+            // Without a cursor, as in the plain diff, it does nothing, and the help shows it disabled.
+            assertEquals(Option.none(), keys.handle(scope, colon, Option.none()));
+        }
+
+        // Run from the help, the line opens above the area.
+        Driven driven = new Driven(commit(DiffStyle.RICH, SMALL));
+        try (ToolkitTestRunner testRunner = driven.run()) {
+            driven.model.set(
+                    Update.update(driven.model.get(), new net.vanfleteren.jazygit.state.view.LineNumberMsg.Opened())
+                            .model());
+            // The help closing draws a frame, with the line open.
+            driven.screen(testRunner);
+            driven.type(testRunner, "3");
+            assertTrue(driven.screen(testRunner).contains(": 3"), driven.screen(testRunner));
+            driven.press(testRunner, KeyCode.ENTER);
+            assertEquals(Option.of(onNew(3)), driven.lastScrolled().cursor());
+            assertTrue(driven.model.get().lineNumber().isEmpty());
+        }
+    }
+
+    @Test
     void escapeClosesTheLineAndGoesNowhere() throws Exception {
         Driven driven = new Driven(commit(DiffStyle.RICH, SMALL));
         try (ToolkitTestRunner testRunner = driven.run()) {
