@@ -63,3 +63,6 @@ was made from, else the main branch, of each the one on `origin` before the loca
 
 Amended by ADR 128: `F` on the main branch lists all files of its tip, as committed, instead of saying it has no
 base.
+
+Amended by ADR 141: the files pane lists the files of the highlighted branch against its base while the branches have
+the focus, without `F`; `F` still lists those of its pull request.
