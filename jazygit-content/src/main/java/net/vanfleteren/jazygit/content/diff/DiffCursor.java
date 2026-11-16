@@ -25,8 +25,18 @@ import net.vanfleteren.jazygit.ui.text.Rows;
  * @param stop   the index of the stop the cursor is on
  * @param row    the first line the view shows
  * @param mark   the index of the line the range was started on, while one is open
+ * @param side   the side of the split view the cursor keeps to (ADR 139): that of its stop when it is on a half, else
+ *               the side it was on before; only {@code [}, {@code ]}, a click on a half and a match of a search take it
+ *               to the other side
  */
-public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, int row, Option<Integer> mark) {
+public record DiffCursor(
+        Vector<RichDiff.Stop> stops,
+        int lines,
+        int height,
+        int stop,
+        int row,
+        Option<Integer> mark,
+        ReviewThread.Side side) {
 
     /**
      * The cursor of a diff of {@code lines} lines with {@code stops}, shown {@code height} lines high from
@@ -45,15 +55,33 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
             int row,
             Option<Anchor> at,
             Option<Anchor> mark) {
+        return of(stops, near, lines, height, row, at, mark, ReviewThread.Side.RIGHT);
+    }
+
+    /**
+     * The cursor as {@link #of(Vector, int, int, int, int, Option, Option)}, on {@code side} of the split view while it
+     * is on no half (ADR 139): the side it was on when it was last drawn, the new file's for a diff shown anew.
+     */
+    public static Option<DiffCursor> of(
+            Vector<RichDiff.Stop> stops,
+            int near,
+            int lines,
+            int height,
+            int row,
+            Option<Anchor> at,
+            Option<Anchor> mark,
+            ReviewThread.Side side) {
         int on = at.flatMap(anchor -> index(stops, anchor, near)
                         .orElse(() -> DiffStops.nearest(
                                         stops.map(stop -> stop.mark().anchor()), anchor)
                                 .flatMap(nearest -> index(stops, nearest, near))))
                 .getOrElse(0);
         return Option.when(!stops.isEmpty(), () -> {
-            DiffCursor cursor = new DiffCursor(stops, lines, Math.max(1, height), on, row, Option.none()).clamped();
+            DiffCursor cursor =
+                    new DiffCursor(stops, lines, Math.max(1, height), on, row, Option.none(), side).clamped();
+            // A range keeps to the side it was started on (ADR 139).
             return cursor.withMark(mark.flatMap(anchor -> index(stops, anchor, cursor.stop()))
-                            .filter(cursor::sameHunk))
+                            .filter(index -> cursor.sameHunk(index) && cursor.keepsSide(index)))
                     .shown();
         });
     }
@@ -137,14 +165,15 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
 
     /**
      * {@code [} or {@code ]} in the split view (ADR 139): the cursor to the line on {@code side} of its row, or the
-     * closest that has one there; while a range is open, of its hunk. None off a line, and in the unified view.
+     * closest that has one there; where it is while a range is open, which keeps to its side. None off a line, and in
+     * the unified view.
      */
     public Option<DiffCursor> toSide(ReviewThread.Side side) {
         RichDiff.Mark on = stops.get(stop).mark();
         if (on.side().isEmpty() || !(on.anchor() instanceof Anchor.OnLine)) {
             return Option.none();
         }
-        if (on.side().contains(side)) {
+        if (mark.isDefined() || on.side().contains(side)) {
             return Option.some(this);
         }
         int at = start(stop);
@@ -152,8 +181,7 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
                 .flatMap(away -> List.of(stop - away, stop + away))
                 .filter(index -> index >= 0 && index < stops.size())
                 .filter(index -> stops.get(index).mark().side().contains(side)
-                        && stops.get(index).mark().anchor() instanceof Anchor.OnLine
-                        && (mark.isEmpty() || lineOfHunk(index)))
+                        && stops.get(index).mark().anchor() instanceof Anchor.OnLine)
                 // Outwards from the cursor, so the first found on a row as close is the closest by index too.
                 .take(4)
                 .toList()
@@ -162,23 +190,12 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
     }
 
     /**
-     * The side of the split view the cursor is on: that of its stop, or of the last before it that has one, as it is
-     * on a bar or a marker as wide as the area; the new file before the first.
-     */
-    private ReviewThread.Side side() {
-        return Iterator.rangeBy(stop, -1, -1)
-                .flatMap(index -> stops.get(index).mark().side())
-                .headOption()
-                .getOrElse(ReviewThread.Side.RIGHT);
-    }
-
-    /**
      * Whether the stop at {@code index} is one the cursor stops on as it moves: any in the unified view, and in the
      * split view one as wide as the area, or on the side of the cursor (ADR 139).
      */
     private boolean keepsSide(int index) {
         Option<ReviewThread.Side> its = stops.get(index).mark().side();
-        return its.isEmpty() || its.contains(side());
+        return its.isEmpty() || its.contains(side);
     }
 
     /**
@@ -211,17 +228,31 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
 
     /**
      * Scrolled {@code by} lines, down when positive: the cursor is pulled along to the nearest stop with a line on the
-     * screen when it would leave it. While a range is open, the cursor stays, and the view only scrolls as far as it
-     * still shows it.
+     * screen when it would leave it, in the split view one it keeps to the side of (ADR 139). While a range is open,
+     * the cursor stays, and the view only scrolls as far as it still shows it.
      */
     public DiffCursor scrolled(int by) {
         if (mark.isDefined()) {
             return at(stop, Math.clamp(row + by, start(stop) - height + 1, start(stop)));
         }
         DiffCursor moved = at(stop, row + by);
-        return moved.onScreen(stop)
-                ? moved
-                : moved.at(moved.containing(by > 0 ? moved.row : moved.row + height - 1), moved.row);
+        return moved.onScreen(stop) ? moved : moved.pulled(by > 0);
+    }
+
+    /**
+     * The cursor on the stop with a line on the screen nearest its top when {@code down}, else its bottom, of those
+     * it keeps to the side of; the nearest of any when none is.
+     */
+    private DiffCursor pulled(boolean down) {
+        int top = containing(row);
+        int bottom = containing(Math.min(row + height, lines) - 1);
+        // Both halves of the row at the top, the first of which comes before the stop that row is found by.
+        int first = Iterator.rangeBy(top, -1, -1)
+                .takeWhile(index -> start(index) == start(top))
+                .last();
+        Iterator<Integer> nearest =
+                down ? Iterator.rangeClosed(first, bottom) : Iterator.rangeBy(bottom, first - 1, -1);
+        return at(nearest.find(this::keepsSide).getOrElse(down ? top : bottom), row);
     }
 
     /**
@@ -262,7 +293,7 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
                 .flatMap(index -> divider.map(at ->
                                 half(index, row + line, column < at ? ReviewThread.Side.LEFT : ReviewThread.Side.RIGHT))
                         .getOrElse(Option.some(index)))
-                .filter(index -> mark.isEmpty() || lineOfHunk(index))
+                .filter(index -> mark.isEmpty() || (lineOfHunk(index) && keepsSide(index)))
                 .map(index -> at(index, row));
     }
 
@@ -288,8 +319,17 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
      * the range then reaches to, as with a click. None for a line outside that hunk.
      */
     public Option<DiffCursor> toLine(int line) {
-        int index = containing(line);
-        return Option.when(mark.isEmpty() || lineOfHunk(index), () -> {
+        return toLine(line, Option.none());
+    }
+
+    /**
+     * {@code n} or {@code N} of a search, as {@link #toLine(int)}: in the split view, to the half on {@code onSide}
+     * of the row, that of the match (ADR 139). While a range is open, only a line on its side.
+     */
+    public Option<DiffCursor> toLine(int line, Option<ReviewThread.Side> onSide) {
+        int last = containing(line);
+        int index = onSide.flatMap(its -> half(last, line, its)).getOrElse(last);
+        return Option.when(mark.isEmpty() || (lineOfHunk(index) && keepsSide(index)), () -> {
             DiffCursor moved = at(index, row).shown();
             return line >= moved.row && line < moved.row + height
                     ? moved
@@ -320,7 +360,7 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
     }
 
     private DiffCursor withMark(Option<Integer> mark) {
-        return new DiffCursor(stops, lines, height, stop, row, mark);
+        return new DiffCursor(stops, lines, height, stop, row, mark, side);
     }
 
     /**
@@ -336,14 +376,13 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
 
     /**
      * The indexes of the lines of a range of the split view from the line at {@code from} (ADR 139): those of its
-     * hunk from its first to its last in the order of the diff, of its side only when it starts and ends on one.
+     * hunk on its side from its first to its last, as the cursor keeps to the side the range was started on.
      */
     private Vector<Integer> splitRange(int from) {
         RichDiff.Mark start = stops.get(from).mark();
         RichDiff.Mark end = stops.get(stop).mark();
         int low = Math.min(start.order(), end.order());
         int high = Math.max(start.order(), end.order());
-        boolean oneSide = start.side().equals(end.side());
         // The lines of a hunk lie between the bars and the markers around it.
         int first = Iterator.rangeBy(Math.min(from, stop), -1, -1)
                 .find(this::bounds)
@@ -356,7 +395,7 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
             return lineOfHunk(index)
                     && its.order() >= low
                     && its.order() <= high
-                    && (!oneSide || its.side().equals(start.side()));
+                    && its.side().equals(start.side());
         });
     }
 
@@ -379,17 +418,22 @@ public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int
     }
 
     private DiffCursor at(int stop, int row) {
-        return new DiffCursor(stops, lines, height, stop, row, mark).clamped();
+        return new DiffCursor(stops, lines, height, stop, row, mark, side).clamped();
     }
 
+    /**
+     * The cursor on a stop of the diff, and the view within its lines; on the side of its stop when that is a half.
+     */
     private DiffCursor clamped() {
+        int on = Math.clamp(stop, 0, stops.size() - 1);
         return new DiffCursor(
                 stops,
                 lines,
                 height,
-                Math.clamp(stop, 0, stops.size() - 1),
+                on,
                 Math.clamp(row, 0, Math.max(0, lines - height)),
-                mark);
+                mark,
+                stops.get(on).mark().side().getOrElse(side));
     }
 
     /**

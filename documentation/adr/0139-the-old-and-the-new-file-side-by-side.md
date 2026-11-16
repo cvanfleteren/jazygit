@@ -67,14 +67,21 @@ leaves out (ADR 77), and the arrows only leave the panel (ADR 118).
 - A context line on the left is a stop by its number in the old file: its anchor is on the left side. The unified
   view finds the stop of that line by either anchor, so the cursor keeps its line when the style changes: a removed
   line goes to the left, an added or a context line to the right.
-- `j` and `k` keep to the side of the cursor: on the left, a row that only holds an added line is passed over. From a
-  stop as wide as the area they go on on the side of the last line before it.
+- The cursor keeps to its side, so it does not jump across the screen as it moves. Only `[`, `]`, a click on a half
+  and going to a match of a search take it to the other side. `j` and `k` pass over a row that holds no line on its
+  side, as a row of only an added line on the left. On a stop as wide as the area, a bar or a marker, the cursor
+  stays on the side it was on, and goes on there. A scroll that pulls the cursor along, with the wheel or a page,
+  pulls it to the nearest line on its side. A diff shown anew starts on the new side. The side is kept by the area,
+  not the model, and not with the preferences. Not: taking the side of the last line before a bar, which is the new
+  side whenever that row has a line there, and sent the cursor across the screen.
 - A click on a half puts the cursor on its line; on a blank half it does nothing.
-- A range (`v`, ADR 60) from a line to a line of the same side holds the lines of that side between them only, as
-  the column shows them. One from a line of one side to a line of the other holds every line between them in the
-  order of the diff, as in the unified view. The tint, a copy (`y`, ADR 94) and a thread started on it hold what the
-  range holds. The hunk a range is open in is not shown as git gives it: the split view puts no pair together that a
-  range would have to take apart.
+- A range (`v`, ADR 60) keeps to the side it was started on, and holds the lines of that side between its ends, as
+  the column shows them. While it is open, `[` and `]` do nothing, and a click or a match on the other side is
+  outside it. The tint, a copy (`y`, ADR 94) and a thread started on it hold what the range holds. A range over the
+  old and the new lines of a change is made in the unified view. Not: a range from one side to the other holding
+  every line between its ends in the order of the diff, which the cursor would have to cross the screen for. The
+  hunk a range is open in is not shown as git gives it: the split view puts no pair together that a range would have
+  to take apart.
 
 ### Searching
 

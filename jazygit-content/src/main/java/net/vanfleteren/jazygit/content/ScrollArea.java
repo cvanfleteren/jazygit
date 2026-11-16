@@ -177,6 +177,11 @@ public final class ScrollArea {
         // its diff (ADR 102): the line of the cursor stays where it was on the screen then too.
         Option<Styled> sameChanges = styled.filter(
                 before -> before.theme() == theme && shownAt.content().sameChanges(content));
+        // The side of the split view the cursor keeps to while it is on no half: the new file's in a diff shown
+        // anew, else where it was (ADR 139). Kept by the area, as it is not where the cursor is but where it goes.
+        ReviewThread.Side side = cursor.filter(ignored -> shownAt.content().equals(content))
+                .map(DiffCursor::side)
+                .getOrElse(ReviewThread.Side.RIGHT);
         shownAt = known;
         Body body = shown.body();
         // A version rendered, or the builds, are drawn as wide as the area, which it learns while it draws (ADR 80,
@@ -230,7 +235,8 @@ public final class ScrollArea {
                 state.viewportHeight(),
                 at.row(),
                 at.cursor(),
-                at.mark());
+                at.mark(),
+                side);
         review = shown.body() instanceof Body.Diff(var diff, var look, var remarks) && remarks.isDefined();
         // What the title said of the search lasts until the next key in the area: the area losing the focus, or
         // showing another body, is past that too (ADR 126).
@@ -394,7 +400,7 @@ public final class ScrollArea {
         Option<String> wrapped = Option.when(step.wrapped(), () -> Messages.get("content.search.wrapped"));
         RichTextState state = element.state();
         if (cursor.isDefined()) {
-            Option<DiffCursor> to = cursor.get().toLine(hit.row());
+            Option<DiffCursor> to = cursor.get().toLine(hit.row(), sideOf(hits, hit));
             if (to.isEmpty()) {
                 notice = Option.of(Messages.get("content.search.outsideRange"));
                 return EventResult.HANDLED;
@@ -426,8 +432,7 @@ public final class ScrollArea {
     private int shownColumn(SearchHits hits, SearchHits.Hit hit) {
         return styled.map(shown -> {
                     String text = shown.lines().get(hit.row()).rawContent();
-                    int from = Math.min(
-                            text.length(), shown.lines().source(hit.row()).from() + hit.start());
+                    int from = from(shown, hit);
                     int until = Math.min(text.length(), from + hits.query().length());
                     int start = Span.raw(text.substring(0, from)).width();
                     int end = Span.raw(text.substring(0, until)).width();
@@ -449,6 +454,27 @@ public final class ScrollArea {
                     return Math.clamp(shifted, 0, Math.max(0, columns));
                 })
                 .getOrElse(column);
+    }
+
+    /**
+     * The side of the split view {@code hit} is in (ADR 139); none in a row that is not split.
+     */
+    private Option<ReviewThread.Side> sideOf(SearchHits hits, SearchHits.Hit hit) {
+        return styled.flatMap(shown -> shown.split().halvesOf(hit.row()).map(cut -> {
+            String text = shown.lines().get(hit.row()).rawContent();
+            return Span.raw(text.substring(0, from(shown, hit))).width() < cut.rule()
+                    ? ReviewThread.Side.LEFT
+                    : ReviewThread.Side.RIGHT;
+        }));
+    }
+
+    /**
+     * Where in the text of its line {@code hit} starts.
+     */
+    private static int from(Styled shown, SearchHits.Hit hit) {
+        return Math.min(
+                shown.lines().get(hit.row()).rawContent().length(),
+                shown.lines().source(hit.row()).from() + hit.start());
     }
 
     /**
