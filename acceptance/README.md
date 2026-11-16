@@ -79,9 +79,16 @@ three runs), so you can `cd` into it and look around, or start jazygit on it you
 `.github/workflows/build.yml` runs them on every pull request and before every publish, with Python 3.12 and the
 dependencies from `requirements.txt`. A job builds the jar without tests, and the acceptance tests run on it while
 `./mvnw verify` runs in a job of its own, at the same time. They run on six machines at once, each taking a share
-of the tests with `--shard 1/6` to `--shard 6/6`; a share runs four at a time like the whole. A share is every sixth
-test, so the four scenarios, collected next to each other, get one each. Six rather than more: past six, the
-acceptance tests already finish no later than `verify`, and each machine spends about 25 s setting up.
+of the tests with `--shard 1/6` to `--shard 6/6`; a share runs four at a time like the whole. Six rather than more:
+past six, the acceptance tests already finish no later than `verify`, and each machine spends about 25 s setting up.
+
+The shares take about as long as each other, by the seconds each test took on `main` (`shards.py`): each test, the
+longest first, goes to the share that takes least until then, so the four scenarios get one each. On `main`, each
+machine writes what its tests took with `--save-durations`, and once all passed, a job merges that into the
+durations kept in GitHub's cache, each moved 30 % of the way from what the test took before. Every build reads
+the latest: the job that builds the jar restores them once and hands that file to every machine with
+`--shard-durations`, as machines that split by other durations would run some tests twice and others not at all. A
+test without a duration counts as the average one; without any durations, a share is every sixth test.
 
 ## Writing a test
 

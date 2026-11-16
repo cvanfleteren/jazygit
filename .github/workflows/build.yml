@@ -127,6 +127,29 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      # The seconds each acceptance test took, kept by main's latest build, by which the shards split the tests.
+      # Restored here, once, so that every shard gets the same: main may keep newer ones while the shards run, and
+      # shards that split by other durations would run some tests twice and leave others out. Without any, an empty
+      # file: the shards then split as before durations were kept.
+      - name: Restore the acceptance tests' durations
+        uses: actions/cache/restore@v6
+        with:
+          path: acceptance-durations.json
+          key: acceptance-durations-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: acceptance-durations-
+
+      - name: Keep the acceptance tests' durations
+        run: |
+          [ -f acceptance-durations.json ] || echo '{}' > acceptance-durations.json
+          echo "durations of $(grep -c '": ' acceptance-durations.json || true) tests"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: acceptance-durations
+          path: acceptance-durations.json
+          if-no-files-found: error
+          retention-days: 1
+
   checks:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -201,11 +224,61 @@ jobs:
           name: fat-jar
           path: jar
 
+      - name: Download the acceptance tests' durations
+        uses: actions/download-artifact@v8
+        with:
+          name: acceptance-durations
+          path: durations
+
       - name: Acceptance tests
         run: |
           git --version
           pip install -r acceptance/requirements.txt
-          python -m pytest acceptance -v --jar "$(ls jar/jazygit-*-fat.jar)" --shard ${{ matrix.shard }}/6
+          python -m pytest acceptance -v --jar "$(ls jar/jazygit-*-fat.jar)" --shard ${{ matrix.shard }}/6 \
+            --shard-durations durations/acceptance-durations.json --save-durations measured.json
+
+      # Only main's durations are kept: a pull request's might be those of a change that never lands.
+      - name: Keep the durations measured
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with:
+          name: measured-durations-${{ matrix.shard }}
+          path: measured.json
+          if-no-files-found: error
+          retention-days: 1
+
+  # On main, once every shard passed: the durations just measured join those kept, for the next builds to split the
+  # acceptance tests by. A cache saved on main is one every pull request can restore.
+  durations:
+    needs: acceptance
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download the durations the shards split by
+        uses: actions/download-artifact@v8
+        with:
+          name: acceptance-durations
+          path: durations
+
+      - name: Download the durations the shards measured
+        uses: actions/download-artifact@v8
+        with:
+          pattern: measured-durations-*
+          path: measured
+
+      - name: Merge the durations
+        run: |
+          python3 acceptance/shards.py merge durations/acceptance-durations.json measured/*/measured.json \
+            -o acceptance-durations.json
+
+      - name: Keep the durations
+        uses: actions/cache/save@v6
+        with:
+          path: acceptance-durations.json
+          key: acceptance-durations-${{ github.run_id }}-${{ github.run_attempt }}
 
   # The one check main requires: passes when the jobs above passed, or were skipped as only documentation changed.
   build-ok:
