@@ -85,6 +85,9 @@ class Durations:
         self.path = path
         self.seconds: dict[str, float] = {}
 
+    # The setup of each worker's first test also counts making the class data archive, or waiting for it. Every shard
+    # pays that once per worker, so the shards still take as long as each other; which tests it lands on changes with
+    # the split, and moving only part of the way from the old durations soon evens it out.
     def pytest_runtest_logreport(self, report):
         self.seconds[report.nodeid] = self.seconds.get(report.nodeid, 0.0) + report.duration
 

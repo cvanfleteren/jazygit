@@ -17,8 +17,8 @@ WEIGHT = 0.3
 
 def shares(tests: list[str], durations: dict[str, float], count: int) -> list[list[str]]:
     """The tests split in count shares that take about as long: each test, the longest first, goes to the share that
-    takes least until then. A test without a duration counts as the average one; without any durations, the I-th
-    share takes every count-th test."""
+    takes least until then, of those the one with fewest tests. A test without a duration counts as the average one;
+    without any durations, the I-th share takes every count-th test."""
     if not durations:
         return [tests[index::count] for index in range(count)]
     average = sum(durations.values()) / len(durations)
@@ -26,7 +26,7 @@ def shares(tests: list[str], durations: dict[str, float], count: int) -> list[li
     split: list[list[str]] = [[] for _ in range(count)]
     totals = [0.0] * count
     for test in longest_first:
-        least = totals.index(min(totals))
+        least = min(range(count), key=lambda share: (totals[share], len(split[share])))
         split[least].append(test)
         totals[least] += durations.get(test, average)
     order = {test: position for position, test in enumerate(tests)}

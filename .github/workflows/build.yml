@@ -252,6 +252,9 @@ jobs:
   durations:
     needs: acceptance
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only for the next builds' split, which then takes the durations kept before: failing to keep them must not fail
+    # publish.yml's verify, which calls this workflow on main.
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
