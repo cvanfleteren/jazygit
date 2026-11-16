@@ -73,6 +73,11 @@ directories collapsed, about 90 ms more by ADR 108's measure.
 - Every move of the highlight reads the files of the one highlighted. Not debounced: a read not started yet is
   cancelled by the next one, which takes its slot (ADR 101), and what is read for one no longer highlighted is
   dropped. One is added if holding `j` turns out to lag.
+- What is shown is debounced instead: the files listed before stay listed while the next are read, for up to 200 ms,
+  as the content panel keeps the diff shown before (`Preview`). Most are read by then, a local branch in a few
+  milliseconds, so the pane does not flash `Loading…` at each move. Past that, the pane says they are read: a wake at
+  that moment draws it (ADR 124). Not: keeping them until the next are read, however long, which would show the files
+  of one while another is highlighted, with nothing to say so.
 - The filter (ADR 105) stays from one to the next. All files (`a`, ADR 128) goes back to the files changed: it would
   be an `ls-tree` at each move. The directories start collapsed anew for each.
 - The files are read whether the pane is shown or not.
