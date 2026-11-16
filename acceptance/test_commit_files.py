@@ -16,7 +16,8 @@ def test_the_files_of_a_commit_show_in_the_files_pane_each_with_its_own_diff(rep
     ui.app.wait_in("Files", "two.txt")
     assert f"Files of {short}" in ui.app.text()
     assert "work.txt" not in ui.app.pane_text("Files")
-    assert ui.app.focused_pane() == "Files"
+    # The files may be listed already, following the highlight (ADR 141): F moves the focus a frame later.
+    ui.app.eventually(lambda: ui.app.focused_pane() == "Files", "the focus in the files")
     ui.app.move_cursor("Files", "two.txt")
     ui.app.wait_for(f"{short} · src/two.txt")
     assert "+other" in ui.app.text()
@@ -136,7 +137,8 @@ def test_f_on_a_branch_without_a_pull_request_shows_its_files_against_its_base(r
     ui.app.wait_in("Files", "two.txt")
     assert "Files of feature · vs main" in ui.app.text()
     assert "one.txt" not in ui.app.pane_text("Files")
-    assert ui.app.focused_pane() == "Files"
+    # The files may be listed already, following the highlight (ADR 141): F moves the focus a frame later.
+    ui.app.eventually(lambda: ui.app.focused_pane() == "Files", "the focus in the files")
 
     ui.app.press("escape")
 
