@@ -19,7 +19,10 @@ import net.vanfleteren.jazygit.chrome.layout.LayoutMsg;
 import net.vanfleteren.jazygit.chrome.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.github.browse.BrowseMsg;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
@@ -139,6 +142,19 @@ class KeymapTest {
         assertEquals(
                 Option.of(new CheckoutMsg.Requested(new BranchName("x"))),
                 keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar(' '), Option.of(new BranchName("x"))));
+    }
+
+    @Test
+    void spaceChecksOutTheCommitInTheCommitsPaneAndInTheCommitsOfABranch() {
+        Sha sha = new Sha("bbbb");
+        Commit commit = Fixtures.commit(sha, "a", "a@a", java.time.Instant.EPOCH, "m", "");
+
+        for (Keymap.Scope<Commit> scope : List.of(Scopes.COMMITS, Scopes.BRANCH_COMMITS)) {
+            assertEquals(
+                    Option.of(new CheckoutMsg.CommitRequested(sha)),
+                    keymap.handle(scope, KeyEvent.ofChar(' '), Option.of(commit)),
+                    scope.id());
+        }
     }
 
     @Test

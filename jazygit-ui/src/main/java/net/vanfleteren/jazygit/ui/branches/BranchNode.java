@@ -11,10 +11,11 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
  * A row of the local branches (ADR 72): a branch, the header of a stack of pull requests on GitHub that has a local
- * branch, or a pull request of such a stack whose branch is not checked out here.
+ * branch, a pull request of such a stack whose branch is not checked out here, or a detached HEAD, listed first.
  */
 sealed interface BranchNode {
 
@@ -122,6 +123,18 @@ sealed interface BranchNode {
         @Override
         public String key() {
             return "stack:" + stack.number();
+        }
+    }
+
+    /**
+     * HEAD, detached at {@code at}, listed first, as lazygit does: no branch is checked out. It has no log of its own,
+     * as the commits pane shows it, and the keys of a branch do nothing on it.
+     */
+    record Detached(Sha at) implements BranchNode {
+
+        @Override
+        public String key() {
+            return "detached";
         }
     }
 

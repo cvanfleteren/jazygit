@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.app;
 import static dev.tamboui.toolkit.Toolkit.column;
 import static dev.tamboui.toolkit.Toolkit.row;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -427,7 +428,10 @@ class JazygitAppPilotTest {
             pilot.pause();
             pilot.press(' ');
             pilot.pause();
-            assertEquals(1, fixture.dispatched().size(), "Space outside the branches pane should not check out");
+            // In the commits pane, Space checks out the highlighted commit, detached (ADR 137), not a branch.
+            assertEquals(2, fixture.dispatched().size());
+            assertInstanceOf(
+                    CheckoutMsg.CommitRequested.class, fixture.dispatched().getLast());
 
             pilot.quit();
         }

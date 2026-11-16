@@ -42,6 +42,7 @@ import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.NoLog;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
 import net.vanfleteren.jazygit.state.view.WorkflowRuns;
@@ -530,10 +531,14 @@ public final class ContentView {
                 })
                 .getOrElse(() -> model.repoView()
                         .branches()
-                        .unfetched()
-                        .map(pullRequest -> dim(
+                        .noLog()
+                        .map(noLog -> dim(
                                 Messages.get("content.panel.log.title"),
-                                Messages.get("content.unfetched", String.valueOf(pullRequest.value()))))
+                                switch (noLog) {
+                                    case NoLog.Unfetched(var pullRequest) ->
+                                        Messages.get("content.unfetched", String.valueOf(pullRequest.value()));
+                                    case NoLog.Detached(var at) -> Messages.get("content.detached", at.shortSha());
+                                }))
                         .getOrElse(() -> loading(Messages.get("content.panel.log.title"))));
     }
 

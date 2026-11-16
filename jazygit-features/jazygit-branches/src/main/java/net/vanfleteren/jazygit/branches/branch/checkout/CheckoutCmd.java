@@ -6,12 +6,8 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.branches.branch.BranchCmd;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
@@ -31,7 +27,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
      * Checks out {@code branch}. When uncommitted changes are in the way, the user is offered to take them
      * along instead of being told it failed.
      */
-    record Checkout(BranchName branch) implements CheckoutCmd {
+    record Checkout(BranchName branch) implements CheckoutCmd, StashableCheckout {
 
         @Override
         public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
@@ -39,15 +35,13 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
         }
 
         @Override
-        public Msg run(Env env) {
-            return env.git()
-                    .checkout()
-                    .branch(branch)
-                    .fold(
-                            failure -> failure.error() instanceof GitError.LocalChanges
-                                    ? new CheckoutMsg.NeedsStash(this, failure.commands())
-                                    : failed(Failure.of(failure)),
-                            this::succeeded);
+        public String target() {
+            return branch.value();
+        }
+
+        @Override
+        public CheckoutWithStash withStash() {
+            return new CheckoutWithStash(branch);
         }
     }
 

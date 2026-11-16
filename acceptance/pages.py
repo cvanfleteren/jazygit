@@ -333,8 +333,15 @@ class BranchesPane:
             return False
         rows = self.app.pane_text("Branches").splitlines()
         current = self.repo.current_branch()
+        # A detached HEAD is listed first, as lazygit does; not while a rebase, which detaches it, goes on.
+        detached = not current and self.repo.has_head() and self.repo.in_progress() != "rebase"
         return (all(self._shows_sync(rows, branch) for branch in self.repo.branches())
-                and (not current or not self.repo.has_head() or current in self.app.bold_in("Branches")))
+                and (not current or not self.repo.has_head() or current in self.app.bold_in("Branches"))
+                and (not detached or bool(rows) and rows[0].strip() == self.detached_row()))
+
+    def detached_row(self) -> str:
+        """The row of the local branches that shows HEAD detached at the commit it is at."""
+        return f"(HEAD detached at {self.repo.short('HEAD')})"
 
     def _shows_sync(self, rows: list, branch: str) -> bool:
         """Whether a row shows branch, with the commits it has to push and to pull, and whether its upstream is
@@ -415,6 +422,27 @@ class BranchesPane:
     def checkout(self, branch: str):
         self.select(branch)
         self.ui.changing_repo(f"{branch} to be checked out", lambda: self.app.press("space"))
+
+    def checkout_commit(self, branch: str, subject: str):
+        """Lists the commits of the local branch in place of the branches (ADR 23), and checks out the one with this
+        subject, detached (ADR 137)."""
+        self.select(branch)
+        self.app.press("enter")
+        sha = self.repo.find(subject, branch)
+        short = self.repo.short(sha)
+        # The list is titled with the name of the branch, in place of the tabs.
+        self.app.move_cursor(branch, short)
+        self.app.wait_for(f"Commit: {short}")
+        self.app.press("space")
+        # The commits of the branch stay open, in place of the branches, which caught_up waits for: so it waits for
+        # git to have HEAD detached at the commit instead.
+        self.app.eventually(
+            lambda: not self.ui._busy() and self.repo.current_branch() == "" and self.repo("rev-parse", "HEAD") == sha,
+            f"{short} to be checked out")
+
+    def close_commits(self):
+        """Goes back from the commits of a branch to the branches."""
+        self.app.press("escape")
 
     def try_to_checkout(self, branch: str):
         """Asks to check out the branch, for when the app is to ask first, or git to refuse it: it does not wait

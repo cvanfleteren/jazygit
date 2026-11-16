@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.CliGit;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.process.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.process.GitError.LocalChanges;
 import net.vanfleteren.jazygit.git.process.GitError.StashNotRestored;
@@ -131,6 +132,50 @@ class CliCheckoutTest {
         assertInstanceOf(StashNotRestored.class, failure.error());
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals(1, git("stash", "list").lines().count());
+    }
+
+    @Test
+    void checkingOutACommitDetachesHeadAtIt() throws Exception {
+        Sha first = new Sha(git("rev-parse", "HEAD").strip());
+        Files.writeString(repo.resolve("a.txt"), "two\n");
+        git("commit", "-qam", "two");
+
+        assertEquals(
+                List.of("git checkout --quiet --detach " + first.value() + " --"),
+                checkout().commit(first).get().map(ExecutedCommand::line));
+
+        assertEquals(first.value(), git("rev-parse", "HEAD").strip());
+        assertEquals("", git("branch", "--show-current").strip());
+    }
+
+    @Test
+    void commitCheckoutRefusedForLocalChangesIsReportedAsSuch() throws Exception {
+        Sha first = new Sha(git("rev-parse", "HEAD").strip());
+        Files.writeString(repo.resolve("a.txt"), "two\n");
+        git("commit", "-qam", "two");
+        Files.writeString(repo.resolve("a.txt"), "changed\n");
+
+        assertInstanceOf(LocalChanges.class, checkout().commit(first).getLeft().error());
+    }
+
+    @Test
+    void commitCheckoutWithStashBringsTheChangesAcrossAndLeavesNoStash() throws Exception {
+        Sha first = new Sha(git("rev-parse", "HEAD").strip());
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-qm", "two");
+        Files.writeString(repo.resolve("a.txt"), "changed\n");
+
+        assertEquals(
+                List.of(
+                        "git stash push --quiet",
+                        "git checkout --quiet --detach " + first.value() + " --",
+                        "git stash pop --index --quiet"),
+                checkout().commitWithStash(first).get().map(ExecutedCommand::line));
+
+        assertEquals(first.value(), git("rev-parse", "HEAD").strip());
+        assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
+        assertEquals("", git("stash", "list"));
     }
 
     // Through the repository, as the app reaches it.

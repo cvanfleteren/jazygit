@@ -26,7 +26,7 @@ public final class CheckoutDialogs {
             "stash-checkout",
             StashCheckoutPopup.class,
             popup -> Messages.get(
-                    "branches.dialog.stashCheckout.title", popup.branch().value()),
+                    "branches.dialog.stashCheckout.title", popup.checkout().target()),
             popup -> Messages.get("branches.dialog.stashCheckout.message"));
 
     /**

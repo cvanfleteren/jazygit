@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.branches.branch.BranchCmd;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -20,6 +21,11 @@ public sealed interface CheckoutMsg extends Msg {
      * The user asked to check out a branch.
      */
     record Requested(BranchName branch) implements CheckoutMsg {}
+
+    /**
+     * The user asked to check out the commit {@code sha}, with HEAD detached at it (ADR 137).
+     */
+    record CommitRequested(Sha sha) implements CheckoutMsg {}
 
     /**
      * The user asked to check out the remote branch {@code branch}: the local branch that follows it, or a new
@@ -42,7 +48,7 @@ public sealed interface CheckoutMsg extends Msg {
      * Git refused the checkout {@code cmd}, which ran {@code commands}, because uncommitted changes would be
      * overwritten.
      */
-    record NeedsStash(CheckoutCmd.Checkout cmd, List<ExecutedCommand> commands) implements CheckoutMsg {}
+    record NeedsStash(StashableCheckout cmd, List<ExecutedCommand> commands) implements CheckoutMsg {}
 
     /**
      * The user agreed to switch to the worktree that has the branch to check out checked out.

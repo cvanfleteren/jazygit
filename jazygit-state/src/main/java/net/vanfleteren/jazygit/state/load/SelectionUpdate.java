@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.state.load;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.FileContent;
@@ -18,10 +17,11 @@ import net.vanfleteren.jazygit.state.load.SelectionMsg.CommitFilesSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.CommitSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.DivergenceCommitSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.FilesSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.NoLogSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.StashSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedDirectorySelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedFileSelected;
-import net.vanfleteren.jazygit.state.load.SelectionMsg.UnfetchedSelected;
+import net.vanfleteren.jazygit.state.view.NoLog;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
 
@@ -35,7 +35,7 @@ public final class SelectionUpdate {
     public static Next update(Model model, SelectionMsg msg) {
         return switch (msg) {
             case BranchSelected(var branch) -> branchSelected(model, branch);
-            case UnfetchedSelected(PrNumber pullRequest) -> unfetchedSelected(model, pullRequest);
+            case NoLogSelected(NoLog noLog) -> noLogSelected(model, noLog);
             case CommitSelected(var sha) -> commitSelected(model, sha);
             case DivergenceCommitSelected(var sha) -> divergenceCommitSelected(model, sha);
             case BranchCommitSelected(var sha) -> branchCommitSelected(model, sha);
@@ -56,17 +56,17 @@ public final class SelectionUpdate {
                 branch,
                 model.repoView().preview().branchLog(),
                 log -> model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withBranchLog(log))
-                        .mapBranches(branches -> branches.withUnfetched(Option.none()))),
+                        .mapBranches(branches -> branches.withNoLog(Option.none()))),
                 log -> new LoadBranchLog(log, AheadUpdate.of(model, log)));
     }
 
     /**
      * No log is shown, nor read again as branches move.
      */
-    private static Next unfetchedSelected(Model model, PrNumber pullRequest) {
+    private static Next noLogSelected(Model model, NoLog noLog) {
         return Next.of(
                 model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withBranchLog(Option.none()))
-                        .mapBranches(branches -> branches.withUnfetched(Option.of(pullRequest)))));
+                        .mapBranches(branches -> branches.withNoLog(Option.of(noLog)))));
     }
 
     /**

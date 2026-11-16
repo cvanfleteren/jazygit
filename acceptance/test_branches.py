@@ -32,6 +32,27 @@ def test_checkout_a_branch(repo, jazygit):
     assert not (repo.path / "two.txt").exists()
 
 
+def test_checkout_a_commit_of_another_branch_detached(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("checkout", "-q", "-b", "feature")
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo.commit("Add three", **{"three.txt": "three\n"})
+    repo("checkout", "-q", "main")
+    ui = jazygit()
+
+    ui.branches.checkout_commit("feature", "Add two")
+
+    assert repo.current_branch() == ""
+    assert repo("rev-parse", "HEAD") == repo.find("Add two", "feature")
+    assert not (repo.path / "three.txt").exists()
+    # The commits of the branch stay open, for the next one to be checked out (ADR 137).
+    ui.app.wait_in("feature", repo.short("feature"))
+    ui.branches.close_commits()
+    ui.caught_up()
+    # Back on the branches, the detached HEAD is listed first, highlighted.
+    assert ui.app.pane_text("Branches").splitlines()[0].strip() == ui.branches.detached_row()
+
+
 def test_rename_a_branch(repo, jazygit):
     three_commits(repo)
     repo("branch", "feature")
