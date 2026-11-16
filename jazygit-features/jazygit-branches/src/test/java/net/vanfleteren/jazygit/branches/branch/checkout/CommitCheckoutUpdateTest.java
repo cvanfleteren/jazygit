@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.branches.branch.checkout.CommitCheckoutCmd.CheckoutCommit;
 import net.vanfleteren.jazygit.branches.branch.checkout.CommitCheckoutCmd.CheckoutCommitWithStash;
+import net.vanfleteren.jazygit.branches.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.branches.worktree.add.LocationAsked;
 import net.vanfleteren.jazygit.branches.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.branches.worktree.add.WorktreeSource;
@@ -18,6 +19,7 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
+import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -98,6 +100,19 @@ class CommitCheckoutUpdateTest {
                 LocationAsked.located(Update.update(asked.model(), new CheckoutMsg.NewWorktreeChosen()))
                         .model()
                         .popup());
+
+        // Here, it is checked out as it is without asking.
+        assertEquals(
+                List.of(new CheckoutCommit(OLDER)),
+                Update.update(asked.model(), new CheckoutMsg.HereChosen()).cmds());
+
+        // In the main worktree, which lands as after checking out a branch there, and checks the commit out once shown.
+        assertEquals(
+                List.of(new RecentReposCmd.SwitchTo(
+                        "/repos/app",
+                        new Landing(BranchesTab.LOCAL, asked.model().repoView().focusedPane())
+                                .followedBy(new CheckoutMsg.CommitRequested(OLDER)))),
+                Update.update(asked.model(), new CheckoutMsg.MainChosen()).cmds());
     }
 
     @Test

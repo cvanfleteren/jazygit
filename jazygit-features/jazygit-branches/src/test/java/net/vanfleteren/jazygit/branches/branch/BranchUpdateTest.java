@@ -130,7 +130,7 @@ class BranchUpdateTest {
                         net.vanfleteren.jazygit.git.StubGit.executed("git checkout --quiet feature --")));
 
         assertEquals(
-                Option.of(new StashCheckoutPopup(new BranchName("feature"))),
+                Option.of(new StashCheckoutPopup(new CheckoutCmd.Checkout(new BranchName("feature")))),
                 next.model().popup(StashCheckoutPopup.class));
         // The checkout that ran is logged like any other.
         assertEquals(

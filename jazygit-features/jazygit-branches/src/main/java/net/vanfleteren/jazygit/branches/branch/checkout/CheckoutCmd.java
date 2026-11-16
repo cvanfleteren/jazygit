@@ -8,8 +8,6 @@ import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
@@ -44,11 +42,6 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
         @Override
         public CheckoutWithStash withStash() {
             return new CheckoutWithStash(branch);
-        }
-
-        @Override
-        public Msg run(Env env) {
-            return StashableCheckout.super.run(env);
         }
     }
 
