@@ -34,9 +34,6 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
  * @param readAt     for each load that {@link CheckMetadata} guards, what the files it reads looked like when it
  *                   was last started, and for the highlighted diff, when it was last read (ADR 58); it is not
  *                   started again until they change. A load that fails is forgotten, so the next tick tries again
- * @param ghExecutableEntered the gh executable the user entered last, to be checked before it is used: none for the
- *                            one on the PATH. Checks can finish in another order than they were asked for; only the
- *                            check of this one decides
  * @param ticks      how many ticks there were, which tells when a read that failed is tried again
  * @param retries    the reads that failed the last time they ran, with how often they failed in a row and the tick
  *                   they last failed on: a tick only tries one again once it waited longer the more it failed
@@ -64,7 +61,6 @@ public record Jobs(
         boolean fetchChanged,
         Freshness lastFetch,
         Map<Load, MetadataStamp> readAt,
-        Option<String> ghExecutableEntered,
         long ticks,
         Map<Load, Retry> retries,
         Map<Long, Running> running,
@@ -82,7 +78,6 @@ public record Jobs(
             false,
             Freshness.NEVER,
             HashMap.empty(),
-            Option.none(),
             0,
             HashMap.empty(),
             HashMap.empty(),

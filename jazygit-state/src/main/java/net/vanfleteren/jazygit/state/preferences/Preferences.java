@@ -37,6 +37,9 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param file          what the settings file had when it was last read or written, to tell what changed in it since
  *                      (ADR 111)
  * @param reported      what was wrong in the settings file as last reported, at the start or since (ADR 111)
+ * @param ghExecutableEntered the gh executable the user entered last, to be checked before it is used: none for the
+ *                            one on the PATH. Checks can finish in another order than they were asked for; only the
+ *                            check of this one decides
  */
 @With
 public record Preferences(
@@ -51,7 +54,8 @@ public record Preferences(
         Map<Screen, Integer> maximizedPanes,
         Set<Screen> collapsedColumns,
         SettingsStore.Loaded file,
-        Option<SettingsProblem> reported) {
+        Option<SettingsProblem> reported,
+        Option<String> ghExecutableEntered) {
 
     public static final Preferences DEFAULT = new Preferences(
             Settings.DEFAULT,
@@ -65,6 +69,7 @@ public record Preferences(
             HashMap.empty(),
             HashSet.empty(),
             SettingsStore.Loaded.DEFAULT,
+            Option.none(),
             Option.none());
 
     /**

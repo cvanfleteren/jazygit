@@ -251,7 +251,9 @@ class SettingsPanelUpdateTest {
         Settings chosen = TestModels.PLAIN.settings().withGhExecutable(Option.of("/opt/gh/bin/gh"));
 
         Next next = Update.update(
-                TestModels.loaded().mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/opt/gh/bin/gh"))),
+                TestModels.loaded()
+                        .mapPreferences(
+                                preferences -> preferences.withGhExecutableEntered(Option.of("/opt/gh/bin/gh"))),
                 new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
 
         assertEquals(chosen, next.model().preferences().settings());
@@ -267,7 +269,7 @@ class SettingsPanelUpdateTest {
         Model there = TestModels.loaded()
                 .mapRepoView(view -> view.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES))
                         .withFocusedPane(Option.of(new PaneId("commits"))))
-                .mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/opt/gh/bin/gh")));
+                .mapPreferences(preferences -> preferences.withGhExecutableEntered(Option.of("/opt/gh/bin/gh")));
 
         Next next = Update.update(
                 there, new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
@@ -283,7 +285,8 @@ class SettingsPanelUpdateTest {
         Failure failure = new Failure.GitHub(new GhError.GhUnavailable(new java.io.IOException("no such file")));
 
         Next next = Update.update(
-                TestModels.loaded().mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/nowhere/gh"))),
+                TestModels.loaded()
+                        .mapPreferences(preferences -> preferences.withGhExecutableEntered(Option.of("/nowhere/gh"))),
                 new SettingsPanelMsg.GhExecutableChecked(Option.of("/nowhere/gh"), Either.left(failure)));
 
         assertEquals(TestModels.PLAIN.settings(), next.model().preferences().settings());

@@ -146,7 +146,7 @@ public final class SettingsPanelUpdate {
                 .map(popup -> Option.of(popup.executable().strip()).filter(path -> !path.isEmpty()))
                 .map(executable -> Next.of(
                         model.withoutPopup(GhExecutablePopup.class)
-                                .mapJobs(jobs -> jobs.withGhExecutableEntered(executable)),
+                                .mapPreferences(preferences -> preferences.withGhExecutableEntered(executable)),
                         new SettingsPanelCmd.CheckGhExecutable(executable)))
                 .getOrElse(() -> Next.of(model));
     }
@@ -156,7 +156,7 @@ public final class SettingsPanelUpdate {
      * the check of that one decides, whenever it finishes.
      */
     private static Next ghExecutableChecked(Model model, Option<String> executable, Either<Failure, String> version) {
-        if (!model.jobs().ghExecutableEntered().equals(executable)) {
+        if (!model.preferences().ghExecutableEntered().equals(executable)) {
             return Next.of(model);
         }
         return version.fold(
