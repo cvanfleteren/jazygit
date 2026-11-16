@@ -41,7 +41,8 @@ public final class LeftPanes {
      */
     public static List<Integer> shown(Model model, Screen screen, int column) {
         return maximized(model, screen, column)
-                .getOrElse(() -> sized(model, screen, model.preferences().leftHeights(screen), column));
+                .getOrElse(
+                        () -> sized(model, screen, model.get(Preferences.SLICE).leftHeights(screen), column));
     }
 
     /**
@@ -76,9 +77,9 @@ public final class LeftPanes {
      * none is, or when the column is too short to show it so.
      */
     public static Option<List<Integer>> maximized(Model model, Screen screen, int column) {
-        int panes = model.preferences().leftHeights(screen).size() + 1;
+        int panes = model.get(Preferences.SLICE).leftHeights(screen).size() + 1;
         int rest = column - STATUS_ROWS - COLLAPSED_ROWS * (panes - 1);
-        return model.preferences()
+        return model.get(Preferences.SLICE)
                 .maximizedPane(screen)
                 .filter(pane -> pane < panes && rest >= COLLAPSED_ROWS)
                 .map(pane -> List.fill(panes, COLLAPSED_ROWS).update(pane, rest));
@@ -91,13 +92,15 @@ public final class LeftPanes {
      * one is maximized, which ends it.
      */
     public static List<Integer> shownHeights(Model model, Screen screen) {
-        return model.preferences()
+        return model.get(Preferences.SLICE)
                 .columnRows()
                 .flatMap(column -> maximized(model, screen, column)
                         .map(rows -> raisedToLeast(
                                 heights(rows, column),
-                                model.preferences().maximizedPane(screen).get())))
-                .getOrElse(() -> model.preferences().leftHeights(screen));
+                                model.get(Preferences.SLICE)
+                                        .maximizedPane(screen)
+                                        .get())))
+                .getOrElse(() -> model.get(Preferences.SLICE).leftHeights(screen));
     }
 
     /**

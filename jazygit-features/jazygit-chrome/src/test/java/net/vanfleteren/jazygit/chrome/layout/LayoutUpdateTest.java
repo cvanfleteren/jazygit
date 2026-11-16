@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.preferences.Screen;
@@ -35,9 +36,9 @@ class LayoutUpdateTest {
         Next next = Update.update(model, new LayoutMsg.Stepped(5));
 
         Settings wider = TestModels.PLAIN.settings().withRepositoryWidth(35);
-        assertEquals(wider, next.model().preferences().settings());
-        assertEquals(35, next.model().preferences().leftWidth(Screen.REPOSITORY));
-        assertEquals(30, next.model().preferences().leftWidth(Screen.PULL_REQUESTS));
+        assertEquals(wider, next.model().get(Preferences.SLICE).settings());
+        assertEquals(35, next.model().get(Preferences.SLICE).leftWidth(Screen.REPOSITORY));
+        assertEquals(30, next.model().get(Preferences.SLICE).leftWidth(Screen.PULL_REQUESTS));
         assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), wider)), next.cmds());
     }
 
@@ -47,13 +48,15 @@ class LayoutUpdateTest {
 
         assertEquals(
                 TestModels.PLAIN.settings().withPullRequestsWidth(25),
-                next.model().preferences().settings());
+                next.model().get(Preferences.SLICE).settings());
     }
 
     @Test
     void theWidthStaysWithinItsRangeAndAStepPastTheWidestKeepsNothing() {
-        Model widest = model.mapPreferences(preferences ->
-                preferences.withSettings(TestModels.PLAIN.settings().withRepositoryWidth(Settings.MAX_WIDTH)));
+        Model widest = model.map(
+                Preferences.SLICE,
+                preferences ->
+                        preferences.withSettings(TestModels.PLAIN.settings().withRepositoryWidth(Settings.MAX_WIDTH)));
 
         Next next = Update.update(widest, new LayoutMsg.Stepped(5));
 
@@ -63,27 +66,34 @@ class LayoutUpdateTest {
 
     @Test
     void aStepNarrowerAtTheNarrowestCollapsesTheColumnForTheSession() {
-        Model narrowest = model.mapPreferences(preferences ->
-                preferences.withSettings(TestModels.PLAIN.settings().withRepositoryWidth(Settings.MIN_WIDTH)));
+        Model narrowest = model.map(
+                Preferences.SLICE,
+                preferences ->
+                        preferences.withSettings(TestModels.PLAIN.settings().withRepositoryWidth(Settings.MIN_WIDTH)));
 
         Next next = Update.update(narrowest, new LayoutMsg.Stepped(-5));
 
-        assertTrue(next.model().preferences().leftCollapsed(Screen.REPOSITORY));
-        assertFalse(next.model().preferences().leftCollapsed(Screen.PULL_REQUESTS));
+        assertTrue(next.model().get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertFalse(next.model().get(Preferences.SLICE).leftCollapsed(Screen.PULL_REQUESTS));
         assertEquals(
-                narrowest.preferences().settings(), next.model().preferences().settings());
+                narrowest.get(Preferences.SLICE).settings(),
+                next.model().get(Preferences.SLICE).settings());
         assertEquals(List.of(), next.cmds());
     }
 
     @Test
     void aStepNarrowerOnTheWayClampsToTheNarrowestWithoutCollapsing() {
-        Model narrow = model.mapPreferences(preferences ->
-                preferences.withSettings(TestModels.PLAIN.settings().withRepositoryWidth(Settings.MIN_WIDTH + 2)));
+        Model narrow = model.map(
+                Preferences.SLICE,
+                preferences -> preferences.withSettings(
+                        TestModels.PLAIN.settings().withRepositoryWidth(Settings.MIN_WIDTH + 2)));
 
         Next next = Update.update(narrow, new LayoutMsg.Stepped(-5));
 
-        assertFalse(next.model().preferences().leftCollapsed(Screen.REPOSITORY));
-        assertEquals(Settings.MIN_WIDTH, next.model().preferences().settings().repositoryWidth());
+        assertFalse(next.model().get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertEquals(
+                Settings.MIN_WIDTH,
+                next.model().get(Preferences.SLICE).settings().repositoryWidth());
     }
 
     @Test
@@ -100,15 +110,17 @@ class LayoutUpdateTest {
     void aDraggedWidthShowsAndIsOnlyKeptWhenLetGo() {
         Next dragged = Update.update(model, new LayoutMsg.Resized(Screen.REPOSITORY, 90));
 
-        assertEquals(Settings.MAX_WIDTH, dragged.model().preferences().leftWidth(Screen.REPOSITORY));
-        assertEquals(TestModels.PLAIN.settings(), dragged.model().preferences().settings());
+        assertEquals(Settings.MAX_WIDTH, dragged.model().get(Preferences.SLICE).leftWidth(Screen.REPOSITORY));
+        assertEquals(
+                TestModels.PLAIN.settings(),
+                dragged.model().get(Preferences.SLICE).settings());
         assertEquals(List.of(), dragged.cmds());
 
         Next settled = Update.update(dragged.model(), new LayoutMsg.Settled(Screen.REPOSITORY));
 
         Settings kept = TestModels.PLAIN.settings().withRepositoryWidth(Settings.MAX_WIDTH);
-        assertEquals(kept, settled.model().preferences().settings());
-        assertEquals(Option.none(), settled.model().preferences().dragged());
+        assertEquals(kept, settled.model().get(Preferences.SLICE).settings());
+        assertEquals(Option.none(), settled.model().get(Preferences.SLICE).dragged());
         assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), kept)), settled.cmds());
     }
 
@@ -130,8 +142,8 @@ class LayoutUpdateTest {
 
         Next stepped = Update.update(dragged, new LayoutMsg.Stepped(5));
 
-        assertEquals(55, stepped.model().preferences().leftWidth(Screen.REPOSITORY));
-        assertEquals(Option.none(), stepped.model().preferences().dragged());
+        assertEquals(55, stepped.model().get(Preferences.SLICE).leftWidth(Screen.REPOSITORY));
+        assertEquals(Option.none(), stepped.model().get(Preferences.SLICE).dragged());
         Next released = Update.update(stepped.model(), new LayoutMsg.Settled(Screen.REPOSITORY));
         assertEquals(Next.of(stepped.model()), released);
     }
@@ -140,15 +152,17 @@ class LayoutUpdateTest {
     void aDraggedPaneShowsWithThePaneUnderItAndIsOnlyKeptWhenLetGo() {
         Next dragged = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 35));
 
-        assertEquals(List.of(35, 10, 30), dragged.model().preferences().leftHeights(Screen.REPOSITORY));
-        assertEquals(TestModels.PLAIN.settings(), dragged.model().preferences().settings());
+        assertEquals(List.of(35, 10, 30), dragged.model().get(Preferences.SLICE).leftHeights(Screen.REPOSITORY));
+        assertEquals(
+                TestModels.PLAIN.settings(),
+                dragged.model().get(Preferences.SLICE).settings());
         assertEquals(List.of(), dragged.cmds());
 
         Next settled = Update.update(dragged.model(), new LayoutMsg.PaneSettled(Screen.REPOSITORY));
 
         Settings kept = TestModels.PLAIN.settings().withRepositoryHeights(List.of(35, 10, 30));
-        assertEquals(kept, settled.model().preferences().settings());
-        assertEquals(Option.none(), settled.model().preferences().draggedHeights());
+        assertEquals(kept, settled.model().get(Preferences.SLICE).settings());
+        assertEquals(Option.none(), settled.model().get(Preferences.SLICE).draggedHeights());
         assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), kept)), settled.cmds());
     }
 
@@ -160,9 +174,9 @@ class LayoutUpdateTest {
         // The stash under the commits has no height of its own: it takes what the others leave.
         Next commits = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 2, 90));
 
-        assertEquals(List.of(25, 40, 10), taller.model().preferences().leftHeights(Screen.REPOSITORY));
-        assertEquals(List.of(25, 10, 40), shorter.model().preferences().leftHeights(Screen.REPOSITORY));
-        assertEquals(List.of(25, 20, 45), commits.model().preferences().leftHeights(Screen.REPOSITORY));
+        assertEquals(List.of(25, 40, 10), taller.model().get(Preferences.SLICE).leftHeights(Screen.REPOSITORY));
+        assertEquals(List.of(25, 10, 40), shorter.model().get(Preferences.SLICE).leftHeights(Screen.REPOSITORY));
+        assertEquals(List.of(25, 20, 45), commits.model().get(Preferences.SLICE).leftHeights(Screen.REPOSITORY));
     }
 
     @Test
@@ -170,8 +184,10 @@ class LayoutUpdateTest {
         Model dragged = Update.update(model, new LayoutMsg.PaneResized(Screen.PULL_REQUESTS, 1, 82))
                 .model();
 
-        assertEquals(List.of(32, 50), dragged.preferences().leftHeights(Screen.PULL_REQUESTS));
-        assertEquals(Settings.DEFAULT_REPOSITORY_HEIGHTS, dragged.preferences().leftHeights(Screen.REPOSITORY));
+        assertEquals(List.of(32, 50), dragged.get(Preferences.SLICE).leftHeights(Screen.PULL_REQUESTS));
+        assertEquals(
+                Settings.DEFAULT_REPOSITORY_HEIGHTS,
+                dragged.get(Preferences.SLICE).leftHeights(Screen.REPOSITORY));
         assertEquals(Next.of(dragged), Update.update(dragged, new LayoutMsg.PaneSettled(Screen.REPOSITORY)));
     }
 
@@ -210,7 +226,7 @@ class LayoutUpdateTest {
     }
 
     private static List<Integer> heights(Next next) {
-        return next.model().preferences().settings().repositoryHeights();
+        return next.model().get(Preferences.SLICE).settings().repositoryHeights();
     }
 
     @Test
@@ -218,7 +234,7 @@ class LayoutUpdateTest {
         Next next = Update.update(focused(model, Scopes.BRANCHES.id()), new LayoutMsg.PaneStepped(5));
 
         Settings taller = TestModels.PLAIN.settings().withRepositoryHeights(List.of(25, 25, 25));
-        assertEquals(taller, next.model().preferences().settings());
+        assertEquals(taller, next.model().get(Preferences.SLICE).settings());
         assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), taller)), next.cmds());
     }
 
@@ -252,19 +268,19 @@ class LayoutUpdateTest {
         // In 100 rows, the others are 10 rows each at their least height, 3 maximized.
         Model branches = measured(focused(model, Scopes.BRANCHES.id()), 100);
         Model tallest = stepped(branches, 10).model();
-        assertEquals(List.of(10, 70, 10), tallest.preferences().leftHeights(Screen.REPOSITORY));
-        assertEquals(Option.none(), tallest.preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(List.of(10, 70, 10), tallest.get(Preferences.SLICE).leftHeights(Screen.REPOSITORY));
+        assertEquals(Option.none(), tallest.get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
 
         Next maximizing = Update.update(tallest, new LayoutMsg.PaneStepped(5));
         Model maximized = maximizing.model();
 
-        assertEquals(Option.of(1), maximized.preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.of(1), maximized.get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
         // The heights from before the press are kept, and were saved by it.
         assertEquals(List.of(10, 70, 10), heights(maximizing));
         assertEquals(List.empty(), maximizing.cmds());
         assertEquals(Next.of(maximized), Update.update(maximized, new LayoutMsg.PaneStepped(5)));
         Next shorter = Update.update(maximized, new LayoutMsg.PaneStepped(-5));
-        assertEquals(Option.none(), shorter.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.none(), shorter.model().get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
         assertEquals(List.of(10, 65, 15), heights(shorter));
     }
 
@@ -283,7 +299,7 @@ class LayoutUpdateTest {
         // and the branches, but not the one between the branches and the commits.
         Next next = stepped(measured(focused(model, Scopes.COMMITS.id()), 53), 20);
 
-        assertEquals(Option.of(2), next.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.of(2), next.model().get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
     }
 
     @Test
@@ -293,7 +309,7 @@ class LayoutUpdateTest {
 
         Next maximized = stepped(stash, 20);
 
-        assertEquals(Option.of(3), maximized.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.of(3), maximized.model().get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
         assertEquals(List.of(10, 10, 10), heights(maximized));
     }
 
@@ -305,7 +321,7 @@ class LayoutUpdateTest {
 
         Next next = Update.update(focused(maximized, Scopes.BRANCHES.id()), new LayoutMsg.PaneStepped(5));
 
-        assertEquals(Option.none(), next.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.none(), next.model().get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
         assertEquals(List.of(65, 15, 10), heights(next));
     }
 
@@ -315,7 +331,7 @@ class LayoutUpdateTest {
 
         Next next = Update.update(maximized, new LayoutMsg.PaneStepped(5));
 
-        assertEquals(Option.none(), next.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.none(), next.model().get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
     }
 
     private static Next stepped(Model model, int times) {
@@ -416,13 +432,13 @@ class LayoutUpdateTest {
     void zMaximizesTheFocusedPaneUntilZOnItAgain() {
         Model maximized = toggled(focused(model, Scopes.COMMITS.id()));
 
-        assertEquals(Option.of(2), maximized.preferences().maximizedPane(Screen.REPOSITORY));
-        assertEquals(Option.none(), maximized.preferences().maximizedPane(Screen.PULL_REQUESTS));
+        assertEquals(Option.of(2), maximized.get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.none(), maximized.get(Preferences.SLICE).maximizedPane(Screen.PULL_REQUESTS));
         // It stays maximized wherever the focus goes.
         assertEquals(
                 Option.of(2),
-                focused(maximized, Scopes.FILES.id()).preferences().maximizedPane(Screen.REPOSITORY));
-        assertEquals(Option.none(), toggled(maximized).preferences().maximizedPane(Screen.REPOSITORY));
+                focused(maximized, Scopes.FILES.id()).get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.none(), toggled(maximized).get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
     }
 
     @Test
@@ -431,11 +447,12 @@ class LayoutUpdateTest {
 
         Next taller = Update.update(reviewRequested, new LayoutMsg.PaneStepped(5));
 
-        assertEquals(List.of(32, 37), taller.model().preferences().leftHeights(Screen.PULL_REQUESTS));
+        assertEquals(List.of(32, 37), taller.model().get(Preferences.SLICE).leftHeights(Screen.PULL_REQUESTS));
         assertEquals(
                 Settings.DEFAULT_REPOSITORY_HEIGHTS,
-                taller.model().preferences().leftHeights(Screen.REPOSITORY));
-        assertEquals(Option.of(1), toggled(reviewRequested).preferences().maximizedPane(Screen.PULL_REQUESTS));
+                taller.model().get(Preferences.SLICE).leftHeights(Screen.REPOSITORY));
+        assertEquals(
+                Option.of(1), toggled(reviewRequested).get(Preferences.SLICE).maximizedPane(Screen.PULL_REQUESTS));
     }
 
     @Test
@@ -444,7 +461,7 @@ class LayoutUpdateTest {
 
         Next files = Update.update(focused(maximized, Scopes.FILES.id()), new LayoutMsg.MaximizeToggled());
 
-        assertEquals(Option.of(0), files.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.of(0), files.model().get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
         assertEquals(List.empty(), files.cmds());
     }
 
@@ -452,30 +469,30 @@ class LayoutUpdateTest {
     void zOnTheContentPanelCollapsesTheLeftColumnApartFromAMaximizedPane() {
         Model collapsed = toggled(content(toggled(focused(model, Scopes.COMMITS.id()))));
 
-        assertTrue(collapsed.preferences().leftCollapsed(Screen.REPOSITORY));
-        assertEquals(30, collapsed.preferences().keptWidth(Screen.REPOSITORY));
-        assertEquals(Option.of(2), collapsed.preferences().maximizedPane(Screen.REPOSITORY));
-        assertFalse(toggled(collapsed).preferences().leftCollapsed(Screen.REPOSITORY));
-        assertEquals(30, toggled(collapsed).preferences().leftWidth(Screen.REPOSITORY));
-        assertEquals(Option.of(2), toggled(collapsed).preferences().maximizedPane(Screen.REPOSITORY));
+        assertTrue(collapsed.get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertEquals(30, collapsed.get(Preferences.SLICE).keptWidth(Screen.REPOSITORY));
+        assertEquals(Option.of(2), collapsed.get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
+        assertFalse(toggled(collapsed).get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertEquals(30, toggled(collapsed).get(Preferences.SLICE).leftWidth(Screen.REPOSITORY));
+        assertEquals(Option.of(2), toggled(collapsed).get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
     }
 
     @Test
     void zOpensACollapsedColumnWhileAPaneItHidesHadTheFocusLast() {
         // Collapsed by < while the files had the focus, whose content had no area to take it.
         Model collapsed = focused(model, Scopes.FILES.id())
-                .mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+                .map(Preferences.SLICE, preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
 
         Model opened = toggled(collapsed);
 
-        assertFalse(opened.preferences().leftCollapsed(Screen.REPOSITORY));
-        assertEquals(Option.none(), opened.preferences().maximizedPane(Screen.REPOSITORY));
+        assertFalse(opened.get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertEquals(Option.none(), opened.get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
     }
 
     @Test
     void plusAndMinusDoNothingWhileTheColumnIsCollapsed() {
         Model collapsed = focused(model, Scopes.FILES.id())
-                .mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+                .map(Preferences.SLICE, preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
 
         assertEquals(Next.of(collapsed), Update.update(collapsed, new LayoutMsg.PaneStepped(5)));
         assertEquals(Next.of(collapsed), Update.update(collapsed, new LayoutMsg.PaneStepped(-5)));
@@ -485,9 +502,9 @@ class LayoutUpdateTest {
     void aStepWiderOpensACollapsedColumnAtTheNarrowestAndKeepsIt() {
         Next next = Update.update(toggled(content(model)), new LayoutMsg.Stepped(5));
 
-        assertFalse(next.model().preferences().leftCollapsed(Screen.REPOSITORY));
+        assertFalse(next.model().get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
         Settings narrowest = TestModels.PLAIN.settings().withRepositoryWidth(Settings.MIN_WIDTH);
-        assertEquals(narrowest, next.model().preferences().settings());
+        assertEquals(narrowest, next.model().get(Preferences.SLICE).settings());
         assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), narrowest)), next.cmds());
     }
 
@@ -503,8 +520,8 @@ class LayoutUpdateTest {
         Model dragged = Update.update(toggled(content(model)), new LayoutMsg.Resized(Screen.REPOSITORY, 25))
                 .model();
 
-        assertFalse(dragged.preferences().leftCollapsed(Screen.REPOSITORY));
-        assertEquals(25, dragged.preferences().leftWidth(Screen.REPOSITORY));
+        assertFalse(dragged.get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertEquals(25, dragged.get(Preferences.SLICE).leftWidth(Screen.REPOSITORY));
     }
 
     @Test
@@ -512,8 +529,8 @@ class LayoutUpdateTest {
         Model collapsed = Update.update(model, new LayoutMsg.Resized(Screen.REPOSITORY, Settings.MIN_WIDTH / 2))
                 .model();
 
-        assertTrue(collapsed.preferences().leftCollapsed(Screen.REPOSITORY));
-        assertEquals(Option.none(), collapsed.preferences().dragged());
+        assertTrue(collapsed.get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertEquals(Option.none(), collapsed.get(Preferences.SLICE).dragged());
         assertEquals(
                 List.of(),
                 Update.update(collapsed, new LayoutMsg.Settled(Screen.REPOSITORY))
@@ -522,8 +539,8 @@ class LayoutUpdateTest {
         Model reopened = Update.update(collapsed, new LayoutMsg.Resized(Screen.REPOSITORY, Settings.MIN_WIDTH / 2 + 1))
                 .model();
 
-        assertFalse(reopened.preferences().leftCollapsed(Screen.REPOSITORY));
-        assertEquals(Settings.MIN_WIDTH, reopened.preferences().leftWidth(Screen.REPOSITORY));
+        assertFalse(reopened.get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertEquals(Settings.MIN_WIDTH, reopened.get(Preferences.SLICE).leftWidth(Screen.REPOSITORY));
     }
 
     @Test
@@ -533,9 +550,9 @@ class LayoutUpdateTest {
         Next other = Update.update(collapsed, new LayoutMsg.Expanded(Screen.PULL_REQUESTS));
         Next expanded = Update.update(collapsed, new LayoutMsg.Expanded(Screen.REPOSITORY));
 
-        assertTrue(other.model().preferences().leftCollapsed(Screen.REPOSITORY));
-        assertFalse(expanded.model().preferences().leftCollapsed(Screen.REPOSITORY));
-        assertEquals(30, expanded.model().preferences().leftWidth(Screen.REPOSITORY));
+        assertTrue(other.model().get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertFalse(expanded.model().get(Preferences.SLICE).leftCollapsed(Screen.REPOSITORY));
+        assertEquals(30, expanded.model().get(Preferences.SLICE).leftWidth(Screen.REPOSITORY));
         assertEquals(List.of(), expanded.cmds());
     }
 
@@ -547,7 +564,7 @@ class LayoutUpdateTest {
 
         Next next = Update.update(maximized, new LayoutMsg.PaneStepped(-5));
 
-        assertEquals(Option.none(), next.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.none(), next.model().get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
         assertEquals(List.of(60, 15, 10), heights(next));
     }
 
@@ -558,7 +575,7 @@ class LayoutUpdateTest {
         // The stash shows all it has: it gets no taller, but the panes keep the heights they were shown with.
         Next next = Update.update(focused(maximized, Scopes.STASH.id()), new LayoutMsg.PaneStepped(5));
 
-        assertEquals(Option.none(), next.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Option.none(), next.model().get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
         assertEquals(List.of(65, 10, 10), heights(next));
     }
 
@@ -569,16 +586,18 @@ class LayoutUpdateTest {
         Model dragged = Update.update(maximized, new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 50))
                 .model();
 
-        assertEquals(Option.none(), dragged.preferences().maximizedPane(Screen.REPOSITORY));
-        assertEquals(List.of(50, 25, 10), dragged.preferences().leftHeights(Screen.REPOSITORY));
+        assertEquals(Option.none(), dragged.get(Preferences.SLICE).maximizedPane(Screen.REPOSITORY));
+        assertEquals(List.of(50, 25, 10), dragged.get(Preferences.SLICE).leftHeights(Screen.REPOSITORY));
     }
 
     @Test
     void theRowsOfTheColumnAreKeptForTheSessionOnly() {
         Next next = Update.update(model, new LayoutMsg.Measured(42));
 
-        assertEquals(Option.of(42), next.model().preferences().columnRows());
-        assertEquals(model.preferences().settings(), next.model().preferences().settings());
+        assertEquals(Option.of(42), next.model().get(Preferences.SLICE).columnRows());
+        assertEquals(
+                model.get(Preferences.SLICE).settings(),
+                next.model().get(Preferences.SLICE).settings());
         assertEquals(List.empty(), next.cmds());
     }
 }

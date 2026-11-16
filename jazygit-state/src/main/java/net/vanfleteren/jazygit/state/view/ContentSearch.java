@@ -15,7 +15,7 @@ public record ContentSearch(String text, Option<String> before) {
     /**
      * The search of the content panel, if there is one, in the model.
      */
-    public static final Slice<Option<ContentSearch>> SLICE = Slice.of("content.search", Option.none());
+    public static final Slice<Option<ContentSearch>> SLICE = Slice.of("content search", Option.none());
 
     /**
      * The search {@code current} with the line to type it in opened, showing its query.

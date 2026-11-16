@@ -11,6 +11,7 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd.*;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.SettingsError;
 
@@ -37,12 +38,14 @@ public final class Update {
         // Commits are loaded once the first status tells us where HEAD is.
         return RereadUpdate.refresh(initial.mapRepoView(landing::applyTo)
                 .mapJobs(jobs -> jobs.withOnArrival(landing.then()))
-                .mapPreferences(preferences -> preferences
-                        .withSettings(settings.settings())
-                        .withFile(settings)
-                        .withReported(settings.problem())
-                        .withThemeOverride(themeOverride)
-                        .withRepositoryTheme(repositoryTheme))
+                .map(
+                        Preferences.SLICE,
+                        preferences -> preferences
+                                .withSettings(settings.settings())
+                                .withFile(settings)
+                                .withReported(settings.problem())
+                                .withThemeOverride(themeOverride)
+                                .withRepositoryTheme(repositoryTheme))
                 .mapOutcome(outcome -> outcome.withError(settings.problem().map(SettingsError.NotLoaded::new))));
     }
 
@@ -83,7 +86,7 @@ public final class Update {
 
     private static Next handle(Model model, Msg msg) {
         if (msg instanceof Msg.Periodic periodic
-                && !periodic.on(model.preferences().settings())) {
+                && !periodic.on(model.get(Preferences.SLICE).settings())) {
             return model.jobs().away() && periodic.readOnReturn()
                     ? Next.of(model.mapJobs(jobs -> jobs.keptWhileAway(periodic, model.now())))
                     : Next.of(model);
@@ -135,7 +138,7 @@ public final class Update {
      */
     private static Next replayed(Model model, Msg msg) {
         return msg instanceof Msg.Periodic periodic
-                        && !periodic.on(model.preferences().settings())
+                        && !periodic.on(model.get(Preferences.SLICE).settings())
                         && !periodic.readOnReturn()
                 ? Next.of(model)
                 : arrived(msg.apply(model));

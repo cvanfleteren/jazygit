@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.FileStepMsg;
@@ -85,13 +86,13 @@ public final class LeftColumn {
      * @param inUse the pane in use, whose highlighted row shows
      */
     public Rendered render(Model model, Option<Focus> focus, Option<PaneId> inUse, Option<List<Integer>> rows) {
-        if (model.preferences().leftCollapsed(model.screen())) {
+        if (model.get(Preferences.SLICE).leftCollapsed(model.screen())) {
             return new Rendered(column(collapsed()), List.empty());
         }
         List<Panel> shown = model.screen() == Screen.PULL_REQUESTS
                 ? pullRequestsPanels.map(pane -> pane.render(model, focus, inUse))
                 : repositoryPanes(model, focus, inUse);
-        List<Integer> heights = model.preferences().leftHeights(model.screen());
+        List<Integer> heights = model.get(Preferences.SLICE).leftHeights(model.screen());
         List<Panel> panes = rows.fold(
                 () -> shown.init()
                         .zipWith(heights, Panel::percent)

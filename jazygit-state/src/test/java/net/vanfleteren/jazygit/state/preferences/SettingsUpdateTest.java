@@ -53,7 +53,7 @@ class SettingsUpdateTest {
         Model model = TestModels.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()))
                 .model();
 
-        assertEquals(DARCULA, model.preferences().settings());
+        assertEquals(DARCULA, model.get(Preferences.SLICE).settings());
         assertEquals(Option.none(), model.outcome().error());
     }
 
@@ -63,8 +63,8 @@ class SettingsUpdateTest {
                         "repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.of(ThemeName.LIGHT))
                 .model();
 
-        assertEquals(ThemeName.LIGHT, model.preferences().theme());
-        assertEquals(DARCULA, model.preferences().settings());
+        assertEquals(ThemeName.LIGHT, model.get(Preferences.SLICE).theme());
+        assertEquals(DARCULA, model.get(Preferences.SLICE).settings());
     }
 
     @Test
@@ -72,7 +72,7 @@ class SettingsUpdateTest {
         Model model = TestModels.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.none())
                 .model();
 
-        assertEquals(ThemeName.DARCULA, model.preferences().theme());
+        assertEquals(ThemeName.DARCULA, model.get(Preferences.SLICE).theme());
     }
 
     @Test
@@ -93,14 +93,18 @@ class SettingsUpdateTest {
         SettingsStore.Loaded file =
                 new SettingsStore.Loaded(Settings.DEFAULT.withDiffStyle(DiffStyle.PLAIN), Option.none());
         Model model = TestModels.loaded()
-                .mapPreferences(preferences -> preferences.withSettings(DARCULA).withFile(file));
+                .map(
+                        Preferences.SLICE,
+                        preferences -> preferences.withSettings(DARCULA).withFile(file));
 
         Msg saved = Program.perform(env(saving(Either.right(DARCULA))), SAVE);
 
         assertEquals(new SettingsMsg.Saved(Settings.DEFAULT, DARCULA), saved);
         assertEquals(
-                Update.Next.of(model.mapPreferences(preferences -> preferences.withFile(
-                        new SettingsStore.Loaded(DARCULA.withDiffStyle(DiffStyle.PLAIN), Option.none())))),
+                Update.Next.of(model.map(
+                        Preferences.SLICE,
+                        preferences -> preferences.withFile(
+                                new SettingsStore.Loaded(DARCULA.withDiffStyle(DiffStyle.PLAIN), Option.none())))),
                 Update.update(model, saved));
     }
 
@@ -112,8 +116,8 @@ class SettingsUpdateTest {
         Model model = Update.update(TestModels.loaded(), new SettingsMsg.Carried(file, reported, Option.none()))
                 .model();
 
-        assertEquals(file, model.preferences().file());
-        assertEquals(reported, model.preferences().reported());
+        assertEquals(file, model.get(Preferences.SLICE).file());
+        assertEquals(reported, model.get(Preferences.SLICE).reported());
         assertEquals(Option.none(), model.outcome().error());
     }
 
@@ -128,7 +132,7 @@ class SettingsUpdateTest {
 
         assertEquals(
                 Option.of(new SettingsError.NotReread(invalid)), model.outcome().error());
-        assertEquals(Option.of(invalid), model.preferences().reported());
+        assertEquals(Option.of(invalid), model.get(Preferences.SLICE).reported());
     }
 
     @Test
@@ -138,20 +142,20 @@ class SettingsUpdateTest {
 
         Model model = TestModels.init("repo", loaded).model();
 
-        assertEquals(loaded, model.preferences().file());
-        assertEquals(Option.of(invalid), model.preferences().reported());
+        assertEquals(loaded, model.get(Preferences.SLICE).file());
+        assertEquals(Option.of(invalid), model.get(Preferences.SLICE).reported());
     }
 
     @Test
     void savingThatFailsKeepsTheSettingAndShowsTheError() {
-        Model model = TestModels.loaded().mapPreferences(preferences -> preferences.withSettings(DARCULA));
+        Model model = TestModels.loaded().map(Preferences.SLICE, preferences -> preferences.withSettings(DARCULA));
         SettingsProblem unwritable = new SettingsProblem.Unwritable(FILE, "read-only");
 
         Model after = Update.update(model, Program.perform(env(saving(Either.left(unwritable))), SAVE))
                 .model();
 
         AppError error = new SettingsError.NotSaved(new Failure.Settings(unwritable));
-        assertEquals(DARCULA, after.preferences().settings());
+        assertEquals(DARCULA, after.get(Preferences.SLICE).settings());
         assertEquals(Option.of(error), after.outcome().error());
         assertEquals(Option.of(new ErrorPopup(error)), after.popup());
     }

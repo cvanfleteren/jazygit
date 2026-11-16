@@ -31,6 +31,7 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.operation.Outcome;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
 import net.vanfleteren.jazygit.ui.text.NoticeText;
@@ -296,7 +297,7 @@ public final class CommandLogPanel {
      * How many lines {@link #logLines} has.
      */
     private static int logLineCount(Model model) {
-        return model.preferences().leftCollapsed(model.screen())
+        return model.get(Preferences.SLICE).leftCollapsed(model.screen())
                 ? 0
                 : model.outcome()
                         .commandLog()
@@ -310,7 +311,9 @@ public final class CommandLogPanel {
      * content panel is maximized, which collapses the left column of the screen shown (ADR 104).
      */
     private static List<Row> logLines(Model model, ZoneId zone) {
-        return model.preferences().leftCollapsed(model.screen()) ? List.empty() : entryRows(model.outcome(), zone);
+        return model.get(Preferences.SLICE).leftCollapsed(model.screen())
+                ? List.empty()
+                : entryRows(model.outcome(), zone);
     }
 
     /**

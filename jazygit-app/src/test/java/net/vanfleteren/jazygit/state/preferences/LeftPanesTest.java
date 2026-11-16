@@ -29,7 +29,8 @@ class LeftPanesTest {
     }
 
     private static Model maximized(Model model, int pane) {
-        return model.mapPreferences(preferences -> preferences.withMaximizedPane(Screen.REPOSITORY, Option.of(pane)));
+        return model.map(
+                Preferences.SLICE, preferences -> preferences.withMaximizedPane(Screen.REPOSITORY, Option.of(pane)));
     }
 
     @Test
@@ -102,15 +103,17 @@ class LeftPanesTest {
     @Test
     void theMaximizedPaneOfAnotherScreenIsNotShown() {
         Model model = withStashes(2)
-                .mapPreferences(preferences -> preferences.withMaximizedPane(Screen.PULL_REQUESTS, Option.of(0)));
+                .map(
+                        Preferences.SLICE,
+                        preferences -> preferences.withMaximizedPane(Screen.PULL_REQUESTS, Option.of(0)));
 
         assertEquals(List.of(25, 20, 48, 4), LeftPanes.shown(model, Screen.REPOSITORY, 100));
     }
 
     @Test
     void theHeightsShownWhileAPaneIsMaximizedKeepEachPaneAtItsLeastHeight() {
-        Model model =
-                maximized(withStashes(2), 0).mapPreferences(preferences -> preferences.withColumnRows(Option.of(40)));
+        Model model = maximized(withStashes(2), 0)
+                .map(Preferences.SLICE, preferences -> preferences.withColumnRows(Option.of(40)));
 
         // The files take 28 of 40 rows, 70 percent, and the others 3 rows each, 7.5 percent, which is raised to the
         // least height, 10 percent, with what that takes taken from the files.
@@ -121,7 +124,7 @@ class LeftPanesTest {
 
     @Test
     void theHeightsShownAreTheHeightsWhenNothingIsMaximized() {
-        Model model = withStashes(2).mapPreferences(preferences -> preferences.withColumnRows(Option.of(40)));
+        Model model = withStashes(2).map(Preferences.SLICE, preferences -> preferences.withColumnRows(Option.of(40)));
 
         assertEquals(Settings.DEFAULT_REPOSITORY_HEIGHTS, LeftPanes.shownHeights(model, Screen.REPOSITORY));
     }

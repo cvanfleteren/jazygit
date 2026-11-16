@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.state.load.LoadFileDiff;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.LoadStashDetail;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.Preview;
@@ -45,7 +46,7 @@ class DiffOptionsUpdateTest {
 
         Next next = Update.update(model, new DiffOptionsMsg.WhitespaceToggled());
 
-        assertEquals(IGNORING, next.model().preferences().diffOptions());
+        assertEquals(IGNORING, next.model().get(Preferences.SLICE).diffOptions());
         assertEquals(
                 List.of(new LoadFileDiff(DIRTY.files(), IGNORING), new LoadCommitDetail(SHA, IGNORING)), next.cmds());
         Preview<List<FileEntry>, Diffs> diff =
@@ -60,7 +61,7 @@ class DiffOptionsUpdateTest {
                 DiffOptions.DEFAULT,
                 Update.update(next.model(), new DiffOptionsMsg.WhitespaceToggled())
                         .model()
-                        .preferences()
+                        .get(Preferences.SLICE)
                         .diffOptions());
     }
 
@@ -70,20 +71,20 @@ class DiffOptionsUpdateTest {
 
         Next next = Update.update(shown(), new DiffOptionsMsg.ContextWidened());
 
-        assertEquals(wider, next.model().preferences().diffOptions());
+        assertEquals(wider, next.model().get(Preferences.SLICE).diffOptions());
         assertEquals(List.of(new LoadFileDiff(DIRTY.files(), wider), new LoadCommitDetail(SHA, wider)), next.cmds());
         assertEquals(
                 DiffOptions.DEFAULT,
                 Update.update(next.model(), new DiffOptionsMsg.ContextNarrowed())
                         .model()
-                        .preferences()
+                        .get(Preferences.SLICE)
                         .diffOptions());
     }
 
     @Test
     void steppingPastTheLastAmountReadsNothingAgain() {
-        Model narrowest = shown().mapPreferences(preferences -> preferences.withContext(new DiffContext(0)));
-        Model widest = shown().mapPreferences(preferences -> preferences.withContext(DiffContext.WHOLE_FILE));
+        Model narrowest = shown().map(Preferences.SLICE, preferences -> preferences.withContext(new DiffContext(0)));
+        Model widest = shown().map(Preferences.SLICE, preferences -> preferences.withContext(DiffContext.WHOLE_FILE));
 
         Next narrowed = Update.update(narrowest, new DiffOptionsMsg.ContextNarrowed());
         Next widened = Update.update(widest, new DiffOptionsMsg.ContextWidened());
@@ -100,16 +101,16 @@ class DiffOptionsUpdateTest {
 
         Next next = Update.update(model, new DiffOptionsMsg.WordsToggled());
 
-        assertFalse(next.model().preferences().diffLook().words());
+        assertFalse(next.model().get(Preferences.SLICE).diffLook().words());
         assertEquals(
                 List.of(new SaveSettings(
-                        model.preferences().settings(),
-                        model.preferences().settings().withDiffWords(false))),
+                        model.get(Preferences.SLICE).settings(),
+                        model.get(Preferences.SLICE).settings().withDiffWords(false))),
                 next.cmds());
         assertEquals(model.repoView(), next.model().repoView());
         assertTrue(Update.update(next.model(), new DiffOptionsMsg.WordsToggled())
                 .model()
-                .preferences()
+                .get(Preferences.SLICE)
                 .diffLook()
                 .words());
     }

@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import net.vanfleteren.jazygit.ui.widgets.SelectedTextColoured;
@@ -132,7 +133,7 @@ final class StartApp extends ToolkitApp {
 
     @Override
     protected Element render() {
-        Theme.activate(styleEngine, model.preferences().theme());
+        Theme.activate(styleEngine, model.get(Preferences.SLICE).theme());
         // The dialog shown takes the focus, also when it takes the place of another one.
         Option<Tuple2<PopupView, Element>> open = popups.flatMap(
                         view -> view.render(model).map(dialog -> Tuple.of(view, dialog)))

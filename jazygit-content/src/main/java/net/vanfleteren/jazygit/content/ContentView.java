@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.BuildsShown;
@@ -146,7 +147,7 @@ public final class ContentView {
         Option<Version> version = model.repoView()
                 .version(area.area().id(), area.content())
                 .orElse(() -> asVersion(model, area.content()));
-        DiffContext context = model.preferences().context();
+        DiffContext context = model.get(Preferences.SLICE).context();
         Body body = switch (area.body()) {
             case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
                 new Body.Diff(diff.expanded(expansion, context).versioned(version), look, remarks);
@@ -181,7 +182,7 @@ public final class ContentView {
                                 content,
                                 unchanged.source(),
                                 unchanged.path(),
-                                model.preferences().diffOptions()),
+                                model.get(Preferences.SLICE).diffOptions()),
                         new Loadable.Loaded<>(unchanged.asDiff())))
                 : Option.none();
     }
@@ -216,7 +217,7 @@ public final class ContentView {
     private static Shown fileContent(Model model, String path, FileContent content, String title, Option<Sha> commit) {
         return switch (content) {
             case FileContent.Text(DiffText asDiff) -> {
-                DiffLook look = model.preferences().diffLook();
+                DiffLook look = model.get(Preferences.SLICE).diffLook();
                 yield new Shown.Area(
                         commit.isDefined() ? ContentArea.COMMIT_FILE : ContentArea.FILE_CONTENT,
                         title,
@@ -363,7 +364,7 @@ public final class ContentView {
      * One area for the staged changes and one for the unstaged changes, one above the other when both exist.
      */
     private static Shown fileDiffs(Model model) {
-        DiffOptions options = model.preferences().diffOptions();
+        DiffOptions options = model.get(Preferences.SLICE).diffOptions();
         String title = titled(Messages.get("panel.diff.title"), options);
         // With no files there is nothing to highlight, so no diff is ever requested.
         return model.repo().status().toOption().exists(status -> status.files().isEmpty())
@@ -378,7 +379,10 @@ public final class ContentView {
                                         title,
                                         diff.value(),
                                         diffs -> diffAreas(
-                                                options, model.preferences().diffLook(), title, diffs)))
+                                                options,
+                                                model.get(Preferences.SLICE).diffLook(),
+                                                title,
+                                                diffs)))
                                 .getOrElse(() -> loading(title));
     }
 
@@ -548,7 +552,7 @@ public final class ContentView {
             Option<Preview<Sha, DiffText>> detail,
             Function<Sha, Option<Commit>> commit,
             Option<String> nothing) {
-        DiffOptions options = model.preferences().diffOptions();
+        DiffOptions options = model.get(Preferences.SLICE).diffOptions();
         String title = Messages.get("content.panel.commit.title");
         return detail.map(Preview::shown)
                 .map(shown -> whenLoaded(
@@ -560,7 +564,7 @@ public final class ContentView {
                                         found,
                                         changes,
                                         options,
-                                        model.preferences().diffLook()))
+                                        model.get(Preferences.SLICE).diffLook()))
                                 .getOrElse(() -> loading(title))))
                 .getOrElse(() -> nothing.map(message -> dim(title, Messages.get(message)))
                         .getOrElse(() -> loading(title)));
@@ -581,7 +585,7 @@ public final class ContentView {
      * nothing changed.
      */
     private static Shown commitFiles(Model model, CommitFilesView view) {
-        DiffOptions options = model.preferences().diffOptions();
+        DiffOptions options = model.get(Preferences.SLICE).diffOptions();
         String name = FilesPanel.changesName(model, view.of());
         String title = titled(Messages.get("panel.commitFiles.titleFor", name), options);
         // A node the commit did not change, among all its files, shows as it is in it (ADR 128).
@@ -627,7 +631,7 @@ public final class ContentView {
                                         new ScrolledContent.FileChanges(view.of(), diff.key(), changes),
                                         new Body.Diff(
                                                 shownChanges(changes, options),
-                                                model.preferences().diffLook(),
+                                                model.get(Preferences.SLICE).diffLook(),
                                                 remarks(model, view, diff.key())))))
                 .getOrElse(() -> whenLoaded(
                         title,
@@ -682,7 +686,7 @@ public final class ContentView {
      * there are none.
      */
     private static Shown stash(Model model) {
-        DiffOptions options = model.preferences().diffOptions();
+        DiffOptions options = model.get(Preferences.SLICE).diffOptions();
         String title = Messages.get("panel.stash.title");
         return model.repoView()
                 .preview()
@@ -700,7 +704,7 @@ public final class ContentView {
                                         new Body.StashChanges(
                                                 stash,
                                                 shownChanges(changes, options),
-                                                model.preferences().diffLook())))))
+                                                model.get(Preferences.SLICE).diffLook())))))
                 .getOrElse(() -> whenLoaded(
                         title,
                         model.repo().stashes(),

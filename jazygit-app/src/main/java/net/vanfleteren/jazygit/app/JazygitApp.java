@@ -187,7 +187,7 @@ public class JazygitApp extends ToolkitApp {
      */
     private boolean leaveScrollArea() {
         Model model = model();
-        if (model.preferences().leftCollapsed(model.screen()) && focus.inPaneContent()) {
+        if (model.get(Preferences.SLICE).leftCollapsed(model.screen()) && focus.inPaneContent()) {
             dispatch.accept(new LayoutMsg.Expanded(model.screen()));
         }
         return focus.leaveScrollArea();
@@ -273,7 +273,7 @@ public class JazygitApp extends ToolkitApp {
         if (mouse.kind() == MouseEventKind.PRESS
                 && mouse.isLeftButton()
                 && model.popup().isEmpty()
-                && model.preferences().leftCollapsed(model.screen())
+                && model.get(Preferences.SLICE).leftCollapsed(model.screen())
                 && borderDrag.onLeftColumn(mouse.x(), mouse.y())) {
             dispatch.accept(new LayoutMsg.Expanded(model.screen()));
             return EventResult.HANDLED;
@@ -314,7 +314,7 @@ public class JazygitApp extends ToolkitApp {
         long started = System.nanoTime();
         redrawPending = false;
         Model model = model();
-        Theme.activate(styleEngine, model.preferences().theme());
+        Theme.activate(styleEngine, model.get(Preferences.SLICE).theme());
         Option<Focus> focused = focus.settle(model);
         Option<PaneId> active = focus.activePane(model, focused);
         // In rows, which the panes slide through, once the height of the screen is known (ADR 92).
@@ -324,9 +324,9 @@ public class JazygitApp extends ToolkitApp {
         Column left = Try.of(() -> runner().tuiRunner().backend().size().width())
                 .toOption()
                 .map(width -> rendered.column().length(leftColumns(model, width)))
-                .getOrElse(() -> model.preferences().leftCollapsed(model.screen())
+                .getOrElse(() -> model.get(Preferences.SLICE).leftCollapsed(model.screen())
                         ? rendered.column().length(LeftColumn.COLLAPSED_COLUMNS)
-                        : rendered.column().percent(model.preferences().leftWidth(model.screen())));
+                        : rendered.column().percent(model.get(Preferences.SLICE).leftWidth(model.screen())));
         var panes = row(
                 left,
                 column(contentPanel.render(model, focused).fill(), commandLog(model, focused))
@@ -372,7 +372,8 @@ public class JazygitApp extends ToolkitApp {
                 .selectionChanges(model, focus.activePane(model, focused))
                 .appendAll(focus.report(model, focused))
                 .appendAll(leftHeight()
-                        .filter(rows -> !model.preferences().columnRows().contains(rows))
+                        .filter(rows ->
+                                !model.get(Preferences.SLICE).columnRows().contains(rows))
                         .map(LayoutMsg.Measured::new));
     }
 
@@ -405,8 +406,8 @@ public class JazygitApp extends ToolkitApp {
                 model.screen(),
                 width,
                 leftColumnsChosen(model, width),
-                model.preferences().settings().animations(),
-                model.preferences().dragged().isDefined(),
+                model.get(Preferences.SLICE).settings().animations(),
+                model.get(Preferences.SLICE).dragged().isDefined(),
                 now);
         leftSlide = Option.of(shown);
         slideOn(shown.moving(now));
@@ -420,7 +421,7 @@ public class JazygitApp extends ToolkitApp {
     private List<Integer> paneRows(Model model, int column) {
         Instant now = clock.instant();
         Screen screen = model.screen();
-        Preferences preferences = model.preferences();
+        Preferences preferences = model.get(Preferences.SLICE);
         PaneSlide shown = PaneSlide.next(
                 paneSlide,
                 screen,
@@ -471,9 +472,9 @@ public class JazygitApp extends ToolkitApp {
      * where it slides to: the command log wraps its lines in the rest, which does not change while it slides.
      */
     private static int leftColumnsChosen(Model model, int width) {
-        return model.preferences().leftCollapsed(model.screen())
+        return model.get(Preferences.SLICE).leftCollapsed(model.screen())
                 ? LeftColumn.COLLAPSED_COLUMNS
-                : LeftBorder.columns(width, model.preferences().leftWidth(model.screen()));
+                : LeftBorder.columns(width, model.get(Preferences.SLICE).leftWidth(model.screen()));
     }
 
     /**
@@ -487,7 +488,7 @@ public class JazygitApp extends ToolkitApp {
                 model.screen(),
                 column,
                 rows,
-                model.preferences().settings().animations(),
+                model.get(Preferences.SLICE).settings().animations(),
                 now);
         logSlide = Option.of(shown);
         slideOn(shown.moving(now));

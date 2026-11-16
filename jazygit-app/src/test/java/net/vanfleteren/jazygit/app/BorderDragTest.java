@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import org.junit.jupiter.api.BeforeEach;
@@ -190,8 +191,8 @@ class BorderDragTest {
         drag.handle(MouseEvent.drag(MouseButton.LEFT, 10, 86), shown());
         drag.handle(MouseEvent.release(MouseButton.LEFT, 10, 87), shown());
 
-        assertEquals(TestModels.PLAIN.settings(), shown().preferences().settings());
-        assertEquals(Option.none(), shown().preferences().draggedHeights());
+        assertEquals(TestModels.PLAIN.settings(), shown().get(Preferences.SLICE).settings());
+        assertEquals(Option.none(), shown().get(Preferences.SLICE).draggedHeights());
     }
 
     @Test
@@ -207,7 +208,7 @@ class BorderDragTest {
         drag.handle(MouseEvent.drag(MouseButton.LEFT, 10, 12), shown());
         drag.handle(MouseEvent.release(MouseButton.LEFT, 10, 11), shown());
 
-        assertEquals(TestModels.PLAIN.settings(), shown().preferences().settings());
+        assertEquals(TestModels.PLAIN.settings(), shown().get(Preferences.SLICE).settings());
     }
 
     @Test

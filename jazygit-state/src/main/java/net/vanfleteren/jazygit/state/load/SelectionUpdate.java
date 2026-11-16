@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.state.load.SelectionMsg.StashSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedDirectorySelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedFileSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnfetchedSelected;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
 
@@ -126,7 +127,8 @@ public final class SelectionUpdate {
                 files,
                 changed.repoView().preview().fileDiff(),
                 diff -> changed.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withFileDiff(diff))),
-                entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
+                entries ->
+                        new LoadFileDiff(entries, model.get(Preferences.SLICE).diffOptions()));
     }
 
     /**
@@ -193,7 +195,7 @@ public final class SelectionUpdate {
                         diff -> changed.mapRepoView(repoView ->
                                 repoView.mapFiles(part -> part.withCommitFiles(Option.of(view.withDiff(diff))))),
                         entries -> LoadCommitFileDiff.of(
-                                view, entries, model.preferences().diffOptions())))
+                                view, entries, model.get(Preferences.SLICE).diffOptions())))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -207,11 +209,11 @@ public final class SelectionUpdate {
                 model.repoView().preview().stashDetail(),
                 detail ->
                         model.mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withStashDetail(detail))),
-                stash -> new LoadStashDetail(stash, model.preferences().diffOptions()));
+                stash -> new LoadStashDetail(stash, model.get(Preferences.SLICE).diffOptions()));
     }
 
     private static Function<Sha, Load> detail(Model model, Cmd.Slot slot) {
-        return sha -> new LoadCommitDetail(sha, model.preferences().diffOptions(), slot);
+        return sha -> new LoadCommitDetail(sha, model.get(Preferences.SLICE).diffOptions(), slot);
     }
 
     /**

@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.operation.LogEntry;
 import net.vanfleteren.jazygit.state.operation.Notice;
 import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
@@ -489,7 +490,7 @@ class CommandLogPanelTest {
      * {@code model} with the content panel maximized: the left column of the repository screen collapsed.
      */
     private static Model collapsed(Model model) {
-        return model.mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+        return model.map(Preferences.SLICE, preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
     }
 
     /**

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.preferences.LeftPanes;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Preferences.Dragged;
 import net.vanfleteren.jazygit.state.preferences.Preferences.DraggedHeights;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
@@ -51,43 +52,50 @@ public final class LayoutUpdate {
             case LayoutMsg.Stepped(int by) -> stepWidth(model, by);
             // Dragged far enough, the column collapses, until it is dragged out again.
             case LayoutMsg.Resized(Screen screen, int width) ->
-                Next.of(model.mapPreferences(preferences -> collapses(width)
-                        ? preferences.withLeftCollapsed(screen, true).withDragged(Option.none())
-                        : preferences
-                                .withLeftCollapsed(screen, false)
-                                .withDragged(Option.of(new Dragged(screen, Settings.clampWidth(width))))));
+                Next.of(model.map(
+                        Preferences.SLICE,
+                        preferences -> collapses(width)
+                                ? preferences.withLeftCollapsed(screen, true).withDragged(Option.none())
+                                : preferences
+                                        .withLeftCollapsed(screen, false)
+                                        .withDragged(Option.of(new Dragged(screen, Settings.clampWidth(width))))));
             case LayoutMsg.Settled(Screen screen) ->
-                model.preferences()
+                model.get(Preferences.SLICE)
                         .dragged()
                         .filter(drag -> drag.screen() == screen)
                         .map(drag -> keep(
-                                model.mapPreferences(preferences -> preferences.withDragged(Option.none())),
+                                model.map(Preferences.SLICE, preferences -> preferences.withDragged(Option.none())),
                                 screen,
                                 drag.width()))
                         .getOrElse(() -> Next.of(model));
             // A drag ends a maximized pane, from the heights the panes are shown with.
             case LayoutMsg.PaneResized(Screen screen, int pane, int bottom) ->
-                Next.of(model.mapPreferences(preferences -> preferences
-                        .withMaximizedPane(screen, Option.none())
-                        .withDraggedHeights(Option.of(new DraggedHeights(
-                                screen, resized(LeftPanes.shownHeights(model, screen), pane, bottom))))));
+                Next.of(model.map(
+                        Preferences.SLICE,
+                        preferences -> preferences
+                                .withMaximizedPane(screen, Option.none())
+                                .withDraggedHeights(Option.of(new DraggedHeights(
+                                        screen, resized(LeftPanes.shownHeights(model, screen), pane, bottom))))));
             case LayoutMsg.PaneSettled(Screen screen) ->
-                model.preferences()
+                model.get(Preferences.SLICE)
                         .draggedHeights()
                         .filter(drag -> drag.screen() == screen)
                         .map(drag -> keep(
-                                model.mapPreferences(preferences -> preferences.withDraggedHeights(Option.none())),
-                                model.preferences().keepingHeights(screen, drag.heights())))
+                                model.map(
+                                        Preferences.SLICE,
+                                        preferences -> preferences.withDraggedHeights(Option.none())),
+                                model.get(Preferences.SLICE).keepingHeights(screen, drag.heights())))
                         .getOrElse(() -> Next.of(model));
             // The panes of a collapsed column are not drawn, so they are not resized either (ADR 104).
-            case LayoutMsg.PaneStepped stepped when model.preferences().leftCollapsed(model.screen()) -> Next.of(model);
+            case LayoutMsg.PaneStepped stepped
+            when model.get(Preferences.SLICE).leftCollapsed(model.screen()) -> Next.of(model);
             case LayoutMsg.PaneStepped(int by) ->
                 focusedPane(model).map(pane -> stepPane(model, pane, by)).getOrElse(() -> Next.of(model));
             case LayoutMsg.MaximizeToggled() -> Next.of(toggleMaximized(model));
             case LayoutMsg.Expanded(Screen screen) ->
-                Next.of(model.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, false)));
+                Next.of(model.map(Preferences.SLICE, preferences -> preferences.withLeftCollapsed(screen, false)));
             case LayoutMsg.Measured(int rows) ->
-                Next.of(model.mapPreferences(preferences -> preferences.withColumnRows(Option.of(rows))));
+                Next.of(model.map(Preferences.SLICE, preferences -> preferences.withColumnRows(Option.of(rows))));
         };
     }
 
@@ -99,18 +107,18 @@ public final class LayoutUpdate {
      */
     private static Next stepWidth(Model model, int by) {
         Screen screen = model.screen();
-        Model ended = model.mapPreferences(preferences -> preferences.withDragged(Option.none()));
-        if (model.preferences().leftCollapsed(screen)) {
+        Model ended = model.map(Preferences.SLICE, preferences -> preferences.withDragged(Option.none()));
+        if (model.get(Preferences.SLICE).leftCollapsed(screen)) {
             return by > 0
                     ? keep(
-                            ended.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, false)),
+                            ended.map(Preferences.SLICE, preferences -> preferences.withLeftCollapsed(screen, false)),
                             screen,
                             Settings.MIN_WIDTH)
                     : Next.of(ended);
         }
-        int shown = model.preferences().leftWidth(screen);
+        int shown = model.get(Preferences.SLICE).leftWidth(screen);
         return by < 0 && shown == Settings.MIN_WIDTH
-                ? Next.of(ended.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, true)))
+                ? Next.of(ended.map(Preferences.SLICE, preferences -> preferences.withLeftCollapsed(screen, true)))
                 : keep(ended, screen, shown + by);
     }
 
@@ -145,17 +153,20 @@ public final class LayoutUpdate {
             return Next.of(model);
         }
         List<Integer> shown = LeftPanes.shownHeights(model, screen);
-        boolean maximized = model.preferences().maximizedPane(screen).isDefined();
-        Model ended = model.mapPreferences(
+        boolean maximized = model.get(Preferences.SLICE).maximizedPane(screen).isDefined();
+        Model ended = model.map(
+                Preferences.SLICE,
                 preferences -> preferences.withDraggedHeights(Option.none()).withMaximizedPane(screen, Option.none()));
         List<Integer> heights = stashShown(ended, screen, shown, pane);
         return stepped(ended, screen, heights, pane, by)
-                .map(stepped -> keep(ended, ended.preferences().keepingHeights(screen, stepped)))
+                .map(stepped -> keep(ended, ended.get(Preferences.SLICE).keepingHeights(screen, stepped)))
                 .orElse(() -> (by > 0 ? maximizing(ended, screen, heights, pane) : Option.<Model>none())
-                        .map(oneMaximized ->
-                                keep(oneMaximized, oneMaximized.preferences().keepingHeights(screen, heights))))
+                        .map(oneMaximized -> keep(
+                                oneMaximized,
+                                oneMaximized.get(Preferences.SLICE).keepingHeights(screen, heights))))
                 .orElse(() -> Option.when(
-                        maximized, () -> keep(ended, ended.preferences().keepingHeights(screen, shown))))
+                        maximized,
+                        () -> keep(ended, ended.get(Preferences.SLICE).keepingHeights(screen, shown))))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -164,8 +175,8 @@ public final class LayoutUpdate {
      * the column the last frame drew.
      */
     private static boolean maximizedShown(Model model, Screen screen, int pane) {
-        return model.preferences().maximizedPane(screen).contains(pane)
-                && model.preferences()
+        return model.get(Preferences.SLICE).maximizedPane(screen).contains(pane)
+                && model.get(Preferences.SLICE)
                         .columnRows()
                         .flatMap(column -> LeftPanes.maximized(model, screen, column))
                         .isDefined();
@@ -177,8 +188,9 @@ public final class LayoutUpdate {
      * the 3 each keeps. None when that shows it no taller, or when it is a stash that shows all its stashes.
      */
     private static Option<Model> maximizing(Model model, Screen screen, List<Integer> heights, int pane) {
-        Model maximized = model.mapPreferences(preferences -> preferences.withMaximizedPane(screen, Option.of(pane)));
-        return model.preferences().columnRows().flatMap(column -> {
+        Model maximized =
+                model.map(Preferences.SLICE, preferences -> preferences.withMaximizedPane(screen, Option.of(pane)));
+        return model.get(Preferences.SLICE).columnRows().flatMap(column -> {
             List<Integer> rows = LeftPanes.sized(model, screen, heights, column);
             boolean stash = screen == Screen.REPOSITORY && pane == heights.size();
             return LeftPanes.maximized(maximized, screen, column)
@@ -194,7 +206,7 @@ public final class LayoutUpdate {
      * {@code by} itself when the rows of the column are not known yet.
      */
     private static Option<List<Integer>> stepped(Model model, Screen screen, List<Integer> heights, int pane, int by) {
-        return model.preferences()
+        return model.get(Preferences.SLICE)
                 .columnRows()
                 .fold(() -> Option.of(moved(heights, pane, by)).filter(moved -> !moved.equals(heights)), column -> {
                     int rows = LeftPanes.sized(model, screen, heights, column).get(pane);
@@ -237,7 +249,7 @@ public final class LayoutUpdate {
      */
     private static List<Integer> stashShown(Model model, Screen screen, List<Integer> heights, int pane) {
         int commits = heights.size() - 1;
-        return model.preferences()
+        return model.get(Preferences.SLICE)
                 .columnRows()
                 .filter(column -> screen == Screen.REPOSITORY && pane >= commits)
                 .map(column -> {
@@ -259,28 +271,31 @@ public final class LayoutUpdate {
      */
     private static Model toggleMaximized(Model model) {
         Screen screen = model.screen();
-        if (model.preferences().leftCollapsed(screen)) {
-            return model.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, false));
+        if (model.get(Preferences.SLICE).leftCollapsed(screen)) {
+            return model.map(Preferences.SLICE, preferences -> preferences.withLeftCollapsed(screen, false));
         }
         return focusedPane(model)
-                .map(pane -> model.mapPreferences(preferences -> preferences.withMaximizedPane(
-                        screen, preferences.maximizedPane(screen).contains(pane) ? Option.none() : Option.of(pane))))
+                .map(pane -> model.map(
+                        Preferences.SLICE,
+                        preferences -> preferences.withMaximizedPane(
+                                screen,
+                                preferences.maximizedPane(screen).contains(pane) ? Option.none() : Option.of(pane))))
                 .orElse(() -> model.shownPane()
-                        .map(content ->
-                                model.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, true))))
+                        .map(content -> model.map(
+                                Preferences.SLICE, preferences -> preferences.withLeftCollapsed(screen, true))))
                 .getOrElse(model);
     }
 
     private static Next keep(Model model, Screen screen, int width) {
-        return keep(model, model.preferences().keepingWidth(screen, Settings.clampWidth(width)));
+        return keep(model, model.get(Preferences.SLICE).keepingWidth(screen, Settings.clampWidth(width)));
     }
 
     /**
      * Keeps the {@code chosen} settings, saving them if they changed.
      */
     private static Next keep(Model model, Settings chosen) {
-        Settings kept = model.preferences().settings();
-        Model shown = model.mapPreferences(preferences -> preferences.withSettings(chosen));
+        Settings kept = model.get(Preferences.SLICE).settings();
+        Model shown = model.map(Preferences.SLICE, preferences -> preferences.withSettings(chosen));
         return chosen.equals(kept) ? Next.of(shown) : Next.of(shown, new SaveSettings(kept, chosen));
     }
 }

@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 
@@ -184,7 +185,7 @@ final class ReviewFixtures {
                 CONTENT,
                 new WholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
                 "a.txt",
-                model.preferences().diffOptions());
+                model.get(Preferences.SLICE).diffOptions());
         Expansion expansion = new Expansion(
                 CONTENT,
                 io.vavr.collection.HashMap.of(

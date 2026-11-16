@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.CommandLog;
 import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 
@@ -36,7 +37,8 @@ public final class ThemeUpdate {
             case ThemeMsg.Cancelled() ->
                 Next.of(model.popup(ThemePopup.class)
                         .map(popup -> {
-                            Model closed = model.mapPreferences(
+                            Model closed = model.map(
+                                            Preferences.SLICE,
                                             preferences -> preferences.withThemeOverride(popup.overridden()))
                                     .withoutPopup(ThemePopup.class);
                             return popup.behind().map(closed::openPopup).getOrElse(closed);
@@ -72,11 +74,11 @@ public final class ThemeUpdate {
 
     private static ThemePopup asked(Model model, ThemeScope scope, Option<Popup> behind) {
         return new ThemePopup(
-                model.preferences().theme(),
-                model.preferences().themeOverride(),
+                model.get(Preferences.SLICE).theme(),
+                model.get(Preferences.SLICE).themeOverride(),
                 scope,
-                model.preferences().repositoryTheme(),
-                model.preferences().settings().theme(),
+                model.get(Preferences.SLICE).repositoryTheme(),
+                model.get(Preferences.SLICE).settings().theme(),
                 behind);
     }
 
@@ -85,27 +87,30 @@ public final class ThemeUpdate {
      */
     private static Model preview(Model model, Function<ThemePopup, ThemeName> theme) {
         return model.popup(ThemePopup.class)
-                .map(popup -> model.mapPreferences(
-                        preferences -> preferences.withThemeOverride(Option.of(theme.apply(popup)))))
+                .map(popup -> model.map(
+                        Preferences.SLICE, preferences -> preferences.withThemeOverride(Option.of(theme.apply(popup)))))
                 .getOrElse(model);
     }
 
     private static Next choose(Model model, ThemeName theme) {
-        Settings chosen = model.preferences().settings().withTheme(theme);
-        Model shown = model.mapPreferences(
+        Settings chosen = model.get(Preferences.SLICE).settings().withTheme(theme);
+        Model shown = model.map(
+                Preferences.SLICE,
                 preferences -> preferences.withSettings(chosen).withThemeOverride(Option.none()));
-        return chosen.equals(model.preferences().settings())
+        return chosen.equals(model.get(Preferences.SLICE).settings())
                 ? Next.of(shown)
-                : Next.of(shown, new SaveSettings(model.preferences().settings(), chosen));
+                : Next.of(shown, new SaveSettings(model.get(Preferences.SLICE).settings(), chosen));
     }
 
     /**
      * Gives the repository {@code theme} as its own, or none, keeping it in its git configuration.
      */
     private static Next own(Model model, Option<ThemeName> theme) {
-        RepositoryTheme before = model.preferences().repositoryTheme();
-        Model shown = model.mapPreferences(preferences ->
-                preferences.withRepositoryTheme(before.withOwn(theme)).withThemeOverride(Option.none()));
+        RepositoryTheme before = model.get(Preferences.SLICE).repositoryTheme();
+        Model shown = model.map(
+                Preferences.SLICE,
+                preferences ->
+                        preferences.withRepositoryTheme(before.withOwn(theme)).withThemeOverride(Option.none()));
         return before.own().equals(theme) ? Next.of(shown) : Next.of(shown, new ThemeCmd(theme));
     }
 }

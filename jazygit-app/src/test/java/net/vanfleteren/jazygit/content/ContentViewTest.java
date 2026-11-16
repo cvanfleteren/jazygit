@@ -129,8 +129,10 @@ class ContentViewTest {
         return Update.update(
                         Update.update(
                                         TestModels.loaded()
-                                                .mapPreferences(preferences ->
-                                                        preferences.withIgnoreWhitespace(options.ignoreWhitespace())),
+                                                .map(
+                                                        Preferences.SLICE,
+                                                        preferences -> preferences.withIgnoreWhitespace(
+                                                                options.ignoreWhitespace())),
                                         new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), options, DiffText.of(changes)))
@@ -220,7 +222,7 @@ class ContentViewTest {
                         model,
                         new LoadMsg.FileDiffLoaded(
                                 TestModels.DIRTY.files(),
-                                model.preferences().diffOptions(),
+                                model.get(Preferences.SLICE).diffOptions(),
                                 new Diffs(
                                         header + "@@ -1,2 +1,2 @@\n one\n-two\n+Two\n",
                                         header + "@@ -1,2 +1,2 @@\n one\n-Two\n+TWO\n")))
@@ -331,8 +333,10 @@ class ContentViewTest {
         Changes of = new Changes.OfCommit(new Sha("aaaa"));
         CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
         Model rich = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         Model open = Update.update(
                         Update.update(rich, new CommitFilesMsg.Opened(of, Scopes.COMMITS.pane()))
                                 .model(),
@@ -342,7 +346,7 @@ class ContentViewTest {
                         Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
                                 .model(),
                         new LoadMsg.CommitFileDiffLoaded(
-                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of("+a\n")))
+                                of, List.of(file), rich.get(Preferences.SLICE).diffOptions(), DiffText.of("+a\n")))
                 .model();
 
         assertEquals(
@@ -369,7 +373,7 @@ class ContentViewTest {
                         Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
                                 .model(),
                         new LoadMsg.CommitFileDiffLoaded(
-                                of, List.of(file), open.preferences().diffOptions(), DiffText.of("+a\n")))
+                                of, List.of(file), open.get(Preferences.SLICE).diffOptions(), DiffText.of("+a\n")))
                 .model();
         Model unresolved =
                 Update.update(selected, new CommitFilesMsg.ListedCycled()).model();
@@ -409,7 +413,7 @@ class ContentViewTest {
         DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
         Model dirty = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(TestModels.DIRTY))
                 .model()
-                .mapPreferences(preferences -> preferences.withIgnoreWhitespace(ignoring.ignoreWhitespace()));
+                .map(Preferences.SLICE, preferences -> preferences.withIgnoreWhitespace(ignoring.ignoreWhitespace()));
         List<FileEntry> files = TestModels.DIRTY.files();
         Model selected =
                 Update.update(dirty, new SelectionMsg.FilesSelected(files)).model();
@@ -466,7 +470,8 @@ class ContentViewTest {
                 List.of(
                         new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
                         new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
-        Model rich = selected.mapPreferences(
+        Model rich = selected.map(
+                Preferences.SLICE,
                 preferences -> preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
 
         assertEquals(

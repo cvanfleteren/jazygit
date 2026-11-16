@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Found;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
@@ -175,7 +176,7 @@ class ContentSearchTest {
                             driven.model.get(),
                             new LoadMsg.CommitDetailLoaded(
                                     new Sha("aaaa"),
-                                    driven.model.get().preferences().diffOptions(),
+                                    driven.model.get().get(Preferences.SLICE).diffOptions(),
                                     DiffText.of(DIFF.replace("one foo", "one bar"))))
                     .model();
             driven.model.set(other);
@@ -381,13 +382,15 @@ class ContentSearchTest {
 
     private static Model commit(DiffStyle style, String diff) {
         Model model = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(style)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(style)));
         return Update.update(
                         Update.update(model, new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(
-                                new Sha("aaaa"), model.preferences().diffOptions(), DiffText.of(diff)))
+                                new Sha("aaaa"), model.get(Preferences.SLICE).diffOptions(), DiffText.of(diff)))
                 .model();
     }
 

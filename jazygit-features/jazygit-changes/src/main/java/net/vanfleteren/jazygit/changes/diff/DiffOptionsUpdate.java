@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.DiffLoad;
 import net.vanfleteren.jazygit.state.load.LoadFileDiff;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
@@ -33,7 +34,8 @@ public final class DiffOptionsUpdate {
             // The keys work everywhere, but not in a dialog, whose diff does not change.
             case DiffOptionsMsg m when model.popup().isDefined() -> Next.of(model);
             case DiffOptionsMsg.WhitespaceToggled() ->
-                changed(model.mapPreferences(
+                changed(model.map(
+                        Preferences.SLICE,
                         preferences -> preferences.withIgnoreWhitespace(!preferences.ignoreWhitespace())));
             case DiffOptionsMsg.StyleToggled() -> styleToggled(model);
             case DiffOptionsMsg.WordsToggled() -> wordsToggled(model);
@@ -47,20 +49,20 @@ public final class DiffOptionsUpdate {
      * it changes nothing, so nothing is read again.
      */
     private static Next stepped(Model model, UnaryOperator<DiffContext> step) {
-        DiffContext current = model.preferences().context();
+        DiffContext current = model.get(Preferences.SLICE).context();
         DiffContext next = step.apply(current);
         return next.equals(current)
                 ? Next.of(model)
-                : changed(model.mapPreferences(preferences -> preferences.withContext(next)));
+                : changed(model.map(Preferences.SLICE, preferences -> preferences.withContext(next)));
     }
 
     /**
      * Draws the changes in the other style from now on, keeping it for the next session.
      */
     private static Next styleToggled(Model model) {
-        Settings previous = model.preferences().settings();
+        Settings previous = model.get(Preferences.SLICE).settings();
         Settings chosen = previous.withDiffStyle(previous.diffStyle().toggled());
-        return changed(model.mapPreferences(preferences -> preferences.withSettings(chosen)))
+        return changed(model.map(Preferences.SLICE, preferences -> preferences.withSettings(chosen)))
                 .and(new SaveSettings(previous, chosen));
     }
 
@@ -69,10 +71,10 @@ public final class DiffOptionsUpdate {
      * changes how the diffs are drawn, so they are not read again.
      */
     private static Next wordsToggled(Model model) {
-        Settings previous = model.preferences().settings();
+        Settings previous = model.get(Preferences.SLICE).settings();
         Settings chosen = previous.withDiffWords(!previous.diffWords());
         return Next.of(
-                model.mapPreferences(preferences -> preferences.withSettings(chosen)),
+                model.map(Preferences.SLICE, preferences -> preferences.withSettings(chosen)),
                 new SaveSettings(previous, chosen));
     }
 
@@ -81,7 +83,7 @@ public final class DiffOptionsUpdate {
      * settings file (ADR 111).
      */
     public static Next changed(Model model) {
-        DiffOptions options = model.preferences().diffOptions();
+        DiffOptions options = model.get(Preferences.SLICE).diffOptions();
         Option<DivergenceView> divergence =
                 model.repoView().branches().divergence().map(view -> view.withDetail(reloading(view.detail())));
         Option<BranchCommitsView> branchCommits =

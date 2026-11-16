@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
 import net.vanfleteren.jazygit.state.load.ReadWholeFile;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
@@ -55,7 +56,7 @@ public final class ExpandUpdate {
                                 expansion.content(),
                                 source,
                                 gap.path(),
-                                model.preferences().diffOptions()))
+                                model.get(Preferences.SLICE).diffOptions()))
                 : Option.none();
         if (reads && read.isEmpty()) {
             return Next.of(model);

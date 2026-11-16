@@ -38,6 +38,7 @@ import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.load.LoadCommitTree;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.FileFilter;
@@ -156,13 +157,14 @@ class CommitFilesUpdateTest {
         Next next = Update.update(open, new DiffOptionsMsg.StyleToggled());
 
         DiffOptions rich = DiffOptions.DEFAULT.withFirstParent(true);
-        assertEquals(DiffStyle.RICH, next.model().preferences().diffLook().style());
-        assertEquals(rich, next.model().preferences().diffOptions());
+        assertEquals(
+                DiffStyle.RICH, next.model().get(Preferences.SLICE).diffLook().style());
+        assertEquals(rich, next.model().get(Preferences.SLICE).diffOptions());
         assertTrue(next.cmds().contains(new LoadCommitFileDiff(COMMIT, List.of(A), rich)));
         assertTrue(next.cmds()
                 .contains(new SaveSettings(
-                        open.preferences().settings(),
-                        open.preferences().settings().withDiffStyle(DiffStyle.RICH))));
+                        open.get(Preferences.SLICE).settings(),
+                        open.get(Preferences.SLICE).settings().withDiffStyle(DiffStyle.RICH))));
         assertEquals(
                 new Loaded<>(DiffText.of("+a")),
                 next.model()

@@ -50,6 +50,7 @@ import net.vanfleteren.jazygit.state.diff.Found;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.FileStepMsg;
@@ -163,7 +164,7 @@ public final class ScrollArea {
      */
     private RichTextAreaElement fit(
             Model model, boolean focused, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
-        ThemeName theme = model.preferences().theme();
+        ThemeName theme = model.get(Preferences.SLICE).theme();
         ScrolledContent content = shown.content();
         Scrolled known = model.scrolled(area.id(), content);
         sent = sent.filter(told -> told._1().equals(known));

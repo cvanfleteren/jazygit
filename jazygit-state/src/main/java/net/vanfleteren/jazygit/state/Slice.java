@@ -26,14 +26,14 @@ public final class Slice<T> {
     /**
      * A new slice, which holds {@code initial} until it is changed.
      *
-     * @param name what it is shown as, starting with the root package of the module that declares it
+     * @param name what it is shown as; no message key, so not starting with the root package of a module
      */
     public static <T> Slice<T> of(String name, T initial) {
         return new Slice<>(name, initial);
     }
 
     /**
-     * What it is shown as, starting with the root package of the module that declares it.
+     * What it is shown as.
      */
     public String name() {
         return name;

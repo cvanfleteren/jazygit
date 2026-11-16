@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.Slice;
 
 /**
  * How the user wants things shown: what is kept from one session to the next, and what holds for this one only.
@@ -66,6 +67,11 @@ public record Preferences(
             HashSet.empty(),
             SettingsStore.Loaded.DEFAULT,
             Option.none());
+
+    /**
+     * How the user wants things shown, in the model. Declared after {@link #DEFAULT}, which it holds at first.
+     */
+    public static final Slice<Preferences> SLICE = Slice.of("preferences", DEFAULT);
 
     /**
      * How the diffs of the files and the commits are read: a merge against its first parent when changes are drawn

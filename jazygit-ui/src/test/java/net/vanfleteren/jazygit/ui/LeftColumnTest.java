@@ -15,6 +15,7 @@ import io.vavr.control.Option;
 import java.time.Clock;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -56,7 +57,7 @@ class LeftColumnTest {
         LeftColumn.Rendered rendered = leftColumn.render(
                 TestModels.loaded()
                         .withScreen(screen)
-                        .mapPreferences(preferences -> preferences.withLeftCollapsed(screen, true)),
+                        .map(Preferences.SLICE, preferences -> preferences.withLeftCollapsed(screen, true)),
                 Option.none(),
                 Option.none(),
                 Option.none());

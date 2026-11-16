@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.load.LoadStatus;
 import net.vanfleteren.jazygit.state.load.LoadWorktreeChanges;
 import net.vanfleteren.jazygit.state.load.SearchCommits;
 import net.vanfleteren.jazygit.state.load.Targeted;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
@@ -97,7 +98,7 @@ public final class RereadUpdate {
      */
     public static List<Targeted<?>> shown(Model model) {
         RepoView repoView = model.repoView();
-        DiffOptions options = model.preferences().diffOptions();
+        DiffOptions options = model.get(Preferences.SLICE).diffOptions();
         return List.<Targeted<?>>empty()
                 .appendAll(repoView.commits().commitSearch().map(SearchCommits::of))
                 .appendAll(repoView.preview()

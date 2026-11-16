@@ -191,9 +191,9 @@ final class RepositorySession {
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
             open(
-                    RepositoryEnv.reopen(env, git, last.preferences().settings()),
-                    new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
-                    last.preferences().themeOverride(),
+                    RepositoryEnv.reopen(env, git, last.get(Preferences.SLICE).settings()),
+                    new SettingsStore.Loaded(last.get(Preferences.SLICE).settings(), Option.none()),
+                    last.get(Preferences.SLICE).themeOverride(),
                     repositoryTheme,
                     landing);
             // What this session knew of the settings file goes on, so a setting only it has is not taken for one

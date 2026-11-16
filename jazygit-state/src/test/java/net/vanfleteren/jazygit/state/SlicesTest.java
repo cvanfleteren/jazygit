@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
  */
 class SlicesTest {
 
-    private static final Slice<Integer> COUNT = Slice.of("test.count", 0);
+    private static final Slice<Integer> COUNT = Slice.of("count", 0);
 
     @Test
     void aSliceNeverChangedHoldsWhatItHoldsInitially() {

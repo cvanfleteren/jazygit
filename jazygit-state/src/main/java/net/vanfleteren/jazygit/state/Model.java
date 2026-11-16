@@ -42,7 +42,6 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * @param popup          the popup that is open, if any; only one can be
  * @param listCursor     where the user is in the list of the popup, if it has one
  * @param scrolled       where the areas of the content panel were scrolled to, by the id of the area
- * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
  * @param now            the time the last message was handled at, which tells how long ago things happened
  * @param slices         what the features keep in the model, each under its own {@link Slice}
  */
@@ -59,7 +58,6 @@ public record Model(
         Option<Popup> popup,
         ListCursor listCursor,
         Map<AreaId, Scrolled> scrolled,
-        Preferences preferences,
         Instant now,
         Slices slices) {
 
@@ -82,7 +80,6 @@ public record Model(
                 Option.none(),
                 ListCursor.START,
                 HashMap.empty(),
-                Preferences.DEFAULT,
                 Instant.EPOCH,
                 Slices.NONE);
     }
@@ -210,13 +207,6 @@ public record Model(
     }
 
     /**
-     * This model with {@code f} applied to how the user wants things shown, kept from one session to the next or for this one only.
-     */
-    public Model mapPreferences(UnaryOperator<Preferences> f) {
-        return withPreferences(f.apply(preferences));
-    }
-
-    /**
      * The local branch {@code name}, if it is one and no operation runs on it: a branch that is being pushed,
      * pulled or deleted takes no other operation meanwhile.
      */
@@ -243,7 +233,8 @@ public record Model(
         Option<Expansion> expansion = repoView.expansion(at.area(), at.at().content());
         Option<Version> version = repoView.version(at.area(), at.at().content());
         return diff.map(text -> expansion
-                        .map(expanded -> expanded.folded(text.parsed(), preferences.context()))
+                        .map(expanded -> expanded.folded(
+                                text.parsed(), get(Preferences.SLICE).context()))
                         .getOrElse(() -> Expansion.Folded.of(text.parsed())))
                 .map(folded -> version.map(shown -> shown.applied(folded)).getOrElse(folded))
                 .map(folded -> DiffLines.of(folded.diff().diff()))

@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
@@ -136,7 +137,7 @@ final class FocusKeeper {
      * does not draw the pane (ADR 104).
      */
     private void leaveCollapsedColumn(Model model) {
-        if (model.preferences().leftCollapsed(model.screen())) {
+        if (model.get(Preferences.SLICE).leftCollapsed(model.screen())) {
             focus().flatMap(focus -> focus instanceof PaneId pane
                                     && Scopes.leftPanes(model.screen()).contains(pane)
                             ? contentPanel.areaOfPane(model, pane)

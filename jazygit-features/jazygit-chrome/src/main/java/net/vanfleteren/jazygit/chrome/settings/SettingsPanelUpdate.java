@@ -79,16 +79,17 @@ public final class SettingsPanelUpdate {
         }
         return Next.of(
                 model.openPopup(new SettingsPanelPopup(
-                        model.preferences().settings().theme(),
-                        model.preferences().repositoryTheme(),
-                        model.preferences().settings().ghExecutable(),
+                        model.get(Preferences.SLICE).settings().theme(),
+                        model.get(Preferences.SLICE).repositoryTheme(),
+                        model.get(Preferences.SLICE).settings().ghExecutable(),
                         Option.none(),
-                        model.preferences().settings().animations(),
-                        model.preferences().settings().autoRefresh(),
-                        model.preferences().settings().autoFetch(),
-                        model.preferences().settings().browsers(),
+                        model.get(Preferences.SLICE).settings().animations(),
+                        model.get(Preferences.SLICE).settings().autoRefresh(),
+                        model.get(Preferences.SLICE).settings().autoFetch(),
+                        model.get(Preferences.SLICE).settings().browsers(),
                         Option.none())),
-                new SettingsPanelCmd.ReadGitHub(model.preferences().settings().gh()),
+                new SettingsPanelCmd.ReadGitHub(
+                        model.get(Preferences.SLICE).settings().gh()),
                 new SettingsPanelCmd.ReadFile());
     }
 
@@ -109,10 +110,10 @@ public final class SettingsPanelUpdate {
             Model model, Function<Settings, Boolean> on, BiFunction<Settings, Boolean, Settings> with) {
         return model.popup(SettingsPanelPopup.class)
                 .map(panel -> {
-                    Settings kept = model.preferences().settings();
+                    Settings kept = model.get(Preferences.SLICE).settings();
                     Settings chosen = with.apply(kept, !on.apply(kept));
                     return Next.of(
-                            model.mapPreferences(preferences -> preferences.withSettings(chosen))
+                            model.map(Preferences.SLICE, preferences -> preferences.withSettings(chosen))
                                     .openPopup(shown(panel, chosen)),
                             new SaveSettings(kept, chosen));
                 })
@@ -245,8 +246,8 @@ public final class SettingsPanelUpdate {
      */
     public static SettingsMsg.Carried carried(Model last) {
         return new SettingsMsg.Carried(
-                last.preferences().file(),
-                last.preferences().reported(),
+                last.get(Preferences.SLICE).file(),
+                last.get(Preferences.SLICE).reported(),
                 last.outcome()
                         .error()
                         .flatMap(error -> error instanceof SettingsError.NotReread(var problem)
@@ -262,14 +263,16 @@ public final class SettingsPanelUpdate {
      * the settings as applied.
      */
     static Next read(Model model, SettingsStore.Loaded loaded, boolean edited) {
-        Preferences before = model.preferences();
+        Preferences before = model.get(Preferences.SLICE);
         SettingsStore.Applied applied = loaded.appliedTo(before.settings(), before.file());
         Settings settings = applied.settings();
-        Model updated = model.mapPreferences(preferences -> preferences
-                .withSettings(settings)
-                .withFile(loaded)
-                .withReported(loaded.problem())
-                .withThemeOverride(applied.themeChanged() ? Option.none() : preferences.themeOverride()));
+        Model updated = model.map(
+                Preferences.SLICE,
+                preferences -> preferences
+                        .withSettings(settings)
+                        .withFile(loaded)
+                        .withReported(loaded.problem())
+                        .withThemeOverride(applied.themeChanged() ? Option.none() : preferences.themeOverride()));
         Model shown = updated.popup(SettingsPanelPopup.class)
                 .map(panel -> updated.openPopup(shown(panel, settings)
                         .withTheme(settings.theme())
@@ -295,7 +298,7 @@ public final class SettingsPanelUpdate {
      * keeping that for the next session (ADR 88).
      */
     private static Next useBrowser(Model model, AccountBrowserPopup popup) {
-        Settings kept = model.preferences().settings();
+        Settings kept = model.get(Preferences.SLICE).settings();
         Settings chosen = kept.withBrowsers(kept.browsers()
                 .with(
                         popup.account().host(),
@@ -304,7 +307,7 @@ public final class SettingsPanelUpdate {
         return chosen.equals(kept)
                 ? Next.of(model)
                 : Next.of(
-                        model.mapPreferences(preferences -> preferences.withSettings(chosen)),
+                        model.map(Preferences.SLICE, preferences -> preferences.withSettings(chosen)),
                         new SaveSettings(kept, chosen));
     }
 
@@ -312,12 +315,12 @@ public final class SettingsPanelUpdate {
      * Runs the gh at {@code executable} from now on, keeping it for the next session.
      */
     private static Next useGhExecutable(Model model, Option<String> executable) {
-        Settings chosen = model.preferences().settings().withGhExecutable(executable);
-        return chosen.equals(model.preferences().settings())
+        Settings chosen = model.get(Preferences.SLICE).settings().withGhExecutable(executable);
+        return chosen.equals(model.get(Preferences.SLICE).settings())
                 ? Next.of(model)
                 : Next.of(
-                        model.mapPreferences(preferences -> preferences.withSettings(chosen)),
-                        new SaveSettings(model.preferences().settings(), chosen),
+                        model.map(Preferences.SLICE, preferences -> preferences.withSettings(chosen)),
+                        new SaveSettings(model.get(Preferences.SLICE).settings(), chosen),
                         new SettingsPanelCmd.Reopen(Landing.of(model.repoView())));
     }
 }

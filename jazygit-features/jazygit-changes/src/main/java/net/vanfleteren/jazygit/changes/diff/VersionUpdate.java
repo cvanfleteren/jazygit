@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.state.load.ReadVersion;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.RepoView;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
@@ -89,7 +90,11 @@ public final class VersionUpdate {
         Option<ReadVersion> read = reads
                 ? ExpandUpdate.source(model, content, path)
                         .map(source -> ReadVersion.of(
-                                area, content, source, path, model.preferences().diffOptions()))
+                                area,
+                                content,
+                                source,
+                                path,
+                                model.get(Preferences.SLICE).diffOptions()))
                 : before.map(kept -> ReadVersion.of(area, kept.read()));
         Shows next = new Shows(
                 target.version().filter(version -> version.in(file.file().type())), target.rendered());
@@ -128,7 +133,7 @@ public final class VersionUpdate {
      */
     private static List<Tuple2<AreaId, Scrolled>> filesAreas(Model model) {
         RepoView view = model.repoView();
-        boolean rich = model.preferences().diffLook().style() == DiffStyle.RICH;
+        boolean rich = model.get(Preferences.SLICE).diffLook().style() == DiffStyle.RICH;
         List<Tuple2<AreaId, ScrolledContent>> areas = view.files()
                 .commitFiles()
                 .map(files -> files.unchanged()

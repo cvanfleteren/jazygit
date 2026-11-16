@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.chrome.layout.LayoutUpdate;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.preferences.LeftPanes;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.LeftBorder;
 import net.vanfleteren.jazygit.ui.PaneBorder;
@@ -120,10 +121,10 @@ final class BorderDrag {
      * percent of the width: collapsed for a width that collapses it (ADR 104), else that width.
      */
     private static boolean shownAt(Model model, Screen screen, int width) {
-        boolean collapsed = model.preferences().leftCollapsed(screen);
+        boolean collapsed = model.get(Preferences.SLICE).leftCollapsed(screen);
         return LayoutUpdate.collapses(width)
                 ? collapsed
-                : !collapsed && width == model.preferences().leftWidth(screen);
+                : !collapsed && width == model.get(Preferences.SLICE).leftWidth(screen);
     }
 
     /**

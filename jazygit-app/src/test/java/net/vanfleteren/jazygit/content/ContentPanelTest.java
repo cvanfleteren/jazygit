@@ -159,8 +159,10 @@ class ContentPanelTest {
                 -ten
                 +TEN
                 """)
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         AreaId area = expanding.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.Gap above = new Anchor.Gap("a.txt", 1, Option.of(9));
@@ -195,8 +197,10 @@ class ContentPanelTest {
         ContentPanel versions = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
         String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
         Model shown = showingCommit(header + "@@ -9,2 +9,2 @@\n nine\n-ten\n+TEN\n")
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         AreaId area = versions.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine removed = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.LEFT, 10);
@@ -269,8 +273,10 @@ class ContentPanelTest {
                 n -> n == 21 ? "-para 21\n+changed 21\n" : n % 2 == 1 ? " para " + n + "\n" : " \n";
         Model shown = showingCommit(header + "@@ -18,7 +18,7 @@\n"
                         + List.rangeClosed(18, 24).map(line::apply).mkString())
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
         AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
@@ -308,8 +314,10 @@ class ContentPanelTest {
         String header = "diff --git a/a.md b/a.md\n--- a/a.md\n+++ b/a.md\n";
         DiffText changes = DiffText.of(header + "@@ -1,3 +1,3 @@\n # Title\n-old text\n+new text\n \n");
         Model shown = showingCommit(changes.text())
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
         AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
@@ -355,8 +363,10 @@ class ContentPanelTest {
         java.util.function.IntFunction<String> line = n -> n == 41 ? "-line41\n+changed\n" : " line" + n + "\n";
         Model shown = showingCommit(header + "@@ -38,7 +38,7 @@\n"
                         + List.rangeClosed(38, 44).map(line::apply).mkString())
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
         AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
@@ -400,8 +410,10 @@ class ContentPanelTest {
                 -ten
                 +TEN
                 """)
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         AreaId area = copying.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine added = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 10);
@@ -989,15 +1001,17 @@ class ContentPanelTest {
      */
     private static Model showingRichCommit(String lines) {
         Model rich = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         int count = lines.split("\n").length;
         return Update.update(
                         Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(
                                 new Sha("aaaa"),
-                                rich.preferences().diffOptions(),
+                                rich.get(Preferences.SLICE).diffOptions(),
                                 DiffText.of(String.join(
                                         "\n",
                                         "diff --git a/schema.sql b/schema.sql",
@@ -1341,8 +1355,10 @@ class ContentPanelTest {
                 },
                 () -> false);
         Model selected = showingCommit("+added line\n");
-        Model light = selected.mapPreferences(preferences ->
-                preferences.withThemeOverride(Option.of(net.vanfleteren.jazygit.settings.ThemeName.LIGHT)));
+        Model light = selected.map(
+                Preferences.SLICE,
+                preferences ->
+                        preferences.withThemeOverride(Option.of(net.vanfleteren.jazygit.settings.ThemeName.LIGHT)));
         Model other = showingCommit("+other line\n");
 
         counting.render(selected, CommitsPanel.PANE);
@@ -1374,14 +1390,16 @@ class ContentPanelTest {
                 dispatched::add);
         int lines = 2_000;
         Model rich = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         Model model = Update.update(
                         Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(
                                 new Sha("aaaa"),
-                                rich.preferences().diffOptions(),
+                                rich.get(Preferences.SLICE).diffOptions(),
                                 DiffText.of("diff --git a/a.txt b/a.txt\n--- /dev/null\n+++ b/a.txt\n@@ -0,0 +1,"
                                         + lines + " @@\n"
                                         + List.range(0, lines)
@@ -1428,13 +1446,15 @@ class ContentPanelTest {
                 id -> {},
                 dispatched::add);
         Model rich = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         Model model = Update.update(
                         Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(
-                                new Sha("aaaa"), rich.preferences().diffOptions(), DiffText.of("""
+                                new Sha("aaaa"), rich.get(Preferences.SLICE).diffOptions(), DiffText.of("""
                                 diff --git a/a.txt b/a.txt
                                 --- a/a.txt
                                 +++ b/a.txt
@@ -1467,13 +1487,15 @@ class ContentPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel clicking = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
         Model rich = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         Model model = Update.update(
                         Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(
-                                new Sha("aaaa"), rich.preferences().diffOptions(), DiffText.of("""
+                                new Sha("aaaa"), rich.get(Preferences.SLICE).diffOptions(), DiffText.of("""
                                 diff --git a/a.txt b/a.txt
                                 --- a/a.txt
                                 +++ b/a.txt
@@ -1788,8 +1810,10 @@ class ContentPanelTest {
         Changes of = pullRequestChanges();
         CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
         Model rich = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         Model open = Update.update(
                         Update.update(
                                         Update.update(
@@ -1805,7 +1829,7 @@ class ContentPanelTest {
                         Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
                                 .model(),
                         new LoadMsg.CommitFileDiffLoaded(
-                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of(diff)))
+                                of, List.of(file), rich.get(Preferences.SLICE).diffOptions(), DiffText.of(diff)))
                 .model();
     }
 

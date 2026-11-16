@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.settings.Editors;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 
 /**
  * Opening a worktree in an editor the user set (ADR 110): at once with only one set, else after choosing it in a
@@ -61,7 +62,7 @@ public final class OpenInEditorUpdate {
      * said, with how to set one.
      */
     private static Next editors(Model model, String location) {
-        Editors editors = model.preferences().settings().editors();
+        Editors editors = model.get(Preferences.SLICE).settings().editors();
         if (editors.isEmpty()) {
             return Next.of(model.fail(new WorktreeError.NoEditorSet()));
         }

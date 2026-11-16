@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import org.junit.jupiter.api.Test;
@@ -33,9 +34,10 @@ class ThemeUpdateTest {
 
         Next previewed = Update.update(open, new ThemeMsg.Previewed(ThemeName.DARCULA));
 
-        assertEquals(ThemeName.DARCULA, previewed.model().preferences().theme());
+        assertEquals(ThemeName.DARCULA, previewed.model().get(Preferences.SLICE).theme());
         assertEquals(
-                TestModels.PLAIN.settings(), previewed.model().preferences().settings());
+                TestModels.PLAIN.settings(),
+                previewed.model().get(Preferences.SLICE).settings());
         assertEquals(List.empty(), previewed.cmds());
         assertEquals(open.popup(), previewed.model().popup());
     }
@@ -44,7 +46,8 @@ class ThemeUpdateTest {
     void cancellingShowsTheThemeFromBeforeAgain() {
         Model open = Update.update(
                         TestModels.loaded()
-                                .mapPreferences(
+                                .map(
+                                        Preferences.SLICE,
                                         preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT))),
                         new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
                 .model();
@@ -53,7 +56,7 @@ class ThemeUpdateTest {
 
         Model cancelled = Update.update(previewed, new ThemeMsg.Cancelled()).model();
 
-        assertEquals(ThemeName.LIGHT, cancelled.preferences().theme());
+        assertEquals(ThemeName.LIGHT, cancelled.get(Preferences.SLICE).theme());
         assertEquals(Option.none(), cancelled.popup());
     }
 
@@ -66,8 +69,8 @@ class ThemeUpdateTest {
 
         Next chosen = Update.update(previewed, new ThemeMsg.Chosen(ThemeName.LIGHT));
 
-        assertEquals(ThemeName.LIGHT, chosen.model().preferences().theme());
-        assertEquals(Option.none(), chosen.model().preferences().themeOverride());
+        assertEquals(ThemeName.LIGHT, chosen.model().get(Preferences.SLICE).theme());
+        assertEquals(Option.none(), chosen.model().get(Preferences.SLICE).themeOverride());
         assertEquals(
                 List.of(new SaveSettings(
                         TestModels.PLAIN.settings(), TestModels.PLAIN.settings().withTheme(ThemeName.LIGHT))),
@@ -101,7 +104,9 @@ class ThemeUpdateTest {
         Next chosen = Update.update(open, new ThemeMsg.Chosen(ThemeName.DARCULA));
 
         assertEquals(Option.none(), chosen.model().popup(ThemePopup.class));
-        assertEquals(ThemeName.DARCULA, chosen.model().preferences().settings().theme());
+        assertEquals(
+                ThemeName.DARCULA,
+                chosen.model().get(Preferences.SLICE).settings().theme());
         assertEquals(
                 List.of(new SaveSettings(
                         TestModels.PLAIN.settings(), TestModels.PLAIN.settings().withTheme(ThemeName.DARCULA))),
@@ -123,7 +128,8 @@ class ThemeUpdateTest {
     void requestOpensTheChoiceWithTheThemeAskedForAtStartup() {
         Model model = Update.update(
                         TestModels.loaded()
-                                .mapPreferences(
+                                .map(
+                                        Preferences.SLICE,
                                         preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT))),
                         new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
                 .model();
@@ -142,15 +148,16 @@ class ThemeUpdateTest {
     void choosingTheThemeAskedForAtStartupSavesIt() {
         Model open = Update.update(
                         TestModels.loaded()
-                                .mapPreferences(
+                                .map(
+                                        Preferences.SLICE,
                                         preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT))),
                         new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
                 .model();
 
         Next chosen = Update.update(open, new ThemeMsg.Chosen(ThemeName.LIGHT));
 
-        assertEquals(Option.none(), chosen.model().preferences().themeOverride());
-        assertEquals(ThemeName.LIGHT, chosen.model().preferences().theme());
+        assertEquals(Option.none(), chosen.model().get(Preferences.SLICE).themeOverride());
+        assertEquals(ThemeName.LIGHT, chosen.model().get(Preferences.SLICE).theme());
         assertEquals(
                 List.of(new SaveSettings(
                         TestModels.PLAIN.settings(), TestModels.PLAIN.settings().withTheme(ThemeName.LIGHT))),
@@ -161,14 +168,15 @@ class ThemeUpdateTest {
     void choosingTheSavedThemeOverTheOneAskedForAtStartupSwitchesBackAndSavesNothing() {
         Model open = Update.update(
                         TestModels.loaded()
-                                .mapPreferences(
+                                .map(
+                                        Preferences.SLICE,
                                         preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT))),
                         new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
                 .model();
 
         Next chosen = Update.update(open, new ThemeMsg.Chosen(ThemeName.DARK));
 
-        assertEquals(ThemeName.DARK, chosen.model().preferences().theme());
+        assertEquals(ThemeName.DARK, chosen.model().get(Preferences.SLICE).theme());
         assertEquals(List.empty(), chosen.cmds());
     }
 
@@ -176,14 +184,15 @@ class ThemeUpdateTest {
     void cancellingKeepsTheThemeAskedForAtStartup() {
         Model open = Update.update(
                         TestModels.loaded()
-                                .mapPreferences(
+                                .map(
+                                        Preferences.SLICE,
                                         preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT))),
                         new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
                 .model();
 
         Next cancelled = Update.update(open, new ThemeMsg.Cancelled());
 
-        assertEquals(ThemeName.LIGHT, cancelled.model().preferences().theme());
+        assertEquals(ThemeName.LIGHT, cancelled.model().get(Preferences.SLICE).theme());
         assertEquals(List.empty(), cancelled.cmds());
     }
 
@@ -195,7 +204,9 @@ class ThemeUpdateTest {
         Next cancelled = Update.update(open, new ThemeMsg.Cancelled());
 
         assertEquals(Option.none(), cancelled.model().popup(ThemePopup.class));
-        assertEquals(ThemeName.DARK, cancelled.model().preferences().settings().theme());
+        assertEquals(
+                ThemeName.DARK,
+                cancelled.model().get(Preferences.SLICE).settings().theme());
         assertEquals(List.empty(), cancelled.cmds());
     }
 
@@ -203,7 +214,7 @@ class ThemeUpdateTest {
             new RepositoryTheme.Inherited(ThemeName.LIGHT, "/home/alice/.gitconfig-work");
 
     private static Model inRepository(RepositoryTheme theme) {
-        return TestModels.loaded().mapPreferences(preferences -> preferences.withRepositoryTheme(theme));
+        return TestModels.loaded().map(Preferences.SLICE, preferences -> preferences.withRepositoryTheme(theme));
     }
 
     @Test
@@ -211,12 +222,12 @@ class ThemeUpdateTest {
         assertEquals(
                 ThemeName.LIGHT,
                 inRepository(new RepositoryTheme(Option.none(), Option.of(WORK)))
-                        .preferences()
+                        .get(Preferences.SLICE)
                         .theme());
         assertEquals(
                 ThemeName.EMBER,
                 inRepository(new RepositoryTheme(Option.of(ThemeName.EMBER), Option.of(WORK)))
-                        .preferences()
+                        .get(Preferences.SLICE)
                         .theme());
     }
 
@@ -242,9 +253,11 @@ class ThemeUpdateTest {
         Next chosen = Update.update(previewed, new ThemeMsg.Chosen(ThemeName.EMBER));
 
         assertEquals(Option.none(), chosen.model().popup(ThemePopup.class));
-        assertEquals(ThemeName.EMBER, chosen.model().preferences().theme());
-        assertEquals(Option.none(), chosen.model().preferences().themeOverride());
-        assertEquals(TestModels.PLAIN.settings(), chosen.model().preferences().settings());
+        assertEquals(ThemeName.EMBER, chosen.model().get(Preferences.SLICE).theme());
+        assertEquals(Option.none(), chosen.model().get(Preferences.SLICE).themeOverride());
+        assertEquals(
+                TestModels.PLAIN.settings(),
+                chosen.model().get(Preferences.SLICE).settings());
         assertEquals(List.of(new ThemeCmd(Option.of(ThemeName.EMBER))), chosen.cmds());
     }
 
@@ -257,7 +270,7 @@ class ThemeUpdateTest {
 
         Next chosen = Update.update(open, new ThemeMsg.Chosen(ThemeName.EMBER));
 
-        assertEquals(ThemeName.EMBER, chosen.model().preferences().theme());
+        assertEquals(ThemeName.EMBER, chosen.model().get(Preferences.SLICE).theme());
         assertEquals(List.empty(), chosen.cmds());
     }
 
@@ -271,12 +284,12 @@ class ThemeUpdateTest {
         Model previewed = Update.update(open, new ThemeMsg.FallbackPreviewed()).model();
         Next cleared = Update.update(previewed, new ThemeMsg.Cleared());
 
-        assertEquals(ThemeName.LIGHT, previewed.preferences().theme());
+        assertEquals(ThemeName.LIGHT, previewed.get(Preferences.SLICE).theme());
         assertEquals(Option.none(), cleared.model().popup(ThemePopup.class));
         assertEquals(
                 new RepositoryTheme(Option.none(), Option.of(WORK)),
-                cleared.model().preferences().repositoryTheme());
-        assertEquals(ThemeName.LIGHT, cleared.model().preferences().theme());
+                cleared.model().get(Preferences.SLICE).repositoryTheme());
+        assertEquals(ThemeName.LIGHT, cleared.model().get(Preferences.SLICE).theme());
         assertEquals(List.of(new ThemeCmd(Option.none())), cleared.cmds());
     }
 
@@ -289,7 +302,7 @@ class ThemeUpdateTest {
 
         Next cleared = Update.update(open, new ThemeMsg.Cleared());
 
-        assertEquals(ThemeName.DARK, cleared.model().preferences().theme());
+        assertEquals(ThemeName.DARK, cleared.model().get(Preferences.SLICE).theme());
     }
 
     @Test
@@ -300,8 +313,10 @@ class ThemeUpdateTest {
 
         Next chosen = Update.update(open, new ThemeMsg.Chosen(ThemeName.LIGHT));
 
-        assertEquals(theme, chosen.model().preferences().repositoryTheme());
-        assertEquals(ThemeName.EMBER, chosen.model().preferences().theme());
-        assertEquals(ThemeName.LIGHT, chosen.model().preferences().settings().theme());
+        assertEquals(theme, chosen.model().get(Preferences.SLICE).repositoryTheme());
+        assertEquals(ThemeName.EMBER, chosen.model().get(Preferences.SLICE).theme());
+        assertEquals(
+                ThemeName.LIGHT,
+                chosen.model().get(Preferences.SLICE).settings().theme());
     }
 }

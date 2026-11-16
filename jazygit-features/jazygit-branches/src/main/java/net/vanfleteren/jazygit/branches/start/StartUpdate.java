@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 
 /**
  * Asking what to open instead, when jazygit starts outside a repository: making the folder one, another folder, or
@@ -33,7 +34,8 @@ public final class StartUpdate {
             Settings settings,
             Option<ThemeName> themeOverride) {
         return Model.initial("")
-                .mapPreferences(
+                .map(
+                        Preferences.SLICE,
                         preferences -> preferences.withSettings(settings).withThemeOverride(themeOverride))
                 .openPopup(new NoRepositoryPopup(directory, exists, recent, Option.none()));
     }

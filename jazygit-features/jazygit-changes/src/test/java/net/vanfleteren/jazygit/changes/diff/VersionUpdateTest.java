@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.ReadVersion;
 import net.vanfleteren.jazygit.state.load.ReadWholeFile;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
@@ -70,7 +71,7 @@ class VersionUpdateTest {
     void theFirstTimeTheFileIsReadWholeWithWhitespaceNotIgnored() {
         Model model =
                 Update.update(loaded(), new DiffOptionsMsg.WhitespaceToggled()).model();
-        assertTrue(model.preferences().diffOptions().ignoreWhitespace());
+        assertTrue(model.get(Preferences.SLICE).diffOptions().ignoreWhitespace());
 
         Next next = Update.update(model, new VersionMsg.Cycled(at(REMOVED)));
 
@@ -200,7 +201,9 @@ class VersionUpdateTest {
         model = Update.update(
                         model,
                         new LoadMsg.FileDiffLoaded(
-                                DIRTY.files(), model.preferences().diffOptions(), new Diffs("", unstaged.text())))
+                                DIRTY.files(),
+                                model.get(Preferences.SLICE).diffOptions(),
+                                new Diffs("", unstaged.text())))
                 .model();
         ScrolledContent shown = new ScrolledContent.Diff(unstaged);
         Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
@@ -223,7 +226,9 @@ class VersionUpdateTest {
         Next reread = Update.update(
                 whole,
                 new LoadMsg.FileDiffLoaded(
-                        DIRTY.files(), whole.preferences().diffOptions(), new Diffs("", unstaged.text() + "+three\n")));
+                        DIRTY.files(),
+                        whole.get(Preferences.SLICE).diffOptions(),
+                        new Diffs("", unstaged.text() + "+three\n")));
 
         assertTrue(reread.cmds().contains(read), reread.cmds().mkString("\n"));
     }
@@ -295,7 +300,7 @@ class VersionUpdateTest {
     void fromTheFilesPaneThePlainViewShowsNoVersion() {
         Model model = workingTree(STAGED_CHANGE, UNSTAGED_CHANGE);
         Model plain = Update.update(model, new DiffOptionsMsg.StyleToggled()).model();
-        assertEquals(DiffStyle.PLAIN, plain.preferences().diffLook().style());
+        assertEquals(DiffStyle.PLAIN, plain.get(Preferences.SLICE).diffLook().style());
 
         Next next = Update.update(plain, new VersionMsg.FilesCycled());
 
@@ -340,7 +345,10 @@ class VersionUpdateTest {
         Model read = Update.update(
                         opened,
                         new LoadMsg.CommitFileDiffLoaded(
-                                commit, List.of(file), opened.preferences().diffOptions(), CHANGES))
+                                commit,
+                                List.of(file),
+                                opened.get(Preferences.SLICE).diffOptions(),
+                                CHANGES))
                 .model();
 
         Next next = Update.update(read, new VersionMsg.FilesCycled());
@@ -363,7 +371,7 @@ class VersionUpdateTest {
         return Update.update(
                         model,
                         new LoadMsg.FileDiffLoaded(
-                                files, model.preferences().diffOptions(), new Diffs(staged, unstaged)))
+                                files, model.get(Preferences.SLICE).diffOptions(), new Diffs(staged, unstaged)))
                 .model();
     }
 
@@ -372,7 +380,7 @@ class VersionUpdateTest {
      */
     private static Model rich() {
         Model rich = Update.update(loaded(), new DiffOptionsMsg.StyleToggled()).model();
-        assertEquals(DiffStyle.RICH, rich.preferences().diffLook().style());
+        assertEquals(DiffStyle.RICH, rich.get(Preferences.SLICE).diffLook().style());
         return rich;
     }
 
@@ -398,7 +406,7 @@ class VersionUpdateTest {
      */
     private static ReadVersion read(Model model) {
         return ReadVersion.of(
-                AREA, CONTENT, SOURCE, "a.txt", model.preferences().diffOptions());
+                AREA, CONTENT, SOURCE, "a.txt", model.get(Preferences.SLICE).diffOptions());
     }
 
     /**

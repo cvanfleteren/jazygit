@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.state.compose.ComposeMsg;
 import net.vanfleteren.jazygit.state.compose.EditorFile;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
@@ -378,7 +379,7 @@ class ReviewUpdateTest {
                 CONTENT,
                 new WholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
                 "a.txt",
-                files().preferences().diffOptions());
+                files().get(Preferences.SLICE).diffOptions());
         Version shown =
                 new Version(CONTENT, "a.txt", Option.of(FileVersion.NEW), read.file(), new Loadable.Loaded<>(DIFF));
         Model inVersion = files().mapRepoView(view -> view.withVersion(AREA, shown));

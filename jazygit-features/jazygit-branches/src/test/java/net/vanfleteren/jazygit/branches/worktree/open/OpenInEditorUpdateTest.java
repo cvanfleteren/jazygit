@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -82,8 +83,10 @@ class OpenInEditorUpdateTest {
                 .model();
         return Update.update(branches, new LoadMsg.WorktreesLoaded(List.of(MAIN, LINKED, MISSING)))
                 .model()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withEditors(new Editors(editors))));
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withEditors(new Editors(editors))));
     }
 
     private static Branch elsewhere(BranchName name, Path worktree) {

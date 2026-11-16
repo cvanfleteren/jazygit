@@ -215,7 +215,7 @@ class JazygitAppPilotTest {
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("+a\n")))
                 .model()
-                .mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+                .map(Preferences.SLICE, preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
         AtomicReference<ToolkitTestRunner> runner = new AtomicReference<>();
         AtomicReference<FocusKeeper> keeper = new AtomicReference<>();
         ContentPanel content = new ContentPanel(Theme.SpanStyles.NONE, () -> false);

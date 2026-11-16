@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
@@ -106,12 +107,15 @@ class BranchCommitsUpdateTest {
         Model read = Update.update(
                         selected.model(),
                         new LoadMsg.CommitDetailLoaded(
-                                FEATURE_TIP, open.preferences().diffOptions(), CHANGES, Cmd.Slot.BRANCH_COMMITS_DETAIL))
+                                FEATURE_TIP,
+                                open.get(Preferences.SLICE).diffOptions(),
+                                CHANGES,
+                                Cmd.Slot.BRANCH_COMMITS_DETAIL))
                 .model();
 
         assertEquals(
                 List.of(new LoadCommitDetail(
-                        FEATURE_TIP, open.preferences().diffOptions(), Cmd.Slot.BRANCH_COMMITS_DETAIL)),
+                        FEATURE_TIP, open.get(Preferences.SLICE).diffOptions(), Cmd.Slot.BRANCH_COMMITS_DETAIL)),
                 selected.cmds());
         assertEquals(
                 Option.of(new Loadable.Loaded<>(CHANGES)),
@@ -131,7 +135,7 @@ class BranchCommitsUpdateTest {
                 ignoring.cmds()
                         .contains(new LoadCommitDetail(
                                 FEATURE_TIP,
-                                ignoring.model().preferences().diffOptions(),
+                                ignoring.model().get(Preferences.SLICE).diffOptions(),
                                 Cmd.Slot.BRANCH_COMMITS_DETAIL)),
                 ignoring.cmds().toString());
     }
@@ -175,8 +179,8 @@ class BranchCommitsUpdateTest {
     void whatAHighlightedCommitChangedThatFailedToBeReadIsReadAgainOnTheNextTick() {
         Model selected = Update.update(opened(featureLogRead()), new SelectionMsg.BranchCommitSelected(FEATURE_TIP))
                 .model();
-        LoadCommitDetail load =
-                new LoadCommitDetail(FEATURE_TIP, selected.preferences().diffOptions(), Cmd.Slot.BRANCH_COMMITS_DETAIL);
+        LoadCommitDetail load = new LoadCommitDetail(
+                FEATURE_TIP, selected.get(Preferences.SLICE).diffOptions(), Cmd.Slot.BRANCH_COMMITS_DETAIL);
 
         Model failed = Update.update(selected, new LoadMsg.Failed(load, refused("boom")))
                 .model();

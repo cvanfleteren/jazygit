@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.changes.fetch.FetchMsg;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -21,7 +22,7 @@ class TimerSwitchesTest {
     private static final Instant AWAY_AT = Instant.parse("2026-11-14T20:00:00Z");
 
     private static Model with(Model model, Settings settings) {
-        return model.mapPreferences(preferences -> preferences.withSettings(settings));
+        return model.map(Preferences.SLICE, preferences -> preferences.withSettings(settings));
     }
 
     private static Model autoRefreshOff() {

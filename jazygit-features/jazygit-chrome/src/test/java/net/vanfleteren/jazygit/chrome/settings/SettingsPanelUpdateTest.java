@@ -46,6 +46,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.operation.CommandLog;
 import net.vanfleteren.jazygit.state.popup.*;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.preferences.SettingsError;
@@ -152,7 +153,7 @@ class SettingsPanelUpdateTest {
         Model cancelled = Update.update(previewed, new ThemeMsg.Cancelled()).model();
 
         assertEquals(Option.of(READ.withOpensAt(Option.of('t'))), cancelled.popup(SettingsPanelPopup.class));
-        assertEquals(ThemeName.DARK, cancelled.preferences().theme());
+        assertEquals(ThemeName.DARK, cancelled.get(Preferences.SLICE).theme());
     }
 
     @Test
@@ -199,8 +200,8 @@ class SettingsPanelUpdateTest {
         Next olderFirst = Update.update(
                 second, new SettingsPanelMsg.GhExecutableChecked(Option.of("/old/gh"), Either.right("2.102.0")));
 
-        assertEquals(chosen, latestFirst.model().preferences().settings());
-        assertEquals(chosen, olderAfter.model().preferences().settings());
+        assertEquals(chosen, latestFirst.model().get(Preferences.SLICE).settings());
+        assertEquals(chosen, olderAfter.model().get(Preferences.SLICE).settings());
         assertEquals(List.empty(), olderAfter.cmds());
         assertEquals(second, olderFirst.model());
         assertEquals(List.empty(), olderFirst.cmds());
@@ -212,7 +213,7 @@ class SettingsPanelUpdateTest {
         Model first = Update.update(
                         typed(
                                 TestModels.loaded()
-                                        .mapPreferences(preferences -> preferences.withSettings(saved))
+                                        .map(Preferences.SLICE, preferences -> preferences.withSettings(saved))
                                         .openPopup(new GhExecutablePopup("")),
                                 "/old/gh"),
                         new SettingsPanelMsg.GhExecutableEntered())
@@ -229,7 +230,8 @@ class SettingsPanelUpdateTest {
 
         assertEquals(onThePath, older.model());
         assertEquals(List.empty(), older.cmds());
-        assertEquals(Option.none(), latest.model().preferences().settings().ghExecutable());
+        assertEquals(
+                Option.none(), latest.model().get(Preferences.SLICE).settings().ghExecutable());
         assertEquals(
                 List.of(
                         new SaveSettings(saved, TestModels.PLAIN.settings()),
@@ -254,7 +256,7 @@ class SettingsPanelUpdateTest {
                 TestModels.loaded().mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/opt/gh/bin/gh"))),
                 new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
 
-        assertEquals(chosen, next.model().preferences().settings());
+        assertEquals(chosen, next.model().get(Preferences.SLICE).settings());
         assertEquals(
                 List.of(
                         new SaveSettings(TestModels.PLAIN.settings(), chosen),
@@ -286,7 +288,8 @@ class SettingsPanelUpdateTest {
                 TestModels.loaded().mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/nowhere/gh"))),
                 new SettingsPanelMsg.GhExecutableChecked(Option.of("/nowhere/gh"), Either.left(failure)));
 
-        assertEquals(TestModels.PLAIN.settings(), next.model().preferences().settings());
+        assertEquals(
+                TestModels.PLAIN.settings(), next.model().get(Preferences.SLICE).settings());
         assertEquals(List.empty(), next.cmds());
         assertEquals(
                 Option.of(
@@ -328,51 +331,51 @@ class SettingsPanelUpdateTest {
     @Test
     void theAnimationsAreTurnedOffAndOnAgainAndKeptWithThePanelStillOpen() {
         Model open = TestModels.loaded().openPopup(READ);
-        Settings kept = open.preferences().settings();
+        Settings kept = open.get(Preferences.SLICE).settings();
 
         Next off = Update.update(open, new SettingsPanelMsg.AnimationsToggled());
 
-        assertFalse(off.model().preferences().settings().animations());
+        assertFalse(off.model().get(Preferences.SLICE).settings().animations());
         assertEquals(Option.of(READ.withAnimations(false)), off.model().popup(SettingsPanelPopup.class));
         assertEquals(List.of(new SaveSettings(kept, kept.withAnimations(false))), off.cmds());
 
         Next on = Update.update(off.model(), new SettingsPanelMsg.AnimationsToggled());
 
-        assertTrue(on.model().preferences().settings().animations());
+        assertTrue(on.model().get(Preferences.SLICE).settings().animations());
         assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
     }
 
     @Test
     void readingTheRepositoryEverySoOftenIsTurnedOffAndOnAgainAndKeptWithThePanelStillOpen() {
         Model open = TestModels.loaded().openPopup(READ);
-        Settings kept = open.preferences().settings();
+        Settings kept = open.get(Preferences.SLICE).settings();
 
         Next off = Update.update(open, new SettingsPanelMsg.AutoRefreshToggled());
 
-        assertFalse(off.model().preferences().settings().autoRefresh());
+        assertFalse(off.model().get(Preferences.SLICE).settings().autoRefresh());
         assertEquals(Option.of(READ.withAutoRefresh(false)), off.model().popup(SettingsPanelPopup.class));
         assertEquals(List.of(new SaveSettings(kept, kept.withAutoRefresh(false))), off.cmds());
 
         Next on = Update.update(off.model(), new SettingsPanelMsg.AutoRefreshToggled());
 
-        assertTrue(on.model().preferences().settings().autoRefresh());
+        assertTrue(on.model().get(Preferences.SLICE).settings().autoRefresh());
         assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
     }
 
     @Test
     void fetchingEverySoOftenIsTurnedOffAndOnAgainAndKeptWithThePanelStillOpen() {
         Model open = TestModels.loaded().openPopup(READ);
-        Settings kept = open.preferences().settings();
+        Settings kept = open.get(Preferences.SLICE).settings();
 
         Next off = Update.update(open, new SettingsPanelMsg.AutoFetchToggled());
 
-        assertFalse(off.model().preferences().settings().autoFetch());
+        assertFalse(off.model().get(Preferences.SLICE).settings().autoFetch());
         assertEquals(Option.of(READ.withAutoFetch(false)), off.model().popup(SettingsPanelPopup.class));
         assertEquals(List.of(new SaveSettings(kept, kept.withAutoFetch(false))), off.cmds());
 
         Next on = Update.update(off.model(), new SettingsPanelMsg.AutoFetchToggled());
 
-        assertTrue(on.model().preferences().settings().autoFetch());
+        assertTrue(on.model().get(Preferences.SLICE).settings().autoFetch());
         assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
     }
 
@@ -416,7 +419,7 @@ class SettingsPanelUpdateTest {
                 new SettingsPanelMsg.BrowserEntered());
 
         assertEquals(Option.none(), next.model().popup());
-        assertEquals(chosen, next.model().preferences().settings());
+        assertEquals(chosen, next.model().get(Preferences.SLICE).settings());
         assertEquals(List.of(new SaveSettings(kept, chosen)), next.cmds());
     }
 
@@ -424,15 +427,19 @@ class SettingsPanelUpdateTest {
     void anEmptyBrowserTakesTheAccountsAway() {
         GhAccount alice = new GhAccount("github.com", "alice");
         Model set = TestModels.loaded()
-                .mapPreferences(preferences -> preferences.withSettings(preferences
-                        .settings()
-                        .withBrowsers(AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")))));
-        Settings kept = set.preferences().settings();
+                .map(
+                        Preferences.SLICE,
+                        preferences -> preferences.withSettings(preferences
+                                .settings()
+                                .withBrowsers(AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")))));
+        Settings kept = set.get(Preferences.SLICE).settings();
 
         Next next = Update.update(
                 set.openPopup(new AccountBrowserPopup(alice, "  ")), new SettingsPanelMsg.BrowserEntered());
 
-        assertEquals(AccountBrowsers.NONE, next.model().preferences().settings().browsers());
+        assertEquals(
+                AccountBrowsers.NONE,
+                next.model().get(Preferences.SLICE).settings().browsers());
         assertEquals(List.of(new SaveSettings(kept, kept.withBrowsers(AccountBrowsers.NONE))), next.cmds());
     }
 
@@ -636,8 +643,8 @@ class SettingsPanelUpdateTest {
                         new SettingsPanelMsg.FileEdited(List.empty(), read(edited)))
                 .model();
 
-        assertEquals(edited, model.preferences().settings());
-        assertEquals(read(edited), model.preferences().file());
+        assertEquals(edited, model.get(Preferences.SLICE).settings());
+        assertEquals(read(edited), model.get(Preferences.SLICE).file());
         assertEquals(
                 Option.of(READ.withTheme(ThemeName.DARCULA).withAnimations(false)),
                 model.popup(SettingsPanelPopup.class));
@@ -648,15 +655,17 @@ class SettingsPanelUpdateTest {
     void readingTheFileAsThePanelOpensShowsWhereItIsAndKeepsASettingOnlyTheSessionHas() {
         // The animations were turned off, but could not be saved: the file has them on still.
         Model model = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withAnimations(false)))
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withAnimations(false)))
                 .openPopup(READ.withAnimations(false));
 
         Model read = Update.update(
                         model, new SettingsPanelMsg.FileRead(Option.of(FILE.toString()), SettingsStore.Loaded.DEFAULT))
                 .model();
 
-        assertFalse(read.preferences().settings().animations());
+        assertFalse(read.get(Preferences.SLICE).settings().animations());
         assertEquals(
                 Option.of(READ.withAnimations(false).withFile(Option.of(FILE.toString()))),
                 read.popup(SettingsPanelPopup.class));
@@ -665,8 +674,10 @@ class SettingsPanelUpdateTest {
     @Test
     void aValueThatIsNotValidKeepsTheOneInUseAndIsReported() {
         Model model = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withTheme(ThemeName.DARCULA)))
+                .map(
+                        Preferences.SLICE,
+                        preferences ->
+                                preferences.withSettings(preferences.settings().withTheme(ThemeName.DARCULA)))
                 .openPopup(READ);
 
         Model read = Update.update(
@@ -675,17 +686,17 @@ class SettingsPanelUpdateTest {
                                 List.empty(), new SettingsStore.Loaded(Settings.DEFAULT, Option.of(INVALID_THEME))))
                 .model();
 
-        assertEquals(ThemeName.DARCULA, read.preferences().settings().theme());
+        assertEquals(ThemeName.DARCULA, read.get(Preferences.SLICE).settings().theme());
         assertEquals(
                 Option.of(new SettingsError.NotReread(INVALID_THEME)),
                 read.outcome().error());
-        assertEquals(Option.of(INVALID_THEME), read.preferences().reported());
+        assertEquals(Option.of(INVALID_THEME), read.get(Preferences.SLICE).reported());
     }
 
     @Test
     void aProblemReportedBeforeIsReportedAgainAfterTheEditor() {
         Model model = TestModels.loaded()
-                .mapPreferences(preferences -> preferences.withReported(Option.of(INVALID_THEME)))
+                .map(Preferences.SLICE, preferences -> preferences.withReported(Option.of(INVALID_THEME)))
                 .openPopup(READ);
 
         Model read = Update.update(
@@ -702,7 +713,7 @@ class SettingsPanelUpdateTest {
     @Test
     void aProblemReportedBeforeIsNotReportedAgainAsThePanelOpens() {
         Model model = TestModels.loaded()
-                .mapPreferences(preferences -> preferences.withReported(Option.of(INVALID_THEME)))
+                .map(Preferences.SLICE, preferences -> preferences.withReported(Option.of(INVALID_THEME)))
                 .openPopup(READ);
         SettingsProblem other = new SettingsProblem.Invalid(FILE, List.of("ui.animations"));
 
@@ -727,7 +738,7 @@ class SettingsPanelUpdateTest {
     @Test
     void aThemeChangedInTheFileReplacesTheOneAskedForAtStartup() {
         Model model = TestModels.loaded()
-                .mapPreferences(preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT)))
+                .map(Preferences.SLICE, preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT)))
                 .openPopup(READ);
 
         Model changed = Update.update(
@@ -740,8 +751,8 @@ class SettingsPanelUpdateTest {
                         new SettingsPanelMsg.FileEdited(List.empty(), read(Settings.DEFAULT.withAnimations(false))))
                 .model();
 
-        assertEquals(ThemeName.DARCULA, changed.preferences().theme());
-        assertEquals(ThemeName.LIGHT, unchanged.preferences().theme());
+        assertEquals(ThemeName.DARCULA, changed.get(Preferences.SLICE).theme());
+        assertEquals(ThemeName.LIGHT, unchanged.get(Preferences.SLICE).theme());
     }
 
     @Test
@@ -753,7 +764,9 @@ class SettingsPanelUpdateTest {
                 new SettingsPanelMsg.FileEdited(
                         List.empty(), read(Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh")))));
 
-        assertEquals(Option.of("/opt/gh"), next.model().preferences().settings().ghExecutable());
+        assertEquals(
+                Option.of("/opt/gh"),
+                next.model().get(Preferences.SLICE).settings().ghExecutable());
         assertEquals(List.of(new SettingsPanelCmd.Reopen(Landing.of(model.repoView()))), next.cmds());
     }
 
@@ -781,7 +794,9 @@ class SettingsPanelUpdateTest {
     void whatTheSessionKnewOfTheFileGoesOnWithoutAnotherErrorItWasShowing() {
         SettingsStore.Loaded file = read(Settings.DEFAULT.withAnimations(false));
         Model last = TestModels.loaded()
-                .mapPreferences(preferences -> preferences.withFile(file).withReported(Option.of(INVALID_THEME)))
+                .map(
+                        Preferences.SLICE,
+                        preferences -> preferences.withFile(file).withReported(Option.of(INVALID_THEME)))
                 .fail(new SettingsError.NotSaved(
                         new Failure.Settings(new SettingsProblem.Unwritable(FILE, "Permission denied"))));
 
@@ -798,7 +813,9 @@ class SettingsPanelUpdateTest {
 
         Next next = Update.update(model, new SettingsPanelMsg.FileEdited(List.empty(), read(edited)));
 
-        assertEquals(edited.diffStyle(), next.model().preferences().settings().diffStyle());
+        assertEquals(
+                edited.diffStyle(),
+                next.model().get(Preferences.SLICE).settings().diffStyle());
         assertEquals(DiffOptionsUpdate.changed(next.model()).cmds(), next.cmds());
     }
 

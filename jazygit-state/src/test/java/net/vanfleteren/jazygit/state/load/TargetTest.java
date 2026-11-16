@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.Preview;
@@ -37,7 +38,7 @@ class TargetTest {
     }
 
     private static DiffOptions options(Model model) {
-        return model.preferences().diffOptions();
+        return model.get(Preferences.SLICE).diffOptions();
     }
 
     @Test

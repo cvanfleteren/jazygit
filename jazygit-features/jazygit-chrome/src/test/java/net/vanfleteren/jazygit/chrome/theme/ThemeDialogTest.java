@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
@@ -100,10 +101,12 @@ class ThemeDialogTest {
     void forTheRepositoryItsOwnThemeCanBeTakenAway() throws Exception {
         Model own = Update.update(
                         TestModels.loaded(SampleData.git())
-                                .mapPreferences(preferences -> preferences.withRepositoryTheme(new RepositoryTheme(
-                                        Option.of(ThemeName.EMBER),
-                                        Option.of(new RepositoryTheme.Inherited(
-                                                ThemeName.LIGHT, "/etc/gitconfig-work"))))),
+                                .map(
+                                        Preferences.SLICE,
+                                        preferences -> preferences.withRepositoryTheme(new RepositoryTheme(
+                                                Option.of(ThemeName.EMBER),
+                                                Option.of(new RepositoryTheme.Inherited(
+                                                        ThemeName.LIGHT, "/etc/gitconfig-work"))))),
                         new ThemeMsg.Requested(ThemeScope.REPOSITORY))
                 .model();
 
@@ -155,7 +158,8 @@ class ThemeDialogTest {
     void opensAtTheThemeInUse() throws Exception {
         Model light = Update.update(
                         TestModels.loaded(SampleData.git())
-                                .mapPreferences(
+                                .map(
+                                        Preferences.SLICE,
                                         preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT))),
                         new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
                 .model();

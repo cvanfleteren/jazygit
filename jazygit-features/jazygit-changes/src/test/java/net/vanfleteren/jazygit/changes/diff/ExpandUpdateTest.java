@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.ReadWholeFile;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import org.junit.jupiter.api.Test;
 
 class ExpandUpdateTest {
@@ -74,7 +75,9 @@ class ExpandUpdateTest {
         assertEquals(
                 List.of("@@ -1,23 +1,23 @@"),
                 expansion
-                        .folded(CHANGES.parsed(), next.model().preferences().context())
+                        .folded(
+                                CHANGES.parsed(),
+                                next.model().get(Preferences.SLICE).context())
                         .diff()
                         .files()
                         .head()
@@ -83,7 +86,9 @@ class ExpandUpdateTest {
         assertEquals(
                 new Expansion.Fold(Option.of(30), Expansion.Read.WHOLE),
                 expansion
-                        .folded(CHANGES.parsed(), next.model().preferences().context())
+                        .folded(
+                                CHANGES.parsed(),
+                                next.model().get(Preferences.SLICE).context())
                         .fold("a.txt"));
     }
 
@@ -151,7 +156,9 @@ class ExpandUpdateTest {
         model = Update.update(
                         model,
                         new LoadMsg.FileDiffLoaded(
-                                DIRTY.files(), model.preferences().diffOptions(), new Diffs("", unstaged.text())))
+                                DIRTY.files(),
+                                model.get(Preferences.SLICE).diffOptions(),
+                                new Diffs("", unstaged.text())))
                 .model();
         ScrolledContent shown = new ScrolledContent.Diff(unstaged);
         DiffCursorAt at = new DiffCursorAt(
@@ -169,7 +176,7 @@ class ExpandUpdateTest {
                 shown,
                 new Source.WorkingTree(DIRTY.files().head(), false),
                 "a.txt",
-                model.preferences().diffOptions());
+                model.get(Preferences.SLICE).diffOptions());
         assertEquals(List.of(read), asked.cmds());
         Model whole = TestModels.done(
                         TestModels.running(asked.model(), read), read, new LoadMsg.WholeFileRead(read, unstaged))
@@ -178,7 +185,9 @@ class ExpandUpdateTest {
         Next reread = Update.update(
                 whole,
                 new LoadMsg.FileDiffLoaded(
-                        DIRTY.files(), whole.preferences().diffOptions(), new Diffs("", unstaged.text() + "+b\n")));
+                        DIRTY.files(),
+                        whole.get(Preferences.SLICE).diffOptions(),
+                        new Diffs("", unstaged.text() + "+b\n")));
 
         assertTrue(reread.cmds().contains(read), reread.cmds().mkString("\n"));
     }
@@ -205,7 +214,7 @@ class ExpandUpdateTest {
                 CONTENT,
                 new Source.OfStash(STASH, new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
                 "a.txt",
-                model.preferences().diffOptions());
+                model.get(Preferences.SLICE).diffOptions());
     }
 
     /**

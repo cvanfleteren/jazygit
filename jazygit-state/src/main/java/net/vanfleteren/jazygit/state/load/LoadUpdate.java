@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.index.IndexUpdate;
 import net.vanfleteren.jazygit.state.load.LoadMsg.*;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.Preview;
 
@@ -105,7 +106,7 @@ public final class LoadUpdate {
      * now read of the working tree has, and that is not being read (ADR 77).
      */
     private static Next rereadWhole(Model model) {
-        DiffOptions options = model.preferences().diffOptions();
+        DiffOptions options = model.get(Preferences.SLICE).diffOptions();
         Set<String> shown = model.repoView()
                 .preview()
                 .fileDiff()
@@ -178,7 +179,7 @@ public final class LoadUpdate {
      */
     private static boolean stale(Model model, Load load) {
         return load instanceof DiffLoad diff
-                && !diff.options().equals(model.preferences().diffOptions());
+                && !diff.options().equals(model.get(Preferences.SLICE).diffOptions());
     }
 
     /**
@@ -251,7 +252,7 @@ public final class LoadUpdate {
                         .status()
                         .toOption()
                         .exists(status -> status.files().toSet().containsAll(d.key())))
-                .map(d -> new LoadFileDiff(d.key(), model.preferences().diffOptions()));
+                .map(d -> new LoadFileDiff(d.key(), model.get(Preferences.SLICE).diffOptions()));
     }
 
     /**
