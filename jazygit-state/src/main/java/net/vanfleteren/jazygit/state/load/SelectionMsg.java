@@ -7,7 +7,9 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.NoLog;
 
 /**
@@ -73,4 +75,16 @@ public sealed interface SelectionMsg extends Msg {
      * The user highlighted the stash {@code sha} in the stash pane.
      */
     record StashSelected(Sha sha) implements SelectionMsg {}
+
+    /**
+     * The files pane, {@code listedIn}, is to list what the row highlighted in the pane {@code from} that has the focus
+     * follows: its files, nothing, or the files of the working tree (ADR 141).
+     */
+    record FilesFollowed(Followed followed, PaneId from, PaneId listedIn) implements SelectionMsg {}
+
+    /**
+     * The user asked for the files that follow the highlight whole, which the pane counts in place of their tree as
+     * there are many (ADR 141).
+     */
+    record WholeListed() implements SelectionMsg {}
 }

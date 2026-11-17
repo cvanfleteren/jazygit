@@ -222,6 +222,18 @@ class BranchesPanelTest {
                         .noLog());
     }
 
+    @Test
+    void theDetachedHeadListsTheFilesOfTheWorkingTree() throws Exception {
+        // ADR 141: it is what is checked out.
+        Model detached = detachedAt(new Sha("89eeda75aaaaaaaa"));
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(detached, BranchesPanel.PANE))) {
+            RenderedText.of(testRunner, () -> panel.render(detached, BranchesPanel.PANE));
+            assertEquals(Option.of(new Followed.WorkingTree()), panel.followed(detached));
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
     /**
      * {@link #before} once HEAD was detached at {@code at}: no branch is checked out.
      */

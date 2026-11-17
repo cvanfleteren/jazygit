@@ -37,10 +37,13 @@ import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.ui.keys.Keymap;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -85,6 +88,95 @@ class JazygitAppWiringTest {
             await(
                     () -> FilesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
                     "the files focused");
+            // What the main branch follows, the working tree it is checked out in, did not take their place as the
+            // focus moved (ADR 141).
+            SettledPilot.of(testRunner, app.drawnAt::size);
+            assertEquals(
+                    Boolean.TRUE,
+                    onRenderThread(
+                            testRunner,
+                            () -> app.model()
+                                    .repoView()
+                                    .files()
+                                    .commitFiles()
+                                    .exists(view -> view.of() instanceof Changes.OfTip && !view.followed())));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void theFilesFollowTheHighlightedCommitAndFAndEscapeGoInAndBack() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().preview().commitDetail().isDefined());
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+
+            // The files of the highlighted commit are listed, and the focus stays in the commits (ADR 141).
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView()
+                            .files()
+                            .commitFiles()
+                            .exists(view -> view.followed() && view.of() instanceof Changes.OfCommit));
+            assertEquals(CommitsPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+
+            SettledPilot.of(testRunner, app.drawnAt::size).press('F');
+            await(
+                    () -> FilesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
+                    "the files focused");
+
+            SettledPilot.of(testRunner, app.drawnAt::size).press(KeyCode.ESCAPE);
+            await(
+                    () -> CommitsPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
+                    "the commits focused again");
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().files().commitFiles().exists(CommitFilesView::followed));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void backToTheListChosenFromTheHelpGoesBackAsEscapeDoes() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().preview().commitDetail().isDefined());
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            SettledPilot.of(testRunner, app.drawnAt::size).press('F');
+            await(
+                    () -> FilesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
+                    "the files focused");
+
+            // Escape is the first key of the files of a commit the help lists.
+            int escape = Keymap.standard()
+                    .bindings(Scopes.COMMIT_FILES.id())
+                    .indexWhere(binding -> binding.key().equals(Keymap.ESCAPE));
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press('?');
+            for (int i = 0; i < escape; i++) {
+                pilot.press(KeyCode.DOWN);
+            }
+            pilot.press(KeyCode.ENTER);
+
+            await(
+                    () -> CommitsPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
+                    "the commits focused again");
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().files().commitFiles().exists(CommitFilesView::followed));
         } finally {
             app.onStop();
         }

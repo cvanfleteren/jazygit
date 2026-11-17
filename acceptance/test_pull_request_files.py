@@ -77,7 +77,8 @@ def test_the_files_changed_of_a_pull_request_show_in_the_files_pane_fetched_when
     ui.app.wait_in("Files", "b.txt")
     assert "Files of #1" in ui.app.text()
     assert "README.md" not in ui.app.pane_text("Files")
-    assert ui.app.focused_pane() == "Files"
+    # The files may be listed already, following the highlight (ADR 141): F moves the focus a frame later.
+    ui.app.eventually(lambda: ui.app.focused_pane() == "Files", "the focus in the files")
     ui.app.move_cursor("Files", "b.txt")
     ui.app.wait_for("#1 · b.txt")
     assert "+b" in ui.app.text()

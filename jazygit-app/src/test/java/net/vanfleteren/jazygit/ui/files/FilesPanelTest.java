@@ -834,7 +834,7 @@ class FilesPanelTest {
     }
 
     @Test
-    void escapeInTheFilteredFilesOfACommitClearsTheFilterBeforeItClosesThem() throws Exception {
+    void escapeInTheFilteredFilesOfACommitClearsTheFilterBeforeItGoesBack() throws Exception {
         AtomicReference<Model> model =
                 new AtomicReference<>(loaded(opened(TestModels.loaded(fixed(List.of()))), MODEL_AND_TEST)
                         .mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
@@ -856,9 +856,11 @@ class FilesPanelTest {
             assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE))
                     .contains("WordDiff.java"));
 
+            // The second goes back to the list they are of, which the app does: they stay listed (ADR 141).
+            Model unfiltered = model.get();
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
-            assertTrue(model.get().repoView().files().commitFiles().isEmpty());
+            assertSame(unfiltered, model.get());
             SettledPilot.of(testRunner).quit();
         }
     }

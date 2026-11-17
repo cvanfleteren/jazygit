@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
+import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.text.ShownTime;
@@ -161,6 +162,14 @@ public class BranchesPanel {
         BranchesTab tab = model.repoView().branches().tab();
         Panel panel = list(tab).render(model, focused, active, title(tab));
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event, tabClicked));
+    }
+
+    /**
+     * What the files pane lists while the list of the tab shown has the focus, rather than a divergence or the commits
+     * of a branch (ADR 141); none while that is not known yet.
+     */
+    public Option<Followed> followed(Model model) {
+        return list(model.repoView().branches().tab()).followed(model);
     }
 
     /**

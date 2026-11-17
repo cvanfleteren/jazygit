@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Program;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -32,6 +33,7 @@ import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.ReadCommitFileContent;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
@@ -184,7 +186,12 @@ class CommitAllFilesTest {
     @Test
     void allFilesOfAViewClosedSinceAreDropped() {
         Model on = Update.update(withFiles(), new CommitFilesMsg.AllToggled()).model();
-        Model closed = Update.update(on, new CommitFilesMsg.Closed()).model();
+        // A pane that follows nothing got the focus (ADR 141).
+        Model closed = Update.update(
+                        on,
+                        new SelectionMsg.FilesFollowed(
+                                new Followed.WorkingTree(), new PaneId("worktrees"), Scopes.FILES.pane()))
+                .model();
 
         Model read =
                 Update.update(closed, new LoadMsg.CommitTreeLoaded(COMMIT, ALL)).model();

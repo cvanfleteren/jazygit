@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.BaseBranchError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
@@ -44,11 +45,9 @@ public final class CommitFilesUpdate {
 
     public static Next update(Model model, CommitFilesMsg msg) {
         return switch (msg) {
-            case CommitFilesMsg.Opened(var of, var pane) ->
-                open(model, CommitFilesView.of(of, pane, Scopes.FILES.pane()));
-            case CommitFilesMsg.Closed() ->
-                Next.of(model.mapRepoView(
-                        repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.none()))));
+            case CommitFilesMsg.Opened(var of, var pane) -> opened(model, of, pane);
+            // Escape moves the focus back to the list the files are of, which the app does: they stay (ADR 141).
+            case CommitFilesMsg.Closed() -> Next.of(model);
             case CommitFilesMsg.RemarksLoaded(PrNumber number, var remarks, var settled, int version) ->
                 remarksRead(model, number, remarks, settled, version);
             // The review threads read before stay shown; what was sent is done with all the same. A failed read
@@ -87,6 +86,20 @@ public final class CommitFilesUpdate {
                                 .toList()
                                 .flatMap(CommitFilesUpdate::remarksLoad)));
         };
+    }
+
+    /**
+     * {@code F} on {@code of}, in the pane {@code pane}: the files that follow its highlight already list them, and
+     * then stay as they are, read or being read; the focus goes into them as they no longer follow (ADR 141).
+     */
+    private static Next opened(Model model, Changes of, PaneId pane) {
+        return model.repoView()
+                .files()
+                .commitFiles()
+                .filter(view -> view.followed() && view.of().equals(of))
+                .map(view -> Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files ->
+                        files.withCommitFiles(Option.of(view.withFollowed(false).withPane(pane)))))))
+                .getOrElse(() -> open(model, CommitFilesView.of(of, pane, Scopes.FILES.pane())));
     }
 
     /**

@@ -4,6 +4,8 @@ import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.focus.FocusManager;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -14,6 +16,7 @@ import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
@@ -146,22 +149,31 @@ final class FocusKeeper {
     }
 
     /**
-     * Moves the focus into the pane that lists the files of a commit or a stash once they are opened, and back to the
-     * pane they were opened from once they are closed while that pane, or the diff it shows, has it (ADR 44).
+     * Moves the focus into the pane that lists the files of a commit or a stash once {@code F} opened them, but not
+     * when they follow the highlight (ADR 141), and back to the pane they were opened from once they are closed while
+     * that pane, or the diff it shows, has it (ADR 44).
      */
     private void followCommitFiles(Model model) {
         Option<CommitFilesView> files = model.repoView().files().commitFiles();
-        if (files.map(CommitFilesView::of).equals(shownFiles.map(CommitFilesView::of))) {
+        if (files.map(FocusKeeper::opened).equals(shownFiles.map(FocusKeeper::opened))) {
             return;
         }
         Option<CommitFilesView> closed = shownFiles;
         shownFiles = files;
-        files.forEach(opened -> moveTo(opened.listedIn()));
+        files.filter(opened -> !opened.followed()).forEach(opened -> moveTo(opened.listedIn()));
         if (files.isEmpty()) {
             closed.filter(view -> focus().exists(focus -> focus.equals(view.listedIn())
                             || contentPanel.paneOfArea(model, focus).contains(view.listedIn())))
                     .forEach(view -> moveTo(view.pane()));
         }
+    }
+
+    /**
+     * Whose files {@code view} lists, and whether they follow the highlight: {@code F} on the commit whose files follow
+     * it still moves the focus into them.
+     */
+    private static Tuple2<Changes, Boolean> opened(CommitFilesView view) {
+        return Tuple.of(view.of(), view.followed());
     }
 
     /**
