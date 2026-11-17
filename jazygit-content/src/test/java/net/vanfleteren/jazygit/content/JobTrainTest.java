@@ -148,6 +148,29 @@ class JobTrainTest {
     }
 
     @Test
+    void theTimeLineAndTheNamesSpreadOverAWidePanel() {
+        Build longNames = new Build(
+                "Publish",
+                "push",
+                1,
+                1,
+                "abc",
+                "Title",
+                START,
+                List.of(job("Publish fat-jar and native image / build", 2, 120), job("verify", 120, 240)));
+
+        List<String> rows =
+                text(JobTrain.lines(longNames, HashMap.empty(), HashMap.empty(), 200, Theme.SpanStyles.NONE));
+
+        assertTrue(rows.forAll(row -> row.length() <= 200), rows.mkString("\n"));
+        assertTrue(
+                rows.exists(row -> row.startsWith("Publish fat-jar and native image / build │")), rows.mkString("\n"));
+        // The time line takes what the names and the numbers leave: well over the 60 columns it was held to.
+        String verify = rows.find(row -> row.startsWith("verify ")).get();
+        assertTrue(verify.lastIndexOf('│') - verify.indexOf('│') > 100, verify);
+    }
+
+    @Test
     void eachJobSaysHowLongItWaitedAfterWhatItNeedsAndHowItTookAgainstItsMedian() {
         List<String> rows = text(JobTrain.lines(
                 BUILD,

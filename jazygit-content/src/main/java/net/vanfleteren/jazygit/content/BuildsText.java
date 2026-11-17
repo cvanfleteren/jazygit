@@ -40,8 +40,12 @@ final class BuildsText {
     private static final int JOB_BUILDS = 40;
     // The columns before the chart: its scale.
     private static final int SCALE = 6;
-    // The widest a job's name is shown.
+    // The widest a job's name is shown in a narrow panel; a wider panel gives it up to a quarter of its width.
     private static final int NAME = 28;
+    // The columns of a job's median, its last time and its trend, after its results and times.
+    private static final int MEDIAN = 6;
+    private static final int LAST = 7;
+    private static final int TREND = 10;
     // A trend smaller than this is no change.
     private static final Duration STEADY = Duration.ofSeconds(10);
     private static final String EIGHTHS = " ▁▂▃▄▅▆▇█";
@@ -52,7 +56,8 @@ final class BuildsText {
     private static final String MINE = "◆";
     // The widest the column of what a run on every branch ran for is: its pull request, else its branch.
     private static final int FOR = 14;
-    // The widest a build's bar in the chart is, with the column after it, when there are few builds.
+    // The widest a build's bar in the chart is, with the column after it, when there are few builds; also the widest
+    // a build's cell in the results and the times of the jobs is.
     private static final int WIDEST = 5;
     // A job split in shards, like "acceptance (1/6)", is one job.
     private static final Pattern SHARD = Pattern.compile("\\s*\\(\\d+/\\d+\\)$");
@@ -80,6 +85,7 @@ final class BuildsText {
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.dayPattern"))
                         .withZone(zone),
                 DateTimeFormatter.ofPattern(Messages.get("builds.whenPattern")).withZone(zone),
+                width,
                 Math.max(10, width - SCALE - 1));
         String workflow = shown.shown().workflow();
         List<Line> builds = switch (shown.builds()) {
@@ -237,13 +243,37 @@ final class BuildsText {
     }
 
     /**
+     * The columns of each of {@code count} builds that share {@code series} columns, as even as can be.
+     */
+    static List<Integer> cells(int count, int series) {
+        return List.range(0, count).map(index -> (index + 1) * series / count - index * series / count);
+    }
+
+    /**
+     * The columns of the names of jobs, the widest {@code widest} columns wide, in a panel {@code panel} columns wide,
+     * with the column after them: at most {@link #NAME}, or a quarter of a wider panel.
+     */
+    static int names(int widest, int panel) {
+        return Math.min(Math.max(NAME, panel / 4), widest) + 1;
+    }
+
+    /**
      * The widths of the columns of the jobs, before their numbers.
      *
      * @param name   of the names of the jobs
      * @param passed of whether each passed
      * @param time   of how long each took
+     * @param cells  of each build, in the results and the times
      */
-    private record Columns(int name, int passed, int time) {}
+    private record Columns(int name, int passed, int time, List<Integer> cells) {
+
+        /**
+         * The columns all builds take, in each of the results and the times.
+         */
+        int series() {
+            return cells.sum().intValue();
+        }
+    }
 
     /**
      * The widths of the columns of the list of builds, each as wide as its widest value or its header.
@@ -262,6 +292,7 @@ final class BuildsText {
      * @param picked the run of the build whose jobs show on one time line; none for the last that is done
      * @param day    how a day is written
      * @param when   how a day and a time are written
+     * @param width  the columns of the panel
      * @param chart  the builds the chart has room for
      */
     private record Drawing(
@@ -274,6 +305,7 @@ final class BuildsText {
             Option<Long> picked,
             DateTimeFormatter day,
             DateTimeFormatter when,
+            int width,
             int chart) {
 
         /**
@@ -516,16 +548,21 @@ final class BuildsText {
             if (names.isEmpty()) {
                 return List.empty();
             }
-            int width = Math.min(NAME, names.map(TextWidth::of).max().getOrElse(0)) + 1;
+            int nameColumns = names(names.map(TextWidth::of).max().getOrElse(0), width);
             int count = builds.size();
             String passedLabel = Messages.get("content.builds.lastBuilds", String.valueOf(count));
             String timeLabel = Messages.get("content.builds.time");
+            // The results and the times share what the names and the numbers leave of the panel: each build gets a
+            // column at least, and no more than WIDEST.
+            int series =
+                    Math.max(count, Math.min(count * WIDEST, (width - nameColumns - MEDIAN - LAST - TREND - 4) / 2));
             // A column is as wide as its builds, or as its header with few of them, with two columns after it.
             Columns columns = new Columns(
-                    width,
-                    Math.max(count, TextWidth.of(passedLabel)) + 2,
-                    Math.max(count, TextWidth.of(timeLabel)) + 2);
-            Line header = Line.from(dim(pad(Messages.get("content.builds.job"), width)
+                    nameColumns,
+                    Math.max(series, TextWidth.of(passedLabel)) + 2,
+                    Math.max(series, TextWidth.of(timeLabel)) + 2,
+                    cells(count, series));
+            Line header = Line.from(dim(pad(Messages.get("content.builds.job"), nameColumns)
                     + pad(passedLabel, columns.passed())
                     + pad(timeLabel, columns.time())
                     + Messages.get("content.builds.jobTimes")));
@@ -563,21 +600,31 @@ final class BuildsText {
                     .map(Tuple2::_2);
             Duration low = passed.min().getOrElse(Duration.ZERO);
             Duration high = passed.max().getOrElse(Duration.ZERO);
-            List<Span> results = runs.map(run -> run.map(done -> switch (done._1()) {
-                        case PASSED -> span("▆", Theme.Classes.CHECKS_PASSED);
-                        case FAILED -> span("▆", Theme.Classes.CHECKS_FAILED);
-                        case CANCELLED, RUNNING -> dim("▁");
-                    })
-                    .getOrElse(() -> Span.raw(" ")));
-            List<Span> sparks = runs.map(run -> run.map(done -> done._1() == Outcome.PASSED
-                            ? Span.raw(String.valueOf(SPARKS.charAt(
-                                    high.equals(low)
-                                            ? 0
-                                            : (int) Math.round(7.0
-                                                    * done._2().minus(low).toMillis()
-                                                    / high.minus(low).toMillis()))))
-                            : done._1() == Outcome.FAILED ? span("▁", Theme.Classes.CHECKS_FAILED) : Span.raw(" "))
-                    .getOrElse(() -> Span.raw(" ")));
+            List<Span> results = runs.zip(columns.cells())
+                    .map(run -> run._1()
+                            .map(done -> switch (done._1()) {
+                                case PASSED -> span("▆".repeat(run._2()), Theme.Classes.CHECKS_PASSED);
+                                case FAILED -> span("▆".repeat(run._2()), Theme.Classes.CHECKS_FAILED);
+                                case CANCELLED, RUNNING -> dim("▁".repeat(run._2()));
+                            })
+                            .getOrElse(() -> Span.raw(" ".repeat(run._2()))));
+            List<Span> sparks = runs.zip(columns.cells())
+                    .map(run -> run._1()
+                            .map(done -> done._1() == Outcome.PASSED
+                                    ? Span.raw(String.valueOf(SPARKS.charAt(
+                                                    high.equals(low)
+                                                            ? 0
+                                                            : (int) Math.round(7.0
+                                                                    * done._2()
+                                                                            .minus(low)
+                                                                            .toMillis()
+                                                                    / high.minus(low)
+                                                                            .toMillis())))
+                                            .repeat(run._2()))
+                                    : done._1() == Outcome.FAILED
+                                            ? span("▁".repeat(run._2()), Theme.Classes.CHECKS_FAILED)
+                                            : Span.raw(" ".repeat(run._2())))
+                            .getOrElse(() -> Span.raw(" ".repeat(run._2()))));
             int half = passed.size() / 2;
             Option<Duration> trend = Option.when(
                     half > 0,
@@ -588,12 +635,12 @@ final class BuildsText {
                     runs.reverse().flatMap(run -> run).headOption().map(Tuple2::_2);
             return Line.from(List.of(Span.raw(pad(name, columns.name())))
                     .appendAll(results)
-                    .append(Span.raw(" ".repeat(Math.max(0, columns.passed() - runs.size()))))
+                    .append(Span.raw(" ".repeat(Math.max(0, columns.passed() - columns.series()))))
                     .appendAll(sparks)
-                    .append(Span.raw(" ".repeat(Math.max(0, columns.time() - runs.size()))))
+                    .append(Span.raw(" ".repeat(Math.max(0, columns.time() - columns.series()))))
                     .append(Span.raw(
-                            padLeft(median(passed).map(BuildsText::duration).getOrElse("–"), 6)))
-                    .append(Span.raw(padLeft(last.map(BuildsText::duration).getOrElse("–"), 7)))
+                            padLeft(median(passed).map(BuildsText::duration).getOrElse("–"), MEDIAN)))
+                    .append(Span.raw(padLeft(last.map(BuildsText::duration).getOrElse("–"), LAST)))
                     .append(trend.map(change -> change.compareTo(STEADY) > 0
                                     ? span("  ▲ " + signed(change), Theme.Classes.CHECKS_FAILED)
                                     : change.compareTo(STEADY.negated()) < 0

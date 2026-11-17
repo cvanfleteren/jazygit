@@ -393,12 +393,55 @@ class BuildsTextTest {
     }
 
     @Test
+    void theJobsSpreadOverAWidePanel() {
+        List<String> lines = BuildsText.lines(shown(PUBLISH, Option.none()), ZoneOffset.UTC, Theme.SpanStyles.NONE, 200)
+                .map(BuildsTextTest::text);
+        int header = lines.indexWhere(line -> line.startsWith("job"));
+        List<String> jobs = lines.drop(header + 1).takeWhile(line -> !line.isEmpty());
+        String acceptance = jobs.find(line -> line.startsWith("acceptance ")).get();
+
+        // The 30 builds share the room the names and the numbers leave, more than a column each.
+        int strip = acceptance.substring("acceptance".length()).stripLeading().indexOf(' ');
+        assertTrue(strip > 60, acceptance);
+        assertTrue(jobs.prepend(lines.get(header)).forAll(line -> line.length() <= 200), jobs.mkString("\n"));
+    }
+
+    @Test
+    void theHeadersOfTheJobsStayOverTheirColumnsInAWidePanel() {
+        List<String> lines = BuildsText.lines(shown(PUBLISH, Option.none()), ZoneOffset.UTC, Theme.SpanStyles.NONE, 200)
+                .map(BuildsTextTest::text);
+        String header = lines.find(line -> line.startsWith("job")).get();
+        String row = lines.find(line -> line.startsWith("package ")).get();
+
+        assertEquals(header.indexOf("last 30"), row.indexOf("▆"), header + "\n" + row);
+        assertEquals(header.indexOf("time"), row.indexOf("▁"), header + "\n" + row);
+        assertEquals(
+                header.indexOf("median") + "median".length(), row.indexOf("55s") + "55s".length(), header + "\n" + row);
+    }
+
+    @Test
+    void buildsShareTheirColumnsAsEvenlyAsCanBe() {
+        List<Integer> uneven = BuildsText.cells(30, 70);
+
+        assertEquals(70, uneven.sum().intValue());
+        assertTrue(uneven.forAll(cell -> cell == 2 || cell == 3), uneven.mkString(","));
+        assertEquals(List.fill(30, 1), BuildsText.cells(30, 30));
+    }
+
+    @Test
+    void theNamesOfJobsTakeAtMostTwentyEightColumnsOrAQuarterOfAWidePanel() {
+        assertEquals(29, BuildsText.names(40, 100));
+        assertEquals(51, BuildsText.names(60, 200));
+        assertEquals(11, BuildsText.names(10, 200));
+    }
+
+    @Test
     void theHeadersOfTheJobsShowInFullWithOneBuild() {
         List<String> lines = drawn(List.of(build("Publish", 0, "SUCCESS", 240)));
         String header = lines.find(line -> line.startsWith("job")).get();
         String row = lines.find(line -> line.startsWith("package ")).get();
 
-        assertTrue(header.contains("last 1  time  median"), header);
+        assertTrue(header.matches(".*last 1  time +median.*"), header);
         // The strip and the sparkline sit under their headers, the numbers under theirs.
         assertEquals(header.indexOf("last 1"), row.indexOf("▆"), header + "\n" + row);
         assertEquals(
