@@ -147,8 +147,7 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record CommitSearchLoaded(CommitQuery query, Option<BranchRef> notOn, List<Commit> commits)
-            implements Read<List<Commit>> {
+    record CommitSearchLoaded(CommitQuery query, List<Commit> commits) implements Read<List<Commit>> {
 
         @Override
         public List<Commit> value() {
@@ -157,7 +156,7 @@ public sealed interface LoadMsg extends Msg {
 
         @Override
         public SearchCommits cmd() {
-            return new SearchCommits(query, notOn);
+            return new SearchCommits(query);
         }
     }
 

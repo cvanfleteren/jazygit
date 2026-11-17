@@ -38,7 +38,7 @@ public final class CommitSearchUpdate {
     }
 
     private static Next run(Model model, String text) {
-        CommitSearch search = CommitSearch.loading(text.strip(), AheadUpdate.searchNotOn(model));
+        CommitSearch search = CommitSearch.loading(text.strip());
         Model closed =
                 model.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withSearchLine(Option.none())));
         return search.query().isEmpty()

@@ -64,16 +64,12 @@ public final class CliHistory implements History {
      * They are left as git lists them: with commits left out, merges and what they brought in no longer join up.
      */
     @Override
-    public Either<GitError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn) {
+    public Either<GitError, List<Commit>> search(CommitQuery query) {
         return resolve(worktree, "HEAD")
                 .mapLeft(GitFailure::error)
                 .flatMap(head -> head.fold(
                         () -> Either.right(List.empty()),
-                        tip -> read(
-                                worktree,
-                                filters(query).append(tip.value()).appendAll(notOn.map(base -> GitArgs.not(base))),
-                                query.paths(),
-                                MAX_COMMITS)));
+                        tip -> read(worktree, filters(query).append(tip.value()), query.paths(), MAX_COMMITS)));
     }
 
     /**

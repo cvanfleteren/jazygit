@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.changes.commit;
 
-import net.vanfleteren.jazygit.changes.ahead.AheadAction;
 import net.vanfleteren.jazygit.changes.commit.amend.AmendAction;
 import net.vanfleteren.jazygit.changes.commit.create.CreateCommitAction;
 import net.vanfleteren.jazygit.changes.commit.drop.DropAction;
@@ -30,8 +29,7 @@ public final class CommitFeature {
             DropAction.ACTION,
             RevertAction.ACTION,
             ResetAction.ACTION,
-            CommitSearchAction.ACTION,
-            AheadAction.COMMITS);
+            CommitSearchAction.ACTION);
 
     private CommitFeature() {}
 }

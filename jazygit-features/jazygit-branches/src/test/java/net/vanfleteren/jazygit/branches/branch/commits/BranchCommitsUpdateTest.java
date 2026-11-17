@@ -190,15 +190,14 @@ class BranchCommitsUpdateTest {
     }
 
     @Test
-    void theForkPointListedWithOnlyTheCommitsAheadIsFoundAlsoWhenTheLogStopsBeforeIt() {
+    void theForkPointIsFoundAlsoWhenTheLogStopsBeforeIt() {
         Commit fork = Fixtures.commit(new Sha("eeee"), "Ada", "ada@example.com", Instant.EPOCH, "Fork", "");
         BranchRef base = new BranchRef.Local(MAIN);
         Model open = opened(featureLogRead())
-                .mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withShown(CommitsShown.AHEAD))
-                        .mapPreview(preview -> preview.withBranchAhead(Option.of(new Preview<>(
-                                FEATURE,
-                                new Loadable.Loaded<>(Option.of(
-                                        new Ahead(FEATURE_TIP, base, FEATURE_COMMITS, false, Option.of(fork)))))))));
+                .mapRepoView(repoView -> repoView.mapPreview(preview -> preview.withBranchAhead(Option.of(new Preview<>(
+                        FEATURE,
+                        new Loadable.Loaded<>(
+                                Option.of(new Ahead(FEATURE_TIP, base, FEATURE_COMMITS, false, Option.of(fork)))))))));
 
         assertEquals(Option.of(fork), view(open).flatMap(v -> open.branchCommit(v, fork.sha())));
     }

@@ -6,13 +6,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.Build;
-import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 import org.junit.jupiter.api.Test;
 
@@ -86,16 +81,5 @@ class BuildsViewTest {
 
         assertEquals("Build · pull_request", BUILD.label(all));
         assertEquals("Nix", NIX.label(all));
-    }
-
-    @Test
-    void withOnlyTheCommitsNotOnTheBaseOnlyTheirBuildsShow() {
-        Commit tip = Fixtures.commit(new Sha(TIP), "A", "a@a", Instant.EPOCH, "Tip", "");
-        Ahead ahead = new Ahead(
-                new Sha(TIP), new BranchRef.Local(new BranchName("main")), List.of(tip), false, Option.none());
-
-        assertEquals(BUILDS.take(2), BuildsView.shown(BUILDS, Option.of(ahead), true));
-        assertEquals(BUILDS, BuildsView.shown(BUILDS, Option.of(ahead), false));
-        assertEquals(BUILDS, BuildsView.shown(BUILDS, Option.none(), true));
     }
 }

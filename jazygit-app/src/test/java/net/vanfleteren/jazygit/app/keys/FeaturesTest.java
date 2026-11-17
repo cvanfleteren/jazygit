@@ -38,10 +38,10 @@ class FeaturesTest {
     private static final String GITHUB = "github";
 
     /**
-     * The top-level feature packages that are no feature: {@code ahead}'s actions are listed by {@code branch} and
-     * {@code commit}, {@code layout} has only global keys, and {@code start} has the popups of the start screen.
+     * The top-level feature packages that are no feature: {@code layout} has only global keys, and {@code start} has
+     * the popups of the start screen.
      */
-    private static final Set<String> NO_FEATURE = HashSet.of("changes.ahead", "chrome.layout", "branches.start");
+    private static final Set<String> NO_FEATURE = HashSet.of("chrome.layout", "branches.start");
 
     private static final JavaClasses CLASSES = new ClassFileImporter()
             .withImportOption(new ImportOption.DoNotIncludeTests())

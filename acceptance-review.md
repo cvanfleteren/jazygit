@@ -92,7 +92,7 @@ the remote's commits.
 ### Medium: behaviour the app documents but no test checks
 
 - **Parent recording.** New branch, move to new branch, move onto a branch and new branch worktree all write
-  `branch.<name>.gh-merge-base` (`CliCheckout.recordParent`). Ahead/behind counts, "only the commits not on the base"
+  `branch.<name>.gh-merge-base` (`CliCheckout.recordParent`). Ahead/behind counts, the commits dimmed as on the base
   and stacks are built on it. The one test that uses it (`test_a_branch_says_how_far_it_is_from_its_base`) sets the
   config by hand. Add `repo("config", "branch.feature.gh-merge-base") == "main"` to
   `test_new_branch_from_the_checked_out_branch` and its siblings.
@@ -141,7 +141,7 @@ for `two\nlines.txt`), and the rows after it go missing.
 These are reads, but the git query is the feature, and a wrong query shows the wrong commits without any error:
 
 - **Commit search (`/`):** `author:`, `path:`, `-S:`, quoted values, smart case.
-- **"Only the commits not on the base" (`b`),** in both panes. The base can be the parent config, `origin/main`, or the
+- **The commits on the base, dimmed,** in both panes. The base can be the parent config, `origin/main`, or the
   local `main` or `master`.
 - **Divergence view** (upstream options → view divergence).
 - **The whitespace toggle** (`git diff -w`).

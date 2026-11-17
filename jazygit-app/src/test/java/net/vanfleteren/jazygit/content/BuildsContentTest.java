@@ -45,7 +45,6 @@ import net.vanfleteren.jazygit.state.github.BranchChecksMsg;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
 import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.state.github.builds.ReadWorkflows;
-import net.vanfleteren.jazygit.state.load.AheadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.state.view.BuildsView;
@@ -628,8 +627,6 @@ class BuildsContentTest {
         assertEquals(
                 Option.of(new BuildsMsg.PickRequested()),
                 keys.handle(Scopes.BUILDS, KeyEvent.ofChar('w'), Option.none()));
-        assertEquals(
-                Option.of(new AheadMsg.Toggled()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('b'), Option.none()));
         assertEquals(
                 Option.of(new BuildsMsg.Closed()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('B'), Option.none()));
         assertEquals(

@@ -4,7 +4,6 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.Tuple;
-import io.vavr.Tuple3;
 import io.vavr.Tuple4;
 import io.vavr.collection.List;
 import io.vavr.collection.Stream;
@@ -63,10 +62,8 @@ public class CommitsPanel {
     private boolean searching;
     // What a paste does: while the search line is open, it goes in it.
     private final Consumer<PasteEvent> paste;
-    // The commits listed and their rows, worked out again only when what they are drawn from changes: the list then
-    // keeps what it built from them, and the graph is not laid out on every render.
-    private final Memo<Tuple3<Boolean, Loadable<List<Commit>>, AheadView>, Loadable<List<Commit>>> listed =
-            new Memo<>();
+    // The rows of the commits listed, worked out again only when what they are drawn from changes: the graph is not
+    // laid out on every render.
     private final Memo<Tuple4<List<Commit>, Boolean, Option<Sha>, AheadView>, List<LoadableList.Item>> drawn =
             new Memo<>();
 
@@ -251,17 +248,14 @@ public class CommitsPanel {
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
         Option<CommitSearch> search = model.repoView().commits().commitSearch();
-        AheadView ahead = new AheadView(
-                AheadUpdate.head(model),
-                AheadUpdate.headDistance(model),
-                model.repoView().commits().shown().ahead());
+        AheadView ahead = new AheadView(AheadUpdate.head(model), AheadUpdate.headDistance(model));
         typing = model.repoView().commits().searchLine();
         searching = search.isDefined();
         list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));
         Loadable<List<Commit>> source =
                 search.map(CommitSearch::results).getOrElse(() -> model.repo().commits());
         return list.renderItems(
-                listed.get(Tuple.of(searching, source, ahead), key -> searching ? source : source.map(ahead::shown)),
+                source,
                 commits -> drawn.get(
                         Tuple.of(commits, searching, copied, ahead),
                         key -> searching ? foundItems(commits, copied, ahead) : graphed(commits, copied, ahead)),
@@ -281,24 +275,13 @@ public class CommitsPanel {
     }
 
     /**
-     * {@code row}, that of the commit {@code sha}, dimmed when the commit is on the base, and marked when it is the
-     * fork point.
+     * {@code row}, that of the commit {@code sha}, dimmed when the commit is on the base.
      */
     private static LoadableList.Row marked(LoadableList.Row row, Sha sha, AheadView ahead) {
-        // The mark goes before the message, the last piece of the row.
-        LoadableList.Row labelled = ahead.mark(sha)
-                .map(mark -> new LoadableList.Row(
-                        row.segs()
-                                .init()
-                                .append(LoadableList.Seg.of(mark + " "))
-                                .append(row.segs().last()),
-                        row.detail()))
-                .getOrElse(row);
         return ahead.dimmed(sha)
                 ? new LoadableList.Row(
-                        labelled.segs().map(seg -> LoadableList.Seg.styled(seg.text(), Theme.Classes.DIM)),
-                        labelled.detail())
-                : labelled;
+                        row.segs().map(seg -> LoadableList.Seg.styled(seg.text(), Theme.Classes.DIM)), row.detail())
+                : row;
     }
 
     /**

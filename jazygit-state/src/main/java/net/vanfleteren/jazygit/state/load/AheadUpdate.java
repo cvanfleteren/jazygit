@@ -19,53 +19,14 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.BaseTip;
-import net.vanfleteren.jazygit.state.view.CommitSearch;
 import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
- * The commits of HEAD and of the highlighted branch that are not on their base: which ones to read, and listing
- * only those or the whole logs.
+ * The commits of HEAD and of the highlighted branch that are not on their base: which ones to read, and when.
  */
 public final class AheadUpdate {
 
     private AheadUpdate() {}
-
-    public static Next update(Model model, AheadMsg msg) {
-        return switch (msg) {
-            case AheadMsg.Toggled() ->
-                searchFollowed(model.mapRepoView(repoView -> repoView.mapCommits(
-                        commits -> commits.withShown(commits.shown().toggled()))));
-        };
-    }
-
-    /**
-     * Runs the search again when it should leave out other commits than it does: after the logs were switched, or
-     * once the base of HEAD is known, or another one.
-     */
-    private static Next searchFollowed(Model model) {
-        Option<BranchRef> notOn = searchNotOn(model);
-        return model.repoView()
-                .commits()
-                .commitSearch()
-                .filter(search -> !search.notOn().equals(notOn))
-                .map(search -> CommitSearch.loading(search.text(), notOn))
-                .map(search -> Next.of(
-                        model.mapRepoView(repoView ->
-                                repoView.mapCommits(commits -> commits.withCommitSearch(Option.of(search)))),
-                        SearchCommits.of(search)))
-                .getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * The branch whose commits a search of the log of HEAD leaves out: its base, while only the commits not on it are
-     * listed.
-     */
-    public static Option<BranchRef> searchNotOn(Model model) {
-        return Option.when(
-                        model.repoView().commits().shown().ahead(),
-                        () -> head(model).map(Ahead::base))
-                .flatMap(base -> base);
-    }
 
     /**
      * The commits of HEAD that are not on its base, once they are read for the log shown and it has one. Those read
@@ -217,13 +178,12 @@ public final class AheadUpdate {
     }
 
     /**
-     * Keeps what {@code load} read, unless it was for a branch no longer shown. For HEAD, the search follows its
-     * base.
+     * Keeps what {@code load} read, unless it was for a branch no longer shown.
      */
     static Next loaded(Model model, LoadAhead load, Option<Ahead> ahead) {
         return load.branch()
                 .fold(
-                        () -> searchFollowed(model.mapJobs(jobs -> jobs.withoutFailedRead(load))
+                        () -> Next.of(model.mapJobs(jobs -> jobs.withoutFailedRead(load))
                                 .mapRepo(repo -> repo.withAhead(repo.ahead().reload(ahead)))),
                         branch -> Next.of(model.mapRepoView(repoView ->
                                 repoView.mapPreview(previews -> previews.withBranchAhead(Preview.updated(

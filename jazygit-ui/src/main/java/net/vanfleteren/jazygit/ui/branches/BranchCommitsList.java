@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.ui.branches;
 
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.Tuple3;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -10,7 +9,6 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
@@ -38,9 +36,8 @@ class BranchCommitsList {
     private final Keymap keymap = Keymap.standard();
     // Which branch was listed at the last render.
     private Option<BranchRef> shown = Option.none();
-    // The commits listed and their rows, worked out again only when what they are drawn from changes, as the commits
-    // pane does.
-    private final Memo<Tuple2<Loadable<List<Commit>>, AheadView>, Loadable<List<Commit>>> listed = new Memo<>();
+    // The rows of the commits listed, worked out again only when what they are drawn from changes, as the commits pane
+    // does.
     private final Memo<Tuple3<List<Commit>, Option<Sha>, AheadView>, List<LoadableList.Item>> drawn = new Memo<>();
 
     /**
@@ -81,13 +78,10 @@ class BranchCommitsList {
 
     private Panel panel(Model model, BranchCommitsView view, boolean focused, boolean active) {
         Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
-        AheadView ahead = new AheadView(
-                AheadUpdate.branch(model, view.branch()),
-                AheadUpdate.distance(model, view.branch()),
-                model.repoView().commits().shown().ahead());
-        Loadable<List<Commit>> source = view.commits(model);
+        AheadView ahead =
+                new AheadView(AheadUpdate.branch(model, view.branch()), AheadUpdate.distance(model, view.branch()));
         return list.renderItems(
-                listed.get(Tuple.of(source, ahead), key -> source.map(ahead::shown)),
+                view.commits(model),
                 commits -> drawn.get(
                         Tuple.of(commits, copied, ahead), key -> CommitsPanel.graphed(commits, copied, ahead)),
                 focused,

@@ -34,10 +34,8 @@ public interface History {
     /**
      * The commits of the log of HEAD that {@code query} finds, newest first, as many as {@link #commits} reads at
      * most; none in a repository without commits.
-     *
-     * @param notOn the branch whose commits are left out, if any
      */
-    Either<GitError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn);
+    Either<GitError, List<Commit>> search(CommitQuery query);
 
     /**
      * The commits from {@code tip} that are not on {@code base}, which is at {@code baseTip}: at most as many as

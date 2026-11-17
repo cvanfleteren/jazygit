@@ -53,7 +53,7 @@ public final class BuildsUpdate {
                 model.repoView()
                         .branches()
                         .builds()
-                        .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(model, view)))
+                        .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(view)))
                         .map(shown -> PopupUpdate.ask(
                                 model,
                                 new BuildsPopup(shown.tabs()
@@ -69,7 +69,7 @@ public final class BuildsUpdate {
                 model.repoView()
                         .branches()
                         .builds()
-                        .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(model, view)))
+                        .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(view)))
                         .flatMap(shown -> shown.builds()
                                 .toOption()
                                 .filter(builds -> !builds.isEmpty())
@@ -106,7 +106,7 @@ public final class BuildsUpdate {
      * {@code model}, reading more runs on every branch of the workflow of the tab {@code view} shows.
      */
     private static Option<Next> moreRuns(Model model, BuildsView view) {
-        return view.shownTab(BuildsReads.shownBuilds(model, view))
+        return view.shownTab(BuildsReads.shownBuilds(view))
                 .flatMap(tab -> view.workflowId(tab.workflow()))
                 .flatMap(id -> view.runs()
                         .get(id)
@@ -136,7 +136,7 @@ public final class BuildsUpdate {
                         ? view.runsOf(tab.workflow())
                                 .flatMap(runs -> runs.builds().toOption())
                                 .map(runs -> runs.size())
-                        : Option.of(BuildsReads.shownBuilds(model, view).count(tab::ran)));
+                        : Option.of(BuildsReads.shownBuilds(view).count(tab::ran)));
     }
 
     /**
@@ -180,7 +180,7 @@ public final class BuildsUpdate {
         return model.repoView()
                 .branches()
                 .builds()
-                .map(view -> shown(model, Option.of(change.apply(view, BuildsReads.shownBuilds(model, view)))))
+                .map(view -> shown(model, Option.of(change.apply(view, BuildsReads.shownBuilds(view)))))
                 .getOrElse(model);
     }
 

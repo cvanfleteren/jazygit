@@ -74,3 +74,5 @@ As the divergence view is, and next to it, not through it nor a stack of views:
   are left for later.
 - The divergence view and this list are two drill-downs of the branches pane held side by side. A third would be the
   time to bring them under one.
+
+Amended by ADR 142: `b` no longer lists only the commits not on the base, here nor in the other logs.

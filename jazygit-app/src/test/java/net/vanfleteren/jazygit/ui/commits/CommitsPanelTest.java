@@ -10,14 +10,10 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.git.history.History;
-import net.vanfleteren.jazygit.git.model.Ahead;
-import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.Fixtures;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -29,7 +25,6 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.view.CommitSearch;
-import net.vanfleteren.jazygit.state.view.CommitsShown;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -39,7 +34,7 @@ import org.junit.jupiter.api.Test;
 class CommitsPanelTest {
 
     // A log without a base: no commit is dimmed or marked.
-    private static final AheadView NO_BASE = new AheadView(Option.none(), Option.none(), false);
+    private static final AheadView NO_BASE = new AheadView(Option.none(), Option.none());
 
     /**
      * The rows of {@code log} as the pane draws them.
@@ -410,7 +405,7 @@ class CommitsPanelTest {
 
     @Test
     void theTitleSaysWhatWasSearchedAndWhenThereWereMoreThanItLists() {
-        CommitSearch search = CommitSearch.loading("fix", Option.none());
+        CommitSearch search = CommitSearch.loading("fix");
 
         assertEquals("Commits: /fix", CommitsPanel.title(search));
         assertEquals(
@@ -455,9 +450,7 @@ class CommitsPanelTest {
                     Option.of("d"),
                     model.get().repoView().commits().commitSearch().map(CommitSearch::text));
             model.set(Update.update(
-                            model.get(),
-                            new LoadMsg.CommitSearchLoaded(
-                                    CommitQuery.parse("d"), Option.none(), List.of(commit("s0"))))
+                            model.get(), new LoadMsg.CommitSearchLoaded(CommitQuery.parse("d"), List.of(commit("s0"))))
                     .model());
             String shown = RenderedText.of(testRunner, () -> panel.render(model.get(), CommitsPanel.PANE));
             assertTrue(shown.contains("Commits: /d"), shown);
@@ -502,9 +495,8 @@ class CommitsPanelTest {
     @Test
     void aSearchThatFindsNothingSaysSo() throws Exception {
         Model model = TestModels.loaded(SampleData.git())
-                .mapRepoView(repoView -> repoView.mapCommits(
-                        commits -> commits.withCommitSearch(Option.of(CommitSearch.loading("nothing", Option.none())
-                                .withResults(new Loadable.Loaded<>(List.empty()))))));
+                .mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withCommitSearch(
+                        Option.of(CommitSearch.loading("nothing").withResults(new Loadable.Loaded<>(List.empty()))))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
@@ -543,43 +535,12 @@ class CommitsPanelTest {
     }
 
     @Test
-    void onlyTheCommitsAheadAreListedAndAllAgainAsThatIsToggled() {
-        Commit tip = commit("c2", "c1");
-        Commit middle = commit("c1", "f0");
-        Commit fork = commit("f0", "o0");
-        BranchRef main = new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName("main")));
-        Model all = TestModels.loaded(SampleData.git())
-                .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(tip, middle, fork, commit("o0"))))
-                        .withAhead(new Loadable.Loaded<>(
-                                Option.of(new Ahead(tip.sha(), main, List.of(tip, middle), false, Option.of(fork))))));
-        Model only = all.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withShown(CommitsShown.AHEAD)));
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
-
-        panel.render(all, CommitsPanel.PANE);
-        List<String> first = panel.shownRows().map(LoadableList.Row::text);
-        panel.render(only, CommitsPanel.PANE);
-        List<String> ahead = panel.shownRows().map(LoadableList.Row::text);
-        panel.render(all, CommitsPanel.PANE);
-
-        assertEquals(4, first.size());
-        assertEquals(List.of("msg c2", "msg c1", "⑂ origin/main msg f0"), ahead.map(CommitsPanelTest::afterGraph));
-        assertEquals(first, panel.shownRows().map(LoadableList.Row::text));
-    }
-
-    /**
-     * The text of a row after the sha, the initials and the graph.
-     */
-    private static String afterGraph(String row) {
-        return row.substring(row.indexOf("○ ") + 2);
-    }
-
-    @Test
     void aSearchThatFindsTheWholeLogListsItWithoutRailsAndClearedWithThem() {
         Loadable<List<Commit>> log = new Loadable.Loaded<>(
                 List.of(commit("mmmmmmm", "bbbbbbb", "aaaaaaa"), commit("bbbbbbb", "aaaaaaa"), commit("aaaaaaa")));
         Model listed = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(log));
-        Model found = listed.mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withCommitSearch(
-                Option.of(CommitSearch.loading("a", Option.none()).withResults(log)))));
+        Model found = listed.mapRepoView(repoView -> repoView.mapCommits(commits ->
+                commits.withCommitSearch(Option.of(CommitSearch.loading("a").withResults(log)))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         panel.render(listed, CommitsPanel.PANE);

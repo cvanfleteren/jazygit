@@ -5,12 +5,10 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.Build;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
 import net.vanfleteren.jazygit.state.view.Workflow;
@@ -26,14 +24,10 @@ public final class BuildsReads {
     private BuildsReads() {}
 
     /**
-     * Of the builds of {@code view}, those that show: with only the commits not on the base listed ({@code b}), those
-     * of the commits not on it, as the log of the branch (ADR 20, 131).
+     * The builds of {@code view} that show: all of them, once they are read (ADR 131).
      */
-    public static List<Build> shownBuilds(Model model, BuildsView view) {
-        return BuildsView.shown(
-                view.builds().getOrElse(List.empty()),
-                AheadUpdate.branch(model, new BranchRef.Local(view.branch())),
-                model.repoView().commits().shown().ahead());
+    public static List<Build> shownBuilds(BuildsView view) {
+        return view.builds().getOrElse(List.empty());
     }
 
     /**
@@ -47,7 +41,7 @@ public final class BuildsReads {
                 .map(view -> {
                     List<FileAt> files = view.unread();
                     boolean repo = view.allBranches() && view.repoWorkflows().isEmpty();
-                    Option<String> runs = view.shownTab(shownBuilds(model, view))
+                    Option<String> runs = view.shownTab(shownBuilds(view))
                             .flatMap(tab -> view.workflowId(tab.workflow()))
                             .filter(id -> !view.runs().containsKey(id));
                     BuildsView asked = view.withWorkflows(

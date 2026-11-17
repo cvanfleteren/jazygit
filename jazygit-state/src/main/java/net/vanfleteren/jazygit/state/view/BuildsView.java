@@ -13,10 +13,8 @@ import lombok.With;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.gh.model.RepoWorkflow;
-import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 
@@ -325,16 +323,6 @@ public record BuildsView(
                                 build.runId(),
                                 workflow.needs(
                                         build.ran().map(Build.Job::name), called -> workflow(build.sha(), called))))));
-    }
-
-    /**
-     * Of {@code builds}, those that show: all of them, or with {@code only}, those of the commits not on the base of
-     * the branch, as {@code ahead} tells, the same as its log lists (ADR 20, 131).
-     */
-    public static List<Build> shown(List<Build> builds, Option<Ahead> ahead, boolean only) {
-        return ahead.filter(read -> only)
-                .map(read -> builds.filter(build -> Sha.parse(build.sha()).exists(sha -> !read.shared(sha))))
-                .getOrElse(builds);
     }
 
     /**

@@ -514,17 +514,4 @@ class AheadUpdateTest {
         assertEquals(Option.none(), AheadUpdate.head(failed));
         assertTrue(RereadUpdate.refresh(failed).cmds().contains(load));
     }
-
-    @Test
-    void togglingSwitchesBetweenTheWholeLogAndOnlyWhatIsNotOnTheBase() {
-        Model only = Update.update(loaded(), new AheadMsg.Toggled()).model();
-
-        assertTrue(only.repoView().commits().shown().ahead());
-        assertFalse(Update.update(only, new AheadMsg.Toggled())
-                .model()
-                .repoView()
-                .commits()
-                .shown()
-                .ahead());
-    }
 }
