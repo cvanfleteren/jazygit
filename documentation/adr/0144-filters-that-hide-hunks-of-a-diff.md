@@ -23,10 +23,12 @@ diff is read.
 - A filter applies to files by language, the `Language` the lexer tells them apart by (ADR 53), by path glob, or
   both: a file is in its scope when either matches. A filter has at least one of the two.
 - A glob without a `/` is matched against the file's name, so `go.sum` is every `go.sum`, and `*` is every file. One
-  with a `/` is matched against its path from the root of the repository, and against that path with a `/` before
-  it. `*` does not cross a `/`, `**` does, as `FileSystem.getPathMatcher("glob:…")` has it. So
-  `**/__snapshots__/*.snap` matches `__snapshots__/a.snap` at the root too, which Java's glob alone, wanting the `/`
-  after `**`, does not; `src/*.java` matches as it would. A renamed file is matched by its new path.
+  with a `/` is matched against its path from the root of the repository. `*` does not cross a `/`, `**` does, as
+  `FileSystem.getPathMatcher("glob:…")` has it. A glob that starts with `**/` also matches without it, as git has
+  it, so `**/__snapshots__/*.snap` matches `__snapshots__/a.snap` at the root too, which Java's glob alone, wanting
+  the `/` after `**`, does not. Not: matching every glob against its path with a `/` before it too, which makes
+  `*/package.json`, the one of each package a directory down, match the one at the root as well. A renamed file is
+  matched by its new path.
 - It has line patterns, Java regexes that match anywhere in a changed line, without its `+` or `-`, as grep and
   `git -I` do; `^` and `$` anchor. A filter without patterns matches every line: it hides all of a file, a lockfile
   or generated code. Not: a second kind of filter for whole files.
