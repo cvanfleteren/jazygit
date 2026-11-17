@@ -491,7 +491,7 @@ public final class ScrollArea {
                         Option.when(!exact, () -> Messages.get("content.line.notShown", line, at)),
                         content);
             }
-            case LineGoal.Hidden(Anchor.OnLine wanted, Anchor.Gap lines, int closest) ->
+            case LineGoal.Hidden(Anchor.OnLine wanted, Anchor lines, int closest) ->
                 hidden(on, wanted, lines, shown.stops().get(closest), content);
             case LineGoal.InRow(int row, boolean exact, int at) -> {
                 Option<String> says = Option.when(!exact, () -> Messages.get("content.line.notShown", line, at));
@@ -532,7 +532,7 @@ public final class ScrollArea {
      * it shows; until then the cursor is on {@code closest}. Refused while a range is open: the line is in no hunk.
      */
     private EventResult hidden(
-            DiffCursor on, Anchor.OnLine wanted, Anchor.Gap lines, RichDiff.Stop closest, ScrolledContent content) {
+            DiffCursor on, Anchor.OnLine wanted, Anchor lines, RichDiff.Stop closest, ScrolledContent content) {
         if (on.mark().isDefined()) {
             notice = Option.of(Messages.get("content.line.outsideRange"));
             return EventResult.HANDLED;

@@ -672,7 +672,7 @@ public final class RichDiff {
         return () -> List.of(new Marked(
                 Rows.kept(Line.from(rule, styled("┄ " + says + " ┄", Theme.Classes.DIFF_HUNK, styles))),
                 Option.of(new Mark(
-                        new Anchor.Filtered(path, run.map(HiddenHunks.Hidden::start)), 1, width, Option.none()))));
+                        new Anchor.Filtered(path, run.map(HiddenHunks.Hidden::ranges)), 1, width, Option.none()))));
     }
 
     /**

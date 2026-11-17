@@ -31,7 +31,7 @@ public final class FilteredUpdate {
                         model,
                         at,
                         opened ->
-                                opened.appendAll(marker.hunks().map(start -> new Opened.Hunk(marker.path(), start)))));
+                                opened.appendAll(marker.starts().map(start -> new Opened.Hunk(marker.path(), start)))));
             case FilteredMsg.Opened _ -> Next.of(model);
             case FilteredMsg.Closed(DiffCursorAt at)
             when at.cursor() instanceof Anchor.OnLine line ->

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.app.keys;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.branches.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.changes.cherrypick.CherryPickMsg;
+import net.vanfleteren.jazygit.changes.diff.DiffFiltersMsg;
 import net.vanfleteren.jazygit.changes.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.changes.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpPopup;
@@ -39,6 +40,11 @@ final class GlobalKeys {
                         "app.help.global.settings",
                         GlobalKeys::isSettingsKey,
                         SettingsPanelMsg.Requested::new))
+                .global(new Keymap.Global.Dispatching(
+                        "ctrl+f",
+                        "app.help.global.diffFilters",
+                        GlobalKeys::isDiffFiltersKey,
+                        DiffFiltersMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+w",
                         "app.help.global.ignoreWhitespace",
@@ -133,6 +139,13 @@ final class GlobalKeys {
      */
     static boolean isInProgressKey(KeyEvent event) {
         return isChar(event, 'M');
+    }
+
+    /**
+     * Whether {@code event} is the shortcut that shows the diff filters (ADR 144).
+     */
+    static boolean isDiffFiltersKey(KeyEvent event) {
+        return event.hasCtrl() && event.isCharIgnoreCase('f');
     }
 
     /**

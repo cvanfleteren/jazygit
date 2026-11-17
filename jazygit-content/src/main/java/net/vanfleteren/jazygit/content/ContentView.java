@@ -85,6 +85,34 @@ public final class ContentView {
     }
 
     /**
+     * What the content panel shows next to the pane that has the focus, {@code focus}, as far as a step of {@code J}
+     * or {@code K} past a file the diff filters hide all of needs it (ADR 144): what each area shows, and whether all
+     * the changes they show are hidden; none when an area shows no diff, as while one is read.
+     */
+    public static Filtered filtered(Model model, Option<Focus> focus) {
+        List<Shown.Area> areas = of(model, focus).areas();
+        List<Option<ShownDiff>> diffs = areas.map(area -> switch (area.body()) {
+            case Body.Diff(ShownDiff diff, var look, var remarks) -> Option.of(diff);
+            case Body.CommitChanges(var commit, ShownDiff changes, var look) -> Option.of(changes);
+            case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
+            default -> Option.<ShownDiff>none();
+        });
+        return new Filtered(
+                areas.map(Shown.Area::content),
+                Option.when(
+                        diffs.nonEmpty() && diffs.forAll(Option::isDefined),
+                        () -> diffs.flatMap(diff -> diff).forAll(diff -> {
+                            Expansion.Folded folded = diff.folded();
+                            return folded.diff().files().nonEmpty()
+                                    && folded.diff()
+                                            .files()
+                                            .forAll(file -> folded.hiding(
+                                                            file.file().path())
+                                                    .all());
+                        })));
+    }
+
+    /**
      * The times the content shows (ADR 124): how long ago the comments of the review threads in a diff were written,
      * which it takes to the minute of the clock ({@link #remarks}).
      */
@@ -170,14 +198,14 @@ public final class ContentView {
                         ? Messages.get("content.panel.file.rendered", area.title())
                         : area.title()
                 : version.map(shown -> versioned(area.title(), shown)).getOrElse(area.title());
-        return new Shown.Area(area.area(), filtered(model, area, title, filtering), area.content(), body);
+        return new Shown.Area(area.area(), filteredTitle(model, area, title, filtering), area.content(), body);
     }
 
     /**
      * {@code title}, saying how many hunks the diff filters hide of the diff {@code area} shows, or that they are
      * switched off when they would hide some (ADR 144); as it is when they hide none.
      */
-    private static String filtered(Model model, Shown.Area area, String title, Filtering filtering) {
+    private static String filteredTitle(Model model, Shown.Area area, String title, Filtering filtering) {
         Option<ParsedDiff> git = switch (area.body()) {
             case Body.Diff(ShownDiff diff, var look, var remarks) ->
                 Option.of(diff.diff().parsed());
@@ -925,4 +953,12 @@ public final class ContentView {
             return List.of(values()).find(mirrored -> mirrored.id.equals(pane.value()));
         }
     }
+
+    /**
+     * What the content panel shows, as {@link #filtered} gives it.
+     *
+     * @param contents  what each of its areas shows
+     * @param allHidden whether the diff filters hide all the changes they show; none when one shows no diff
+     */
+    public record Filtered(List<ScrolledContent> contents, Option<Boolean> allHidden) {}
 }

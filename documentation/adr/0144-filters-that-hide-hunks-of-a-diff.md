@@ -66,7 +66,7 @@ diff is read.
 - A hidden hunk draws as one line, a marker: `┄ 3 filtered changes · Java imports ┄`. Hidden hunks with nothing shown
   between them share one marker. Where the file is read whole and folded, the marker takes the hidden hunk's lines in
   the folded hunk they fall in, so expanding a gap never shows them.
-- Enter on a marker shows its hunks, as the changes they are; Enter on their first line hides them again. Which are
+- Enter on a marker shows its hunks, as the changes they are; Enter on one of their lines hides them again. Which are
   shown is kept for the session by where they start in both files, apart from the lines ADR 77 keeps expanded, which
   are kept by their numbers in the new file as before. Not: a hidden hunk in the gap around it, whose expansions ADR 77
   keeps by lines of the new file a removed-only hunk has none of, and which a fold after the first expansion would
@@ -94,10 +94,11 @@ diff is read.
 
 - Its first row switches all filters off and on again for this session, without changing which are enabled: to see
   everything a moment, as when an import looks suspect. It is on at the start of every session, and not saved.
-- Then the filters, enabled or not: the built-in ones by language, the built-in ones by path, and the user's. One that
-  applies to the file highlighted says what it hides there: `· 3 hunks here`.
-- Space toggles the highlighted row, which applies at once and is saved at once, as the settings panel saves. `/`
-  filters the list. Escape and `Ctrl+F` close it.
+- Then the filters, enabled or not: the built-in ones by language, the built-in ones by path, and the user's, each
+  with the languages or the paths it applies to. Not: what one hides of the file highlighted, which the popup, opened
+  over any pane, does not know; the title of the diff says how many hunks are hidden.
+- Space or Enter toggles the highlighted row, which applies at once and is saved at once, as the settings panel saves.
+  `/` filters the list. Escape closes it; `Ctrl+F` does not, as no global key works while a popup is open.
 - The settings panel does not list them: the popup is their one place.
 
 Which filters are enabled is kept in the settings file, `ui.diff-filters = ["java-imports", …]`, by id, as the other

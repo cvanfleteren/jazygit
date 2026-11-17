@@ -103,10 +103,11 @@ class FilteredDiffTest {
         RichDiff.Drawn drawn = drawn(filtering(), DIFF, false);
 
         assertEquals(
-                List.of(
-                        new Anchor.Filtered("A.java", List.of(new HunkStart(1, 1))),
-                        new Anchor.Filtered("A.java", List.of(new HunkStart(40, 40)))),
-                drawn.stops().map(stop -> stop.mark().anchor()).filter(Anchor.Filtered.class::isInstance));
+                List.of(List.of(new HunkStart(1, 1)), List.of(new HunkStart(40, 40))),
+                drawn.stops()
+                        .map(stop -> stop.mark().anchor())
+                        .filter(Anchor.Filtered.class::isInstance)
+                        .map(anchor -> ((Anchor.Filtered) anchor).starts()));
     }
 
     @Test

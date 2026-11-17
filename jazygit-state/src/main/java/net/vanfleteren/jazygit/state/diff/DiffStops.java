@@ -70,13 +70,14 @@ public final class DiffStops {
                 stops.find(at::equals)
                         .orElse(() -> stops.find(stop -> stop instanceof Anchor.Filtered(var p, var h)
                                 && p.equals(path)
-                                && h.exists(hunks.head()::equals)))
+                                && h.exists(
+                                        hunk -> hunk.start().equals(hunks.head().start()))))
                         .orElse(() -> nearest(
                                 stops,
                                 new Anchor.OnLine(
                                         path,
                                         ReviewThread.Side.RIGHT,
-                                        hunks.head().newLine())));
+                                        hunks.head().newStart())));
             case Anchor.Node(String path, String pointer, Anchor.OnLine line) ->
                 stops.find(stop -> stop instanceof Anchor.Node(var p, var o, var ignored)
                                 && p.equals(path)

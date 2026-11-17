@@ -136,19 +136,32 @@ public final class HiddenHunks {
          * Whether {@code line} is one of its lines, by its number in the old file or the new one.
          */
         public boolean has(DiffLine line) {
-            return line.oldNumber()
-                            .exists(number ->
-                                    number >= ranges.oldStart() && number < ranges.oldStart() + ranges.oldLength())
-                    || line.newNumber()
-                            .exists(number ->
-                                    number >= ranges.newStart() && number < ranges.newStart() + ranges.newLength());
+            return line.oldNumber().exists(number -> ranges.has(true, number))
+                    || line.newNumber().exists(number -> ranges.has(false, number));
         }
     }
 
     /**
      * Where a hunk starts in the old file and the new one, and how many lines it has in each, as its header says.
      */
-    public record Ranges(int oldStart, int oldLength, int newStart, int newLength) {}
+    public record Ranges(int oldStart, int oldLength, int newStart, int newLength) {
+
+        /**
+         * Where the hunk starts in the old file and the new one.
+         */
+        public HunkStart start() {
+            return new HunkStart(oldStart, newStart);
+        }
+
+        /**
+         * Whether the line {@code number} of the old file, if {@code old}, or of the new one is one of the hunk's.
+         */
+        public boolean has(boolean old, int number) {
+            return old
+                    ? number >= oldStart && number < oldStart + oldLength
+                    : number >= newStart && number < newStart + newLength;
+        }
+    }
 
     /**
      * A piece of a hunk as it is drawn, and the hunk of git's that hides it, if one does.
