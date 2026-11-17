@@ -393,12 +393,26 @@ class BuildsTextTest {
     }
 
     @Test
+    void theJobsSpreadOverAWidePanel() {
+        List<String> lines = BuildsText.lines(shown(PUBLISH, Option.none()), ZoneOffset.UTC, Theme.SpanStyles.NONE, 200)
+                .map(BuildsTextTest::text);
+        int header = lines.indexWhere(line -> line.startsWith("job"));
+        List<String> jobs = lines.drop(header + 1).takeWhile(line -> !line.isEmpty());
+        String acceptance = jobs.find(line -> line.startsWith("acceptance ")).get();
+
+        // The 30 builds share the room the names and the numbers leave, more than a column each.
+        int strip = acceptance.substring("acceptance".length()).stripLeading().indexOf(' ');
+        assertTrue(strip > 60, acceptance);
+        assertTrue(jobs.prepend(lines.get(header)).forAll(line -> line.length() <= 200), jobs.mkString("\n"));
+    }
+
+    @Test
     void theHeadersOfTheJobsShowInFullWithOneBuild() {
         List<String> lines = drawn(List.of(build("Publish", 0, "SUCCESS", 240)));
         String header = lines.find(line -> line.startsWith("job")).get();
         String row = lines.find(line -> line.startsWith("package ")).get();
 
-        assertTrue(header.contains("last 1  time  median"), header);
+        assertTrue(header.matches(".*last 1  time +median.*"), header);
         // The strip and the sparkline sit under their headers, the numbers under theirs.
         assertEquals(header.indexOf("last 1"), row.indexOf("▆"), header + "\n" + row);
         assertEquals(

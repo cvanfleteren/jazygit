@@ -28,8 +28,6 @@ import net.vanfleteren.jazygit.ui.theme.Theme;
  */
 final class JobTrain {
 
-    // The widest a job's name is shown.
-    private static final int NAME = 28;
     // The columns of how long a job took, like "1m28–2m23".
     private static final int TOOK = 10;
     // The columns of how long a job waited for a runner, and of how long it took against its median.
@@ -37,9 +35,8 @@ final class JobTrain {
     private static final int VS = 11;
     // A difference from the median smaller than this is no change.
     private static final Duration STEADY = Duration.ofSeconds(10);
-    // The narrowest and the widest the time line is.
+    // The narrowest the time line is.
     private static final int MIN_LINE = 10;
-    private static final int MAX_LINE = 60;
 
     private JobTrain() {}
 
@@ -65,12 +62,11 @@ final class JobTrain {
         Instant start = build.started();
         long whole = Math.max(
                 1, Duration.between(start, groups.map(Group::end).max().get()).toMillis());
-        int name = Math.min(
-                        NAME,
-                        groups.map(group -> TextWidth.of(group.label())).max().getOrElse(0))
-                + 1;
+        // The names are as wide as those of the jobs over the builds.
+        int name = BuildsText.names(
+                groups.map(group -> TextWidth.of(group.label())).max().getOrElse(0), panel);
         // The time line takes what the names, its two borders and the numbers leave of the panel.
-        int width = Math.max(MIN_LINE, Math.min(MAX_LINE, panel - name - 2 - TOOK - WAITED - VS));
+        int width = Math.max(MIN_LINE, panel - name - 2 - TOOK - WAITED - VS);
         Layout layout = layout(ordered(groups), start, whole, width);
         // Without the needs, the last job to end is all that is known: it did not decide alone. While the build runs,
         // nothing decided yet how long it takes.
