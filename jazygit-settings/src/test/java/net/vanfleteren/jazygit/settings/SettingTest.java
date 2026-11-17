@@ -31,7 +31,8 @@ class SettingTest {
             .withAnimations(false)
             .withAutoRefresh(false)
             .withAutoFetch(false)
-            .withBrowsers(AccountBrowsers.NONE.with("github.com", "octocat", Option.some("firefox")));
+            .withBrowsers(AccountBrowsers.NONE.with("github.com", "octocat", Option.some("firefox")))
+            .withDiffFilters(List.of("java-imports", "lockfiles"));
 
     @Test
     void eachSettingTheAppWritesIsReadBackAsItWas() {
@@ -47,8 +48,8 @@ class SettingTest {
                 .filter(setting -> !setting.differs(Settings.DEFAULT, CHANGED))
                 .map(Setting::key);
 
-        // Only the user writes the editors.
-        assertEquals(List.of(Editors.KEY), same);
+        // Only the user writes the editors and the diff filters.
+        assertEquals(List.of(Editors.KEY, FilterDefinitions.KEY), same);
     }
 
     @Test

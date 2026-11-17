@@ -100,7 +100,7 @@ public final class SettingsFile implements SettingsStore {
      * {@code value} as read, with a table as a {@link java.util.Map}, also one in an array, as the editors are
      * (ADR 110), so the settings know nothing of the TOML library.
      */
-    private static Object plain(Object value) {
+    static Object plain(Object value) {
         return value instanceof UnmodifiableConfig table
                 ? List.ofAll(table.valueMap().entrySet())
                         .toJavaMap(

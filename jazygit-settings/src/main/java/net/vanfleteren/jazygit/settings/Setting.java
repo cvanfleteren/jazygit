@@ -106,6 +106,21 @@ record Setting<T>(
                         return new Decoded<>(Option.some(read.editors()), read.invalid());
                     },
                     (key, editors) -> LinkedHashMap.empty(),
+                    false),
+            of(
+                    Settings.DIFF_FILTERS,
+                    Lens.of(Settings::diffFilters, Settings::withDiffFilters),
+                    Setting::ids,
+                    as(List::toJavaList)),
+            // As the editors: an entry that is wrong is left out and reported, and saving leaves them as they are.
+            new Setting<>(
+                    FilterDefinitions.KEY,
+                    Lens.of(Settings::filterDefinitions, Settings::withFilterDefinitions),
+                    value -> {
+                        FilterDefinitions.Read read = FilterDefinitions.read(value, false);
+                        return new Decoded<>(Option.some(read.filters()), read.invalid());
+                    },
+                    (key, filters) -> LinkedHashMap.empty(),
                     false));
 
     /**
@@ -188,6 +203,17 @@ record Setting<T>(
 
     private static Option<String> text(Object value) {
         return Option.of(value).filter(String.class::isInstance).map(String.class::cast);
+    }
+
+    /**
+     * The ids {@code value} holds, if it is an array of text: each once, in its order.
+     */
+    private static Option<List<String>> ids(Object value) {
+        return Option.of(value)
+                .filter(java.util.List.class::isInstance)
+                .map(array -> List.ofAll((java.util.List<?>) array))
+                .filter(items -> items.forAll(String.class::isInstance))
+                .map(items -> items.map(String.class::cast).distinct());
     }
 
     private static Option<Boolean> bool(Object value) {
