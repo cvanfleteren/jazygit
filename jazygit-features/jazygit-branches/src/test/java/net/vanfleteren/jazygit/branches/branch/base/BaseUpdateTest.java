@@ -136,6 +136,33 @@ class BaseUpdateTest {
     }
 
     @Test
+    void aBranchStackedOnTheBranchIsNotOfferedOnceTheBranchMovedOn() {
+        // sibling is built on feature, and next on sibling; feature got a commit since, so git offers both.
+        BranchName next = new BranchName("next");
+        Model stacked = model().mapRepo(repo -> repo.withParents(HashMap.of(SIBLING, FEATURE, next, SIBLING)));
+
+        Model open = Update.update(
+                        stacked,
+                        new BaseMsg.CandidatesRead(
+                                FEATURE,
+                                new BaseCandidates(
+                                        List.of(MAIN_BASE, candidate(SIBLING, 1, 2), candidate(next, 1, 3)),
+                                        Option.of(SIBLING))))
+                .model();
+
+        BasePopup popup = open.popup(BasePopup.class).get();
+        assertEquals(List.of(MAIN_BASE), popup.candidates());
+        assertEquals(Option.none(), popup.createdFrom());
+    }
+
+    @Test
+    void aCycleAmongTheParentsEndsTheWalk() {
+        BranchName other = new BranchName("other");
+
+        assertEquals(false, BaseUpdate.builtOn(HashMap.of(SIBLING, other, other, SIBLING), SIBLING, FEATURE));
+    }
+
+    @Test
     void pickingABaseRecordsIt() {
         Next next = Update.update(read(model(), Option.none()), new BaseMsg.Chosen(Option.of(STAGING)));
 

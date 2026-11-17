@@ -54,7 +54,9 @@ One `git for-each-ref --format=%(refname) %(ahead-behind:<tip>)` over the local 
 counts every branch against the tip at once, as ADR 46 counts the bases, and one `git log --walk-reflogs` of the branch
 reads where it was made from.
 
-- Left out: the branch itself, and a branch that has its tip, which is built on it or a copy of it.
+- Left out: the branch itself, and a branch that has its tip, which is built on it or a copy of it. Also a branch
+  built on it through its parents, which no longer has its tip once the branch moved on: picking it would make a
+  cycle.
 - One row per name. Of a branch that is both local and on `origin`, the one on `origin` is counted, as the base is
   looked up there first (ADR 20). The config records the name either way.
 - First the branch the reflog says it was made from, if it is offered, tagged `made from`.

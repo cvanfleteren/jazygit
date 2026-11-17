@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.branches.branch.base;
 
 import io.vavr.collection.HashSet;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.Comparator;
 import java.util.function.Predicate;
@@ -60,19 +62,21 @@ public final class BaseUpdate {
 
     /**
      * Offers {@code found} to pick from, as {@link #rank} orders them, unless the branch is gone meanwhile: on the base
-     * recorded for the branch, else on the likeliest one.
+     * recorded for the branch, else on the likeliest one. A branch built on this one, through its parents, is not
+     * offered, also when it no longer has the branch's tip, as the branch moved on since: it would make a cycle.
      */
     private static Next read(Model model, BranchName branch, BaseCandidates found) {
         if (model.repo().branch(branch).isEmpty()) {
             return Next.of(model);
         }
-        Option<BranchName> current = model.repo().parents().get(branch);
+        Map<BranchName, BranchName> parents = model.repo().parents();
+        List<BaseCandidate> candidates =
+                found.candidates().filter(candidate -> !builtOn(parents, candidate.name(), branch));
+        Option<BranchName> current = parents.get(branch);
         Option<BranchName> main = AheadUpdate.main(model);
         Option<BranchName> createdFrom = found.createdFrom()
-                .filter(start ->
-                        found.candidates().exists(candidate -> candidate.name().equals(start)));
-        BasePopup popup =
-                new BasePopup(branch, rank(found.candidates(), createdFrom, root(model)), current, createdFrom, main);
+                .filter(start -> candidates.exists(candidate -> candidate.name().equals(start)));
+        BasePopup popup = new BasePopup(branch, rank(candidates, createdFrom, root(model)), current, createdFrom, main);
         int at = current.map(base -> popup.choices().indexOf(Option.of(base)))
                 .filter(index -> index >= 0)
                 .getOrElse(0);
@@ -109,6 +113,17 @@ public final class BaseUpdate {
                 .map(popup -> Next.of(model.withoutPopup(BasePopup.class)))
                 .getOrElse(() -> PopupUpdate.confirm(
                         model, BasePopup.class, popup -> Option.of(new SetBaseCmd(popup.branch(), base))));
+    }
+
+    /**
+     * Whether {@code candidate} is built on {@code branch}, through its parent, or its parent's, and so on, as
+     * {@code parents} has them (ADR 72); a cycle among them ends the walk.
+     */
+    static boolean builtOn(Map<BranchName, BranchName> parents, BranchName candidate, BranchName branch) {
+        return Iterator.iterate(parents.get(candidate), parent -> parent.flatMap(parents::get))
+                .take(parents.size())
+                .takeWhile(Option::isDefined)
+                .exists(parent -> parent.contains(branch));
     }
 
     private static Predicate<BranchName> root(Model model) {
