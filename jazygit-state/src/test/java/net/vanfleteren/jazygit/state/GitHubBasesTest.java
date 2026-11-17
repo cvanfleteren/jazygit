@@ -111,7 +111,7 @@ class GitHubBasesTest {
 
     private static Map<BranchName, BranchName> parents(
             GitHubBases gitHub, List<Branch> local, Map<BranchName, BranchName> recorded) {
-        return gitHub.parents(local, MAIN, recorded);
+        return gitHub.parents(local, HashSet.empty(), MAIN, recorded);
     }
 
     @Test
@@ -145,13 +145,39 @@ class GitHubBasesTest {
     }
 
     @Test
-    void aParentIsOnlyAnotherLocalBranch() {
+    void aParentIsAnotherLocalBranch() {
         assertEquals(
                 HashMap.empty(),
                 parents(
                         GitHubBases.NONE,
                         List.of(branch("main"), branch("feat/b"), branch("feat/c")),
                         HashMap.of(name("feat/b"), name("colleague"), name("feat/c"), name("feat/c"))));
+    }
+
+    @Test
+    void aParentCanBeABranchThatIsOnlyOnOrigin() {
+        assertEquals(
+                HashMap.of(name("feat/b"), name("staging/sync")),
+                GitHubBases.NONE.parents(
+                        List.of(branch("main"), branch("feat/b")),
+                        HashSet.of(name("staging/sync")),
+                        MAIN,
+                        HashMap.of(name("feat/b"), name("staging/sync"))));
+    }
+
+    @Test
+    void theBaseOfAPullRequestCanBeABranchThatIsOnlyOnOrigin() {
+        GitHubBases gitHub = of(List.of(pr(97, "feat/b", "staging/sync")));
+
+        assertEquals(
+                HashMap.of(name("feat/b"), name("staging/sync")),
+                gitHub.parents(
+                        List.of(branch("main"), branch("feat/b")),
+                        HashSet.of(name("staging/sync")),
+                        MAIN,
+                        HashMap.empty()));
+        assertEquals(Option.of(name("staging/sync")), gitHub.fromPullRequest(branch("feat/b")));
+        assertEquals(Option.none(), GitHubBases.NONE.fromPullRequest(branch("feat/b")));
     }
 
     @Test

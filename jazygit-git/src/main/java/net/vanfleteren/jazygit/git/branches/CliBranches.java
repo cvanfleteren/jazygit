@@ -198,6 +198,38 @@ public final class CliBranches implements Branches {
         return CliConfig.writeLocal(worktree, parentKey(branch), Option.of(GitArgs.name(parent)));
     }
 
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> setParent(BranchName branch, Option<BranchName> parent) {
+        return CliConfig.writeLocal(worktree, parentKey(branch), parent.map(GitArgs::name));
+    }
+
+    /**
+     * The candidates of {@link CliBaseCandidates}, and the branch the reflog of {@code branch} says it was made from,
+     * read as {@link #all} reads when the branches were made.
+     */
+    @Override
+    public Either<GitError, BaseCandidates> baseCandidates(BranchName branch, Sha tip) {
+        return GitProcess.read(
+                        worktree,
+                        GitCommand.reading(
+                                "log",
+                                "--walk-reflogs",
+                                "--no-color",
+                                "--no-show-signature",
+                                "--date=unix",
+                                "--format=" + REFLOG_FORMAT,
+                                GitArgs.revision(new BranchRef.Local(branch)),
+                                "--"),
+                        CliBranches::parseCreated)
+                // A branch without a reflog, or one git cannot read, tells nothing of where it came from.
+                .fold(
+                        error -> Option.<BranchName>none(),
+                        created -> created.get(branch)
+                                .flatMap(creation -> CliBaseCandidates.startBranch(creation.start())))
+                .transform(createdFrom -> CliBaseCandidates.read(worktree, branch, tip)
+                        .map(candidates -> new BaseCandidates(candidates, createdFrom)));
+    }
+
     private static String parentKey(BranchName branch) {
         return PARENT_PREFIX + GitArgs.name(branch) + PARENT_SUFFIX;
     }

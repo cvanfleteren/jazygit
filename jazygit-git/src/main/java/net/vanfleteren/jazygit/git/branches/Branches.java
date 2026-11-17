@@ -5,6 +5,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.AllBranches;
+import net.vanfleteren.jazygit.git.model.BaseCandidates;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -65,6 +66,18 @@ public interface Branches {
      * The branch each branch was made from, of those that have one recorded, as {@link #parent} reads it.
      */
     Either<GitError, Map<BranchName, BranchName>> parents();
+
+    /**
+     * Records {@code parent} as the branch {@code branch} is built on, in {@code branch.<name>.gh-merge-base}, or
+     * removes what is recorded for none (ADR 143).
+     */
+    Either<GitFailure, List<ExecutedCommand>> setParent(BranchName branch, Option<BranchName> parent);
+
+    /**
+     * The branches {@code branch}, at {@code tip}, could be built on, with how far each is from it, in one
+     * {@code for-each-ref}, and the branch its reflog says it was made from (ADR 143).
+     */
+    Either<GitError, BaseCandidates> baseCandidates(BranchName branch, Sha tip);
 
     /**
      * How far each local branch is from its base, by its name, for those that have a base (ADR 46): the branch it was

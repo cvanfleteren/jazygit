@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.branches.branch;
 
+import net.vanfleteren.jazygit.branches.branch.base.BaseAction;
 import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutAction;
 import net.vanfleteren.jazygit.branches.branch.commits.BranchCommitsAction;
 import net.vanfleteren.jazygit.branches.branch.delete.DeleteBranchAction;
@@ -40,6 +41,7 @@ public final class BranchFeature {
             BranchCommitsAction.ACTION,
             StackAction.ACTION,
             UpstreamAction.ACTION,
+            BaseAction.ACTION,
             BranchesTabAction.ACTION);
 
     private BranchFeature() {}

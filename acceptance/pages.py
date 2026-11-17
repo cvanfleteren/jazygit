@@ -655,6 +655,24 @@ class BranchesPane:
         self.ui.changing_repo(f"{checked_out} rebased onto {branch}", lambda: (
             self.app.press("r"), self.ui.confirm(f"Rebase '{checked_out}'", key="s")))
 
+    def set_base(self, branch: str, base: str = None):
+        """Sets the branch branch is built on to base, picked from the branches the app offers; None records none.
+        Only git's config changes, which the app's wait for a change does not see: so it waits for the config."""
+        self.select(branch)
+        self.app.press("b")
+        self.app.wait_for(f"Base of {branch}")
+        self.app.press("/")
+        if base is None:
+            self.app.type("None:")
+            # The row of the main branch, which is always offered, is tagged so.
+            self.app.wait_gone("main branch")
+        else:
+            self.app.type(base)
+            self.app.wait_gone("None:")
+        self.app.press("enter")
+        self.app.eventually(lambda: self.repo.parent(branch) == (base or ""), f"the base of {branch} set")
+        self.ui.caught_up()
+
     def rebase_on_base(self, base: str):
         """Rebases the checked out branch on its base branch, from its own row."""
         checked_out = self.repo.current_branch()

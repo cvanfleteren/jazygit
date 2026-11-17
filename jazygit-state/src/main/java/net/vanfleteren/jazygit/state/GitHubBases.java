@@ -76,22 +76,37 @@ public record GitHubBases(
     /**
      * The parent of each of {@code local} that is not a root and has one (ADR 72): the first of the branch it is built
      * on as GitHub says and the one recorded in {@code recorded}, {@code branch.<name>.gh-merge-base}, and only when
-     * that is another of {@code local}. What GitHub says comes first, also when it names no local branch: a branch
-     * whose pull request is on a colleague's branch that is not checked out has no parent.
+     * that is another of {@code local}, or a branch on {@code origin} (ADR 143). What GitHub says comes first, also when
+     * it names a branch that is in neither: then the branch has no parent.
      *
-     * @param main the main branch, a root
+     * @param onOrigin the branches on {@code origin}, by their name there
+     * @param main     the main branch, a root
      */
     public Map<BranchName, BranchName> parents(
-            List<Branch> local, Option<BranchName> main, Map<BranchName, BranchName> recorded) {
+            List<Branch> local,
+            Set<BranchName> onOrigin,
+            Option<BranchName> main,
+            Map<BranchName, BranchName> recorded) {
         return local.filter(branch -> !root(branch.name(), main))
                 .flatMap(branch -> onGitHub(branch)
                         .flatMap(byHead::get)
                         .fold(
-                                () -> recorded.get(branch.name()).filter(parent -> isLocal(local, parent)),
-                                onRemote -> localOf(local, onRemote))
+                                () -> recorded.get(branch.name())
+                                        .filter(parent -> isLocal(local, parent) || onOrigin.contains(parent)),
+                                onRemote -> localOf(local, onRemote)
+                                        .orElse(() -> Option.of(onRemote).filter(onOrigin::contains)))
                         .filter(parent -> !parent.equals(branch.name()))
                         .map(parent -> Tuple.of(branch.name(), parent)))
                 .toMap(pair -> pair);
+    }
+
+    /**
+     * The branch {@code branch} is built on as GitHub says (ADR 72), by its name on GitHub: the branch below it in
+     * the stack of its open pull request, else the base of that; none without one. It comes before what is recorded
+     * for the branch, which so cannot set it (ADR 143).
+     */
+    public Option<BranchName> fromPullRequest(Branch branch) {
+        return onGitHub(branch).flatMap(byHead::get);
     }
 
     /**

@@ -4,6 +4,7 @@ import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 
 /**
@@ -24,6 +25,16 @@ public record AllBranches(List<Branch> local, List<RemoteRef> remote) {
                 .merge(HashMap.ofEntries(
                         remote.filter(ref -> ref.branch().remote().equals(RemoteBranch.DEFAULT_REMOTE))
                                 .map(ref -> Tuple.of(new BranchRef.Remote(ref.branch()), ref.tip()))));
+    }
+
+    /**
+     * The branches on {@link RemoteBranch#DEFAULT_REMOTE}, by their name there: those that can be a base without
+     * being checked out (ADR 143).
+     */
+    public Set<BranchName> onOrigin() {
+        return remote.filter(ref -> ref.branch().remote().equals(RemoteBranch.DEFAULT_REMOTE))
+                .map(ref -> ref.branch().branch())
+                .toSet();
     }
 
     /**
