@@ -56,7 +56,8 @@ final class BuildsText {
     private static final String MINE = "◆";
     // The widest the column of what a run on every branch ran for is: its pull request, else its branch.
     private static final int FOR = 14;
-    // The widest a build's bar in the chart is, with the column after it, when there are few builds.
+    // The widest a build's bar in the chart is, with the column after it, when there are few builds; also the widest
+    // a build's cell in the results and the times of the jobs is.
     private static final int WIDEST = 5;
     // A job split in shards, like "acceptance (1/6)", is one job.
     private static final Pattern SHARD = Pattern.compile("\\s*\\(\\d+/\\d+\\)$");

@@ -62,7 +62,7 @@ final class JobTrain {
         Instant start = build.started();
         long whole = Math.max(
                 1, Duration.between(start, groups.map(Group::end).max().get()).toMillis());
-        // The names are as wide as those of the jobs over the builds.
+        // The names follow the same rule as those of the jobs over the builds.
         int name = BuildsText.names(
                 groups.map(group -> TextWidth.of(group.label())).max().getOrElse(0), panel);
         // The time line takes what the names, its two borders and the numbers leave of the panel.
