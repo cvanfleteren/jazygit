@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.content.diff.ShownRemarks;
-import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -445,13 +444,12 @@ public final class ContentView {
                 .map(view -> {
                     String branch = view.branch().value();
                     String commits = String.valueOf(view.commits());
-                    List<Build> shown = view.builds().getOrElse(List.empty());
                     String ofBranch = view.reading()
                             ? Messages.get("content.panel.builds.reading", branch, commits)
                             : view.stopped().isDefined()
                                     ? Messages.get("content.panel.builds.stopped", branch, commits)
                                     : Messages.get("content.panel.builds.title", branch, commits);
-                    Option<WorkflowRuns> runs = view.shownTab(shown).flatMap(tab -> view.runsOf(tab.workflow()));
+                    Option<WorkflowRuns> runs = view.shownTab().flatMap(tab -> view.runsOf(tab.workflow()));
                     // On every branch, the title says when more runs of the tab are being read, as m asked: the
                     // first ones say so in the body.
                     String every = view.allBranches()
@@ -473,7 +471,7 @@ public final class ContentView {
                             title,
                             view.builds(),
                             builds -> view.onGitHub()
-                                    .map(remote -> view.shownOf(shown)
+                                    .map(remote -> view.shownOf()
                                             .<Shown>map(drawn -> new Shown.Area(
                                                     ContentArea.BUILDS,
                                                     title,

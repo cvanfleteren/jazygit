@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.Build;
+import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
@@ -46,7 +47,8 @@ class BuildsViewTest {
             build(NIX, OLDER, "SUCCESS"));
 
     private static BuildsView view() {
-        return BuildsView.reading(new BranchName("feature"), new RemoteBranch("origin", new BranchName("feature")));
+        return BuildsView.reading(new BranchName("feature"), new RemoteBranch("origin", new BranchName("feature")))
+                .read(Option.of(new BuildsPage(BUILDS, 2, Option.none())));
     }
 
     @Test
@@ -56,23 +58,22 @@ class BuildsViewTest {
 
     @Test
     void ofThoseOnTheTipOneThatFailedShowsUnlessOneWasChosen() {
-        assertEquals(Option.of(MARKDOWN), view().shownPipeline(BUILDS));
-        assertEquals(Option.of(NIX), view().withSelected(NIX).shownPipeline(BUILDS));
+        assertEquals(Option.of(MARKDOWN), view().shownPipeline());
+        assertEquals(Option.of(NIX), view().withSelected(NIX).shownPipeline());
     }
 
     @Test
     void aChosenWorkflowWithoutBuildsGivesWayToTheOneOnTheTip() {
         assertEquals(
                 Option.of(MARKDOWN),
-                view().withSelected(new Pipeline("Gone", "push")).shownPipeline(BUILDS));
+                view().withSelected(new Pipeline("Gone", "push")).shownPipeline());
     }
 
     @Test
     void steppingGoesToTheNextTabAndAroundFromTheLast() {
-        assertEquals(Option.of(PUBLISH), view().stepped(BUILDS, 1).shownPipeline(BUILDS));
-        assertEquals(Option.of(BUILD), view().stepped(BUILDS, -1).shownPipeline(BUILDS));
-        assertEquals(
-                Option.of(BUILD), view().withSelected(NIX).stepped(BUILDS, 1).shownPipeline(BUILDS));
+        assertEquals(Option.of(PUBLISH), view().stepped(1).shownPipeline());
+        assertEquals(Option.of(BUILD), view().stepped(-1).shownPipeline());
+        assertEquals(Option.of(BUILD), view().withSelected(NIX).stepped(1).shownPipeline());
     }
 
     @Test

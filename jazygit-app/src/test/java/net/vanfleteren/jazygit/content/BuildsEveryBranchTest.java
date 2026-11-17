@@ -310,8 +310,7 @@ class BuildsEveryBranchTest {
                                         2,
                                         Option.none())))));
 
-        List<String> lines = BuildsText.lines(
-                        view.shownOf(List.of(MINE)).get(), ZoneOffset.UTC, Theme.SpanStyles.NONE, 100)
+        List<String> lines = BuildsText.lines(view.shownOf().get(), ZoneOffset.UTC, Theme.SpanStyles.NONE, 100)
                 .map(line -> List.ofAll(line.spans()).map(Span::content).mkString());
 
         assertTrue(lines.get(2).startsWith("Build · every branch · 2 builds"), lines.mkString("\n"));

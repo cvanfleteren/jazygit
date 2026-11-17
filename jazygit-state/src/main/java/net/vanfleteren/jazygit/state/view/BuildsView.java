@@ -343,11 +343,12 @@ public record BuildsView(
     }
 
     /**
-     * The workflow whose builds of {@code builds} show: the one chosen, while it has builds; else, of those on the
+     * The workflow whose builds show: the one chosen, while it has builds; else, of those on the
      * newest commit with builds, one whose last build failed, else the one with the most builds. A workflow chosen on
      * every branch stands for its tab with the most builds.
      */
-    public Option<Pipeline> shownPipeline(List<Build> builds) {
+    public Option<Pipeline> shownPipeline() {
+        List<Build> builds = loaded();
         List<Pipeline> all = pipelines(builds);
         return selected.flatMap(chosen -> all.filter(chosen::covers)
                         .maxBy(Comparator.comparingInt(pipeline -> builds.count(pipeline::ran))))
@@ -363,11 +364,12 @@ public record BuildsView(
     }
 
     /**
-     * The workflows of the tabs, of {@code builds}, those of the branch that show: of the branch, those it ran; on
+     * The workflows of the tabs: of the branch, those it ran; on
      * every branch, the workflows it ran first, in the same order, then the other workflows of the repository that
      * run, by name, each of any event.
      */
-    public List<Pipeline> tabs(List<Build> builds) {
+    public List<Pipeline> tabs() {
+        List<Build> builds = loaded();
         if (!allBranches) {
             return pipelines(builds);
         }
@@ -384,29 +386,29 @@ public record BuildsView(
     }
 
     /**
-     * The tab shown of the tabs of {@code builds}: of the branch, as {@link #shownPipeline} says; on every branch, the
+     * The tab shown: of the branch, as {@link #shownPipeline} says; on every branch, the
      * workflow chosen, else that of the tab the branch shows, else the first.
      */
-    public Option<Pipeline> shownTab(List<Build> builds) {
+    public Option<Pipeline> shownTab() {
         if (!allBranches) {
-            return shownPipeline(builds);
+            return shownPipeline();
         }
-        List<Pipeline> all = tabs(builds);
+        List<Pipeline> all = tabs();
         return selected.map(chosen -> Pipeline.any(chosen.workflow()))
                 .filter(all::contains)
-                .orElse(() -> shownPipeline(builds)
+                .orElse(() -> shownPipeline()
                         .map(pipeline -> Pipeline.any(pipeline.workflow()))
                         .filter(all::contains))
                 .orElse(all::headOption);
     }
 
     /**
-     * This, showing the tab {@code by} tabs after the one of {@code builds} that shows, around from the last to the
+     * This, showing the tab {@code by} tabs after the one that shows, around from the last to the
      * first.
      */
-    public BuildsView stepped(List<Build> builds, int by) {
-        List<Pipeline> all = tabs(builds);
-        return shownTab(builds)
+    public BuildsView stepped(int by) {
+        List<Pipeline> all = tabs();
+        return shownTab()
                 .map(now -> all.get(Math.floorMod(all.indexOf(now) + by, all.size())))
                 .map(this::withSelected)
                 .getOrElse(this);
@@ -436,13 +438,14 @@ public record BuildsView(
     }
 
     /**
-     * What the builds show of {@code builds}, those of the branch that show: the tabs, how the last build of each
+     * What the builds show: the tabs, how the last build of each
      * ended, and the builds of the tab shown, with what goes with them; none without a tab.
      */
-    public Option<BuildsShown> shownOf(List<Build> builds) {
-        List<Pipeline> all = tabs(builds);
-        Set<String> mine = HashSet.ofAll(this.builds.getOrElse(List.empty()).map(Build::sha));
-        return shownTab(builds).map(tab -> {
+    public Option<BuildsShown> shownOf() {
+        List<Build> builds = loaded();
+        List<Pipeline> all = tabs();
+        Set<String> mine = HashSet.ofAll(builds.map(Build::sha));
+        return shownTab().map(tab -> {
             Loadable<List<Build>> ofTab = allBranches
                     ? runsOf(tab.workflow()).map(WorkflowRuns::builds).getOrElse(Loadable::loading)
                     : new Loadable.Loaded<>(builds.filter(tab::ran));
@@ -487,6 +490,13 @@ public record BuildsView(
                         .filter(build -> build.outcome() == Build.Outcome.PASSED)
                         .flatMap(Build::duration))
                 .flatMap(passed -> median(passed).map(middle -> new BuildsShown.Baseline(middle, passed.size())));
+    }
+
+    /**
+     * The builds read so far; none while they are not.
+     */
+    private List<Build> loaded() {
+        return builds.getOrElse(List.empty());
     }
 
     private static List<Pipeline> onTip(List<Build> builds) {

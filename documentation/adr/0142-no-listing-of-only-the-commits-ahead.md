@@ -17,8 +17,9 @@ The dimming already shows which commits are the branch's own, in every log and w
 
 `b` and what it did are gone:
 
-- The logs, the commits of a branch and the builds always list everything, with the commits on the base dimmed and the
-  count in the title, as ADR 20 has it otherwise.
+- The logs and the commits of a branch always list everything, with the commits on the base dimmed and the count in
+  the title, as ADR 20 has it otherwise. The builds list all builds of the branch, with nothing to set those of the
+  base apart.
 - `b` is no longer bound, in the commits pane, the branches pane, the commits of a branch, nor the builds.
 - A search looks through the whole log of HEAD again, never leaving out the base: `History.search` takes no branch to
   leave out.

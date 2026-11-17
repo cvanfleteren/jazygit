@@ -6,9 +6,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
@@ -161,5 +165,22 @@ class CommitSearchUpdateTest {
         assertFalse(Update.update(loaded(), TestModels.commitsLoaded(FOUND))
                 .cmds()
                 .exists(SearchCommits.class::isInstance));
+    }
+
+    @Test
+    void theSearchDoesNotRunAgainWhenTheBaseOfHeadIsRead() {
+        BranchRef base = new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main")));
+        Model searched = run("fix").model();
+
+        Next read = Update.update(
+                searched,
+                new LoadMsg.AheadLoaded(
+                        AheadUpdate.ofHead(searched),
+                        Option.of(new Ahead(COMMITS.head().sha(), base, FOUND, false, Option.none()))));
+
+        assertFalse(read.cmds().exists(SearchCommits.class::isInstance));
+        assertEquals(
+                searched.repoView().commits().commitSearch(),
+                read.model().repoView().commits().commitSearch());
     }
 }

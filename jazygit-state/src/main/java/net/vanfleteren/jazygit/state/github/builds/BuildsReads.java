@@ -4,7 +4,6 @@ import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -24,13 +23,6 @@ public final class BuildsReads {
     private BuildsReads() {}
 
     /**
-     * The builds of {@code view} that show: all of them, once they are read (ADR 131).
-     */
-    public static List<Build> shownBuilds(BuildsView view) {
-        return view.builds().getOrElse(List.empty());
-    }
-
-    /**
      * {@code model}, reading what its builds show and is not read yet, nor being read.
      */
     public static Next next(Model model) {
@@ -41,7 +33,7 @@ public final class BuildsReads {
                 .map(view -> {
                     List<FileAt> files = view.unread();
                     boolean repo = view.allBranches() && view.repoWorkflows().isEmpty();
-                    Option<String> runs = view.shownTab(shownBuilds(view))
+                    Option<String> runs = view.shownTab()
                             .flatMap(tab -> view.workflowId(tab.workflow()))
                             .filter(id -> !view.runs().containsKey(id));
                     BuildsView asked = view.withWorkflows(
