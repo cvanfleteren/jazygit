@@ -81,9 +81,10 @@ public final class BaseUpdate {
 
     /**
      * {@code candidates}, the likeliest base first: the one the reflog says the branch was made from; then the one it
-     * forked from last, the one with the fewest of the branch's commits since; of those, the one with the fewest
-     * commits of its own, which the branch is most likely built on rather than beside; then a root last, as a branch
-     * made from another is more likely built on that one than on the main branch they both forked from.
+     * forked from last, which the branch is the fewest commits ahead of; of those, the one it is the fewest behind, the
+     * candidate with the fewest commits of its own, which the branch is most likely built on rather than beside; then a
+     * root last, as a branch made from another is more likely built on that one than on the main branch they both
+     * forked from.
      *
      * @param root whether a branch is a root: the main branch or a protected one
      */
@@ -91,18 +92,20 @@ public final class BaseUpdate {
             List<BaseCandidate> candidates, Option<BranchName> createdFrom, Predicate<BranchName> root) {
         return candidates.sorted(
                 Comparator.comparing((BaseCandidate candidate) -> !createdFrom.contains(candidate.name()))
-                        .thenComparingInt(BaseCandidate::own)
-                        .thenComparingInt(BaseCandidate::theirs)
+                        .thenComparingInt(BaseCandidate::ahead)
+                        .thenComparingInt(BaseCandidate::behind)
                         .thenComparing(candidate -> root.test(candidate.name()))
                         .thenComparing(candidate -> candidate.name().value()));
     }
 
     /**
-     * Records {@code base} for the branch of the popup, unless it is the base the branch has already.
+     * Records {@code base} for the branch of the popup, unless it is the branch the base is already. None is always
+     * recorded, which removes what is: the base the model has leaves out one recorded that is gone, which would come
+     * back as the base with a branch of that name; removing what is not recorded does nothing.
      */
     private static Next chosen(Model model, Option<BranchName> base) {
         return model.popup(BasePopup.class)
-                .filter(popup -> popup.current().equals(base))
+                .filter(popup -> base.isDefined() && popup.current().equals(base))
                 .map(popup -> Next.of(model.withoutPopup(BasePopup.class)))
                 .getOrElse(() -> PopupUpdate.confirm(
                         model, BasePopup.class, popup -> Option.of(new SetBaseCmd(popup.branch(), base))));

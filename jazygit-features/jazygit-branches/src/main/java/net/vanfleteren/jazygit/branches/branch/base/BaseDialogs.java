@@ -68,12 +68,12 @@ public final class BaseDialogs {
      * of none of its own.
      */
     private static String counts(BaseCandidate candidate) {
-        return candidate.theirs() == 0
-                ? Messages.get("branches.dialog.base.ahead", String.valueOf(candidate.own()))
+        return candidate.behind() == 0
+                ? Messages.get("branches.dialog.base.ahead", String.valueOf(candidate.ahead()))
                 : Messages.get(
                         "branches.dialog.base.aheadBehind",
-                        String.valueOf(candidate.own()),
-                        String.valueOf(candidate.theirs()));
+                        String.valueOf(candidate.ahead()),
+                        String.valueOf(candidate.behind()));
     }
 
     /**

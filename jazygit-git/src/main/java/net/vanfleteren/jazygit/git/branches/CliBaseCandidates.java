@@ -47,15 +47,17 @@ final class CliBaseCandidates {
     /**
      * The candidates in {@code raw}, a line per ref: its full name, then the commits it has that the tip does not and
      * those the tip has that it does not, separated by a space. Left out: {@code branch} itself, on either side; a
-     * ref that has the tip, which is the branch or built on it; and {@code origin/HEAD}. Of a branch that is both
-     * local and on {@code origin}, the one on {@code origin} is counted.
+     * branch of which either ref has the tip, which is the branch or built on it, also when its other ref is an older
+     * one that does not; and {@code origin/HEAD}. Of a branch that is both local and on {@code origin}, the one on
+     * {@code origin} is counted.
      */
     static Either<UnexpectedOutput, List<BaseCandidate>> parse(String raw, BranchName branch) {
         return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(CliBaseCandidates::line))
                 .map(found -> found.flatMap(candidate -> candidate)
-                        .filter(candidate -> !candidate.name().equals(branch) && candidate.own() > 0)
+                        .filter(candidate -> !candidate.name().equals(branch))
                         .groupBy(BaseCandidate::name)
                         .values()
+                        .filter(same -> same.forAll(candidate -> candidate.ahead() > 0))
                         .map(same -> same.find(candidate -> candidate.counted() instanceof BranchRef.Remote)
                                 .getOrElse(same::head))
                         .toList());
@@ -76,9 +78,10 @@ final class CliBaseCandidates {
             return counts.size() != 2
                     ? Either.left(new UnexpectedOutput(line))
                     : GitOutput.number(counts.get(0))
-                            .flatMap(theirs -> GitOutput.number(counts.get(1))
-                                    .map(own -> Option.of(new BaseCandidate(
-                                            name(ref.get()), ref.get(), own.intValue(), theirs.intValue()))));
+                            // The ref's own commits first, then those of the tip it does not have.
+                            .flatMap(behind -> GitOutput.number(counts.get(1))
+                                    .map(ahead -> Option.of(new BaseCandidate(
+                                            name(ref.get()), ref.get(), ahead.intValue(), behind.intValue()))));
         });
     }
 

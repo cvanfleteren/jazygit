@@ -153,6 +153,26 @@ class BaseUpdateTest {
     }
 
     @Test
+    void pickingNoneRemovesARecordedBaseThatIsGone() {
+        // feature records a base that is gone, so the model has none for it, as when nothing is recorded.
+        Next next = Update.update(read(model(), Option.none()), new BaseMsg.Chosen(Option.none()));
+
+        assertEquals(List.of(new SetBaseCmd(FEATURE, Option.none())), next.cmds());
+    }
+
+    @Test
+    void whatIsReadForABranchThatIsGoneMeanwhileOffersNothing() {
+        Model gone = localBranchesRead(
+                        model(),
+                        List.of(Fixtures.branch(MAIN, true, new Sha("aaaa"), Instant.EPOCH, true, true, Option.none())))
+                .model();
+
+        Model next = read(gone, Option.none());
+
+        assertEquals(Option.none(), next.popup(BasePopup.class));
+    }
+
+    @Test
     void pickingTheBaseItHasJustCloses() {
         Model recorded = model().mapRepo(repo -> repo.withParents(HashMap.of(FEATURE, SIBLING)));
 

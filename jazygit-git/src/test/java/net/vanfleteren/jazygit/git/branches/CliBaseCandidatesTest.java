@@ -64,6 +64,19 @@ class CliBaseCandidatesTest {
     }
 
     @Test
+    void aBranchBuiltOnTheTopicIsNoCandidateAlsoWhenItsCopyOnOriginIsOlder() throws Exception {
+        git("checkout", "-q", "-b", "topic");
+        commit("topic");
+        git("checkout", "-q", "-b", "above");
+        // Pushed before it was rebased onto the topic: the copy on origin does not have the topic's tip.
+        git("update-ref", "refs/remotes/origin/above", "main");
+        commit("above");
+        git("checkout", "-q", "topic");
+
+        assertEquals(List.of(MAIN), candidates().candidates().map(BaseCandidate::name));
+    }
+
+    @Test
     void aBranchOnOriginIsCountedInPlaceOfTheLocalOneOfTheSameName() throws Exception {
         git("checkout", "-q", "-b", "staging/sync");
         commit("staging");
