@@ -53,7 +53,7 @@ public record LoadBranches(GitHubBases gitHub) implements Load {
                 .branches()
                 .parents()
                 .toOption()
-                .map(recorded -> gitHub.parents(branches.local(), branches.main(), recorded))
+                .map(recorded -> gitHub.parents(branches.local(), branches.onOrigin(), branches.main(), recorded))
                 .map(parents -> new LoadMsg.Bases(
                         parents, env.git().branches().baseDistance(branches.tips(), parents, branches.main())));
     }

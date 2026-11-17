@@ -8,6 +8,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.AllBranches;
+import net.vanfleteren.jazygit.git.model.BaseCandidates;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -72,6 +73,16 @@ public interface StubBranches extends Branches {
     @Override
     default Either<GitError, Map<BranchName, BranchName>> parents() {
         return Either.right(HashMap.empty());
+    }
+
+    @Override
+    default Either<GitFailure, List<ExecutedCommand>> setParent(BranchName branch, Option<BranchName> parent) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitError, BaseCandidates> baseCandidates(BranchName branch, Sha tip) {
+        return Either.right(new BaseCandidates(List.empty(), Option.none()));
     }
 
     @Override

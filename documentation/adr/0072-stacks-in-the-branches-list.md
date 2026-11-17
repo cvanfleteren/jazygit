@@ -133,3 +133,5 @@ A stack is one node of the list: a header of one line, with its branches under i
 - The pull requests of the branches are read with one more field, `baseRefName`, and the protected branches with one
   request more per repository.
 - The list has rows of one line next to rows of two.
+
+Amended by ADR 143: a parent can be a branch that is only on `origin`, recorded or the base of a pull request.

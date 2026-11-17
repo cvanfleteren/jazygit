@@ -159,6 +159,29 @@ def test_a_branch_says_how_far_it_is_from_its_base(repo, jazygit):
     assert ui.branches.behind("main") is None
 
 
+def test_set_the_base_of_a_branch_and_remove_it_again(repo, jazygit):
+    three_commits(repo)
+    repo("checkout", "-q", "-b", "staging")
+    repo.commit("Add staging", **{"staging.txt": "staging\n"})
+    repo("checkout", "-q", "-b", "sibling")
+    repo.commit("Add sibling", **{"sibling.txt": "sibling\n"})
+    repo("checkout", "-q", "-b", "feature", "staging")
+    repo.commit("Add four", **{"four.txt": "four\n"})
+    repo.commit("Add five", **{"five.txt": "five\n"})
+    repo("checkout", "-q", "main")
+    ui = jazygit()
+    ui.caught_up()
+    assert ui.app.eventually(lambda: ui.branches.ahead("feature"), "how far feature is ahead of main") == 3
+
+    ui.branches.set_base("feature", "staging")
+
+    assert ui.app.eventually(lambda: ui.branches.ahead("feature") == 2, "feature counted against staging")
+
+    ui.branches.set_base("feature", None)
+
+    assert ui.app.eventually(lambda: ui.branches.ahead("feature") == 3, "feature counted against main again")
+
+
 def test_move_commits_to_a_new_branch_that_starts_on_main(repo, jazygit):
     three_commits(repo)
     repo("switch", "--create", "feature")

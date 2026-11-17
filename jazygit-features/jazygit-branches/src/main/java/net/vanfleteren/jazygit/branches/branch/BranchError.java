@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.branches.branch;
 
 import io.vavr.collection.List;
 import java.util.Locale;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -63,6 +64,31 @@ public sealed interface BranchError extends AppError {
         @Override
         public Phrase phrase() {
             return Phrase.of("branches.error.detached");
+        }
+    }
+
+    /**
+     * Setting the base of {@code branch} was asked for, but it is the main branch or a protected one, which is built
+     * on no other (ADR 143).
+     */
+    record RootHasNoBase(BranchName branch) implements BranchError {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("branches.error.setBase.root", branch.value());
+        }
+    }
+
+    /**
+     * Setting the base of {@code branch} was asked for, but its open pull request {@code number} says it is built on
+     * {@code base}, which comes before what is recorded (ADR 143): it is changed on GitHub.
+     */
+    record BaseFromPullRequest(BranchName branch, PrNumber number, BranchName base) implements BranchError {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of(
+                    "branches.error.setBase.pullRequest", branch.value(), String.valueOf(number.value()), base.value());
         }
     }
 
