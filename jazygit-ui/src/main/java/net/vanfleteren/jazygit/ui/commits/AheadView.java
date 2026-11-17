@@ -1,29 +1,26 @@
 package net.vanfleteren.jazygit.ui.commits;
 
-import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.history.History;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 
 /**
  * How a log shows which of its commits are not on the base of its branch: the others dimmed, and the count in the
- * title; or only those, with the commit they forked from.
+ * title.
  *
  * @param ahead    the commits not on the base, if the branch has one and they were read
  * @param distance how far the branch is from its base, if that was read (ADR 46)
- * @param only     whether only those are listed
  */
-public record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance, boolean only) {
+public record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance) {
 
     /**
      * {@code title}, followed by how many commits are not on the base and how many of the base are not on the branch,
-     * leaving out a count of none, and which branch that is; the same whether only those are listed or not. Until
-     * how far the branch is from that base is read, the count of the commits read stands in for those ahead.
+     * leaving out a count of none, and which branch that is. Until how far the branch is from that base is read, the
+     * count of the commits read stands in for those ahead.
      */
     public String title(String title) {
         return ahead.map(read -> distance.filter(counts -> counts.base().equals(read.base())
@@ -48,34 +45,9 @@ public record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance, bool
     }
 
     /**
-     * The commits to list of {@code log}: all of them, or only those not on the base and the fork point.
-     */
-    public List<Commit> shown(List<Commit> log) {
-        return ahead.filter(read -> only)
-                .map(read -> read.commits().appendAll(forkPoint(read)))
-                .getOrElse(log);
-    }
-
-    /**
      * Whether {@code sha} is on the base, and so is dimmed.
      */
     public boolean dimmed(Sha sha) {
         return ahead.exists(read -> read.shared(sha));
-    }
-
-    /**
-     * What marks {@code sha} as the commit the branch forked from, when it is listed as that.
-     */
-    public Option<String> mark(Sha sha) {
-        return ahead.filter(read ->
-                        only && forkPoint(read).exists(fork -> fork.sha().equals(sha)))
-                .map(read -> Messages.get("panel.forkPoint", read.base().name()));
-    }
-
-    /**
-     * The fork point, unless there are more commits than are listed: then it is not where they start.
-     */
-    private static Option<Commit> forkPoint(Ahead ahead) {
-        return ahead.more() ? Option.none() : ahead.forkPoint();
     }
 }

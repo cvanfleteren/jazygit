@@ -27,7 +27,7 @@ public interface StubHistory extends History {
     }
 
     @Override
-    default Either<GitError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn) {
+    default Either<GitError, List<Commit>> search(CommitQuery query) {
         return Either.right(List.empty());
     }
 

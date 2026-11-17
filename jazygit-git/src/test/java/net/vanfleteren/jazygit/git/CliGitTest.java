@@ -217,14 +217,14 @@ class CliGitTest {
                 CliGit.open(empty)
                         .get()
                         .history()
-                        .search(CommitQuery.parse("x"), Option.none())
+                        .search(CommitQuery.parse("x"))
                         .get());
     }
 
     private List<String> messages(String query) {
         return repository
                 .history()
-                .search(CommitQuery.parse(query), Option.none())
+                .search(CommitQuery.parse(query))
                 .get()
                 .map(Commit::message)
                 .toList();
@@ -516,21 +516,6 @@ class CliGitTest {
 
         assertEquals(List.of("Other root"), ahead.commits().map(Commit::message));
         assertEquals(Option.none(), ahead.forkPoint());
-    }
-
-    @Test
-    void aSearchLeavesOutTheCommitsOnTheBase() throws Exception {
-        git("checkout", "-q", "-b", "side");
-        git("commit", "-q", "--allow-empty", "-m", "Side one");
-        BranchRef main = new BranchRef.Local(new BranchName("main"));
-
-        assertEquals(
-                List.of("Side one"),
-                repository
-                        .history()
-                        .search(CommitQuery.parse("e"), Option.of(main))
-                        .get()
-                        .map(Commit::message));
     }
 
     @Test

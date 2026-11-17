@@ -2,9 +2,7 @@ package net.vanfleteren.jazygit.github.builds;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
-import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -45,15 +43,14 @@ public final class BuildsUpdate {
                 awaited(model, branch, after, view -> view.read(page));
             case BuildsMsg.Failed(RemoteBranch branch, Option<String> after, Failure failure) ->
                 awaited(model, branch, after, view -> view.failed(failure));
-            case BuildsMsg.Stepped(int by) ->
-                BuildsReads.next(changed(model, (view, builds) -> view.stepped(builds, by)));
+            case BuildsMsg.Stepped(int by) -> BuildsReads.next(changed(model, view -> view.stepped(by)));
             case BuildsMsg.AllToggled() ->
-                BuildsReads.next(changed(model, (view, builds) -> view.withAllBranches(!view.allBranches())));
+                BuildsReads.next(changed(model, view -> view.withAllBranches(!view.allBranches())));
             case BuildsMsg.PickRequested() ->
                 model.repoView()
                         .branches()
                         .builds()
-                        .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(model, view)))
+                        .flatMap(view -> view.shownOf())
                         .map(shown -> PopupUpdate.ask(
                                 model,
                                 new BuildsPopup(shown.tabs()
@@ -69,24 +66,21 @@ public final class BuildsUpdate {
                 model.repoView()
                         .branches()
                         .builds()
-                        .flatMap(view -> view.shownOf(BuildsReads.shownBuilds(model, view)))
+                        .flatMap(view -> view.shownOf())
                         .flatMap(shown -> shown.builds()
                                 .toOption()
                                 .filter(builds -> !builds.isEmpty())
                                 .map(builds -> PopupUpdate.ask(model, new BuildPickPopup(builds, shown.picked()))))
                         .getOrElse(() -> Next.of(model));
             case BuildsMsg.BuildPicked(Option<Long> run) ->
-                BuildsReads.next(
-                        changed(model.withoutPopup(BuildPickPopup.class), (view, builds) -> view.withPicked(run)));
+                BuildsReads.next(changed(model.withoutPopup(BuildPickPopup.class), view -> view.withPicked(run)));
             case BuildsMsg.WindowRequested() ->
                 PopupUpdate.ask(
                         model, model.repoView().branches().builds().map(view -> new BuildsWindowPopup(view.window())));
             case BuildsMsg.WindowPicked(Option<Integer> builds) ->
-                BuildsReads.next(
-                        changed(model.withoutPopup(BuildsWindowPopup.class), (view, read) -> view.withWindow(builds)));
+                BuildsReads.next(changed(model.withoutPopup(BuildsWindowPopup.class), view -> view.withWindow(builds)));
             case BuildsMsg.Picked(Pipeline pipeline) ->
-                BuildsReads.next(
-                        changed(model.withoutPopup(BuildsPopup.class), (view, builds) -> view.withSelected(pipeline)));
+                BuildsReads.next(changed(model.withoutPopup(BuildsPopup.class), view -> view.withSelected(pipeline)));
         };
     }
 
@@ -106,7 +100,7 @@ public final class BuildsUpdate {
      * {@code model}, reading more runs on every branch of the workflow of the tab {@code view} shows.
      */
     private static Option<Next> moreRuns(Model model, BuildsView view) {
-        return view.shownTab(BuildsReads.shownBuilds(model, view))
+        return view.shownTab()
                 .flatMap(tab -> view.workflowId(tab.workflow()))
                 .flatMap(id -> view.runs()
                         .get(id)
@@ -136,7 +130,7 @@ public final class BuildsUpdate {
                         ? view.runsOf(tab.workflow())
                                 .flatMap(runs -> runs.builds().toOption())
                                 .map(runs -> runs.size())
-                        : Option.of(BuildsReads.shownBuilds(model, view).count(tab::ran)));
+                        : Option.of(view.builds().getOrElse(List.empty()).count(tab::ran)));
     }
 
     /**
@@ -174,13 +168,13 @@ public final class BuildsUpdate {
     }
 
     /**
-     * {@code model} with the builds view as {@code change} makes it of it and the builds that show.
+     * {@code model} with the builds view as {@code change} makes it.
      */
-    private static Model changed(Model model, BiFunction<BuildsView, List<Build>, BuildsView> change) {
+    private static Model changed(Model model, UnaryOperator<BuildsView> change) {
         return model.repoView()
                 .branches()
                 .builds()
-                .map(view -> shown(model, Option.of(change.apply(view, BuildsReads.shownBuilds(model, view)))))
+                .map(view -> shown(model, Option.of(change.apply(view))))
                 .getOrElse(model);
     }
 

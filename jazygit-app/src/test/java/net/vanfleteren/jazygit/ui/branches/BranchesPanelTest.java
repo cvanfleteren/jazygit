@@ -749,7 +749,6 @@ class BranchesPanelTest {
             highlighted.add(sending.selectionChange(open));
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).pause();
-            SettledPilot.of(testRunner).press('b');
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).press(']');
             SettledPilot.of(testRunner).pause();
@@ -767,10 +766,7 @@ class BranchesPanelTest {
                 highlighted);
         // Enter moves the focus to the highlighted commit, and sends nothing.
         assertEquals(java.util.List.of("commit"), opened);
-        assertEquals(
-                java.util.List.of(
-                        new AheadMsg.Toggled(), new BranchCommitsMsg.Closed(), new BranchesTabMsg.Switched(1)),
-                dispatched);
+        assertEquals(java.util.List.of(new BranchCommitsMsg.Closed(), new BranchesTabMsg.Switched(1)), dispatched);
         assertFalse(BranchesPanel.showsSpinner(TestModels.busy(open, feature, PushCmd.PUSH)));
     }
 
@@ -861,35 +857,6 @@ class BranchesPanelTest {
         assertTrue(loading.contains(Placeholders.loading()), loading);
         assertEquals(Option.none(), whileLoading);
         assertEquals(Option.of(new SelectionMsg.BranchCommitSelected(new Sha("a2"))), highlighted);
-    }
-
-    @Test
-    void withOnlyTheCommitsAheadTheCommitsOfABranchEndAtTheForkPointWhichCanBeHighlighted() throws Exception {
-        Commit ours = commit("a3", "Ours");
-        Commit fork = commit("a2", "Fork");
-        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
-        BranchRef base = new BranchRef.Local(new BranchName("main"));
-        Model open = listing(feature, feature, List.of(ours, fork, commit("a1", "Older")))
-                .mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withShown(CommitsShown.AHEAD))
-                        .mapPreview(preview -> preview.withBranchAhead(Option.of(new Preview<>(
-                                feature,
-                                new Loadable.Loaded<>(Option.of(
-                                        new Ahead(ours.sha(), base, List.of(ours), false, Option.of(fork)))))))));
-        String screen;
-        Option<Msg> highlighted;
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, BranchesPanel.PANE))) {
-            SettledPilot.focus(testRunner, BranchesPanel.ID);
-            screen = RenderedText.of(testRunner, () -> panel.render(open, BranchesPanel.PANE));
-            SettledPilot.of(testRunner).press(KeyCode.DOWN);
-            SettledPilot.of(testRunner).pause();
-            highlighted = panel.selectionChange(open);
-            SettledPilot.of(testRunner).quit();
-        }
-
-        assertTrue(screen.contains("a3 AL ○ Ours"), screen);
-        assertTrue(screen.contains("⑂ main Fork"), screen);
-        assertFalse(screen.contains("Older"), screen);
-        assertEquals(Option.of(new SelectionMsg.BranchCommitSelected(fork.sha())), highlighted);
     }
 
     /**

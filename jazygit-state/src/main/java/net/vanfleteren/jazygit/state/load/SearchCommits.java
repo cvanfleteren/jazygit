@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.state.load;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.lens.Lens;
@@ -15,15 +14,15 @@ import net.vanfleteren.jazygit.state.view.CommitsView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
- * Reads the commits of the log of HEAD that {@code query} finds, leaving out those on {@code notOn}, if given.
+ * Reads the commits of the log of HEAD that {@code query} finds.
  */
-public record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implements Targeted<List<Commit>> {
+public record SearchCommits(CommitQuery query) implements Targeted<List<Commit>> {
 
     /**
      * The load that reads the results of {@code search}.
      */
     public static SearchCommits of(CommitSearch search) {
-        return new SearchCommits(search.query(), search.notOn());
+        return new SearchCommits(search.query());
     }
 
     @Override
@@ -48,8 +47,8 @@ public record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implemen
     public Msg run(Env env) {
         return env.git()
                 .history()
-                .search(query, notOn)
+                .search(query)
                 .mapLeft(Failure::of)
-                .fold(this::failed, commits -> new LoadMsg.CommitSearchLoaded(query, notOn, commits));
+                .fold(this::failed, commits -> new LoadMsg.CommitSearchLoaded(query, commits));
     }
 }

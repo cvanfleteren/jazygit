@@ -14,7 +14,6 @@ import net.vanfleteren.jazygit.branches.branch.rename.RenameBranchAction;
 import net.vanfleteren.jazygit.branches.branch.stack.StackAction;
 import net.vanfleteren.jazygit.branches.branch.tabs.BranchesTabAction;
 import net.vanfleteren.jazygit.branches.branch.upstream.UpstreamAction;
-import net.vanfleteren.jazygit.changes.ahead.AheadAction;
 import net.vanfleteren.jazygit.ui.Feature;
 
 /**
@@ -41,7 +40,6 @@ public final class BranchFeature {
             BranchCommitsAction.ACTION,
             StackAction.ACTION,
             UpstreamAction.ACTION,
-            AheadAction.BRANCHES,
             BranchesTabAction.ACTION);
 
     private BranchFeature() {}

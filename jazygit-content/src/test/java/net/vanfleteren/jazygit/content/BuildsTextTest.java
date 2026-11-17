@@ -62,7 +62,7 @@ class BuildsTextTest {
     static BuildsShown shown(List<Build> builds, Option<BuildsView.Pipeline> chosen) {
         BuildsView view = BuildsView.reading(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")))
                 .read(Option.of(new BuildsPage(builds, 1, Option.none())));
-        return chosen.map(view::withSelected).getOrElse(view).shownOf(builds).get();
+        return chosen.map(view::withSelected).getOrElse(view).shownOf().get();
     }
 
     private static List<String> drawn(List<Build> builds) {
@@ -149,7 +149,7 @@ class BuildsTextTest {
         return BuildsView.reading(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")))
                 .read(Option.of(new BuildsPage(builds, 1, Option.none())))
                 .withPicked(Option.of(run))
-                .shownOf(builds)
+                .shownOf()
                 .get();
     }
 

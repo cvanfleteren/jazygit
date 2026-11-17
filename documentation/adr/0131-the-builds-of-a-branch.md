@@ -125,3 +125,5 @@ issue (`issue_comment`, `issues`) are on the main branch too, as GitHub runs tho
 
 Amended by ADR 138: a file of a workflow git does not have at the commit of a build is read from GitHub at that
 commit.
+
+Amended by ADR 142: `b` is gone; the builds of the commits on the base always show.

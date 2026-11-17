@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.view.CommitsShown;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -47,15 +46,10 @@ class AheadViewTest {
     @Test
     void theTitleCountsTheCommitsNotOnTheBase() {
         assertEquals(
-                "Commits · 2 ahead of origin/main",
-                new AheadView(Option.of(AHEAD), Option.none(), false).title("Commits"));
+                "Commits · 2 ahead of origin/main", new AheadView(Option.of(AHEAD), Option.none()).title("Commits"));
         assertEquals(
-                "Commits · 2 ahead of origin/main",
-                new AheadView(Option.of(AHEAD), Option.none(), true).title("Commits"));
-        assertEquals(
-                "Commits · 3000+ ahead of origin/main",
-                new AheadView(Option.of(MORE), Option.none(), false).title("Commits"));
-        assertEquals("Commits", new AheadView(Option.none(), Option.none(), true).title("Commits"));
+                "Commits · 3000+ ahead of origin/main", new AheadView(Option.of(MORE), Option.none()).title("Commits"));
+        assertEquals("Commits", new AheadView(Option.none(), Option.none()).title("Commits"));
     }
 
     @Test
@@ -71,12 +65,11 @@ class AheadViewTest {
         BaseDistance other = new BaseDistance(new BranchRef.Local(new BranchName("main")), TIP.sha(), 1, 6);
 
         assertEquals(
-                "Commits · 2 ahead of origin/main",
-                new AheadView(Option.of(AHEAD), Option.of(other), false).title("Commits"));
+                "Commits · 2 ahead of origin/main", new AheadView(Option.of(AHEAD), Option.of(other)).title("Commits"));
     }
 
     private static String title(int ahead, int behind) {
-        return new AheadView(Option.of(MORE), Option.of(new BaseDistance(MAIN, TIP.sha(), ahead, behind)), false)
+        return new AheadView(Option.of(MORE), Option.of(new BaseDistance(MAIN, TIP.sha(), ahead, behind)))
                 .title("Commits");
     }
 
@@ -86,77 +79,74 @@ class AheadViewTest {
 
         assertEquals(
                 "Commits · 2 ahead of origin/main",
-                new AheadView(Option.of(AHEAD), Option.of(before), false).title("Commits"));
+                new AheadView(Option.of(AHEAD), Option.of(before)).title("Commits"));
     }
 
     @Test
-    void onlyTheCommitsNotOnTheBaseAndTheForkPointAreListedWhenAsked() {
-        assertEquals(LOG, new AheadView(Option.of(AHEAD), Option.none(), false).shown(LOG));
-        assertEquals(List.of(TIP, MIDDLE, FORK), new AheadView(Option.of(AHEAD), Option.none(), true).shown(LOG));
-        assertEquals(List.of(TIP, MIDDLE), new AheadView(Option.of(MORE), Option.none(), true).shown(LOG));
-        assertEquals(LOG, new AheadView(Option.none(), Option.none(), true).shown(LOG));
-    }
-
-    @Test
-    void theCommitsOnTheBaseAreDimmedAndTheForkPointMarked() {
-        AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
+    void theCommitsOnTheBaseAreDimmed() {
+        AheadView ahead = new AheadView(Option.of(AHEAD), Option.none());
 
         List<LoadableList.Row> rows =
-                CommitsPanel.graphed(only.shown(LOG), Option.none(), only).map(LoadableList.Item::row);
+                CommitsPanel.graphed(LOG, Option.none(), ahead).map(LoadableList.Item::row);
 
-        assertEquals("aaaaaaa Ad ○ ⑂ origin/main msg a", rows.last().text());
-        assertTrue(rows.last().segs().forAll(seg -> seg.cssClass().contains(Theme.Classes.DIM)));
+        assertEquals("aaaaaaa Ad ○ msg a", rows.get(2).text());
+        assertTrue(rows.drop(2)
+                .forAll(row -> row.segs().forAll(seg -> seg.cssClass().contains(Theme.Classes.DIM))));
         assertTrue(rows.head().segs().forAll(seg -> seg.cssClass().isEmpty()));
-        assertFalse(new AheadView(Option.of(MORE), Option.none(), false).dimmed(OLD.sha()));
+        assertFalse(new AheadView(Option.of(MORE), Option.none()).dimmed(OLD.sha()));
     }
 
     @Test
-    void eachRowOfALogIsOneLineWithTheCopiedShaStandingOutAndTheForkPointDimmed() {
-        AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
+    void eachRowOfALogIsOneLineWithTheCopiedShaStandingOutAndTheCommitsOnTheBaseDimmed() {
+        AheadView ahead = new AheadView(Option.of(AHEAD), Option.none());
 
-        List<LoadableList.Item> items = CommitsPanel.graphed(only.shown(LOG), Option.of(MIDDLE.sha()), only);
+        List<LoadableList.Item> items = CommitsPanel.graphed(LOG, Option.of(MIDDLE.sha()), ahead);
 
         assertTrue(items.forAll(item -> item.height() == 1 && item.row().height() == 1));
         assertEquals(
-                List.of(Option.none(), Option.of(Theme.Classes.COPIED), Option.of(Theme.Classes.DIM)),
+                List.of(
+                        Option.none(),
+                        Option.of(Theme.Classes.COPIED),
+                        Option.of(Theme.Classes.DIM),
+                        Option.of(Theme.Classes.DIM)),
                 items.map(item -> item.row().segs().head().cssClass()));
     }
 
     @Test
-    void theBranchLogDimsTheCommitsOnTheBaseAndMarksTheForkPointAfterItsSha() {
+    void theBranchLogDimsTheCommitsOnTheBase() {
         Style dimmed = Style.EMPTY.dim();
         Theme.SpanStyles styles = cssClass -> cssClass.equals(Theme.Classes.DIM) ? dimmed : Style.EMPTY;
-        AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
+        AheadView ahead = new AheadView(Option.of(AHEAD), Option.none());
 
-        java.util.List<Line> lines = ContentText.logText(only.shown(LOG), ZoneOffset.UTC, only, styles)
-                .lines();
+        java.util.List<Line> lines =
+                ContentText.logText(LOG, ZoneOffset.UTC, ahead, styles).lines();
 
         List<String> firstLines = List.ofAll(lines)
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
                 .filter(line -> line.startsWith("* "));
-        assertEquals(List.of("* commit ccccccc", "* commit bbbbbbb", "* commit aaaaaaa  ⑂ origin/main"), firstLines);
+        assertEquals(
+                List.of("* commit ccccccc", "* commit bbbbbbb", "* commit aaaaaaa", "* commit 0000000"), firstLines);
         List<Boolean> dim = List.ofAll(lines)
                 .filter(line -> !line.spans().isEmpty())
                 .map(line -> line.spans().stream().allMatch(span -> span.style().equals(dimmed)));
-        // Only the block of the fork point, the last commit, is dimmed.
+        // Only the blocks of the commits on the base, the last two, are dimmed.
         assertEquals(List.of(false, true), dim.distinct());
         assertTrue(dim.dropWhile(isDim -> !isDim).forAll(isDim -> isDim));
     }
 
     @Test
-    void theCommitsPaneSaysHowManyCommitsAreNotOnTheBase() throws Exception {
+    void theCommitsPaneSaysHowManyCommitsAreNotOnTheBaseAndListsTheWholeLog() throws Exception {
         Model model = TestModels.loaded(SampleData.git())
-                .mapRepo(repo ->
-                        repo.withCommits(new Loadable.Loaded<>(LOG)).withAhead(new Loadable.Loaded<>(Option.of(AHEAD))))
-                .mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withShown(CommitsShown.AHEAD)));
+                .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(LOG))
+                        .withAhead(new Loadable.Loaded<>(Option.of(AHEAD))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             String shown = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE));
 
             assertTrue(shown.contains("Commits · 2 ahead of origin/main"), shown);
-            assertTrue(shown.contains("⑂ origin/main msg a"), shown);
-            assertFalse(shown.contains("msg 0"), shown);
+            assertTrue(shown.contains("1/4"), shown);
+            assertFalse(shown.contains("⑂"), shown);
             SettledPilot.of(testRunner).quit();
         }
     }

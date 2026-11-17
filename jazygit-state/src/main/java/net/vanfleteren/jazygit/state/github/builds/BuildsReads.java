@@ -4,13 +4,10 @@ import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.model.Build;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
 import net.vanfleteren.jazygit.state.view.Workflow;
@@ -26,17 +23,6 @@ public final class BuildsReads {
     private BuildsReads() {}
 
     /**
-     * Of the builds of {@code view}, those that show: with only the commits not on the base listed ({@code b}), those
-     * of the commits not on it, as the log of the branch (ADR 20, 131).
-     */
-    public static List<Build> shownBuilds(Model model, BuildsView view) {
-        return BuildsView.shown(
-                view.builds().getOrElse(List.empty()),
-                AheadUpdate.branch(model, new BranchRef.Local(view.branch())),
-                model.repoView().commits().shown().ahead());
-    }
-
-    /**
      * {@code model}, reading what its builds show and is not read yet, nor being read.
      */
     public static Next next(Model model) {
@@ -47,7 +33,7 @@ public final class BuildsReads {
                 .map(view -> {
                     List<FileAt> files = view.unread();
                     boolean repo = view.allBranches() && view.repoWorkflows().isEmpty();
-                    Option<String> runs = view.shownTab(shownBuilds(model, view))
+                    Option<String> runs = view.shownTab()
                             .flatMap(tab -> view.workflowId(tab.workflow()))
                             .filter(id -> !view.runs().containsKey(id));
                     BuildsView asked = view.withWorkflows(

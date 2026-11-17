@@ -77,3 +77,6 @@ Amended by ADR 72: the base of a branch with an open pull request is the base of
 the branch below it in its stack, before `gh-merge-base`.
 
 Amended by ADR 130: the log reads up to 3000 commits, and the title says `3000+ ahead` past that.
+
+Amended by ADR 142: `b` and the listing of only the commits not on the base are gone; the commits on the base stay
+dimmed.

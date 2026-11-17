@@ -51,3 +51,5 @@ The status panel already names a detached HEAD (`Head.Detached`), and a new work
   a commit, with and without taking the changes along.
 - The commits of a branch are no longer only looked at: Space there moves HEAD.
 - Commits made on a detached HEAD can be lost by checking out something else, without any warning from jazygit.
+
+Amended by ADR 142: `b` is gone from the commits of a branch; they always list every commit.

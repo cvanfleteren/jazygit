@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.content.diff.ShownRemarks;
-import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -40,7 +39,6 @@ import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.BuildsShown;
-import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.NoLog;
 import net.vanfleteren.jazygit.state.view.Preview;
@@ -446,21 +444,12 @@ public final class ContentView {
                 .map(view -> {
                     String branch = view.branch().value();
                     String commits = String.valueOf(view.commits());
-                    BranchRef local = new BranchRef.Local(view.branch());
-                    AheadView ahead = new AheadView(
-                            AheadUpdate.branch(model, local),
-                            AheadUpdate.distance(model, local),
-                            model.repoView().commits().shown().ahead());
-                    List<Build> shown =
-                            BuildsView.shown(view.builds().getOrElse(List.empty()), ahead.ahead(), ahead.only());
-                    String read = view.reading()
+                    String ofBranch = view.reading()
                             ? Messages.get("content.panel.builds.reading", branch, commits)
                             : view.stopped().isDefined()
                                     ? Messages.get("content.panel.builds.stopped", branch, commits)
                                     : Messages.get("content.panel.builds.title", branch, commits);
-                    // Only the builds of the commits not on the base show: the title says how many there are.
-                    String ofBranch = ahead.only() ? ahead.title(read) : read;
-                    Option<WorkflowRuns> runs = view.shownTab(shown).flatMap(tab -> view.runsOf(tab.workflow()));
+                    Option<WorkflowRuns> runs = view.shownTab().flatMap(tab -> view.runsOf(tab.workflow()));
                     // On every branch, the title says when more runs of the tab are being read, as m asked: the
                     // first ones say so in the body.
                     String every = view.allBranches()
@@ -482,7 +471,7 @@ public final class ContentView {
                             title,
                             view.builds(),
                             builds -> view.onGitHub()
-                                    .map(remote -> view.shownOf(shown)
+                                    .map(remote -> view.shownOf()
                                             .<Shown>map(drawn -> new Shown.Area(
                                                     ContentArea.BUILDS,
                                                     title,
@@ -516,18 +505,16 @@ public final class ContentView {
                 .map(log -> {
                     String title =
                             Messages.get("content.panel.log.titleFor", log.key().name());
-                    AheadView ahead = new AheadView(
-                            AheadUpdate.branch(model, log.key()),
-                            AheadUpdate.distance(model, log.key()),
-                            model.repoView().commits().shown().ahead());
-                    return whenLoaded(ahead.title(title), log.value(), commits -> {
-                        List<Commit> shown = ahead.shown(commits);
-                        return new Shown.Area(
-                                ContentArea.LOG,
-                                ahead.title(title),
-                                new ScrolledContent.BranchLog(shown),
-                                new Body.BranchLog(shown, ahead));
-                    });
+                    AheadView ahead =
+                            new AheadView(AheadUpdate.branch(model, log.key()), AheadUpdate.distance(model, log.key()));
+                    return whenLoaded(
+                            ahead.title(title),
+                            log.value(),
+                            commits -> new Shown.Area(
+                                    ContentArea.LOG,
+                                    ahead.title(title),
+                                    new ScrolledContent.BranchLog(commits),
+                                    new Body.BranchLog(commits, ahead)));
                 })
                 .getOrElse(() -> model.repoView()
                         .branches()

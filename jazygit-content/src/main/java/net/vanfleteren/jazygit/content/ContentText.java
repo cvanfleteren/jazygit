@@ -171,13 +171,13 @@ public final class ContentText {
 
     /**
      * The branch log, each commit as {@link #logLines} lists it: the {@code commit <sha>} part of each commit's first line is
-     * yellow. The commits on the base are dimmed instead, and the fork point is marked after its sha.
+     * yellow. The commits on the base are dimmed instead.
      */
     public static Text logText(List<Commit> commits, ZoneId zone, AheadView ahead, Theme.SpanStyles styles) {
         DateTimeFormatter dateTime = dateTime(zone);
         return styledText(drawn(commits).flatMap(node -> {
             Sha sha = node._1.commit().sha();
-            List<String> lines = logLines(node._1, node._2, dateTime, ahead.mark(sha));
+            List<String> lines = logLines(node._1, node._2, dateTime);
             return ahead.dimmed(sha)
                     ? lines.map(line -> Line.from(styled(line, Theme.Classes.DIM, styles)))
                     : lines.map(line -> line.startsWith("* ")
@@ -324,19 +324,16 @@ public final class ContentText {
      */
     public static List<String> logLines(List<Commit> commits, ZoneId zone) {
         DateTimeFormatter dateTime = dateTime(zone);
-        return drawn(commits).flatMap(node -> logLines(node._1, node._2, dateTime, Option.none()));
+        return drawn(commits).flatMap(node -> logLines(node._1, node._2, dateTime));
     }
 
     /**
-     * The lines of the commit of {@code node} in {@link #logLines(List, ZoneId)}, drawn with {@code gutter}, with
-     * {@code mark} after its sha.
+     * The lines of the commit of {@code node} in {@link #logLines(List, ZoneId)}, drawn with {@code gutter}.
      */
-    private static List<String> logLines(
-            CommitGraph.Node node, LogGraph.Gutter gutter, DateTimeFormatter dateTime, Option<String> mark) {
+    private static List<String> logLines(CommitGraph.Node node, LogGraph.Gutter gutter, DateTimeFormatter dateTime) {
         Commit c = node.commit();
         List<String> lines = List.of(
-                        Messages.get("content.commitSha", c.shortSha())
-                                + mark.map(text -> "  " + text).getOrElse(""),
+                        Messages.get("content.commitSha", c.shortSha()),
                         Messages.get("content.author", c.authorName(), c.authorEmail()),
                         dateTime.format(c.authorTime()),
                         "")
