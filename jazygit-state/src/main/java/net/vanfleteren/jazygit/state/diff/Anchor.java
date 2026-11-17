@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.state.diff;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
+import net.vanfleteren.jazygit.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 
 /**
@@ -45,6 +47,13 @@ public sealed interface Anchor {
      * where it starts or ends.
      */
     record Gap(String path, int from, Option<Integer> until) implements Anchor {}
+
+    /**
+     * A marker of hunks of the file with the path {@code path} that filters hide (ADR 144), each by where it starts in
+     * the old file and the new one, as git gave it; the first is where the marker is. It is found again by its path and
+     * its first hunk.
+     */
+    record Filtered(String path, List<HunkStart> hunks) implements Anchor {}
 
     /**
      * A row of a version of JSON rendered of the file with the path {@code path}: what is at {@code pointer}, a JSON

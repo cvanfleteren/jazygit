@@ -14,6 +14,7 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -21,6 +22,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.Folding;
+import net.vanfleteren.jazygit.git.model.HiddenHunks;
 import net.vanfleteren.jazygit.git.model.LinePairs;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
@@ -34,6 +36,7 @@ import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.Filtering;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks.FileRemarks;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks.LineRemarks;
@@ -179,6 +182,7 @@ public final class RichDiff {
                                 file._1()._2(),
                                 file._2(),
                                 folded.fold(file._1()._1().file().path()),
+                                folded.hiding(file._1()._1().file().path()),
                                 asGiven.filter(hunk -> hunk.file() == file._2()).map(DiffStops.HunkAt::hunk),
                                 syntax,
                                 words,
@@ -228,6 +232,7 @@ public final class RichDiff {
             Option<FileRemarks> remarks,
             int index,
             Expansion.Fold fold,
+            Filtering.Hiding hiding,
             Option<Integer> asGiven,
             boolean syntax,
             boolean words,
@@ -243,7 +248,7 @@ public final class RichDiff {
         if (split.isDefined()
                 && version.isEmpty()
                 && parsed.hunks().forAll(hunk -> hunk.hunk().numbered())) {
-            return SplitRows.file(parsed, remarks, index, fold, syntax, words, style, styles, split.get())
+            return SplitRows.file(parsed, remarks, index, fold, hiding, syntax, words, style, styles, split.get())
                     .map(pending -> () -> pending.draw().map(Marked::pin));
         }
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
@@ -311,22 +316,25 @@ public final class RichDiff {
                                                 styles))),
                                 Option.of(new Mark(new Anchor.File(file.path()), 1, width, Option.none()))))
                         .appendAll(note(file)
+                                .orElse(() -> allHidden(hiding))
                                 .map(text -> Marked.plain(Line.from(styled(text, Theme.Classes.DIM, styles))))))
                 .appendAll(remarks.toList()
                         .<Pending>map(placed -> () -> blocks.threads(
                                 placed.onFile(), Option.none(), !file.hunks().isEmpty() || unplaced, styles)))
-                .appendAll(parsed.hunks()
-                        .zip(groups)
-                        .zipWithIndex((hunk, at) -> hunk(
-                                hunk._1().hunk(),
+                .appendAll(hunks(
+                        parsed.hunks().size(),
+                        hiding,
+                        at -> hunk(
+                                parsed.hunks().get(at).hunk(),
                                 byHunk.get(at),
-                                hunk._2(),
+                                groups.get(at),
                                 at,
                                 afterLast || at < parsed.hunks().size() - 1,
                                 gapBefore.get(at),
                                 fold,
-                                layout))
-                        .flatMap(hunk -> hunk))
+                                layout),
+                        at -> gapBefore.get(at).toList().map(gap -> marker(gap, fold, layout)),
+                        run -> filteredMarker(run, file.path(), rule(layout), layout.fileWidth(), styles)))
                 .appendAll(trailing.toList().map(gap -> marker(gap, fold, layout)))
                 .appendAll(cut.toList()
                         .<Pending>map(text ->
@@ -620,6 +628,59 @@ public final class RichDiff {
         return Option.when(line.kind() == DiffLine.Kind.CONTEXT, line::oldNumber)
                 .flatMap(number -> number)
                 .map(number -> new Anchor.OnLine(path, ReviewThread.Side.LEFT, number));
+    }
+
+    /**
+     * The lines still to be drawn of the {@code count} hunks of a file, as {@code hiding} hides them (ADR 144): each
+     * hunk shown as {@code shown} draws it, and each run of hunks hidden with nothing shown between them as one marker,
+     * {@code marker}, after the marker of the lines left out before the first of them, if there are some, as
+     * {@code gap} draws it.
+     */
+    static List<Pending> hunks(
+            int count,
+            Filtering.Hiding hiding,
+            IntFunction<List<Pending>> shown,
+            IntFunction<List<Pending>> gap,
+            Function<List<HiddenHunks.Hidden>, Pending> marker) {
+        List<List<Integer>> runs = List.range(0, count)
+                .foldLeft(
+                        List.<List<Integer>>empty(),
+                        (done, at) -> hiding.of(at).isDefined()
+                                        && done.headOption()
+                                                .exists(run ->
+                                                        hiding.of(run.last()).isDefined() && run.last() == at - 1)
+                                ? done.tail().prepend(done.head().append(at))
+                                : done.prepend(List.of(at)))
+                .reverse();
+        return runs.flatMap(run -> hiding.of(run.head()).isDefined()
+                ? gap.apply(run.head())
+                        .append(marker.apply(run.flatMap(hiding::of).distinctBy(HiddenHunks.Hidden::start)))
+                : shown.apply(run.head()));
+    }
+
+    /**
+     * The marker of {@code run}, hunks of the file with the path {@code path} that filters hide, a stop of the cursor
+     * (ADR 144): {@code rule}, how many lines they change, and the filters that hide them; tinted {@code width} wide
+     * when the cursor is on it.
+     */
+    static Pending filteredMarker(
+            List<HiddenHunks.Hidden> run, String path, Span rule, int width, Theme.SpanStyles styles) {
+        String says = Messages.get(
+                "content.filtered.marker",
+                run.map(HiddenHunks.Hidden::changes).sum().intValue(),
+                String.join(", ", run.flatMap(HiddenHunks.Hidden::filters).distinct()));
+        return () -> List.of(new Marked(
+                Rows.kept(Line.from(rule, styled("┄ " + says + " ┄", Theme.Classes.DIFF_HUNK, styles))),
+                Option.of(new Mark(
+                        new Anchor.Filtered(path, run.map(HiddenHunks.Hidden::start)), 1, width, Option.none()))));
+    }
+
+    /**
+     * That all the changes of a file are hidden, and by which filters, if they are (ADR 144).
+     */
+    static Option<String> allHidden(Filtering.Hiding hiding) {
+        return Option.when(
+                hiding.all(), () -> Messages.get("content.filtered.all", String.join(", ", hiding.filters())));
     }
 
     /**

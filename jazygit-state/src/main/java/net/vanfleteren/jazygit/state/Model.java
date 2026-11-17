@@ -6,10 +6,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.UnaryOperator;
 import lombok.With;
+import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.DiffLines;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.Filtering;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
@@ -26,6 +29,7 @@ import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
@@ -228,12 +232,38 @@ public record Model(
     public DiffLines diffLines(DiffCursorAt at, Option<DiffText> diff) {
         Option<Expansion> expansion = repoView.expansion(at.area(), at.at().content());
         Option<Version> version = repoView.version(at.area(), at.at().content());
-        return diff.map(text -> expansion
-                        .map(expanded -> expanded.folded(text.parsed(), preferences.context()))
-                        .getOrElse(() -> Expansion.Folded.of(text.parsed())))
-                .map(folded -> version.map(shown -> shown.applied(folded)).getOrElse(folded))
+        Filtering filtering = filtering(at.area(), at.at().content());
+        return diff.map(text -> {
+                    Expansion.Folded expanded = expansion
+                            .map(kept -> kept.folded(text.parsed(), preferences.context()))
+                            .getOrElse(() -> Expansion.Folded.of(text.parsed()));
+                    return filtering.hide(
+                            version.map(shown -> shown.applied(expanded)).getOrElse(expanded), text.parsed());
+                })
                 .map(folded -> DiffLines.of(folded.diff().diff()))
                 .getOrElse(() -> new DiffLines(Vector.empty()));
+    }
+
+    /**
+     * What the diff filters hide of the diff {@code content} the area with the id {@code area} shows (ADR 144): with
+     * the filters enabled, unless they are switched off or the diff is drawn plain, the hunks opened in that area, and
+     * the review threads on a pull request's files, whose hunks show.
+     */
+    public Filtering filtering(AreaId area, ScrolledContent content) {
+        List<DiffFilter> filters = preferences.diffFilters().active();
+        if (filters.isEmpty() || !preferences.settings().diffStyle().rich()) {
+            return Filtering.NONE;
+        }
+        List<ReviewThread> threads = content instanceof ScrolledContent.FileChanges
+                ? repoView.files()
+                        .commitFiles()
+                        .filter(CommitFilesView::remarksAtItsCommits)
+                        .flatMap(CommitFilesView::remarks)
+                        .flatMap(Loadable::toOption)
+                        .map(ReviewRemarks::threads)
+                        .getOrElse(List.empty())
+                : List.empty();
+        return new Filtering(filters, repoView.opened(area, content), threads, content instanceof ScrolledContent.Diff);
     }
 
     /**

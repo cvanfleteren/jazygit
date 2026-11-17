@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.Filtering;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.state.diff.WholeFile;
@@ -146,15 +147,21 @@ public final class ContentView {
                 .version(area.area().id(), area.content())
                 .orElse(() -> asVersion(model, area.content()));
         DiffContext context = model.preferences().context();
+        Filtering filtering = model.filtering(area.area().id(), area.content());
         Body body = switch (area.body()) {
             case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
-                new Body.Diff(diff.expanded(expansion, context).versioned(version), look, remarks);
+                new Body.Diff(
+                        diff.expanded(expansion, context).versioned(version).filtered(filtering), look, remarks);
             case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
                 new Body.CommitChanges(
-                        commit, changes.expanded(expansion, context).versioned(version), look);
+                        commit,
+                        changes.expanded(expansion, context).versioned(version).filtered(filtering),
+                        look);
             case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
                 new Body.StashChanges(
-                        stash, changes.expanded(expansion, context).versioned(version), look);
+                        stash,
+                        changes.expanded(expansion, context).versioned(version).filtered(filtering),
+                        look);
             case Body other -> other;
         };
         // A file without changes has one version: the title says only whether it is rendered (ADR 108).
@@ -163,7 +170,37 @@ public final class ContentView {
                         ? Messages.get("content.panel.file.rendered", area.title())
                         : area.title()
                 : version.map(shown -> versioned(area.title(), shown)).getOrElse(area.title());
-        return new Shown.Area(area.area(), title, area.content(), body);
+        return new Shown.Area(area.area(), filtered(model, area, title, filtering), area.content(), body);
+    }
+
+    /**
+     * {@code title}, saying how many hunks the diff filters hide of the diff {@code area} shows, or that they are
+     * switched off when they would hide some (ADR 144); as it is when they hide none.
+     */
+    private static String filtered(Model model, Shown.Area area, String title, Filtering filtering) {
+        Option<ParsedDiff> git = switch (area.body()) {
+            case Body.Diff(ShownDiff diff, var look, var remarks) ->
+                Option.of(diff.diff().parsed());
+            case Body.CommitChanges(var commit, ShownDiff changes, var look) ->
+                Option.of(changes.diff().parsed());
+            case Body.StashChanges(var stash, ShownDiff changes, var look) ->
+                Option.of(changes.diff().parsed());
+            default -> Option.none();
+        };
+        if (git.isEmpty()) {
+            return title;
+        }
+        int hidden = filtering.count(git.get());
+        if (hidden > 0) {
+            return Messages.get("content.panel.filtered", title, hidden);
+        }
+        boolean off = model.preferences().diffFilters().off()
+                && model.preferences().settings().diffStyle().rich()
+                && filtering
+                                .withFilters(model.preferences().diffFilters().enabledFilters())
+                                .count(git.get())
+                        > 0;
+        return off ? Messages.get("content.panel.filtersOff", title) : title;
     }
 
     /**
@@ -801,27 +838,35 @@ public final class ContentView {
             Option<String> note,
             Option<Expansion> expansion,
             DiffContext context,
-            Option<Version> version) {
+            Option<Version> version,
+            Filtering filtering) {
 
         /**
          * {@code diff} and its note, as git gives it.
          */
         public ShownDiff(DiffText diff, Option<String> note) {
-            this(diff, note, Option.none(), DiffContext.DEFAULT, Option.none());
+            this(diff, note, Option.none(), DiffContext.DEFAULT, Option.none(), Filtering.NONE);
         }
 
         /**
          * This diff with the lines of {@code expanded} shown, folded to {@code folding} lines of context (ADR 77).
          */
         ShownDiff expanded(Option<Expansion> expanded, DiffContext folding) {
-            return new ShownDiff(diff, note, expanded, folding, version);
+            return new ShownDiff(diff, note, expanded, folding, version, filtering);
         }
 
         /**
          * This diff with its file shown as {@code shown} has it, if it shows a version of it (ADR 102).
          */
         ShownDiff versioned(Option<Version> shown) {
-            return new ShownDiff(diff, note, expansion, context, shown);
+            return new ShownDiff(diff, note, expansion, context, shown, filtering);
+        }
+
+        /**
+         * This diff with the hunks {@code hiding} hides cut out (ADR 144).
+         */
+        ShownDiff filtered(Filtering hiding) {
+            return new ShownDiff(diff, note, expansion, context, version, hiding);
         }
 
         /**
@@ -833,8 +878,8 @@ public final class ContentView {
                     .map(kept -> kept.folded(diff.parsed(), context))
                     .getOrElse(() -> Expansion.Folded.of(diff.parsed()));
             Expansion.Folded folded =
-                    version.map(shown -> shown.applied(expanded)).getOrElse(expanded);
-            return note.map(line -> new Expansion.Folded(folded.diff().withNote(line), folded.files()))
+                    filtering.hide(version.map(shown -> shown.applied(expanded)).getOrElse(expanded), diff.parsed());
+            return note.map(line -> new Expansion.Folded(folded.diff().withNote(line), folded.files(), folded.hiding()))
                     .getOrElse(folded);
         }
 
