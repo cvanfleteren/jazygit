@@ -23,8 +23,10 @@ diff is read.
 - A filter applies to files by language, the `Language` the lexer tells them apart by (ADR 53), by path glob, or
   both: a file is in its scope when either matches. A filter has at least one of the two.
 - A glob without a `/` is matched against the file's name, so `go.sum` is every `go.sum`, and `*` is every file. One
-  with a `/` is matched against its path from the root of the repository. `*` does not cross a `/`, `**` does, as
-  `FileSystem.getPathMatcher("glob:…")` has it: `**/__snapshots__/*.snap`. A renamed file is matched by its new path.
+  with a `/` is matched against its path from the root of the repository, and against that path with a `/` before
+  it. `*` does not cross a `/`, `**` does, as `FileSystem.getPathMatcher("glob:…")` has it. So
+  `**/__snapshots__/*.snap` matches `__snapshots__/a.snap` at the root too, which Java's glob alone, wanting the `/`
+  after `**`, does not; `src/*.java` matches as it would. A renamed file is matched by its new path.
 - It has line patterns, Java regexes that match anywhere in a changed line, without its `+` or `-`, as grep and
   `git -I` do; `^` and `$` anchor. A filter without patterns matches every line: it hides all of a file, a lockfile
   or generated code. Not: a second kind of filter for whole files.
@@ -118,9 +120,9 @@ name = "Lockfiles"
 paths = ["package-lock.json", "yarn.lock", "Cargo.lock", "go.sum", "flake.lock"]
 ```
 
-- `id` is required: it is what `enabled` lists, and what a user's filter replaces a built-in by. `name` is what the
-  popup shows, the id when there is none. `languages` names the `Language`s in lowercase; `lines` are written as TOML
-  literal strings, so a backslash stays as typed.
+- `id` is required: it is what `ui.diff-filters` lists, and what a user's filter replaces a built-in by. `name` is
+  what the popup shows, the id when there is none. `languages` names the `Language`s in lowercase; `lines` are
+  written as TOML literal strings, so a backslash stays as typed.
 - The built-in filters are such a file in the jar, read as the user's are. So the format can say all they say, and a
   new one is data.
 - The user's are tables of `config.toml`, as the editors are (ADR 110): only read, never written by the app, and read
