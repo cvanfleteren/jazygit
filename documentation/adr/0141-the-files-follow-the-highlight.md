@@ -36,16 +36,18 @@ directories collapsed, about 90 ms more by ADR 108's measure.
 - While the branches have the focus, it lists the files of the highlighted branch against its base (ADR 61), read
   locally, whether it has a pull request or not. A branch whose base is not known says so in the pane, in place of the
   tree; no error is shown.
-- The main branch lists the files its tip commit changed. Not: all its files (ADR 128), which would be an `ls-tree` at
-  each move.
-- What is checked out here, a branch or a detached HEAD (ADR 137), lists the files of the working tree, its changes
-  staged or not, as the files pane does now. Not: the files of its last commit, or what it changed against its base:
-  what the user works on is what is not committed yet. It is also the way back to the working tree from the lists.
-- The other rows of the branches: a stack of pull requests,
-  and a pull request of a stack whose branch is not here, say there is nothing to list, in place of the tree, as a
-  branch without a base does. Not: the files of the branch highlighted before, which would show one while another is
+- The main branch, when it is not checked out, lists the files its tip commit changed. Not: all its files (ADR 128),
+  which would be an `ls-tree` at each move.
+- What is checked out here, a branch, the main branch included, or a detached HEAD (ADR 137), lists the files of the
+  working tree, its changes staged or not, as the files pane does now. Not: the files of its last commit, or what it
+  changed against its base: what the user works on is what is not committed yet. It is also the way back to the
+  working tree from the lists.
+- The other rows of the branches: a stack of pull requests, and a pull request of a stack whose branch is not here,
+  say there is nothing to list, in place of the tree, as a branch without a base does. `Esc` there goes back to the
+  branches, as from files. Not: the files of the branch highlighted before, which would show one while another is
   highlighted (ADR 44).
-- The remote branches do not follow: they list the files of the working tree, as now. `F` on a remote branch is still
+- The tabs of the remote branches and of the worktrees do not follow: while one is shown, the branches pane lists
+  the files of the working tree, as now. `F` on a remote branch is still
   left for later (ADR 61, 128).
 - The focus stays in the list. The arrows move it into the files, as into any pane.
 
@@ -57,10 +59,9 @@ directories collapsed, about 90 ms more by ADR 108's measure.
 
 ### Going back
 
-- The files of the working tree come back when the branch checked out is highlighted, or when the focus moves to a
-  pane that is none of the lists above, not the files pane and not the content panel: the remote branches, the
-  worktrees. From a list into the files
-  pane, and from there into the content panel, they stay (ADR 44); back into the list, they follow again.
+- The files of the working tree come back when the branch checked out is highlighted, or when the branches pane
+  shows the tab of the remote branches or of the worktrees. From a list into the files pane, and from there into the
+  content panel, they stay (ADR 44); back into the list, they follow again.
 - `Esc` in the files pane moves the focus back to the list they were listed from, where they keep following: it is
   "back", as `Esc` in the content panel is back to the tree. Not: `Esc` listing the working tree in the files pane,
   which the files of the list would replace again as soon as it had the focus back. The working tree is the branch
@@ -74,10 +75,13 @@ directories collapsed, about 90 ms more by ADR 108's measure.
   cancelled by the next one, which takes its slot (ADR 101), and what is read for one no longer highlighted is
   dropped. One is added if holding `j` turns out to lag.
 - What is shown is debounced instead: the files listed before stay listed while the next are read, for up to 200 ms,
-  as the content panel keeps the diff shown before (`Preview`). Most are read by then, a local branch in a few
-  milliseconds, so the pane does not flash `Loading…` at each move. Past that, the pane says they are read: a wake at
-  that moment draws it (ADR 124). Not: keeping them until the next are read, however long, which would show the files
-  of one while another is highlighted, with nothing to say so.
+  kept as `Preview` keeps the diff shown before, with the moment they stop being kept beside them. Most are read by
+  then, a local branch in a few milliseconds, so the pane does not flash `Loading…` at each move. Past that, the pane
+  says they are read: a wake at that moment draws it (ADR 124). Not: keeping them until the next are read, however
+  long, as the content panel does: its diff names its commit in its lead, a tree of files names none in its rows.
+- Meanwhile the title still names the one they are of, `Files of <before>`. They are kept only while the list has the
+  focus: once it moves into the files pane, the pane lists those of the one highlighted, read or being read, and the
+  cursor starts on them. Not: a cursor in the files of the one highlighted before, whose diff Enter would show.
 - The filter (ADR 105) stays from one to the next. All files (`a`, ADR 128) goes back to the files changed: it would
   be an `ls-tree` at each move. The directories start collapsed anew for each.
 - The files are read whether the pane is shown or not.

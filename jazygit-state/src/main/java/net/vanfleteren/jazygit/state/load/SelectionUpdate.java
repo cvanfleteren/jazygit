@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.NoLog;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
+import net.vanfleteren.jazygit.state.view.UnlistedFor;
 
 /**
  * The panes' highlights, and the data loaded for them.
@@ -50,6 +51,9 @@ public final class SelectionUpdate {
             case CommitFilesSelected(var files) -> commitFilesSelected(model, files);
             case StashSelected(var sha) -> stashSelected(model, sha);
             case FilesFollowed(var of, var from, var listedIn) -> followed(model, of, from, listedIn);
+            case SelectionMsg.WholeListed() ->
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(
+                        files -> files.withCommitFiles(files.commitFiles().map(view -> view.withWhole(true))))));
         };
     }
 
@@ -224,8 +228,8 @@ public final class SelectionUpdate {
         return switch (followed) {
             case Followed.Files(Changes of) -> filesFollowed(model, of, from, listedIn);
             case Followed.Nothing(var why) ->
-                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(
-                        files -> files.withCommitFiles(Option.none()).withUnlisted(Option.of(why)))));
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files ->
+                        files.withCommitFiles(Option.none()).withUnlisted(Option.of(new UnlistedFor(why, from))))));
             case Followed.WorkingTree() ->
                 Next.of(model.mapRepoView(repoView -> repoView.mapFiles(
                         files -> files.withCommitFiles(Option.none()).withUnlisted(Option.none()))));

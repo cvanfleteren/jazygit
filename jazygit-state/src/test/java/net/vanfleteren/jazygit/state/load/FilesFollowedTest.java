@@ -166,10 +166,38 @@ class FilesFollowedTest {
                 .model();
 
         assertEquals(nothing, unlisted.repoView().files().followed());
+        // Escape there goes back to the list whose row has nothing to list.
+        assertEquals(Option.of(COMMITS), unlisted.repoView().files().backTo());
 
         assertEquals(
                 new Followed.Files(SECOND),
                 followed(unlisted, SECOND).model().repoView().files().followed());
+    }
+
+    @Test
+    void manyFilesThatFollowTheHighlightAreCountedUntilAskedForWhole() {
+        List<CommitFile> many = List.range(0, CommitFilesView.FOLLOWED_LIMIT + 1)
+                .map(i -> new CommitFile("f" + i, ChangeType.MODIFIED));
+        Model read = Update.update(followed(loaded(), FIRST).model(), new LoadMsg.CommitFilesLoaded(FIRST, many))
+                .model();
+        CommitFilesView held = read.repoView().files().commitFiles().get();
+
+        assertEquals(Option.of(CommitFilesView.FOLLOWED_LIMIT + 1), held.held());
+        assertEquals(Option.none(), held.withFiles(new Loaded<>(many.tail())).held());
+        assertEquals(Option.none(), held.withAllFiles(true).held());
+        assertEquals(Option.none(), held.withFollowed(false).held());
+
+        Model whole = Update.update(read, new SelectionMsg.WholeListed()).model();
+        assertEquals(Option.none(), whole.repoView().files().commitFiles().get().held());
+        assertEquals(
+                Option.of(CommitFilesView.FOLLOWED_LIMIT + 1),
+                followed(whole, SECOND)
+                        .model()
+                        .repoView()
+                        .files()
+                        .commitFiles()
+                        .map(view -> view.withFiles(new Loaded<>(many)))
+                        .flatMap(CommitFilesView::held));
     }
 
     private static Next followed(Model model, Changes of) {

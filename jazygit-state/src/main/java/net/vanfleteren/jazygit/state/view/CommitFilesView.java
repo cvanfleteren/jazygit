@@ -57,6 +57,8 @@ import net.vanfleteren.jazygit.state.diff.Collapsed;
  *                  shows it in place of a diff (ADR 128)
  * @param followed whether they follow the highlight of the list that has the focus, rather than being asked for with
  *                 {@code F}: they are then listed without the focus moving into them (ADR 141)
+ * @param whole    whether the files were asked for whole, with Enter, though they follow the highlight and are more
+ *                 than {@link #FOLLOWED_LIMIT} (ADR 141)
  * @param before   the files listed before, read, which the pane keeps listing while these are read, until a moment:
  *                 most are read before then, and the pane does not flash a placeholder for them (ADR 141)
  */
@@ -80,7 +82,13 @@ public record CommitFilesView(
         Option<Loadable<List<CommitFile>>> tree,
         Option<UnchangedNode> unchanged,
         boolean followed,
+        boolean whole,
         Option<Before> before) {
+
+    /**
+     * How many files that follow the highlight are listed as a tree: more are counted, and listed once asked for.
+     */
+    public static final int FOLLOWED_LIMIT = 5000;
 
     /**
      * How long the files listed before stay listed while the next are read, before the pane says they are read.
@@ -110,6 +118,7 @@ public record CommitFilesView(
                 false,
                 Option.none(),
                 Option.none(),
+                false,
                 false,
                 Option.none());
     }
@@ -271,6 +280,17 @@ public record CommitFilesView(
                 FilesView::commitFiles,
                 FilesView::withCommitFiles,
                 view -> view.of().equals(of)));
+    }
+
+    /**
+     * How many files these hold back, when they follow the highlight and are more than {@link #FOLLOWED_LIMIT}: the
+     * pane counts them in place of their tree until they are asked for whole, as building it at each move would cost
+     * a frame and more. All files (ADR 128) and those {@code F} asked for are listed whatever their number (ADR 141).
+     */
+    public Option<Integer> held() {
+        return files.toOption()
+                .map(List::size)
+                .filter(count -> followed && !whole && !allFiles && count > FOLLOWED_LIMIT);
     }
 
     /**

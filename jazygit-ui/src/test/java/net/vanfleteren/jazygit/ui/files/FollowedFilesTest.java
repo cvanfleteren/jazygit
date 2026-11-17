@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.Unlisted;
+import net.vanfleteren.jazygit.state.view.UnlistedFor;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
@@ -171,7 +172,8 @@ class FollowedFilesTest {
     }
 
     private static Model unlisted(Model model) {
-        return model.mapRepoView(view -> view.mapFiles(files -> files.withUnlisted(Option.of(new Unlisted.Stack()))));
+        return model.mapRepoView(view -> view.mapFiles(
+                files -> files.withUnlisted(Option.of(new UnlistedFor(new Unlisted.Stack(), Scopes.BRANCHES.pane())))));
     }
 
     private static SelectionMsg.FilesFollowed followed(Followed followed, PaneId from) {

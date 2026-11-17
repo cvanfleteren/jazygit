@@ -81,4 +81,10 @@ public sealed interface SelectionMsg extends Msg {
      * follows: its files, nothing, or the files of the working tree (ADR 141).
      */
     record FilesFollowed(Followed followed, PaneId from, PaneId listedIn) implements SelectionMsg {}
+
+    /**
+     * The user asked for the files that follow the highlight whole, which the pane counts in place of their tree as
+     * there are many (ADR 141).
+     */
+    record WholeListed() implements SelectionMsg {}
 }

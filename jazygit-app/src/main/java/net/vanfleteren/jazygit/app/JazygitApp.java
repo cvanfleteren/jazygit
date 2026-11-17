@@ -36,7 +36,6 @@ import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
@@ -162,12 +161,12 @@ public class JazygitApp extends ToolkitApp {
             // Escape in the files of a commit is back to the list they were listed from, where they follow the
             // highlight; the list says which files the pane lists then (ADR 141).
             case CommitFilesMsg.Closed() -> {
-                model().repoView().files().commitFiles().forEach(view -> focus.moveTo(view.pane()));
+                model().repoView().files().backTo().forEach(focus::moveTo);
                 requestRedraw();
             }
             // The help gives the focus back to the files as it closes, so the list takes it in the frame after.
             case HelpMsg.Chosen(CommitFilesMsg.Closed()) -> {
-                listAfterPopup = model().repoView().files().commitFiles().map(CommitFilesView::pane);
+                listAfterPopup = model().repoView().files().backTo();
                 session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
             }
             // The help gives the focus back as it closes, so the log takes it in the frame after.

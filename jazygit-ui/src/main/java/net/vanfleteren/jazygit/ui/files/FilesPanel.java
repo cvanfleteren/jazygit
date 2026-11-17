@@ -69,6 +69,8 @@ public class FilesPanel {
     private final Consumer<PasteEvent> paste;
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
+    // Whether the files of a commit the pane lists are counted in place of their tree, as there are many (ADR 141).
+    private boolean held;
     // All files of the working tree, as last merged, with the status and the paths they were merged from: merging
     // them again on every frame would cost tens of milliseconds in a repository of 100 000 files (ADR 108).
     private Option<Merged> merged = Option.none();
@@ -132,6 +134,10 @@ public class FilesPanel {
                 .forEach(tree -> tree.onKey(PaneKeys.whileFocused(
                         () -> focused,
                         event -> filtered(event, dispatch)
+                                // Enter lists the files counted in place of their tree (ADR 141).
+                                .orElse(() -> held && event.isConfirm()
+                                        ? Option.of(() -> dispatch.accept(new SelectionMsg.WholeListed()))
+                                        : Option.none())
                                 .orElse(() -> opensDiff(event, tree)
                                         ? Option.of(openDiff)
                                         : PaneKeys.sending(
@@ -520,6 +526,7 @@ public class FilesPanel {
      */
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         focused = focus.contains(PANE);
+        held = false;
         boolean active = inUse.contains(PANE);
         threads = ThreadsByPath.of(model.repoView()
                 .files()
@@ -531,8 +538,10 @@ public class FilesPanel {
         return model.repoView()
                 .files()
                 .commitFiles()
-                // The files listed before stay listed a moment while the next are read (ADR 141).
-                .map(open -> open.shown(model.now()))
+                // The files listed before stay listed a moment while the next are read, while the list has the focus
+                // (ADR 141): in the pane, it lists those of the one highlighted.
+                .map(open -> active ? open : open.shown(model.now()))
+                .peek(view -> held = view.held().isDefined())
                 .map(view -> Pane.bordered(
                         view.ended()
                                         .map(state -> Messages.get(
@@ -545,12 +554,23 @@ public class FilesPanel {
                                 + listedTitle(view.listed()).map(Messages::get).getOrElse("")
                                 + (view.allFiles() ? Messages.get("panel.files.all") : "")
                                 + filteredTitle(),
-                        withLine(commitTreeOf(view)
-                                .render(view.of(), view.listedFiles(), active, placeholder(view), shown)),
+                        withLine(view.held()
+                                .map(count -> commitTree.render(
+                                        new Held(view.of()),
+                                        new Loadable.Loaded<>(List.<CommitFile>empty()),
+                                        false,
+                                        new FileTreeList.Placeholder(
+                                                Placeholders.loading(),
+                                                Option.of(Messages.get("panel.commitFiles.held", count))),
+                                        Option.none()))
+                                .getOrElse(() -> commitTreeOf(view)
+                                        .render(view.of(), view.listedFiles(), active, placeholder(view), shown))),
                         focused,
                         commitTreeOf(view).selectedRow(),
-                        commitTreeOf(view).count(view.listedFiles())))
-                .orElse(() -> model.repoView().files().unlisted().map(this::unlisted))
+                        view.held().isDefined()
+                                ? Option.none()
+                                : commitTreeOf(view).count(view.listedFiles())))
+                .orElse(() -> model.repoView().files().unlisted().map(none -> unlisted(none.why())))
                 .getOrElse(() -> {
                     boolean all = model.repoView().files().shown().all();
                     Loadable<List<FileEntry>> files = workingFiles(model.repo(), all);
@@ -686,4 +706,10 @@ public class FilesPanel {
      * How many files are under {@code node}.
      */
     private record Counted(FileTree<?> node, int files) {}
+
+    /**
+     * What the tree of files that follow the highlight is built for while they are counted in its place, rather than
+     * listed: the tree is built anew once they are.
+     */
+    private record Held(Changes of) {}
 }
