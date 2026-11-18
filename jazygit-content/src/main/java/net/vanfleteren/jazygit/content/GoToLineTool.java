@@ -42,7 +42,8 @@ final class GoToLineTool implements AreaTool {
         return state.line()
                 .number()
                 .map(text -> line.paste(text, event))
-                .filter(AreaLines::isNumber)
-                .map(text -> AreaLines.edited(state, view, text));
+                // The open line keeps what it refuses, as it keeps the keys it does not take.
+                .map(text ->
+                        AreaLines.isNumber(text) ? AreaLines.edited(state, view, text) : Reaction.handled(state, view));
     }
 }

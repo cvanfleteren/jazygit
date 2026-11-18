@@ -65,8 +65,9 @@ interface AreaTool {
     Option<Reaction> key(AreaState state, Viewport view, KeyEvent event);
 
     /**
-     * What pasting {@code event} does while the tool's line is open in {@code state}: none while it is closed, or when
-     * the line does not take what is pasted.
+     * What pasting {@code event} does while the tool's line is open in {@code state}: none while it is closed. While it
+     * is open, the line keeps the paste even when it does not take it, as {@link #typed} keeps every key, so no tool
+     * behind it gets it.
      */
     Option<Reaction> pasted(AreaState state, Viewport view, PasteEvent event);
 }

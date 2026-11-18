@@ -231,7 +231,43 @@ class AreaStateTest {
         assertEquals(
                 Option.of(Option.of("12")),
                 pasted.map(reaction -> reaction.state().line().number()));
-        assertEquals(Option.none(), refused);
+        assertEquals(Option.of(Vector.<Msg>empty()), refused.map(Reaction::sent));
+        assertEquals(Option.of(numbering), refused.map(Reaction::state));
+    }
+
+    @Test
+    void aPasteTheOpenLineRefusesGoesToNoToolBehindIt() {
+        Model model = commit();
+        AreaState numbering =
+                fit(model, initial(model)).after().withLine(new AreaState.GoToLine(Option.of("1"), Option.none()));
+        Msg stolen = new ContentSearchMsg.Edited("abc");
+        AreaTool behind = new AreaTool() {
+            @Override
+            public Option<StyledElement<?>> line(AreaState state) {
+                return Option.none();
+            }
+
+            @Override
+            public Option<Reaction> typed(AreaState state, Viewport view, KeyEvent event) {
+                return Option.none();
+            }
+
+            @Override
+            public Option<Reaction> key(AreaState state, Viewport view, KeyEvent event) {
+                return Option.none();
+            }
+
+            @Override
+            public Option<Reaction> pasted(AreaState state, Viewport view, PasteEvent event) {
+                return Option.of(Reaction.handled(state, view).sending(stolen));
+            }
+        };
+
+        Option<Reaction> pasted = AreaTool.first(
+                TOOLS.append(behind),
+                tool -> tool.pasted(numbering, new Viewport(0, 10, 80, 20), new PasteEvent("abc")));
+
+        assertEquals(Option.of(Vector.<Msg>empty()), pasted.map(Reaction::sent));
     }
 
     @Test
