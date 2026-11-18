@@ -29,9 +29,22 @@ class BuildsQueryTest {
     }
 
     private static String commit(String sha, String title, String checks) {
+        return commit(sha, title, checks, "");
+    }
+
+    private static String commit(String sha, String title, String checks, String suites) {
         return """
                 { "oid": "%s", "message": "%s",
-                  "statusCheckRollup": { "contexts": { "nodes": [ %s ] } } }""".formatted(sha, title, checks);
+                  "statusCheckRollup": { "contexts": { "nodes": [ %s ] } },
+                  "checkSuites": { "nodes": [ %s ] } }""".formatted(sha, title, checks, suites);
+    }
+
+    private static String suite(String status, int checkRuns, long runId, String event) {
+        return """
+                { "status": "%s", "checkRuns": { "totalCount": %d }, "workflowRun": { "databaseId": %d,
+                  "createdAt": "2026-11-14T23:10:00Z", "runAttempt": 1, "event": "%s",
+                  "workflow": { "name": "Publish", "id": "W_1" },
+                  "file": { "path": ".github/workflows/publish.yml" } } }""".formatted(status, checkRuns, runId, event);
     }
 
     private static String job(long id, String name, String conclusion, long runId, int attempt, String event) {
@@ -54,7 +67,7 @@ class BuildsQueryTest {
                                                 + job(2, "verify / acceptance (1/6)", "FAILURE", 10, 1, "push")
                                                 + ", { \"__typename\": \"StatusContext\" }")
                                 + ", " + commit("bbb", "Older", "")
-                                + ", { \"oid\": \"ccc\", \"message\": \"No checks\", \"statusCheckRollup\": null }"))
+                                + ", { \"oid\": \"ccc\", \"message\": \"No checks\", \"statusCheckRollup\": null, \"checkSuites\": null }"))
                 .get()
                 .get();
 
@@ -70,6 +83,72 @@ class BuildsQueryTest {
         assertEquals(Option.of(".github/workflows/publish.yml"), build.file());
         assertEquals(3, page.commits());
         assertEquals(Option.of("abc 25"), page.next());
+    }
+
+    @Test
+    void aRunHeldBackByItsConcurrencyGroupIsABuildWithoutAJobYet() {
+        BuildsPage page = page(history(
+                        false,
+                        commit(
+                                "aaa",
+                                "Tip",
+                                job(1, "build", "SUCCESS", 10, 1, "push"),
+                                suite("QUEUED", 0, 12, "push") + ", "
+                                        + suite("COMPLETED", 1, 10, "push") + ", "
+                                        + suite("PENDING", 0, 13, "issue_comment") + ", "
+                                        + suite("COMPLETED", 0, 14, "push") + ", "
+                                        + "{ \"status\": \"QUEUED\", \"checkRuns\": { \"totalCount\": 0 }, "
+                                        + "\"workflowRun\": null }")))
+                .get()
+                .get();
+
+        assertEquals(List.of(12L, 10L), page.builds().map(Build::runId));
+        Build held = page.builds().head();
+        assertEquals("Publish", held.workflow());
+        assertEquals("push", held.event());
+        assertEquals(1, held.attempt());
+        assertEquals("aaa", held.sha());
+        assertEquals("Tip", held.title());
+        assertEquals(Instant.parse("2026-11-14T23:10:00Z"), held.createdAt());
+        assertTrue(held.jobs().isEmpty());
+        assertEquals(Build.Outcome.RUNNING, held.outcome());
+        assertEquals(Option.of(".github/workflows/publish.yml"), held.file());
+        assertEquals(Option.of("W_1"), held.origin().workflowId());
+    }
+
+    @Test
+    void aRunWhoseFirstJobShowsWhileItsSuiteStillWaitsIsOneBuild() {
+        // GitHub can answer while the run gets its first job: its suite still counts none, the commit has one.
+        BuildsPage page = page(history(
+                        false,
+                        commit(
+                                "aaa",
+                                "Tip",
+                                job(1, "build", "SUCCESS", 12, 1, "push"),
+                                suite("QUEUED", 0, 12, "push"))))
+                .get()
+                .get();
+
+        Build build = page.builds().single();
+        assertEquals(12, build.runId());
+        assertEquals(List.of("build"), build.jobs().map(Build.Job::name));
+    }
+
+    @Test
+    void aWaitingRunWhoseIdCannotBeReadIsNoBuild() {
+        BuildsPage page =
+                page(history(false, commit("aaa", "Tip", "", """
+                                { "status": "QUEUED", "checkRuns": { "totalCount": 0 }, "workflowRun": {
+                                  "databaseId": null, "createdAt": "2026-11-14T23:10:00Z", "runAttempt": 1,
+                                  "event": "push", "workflow": null, "file": null } }"""))).get().get();
+
+        assertTrue(page.builds().isEmpty());
+    }
+
+    @Test
+    void theCallAsksForTheWorkflowFileAndIdOfTheSuites() {
+        assertTrue(BuildsQuery.QUERY.contains(
+                "workflowRun { databaseId createdAt runAttempt event workflow { name id } file { path } }"));
     }
 
     @Test

@@ -69,11 +69,11 @@ public record Build(
     }
 
     /**
-     * How it ended: running while one of its jobs runs; else failed when one failed, timed out or could not start;
-     * else cancelled when one was; else passed.
+     * How it ended: running while it has no job yet, as when its concurrency group holds it back, or while one of its
+     * jobs runs; else failed when one failed, timed out or could not start; else cancelled when one was; else passed.
      */
     public Outcome outcome() {
-        if (jobs.exists(Job::running)) {
+        if (jobs.isEmpty() || jobs.exists(Job::running)) {
             return Outcome.RUNNING;
         }
         if (jobs.exists(job -> FAILED.contains(job.conclusion()))) {

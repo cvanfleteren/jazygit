@@ -54,6 +54,15 @@ class BuildTest {
     }
 
     @Test
+    void aBuildWithoutAJobYetWaitsToStart() {
+        Build held = build(1);
+
+        assertEquals(Build.Outcome.RUNNING, held.outcome());
+        assertEquals(Option.none(), held.duration());
+        assertEquals(Option.none(), held.queued());
+    }
+
+    @Test
     void itTookFromItsRunsStartToItsLastJobsEnd() {
         assertEquals(
                 Option.of(Duration.ofSeconds(250)),

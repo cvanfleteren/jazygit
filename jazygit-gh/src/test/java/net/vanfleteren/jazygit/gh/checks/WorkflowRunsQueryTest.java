@@ -20,7 +20,7 @@ class WorkflowRunsQueryTest {
     private static final String RUN = """
             { "databaseId": 7, "createdAt": "2026-11-15T08:00:00Z", "runAttempt": 2, "event": "%s",
               "file": { "path": ".github/workflows/build.yml" },
-              "checkSuite": { "branch": %s, "commit": { "oid": "abc", "message": "Title\\n\\nBody" },
+              "checkSuite": { "status": "IN_PROGRESS", "branch": %s, "commit": { "oid": "abc", "message": "Title\\n\\nBody" },
                 "matchingPullRequests": { "nodes": [ { "number": 405 } ] },
                 "checkRuns": { "nodes": [
                   { "name": "verify", "status": "COMPLETED", "conclusion": "SUCCESS",
@@ -60,6 +60,25 @@ class WorkflowRunsQueryTest {
         assertEquals(Option.none(), read.builds().single().origin().branch());
         assertEquals(2, read.runs());
         assertEquals(Option.of("c25"), read.next());
+    }
+
+    private static String jobless(long id, String status) {
+        return """
+                { "databaseId": %d, "createdAt": "2026-11-15T08:00:00Z", "runAttempt": 1, "event": "push",
+                  "file": { "path": ".github/workflows/build.yml" },
+                  "checkSuite": { "status": "%s", "branch": { "name": "main" },
+                    "commit": { "oid": "abc", "message": "Title" }, "matchingPullRequests": { "nodes": [] },
+                    "checkRuns": { "nodes": [] } } }""".formatted(id, status);
+    }
+
+    @Test
+    void aRunWaitingToStartRunsWithoutAJobAndOneDoneWithoutAJobIsNoBuild() {
+        WorkflowRunsPage read = page(jobless(8, "QUEUED") + ", " + jobless(9, "COMPLETED"));
+
+        Build held = read.builds().single();
+        assertEquals(8, held.runId());
+        assertEquals(Build.Outcome.RUNNING, held.outcome());
+        assertEquals(2, read.runs());
     }
 
     @Test
