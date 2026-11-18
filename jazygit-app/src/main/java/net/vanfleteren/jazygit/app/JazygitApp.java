@@ -216,7 +216,7 @@ public class JazygitApp extends ToolkitApp {
                 return;
             }
             stepping = Option.none();
-            if (shown.allHidden().contains(true)) {
+            if (shown.hidden() == ContentView.Hidden.ALL) {
                 runner().tuiRunner().runLater(() -> stepFile(step.step()));
             }
         });

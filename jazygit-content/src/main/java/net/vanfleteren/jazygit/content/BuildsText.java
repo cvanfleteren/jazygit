@@ -281,6 +281,11 @@ final class BuildsText {
     private record ListColumns(int commit, int when, int time, int queued, int vsMedian) {}
 
     /**
+     * How a job did in a build: how it ended, and how long it {@code took}, of its slowest shard.
+     */
+    private record JobRun(Outcome outcome, Duration took) {}
+
+    /**
      * How the builds are drawn.
      *
      * @param styles the styles of the theme
@@ -587,12 +592,12 @@ final class BuildsText {
          * How the job {@code name} did in {@code build}: how it ended and how long it took, of its slowest shard; none
          * when it did not run.
          */
-        private Option<Tuple2<Outcome, Duration>> ofJob(Build build, String name) {
+        private Option<JobRun> ofJob(Build build, String name) {
             List<Build.Job> shards =
                     build.ran().filter(job -> jobName(job.name()).equals(name));
             return Option.when(
                     !shards.isEmpty(),
-                    () -> Tuple.of(
+                    () -> new JobRun(
                             new Build(
                                             build.workflow(),
                                             build.event(),
@@ -606,15 +611,15 @@ final class BuildsText {
                             shards.flatMap(Build.Job::duration).max().getOrElse(Duration.ZERO)));
         }
 
-        private Line job(String name, List<Option<Tuple2<Outcome, Duration>>> runs, Columns columns) {
+        private Line job(String name, List<Option<JobRun>> runs, Columns columns) {
             List<Duration> passed = runs.flatMap(run -> run)
-                    .filter(run -> run._1() == Outcome.PASSED)
-                    .map(Tuple2::_2);
+                    .filter(run -> run.outcome() == Outcome.PASSED)
+                    .map(JobRun::took);
             Duration low = passed.min().getOrElse(Duration.ZERO);
             Duration high = passed.max().getOrElse(Duration.ZERO);
             List<Span> results = runs.zip(columns.cells())
                     .map(run -> run._1()
-                            .map(done -> switch (done._1()) {
+                            .map(done -> switch (done.outcome()) {
                                 case PASSED -> span("▆".repeat(run._2()), Theme.Classes.CHECKS_PASSED);
                                 case FAILED -> span("▆".repeat(run._2()), Theme.Classes.CHECKS_FAILED);
                                 case CANCELLED, RUNNING -> dim("▁".repeat(run._2()));
@@ -622,18 +627,18 @@ final class BuildsText {
                             .getOrElse(() -> Span.raw(" ".repeat(run._2()))));
             List<Span> sparks = runs.zip(columns.cells())
                     .map(run -> run._1()
-                            .map(done -> done._1() == Outcome.PASSED
+                            .map(done -> done.outcome() == Outcome.PASSED
                                     ? Span.raw(String.valueOf(SPARKS.charAt(
                                                     high.equals(low)
                                                             ? 0
                                                             : (int) Math.round(7.0
-                                                                    * done._2()
+                                                                    * done.took()
                                                                             .minus(low)
                                                                             .toMillis()
                                                                     / high.minus(low)
                                                                             .toMillis())))
                                             .repeat(run._2()))
-                                    : done._1() == Outcome.FAILED
+                                    : done.outcome() == Outcome.FAILED
                                             ? span("▁".repeat(run._2()), Theme.Classes.CHECKS_FAILED)
                                             : Span.raw(" ".repeat(run._2())))
                             .getOrElse(() -> Span.raw(" ".repeat(run._2()))));
@@ -644,7 +649,7 @@ final class BuildsText {
                             .get()
                             .minus(median(passed.take(half)).get()));
             Option<Duration> last =
-                    runs.reverse().flatMap(run -> run).headOption().map(Tuple2::_2);
+                    runs.reverse().flatMap(run -> run).headOption().map(JobRun::took);
             return Line.from(List.of(Span.raw(pad(name, columns.name())))
                     .appendAll(results)
                     .append(Span.raw(" ".repeat(Math.max(0, columns.passed() - columns.series()))))
@@ -711,8 +716,8 @@ final class BuildsText {
             return HashMap.ofEntries(builds.flatMap(build -> build.ran().map(job -> jobName(job.name())))
                     .distinct()
                     .flatMap(name -> median(builds.flatMap(build -> ofJob(build, name))
-                                    .filter(run -> run._1() == Outcome.PASSED)
-                                    .map(Tuple2::_2))
+                                    .filter(run -> run.outcome() == Outcome.PASSED)
+                                    .map(JobRun::took))
                             .map(middle -> Tuple.of(name, middle))));
         }
 

@@ -4,7 +4,6 @@ import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.Array;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
@@ -177,14 +176,15 @@ public final class RichDiff {
         // Each file is measured on a thread of its own, and then each of its lines is drawn on one, so that a diff of
         // many files and one of a long file both hold up the render thread for less.
         List<Pending> pending = inParallel(
-                        diff.files().zip(placed).zipWithIndex(),
+                        diff.files().zipWithIndex((file, index) -> new FileAt(file, placed.get(index), index)),
                         file -> file(
-                                file._1()._1(),
-                                file._1()._2(),
-                                file._2(),
-                                folded.fold(file._1()._1().file().path()),
-                                folded.hiding(file._1()._1().file().path()),
-                                asGiven.filter(hunk -> hunk.file() == file._2()).map(DiffStops.HunkAt::hunk),
+                                file.parsed(),
+                                file.remarks(),
+                                file.index(),
+                                folded.fold(file.parsed().file().path()),
+                                folded.hiding(file.parsed().file().path()),
+                                asGiven.filter(hunk -> hunk.file() == file.index())
+                                        .map(DiffStops.HunkAt::hunk),
                                 syntax,
                                 words,
                                 style,
@@ -307,12 +307,14 @@ public final class RichDiff {
         Vector<Vector<Row>> byHunk =
                 cut(rows, parsed.hunks().map(hunk -> hunk.lines().size()));
         // A block a thread covers stays as git gives it, so its gutter marks the lines the thread is on in a run.
-        List<List<List<Integer>>> groups = parsed.hunks()
-                .zipWithIndex((hunk, at) -> asGiven.contains(at) || version.isDefined()
+        Vector<ParsedHunk> hunks = parsed.hunks().toVector();
+        Vector<Vector<Group>> groups = hunks.zipWithIndex((hunk, at) -> (asGiven.contains(at) || version.isDefined()
                         ? List.range(0, hunk.lines().size()).map(List::of)
                         : LinePairs.groups(
                                 hunk.lines(),
-                                line -> byHunk.get(at).get(line).remarks().covered()));
+                                line -> byHunk.get(at).get(line).remarks().covered()))
+                .map(Group::new)
+                .toVector());
         // The bar is padded in a span of its own, which the area draws as far as its edge (ADR 80).
         return List.<Pending>of(() -> List.of(new Marked(
                                 Rows.kept(Line.from(
@@ -329,14 +331,14 @@ public final class RichDiff {
                         .<Pending>map(placed -> () -> blocks.threads(
                                 placed.onFile(), Option.none(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(hunks(
-                        parsed.hunks().size(),
+                        hunks.size(),
                         hiding,
                         (at, headed) -> hunk(
-                                parsed.hunks().get(at).hunk(),
+                                hunks.get(at).hunk(),
                                 byHunk.get(at),
                                 groups.get(at),
                                 at,
-                                afterLast || at < parsed.hunks().size() - 1,
+                                afterLast || at < hunks.size() - 1,
                                 gapBefore.get(at),
                                 headed,
                                 fold,
@@ -614,7 +616,7 @@ public final class RichDiff {
     private static List<Pending> hunk(
             Hunk hunk,
             Vector<Row> rows,
-            List<List<Integer>> groups,
+            Vector<Group> groups,
             int index,
             boolean followed,
             Option<Folding.Gap> gap,
@@ -646,28 +648,31 @@ public final class RichDiff {
         // No line of the diff is wider than the bar of its file, which is as wide as the file: each is measured at most
         // that wide without being drawn.
         Option<Integer> within = Option.some(layout.fileWidth());
-        return header.appendAll(groups.zipWithIndex().<Pending>map(group -> () -> {
-            List<Row> members = group._1().map(rows::get);
-            List<Row> threaded = members.filter(row -> !row.remarks().threads().isEmpty());
-            return group._1()
-                    .map(order -> Tuple.of(rows.get(order), order))
-                    .map(member -> new Marked(
-                            () -> line(member._1(), layout),
-                            Anchor.of(layout.path(), member._1().parsed().line())
-                                    .map(on -> new Mark(
-                                            on,
-                                            1,
-                                            layout.fileWidth(),
-                                            at,
-                                            Option.none(),
-                                            0,
-                                            leftOfContext(
-                                                    layout.path(),
-                                                    member._1().parsed().line()),
-                                            member._2())),
-                            List.empty(),
-                            within,
-                            () -> source(member._1(), prefix, layout)))
+        return header.appendAll(groups.zipWithIndex((group, g) -> (Pending) () -> {
+            List<Row> threaded = group.lines()
+                    .map(rows::get)
+                    .filter(row -> !row.remarks().threads().isEmpty());
+            return group.lines()
+                    .map(order -> {
+                        Row member = rows.get(order);
+                        return new Marked(
+                                () -> line(member, layout),
+                                Anchor.of(layout.path(), member.parsed().line())
+                                        .map(on -> new Mark(
+                                                on,
+                                                1,
+                                                layout.fileWidth(),
+                                                at,
+                                                Option.none(),
+                                                0,
+                                                leftOfContext(
+                                                        layout.path(),
+                                                        member.parsed().line()),
+                                                order)),
+                                List.empty(),
+                                within,
+                                () -> source(member, prefix, layout));
+                    })
                     // The gutter of a line of a version shown blamed stays where it is when the code scrolls sideways
                     // (ADR 147).
                     .map(marked ->
@@ -679,9 +684,7 @@ public final class RichDiff {
                                             Anchor.of(
                                                     layout.path(),
                                                     row._1().parsed().line()),
-                                            followed
-                                                    || group._2() < groups.size() - 1
-                                                    || row._2() < threaded.size() - 1,
+                                            followed || g < groups.size() - 1 || row._2() < threaded.size() - 1,
                                             styles)));
         }));
     }
@@ -986,7 +989,7 @@ public final class RichDiff {
                 .sorted()
                 .distinct();
         Cutter cutter = new Cutter(text, segments.toVector(), ends, tokens.toVector());
-        return cuts.zip(cuts.tail())
+        return cuts.zipWith(cuts.tail(), Cut::new)
                 .foldLeft(new Cursor(List.empty(), 0, 0), cutter::next)
                 .pieces()
                 .reverse();
@@ -1461,22 +1464,38 @@ public final class RichDiff {
     private record Cutter(String text, Vector<Segment> segments, Vector<Integer> ends, Vector<Token> tokens) {
 
         /**
-         * {@code at} with the piece from {@code cut._1} to {@code cut._2} cut too: its segment and its token are found
-         * by going on from those of the piece before it.
+         * {@code at} with the piece {@code cut} cut too: its segment and its token are found by going on from those of
+         * the piece before it.
          */
-        Cursor next(Cursor at, Tuple2<Integer, Integer> cut) {
+        Cursor next(Cursor at, Cut cut) {
             int segment = Iterator.iterate(at.segment(), i -> i + 1)
-                    .find(i -> ends.get(i) > cut._1)
+                    .find(i -> ends.get(i) > cut.from())
                     .get();
             int token = Iterator.iterate(at.token(), i -> i + 1)
-                    .find(i -> i >= tokens.size() || tokens.get(i).end() > cut._1)
+                    .find(i -> i >= tokens.size() || tokens.get(i).end() > cut.from())
                     .get();
             Option<Token.Kind> kind = Option.when(
-                            token < tokens.size() && tokens.get(token).start() <= cut._1, () -> tokens.get(token))
+                            token < tokens.size() && tokens.get(token).start() <= cut.from(), () -> tokens.get(token))
                     .map(Token::kind);
             Piece piece = new Piece(
-                    text.substring(cut._1, cut._2), segments.get(segment).changed(), kind);
+                    text.substring(cut.from(), cut.to()), segments.get(segment).changed(), kind);
             return new Cursor(at.pieces().prepend(piece), segment, token);
         }
     }
+
+    /**
+     * The piece of a line from {@code from} up to, not with, {@code to}.
+     */
+    private record Cut(int from, int to) {}
+
+    /**
+     * A file of a diff to draw: {@code parsed}, the review threads placed on it, if they are shown, and its
+     * {@code index} in the diff.
+     */
+    private record FileAt(ParsedFile parsed, Option<FileRemarks> remarks, int index) {}
+
+    /**
+     * The indexes of the {@code lines} of a hunk drawn together, as {@link LinePairs} groups them.
+     */
+    private record Group(List<Integer> lines) {}
 }
