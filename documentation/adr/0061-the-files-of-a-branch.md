@@ -66,3 +66,5 @@ base.
 
 Amended by ADR 141: the files pane lists the files of the highlighted branch against its base while the branches have
 the focus, without `F`; `F` still lists those of its pull request.
+
+Amended by ADR 149: `F` on a branch also locks the files pane to the branches until `Esc`.

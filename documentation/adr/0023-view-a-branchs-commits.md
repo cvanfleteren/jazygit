@@ -76,3 +76,6 @@ As the divergence view is, and next to it, not through it nor a stack of views:
   time to bring them under one.
 
 Amended by ADR 142: `b` no longer lists only the commits not on the base, here nor in the other logs.
+
+Amended by ADR 149: Enter on a commit of the list locks the files pane to it and moves the focus into its files,
+no longer into its diff.
