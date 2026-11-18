@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.branches.branch.stack;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -60,7 +61,8 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
 
     /**
      * The branches a stack can be added to its top from: the local branch of its top, {@code top}, as the fixed
-     * bottom, then the branches built on it. The top chosen is the top of the stack until one is chosen above it.
+     * bottom, then the branches built on it. The top chosen at first is as far up as the branches above go in one
+     * line while they have an open pull request in no stack; the first one above when it has none (ADR 148).
      */
     public static StackChoice above(
             Branch top,
@@ -69,7 +71,60 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
             Function<Branch, Option<PullRequest>> pullRequest) {
         List<Row> rows =
                 grown(List.of(new Row(top, 0, Option.none(), pullRequest.apply(top))), 0, local, parents, pullRequest);
-        return new StackChoice(rows, 0, 0, 0, Option.none());
+        return new StackChoice(rows, 0, 0, appended(rows), Option.none());
+    }
+
+    /**
+     * The row the line above the first of {@code rows} ends at, as {@link #above} chooses it.
+     */
+    private static int appended(List<Row> rows) {
+        int at = 0;
+        Option<Integer> above = onlyAbove(rows, at);
+        while (above.isDefined()
+                && rows.get(above.get()).pullRequest().exists(pr -> pr.stack().isEmpty())) {
+            at = above.get();
+            above = onlyAbove(rows, at);
+        }
+        // The first branch above, without a pull request, is chosen to create it.
+        return at == 0 && above.exists(row -> rows.get(row).pullRequest().isEmpty()) ? above.get() : at;
+    }
+
+    /**
+     * The row of the one branch built on the one at {@code row}; none where none is, or where the tree forks.
+     */
+    private static Option<Integer> onlyAbove(List<Row> rows, int row) {
+        List<Integer> above =
+                rows.zipWithIndex().filter(at -> at._1().parent().contains(row)).map(Tuple2::_2);
+        return Option.when(above.size() == 1, above::head);
+    }
+
+    /**
+     * The parents, by their history, of the branches built on {@code top} (ADR 148): of those of {@code eligible} that
+     * {@code containing} says have the tip of {@code top}, each on the nearest of the others whose tip it has, else on
+     * {@code top}. Two branches at the same commit are not built on each other.
+     *
+     * @param containing for {@code top} and for each branch found, the local branches that have its tip
+     */
+    public static Map<BranchName, BranchName> byHistory(
+            BranchName top, Set<BranchName> eligible, Map<BranchName, List<BranchName>> containing) {
+        List<BranchName> found = containing.get(top).getOrElse(List.empty()).filter(eligible::contains);
+        Function<BranchName, List<BranchName>> having =
+                name -> containing.get(name).getOrElse(List.empty());
+        return found.toMap(
+                branch -> branch,
+                branch -> found.filter(other -> !other.equals(branch)
+                                && having.apply(other).contains(branch)
+                                && !having.apply(branch).contains(other))
+                        .minBy(other -> having.apply(other).size())
+                        .getOrElse(top));
+    }
+
+    /**
+     * When adding to a stack, the lowest branch added if it has no open pull request: Enter asks to create it then
+     * (ADR 148).
+     */
+    public Option<Row> toCreate() {
+        return chosen().drop(1).headOption().filter(row -> row.pullRequest().isEmpty());
     }
 
     /**

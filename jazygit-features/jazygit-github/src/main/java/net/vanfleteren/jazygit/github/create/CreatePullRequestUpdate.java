@@ -4,9 +4,11 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.branches.branch.BranchError;
+import net.vanfleteren.jazygit.branches.branch.base.SetBaseCmd;
 import net.vanfleteren.jazygit.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.branches.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.branches.branch.push.PushCmd.PushSettingUpstream;
+import net.vanfleteren.jazygit.branches.branch.stack.StackPopups;
 import net.vanfleteren.jazygit.changes.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -21,6 +23,7 @@ import net.vanfleteren.jazygit.github.create.CreatePullRequestCmd.CreatePullRequ
 import net.vanfleteren.jazygit.github.create.CreatePullRequestCmd.PushFirst;
 import net.vanfleteren.jazygit.github.create.CreatePullRequestCmd.ReadParent;
 import net.vanfleteren.jazygit.github.create.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.github.create.CreatePullRequestCmd.RecordParent;
 import net.vanfleteren.jazygit.github.create.CreatePullRequestCmd.RereadTitle;
 import net.vanfleteren.jazygit.github.create.CreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -51,6 +54,8 @@ public final class CreatePullRequestUpdate {
             case BaseTitleRead(var branch, var base, var subject) -> baseTitleRead(model, branch, base, subject);
             case PullRequestEdited(NewPullRequest pullRequest) -> pullRequestEdited(model, pullRequest);
             case StackToggled() -> stackToggled(model);
+            case StackRequested() -> stackRequested(model);
+            case ParentRecorded(var cmd, var commands) -> parentRecorded(model, cmd, commands);
             case Confirmed() -> confirmed(model);
             case PushFirstConfirmed() -> pushFirstConfirmed(model);
             case Pushed(PushFirst cmd, var commands) -> pushed(model, cmd, commands);
@@ -141,6 +146,36 @@ public final class CreatePullRequestUpdate {
                                 Option.when(popup.stack(), () -> stackOn(model, popup.base()))
                                         .flatMap(on -> on)
                                         .flatMap(Either::toOption))));
+    }
+
+    /**
+     * Records the base asked about as the parent of the branch, to put its pull request on a stack once created
+     * (ADR 148). A branch that is busy, or gone, is not.
+     */
+    private static Next stackRequested(Model model) {
+        return model.popup(StackPopups.CreateFirst.class)
+                .map(popup -> {
+                    Model closed = model.withoutPopup(StackPopups.CreateFirst.class);
+                    return model.idleBranch(popup.branch())
+                            .map(known -> OperationUpdate.start(
+                                    closed.clearError(),
+                                    new RecordParent(new SetBaseCmd(popup.branch(), Option.of(popup.base())))))
+                            .getOrElse(() -> Next.of(closed));
+                })
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Once the parent is recorded, asks what the pull request says, as asking for the pull request of a branch without
+     * one does: pushing it first where that is needed. The base is the parent, offered first, and stacking on its pull
+     * request is ticked.
+     */
+    private static Next parentRecorded(Model model, RecordParent cmd, List<ExecutedCommand> commands) {
+        return OperationUpdate.succeeded(model, cmd, commands)
+                .then(done -> done.repo()
+                        .branch(cmd.branch())
+                        .map(known -> askPushed(done, known))
+                        .getOrElse(() -> Next.of(done)));
     }
 
     /**

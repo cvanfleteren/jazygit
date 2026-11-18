@@ -69,10 +69,10 @@ public final class StackPopups {
         }
 
         /**
-         * Whether the pull request of the branch can be stacked on another one.
+         * Whether the branch can be stacked on another one: its pull request, or one created for it (ADR 148).
          */
         public boolean canStackOn() {
-            return canMake() && pullRequest.isDefined() && !targets.isEmpty();
+            return canMake() && !targets.isEmpty();
         }
 
         /**
@@ -121,9 +121,21 @@ public final class StackPopups {
     }
 
     /**
-     * Choosing the pull request to stack the one of {@code branch} on.
+     * Choosing the pull request to stack the one of {@code branch} on: its open pull request, or one created for it
+     * when it has none (ADR 148).
      */
-    public record StackOn(Branch branch, PullRequest pullRequest, List<Target> targets) implements Popup {}
+    public record StackOn(Branch branch, Option<PullRequest> pullRequest, List<Target> targets) implements Popup {}
+
+    /**
+     * Asking to create the pull request of {@code branch}, which has none, on {@code base}, and to stack it on the pull
+     * request of {@code base} (ADR 148). The {@code github} group draws it and creates the pull request, which this
+     * group cannot see (ADR 136).
+     *
+     * @param below the pull request of {@code base}, which it is stacked on
+     * @param stack the stack whose top that pull request is; none when it is in no stack, which stacking makes one of
+     */
+    public record CreateFirst(BranchName branch, BranchName base, PrNumber below, Option<Integer> stack)
+            implements Popup {}
 
     /**
      * Asking before changing the bases of pull requests on GitHub to make {@code cmd}'s stack, or before stacking

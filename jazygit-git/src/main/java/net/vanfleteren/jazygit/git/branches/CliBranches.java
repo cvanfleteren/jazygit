@@ -230,6 +230,21 @@ public final class CliBranches implements Branches {
                         .map(candidates -> new BaseCandidates(candidates, createdFrom)));
     }
 
+    @Override
+    public Either<GitError, List<BranchName>> containing(Sha commit) {
+        return GitProcess.read(
+                worktree,
+                GitCommand.reading(
+                        "for-each-ref",
+                        "--format=%(refname)",
+                        "--contains",
+                        GitArgs.revision(new Revision.Commit(commit)),
+                        HEADS),
+                raw -> Either.right(GitOutput.nonBlankLines(raw)
+                        .flatMap(line -> GitOutput.after(line, HEADS))
+                        .map(BranchName::new)));
+    }
+
     private static String parentKey(BranchName branch) {
         return PARENT_PREFIX + GitArgs.name(branch) + PARENT_SUFFIX;
     }

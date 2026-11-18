@@ -86,6 +86,11 @@ public interface StubBranches extends Branches {
     }
 
     @Override
+    default Either<GitError, List<BranchName>> containing(Sha commit) {
+        return Either.right(List.empty());
+    }
+
+    @Override
     default Map<BranchName, BaseDistance> baseDistance(
             Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
         return HashMap.empty();

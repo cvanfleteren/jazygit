@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.branches.branch.stack;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -173,6 +174,58 @@ class StackChoiceTest {
         assertEquals(
                 Either.right(new Plan(List.of(OPEN.get(name("feat/e")).get()), List.empty())),
                 choice.withTop(3).get().plan(1, 1));
+    }
+
+    // ADR 148: one line above the top, with pull requests up to feat/d, which has none.
+    @Test
+    void addingStartsWithTheTopAsFarUpAsOneLineOfPullRequestsGoes() {
+        StackChoice choice = StackChoice.above(A, LOCAL, PARENTS.remove(name("feat/e")), b -> OPEN.get(b.name()));
+
+        assertEquals(List.of(A, B, C, D), choice.rows().map(StackChoice.Row::branch));
+        assertEquals(2, choice.top());
+        assertEquals(Option.none(), choice.toCreate());
+    }
+
+    @Test
+    void addingStartsWithTheFirstBranchAboveWhenItHasNoPullRequestToCreateIt() {
+        StackChoice choice = StackChoice.above(C, LOCAL, PARENTS, b -> OPEN.get(b.name()));
+
+        assertEquals(1, choice.top());
+        assertEquals(Option.of(D), choice.toCreate().map(StackChoice.Row::branch));
+    }
+
+    @Test
+    void addingWhereTheBranchesAboveForkStartsWithTheTopOfTheStack() {
+        assertEquals(
+                0, StackChoice.above(B, LOCAL, PARENTS, b -> OPEN.get(b.name())).top());
+    }
+
+    // top ← mid ← high, found by history: each on the nearest it has; other is not eligible, as one with a parent.
+    @Test
+    void branchesFoundByHistoryAreEachPlacedOnTheNearestTheyHave() {
+        assertEquals(
+                HashMap.of(name("mid"), name("top"), name("high"), name("mid")),
+                StackChoice.byHistory(
+                        name("top"),
+                        HashSet.of(name("mid"), name("high")),
+                        HashMap.of(
+                                name("top"), List.of(name("high"), name("mid"), name("other"), name("top")),
+                                name("mid"), List.of(name("high"), name("mid")),
+                                name("high"), List.of(name("high")))));
+    }
+
+    // copy is at mid's commit: neither is built on the other.
+    @Test
+    void branchesAtTheSameCommitAreNotBuiltOnEachOther() {
+        assertEquals(
+                HashMap.of(name("mid"), name("top"), name("copy"), name("top")),
+                StackChoice.byHistory(
+                        name("top"),
+                        HashSet.of(name("mid"), name("copy")),
+                        HashMap.of(
+                                name("top"), List.of(name("copy"), name("mid"), name("top")),
+                                name("mid"), List.of(name("copy"), name("mid")),
+                                name("copy"), List.of(name("copy"), name("mid")))));
     }
 
     @Test
