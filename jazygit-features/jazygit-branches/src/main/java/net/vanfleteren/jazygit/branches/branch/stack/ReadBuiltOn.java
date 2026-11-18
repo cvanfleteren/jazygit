@@ -17,12 +17,14 @@ import net.vanfleteren.jazygit.state.Msg;
 /**
  * Reads which of {@code eligible} are built on {@code top}, the top of stack {@code stack}, by their history, before
  * "Add to stack…" lists them (ADR 148): the local branches that have its tip, then, for each of those, the ones that
- * have that one's tip, which places it on the nearest. Without them, the dialog lists the branches built on it by
- * their parents only.
+ * have that one's tip, and the same for each branch listed above the top by its parent, which places a branch found on
+ * the nearest of them. Without them, the dialog lists the branches built on it by their parents only.
  *
  * @param eligible the branches that may be found, with their tips: those with no parent, no root, not at its tip
+ * @param listed   the branches listed above the top by their parents, with their tips, which one found can be on
  */
-public record ReadBuiltOn(int stack, BranchName top, Sha tip, Map<BranchName, Sha> eligible) implements Cmd {
+public record ReadBuiltOn(
+        int stack, BranchName top, Sha tip, Map<BranchName, Sha> eligible, Map<BranchName, Sha> listed) implements Cmd {
 
     @Override
     public Option<Label> label() {
@@ -35,11 +37,13 @@ public record ReadBuiltOn(int stack, BranchName top, Sha tip, Map<BranchName, Sh
                 .branches()
                 .containing(tip)
                 .flatMap(onTop -> {
-                    List<BranchName> found = onTop.filter(eligible::containsKey);
-                    return Either.sequenceRight(found.map(branch -> env.git()
-                                    .branches()
-                                    .containing(eligible.get(branch).get())
-                                    .map(having -> Tuple.of(branch, having))))
+                    Map<BranchName, Sha> read = listed.merge(eligible.filterKeys(onTop::contains));
+                    return Either.sequenceRight(read.keySet()
+                                    .toList()
+                                    .map(branch -> env.git()
+                                            .branches()
+                                            .containing(read.get(branch).get())
+                                            .map(having -> Tuple.of(branch, having))))
                             .map(each -> HashMap.ofEntries(each).put(top, onTop));
                 })
                 .fold(error -> failed(Failure.of(error)), this::read);

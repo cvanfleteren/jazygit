@@ -194,6 +194,23 @@ class StackChoiceTest {
         assertEquals(Option.of(D), choice.toCreate().map(StackChoice.Row::branch));
     }
 
+    // feat/d has no pull request, feat/f above it has: with feat/f the top, feat/d is refused, not created.
+    @Test
+    void aBranchWithoutAPullRequestIsCreatedOnlyWhenItIsTheOneAdded() {
+        Branch f = branch("feat/f");
+        StackChoice choice = StackChoice.above(
+                        C,
+                        List.of(C, D, f),
+                        HashMap.of(name("feat/d"), name("feat/c"), name("feat/f"), name("feat/d")),
+                        b -> OPEN.put(name("feat/f"), pr(100, "feat/f", "feat/d"))
+                                .get(b.name()))
+                .withTop(2)
+                .get();
+
+        assertEquals(Option.none(), choice.toCreate());
+        assertEquals(Either.left(new Refusal.NoPullRequest(List.of(name("feat/d")))), choice.plan(1, 1));
+    }
+
     @Test
     void addingWhereTheBranchesAboveForkStartsWithTheTopOfTheStack() {
         assertEquals(
@@ -212,6 +229,20 @@ class StackChoiceTest {
                                 name("top"), List.of(name("high"), name("mid"), name("other"), name("top")),
                                 name("mid"), List.of(name("high"), name("mid")),
                                 name("high"), List.of(name("high")))));
+    }
+
+    // c is listed above the top by its parent; x, made on c with plain git, is placed on c, not on the top.
+    @Test
+    void aBranchFoundByHistoryIsPlacedOnABranchListedByItsParent() {
+        assertEquals(
+                HashMap.of(name("x"), name("c")),
+                StackChoice.byHistory(
+                        name("top"),
+                        HashSet.of(name("x")),
+                        HashMap.of(
+                                name("top"), List.of(name("c"), name("top"), name("x")),
+                                name("c"), List.of(name("c"), name("x")),
+                                name("x"), List.of(name("x")))));
     }
 
     // copy is at mid's commit: neither is built on the other.

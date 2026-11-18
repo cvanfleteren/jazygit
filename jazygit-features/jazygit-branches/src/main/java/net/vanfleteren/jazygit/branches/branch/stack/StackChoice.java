@@ -100,19 +100,22 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
 
     /**
      * The parents, by their history, of the branches built on {@code top} (ADR 148): of those of {@code eligible} that
-     * {@code containing} says have the tip of {@code top}, each on the nearest of the others whose tip it has, else on
-     * {@code top}. Two branches at the same commit are not built on each other.
+     * {@code containing} says have the tip of {@code top}, each on the nearest whose tip it has of the others read,
+     * else on {@code top}. The others read are those found and the branches listed above the top by their parents, so
+     * a branch made on one of those is placed on it. Two branches at the same commit are not built on each other.
      *
-     * @param containing for {@code top} and for each branch found, the local branches that have its tip
+     * @param containing for {@code top}, for each branch found, and for each branch listed above the top by its parent,
+     *                   the local branches that have its tip
      */
     public static Map<BranchName, BranchName> byHistory(
             BranchName top, Set<BranchName> eligible, Map<BranchName, List<BranchName>> containing) {
         List<BranchName> found = containing.get(top).getOrElse(List.empty()).filter(eligible::contains);
+        Set<BranchName> read = containing.keySet().remove(top);
         Function<BranchName, List<BranchName>> having =
                 name -> containing.get(name).getOrElse(List.empty());
         return found.toMap(
                 branch -> branch,
-                branch -> found.filter(other -> !other.equals(branch)
+                branch -> read.filter(other -> !other.equals(branch)
                                 && having.apply(other).contains(branch)
                                 && !having.apply(branch).contains(other))
                         .minBy(other -> having.apply(other).size())
@@ -120,11 +123,13 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
     }
 
     /**
-     * When adding to a stack, the lowest branch added if it has no open pull request: Enter asks to create it then
-     * (ADR 148).
+     * When adding to a stack, the one branch added if it has no open pull request: Enter asks to create it then
+     * (ADR 148). With more branches added, one without a pull request is refused, as it is added one at a time.
      */
     public Option<Row> toCreate() {
-        return chosen().drop(1).headOption().filter(row -> row.pullRequest().isEmpty());
+        List<Row> added = chosen().drop(1);
+        return Option.when(added.size() == 1, added::head)
+                .filter(row -> row.pullRequest().isEmpty());
     }
 
     /**

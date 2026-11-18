@@ -209,7 +209,11 @@ class MakeStackTest {
         assertTrue(
                 adding.cmds()
                         .contains(new ReadBuiltOn(
-                                12, name("feat/b"), new Sha("aaaa"), HashMap.of(name("feat/x"), new Sha("bbbb")))),
+                                12,
+                                name("feat/b"),
+                                new Sha("aaaa"),
+                                HashMap.of(name("feat/x"), new Sha("bbbb")),
+                                HashMap.of(name("feat/c"), new Sha("aaaa")))),
                 adding.cmds().toString());
         assertEquals(Option.none(), adding.model().popup());
     }

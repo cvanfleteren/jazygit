@@ -530,9 +530,17 @@ public final class StackUpdate {
                     int stack = menu.stack().get().number();
                     Model closed = model.withoutPopup(StackPopups.Menu.class);
                     Map<BranchName, Sha> eligible = unplaced(model, top);
+                    // A branch found can be on one listed above the top by its parent too.
+                    Map<BranchName, Sha> listed = StackChoice.above(
+                                    top, local(model), model.repo().parents(), model.gitHub()::pullRequest)
+                            .rows()
+                            .drop(1)
+                            .toMap(
+                                    row -> row.branch().name(),
+                                    row -> row.branch().tip());
                     return eligible.isEmpty()
                             ? addPick(closed, top, stack, model.repo().parents())
-                            : Next.of(closed, new ReadBuiltOn(stack, top.name(), top.tip(), eligible));
+                            : Next.of(closed, new ReadBuiltOn(stack, top.name(), top.tip(), eligible, listed));
                 })
                 .getOrElse(() -> Next.of(model));
     }

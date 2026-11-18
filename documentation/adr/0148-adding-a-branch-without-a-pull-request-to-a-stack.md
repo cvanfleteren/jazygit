@@ -24,9 +24,9 @@ per pull request, and doing that for many at once is a design of its own.
 
 "Add to stack…" also lists the local branches that are built on the top by their history: those that have its last
 commit and commits of their own, that are no root, and that have no parent. It reads them when it is chosen, where
-any local branch has no parent, with one `git for-each-ref --contains` for the top, then one per branch found, which
-places a branch on the nearest of them it has, as the parents place the others. When they cannot be read, the dialog
-lists the branches placed by their parents.
+any local branch has no parent, with one `git for-each-ref --contains` for the top, then one per branch found and per
+branch listed above the top by its parent. A branch found is placed on the nearest of the branches listed above the
+top that it has, else on the top. When they cannot be read, the dialog lists the branches placed by their parents.
 
 - A branch that has a parent stays where its parent puts it, also when its history says otherwise: the parent is what
   the user or GitHub said (ADR 72, ADR 143).
@@ -49,8 +49,9 @@ it on `blame-read` and put it on the top of the stack. Confirming it records the
 (ADR 25): its base is the top, offered first as its parent, and `Stack on #549` is ticked. Creating it puts it on the
 stack.
 
-- One at a time: a branch without a pull request above another one that is added is refused, as before, naming it.
-  The branches below it are added first, then it is the lowest.
+- One at a time: Enter creates a pull request only when the branch without one is the one branch added. Where more
+  are added, a branch without a pull request among them is refused, as before, naming it: the branches below it are
+  added first, then it is added alone, then those above it.
 - Recording the parent keeps it where the user put it: it shows built on the top in the branches pane before its pull
   request is open, and the create dialog offers the top first, also after pushing it.
 - The question comes from the `github` group: the stack menu is in `branches`, which cannot see the create dialog
@@ -74,8 +75,8 @@ a top that is the top of the stack says what to choose: `Choose a branch above b
 
 - A branch made with plain git on the top of a stack is added from "Add to stack…" or "Stack on…", in two dialogs:
   the question, then the pull request's title and body.
-- Opening "Add to stack…" takes a git process for the top and one per branch found, before the dialog shows, where
-  a branch has no parent.
+- Opening "Add to stack…" takes a git process for the top, one per branch found and one per branch listed above the
+  top, before the dialog shows, where a branch has no parent.
 - Enter adds a line of branches without `t` first.
 - A branch is placed by history only in this dialog; elsewhere it still shows no parent until its pull request is
   open, or the question recorded it.
