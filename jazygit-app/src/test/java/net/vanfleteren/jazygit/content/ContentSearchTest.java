@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
@@ -386,6 +387,42 @@ class ContentSearchTest {
             assertTrue(screen.contains("Staged changes · /new · 1 match"), screen);
             assertTrue(screen.contains("Unstaged changes · /new 1/1"), screen);
         }
+    }
+
+    @Test
+    void inTheBuildsNAndShiftNGoToTheMatchesWhileASearchIsKeptElseToAnotherBuild() throws Exception {
+        List<String> keys = net.vanfleteren.jazygit.ui.keys.Keymap.standard()
+                .bindings(net.vanfleteren.jazygit.ui.keys.Scopes.BUILDS.id())
+                .map(net.vanfleteren.jazygit.ui.keys.Keymap.Binding::key);
+        Driven driven = new Driven(
+                BuildsContentTest.steppable(), net.vanfleteren.jazygit.ui.branches.BranchesPanel.PANE, AreaId.BUILDS);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
+            SettledPilot.focus(testRunner, driven.area().id());
+            driven.screen(testRunner);
+            driven.type(testRunner, "?");
+            List<Option<Msg>> before = driven.help().actions();
+            assertEquals(Option.of(new BuildsMsg.BuildStepped(1)), before.get(keys.indexOf("n")));
+            driven.type(testRunner, "n");
+            assertEquals(1, stepped(driven));
+
+            driven.type(testRunner, "/Older");
+            driven.press(testRunner, KeyCode.ENTER);
+            driven.type(testRunner, "nN");
+            assertEquals(1, stepped(driven));
+            assertTrue(driven.screen(testRunner).contains("/Older"), driven.screen(testRunner));
+
+            // The help says n and N do not step the builds then.
+            driven.type(testRunner, "?");
+            List<Option<Msg>> searching = driven.help().actions();
+            assertTrue(searching.get(keys.indexOf("n")).isEmpty());
+            assertTrue(searching.get(keys.indexOf("N")).isEmpty());
+        }
+    }
+
+    private static long stepped(Driven driven) {
+        return driven.dispatched.stream()
+                .filter(BuildsMsg.BuildStepped.class::isInstance)
+                .count();
     }
 
     private static final Anchor THREAD = new Anchor.Thread(

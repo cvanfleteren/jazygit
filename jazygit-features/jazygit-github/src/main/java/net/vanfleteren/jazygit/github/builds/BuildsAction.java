@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.github.builds;
 
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.state.github.builds.BuildsAt;
 import net.vanfleteren.jazygit.ui.FeatureAction;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
@@ -25,11 +27,24 @@ public final class BuildsAction {
                             Scopes.BUILDS,
                             Binding.always("p", "github.help.builds.pickBuild", BuildsMsg.BuildPickRequested::new))
                     .add(Scopes.BUILDS, Binding.always("m", "github.help.builds.more", BuildsMsg.MoreRequested::new))
+                    .add(Scopes.BUILDS, stepping("n", "github.help.builds.nextBuild", 1))
+                    .add(Scopes.BUILDS, stepping("N", "github.help.builds.previousBuild", -1))
                     .add(
                             Scopes.BUILDS,
-                            Binding.always("n", "github.help.builds.window", BuildsMsg.WindowRequested::new))
+                            Binding.always("c", "github.help.builds.window", BuildsMsg.WindowRequested::new))
                     .add(Scopes.BUILDS, Binding.always("B", "github.help.builds.close", BuildsMsg.Closed::new)),
             BuildsDialog::popups);
 
     private BuildsAction() {}
+
+    /**
+     * {@code key}, which picks the build {@code by} rows after the one on the time line (ADR 133); not while a search
+     * is kept, when the area takes the key to its matches (ADR 126), so the help does not list it as acting then.
+     */
+    private static Binding<BuildsAt> stepping(String key, String descriptionKey, int by) {
+        return new Binding<>(
+                key,
+                descriptionKey,
+                at -> Option.when(!at.exists(BuildsAt::searching), () -> new BuildsMsg.BuildStepped(by)));
+    }
 }

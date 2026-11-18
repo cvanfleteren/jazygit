@@ -46,6 +46,16 @@ public record BuildsShown(
     }
 
     /**
+     * The build whose jobs show on one time line: the one picked, else the last that is done (ADR 131, 133); none
+     * while the builds are not read, or none of them is done.
+     */
+    public Option<Build> onTimeLine() {
+        return builds.toOption()
+                .flatMap(read -> picked.flatMap(run -> read.find(build -> build.runId() == run))
+                        .orElse(() -> BuildsView.lastDoneOf(read)));
+    }
+
+    /**
      * How long the runs of a workflow that passed took on every branch.
      *
      * @param median in the middle
