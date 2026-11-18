@@ -760,9 +760,10 @@ final class BuildsText {
                                                         : Theme.Classes.DIM))
                                 .getOrElse(() -> Span.raw(" ".repeat(columns.vsMedian())));
                         // The build picked is marked after how it ended, and its title is in bold: a mark at the
-                        // end of its row would be cut off with a long title (ADR 133).
+                        // end of its row would be cut off with a long title (ADR 133). Its row is in the tint of the
+                        // cursor of a diff, as far as the edge of the panel, so it stands out among the others.
                         boolean chosen = picked.contains(build.runId());
-                        return Line.from(List.of(
+                        Line row = Line.from(List.of(
                                         outcome(build.outcome()),
                                         chosen ? span(PICKED, Theme.Classes.BOLD) : Span.raw(" "))
                                 .appendAll(forWhat)
@@ -786,6 +787,10 @@ final class BuildsText {
                                                 ? span(GAP + build.title(), Theme.Classes.BOLD)
                                                 : Span.raw(GAP + build.title())))
                                 .toJavaList());
+                        return chosen
+                                ? row.append(Span.raw(" ".repeat(Math.max(0, width - row.width()))))
+                                        .patchStyle(styles.of(Theme.Classes.DIFF_CURSOR))
+                                : row;
                     })
                     .prepend(Line.from(dim("  " + (allBranches ? "  " + pad(forLabel, forWidth) : "")
                             + padRight(Messages.get("content.builds.commit"), columns.commit())

@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.content;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.collection.List;
@@ -164,7 +166,21 @@ class BuildsTextTest {
         assertFalse(lines.exists(line -> line.contains("· the last build")), lines.mkString("\n"));
         assertEquals(
                 List.of("✓▸abcdef0  14 Nov 01:00  20m00      5s     +16m00  Commit 25"),
-                lines.filter(line -> line.startsWith("✓▸")));
+                lines.filter(line -> line.startsWith("✓▸")).map(String::stripTrailing));
+    }
+
+    @Test
+    void theRowOfTheBuildPickedIsTintedAsFarAsTheEdge() {
+        Style tint = Style.EMPTY.bg(Color.BLUE);
+        Theme.SpanStyles styles = cssClass -> cssClass.equals(Theme.Classes.DIFF_CURSOR) ? tint : Style.EMPTY;
+        List<Line> lines = BuildsText.lines(picked(PUBLISH, 25), ZoneOffset.UTC, styles, 80);
+
+        Line row = lines.find(line -> text(line).startsWith("✓▸")).get();
+        assertEquals(80, row.width());
+        assertTrue(List.ofAll(row.spans()).forAll(span -> span.style().bg().isPresent()), text(row));
+        assertFalse(lines.filter(line -> text(line).startsWith("✓ "))
+                .exists(line -> List.ofAll(line.spans())
+                        .exists(span -> span.style().bg().isPresent())));
     }
 
     @Test
