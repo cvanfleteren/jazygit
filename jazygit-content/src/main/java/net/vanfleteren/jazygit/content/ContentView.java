@@ -539,8 +539,9 @@ public final class ContentView {
         return whenLoaded(
                 title,
                 view.builds(),
-                builds -> view.onGitHub()
-                        .flatMap(remote -> view.shownOf())
+                // Builds show only for a branch that follows one on GitHub.
+                builds -> view.shownOf()
+                        .filter(drawn -> view.onGitHub().isDefined())
                         .<Shown>map(drawn -> new Shown.Area(
                                 ContentArea.BUILDS,
                                 title,
@@ -789,7 +790,16 @@ public final class ContentView {
      * panel keeps its styled diff by, so it would style a diff without them again every minute.
      */
     private static Option<ShownRemarks> remarks(Model model, CommitFilesView view, List<CommitFile> files) {
-        return view.remarks().flatMap(remarks -> switch (remarks) {
+        return view.remarks().flatMap(remarks -> remarks(model, view, files, remarks));
+    }
+
+    /**
+     * The review threads {@code remarks} as they are shown with the diff of {@code files}, as
+     * {@link #remarks(Model, CommitFilesView, List)} says.
+     */
+    private static Option<ShownRemarks> remarks(
+            Model model, CommitFilesView view, List<CommitFile> files, Loadable<ReviewRemarks> remarks) {
+        return switch (remarks) {
             case Loadable.Loaded<ReviewRemarks>(ReviewRemarks read) ->
                 Option.of(new ShownRemarks(
                         read.threads(),
@@ -812,7 +822,7 @@ public final class ContentView {
                         view.sending(),
                         view.deleting()));
             case Loadable.Loading<ReviewRemarks>() -> Option.none();
-        });
+        };
     }
 
     /**
