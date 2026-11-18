@@ -36,10 +36,8 @@ import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
-import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.BorderBar;
-import net.vanfleteren.jazygit.ui.widgets.FilterLine;
 import net.vanfleteren.jazygit.ui.widgets.PasteTarget;
 
 /**
@@ -56,16 +54,22 @@ public final class ScrollArea {
     private final BooleanSupplier leaveScrollArea;
     private final Consumer<Focus> focus;
     private final Consumer<Msg> dispatch;
-    // The lines to type the query of a search in (ADR 126), and a line number (ADR 140), which keep where their cursor
-    // is; their text is the area's.
-    private final FilterLine searchLine = new FilterLine();
-    private final FilterLine numberLine = new FilterLine(AreaLines.GO_TO_LINE);
-    private final AreaKeys.Edits edits = new AreaKeys.Edits(searchLine::edit, numberLine::edit);
+    // What the area is searched with, and gone to a line of, asked in order (ADR 126, 140).
+    private final Vector<AreaTool> tools;
     private AreaState state;
 
-    public ScrollArea(
-            ContentArea area, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
+    /**
+     * @param tools the tools of the area ({@link AreaTool#standard()}), of its own: each keeps where the cursor of its
+     *              line is
+     */
+    ScrollArea(
+            ContentArea area,
+            Vector<AreaTool> tools,
+            BooleanSupplier leaveScrollArea,
+            Consumer<Focus> focus,
+            Consumer<Msg> dispatch) {
         this.area = area;
+        this.tools = tools;
         this.id = area.id().value();
         this.leaveScrollArea = leaveScrollArea;
         this.focus = focus;
@@ -91,13 +95,9 @@ public final class ScrollArea {
         boolean focused = focus.contains(area.id());
         AreaFit.Showing showing = new AreaFit.Showing(model, focused, shown, style, styles);
         Element fitted = new Fitted(fitted(showing), () -> fitted(showing));
-        // The line to type the query of a search in, or a line number, above the area that has the focus, which keeps
-        // it (ADR 126, 140).
-        Option<StyledElement<?>> line = state.search()
-                .typing()
-                .filter(ignored -> focused)
-                .<StyledElement<?>>map(searchLine::field)
-                .orElse(() -> state.line().number().filter(ignored -> focused).map(numberLine::field));
+        // The line a tool has open, as the one to type the query of a search in, above the area that has the focus,
+        // which keeps it (ADR 126, 140).
+        Option<StyledElement<?>> line = focused ? AreaTool.first(tools, tool -> tool.line(state)) : Option.none();
         Element shownWithLine = line.<Element>map(
                         field -> new PasteTarget(column(field, fitted).fill(), id, this::pasted))
                 .getOrElse(fitted);
@@ -129,16 +129,11 @@ public final class ScrollArea {
         return element.onKeyEvent(this::keys).onMouseEvent(this::mouse);
     }
 
+    /**
+     * Pastes {@code event} in the line a tool has open.
+     */
     private void pasted(PasteEvent event) {
-        state.search()
-                .typing()
-                .forEach(text -> dispatch.accept(new ContentSearchMsg.Edited(searchLine.paste(text, event))));
-        state.line()
-                .number()
-                .filter(ignored -> state.search().typing().isEmpty())
-                .map(text -> numberLine.paste(text, event))
-                .filter(AreaLines::isNumber)
-                .map(text -> AreaLines.edited(state, Viewport.of(element.state()), text))
+        AreaTool.first(tools, tool -> tool.pasted(state, Viewport.of(element.state()), event))
                 .forEach(this::apply);
     }
 
@@ -146,7 +141,7 @@ public final class ScrollArea {
      * What {@code event} does ({@link AreaKeys}): the area leaves on it, if nothing before that acts on it.
      */
     private EventResult keys(KeyEvent event) {
-        Reaction before = AreaKeys.beforeLeaving(state, Viewport.of(element.state()), event, edits);
+        Reaction before = AreaKeys.beforeLeaving(state, Viewport.of(element.state()), event, tools);
         if (before.handled()) {
             return applied(before);
         }
@@ -154,7 +149,7 @@ public final class ScrollArea {
         if (AreaKeys.leaving(state, event) && leaveScrollArea.getAsBoolean()) {
             return applied(Reaction.handled(before.state(), before.view()));
         }
-        return applied(AreaKeys.afterLeaving(before.state(), before.view(), event));
+        return applied(AreaKeys.afterLeaving(before.state(), before.view(), event, tools));
     }
 
     /**

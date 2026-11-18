@@ -3,10 +3,12 @@ package net.vanfleteren.jazygit.content;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.layout.Rect;
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
@@ -61,8 +63,7 @@ class AreaStateTest {
             +einundzwanzig
             """;
     private static final Option<Rect> NOWHERE = Option.none();
-    private static final AreaKeys.Edits NO_EDITS =
-            new AreaKeys.Edits((text, event) -> Option.none(), (text, event) -> Option.none());
+    private static final Vector<AreaTool> TOOLS = AreaTool.standard();
     private static final ContentPanel PANEL = new ContentPanel(Theme.SpanStyles.NONE, () -> false, focus -> {});
 
     @Test
@@ -85,7 +86,7 @@ class AreaStateTest {
         AreaFit.Fitted fitted = fit(model, initial(model));
         DiffCursor before = fitted.after().cursor().get();
 
-        Reaction pressed = AreaKeys.afterLeaving(fitted.after(), view(fitted), KeyEvent.ofChar('j'));
+        Reaction pressed = AreaKeys.afterLeaving(fitted.after(), view(fitted), KeyEvent.ofChar('j'), TOOLS);
 
         assertTrue(pressed.handled());
         DiffCursor after = pressed.state().cursor().get();
@@ -99,7 +100,7 @@ class AreaStateTest {
     void aFrameDrawnBeforeTheModelHasAMoveShowsWhereItTookTheCursor() {
         Model model = commit();
         AreaFit.Fitted fitted = fit(model, initial(model));
-        Reaction pressed = AreaKeys.afterLeaving(fitted.after(), view(fitted), KeyEvent.ofChar('j'));
+        Reaction pressed = AreaKeys.afterLeaving(fitted.after(), view(fitted), KeyEvent.ofChar('j'), TOOLS);
         int moved = pressed.state().cursor().get().stop();
 
         AreaFit.Fitted meanwhile = fit(model, pressed.state());
@@ -118,7 +119,7 @@ class AreaStateTest {
         Model model = commit();
         AreaState said = fit(model, initial(model)).after().withNotice(Option.of("search wrapped"));
 
-        Reaction pressed = AreaKeys.beforeLeaving(said, new Viewport(0, 10, 80, 20), KeyEvent.ofChar('x'), NO_EDITS);
+        Reaction pressed = AreaKeys.beforeLeaving(said, new Viewport(0, 10, 80, 20), KeyEvent.ofChar('x'), TOOLS);
 
         assertFalse(pressed.handled());
         assertEquals(Option.none(), pressed.state().notice());
@@ -129,7 +130,7 @@ class AreaStateTest {
         Model model = commit();
         AreaFit.Fitted fitted = fit(model, initial(model));
 
-        Reaction pressed = AreaKeys.afterLeaving(fitted.after(), view(fitted), KeyEvent.ofChar(':'));
+        Reaction pressed = AreaKeys.afterLeaving(fitted.after(), view(fitted), KeyEvent.ofChar(':'), TOOLS);
 
         assertEquals(Option.of(""), pressed.state().line().number());
         assertEquals(Vector.<Msg>of(new LineNumberMsg.Opened()), pressed.sent());
@@ -141,7 +142,7 @@ class AreaStateTest {
         AreaFit.Fitted fitted = fit(model, initial(model));
 
         Reaction pressed = AreaSearch.typed(
-                fitted.after(), view(fitted), "three", KeyEvent.ofKey(KeyCode.ENTER), NO_EDITS.search());
+                fitted.after(), view(fitted), "three", KeyEvent.ofKey(KeyCode.ENTER), (text, event) -> Option.none());
 
         assertEquals(2, pressed.sent().size(), pressed.sent().toString());
         assertEquals(new ContentSearchMsg.Submitted(), pressed.sent().get(0));
@@ -154,8 +155,8 @@ class AreaStateTest {
         Model model = commit();
         AreaFit.Fitted fitted = fit(model, initial(model));
 
-        Reaction pressed =
-                AreaLines.typed(fitted.after(), view(fitted), "3", KeyEvent.ofKey(KeyCode.ENTER), NO_EDITS.number());
+        Reaction pressed = AreaLines.typed(
+                fitted.after(), view(fitted), "3", KeyEvent.ofKey(KeyCode.ENTER), (text, event) -> Option.none());
 
         assertEquals(2, pressed.sent().size(), pressed.sent().toString());
         assertEquals(new LineNumberMsg.Closed(), pressed.sent().get(0));
@@ -163,6 +164,74 @@ class AreaStateTest {
         assertEquals(
                 Option.of(new Anchor.OnLine("a.txt", ReviewThread.Side.RIGHT, 3)),
                 moved.to().cursor());
+    }
+
+    @Test
+    void aToolAddedToTheAreaGetsItsKeysBeforeTheCursorMoves() {
+        Model model = commit();
+        AreaFit.Fitted fitted = fit(model, initial(model));
+        Msg said = new ContentSearchMsg.Cleared();
+        AreaTool third = new AreaTool() {
+            @Override
+            public Option<StyledElement<?>> line(AreaState state) {
+                return Option.none();
+            }
+
+            @Override
+            public Option<Reaction> typed(AreaState state, Viewport view, KeyEvent event) {
+                return Option.none();
+            }
+
+            @Override
+            public Option<Reaction> key(AreaState state, Viewport view, KeyEvent event) {
+                return Option.when(
+                        event.isChar('j'), () -> Reaction.handled(state, view).sending(said));
+            }
+
+            @Override
+            public Option<Reaction> pasted(AreaState state, Viewport view, PasteEvent event) {
+                return Option.none();
+            }
+        };
+
+        Reaction pressed =
+                AreaKeys.afterLeaving(fitted.after(), view(fitted), KeyEvent.ofChar('j'), TOOLS.append(third));
+
+        assertEquals(Vector.of(said), pressed.sent());
+        assertEquals(fitted.after().cursor(), pressed.state().cursor());
+    }
+
+    @Test
+    void theLineOfTheFirstToolWithOneOpenTakesTheKeysAndThePaste() {
+        Model model = commit();
+        AreaState both = fit(model, initial(model))
+                .after()
+                .withSearch(new AreaState.Search(Option.of("th"), Option.none()))
+                .withLine(new AreaState.GoToLine(Option.of("1"), Option.none()));
+        Viewport view = new Viewport(0, 10, 80, 20);
+
+        Reaction typed = AreaKeys.beforeLeaving(both, view, KeyEvent.ofChar('r'), TOOLS);
+        Option<Reaction> pasted = AreaTool.first(TOOLS, tool -> tool.pasted(both, view, new PasteEvent("ee")));
+
+        assertEquals(Vector.<Msg>of(new ContentSearchMsg.Edited("thr")), typed.sent());
+        assertEquals(Option.of(Vector.<Msg>of(new ContentSearchMsg.Edited("thee"))), pasted.map(Reaction::sent));
+    }
+
+    @Test
+    void aDigitPastedInTheLineNumberLineIsTypedThere() {
+        Model model = commit();
+        AreaState numbering =
+                fit(model, initial(model)).after().withLine(new AreaState.GoToLine(Option.of("1"), Option.none()));
+
+        Option<Reaction> pasted =
+                AreaTool.first(TOOLS, tool -> tool.pasted(numbering, new Viewport(0, 10, 80, 20), new PasteEvent("2")));
+        Option<Reaction> refused =
+                AreaTool.first(TOOLS, tool -> tool.pasted(numbering, new Viewport(0, 10, 80, 20), new PasteEvent("x")));
+
+        assertEquals(
+                Option.of(Option.of("12")),
+                pasted.map(reaction -> reaction.state().line().number()));
+        assertEquals(Option.none(), refused);
     }
 
     @Test

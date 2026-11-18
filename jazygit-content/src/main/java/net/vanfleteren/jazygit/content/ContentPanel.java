@@ -69,7 +69,9 @@ public final class ContentPanel {
             Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
         this.styles = styles;
         areas = List.of(ContentArea.values())
-                .toLinkedMap(area -> area, area -> new ScrollArea(area, leaveScrollArea, focus, dispatch));
+                .toLinkedMap(
+                        area -> area,
+                        area -> new ScrollArea(area, AreaTool.standard(), leaveScrollArea, focus, dispatch));
     }
 
     /**
