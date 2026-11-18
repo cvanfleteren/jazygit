@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.branches.branch.stack;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -90,7 +92,16 @@ public sealed interface StackMsg extends Msg {
     record AddChosen() implements StackMsg {}
 
     /**
-     * The user chose to stack the pull request of the branch of the menu on another one.
+     * Which of {@code eligible} are built on {@code top}, the top of stack {@code stack}, by their history, was read
+     * (ADR 148): for {@code top} and each branch found, the local branches that have its tip; nothing when it could
+     * not be read.
+     */
+    record BuiltOnRead(
+            int stack, BranchName top, Set<BranchName> eligible, Map<BranchName, List<BranchName>> containing)
+            implements StackMsg {}
+
+    /**
+     * The user chose to stack the branch of the menu on another one: its pull request, or one created for it.
      */
     record StackOnChosen() implements StackMsg {}
 

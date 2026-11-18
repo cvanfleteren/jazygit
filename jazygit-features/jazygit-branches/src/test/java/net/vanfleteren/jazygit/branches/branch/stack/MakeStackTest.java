@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -189,6 +190,72 @@ class MakeStackTest {
                 step(picking, new StackMsg.BottomChosen(1))
                         .popup(StackPopups.Pick.class)
                         .flatMap(StackPopups.Pick::refused));
+    }
+
+    // ADR 148: feat/x was made on feat/b with plain git: it has no parent, and no pull request.
+    private static final Branch X = Fixtures.branch(name("feat/x"), false, new Sha("bbbb"));
+
+    private static Model withX(Model model) {
+        return TestModels.localBranchesRead(
+                        model, List.of(MAIN, branch("feat/a"), branch("feat/b"), branch("feat/c"), X))
+                .model()
+                .mapRepo(repo -> repo.withParents(model.repo().parents()));
+    }
+
+    @Test
+    void addingFirstReadsWhichBranchesWithoutAParentAreBuiltOnTheTop() {
+        Update.Next adding = Update.update(menu(withX(STACKED), "feat/b"), new StackMsg.AddChosen());
+
+        assertTrue(
+                adding.cmds()
+                        .contains(new ReadBuiltOn(
+                                12,
+                                name("feat/b"),
+                                new Sha("aaaa"),
+                                HashMap.of(name("feat/x"), new Sha("bbbb")),
+                                HashMap.of(name("feat/c"), new Sha("aaaa")))),
+                adding.cmds().toString());
+        assertEquals(Option.none(), adding.model().popup());
+    }
+
+    @Test
+    void aBranchBuiltOnTheTopWithoutAPullRequestIsAskedToGetOneThere() {
+        Model picking = step(
+                step(menu(withX(STACKED), "feat/b"), new StackMsg.AddChosen()),
+                new StackMsg.BuiltOnRead(
+                        12,
+                        name("feat/b"),
+                        HashSet.of(name("feat/x")),
+                        HashMap.of(
+                                name("feat/b"), List.of(name("feat/b"), name("feat/c"), name("feat/x")),
+                                name("feat/x"), List.of(name("feat/x")))));
+        assertEquals(
+                List.of(name("feat/b"), name("feat/c"), name("feat/x")),
+                picking.popup(StackPopups.Pick.class)
+                        .get()
+                        .choice()
+                        .rows()
+                        .map(row -> row.branch().name()));
+
+        Model asking = step(step(picking, new StackMsg.TopChosen(2)), new StackMsg.PickConfirmed());
+
+        assertEquals(
+                Option.of(new StackPopups.CreateFirst(name("feat/x"), name("feat/b"), new PrNumber(97), Option.of(12))),
+                asking.popup());
+    }
+
+    @Test
+    void aBranchWithoutAPullRequestIsStackedOnAnotherByCreatingOne() {
+        Model choosing = step(menu(withX(STACKED), "feat/x"), new StackMsg.StackOnChosen());
+        StackPopups.StackOn popup = choosing.popup(StackPopups.StackOn.class).get();
+        assertEquals(Option.none(), popup.pullRequest());
+        StackPopups.Target onB = popup.targets()
+                .find(t -> t.branch().name().equals(name("feat/b")))
+                .get();
+
+        assertEquals(
+                Option.of(new StackPopups.CreateFirst(name("feat/x"), name("feat/b"), new PrNumber(97), Option.of(12))),
+                step(choosing, new StackMsg.TargetChosen(onB)).popup());
     }
 
     @Test

@@ -80,6 +80,12 @@ public interface Branches {
     Either<GitError, BaseCandidates> baseCandidates(BranchName branch, Sha tip);
 
     /**
+     * The local branches that have {@code commit}, in one {@code for-each-ref --contains}: those at it, and those
+     * built on it (ADR 148).
+     */
+    Either<GitError, List<BranchName>> containing(Sha commit);
+
+    /**
      * How far each local branch is from its base, by its name, for those that have a base (ADR 46): the branch it was
      * made from, as {@code parents} has it, else {@code main}; of each, the one on {@code origin} when it is there,
      * else the local one; never the branch itself. The branches and their bases are those of {@code tips}, at the

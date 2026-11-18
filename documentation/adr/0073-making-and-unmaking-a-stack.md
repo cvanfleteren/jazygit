@@ -150,3 +150,6 @@ branches pane shows them.
 
 Amended by ADR 99: the stack menu checks out a stack, or updates its branches, also from the pull requests screen; that
 entry is disabled, with why, where it does not apply.
+
+Amended by ADR 148: "Add to stack…" also lists branches built on the top by their history, starts with a top
+chosen, and asks to create the pull request of a branch without one; "Stack on…" is offered on such a branch too.

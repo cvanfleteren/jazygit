@@ -61,6 +61,19 @@ public sealed interface CreatePullRequestMsg extends Msg {
     record StackToggled() implements CreatePullRequestMsg {}
 
     /**
+     * The user confirmed creating the pull request of a branch to put it on a stack, as the stack menu asked
+     * (ADR 148).
+     */
+    record StackRequested() implements CreatePullRequestMsg {}
+
+    /**
+     * The branch a pull request is created for to put it on a stack was recorded as built on its base, by running
+     * {@code commands}: asking what the pull request says comes next (ADR 148).
+     */
+    record ParentRecorded(CreatePullRequestCmd.RecordParent cmd, List<ExecutedCommand> commands)
+            implements CreatePullRequestMsg {}
+
+    /**
      * The user confirmed what the new pull request says.
      */
     record Confirmed() implements CreatePullRequestMsg {}

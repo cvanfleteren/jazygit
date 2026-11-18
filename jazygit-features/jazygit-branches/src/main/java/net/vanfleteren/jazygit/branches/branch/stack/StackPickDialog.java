@@ -68,14 +68,26 @@ final class StackPickDialog implements PopupView {
                             .toJavaArray(StyledElement[]::new))
                     .selected(line)
                     .onKeyEvent(event -> keys(event, cursor, line, choice.rows().size()));
+            // Adding, a lowest branch without a pull request is no refusal: Enter creates it (ADR 148).
+            Option<String> creating = pick.refused().isEmpty() && pick.addTo().isDefined()
+                    ? choice.toCreate()
+                            .map(row -> Messages.get(
+                                    "branches.dialog.addToStack.create",
+                                    row.branch().name().value(),
+                                    choice.rows().head().branch().name().value()))
+                    : Option.none();
             Option<String> why = pick.refused()
                     .map(Messages::get)
-                    .orElse(() -> pick.plan()
-                            .swap()
-                            .toOption()
-                            .map(refusal -> why(refusal, pick.addTo().isDefined())));
+                    .orElse(() -> creating.isDefined()
+                            ? Option.none()
+                            : pick.plan()
+                                    .swap()
+                                    .toOption()
+                                    .map(refusal ->
+                                            why(refusal, choice, pick.addTo().isDefined())));
             List<StyledElement<?>> under = why.map(text ->
                             List.<StyledElement<?>>of(text(""), text(text).addClass(Theme.Classes.ERROR)))
+                    .orElse(() -> creating.map(text -> List.<StyledElement<?>>of(text(""), text(text))))
                     .getOrElse(List.empty());
             String title = pick.addTo()
                     .map(stack -> Messages.get("branches.dialog.addToStack.title", String.valueOf(stack)))
@@ -83,6 +95,7 @@ final class StackPickDialog implements PopupView {
                             .map(base -> Messages.get("branches.dialog.makeStack.title", base.value()))
                             .getOrElse(() -> Messages.get("branches.dialog.makeStack.titleNoBase")));
             int width = lines.appendAll(why)
+                    .appendAll(creating)
                     .append(Messages.get(HINT))
                     .append(title)
                     .map(TextWidth::of)
@@ -136,16 +149,22 @@ final class StackPickDialog implements PopupView {
     }
 
     /**
-     * Why the chosen branches make no stack, or none to add when {@code adding}.
+     * Why the chosen branches of {@code choice} make no stack, or none to add when {@code adding}: then naming the top
+     * of the stack, and saying when nothing is built on it (ADR 148).
      */
-    static String why(Refusal refusal, boolean adding) {
+    static String why(Refusal refusal, StackChoice choice, boolean adding) {
+        String top = choice.rows().head().branch().name().value();
         return switch (refusal) {
             case Refusal.NoPullRequest(List<BranchName> branches) ->
                 Messages.get("branches.dialog.makeStack.noPullRequests", names(branches));
             case Refusal.Stacked(List<BranchName> branches) ->
                 Messages.get("branches.dialog.makeStack.stacked", names(branches));
             case Refusal.TooFew() ->
-                Messages.get(adding ? "branches.dialog.addToStack.nothing" : "branches.dialog.makeStack.tooFew");
+                !adding
+                        ? Messages.get("branches.dialog.makeStack.tooFew")
+                        : choice.rows().size() == 1
+                                ? Messages.get("branches.dialog.addToStack.none", top)
+                                : Messages.get("branches.dialog.addToStack.nothing", top);
         };
     }
 

@@ -180,9 +180,7 @@ def test_a_branch_built_on_the_top_of_a_stack_is_added_to_it_from_the_menu(repo,
     ui.app.wait_for("(a) add to the stack…")
     ui.app.press("a")
     ui.app.wait_for("(t) top")
-    # The top of the stack is the bottom; the branch built on it is chosen as the new top.
-    ui.app.press("j")
-    ui.app.press("t")
+    # The top of the stack is the bottom; the branch built on it is chosen as the new top at first (ADR 148).
     ui.app.press("enter")
 
     ui.app.eventually(
@@ -190,6 +188,35 @@ def test_a_branch_built_on_the_top_of_a_stack_is_added_to_it_from_the_menu(repo,
                  "-F", "pull_requests[]=3"] in gh.calls(),
         "the branch added on GitHub")
     assert not any(call[:2] == ["pr", "edit"] for call in gh.calls()), "no base changed"
+
+
+def test_a_branch_without_a_pull_request_on_the_top_of_a_stack_gets_one_from_the_menu(repo, origin, gh, jazygit):
+    repository = two_pushed_branches(repo, origin)
+    # feat/c is made on feat/b with plain git, as an agent does: no parent recorded, no pull request (ADR 148).
+    repo("checkout", "--quiet", "-b", "feat/c")
+    repo.commit("Add c", **{"c.txt": "c\n"})
+    repo("push", "--quiet", "-u", "origin", "feat/c")
+    stack = stacked(repository, [(1, "feat/a"), (2, "feat/b")])
+    gh.answer((LISTED, listed(repository, [node(repository, 2, "feat/b", "feat/a", stack, 2),
+                                           node(repository, 1, "feat/a", "main", stack, 1)])))
+    repo("checkout", "--quiet", "feat/b")
+    ui = jazygit()
+    ui.app.eventually(lambda: "stack #12 → main" in ui.app.text(), "the stack shown")
+    ui.branches.select("feat/b")
+
+    ui.app.press("s")
+    ui.app.wait_for("(a) add to the stack…")
+    ui.app.press("a")
+    ui.app.wait_for("feat/c has no pull request: Enter creates one on feat/b")
+    ui.app.press("enter")
+    ui.app.wait_for("Add feat/c to stack #12")
+    ui.app.press("enter")
+
+    ui.app.eventually(
+        # Unset until it is recorded: --default keeps git config from failing while it is waited for.
+        lambda: repo("config", "--default", "", "branch.feat/c.gh-merge-base") == "feat/b",
+        "feat/b recorded as its parent")
+    ui.app.wait_for("Stack on #2")
 
 
 def test_a_pull_request_is_stacked_on_another_from_the_menu_after_changing_its_base(repo, origin, gh, jazygit):

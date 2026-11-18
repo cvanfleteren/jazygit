@@ -17,7 +17,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
- * The branches a branch could be built on, and setting the one it is (ADR 143).
+ * The branches a branch could be built on, and setting the one it is (ADR 143); the branches built on a commit
+ * (ADR 148).
  */
 class CliBaseCandidatesTest {
 
@@ -148,15 +149,34 @@ class CliBaseCandidatesTest {
         branches.setParent(TOPIC, Option.none()).get();
     }
 
+    // ADR 148: the branches built on a commit, and those at it, are the ones that have it.
+    @Test
+    void theLocalBranchesThatHaveACommitAreThoseAtItAndBuiltOnIt() throws Exception {
+        git("checkout", "-q", "-b", "topic");
+        commit("topic");
+        git("branch", "copy");
+        git("checkout", "-q", "-b", "stacked/above");
+        commit("above");
+        git("checkout", "-q", "-b", "beside", "main");
+        commit("beside");
+
+        assertEquals(
+                List.of(new BranchName("copy"), new BranchName("stacked/above"), TOPIC),
+                new CliBranches(repo).containing(new Sha(tip())).get());
+    }
+
     private BaseCandidates candidates() throws Exception {
-        String tip = new ProcessExecutor()
+        return new CliBranches(repo).baseCandidates(TOPIC, new Sha(tip())).get();
+    }
+
+    private String tip() throws Exception {
+        return new ProcessExecutor()
                 .command("git", "-C", repo.toString(), "rev-parse", "topic")
                 .readOutput(true)
                 .exitValueNormal()
                 .execute()
                 .outputUTF8()
                 .strip();
-        return new CliBranches(repo).baseCandidates(TOPIC, new Sha(tip)).get();
     }
 
     private static BaseCandidate local(BranchName name, int own, int theirs) {

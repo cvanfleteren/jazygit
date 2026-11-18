@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.branches.branch.BranchCmd;
+import net.vanfleteren.jazygit.branches.branch.base.SetBaseCmd;
 import net.vanfleteren.jazygit.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.branches.branch.stack.StackCmd;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
@@ -197,6 +198,33 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         private Msg read(Option<String> subject) {
             return new CreatePullRequestMsg.BaseTitleRead(branch, base, subject);
+        }
+    }
+
+    /**
+     * Records the base of a branch as its parent, as {@code set} does, before its pull request is created to put it on
+     * a stack (ADR 148): the create dialog then offers that base first, also after pushing the branch.
+     */
+    record RecordParent(SetBaseCmd set) implements CreatePullRequestCmd, BranchCmd {
+
+        @Override
+        public BranchName branch() {
+            return set.branch();
+        }
+
+        @Override
+        public Operation operation() {
+            return set.operation();
+        }
+
+        @Override
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
+            return set.perform(git);
+        }
+
+        @Override
+        public Msg succeeded(List<ExecutedCommand> commands) {
+            return new CreatePullRequestMsg.ParentRecorded(this, commands);
         }
     }
 

@@ -118,6 +118,30 @@ class StackPickDialogTest {
         assertTrue(screen.contains("The bottom is this branch or one below it"), screen);
     }
 
+    // ADR 148: adding to a stack whose top has nothing built on it says so.
+    @Test
+    void addingSaysWhenNoBranchIsBuiltOnTheTop() throws Exception {
+        StackChoice alone = StackChoice.above(
+                branch("feat/b"), List.of(branch("feat/b")), HashMap.empty(), b -> OPEN.get(b.name()));
+
+        String screen = render(new StackPopups.Pick(alone, Option.none(), Option.of(12)));
+
+        assertTrue(screen.contains("No branch is built on feat/b"), screen);
+    }
+
+    @Test
+    void addingABranchWithoutAPullRequestSaysEnterCreatesIt() throws Exception {
+        StackChoice above = StackChoice.above(
+                branch("feat/c"),
+                List.of(branch("feat/c"), branch("feat/d")),
+                HashMap.of(name("feat/d"), name("feat/c")),
+                b -> OPEN.get(b.name()));
+
+        String screen = render(new StackPopups.Pick(above, Option.none(), Option.of(12)));
+
+        assertTrue(screen.contains("feat/d has no pull request: Enter creates one on feat/c"), screen);
+    }
+
     private String render(StackPopups.Pick pick) throws Exception {
         return render(TestModels.loaded(), pick);
     }

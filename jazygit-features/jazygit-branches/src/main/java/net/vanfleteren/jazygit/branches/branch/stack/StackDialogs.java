@@ -66,10 +66,14 @@ public final class StackDialogs {
     public static final PickDialog.Spec<StackPopups.StackOn, StackPopups.Target> STACK_ON = new PickDialog.Spec<>(
             "stack-on",
             StackPopups.StackOn.class,
-            popup -> Messages.get(
-                    "branches.dialog.stackOn.title",
-                    String.valueOf(popup.pullRequest().number().value()),
-                    popup.branch().name().value()),
+            popup -> popup.pullRequest()
+                    .map(pr -> Messages.get(
+                            "branches.dialog.stackOn.title",
+                            String.valueOf(pr.number().value()),
+                            popup.branch().name().value()))
+                    .getOrElse(() -> Messages.get(
+                            "branches.dialog.stackOn.titleNoPullRequest",
+                            popup.branch().name().value())),
             popup -> popup.targets()
                     .map(target -> new PickDialog.Row<>(
                             target,
