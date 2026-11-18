@@ -16,6 +16,7 @@ import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 import java.util.function.IntUnaryOperator;
 import net.vanfleteren.jazygit.content.ContentView.Body;
+import net.vanfleteren.jazygit.content.ContentView.ShownChanges;
 import net.vanfleteren.jazygit.content.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.content.diff.Halves;
 import net.vanfleteren.jazygit.content.diff.RichDiff;
@@ -521,13 +522,7 @@ public final class ContentText {
      * area, its halves each half of it (ADR 139).
      */
     public static boolean split(Body body) {
-        Option<DiffLook> look = switch (body) {
-            case Body.Diff(var shown, DiffLook drawn, var remarks) -> Option.of(drawn);
-            case Body.CommitChanges(var commit, var changes, DiffLook drawn) -> Option.of(drawn);
-            case Body.StashChanges(var stash, var changes, DiffLook drawn) -> Option.of(drawn);
-            case Body.BranchLog _, Body.Builds _, Body.PullRequest _, Body.Note _ -> Option.none();
-        };
-        return look.exists(drawn -> drawn.style() == DiffStyle.SPLIT);
+        return body.changesShown().exists(changes -> changes.look().style() == DiffStyle.SPLIT);
     }
 
     /**
@@ -545,13 +540,7 @@ public final class ContentText {
     }
 
     private static Option<Version> version(Body body) {
-        Option<ShownDiff> diff = switch (body) {
-            case Body.Diff(ShownDiff shown, var look, var remarks) -> Option.of(shown);
-            case Body.CommitChanges(var commit, ShownDiff changes, var look) -> Option.of(changes);
-            case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
-            case Body.BranchLog _, Body.Builds _, Body.PullRequest _, Body.Note _ -> Option.none();
-        };
-        return diff.flatMap(ShownDiff::version);
+        return body.changesShown().flatMap(changes -> changes.diff().version());
     }
 
     /**
@@ -561,7 +550,7 @@ public final class ContentText {
      * files has ranges.
      */
     public static Option<DiffStops.HunkAt> markedHunk(Body body, Anchor mark) {
-        return body instanceof Body.Diff(ShownDiff diff, var look, var remarks)
+        return body instanceof Body.Diff(ShownChanges(ShownDiff diff, var look), var remarks)
                 ? DiffLines.of(diff.folded().diff().diff())
                         .lines()
                         // A context line by either anchor, as the split view has it a stop on both sides (ADR 139).

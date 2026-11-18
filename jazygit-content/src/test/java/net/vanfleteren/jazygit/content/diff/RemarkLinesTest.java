@@ -249,9 +249,9 @@ class RemarkLinesTest {
 
     @Test
     void theHunkOfARangeIsFoundInTheDiffWithoutDrawingIt() {
-        ContentView.Body body = new ContentView.Body.Diff(
+        ContentView.Body body = new ContentView.Body.Diff(new ContentView.ShownChanges(
                 new ShownDiff(DiffText.of(PAIRS + DIFF.replace("a.txt", "b.txt")), Option.none()),
-                new DiffLook(DiffStyle.RICH, true, true));
+                new DiffLook(DiffStyle.RICH, true, true)));
 
         assertEquals(
                 Option.of(new DiffStops.HunkAt(0, 0)),

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.branches.branch.commits.BranchCommitsMsg;
@@ -13,6 +14,7 @@ import net.vanfleteren.jazygit.changes.diff.VersionMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
+import net.vanfleteren.jazygit.content.ContentView.ShownChanges;
 import net.vanfleteren.jazygit.content.ContentView.Tone;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
@@ -168,11 +170,14 @@ class ContentViewTest {
         return Update.update(logRead, new BranchCommitsMsg.Opened(feature)).model();
     }
 
-    @Test
-    void theTitleSaysWhichVersionShowsWhileItIsReadAndWhenItCouldNotBe() {
-        String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
-        DiffText changes = DiffText.of(header + "@@ -1 +1 @@\n-a\n+b\n");
-        ScrolledContent content = new ScrolledContent.StashChanges(new Sha("5555"), changes);
+    private static final DiffText STASHED =
+            DiffText.of("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-a\n+b\n");
+
+    /**
+     * The new version of the file a stash changed, {@link #STASHED}, as it is asked for: still read.
+     */
+    private static Version stashVersion() {
+        ScrolledContent content = new ScrolledContent.StashChanges(new Sha("5555"), STASHED);
         ReadVersion read = ReadVersion.of(
                 new AreaId("stash-changes"),
                 content,
@@ -180,7 +185,13 @@ class ContentViewTest {
                         new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
                 "a.txt",
                 DiffOptions.DEFAULT);
-        Version asked = new Version(content, "a.txt", Option.of(FileVersion.NEW), read.file(), Loadable.loading());
+        return new Version(content, "a.txt", Option.of(FileVersion.NEW), read.file(), Loadable.loading());
+    }
+
+    @Test
+    void theTitleSaysWhichVersionShowsWhileItIsReadAndWhenItCouldNotBe() {
+        DiffText changes = STASHED;
+        Version asked = stashVersion();
 
         assertEquals("Stash · new version (reading)", ContentView.versioned("Stash", asked));
         assertEquals(
@@ -206,6 +217,33 @@ class ContentViewTest {
                         asked.withShown(Option.of(FileVersion.ORIGINAL))
                                 .withRendered(true)
                                 .withWhole(new Loadable.Loaded<>(changes))));
+    }
+
+    @Test
+    void theTitleSaysAVersionIsBlamedAndWhileItsBlameIsReadOrWhenItCouldNotBe() {
+        Version blamed = stashVersion().withBlamed(true);
+        Version read = blamed.withWhole(new Loadable.Loaded<>(STASHED));
+
+        // While the file is read, that is what the title says (ADR 147).
+        assertEquals("Stash · new version, blamed (reading)", ContentView.versioned("Stash", blamed));
+        assertEquals("Stash · new version, blamed (reading blame)", ContentView.versioned("Stash", read));
+        assertEquals(
+                "Stash · new version, blamed",
+                ContentView.versioned(
+                        "Stash",
+                        read.withBlames(Blames.none(false)
+                                .with(FileVersion.NEW, new Loadable.Loaded<>(new Blame(Vector.empty()))))));
+        assertEquals(
+                "Stash · original, blamed (blame could not be read)",
+                ContentView.versioned(
+                        "Stash",
+                        read.withShown(Option.of(FileVersion.ORIGINAL))
+                                .withBlames(Blames.none(false)
+                                        .with(
+                                                FileVersion.ORIGINAL,
+                                                new Loadable.Failed<>(TestModels.refused("boom"))))));
+        // Rendered, it is not blamed, so the title says only that it is rendered.
+        assertEquals("Stash · new version, rendered", ContentView.versioned("Stash", read.withRendered(true)));
     }
 
     @Test
@@ -335,7 +373,7 @@ class ContentViewTest {
                         ContentArea.COMMIT,
                         "Commit: aaaa",
                         new ScrolledContent.CommitChanges(commit, DiffText.of("+added line\n")),
-                        new Body.CommitChanges(commit, whole("+added line\n"), PLAIN_LOOK)),
+                        new Body.CommitChanges(commit, new ShownChanges(whole("+added line\n"), PLAIN_LOOK))),
                 ContentView.of(selected, CommitsPanel.PANE));
     }
 
@@ -363,7 +401,7 @@ class ContentViewTest {
                         ContentArea.COMMIT_FILE,
                         "aaaa · src/a.txt",
                         new ScrolledContent.FileChanges(of, List.of(file), DiffText.of("+a\n")),
-                        new Body.Diff(whole("+a\n"), RICH_LOOK)),
+                        new Body.Diff(new ShownChanges(whole("+a\n"), RICH_LOOK))),
                 ContentView.of(selected, FilesPanel.PANE));
         assertEquals(note("Files of aaaa", Placeholders.loading()), ContentView.of(open, FilesPanel.PANE));
     }
@@ -486,14 +524,16 @@ class ContentViewTest {
                 List.of(PLAIN_LOOK, PLAIN_LOOK),
                 ContentView.of(selected, FilesPanel.PANE)
                         .areas()
-                        .map(area ->
-                                assertInstanceOf(Body.Diff.class, area.body()).look()));
+                        .map(area -> assertInstanceOf(Body.Diff.class, area.body())
+                                .changes()
+                                .look()));
         assertEquals(
                 List.of(RICH_LOOK, RICH_LOOK),
                 ContentView.of(rich, FilesPanel.PANE)
                         .areas()
-                        .map(area ->
-                                assertInstanceOf(Body.Diff.class, area.body()).look()));
+                        .map(area -> assertInstanceOf(Body.Diff.class, area.body())
+                                .changes()
+                                .look()));
     }
 
     @Test
@@ -506,6 +546,7 @@ class ContentViewTest {
                 "No changes besides whitespace\n",
                 assertInstanceOf(Body.CommitChanges.class, commit.body())
                         .changes()
+                        .diff()
                         .text());
     }
 
@@ -522,7 +563,7 @@ class ContentViewTest {
                         ContentArea.DIVERGENCE,
                         "Commit: cccc",
                         new ScrolledContent.CommitChanges(plain("cccc"), DiffText.of("+added line")),
-                        new Body.CommitChanges(plain("cccc"), whole("+added line"), PLAIN_LOOK)),
+                        new Body.CommitChanges(plain("cccc"), new ShownChanges(whole("+added line"), PLAIN_LOOK))),
                 ContentView.of(selected, BranchesPanel.PANE));
     }
 
@@ -572,6 +613,7 @@ class ContentViewTest {
                 "+added line",
                 assertInstanceOf(Body.CommitChanges.class, commit.body())
                         .changes()
+                        .diff()
                         .text());
     }
 
@@ -604,7 +646,7 @@ class ContentViewTest {
                         ContentArea.STASH,
                         "Stash: stash@{0}",
                         new ScrolledContent.StashChanges(stash.sha(), DiffText.of("+added line\n")),
-                        new Body.StashChanges(stash, whole("+added line\n"), PLAIN_LOOK)),
+                        new Body.StashChanges(stash, new ShownChanges(whole("+added line\n"), PLAIN_LOOK))),
                 ContentView.of(selected, StashPanel.PANE));
     }
 

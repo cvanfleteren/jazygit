@@ -276,7 +276,7 @@ public final class ScrollArea {
                 at.cursor(),
                 at.mark(),
                 side);
-        review = shown.body() instanceof Body.Diff(var diff, var look, var remarks) && remarks.isDefined();
+        review = shown.body() instanceof Body.Diff(var _, var remarks) && remarks.isDefined();
         // What the title said of the search lasts until the next key in the area: the area losing the focus, or
         // showing another body, is past that too (ADR 126).
         if (!focused || last.isEmpty()) {

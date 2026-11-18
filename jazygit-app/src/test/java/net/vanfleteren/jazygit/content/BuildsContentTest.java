@@ -55,6 +55,7 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
+import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -268,6 +269,42 @@ class BuildsContentTest {
         assertEquals(
                 new Shown.Message(
                         "Builds: main · last 0 commits", "origin/main is not on GitHub", ContentView.Tone.DIM),
+                content(read));
+    }
+
+    @Test
+    void commitsWithoutBuildsSayHowManyWereRead() {
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+
+        Model read = Update.update(
+                        shown,
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN, Option.none(), Option.of(new BuildsPage(List.empty(), 25, Option.none()))))
+                .model();
+
+        assertEquals(
+                new Shown.Message(
+                        "Builds: main · last 25 commits",
+                        "No builds on the last 25 commits of origin/main on GitHub",
+                        ContentView.Tone.DIM),
+                content(read));
+    }
+
+    @Test
+    void commitsWithoutBuildsWhileMoreAreReadShowLoading() {
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+
+        Model read = Update.update(
+                        shown,
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN,
+                                Option.none(),
+                                Option.of(new BuildsPage(List.empty(), 25, Option.of("c25")))))
+                .model();
+
+        assertEquals(
+                new Shown.Message(
+                        "Builds: main · reading, 25 commits so far", Placeholders.loading(), ContentView.Tone.DIM),
                 content(read));
     }
 
