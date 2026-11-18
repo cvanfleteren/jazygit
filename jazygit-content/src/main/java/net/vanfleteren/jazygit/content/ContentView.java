@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.Filtering;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.state.diff.WholeFile;
@@ -81,6 +82,34 @@ public final class ContentView {
             return pullRequest(model);
         }
         return expanded(model, mirrored(model, focus));
+    }
+
+    /**
+     * What the content panel shows next to the pane that has the focus, {@code focus}, as far as a step of {@code J}
+     * or {@code K} past a file the diff filters hide all of needs it (ADR 144): what each area shows, and whether all
+     * the changes they show are hidden; none when an area shows no diff, as while one is read.
+     */
+    public static Filtered filtered(Model model, Option<Focus> focus) {
+        List<Shown.Area> areas = of(model, focus).areas();
+        List<Option<ShownDiff>> diffs = areas.map(area -> switch (area.body()) {
+            case Body.Diff(ShownDiff diff, var look, var remarks) -> Option.of(diff);
+            case Body.CommitChanges(var commit, ShownDiff changes, var look) -> Option.of(changes);
+            case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
+            default -> Option.<ShownDiff>none();
+        });
+        return new Filtered(
+                areas.map(Shown.Area::content),
+                Option.when(
+                        diffs.nonEmpty() && diffs.forAll(Option::isDefined),
+                        () -> diffs.flatMap(diff -> diff).forAll(diff -> {
+                            Expansion.Folded folded = diff.folded();
+                            return folded.diff().files().nonEmpty()
+                                    && folded.diff()
+                                            .files()
+                                            .forAll(file -> folded.hiding(
+                                                            file.file().path())
+                                                    .all());
+                        })));
     }
 
     /**
@@ -146,15 +175,21 @@ public final class ContentView {
                 .version(area.area().id(), area.content())
                 .orElse(() -> asVersion(model, area.content()));
         DiffContext context = model.preferences().context();
+        Filtering filtering = model.filtering(area.area().id(), area.content());
         Body body = switch (area.body()) {
             case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
-                new Body.Diff(diff.expanded(expansion, context).versioned(version), look, remarks);
+                new Body.Diff(
+                        diff.expanded(expansion, context).versioned(version).filtered(filtering), look, remarks);
             case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
                 new Body.CommitChanges(
-                        commit, changes.expanded(expansion, context).versioned(version), look);
+                        commit,
+                        changes.expanded(expansion, context).versioned(version).filtered(filtering),
+                        look);
             case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
                 new Body.StashChanges(
-                        stash, changes.expanded(expansion, context).versioned(version), look);
+                        stash,
+                        changes.expanded(expansion, context).versioned(version).filtered(filtering),
+                        look);
             case Body other -> other;
         };
         // A file without changes has one version: the title says only whether it is rendered (ADR 108).
@@ -801,27 +836,35 @@ public final class ContentView {
             Option<String> note,
             Option<Expansion> expansion,
             DiffContext context,
-            Option<Version> version) {
+            Option<Version> version,
+            Filtering filtering) {
 
         /**
          * {@code diff} and its note, as git gives it.
          */
         public ShownDiff(DiffText diff, Option<String> note) {
-            this(diff, note, Option.none(), DiffContext.DEFAULT, Option.none());
+            this(diff, note, Option.none(), DiffContext.DEFAULT, Option.none(), Filtering.NONE);
         }
 
         /**
          * This diff with the lines of {@code expanded} shown, folded to {@code folding} lines of context (ADR 77).
          */
         ShownDiff expanded(Option<Expansion> expanded, DiffContext folding) {
-            return new ShownDiff(diff, note, expanded, folding, version);
+            return new ShownDiff(diff, note, expanded, folding, version, filtering);
         }
 
         /**
          * This diff with its file shown as {@code shown} has it, if it shows a version of it (ADR 102).
          */
         ShownDiff versioned(Option<Version> shown) {
-            return new ShownDiff(diff, note, expansion, context, shown);
+            return new ShownDiff(diff, note, expansion, context, shown, filtering);
+        }
+
+        /**
+         * This diff with the hunks {@code hiding} hides cut out (ADR 144).
+         */
+        ShownDiff filtered(Filtering hiding) {
+            return new ShownDiff(diff, note, expansion, context, version, hiding);
         }
 
         /**
@@ -833,8 +876,8 @@ public final class ContentView {
                     .map(kept -> kept.folded(diff.parsed(), context))
                     .getOrElse(() -> Expansion.Folded.of(diff.parsed()));
             Expansion.Folded folded =
-                    version.map(shown -> shown.applied(expanded)).getOrElse(expanded);
-            return note.map(line -> new Expansion.Folded(folded.diff().withNote(line), folded.files()))
+                    filtering.hide(version.map(shown -> shown.applied(expanded)).getOrElse(expanded), diff.parsed());
+            return note.map(line -> folded.withDiff(folded.diff().withNote(line)))
                     .getOrElse(folded);
         }
 
@@ -880,4 +923,12 @@ public final class ContentView {
             return List.of(values()).find(mirrored -> mirrored.id.equals(pane.value()));
         }
     }
+
+    /**
+     * What the content panel shows, as {@link #filtered} gives it.
+     *
+     * @param contents  what each of its areas shows
+     * @param allHidden whether the diff filters hide all the changes they show; none when one shows no diff
+     */
+    public record Filtered(List<ScrolledContent> contents, Option<Boolean> allHidden) {}
 }

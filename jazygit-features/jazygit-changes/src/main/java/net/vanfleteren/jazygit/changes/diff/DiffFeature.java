@@ -1,10 +1,12 @@
 package net.vanfleteren.jazygit.changes.diff;
 
 import net.vanfleteren.jazygit.ui.Feature;
+import net.vanfleteren.jazygit.ui.FeatureAction;
 
 /**
  * The diffs: the files of a commit or stash, expanding and folding the context, the versions of a file shown, and
- * searching what the content panel shows (ADR 126), and going to a line of it (ADR 140).
+ * searching what the content panel shows (ADR 126), going to a line of it (ADR 140), and the filters that hide hunks
+ * of it (ADR 144).
  */
 public final class DiffFeature {
 
@@ -17,7 +19,8 @@ public final class DiffFeature {
             FoldAction.ACTION,
             VersionAction.ACTION,
             ContentSearchAction.ACTION,
-            GoToLineAction.ACTION);
+            GoToLineAction.ACTION,
+            FeatureAction.ofPopups(DiffFiltersDialog::popups));
 
     private DiffFeature() {}
 }

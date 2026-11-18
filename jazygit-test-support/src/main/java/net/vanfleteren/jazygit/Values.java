@@ -28,6 +28,18 @@ public final class Values {
      */
     public static final String PACKED = "net.vanfleteren.jazygit.git.model.ParsedDiff$ParsedLine";
 
+    /**
+     * A regex of a diff filter, compiled: no record, as two are equal when they were written alike, which a record of
+     * its source and its {@link java.util.regex.Pattern} would not be (ADR 144). Its fields are values.
+     */
+    public static final String REGEX = "net.vanfleteren.jazygit.git.model.Regex";
+
+    /**
+     * The classes of the models that are no records but are taken for values, by name: each says why where it is
+     * declared above.
+     */
+    public static final List<String> EXCEPTIONS = List.of(PACKED, REGEX);
+
     // The JDK's types, outside java.time, that never change.
     private static final List<Class<?>> VALUES = List.of(
             String.class,
@@ -103,7 +115,7 @@ public final class Values {
                         || pkg.equals("java.time")
                         || pkg.equals("java.util.function")
                         || VALUES.exists(raw::isEquivalentTo)
-                        || raw.getName().equals(PACKED)
+                        || EXCEPTIONS.contains(raw.getName())
                         || pkg.startsWith("net.vanfleteren.jazygit") && raw.isInterface())
                 && (!(type instanceof JavaParameterizedType parameterized)
                         || pkg.equals("java.util.function")

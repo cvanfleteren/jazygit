@@ -270,6 +270,52 @@ class JazygitAppFileStepTest {
     }
 
     @Test
+    void jStepsPastTheFilesWhoseChangesTheDiffFiltersHideAll() throws Exception {
+        TestApp app = new TestApp(
+                new Env(withImportsOnly(), StubGitHub.of()),
+                new SettingsStore.Loaded(
+                        Settings.DEFAULT.withDiffStyle(DiffStyle.RICH).withDiffFilters(List.of("java-imports")),
+                        Option.none()));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().preview().commitDetail().isDefined());
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press('F');
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView()
+                            .files()
+                            .commitFiles()
+                            .exists(view -> view.files().toOption().isDefined()));
+            for (int row = 0;
+                    row < 5
+                            && !onRenderThread(testRunner, () -> commitFileShown(app.model()))
+                                    .contains("A.java");
+                    row++) {
+                pilot.press(KeyCode.DOWN);
+                pilot.pause();
+            }
+            awaitModel(testRunner, app, model -> commitFileShown(model).contains("A.java"));
+            pilot.press(KeyCode.RIGHT);
+            pilot.pause();
+
+            // B.java and C.java change only their imports, whose diffs are read as J reaches them.
+            pilot.press('J');
+
+            awaitModel(testRunner, app, model -> commitFileShown(model).contains("D.java"));
+            pilot.pause();
+            assertFocused(testRunner, AreaId.COMMIT_FILE);
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
     void kRunFromTheHelpMovesToThePreviousFileAndTheDiffGetsTheFocusBack() throws Exception {
         TestApp app = new TestApp(
                 new Env(SampleData.git(), StubGitHub.of()),
@@ -356,6 +402,41 @@ class JazygitAppFileStepTest {
             public Either<GitError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
                 return Either.right(DiffText.of(files.map(file ->
                                 "diff --git a/" + file.path() + " b/" + file.path() + "\n@@ -1 +1 @@\n-old\n+new\n")
+                        .mkString()));
+            }
+        });
+    }
+
+    /**
+     * The sample repository, whose commits each changed {@code A.java} to {@code D.java}: the first and the last a line
+     * of code, the two between only their imports.
+     */
+    private static Git withImportsOnly() {
+        Git sample = SampleData.git();
+        return sample.withDiffs(new StubDiffs() {
+            @Override
+            public Either<GitError, DiffText> commitChanges(Sha sha, DiffOptions options) {
+                return sample.diffs().commitChanges(sha, options);
+            }
+
+            @Override
+            public Either<GitError, Diffs> uncommitted(List<FileEntry> files, DiffOptions options) {
+                return sample.diffs().uncommitted(files, options);
+            }
+
+            @Override
+            public Either<GitError, List<CommitFile>> commitFiles(Sha sha) {
+                return Either.right(List.of("A.java", "B.java", "C.java", "D.java")
+                        .map(path -> new CommitFile(path, ChangeType.MODIFIED)));
+            }
+
+            @Override
+            public Either<GitError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
+                return Either.right(DiffText.of(files.map(file -> "diff --git a/" + file.path() + " b/" + file.path()
+                                + "\n--- a/" + file.path() + "\n+++ b/" + file.path() + "\n@@ -1 +1 @@\n"
+                                + (file.path().equals("B.java") || file.path().equals("C.java")
+                                        ? "-import a.B;\n+import a.C;\n"
+                                        : "-int a;\n+int b;\n"))
                         .mkString()));
             }
         });

@@ -416,7 +416,8 @@ public record DiffCursor(
 
     private boolean bounds(int index) {
         return stops.get(index).mark().anchor() instanceof Anchor.File
-                || stops.get(index).mark().anchor() instanceof Anchor.Gap;
+                || stops.get(index).mark().anchor() instanceof Anchor.Gap
+                || stops.get(index).mark().anchor() instanceof Anchor.Filtered;
     }
 
     private boolean lineOfHunk(int index) {
@@ -521,6 +522,7 @@ public record DiffCursor(
                                 .foldLeft(lines, (done, at) -> done.update(at, DiffCursor::ruled));
                     case Anchor.File ignored -> lines.update(first, line -> tinted(line, width, tint));
                     case Anchor.Gap ignored -> lines.update(first, line -> tinted(line, width, tint));
+                    case Anchor.Filtered ignored -> lines.update(first, line -> tinted(line, width, tint));
                     // The half of its line in the split view (ADR 139), which the area pads in its tint.
                     case Anchor.OnLine ignored ->
                         on.mark().side().isDefined()

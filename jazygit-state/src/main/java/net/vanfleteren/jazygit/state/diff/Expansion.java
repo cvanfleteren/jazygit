@@ -95,13 +95,39 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
     /**
      * A diff as it is drawn, its files folded, and what is known of each of them, by its path.
      */
-    public record Folded(ParsedDiff diff, Map<String, Fold> files) {
+    public record Folded(
+            ParsedDiff diff,
+            Map<String, Fold> files,
+            Map<String, Filtering.Hiding> hiding,
+            int filtered,
+            boolean filtersOff) {
+
+        /**
+         * {@code diff}, with what is known of {@code files}, nothing of it hidden by filters.
+         */
+        public Folded(ParsedDiff diff, Map<String, Fold> files) {
+            this(diff, files, HashMap.empty(), 0, false);
+        }
+
+        /**
+         * This diff as {@code changed}, all else as it is.
+         */
+        public Folded withDiff(ParsedDiff changed) {
+            return new Folded(changed, files, hiding, filtered, filtersOff);
+        }
 
         /**
          * {@code diff} as git gives it, nothing of its files known.
          */
         public static Folded of(ParsedDiff diff) {
             return new Folded(diff, HashMap.empty());
+        }
+
+        /**
+         * What filters hide of the file with the path {@code path} (ADR 144).
+         */
+        public Filtering.Hiding hiding(String path) {
+            return hiding.get(path).getOrElse(Filtering.Hiding.NONE);
         }
 
         /**

@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 /**
  * Showing the lines a marker of a rich diff leaves out, from its cursor (ADR 77): in every rich diff, and in the diff
  * of a pull request's files next to the keys of its review. Enter also opens or closes a node of JSON or YAML rendered
- * (ADR 122).
+ * (ADR 122), and shows the hunks a marker of the diff filters hides, or hides them again (ADR 144).
  */
 public final class ExpandAction {
 
@@ -39,7 +39,13 @@ public final class ExpandAction {
                 at -> gap.action()
                         .apply(at)
                         .orElse(() -> at.filter(cursor -> cursor.cursor() instanceof Anchor.Node)
-                                .map(FoldMsg.Toggled::new)));
+                                .map(FoldMsg.Toggled::new))
+                        // A marker of hunks the diff filters hide shows them, and hides them again once they are
+                        // opened (ADR 144).
+                        .orElse(() -> at.filter(cursor -> cursor.cursor() instanceof Anchor.Filtered)
+                                .map(cursor -> ((Anchor.Filtered) cursor.cursor()).opened()
+                                        ? new FilteredMsg.Closed(cursor)
+                                        : new FilteredMsg.Opened(cursor))));
     }
 
     /**

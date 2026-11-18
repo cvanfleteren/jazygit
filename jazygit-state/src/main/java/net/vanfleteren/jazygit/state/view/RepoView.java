@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.lens.Lens;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.Opened;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
 
@@ -120,6 +121,21 @@ public record RepoView(
      */
     public Option<Expansion> expansion(AreaId area, ScrolledContent content) {
         return expandedOf(area).filter(kept -> kept.holdsFor(content));
+    }
+
+    /**
+     * The hunks filters hide that were opened in the area with the id {@code area} while it shows {@code content}, if
+     * they hold for that (ADR 144).
+     */
+    public Option<Opened> opened(AreaId area, ScrolledContent content) {
+        return areas.get(area).flatMap(AreaView::opened).filter(kept -> kept.holdsFor(content));
+    }
+
+    /**
+     * This view with {@code opened} kept for the area with the id {@code area} (ADR 144).
+     */
+    public RepoView withOpened(AreaId area, Opened opened) {
+        return mapArea(area, view -> view.withOpened(Option.of(opened)));
     }
 
     /**

@@ -57,6 +57,17 @@ public sealed interface LineGoal {
         }
         Tuple2<Integer, Integer> closest =
                 lines.minBy(line -> Math.abs(line._1() - number)).getOrElse(Tuple.of(number, 0));
+        // A line of a hunk the diff filters hide is shown by opening its marker (ADR 144).
+        Option<Anchor.Filtered> filtered = stops.iterator()
+                .map(stop -> stop.mark().anchor())
+                .filter(Anchor.Filtered.class::isInstance)
+                .map(Anchor.Filtered.class::cast)
+                .find(marker -> !marker.opened()
+                        && marker.path().equals(path)
+                        && marker.hunks().exists(hunk -> hunk.has(side == Side.LEFT, number)));
+        if (filtered.isDefined()) {
+            return new Hidden(new Anchor.OnLine(path, side, number), filtered.get(), closest._2());
+        }
         Option<Anchor.Gap> hidden = Option.when(
                         side == Side.RIGHT,
                         () -> stops.iterator()
@@ -145,6 +156,7 @@ public sealed interface LineGoal {
             case Anchor.File(String path) -> Option.some(path);
             case Anchor.OnLine(String path, var _, var _) -> Option.some(path);
             case Anchor.Gap(String path, var _, var _) -> Option.some(path);
+            case Anchor.Filtered(String path, var _, var _) -> Option.some(path);
             case Anchor.Node(String path, var _, var _) -> Option.some(path);
             case Anchor.Thread(var _, Option<Anchor.OnLine> line) -> line.map(Anchor.OnLine::path);
             case Anchor.Comment(var _, Anchor.Thread thread) -> path(thread);
@@ -165,7 +177,7 @@ public sealed interface LineGoal {
      * The line {@code line}, which a marker leaves out: {@code lines} are those around it it leaves out, to show, and
      * the stop at {@code closest} the closest line shown until they are.
      */
-    record Hidden(Anchor.OnLine line, Anchor.Gap lines, int closest) implements LineGoal {}
+    record Hidden(Anchor.OnLine line, Anchor lines, int closest) implements LineGoal {}
 
     /**
      * The row {@code row} of a version rendered, drawn from line {@code number}: the line asked for when

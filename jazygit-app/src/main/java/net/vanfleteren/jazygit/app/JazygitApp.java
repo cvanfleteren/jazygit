@@ -29,10 +29,12 @@ import net.vanfleteren.jazygit.chrome.help.HelpMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.chrome.layout.LayoutMsg;
 import net.vanfleteren.jazygit.content.ContentPanel;
+import net.vanfleteren.jazygit.content.ContentView;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.PaneId;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -80,6 +82,9 @@ public class JazygitApp extends ToolkitApp {
     private boolean logAfterPopup;
     // The list the files of a commit are of, which takes the focus once the help that Escape was chosen from closed.
     private Option<PaneId> listAfterPopup = Option.none();
+    // A step of J or K whose file is still to be shown, from what the content showed before it: one whose changes the
+    // diff filters hide all of is stepped past once it shows (ADR 144).
+    private Option<Stepping> stepping = Option.none();
     // The borders of the left column and of the panes in it, which the user drags.
     private final BorderDrag borderDrag = new BorderDrag(dispatch);
     // Whether a Redraw is queued that no frame has been drawn since; only touched on the render thread.
@@ -188,11 +193,33 @@ public class JazygitApp extends ToolkitApp {
         if (!focus.inContentOf(model, FilesPanel.PANE)) {
             return;
         }
+        List<ScrolledContent> before =
+                ContentView.filtered(model, focus.focus()).contents();
         if (leftColumn.stepFile(model, step)) {
+            stepping = Option.when(
+                    !model.preferences().diffFilters().active().isEmpty(), () -> new Stepping(step, before));
             requestRedraw();
         } else {
+            stepping = Option.none();
             session.dispatch(new FileStepEnded(step));
         }
+    }
+
+    /**
+     * Steps on past the file a step of J or K moved to, once it shows, when the diff filters hide all its changes
+     * (ADR 144); the step ends once a file shows that they do not, or something else than a diff.
+     */
+    private void stepPastFiltered(Model model, Option<Focus> focused) {
+        stepping.forEach(step -> {
+            ContentView.Filtered shown = ContentView.filtered(model, focused);
+            if (shown.contents().equals(step.from())) {
+                return;
+            }
+            stepping = Option.none();
+            if (shown.allHidden().contains(true)) {
+                runner().tuiRunner().runLater(() -> stepFile(step.step()));
+            }
+        });
     }
 
     /**
@@ -353,6 +380,7 @@ public class JazygitApp extends ToolkitApp {
         // The framework knows no focus before the first render.
         Popups.Rendered shown = popups.render(model, focused);
         report(reports());
+        stepPastFiltered(model, focused);
         // A popup opening while the log has the focus gives it back to the log once it closes.
         if (model.popup().isDefined() && focused.contains(CommandLogPanel.FOCUS)) {
             logAfterPopup = true;
@@ -538,4 +566,9 @@ public class JazygitApp extends ToolkitApp {
      * Asks for a frame, as {@link #requestRedraw()} does.
      */
     private record Redraw() implements Event {}
+
+    /**
+     * A step of J or K, {@code step}, taken while the content showed {@code from}.
+     */
+    private record Stepping(FileStepMsg.Step step, List<ScrolledContent> from) {}
 }

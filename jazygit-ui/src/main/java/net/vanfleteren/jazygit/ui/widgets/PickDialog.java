@@ -197,10 +197,14 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                 // While the filter is open, the letters are its own.
                 .getOrElse(() -> view.cursor().filter().isDefined()
                         ? EventResult.UNHANDLED
-                        : view.lines()
-                                .find(row -> row.key().exists(event::isChar))
-                                .map(row -> send(spec.onPick().apply(row.value())))
-                                .getOrElse(EventResult.UNHANDLED));
+                        : spec.spacePicks() && event.isChar(' ')
+                                ? view.highlighted()
+                                        .map(row -> send(spec.onPick().apply(row.value())))
+                                        .getOrElse(EventResult.UNHANDLED)
+                                : view.lines()
+                                        .find(row -> row.key().exists(event::isChar))
+                                        .map(row -> send(spec.onPick().apply(row.value())))
+                                        .getOrElse(EventResult.UNHANDLED));
     }
 
     private EventResult send(Msg msg) {
@@ -296,6 +300,8 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      * @param onPick    the message for picking a row, from what it stands for
      * @param onCancel  the message for cancelling, by Escape; by default a {@link PopupMsg.Dismissed}
      * @param emptyKey  the message key of the line shown when there are no rows to pick, if any
+     * @param spacePicks whether Space picks the highlighted row too, as in a list whose rows are switched on and off
+     *                   in place, while the filter is closed
      */
     public record Spec<P extends Popup, T>(
             String id,
@@ -304,7 +310,22 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
             Function<P, List<Row<T>>> rows,
             Function<T, Msg> onPick,
             Supplier<Msg> onCancel,
-            Option<String> emptyKey) {
+            Option<String> emptyKey,
+            boolean spacePicks) {
+
+        /**
+         * A dialog whose rows Enter picks, and their letters, but not Space.
+         */
+        public Spec(
+                String id,
+                Class<P> popupType,
+                Function<P, String> title,
+                Function<P, List<Row<T>>> rows,
+                Function<T, Msg> onPick,
+                Supplier<Msg> onCancel,
+                Option<String> emptyKey) {
+            this(id, popupType, title, rows, onPick, onCancel, emptyKey, false);
+        }
 
         /**
          * A dialog which Escape only closes (ADR 38).
@@ -335,7 +356,14 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
          * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
          */
         public Spec<P, T> cancelledBy(Supplier<Msg> onCancel) {
-            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey);
+            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, spacePicks);
+        }
+
+        /**
+         * This dialog, whose highlighted row Space picks too.
+         */
+        public Spec<P, T> pickedBySpace() {
+            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, true);
         }
     }
 }

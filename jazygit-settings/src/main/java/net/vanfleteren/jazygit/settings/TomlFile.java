@@ -34,11 +34,16 @@ final class TomlFile {
 
     static Try<CommentedConfig> read(Path file) {
         return Try.withResources(() -> Files.newBufferedReader(file, StandardCharsets.UTF_8))
-                .of((Reader reader) -> {
-                    CommentedConfig config = newConfig();
-                    new TomlParser().parse(reader, config, ParsingMode.REPLACE);
-                    return config;
-                });
+                .of(TomlFile::parse);
+    }
+
+    /**
+     * What {@code reader} reads, as TOML.
+     */
+    static CommentedConfig parse(Reader reader) {
+        CommentedConfig config = newConfig();
+        new TomlParser().parse(reader, config, ParsingMode.REPLACE);
+        return config;
     }
 
     /**

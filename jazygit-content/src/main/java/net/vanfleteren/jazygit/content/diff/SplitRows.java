@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.Filtering;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks.FileRemarks;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks.LineRemarks;
 import net.vanfleteren.jazygit.syntax.Token;
@@ -59,6 +60,7 @@ final class SplitRows {
             Option<FileRemarks> remarks,
             int index,
             Expansion.Fold fold,
+            Filtering.Hiding hiding,
             boolean syntax,
             boolean words,
             RemarkLines.RemarkStyle style,
@@ -97,6 +99,7 @@ final class SplitRows {
                                                 styles))),
                                 Option.of(new Mark(new Anchor.File(file.path()), 1, area, Option.none()))))
                         .appendAll(RichDiff.note(file)
+                                .orElse(() -> RichDiff.allHidden(hiding))
                                 .map(text -> Marked.plain(Line.from(RichDiff.styled(text, Theme.Classes.DIM, styles)))))
                         .appendAll(remarks.toList()
                                 .flatMap(placed -> wide.threads(
@@ -104,26 +107,35 @@ final class SplitRows {
                                         Option.none(),
                                         !file.hunks().isEmpty() || unplaced,
                                         styles))))
-                .appendAll(parsed.hunks().zipWithIndex().map(hunk -> () -> {
-                    int at = hunk._2();
-                    int start = starts.get(at);
-                    Hunk shown = new Hunk(
-                            hunk._1().lines().toVector(),
-                            measured.slice(start, starts.get(at + 1)),
-                            onLines.slice(start, starts.get(at + 1)),
-                            new DiffStops.HunkAt(index, at));
-                    boolean followed = unplaced
-                            || trailing.isDefined()
-                            || at < parsed.hunks().size() - 1;
-                    List<Marked> header = gapBefore
-                            .get(at)
-                            .map(gap -> marker(gap, fold, layout))
-                            .orElse(Option.when(at > 0, () -> List.of(Marked.plain(rule(layout)))))
-                            .getOrElse(List.empty());
-                    List<LinePairs.Row> rows = LinePairs.rows(hunk._1().lines());
-                    return header.appendAll(rows.zipWithIndex()
-                            .flatMap(row -> row(row._1(), shown, followed || row._2() < rows.size() - 1, layout)));
-                }))
+                .appendAll(RichDiff.hunks(
+                        parsed.hunks().size(),
+                        hiding,
+                        (at, headed) -> List.of(() -> {
+                            ParsedHunk hunk = parsed.hunks().get(at);
+                            int start = starts.get(at);
+                            Hunk shown = new Hunk(
+                                    hunk.lines().toVector(),
+                                    measured.slice(start, starts.get(at + 1)),
+                                    onLines.slice(start, starts.get(at + 1)),
+                                    new DiffStops.HunkAt(index, at));
+                            boolean followed = unplaced
+                                    || trailing.isDefined()
+                                    || at < parsed.hunks().size() - 1;
+                            List<Marked> header = !headed
+                                    ? List.<Marked>empty()
+                                    : gapBefore
+                                            .get(at)
+                                            .map(gap -> marker(gap, fold, layout))
+                                            .orElse(Option.when(at > 0, () -> List.of(Marked.plain(rule(layout)))))
+                                            .getOrElse(List.empty());
+                            List<LinePairs.Row> rows = LinePairs.rows(hunk.lines());
+                            return header.appendAll(rows.zipWithIndex()
+                                    .flatMap(row ->
+                                            row(row._1(), shown, followed || row._2() < rows.size() - 1, layout)));
+                        }),
+                        at -> gapBefore.get(at).toList().<Pending>map(gap -> () -> marker(gap, fold, layout)),
+                        (run, opened) -> RichDiff.filteredMarker(
+                                run, opened, file.path(), ruleOf(layout), layout.area(), styles)))
                 .appendAll(trailing.toList().map(gap -> () -> marker(gap, fold, layout)))
                 .appendAll(remarks.toList().<Pending>map(placed -> () -> wide.unplaced(placed.unplaced(), styles)));
     }

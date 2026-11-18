@@ -491,7 +491,7 @@ public final class ScrollArea {
                         Option.when(!exact, () -> Messages.get("content.line.notShown", line, at)),
                         content);
             }
-            case LineGoal.Hidden(Anchor.OnLine wanted, Anchor.Gap lines, int closest) ->
+            case LineGoal.Hidden(Anchor.OnLine wanted, Anchor lines, int closest) ->
                 hidden(on, wanted, lines, shown.stops().get(closest), content);
             case LineGoal.InRow(int row, boolean exact, int at) -> {
                 Option<String> says = Option.when(!exact, () -> Messages.get("content.line.notShown", line, at));
@@ -532,7 +532,7 @@ public final class ScrollArea {
      * it shows; until then the cursor is on {@code closest}. Refused while a range is open: the line is in no hunk.
      */
     private EventResult hidden(
-            DiffCursor on, Anchor.OnLine wanted, Anchor.Gap lines, RichDiff.Stop closest, ScrolledContent content) {
+            DiffCursor on, Anchor.OnLine wanted, Anchor lines, RichDiff.Stop closest, ScrolledContent content) {
         if (on.mark().isDefined()) {
             notice = Option.of(Messages.get("content.line.outsideRange"));
             return EventResult.HANDLED;
@@ -838,8 +838,9 @@ public final class ScrollArea {
                                     styled.flatMap(shown -> shown.split().divider()))))
                     .map(clicked -> {
                         EventResult result = moved(clicked, content);
-                        // A click on a marker shows all the lines it leaves out, as Enter on it does (ADR 77).
-                        if (clicked.anchor() instanceof Anchor.Gap) {
+                        // A click on a marker shows all the lines it leaves out, as Enter on it does (ADR 77), and
+                        // one of hunks the diff filters hide shows them, or hides them again (ADR 144).
+                        if (clicked.anchor() instanceof Anchor.Gap || clicked.anchor() instanceof Anchor.Filtered) {
                             KEYMAP.handle(Scopes.DIFF, KeyEvent.ofKey(KeyCode.ENTER), Option.of(at(clicked, content)))
                                     .forEach(dispatch);
                         }
@@ -1119,7 +1120,7 @@ public final class ScrollArea {
             return stops.drop(firstFrom(row, 0, stops.size()))
                     .takeWhile(stop -> stop.row() == row)
                     .exists(stop -> switch (stop.mark().anchor()) {
-                        case Anchor.File _, Anchor.OnLine _, Anchor.Gap _, Anchor.Node _ -> true;
+                        case Anchor.File _, Anchor.OnLine _, Anchor.Gap _, Anchor.Filtered _, Anchor.Node _ -> true;
                         case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
                     });
         }

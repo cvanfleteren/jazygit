@@ -1,0 +1,120 @@
+# The diff filters that come with jazygit (ADR 144), each disabled until the user enables it.
+# A filter of the user's settings file with the same id replaces one of these.
+# lines are Java regexes, matched anywhere in a changed line without its + or -; a filter without them hides every
+# hunk of its files.
+
+[[diff-filters]]
+id = "java-imports"
+name = "Java imports"
+languages = ["java"]
+lines = ['^import (static |module )?[A-Za-z0-9_.$]+(\.\*)?;$']
+
+[[diff-filters]]
+id = "java-package"
+name = "Java package line"
+languages = ["java"]
+lines = ['^package [A-Za-z0-9_.]+;$']
+
+[[diff-filters]]
+id = "kotlin-imports"
+name = "Kotlin imports"
+languages = ["kotlin"]
+lines = ['^import [A-Za-z0-9_.`]+(\.\*)?( as [A-Za-z0-9_`]+)?$']
+
+[[diff-filters]]
+id = "scala-imports"
+name = "Scala imports"
+paths = ["*.scala", "*.sc"]
+lines = ['^import [A-Za-z0-9_.{}, =>*]+$']
+
+[[diff-filters]]
+id = "groovy-imports"
+name = "Groovy imports"
+paths = ["*.groovy", "*.gradle"]
+lines = ['^import (static )?[A-Za-z0-9_.$]+(\.\*)?( as [A-Za-z0-9_]+)?;?$']
+
+[[diff-filters]]
+id = "csharp-usings"
+name = "C# usings"
+paths = ["*.cs"]
+lines = ['^(global )?using (static )?[A-Za-z0-9_.]+( = [A-Za-z0-9_.<>, ]+)?;$']
+
+[[diff-filters]]
+id = "c-includes"
+name = "C and C++ includes"
+languages = ["c"]
+lines = ['^\s*#\s*include\s*[<"][^>"]+[>"]\s*$']
+
+[[diff-filters]]
+id = "javascript-imports"
+name = "JavaScript and TypeScript imports"
+languages = ["javascript"]
+lines = [
+    '''^import .+ from ['"][^'"]+['"];?$''',
+    '''^import ['"][^'"]+['"];?$''',
+    '''^(const|let|var) ([A-Za-z0-9_$]+|\{[^}]*\}) = require\(['"][^'"]+['"]\);?$''',
+]
+
+[[diff-filters]]
+id = "python-imports"
+name = "Python imports"
+languages = ["python"]
+lines = ['^import [A-Za-z0-9_., ]+$', '^from [A-Za-z0-9_.]+ import (\(.*\)|[^(]+)$']
+
+[[diff-filters]]
+id = "go-imports"
+name = "Go imports"
+languages = ["go"]
+lines = ['^import ([A-Za-z0-9_.]+ )?"[^"]+"$']
+
+[[diff-filters]]
+id = "rust-uses"
+name = "Rust uses"
+languages = ["rust"]
+lines = ['^(pub(\([a-z]+\))? )?use [A-Za-z0-9_:]+(::\{[^{}]*\}|::\*)?( as [A-Za-z0-9_]+)?;$']
+
+[[diff-filters]]
+id = "php-uses"
+name = "PHP uses"
+paths = ["*.php"]
+lines = ['^use (function |const )?[A-Za-z0-9_\\]+( as [A-Za-z0-9_]+)?;$']
+
+[[diff-filters]]
+id = "ruby-requires"
+name = "Ruby requires"
+paths = ["*.rb"]
+lines = ['''^require(_relative)? ['"][^'"]+['"]$''']
+
+[[diff-filters]]
+id = "swift-imports"
+name = "Swift imports"
+paths = ["*.swift"]
+lines = ['^import ([a-z]+ )?[A-Za-z0-9_.]+$']
+
+[[diff-filters]]
+id = "copyright-year"
+name = "Copyright year"
+paths = ["*"]
+lines = ['(?i)copyright (\(c\) |© )?\d{4}']
+
+[[diff-filters]]
+id = "lockfiles"
+name = "Lockfiles"
+paths = [
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "Cargo.lock",
+    "go.sum",
+    "poetry.lock",
+    "uv.lock",
+    "Gemfile.lock",
+    "composer.lock",
+    "flake.lock",
+    "gradle.lockfile",
+]
+
+[[diff-filters]]
+id = "generated"
+name = "Generated files"
+paths = ["*.min.js", "*.map", "*_pb2.py", "*.pb.go", "**/__snapshots__/*.snap"]

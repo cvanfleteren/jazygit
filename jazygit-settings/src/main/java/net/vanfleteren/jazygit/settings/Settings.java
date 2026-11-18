@@ -30,6 +30,9 @@ import lombok.With;
  * @param browsers            the browser set for each GitHub account (ADR 88)
  * @param editors             the editors a worktree can be opened in (ADR 110); only read, never written, as only
  *                            the user sets them
+ * @param diffFilters         the ids of the diff filters enabled, in the order they were enabled (ADR 144)
+ * @param filterDefinitions   the diff filters the user set (ADR 144); only read, never written, as only the user
+ *                            sets them
  */
 @With
 public record Settings(
@@ -46,7 +49,9 @@ public record Settings(
         boolean autoRefresh,
         boolean autoFetch,
         AccountBrowsers browsers,
-        Editors editors) {
+        Editors editors,
+        List<String> diffFilters,
+        FilterDefinitions filterDefinitions) {
 
     /**
      * The narrowest the left column may get, in percent of the width.
@@ -93,7 +98,9 @@ public record Settings(
             true,
             true,
             AccountBrowsers.NONE,
-            Editors.NONE);
+            Editors.NONE,
+            List.empty(),
+            FilterDefinitions.NONE);
 
     /**
      * The key of the theme in the settings file.
@@ -147,6 +154,10 @@ public record Settings(
      * The key of the table of the browser of each GitHub account in the settings file (ADR 88).
      */
     static final String BROWSERS = "github.browsers";
+    /**
+     * The key of the ids of the diff filters enabled in the settings file (ADR 144).
+     */
+    static final String DIFF_FILTERS = "ui.diff-filters";
 
     /**
      * {@code width} brought within the widths the left column may have.

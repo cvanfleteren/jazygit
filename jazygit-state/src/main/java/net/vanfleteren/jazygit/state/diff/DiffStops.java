@@ -64,6 +64,20 @@ public final class DiffStops {
                                         stop -> stop instanceof Anchor.Gap(var p, var f, var u) && p.equals(path))
                                 .minBy(stop -> Math.abs(((Anchor.Gap) stop).from() - from)))
                         .orElse(() -> nearest(stops, new Anchor.OnLine(path, ReviewThread.Side.RIGHT, from)));
+            // A marker of hunks filters hide is found by its first hunk, which moves into another marker as those
+            // around it are opened or closed: opened, it stays on the marker kept above them, which hides them again.
+            case Anchor.Filtered(String path, var hunks, var opened) ->
+                stops.find(at::equals)
+                        .orElse(() -> stops.find(stop -> stop instanceof Anchor.Filtered(var p, var h, var o)
+                                && p.equals(path)
+                                && h.exists(
+                                        hunk -> hunk.start().equals(hunks.head().start()))))
+                        .orElse(() -> nearest(
+                                stops,
+                                new Anchor.OnLine(
+                                        path,
+                                        ReviewThread.Side.RIGHT,
+                                        hunks.head().newStart())));
             case Anchor.Node(String path, String pointer, Anchor.OnLine line) ->
                 stops.find(stop -> stop instanceof Anchor.Node(var p, var o, var ignored)
                                 && p.equals(path)
