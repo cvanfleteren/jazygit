@@ -55,6 +55,7 @@ import net.vanfleteren.jazygit.state.diff.Found;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.github.builds.BuildsAt;
 import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
@@ -365,7 +366,11 @@ public final class ScrollArea {
                 // The builds of a branch have keys of their own, to show another workflow (ADR 131).
                 .orElse(() -> Option.when(
                                 content instanceof ScrolledContent.Builds,
-                                () -> KEYMAP.handle(Scopes.BUILDS, event, Option.none()))
+                                () -> KEYMAP.handle(
+                                        Scopes.BUILDS,
+                                        event,
+                                        Option.of(new BuildsAt(styled.exists(
+                                                shown -> shown.hits().isDefined())))))
                         .flatMap(msg -> msg)
                         .map(this::reviewed))
                 // Without a cursor, as in the plain style, only the keys that move to another file act (ADR 117).

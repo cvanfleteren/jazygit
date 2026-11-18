@@ -312,10 +312,7 @@ public record BuildsView(
                         .toOption()
                         .filter(builds -> !builds.isEmpty())
                         .map(builds -> {
-                            Option<Integer> at = shown.picked()
-                                    .flatMap(run -> builds.find(build -> build.runId() == run))
-                                    .orElse(() -> lastDoneOf(builds))
-                                    .map(builds::indexOf);
+                            Option<Integer> at = shown.onTimeLine().map(builds::indexOf);
                             int to = at.map(from -> Math.clamp((long) from + by, 0, builds.size() - 1))
                                     .getOrElse(0);
                             return withPicked(Option.of(builds.get(to).runId()));

@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.state.github.builds.BuildsAt;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Scope;
 
@@ -37,9 +38,9 @@ public final class Scopes {
      */
     public static final Scope<BranchName> BRANCHES = new Scope<>("branches", "panel.branches.title");
     /**
-     * The builds of a branch in the content panel, which have nothing selected (ADR 131).
+     * The builds of a branch in the content panel, which have nothing selected (ADR 131): whether a search is kept.
      */
-    public static final Scope<BranchName> BUILDS = new Scope<>("builds", "panel.builds.keys");
+    public static final Scope<BuildsAt> BUILDS = new Scope<>("builds", "panel.builds.keys");
     /**
      * The number of the stack whose header is selected in the local branches (ADR 72).
      */

@@ -20,7 +20,6 @@ import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.Build.Outcome;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.view.BuildsShown;
-import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
@@ -82,6 +81,7 @@ final class BuildsText {
                 shown.baseline(),
                 shown.of(),
                 shown.picked(),
+                shown.onTimeLine(),
                 DateTimeFormatter.ofPattern(Messages.get("content.builds.dayPattern"))
                         .withZone(zone),
                 DateTimeFormatter.ofPattern(Messages.get("builds.whenPattern")).withZone(zone),
@@ -290,6 +290,7 @@ final class BuildsText {
      * @param baseline how long the runs of the workflow that passed took on every branch
      * @param of     how many builds of the tab are read, of which some show
      * @param picked the run of the build whose jobs show on one time line; none for the last that is done
+     * @param onTimeLine the build whose jobs show on one time line, as {@link BuildsShown#onTimeLine()} says
      * @param day    how a day is written
      * @param when   how a day and a time are written
      * @param width  the columns of the panel
@@ -303,6 +304,7 @@ final class BuildsText {
             Option<BuildsShown.Baseline> baseline,
             int of,
             Option<Long> picked,
+            Option<Build> onTimeLine,
             DateTimeFormatter day,
             DateTimeFormatter when,
             int width,
@@ -651,21 +653,12 @@ final class BuildsText {
         }
 
         /**
-         * The build of {@code builds} whose jobs show on one time line: the one picked, else the last that is done
-         * (ADR 131, 133).
-         */
-        Option<Build> onTimeLine(List<Build> builds) {
-            return picked.flatMap(run -> builds.find(build -> build.runId() == run))
-                    .orElse(() -> BuildsView.lastDoneOf(builds));
-        }
-
-        /**
          * The jobs of the build picked, else of the last build that is done, on one time line, each hanging off the
          * jobs it waits for (ADR 131): with how long it waited for a runner, and how long it took against its median
          * over the builds of the jobs above (ADR 133).
          */
         private List<Line> timeLine(List<Build> builds) {
-            return onTimeLine(builds)
+            return onTimeLine
                     .map(build -> {
                         boolean chosen = picked.contains(build.runId());
                         Line header = Line.from(List.of(

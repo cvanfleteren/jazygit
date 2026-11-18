@@ -43,6 +43,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.BranchChecksMsg;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.state.github.builds.BuildsAt;
 import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.state.github.builds.ReadWorkflows;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
@@ -800,18 +801,7 @@ class BuildsContentTest {
 
     @Test
     void nAndNStepThroughTheBuildsThatShowFromTheOneOnTheTimeLine() {
-        Build tip = withFile(new Build("Build", "push", 1, 1, "abcdef0", "Running", BUILD.createdAt(), List.empty()));
-        Build done = withFile(new Build(
-                "Build", "push", 2, 1, "1234567", "Done", BUILD.createdAt().minusSeconds(60), BUILD.jobs()));
-        Build older = withFile(new Build(
-                "Build", "push", 3, 1, "7654321", "Older", BUILD.createdAt().minusSeconds(120), BUILD.jobs()));
-        Model read = Update.update(
-                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
-                        new BuildsMsg.Read(
-                                ORIGIN_MAIN,
-                                Option.none(),
-                                Option.of(new BuildsPage(List.of(tip, done, older), 3, Option.none()))))
-                .model();
+        Model read = steppable();
 
         // From the last build that is done, not the newest, which runs.
         Model next = Update.update(read, new BuildsMsg.BuildStepped(1)).model();
@@ -828,6 +818,81 @@ class BuildsContentTest {
         assertEquals(
                 Option.of(1L),
                 picked(Update.update(newest, new BuildsMsg.BuildStepped(-1)).model()));
+    }
+
+    @Test
+    void aPickThatNoLongerShowsIsSteppedFromTheLastBuildDoneThatShows() {
+        Model oldest =
+                Update.update(steppable(), new BuildsViewMsg.BuildClicked(3)).model();
+        Model fewer =
+                Update.update(oldest, new BuildsMsg.WindowPicked(Option.of(2))).model();
+
+        // Build 3 is still picked, but no longer shows: the time line shows build 2, the last done of those that do.
+        assertEquals(
+                Option.of(1L),
+                picked(Update.update(fewer, new BuildsMsg.BuildStepped(-1)).model()));
+        assertEquals(
+                Option.of(2L),
+                picked(Update.update(fewer, new BuildsMsg.BuildStepped(1)).model()));
+    }
+
+    @Test
+    void withNoBuildDoneNAndNPickTheNewest() {
+        Build running = new Build("Build", "push", 1, 1, "abcdef0", "Running", BUILD.createdAt(), List.empty());
+        Build queued = new Build(
+                "Build", "push", 2, 1, "1234567", "Queued", BUILD.createdAt().minusSeconds(60), List.empty());
+        Model read = buildsRead(List.of(running, queued));
+
+        assertEquals(
+                Option.of(1L),
+                picked(Update.update(read, new BuildsMsg.BuildStepped(1)).model()));
+        assertEquals(
+                Option.of(1L),
+                picked(Update.update(read, new BuildsMsg.BuildStepped(-1)).model()));
+    }
+
+    @Test
+    void withoutBuildsNAndNChangeNothing() {
+        Model reading = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+        assertEquals(
+                reading, Update.update(reading, new BuildsMsg.BuildStepped(1)).model());
+
+        Model none = buildsRead(List.empty());
+        assertEquals(none, Update.update(none, new BuildsMsg.BuildStepped(1)).model());
+    }
+
+    @Test
+    void whileASearchIsKeptNAndNDoNotStepTheBuilds() {
+        Keymap keys = Keymap.standard();
+        Option<BuildsAt> searching = Option.of(new BuildsAt(true));
+
+        assertEquals(Option.none(), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('n'), searching));
+        assertEquals(Option.none(), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('N'), searching));
+        assertEquals(
+                Option.of(new BuildsMsg.BuildStepped(1)),
+                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('n'), Option.of(new BuildsAt(false))));
+    }
+
+    /**
+     * The builds of the main branch, read: one running, then two done, titled "Running", "Done" and "Older".
+     */
+    static Model steppable() {
+        Build tip = withFile(new Build("Build", "push", 1, 1, "abcdef0", "Running", BUILD.createdAt(), List.empty()));
+        Build done = withFile(new Build(
+                "Build", "push", 2, 1, "1234567", "Done", BUILD.createdAt().minusSeconds(60), BUILD.jobs()));
+        Build older = withFile(new Build(
+                "Build", "push", 3, 1, "7654321", "Older", BUILD.createdAt().minusSeconds(120), BUILD.jobs()));
+        return buildsRead(List.of(tip, done, older));
+    }
+
+    private static Model buildsRead(List<Build> builds) {
+        return Update.update(
+                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN,
+                                Option.none(),
+                                Option.of(new BuildsPage(builds, builds.size(), Option.none()))))
+                .model();
     }
 
     private static Option<Long> picked(Model model) {
