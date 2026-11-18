@@ -542,6 +542,8 @@ public class FilesPanel {
                 // (ADR 141): in the pane, it lists those of the one highlighted.
                 .map(open -> active ? open : open.shown(model.now()))
                 .peek(view -> held = view.held().isDefined())
+                // The files of a commit opened from a line blamed on it start on the file of the line (ADR 147).
+                .peek(view -> commitTreeOf(view).wanting(view.of(), view.wanted()))
                 .map(view -> Pane.bordered(
                         view.ended()
                                         .map(state -> Messages.get(

@@ -235,6 +235,22 @@ public record Version(
     }
 
     /**
+     * The line of the blame of the version shown blamed that the cursor {@code on} is on, once the blame is read: none
+     * on what is no line, as the bar of the file.
+     */
+    public Option<Blame.Line> blamedLine(Anchor on) {
+        return blame().flatMap(Loadable::toOption)
+                .flatMap(read -> showing()
+                        .flatMap(shown -> file().flatMap(whole -> shown.of(whole)
+                                .hunks()
+                                .flatMap(ParsedHunk::lines)
+                                .map(ParsedLine::line)
+                                .find(line -> Anchor.of(path, line).exists(on::equals))
+                                .flatMap(shown::number)))
+                        .flatMap(read::at));
+    }
+
+    /**
      * The commits whose new version of a file read as {@code source} says is shown, with {@code blame}: a line blamed on
      * them is of the changes shown, and tinted as changed already (ADR 147). A commit, or a stash: the stash itself, its
      * index and its untracked files, the commits of its index and its untracked files told by the messages git gives

@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Rendered;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
@@ -29,6 +30,7 @@ import net.vanfleteren.jazygit.state.load.ReadVersion;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.RepoView;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
  * Showing the new version or the original of a file in place of its diff (ADR 102), as source or rendered (ADR 103).
@@ -52,8 +54,31 @@ public final class VersionUpdate {
             case VersionMsg.FilesRenderToggled _ -> shown(model, filesAreas(model), true);
             case VersionMsg.BlameToggled(DiffCursorAt at) -> blamed(model, List.of(Tuple.of(at.area(), at.at())));
             case VersionMsg.FilesBlameToggled _ -> blamed(model, filesAreas(model));
+            case VersionMsg.LineOpened(DiffCursorAt at) -> opened(model, at);
         };
         return next.then(ReadBlame::blamed);
+    }
+
+    /**
+     * Opens the files of the commit the line the cursor {@code at} is on is blamed on, where the commits are, as
+     * {@code F} does, the file of the line highlighted by its path in that commit (ADR 147). Nothing happens on a line
+     * of the commit shown, a line not committed yet, or in an area not showing a version blamed.
+     */
+    private static Next opened(Model model, DiffCursorAt at) {
+        return model.repoView()
+                .version(at.area(), at.at().content())
+                .flatMap(version -> version.blamedLine(at.cursor())
+                        .filter(line -> line.commit().committed())
+                        .filter(line -> version.drawnBlame()
+                                .forAll(blame ->
+                                        !blame.own().contains(line.commit().sha()))))
+                .map(line -> CommitFilesUpdate.update(
+                                model,
+                                new CommitFilesMsg.Opened(
+                                        new Changes.OfCommit(line.commit().sha()), Scopes.COMMITS.pane()))
+                        .map(now -> now.mapRepoView(view -> view.mapFiles(files -> files.withCommitFiles(
+                                files.commitFiles().map(opened -> opened.withWanted(Option.of(line.path()))))))))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**

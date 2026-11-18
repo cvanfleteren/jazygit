@@ -4,10 +4,6 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.Blame;
-import net.vanfleteren.jazygit.git.model.FileVersion;
-import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
-import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedHunk;
-import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedLine;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Version;
@@ -36,8 +32,7 @@ public final class BlameFooter {
             case Loadable.Loading<Blame> reading -> Messages.get("content.blame.reading");
             case Loadable.Failed<Blame> failed -> "";
             case Loadable.Loaded<Blame>(Blame read) ->
-                number(version, cursor)
-                        .flatMap(read::at)
+                cursor.flatMap(version::blamedLine)
                         .map(line -> said(line.commit(), now))
                         .getOrElse("");
         });
@@ -66,22 +61,5 @@ public final class BlameFooter {
                 : months < YEARS_FROM_MONTHS
                         ? Messages.get("content.blame.monthsAgo", months)
                         : Messages.get("content.blame.yearsAgo", months / 12);
-    }
-
-    /**
-     * The number in the version shown of the line {@code cursor} is on, if it is on one.
-     */
-    private static Option<Integer> number(Version version, Option<Anchor> cursor) {
-        return version.showing()
-                .flatMap(shown -> version.file()
-                        .flatMap(whole -> cursor.flatMap(on -> line(shown, shown.of(whole), version.path(), on))));
-    }
-
-    private static Option<Integer> line(FileVersion shown, ParsedFile file, String path, Anchor on) {
-        return file.hunks()
-                .flatMap(ParsedHunk::lines)
-                .map(ParsedLine::line)
-                .find(line -> Anchor.of(path, line).exists(on::equals))
-                .flatMap(shown::number);
     }
 }
