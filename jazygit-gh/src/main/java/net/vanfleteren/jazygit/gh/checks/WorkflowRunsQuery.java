@@ -9,7 +9,6 @@ import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.list;
 import static net.vanfleteren.jazygit.json.Decoder.longValue;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
-import static net.vanfleteren.jazygit.json.Decoder.map4;
 import static net.vanfleteren.jazygit.json.Decoder.map5;
 import static net.vanfleteren.jazygit.json.Decoder.map6;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
@@ -37,7 +36,7 @@ final class WorkflowRunsQuery {
     static final String QUERY = """
             query($id: ID!, $count: Int!, $after: String) { node(id: $id) { ... on Workflow { name \
             runs(first: $count, after: $after) { pageInfo { hasNextPage endCursor } nodes { databaseId createdAt \
-            runAttempt event file { path } checkSuite { branch { name } commit { oid message } \
+            runAttempt event file { path } checkSuite { status branch { name } commit { oid message } \
             matchingPullRequests(first: 1) { nodes { number } } \
             checkRuns(first: 50) { nodes { name status conclusion startedAt completedAt } } } } } } } }""";
 
@@ -51,8 +50,9 @@ final class WorkflowRunsQuery {
             (name, status, conclusion, started, completed) -> new Build.Job(
                     name, status.equals("COMPLETED") ? conclusion.getOrElse("") : "", started, completed));
 
-    // The commit, the branch, the pull request and the jobs of a run.
-    static final Decoder<Suite> SUITE = map4(
+    // Whether a run is done, its commit, its branch, its pull request and its jobs.
+    static final Decoder<Suite> SUITE = map5(
+            field("status", string()).map(status -> status.equals("COMPLETED")),
             field("branch", nullable(field("name", string()))),
             field(
                     "commit",
@@ -69,6 +69,8 @@ final class WorkflowRunsQuery {
 
     /**
      * The runs read, as builds of the workflow {@code workflow}, whose id is {@code id}; none when it is not a workflow.
+     * A run waiting to start has no job yet; one done without a job, as one that could not start, is no build, as on a
+     * branch (ADR 131).
      */
     static Decoder<Option<WorkflowRunsPage>> decoder(String id) {
         return at(
@@ -88,6 +90,8 @@ final class WorkflowRunsQuery {
                                         RunsRead::new)),
                         (name, read) -> new WorkflowRunsPage(
                                 read.runs()
+                                        .filter(run -> !run.suite().done()
+                                                || !run.suite().jobs().isEmpty())
                                         .map(run -> run.build(name, id))
                                         .filter(build -> BuildsQuery.EVENTS.contains(build.event())),
                                 read.runs().size(),
@@ -118,7 +122,8 @@ final class WorkflowRunsQuery {
 
     private record Commit(String sha, String title) {}
 
-    private record Suite(Option<String> branch, Commit commit, Option<Integer> pullRequest, List<Build.Job> jobs) {}
+    private record Suite(
+            boolean done, Option<String> branch, Commit commit, Option<Integer> pullRequest, List<Build.Job> jobs) {}
 
     private record RunsRead(Option<String> next, List<Run> runs) {}
 

@@ -26,26 +26,37 @@ public final class SuiteFragment {
             checkSuites(first: 20) { nodes { status checkRuns { totalCount } \
             workflowRun { databaseId createdAt runAttempt event workflow { name } } } }""";
 
+    /**
+     * The workflow runs of a commit of {@link #FIELDS} that wait to start, each as a queued check named after its
+     * workflow and without an id of its own.
+     */
+    public static final Decoder<List<Check>> WAITING =
+            waiting(CheckFragment.WORKFLOW_RUN.map(Option::some)).map(runs -> runs.map(SuiteFragment::queued));
+
+    private SuiteFragment() {}
+
     /*
      * The workflow run of a suite that waits to start: of a workflow, not completed, without a check run; one whose
      * check runs GitHub does not give does not wait. A suite of another app has no workflow run: one that never adds
      * a check run stays queued for good.
      */
-    static final Decoder<Option<WorkflowRun>> SUITE = map3(
-            field("status", string()),
-            field("checkRuns", nullable(field("totalCount", integer()))),
-            field("workflowRun", nullable(CheckFragment.WORKFLOW_RUN)),
-            (status, checkRuns, run) -> run.filter(waits -> !status.equals("COMPLETED") && checkRuns.contains(0)));
+    private static <T> Decoder<Option<T>> suite(Decoder<Option<T>> run) {
+        return map3(
+                field("status", string()),
+                field("checkRuns", nullable(field("totalCount", integer()))),
+                field("workflowRun", nullable(run)),
+                (status, checkRuns, waiting) -> waiting.flatMap(read -> read)
+                        .filter(waits -> !status.equals("COMPLETED") && checkRuns.contains(0)));
+    }
 
     /**
-     * The workflow runs of a commit of {@link #FIELDS} that wait to start, each as a queued check named after its
-     * workflow and without an id of its own.
+     * The workflow runs of a commit of {@link #FIELDS}, or of fields asking more of each run, that wait to start, each
+     * as {@code run} decodes it; one it gives none for is left out.
      */
-    public static final Decoder<List<Check>> WAITING = field("checkSuites", nullable(field("nodes", list(SUITE))))
-            .map(suites ->
-                    suites.toList().flatMap(nodes -> nodes).flatMap(run -> run).map(SuiteFragment::queued));
-
-    private SuiteFragment() {}
+    public static <T> Decoder<List<T>> waiting(Decoder<Option<T>> run) {
+        return field("checkSuites", nullable(field("nodes", list(suite(run)))))
+                .map(suites -> suites.toList().flatMap(nodes -> nodes).flatMap(waits -> waits));
+    }
 
     private static Check queued(WorkflowRun run) {
         return new Check(

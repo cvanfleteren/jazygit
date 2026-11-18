@@ -253,6 +253,20 @@ class BuildsTextTest {
     }
 
     @Test
+    void aBuildHeldBackByItsConcurrencyGroupRunsWithoutATimeYet() {
+        // GitHub gives it no job until the build before it is done.
+        Build held =
+                new Build("Publish", "push", 3, 1, "abcdef03", "Commit 3", MIDNIGHT.plusSeconds(10800), List.empty());
+        List<String> lines = drawn(List.of(held, build("Publish", 1, "SUCCESS", 240)));
+        int header = lines.indexWhere(line -> line.contains("commit   when"));
+
+        assertTrue(
+                lines.get(header + 1).endsWith("abcdef0  13 Nov 03:00      –       –             Commit 3"),
+                lines.get(header + 1));
+        assertTrue(lines.exists(line -> line.startsWith("✓ 1  ✗ 0  ⊘ 0  ○ 1")), lines.mkString("\n"));
+    }
+
+    @Test
     void aDayOfOneDigitIsAlignedWithOneOfTwo() {
         // Builds on 13 and 3 November: the day of the second is padded, so the columns after it stay put.
         List<String> lines =

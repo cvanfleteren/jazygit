@@ -5,9 +5,13 @@ import static net.vanfleteren.jazygit.json.Decoder.at;
 import static net.vanfleteren.jazygit.json.Decoder.bool;
 import static net.vanfleteren.jazygit.json.Decoder.byField;
 import static net.vanfleteren.jazygit.json.Decoder.field;
+import static net.vanfleteren.jazygit.json.Decoder.instant;
+import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.list;
+import static net.vanfleteren.jazygit.json.Decoder.longValue;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
-import static net.vanfleteren.jazygit.json.Decoder.map3;
+import static net.vanfleteren.jazygit.json.Decoder.map4;
+import static net.vanfleteren.jazygit.json.Decoder.map6;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
@@ -20,8 +24,10 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.time.Instant;
 import java.util.Comparator;
 import net.vanfleteren.jazygit.gh.graphql.CheckFragment;
+import net.vanfleteren.jazygit.gh.graphql.SuiteFragment;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
@@ -51,10 +57,11 @@ final class BuildsQuery {
             query($owner: String!, $name: String!, $branch: String!, $count: Int!, $after: String) { \
             repository(owner: $owner, name: $name) { ref(qualifiedName: $branch) { target { __typename \
             ... on Commit { history(first: $count, after: $after) { pageInfo { hasNextPage endCursor } \
-            nodes { oid message %s } } } } } } }""".formatted(
+            nodes { oid message %s %s } } } } } } }""".formatted(
                     "statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { %s } } } }"
                             .formatted(CheckFragment.CHECK_RUN_FIELDS.replace(
-                                    "workflow { name }", "workflow { name id } file { path }")));
+                                    "workflow { name }", "workflow { name id } file { path }")),
+                    SuiteFragment.FIELDS.replace("workflow { name }", "workflow { name id } file { path }"));
 
     // A check run, with the file and the id of its workflow (ADR 131); a commit status answers only its __typename, and
     // is left out.
@@ -83,13 +90,33 @@ final class BuildsQuery {
                     "statusCheckRollup", nullable(at("contexts.nodes", list(CHECK_RUN))))
             .map(checks -> checks.toList().flatMap(nodes -> nodes).flatMap(check -> check));
 
+    // A workflow run that waits to start, as one held back by its concurrency group, which has no check run until it
+    // starts (ADR 35): a build without a job yet. None when its id or its start cannot be read.
+    static final Decoder<Option<Held>> HELD = map6(
+            field("databaseId", nullable(longValue())),
+            field("createdAt", nullable(instant())),
+            field("runAttempt", nullable(integer())),
+            field("event", nullable(string())),
+            field(
+                    "workflow",
+                    nullable(map2(field("name", nullable(string())), field("id", nullable(string())), Tuple::of))),
+            field("file", nullable(field("path", string()))),
+            (id, createdAt, attempt, event, workflow, file) -> id.flatMap(runId -> createdAt.map(created -> new Held(
+                    workflow.flatMap(Tuple2::_1).getOrElse(""),
+                    event.getOrElse(""),
+                    runId,
+                    attempt.getOrElse(1),
+                    created,
+                    new Workflow(file, workflow.flatMap(Tuple2::_2))))));
+
     // The builds on one commit, the newest first. Its title is the first line of its message, as GitHub's
     // messageHeadline cuts it off at 72 characters with an ellipsis.
-    static final Decoder<List<Build>> COMMIT = map3(
+    static final Decoder<List<Build>> COMMIT = map4(
             field("oid", string()),
             field("message", string())
                     .map(message -> message.lines().findFirst().orElse("")),
             CHECKS,
+            SuiteFragment.waiting(HELD),
             BuildsQuery::builds);
 
     // The page of commits of a branch; none in a repository without a commit.
@@ -142,10 +169,11 @@ final class BuildsQuery {
     }
 
     /**
-     * The builds on the commit {@code sha} titled {@code title} that {@code checks} tell, the newest first: its check
-     * runs grouped by their workflow run, of an event that builds the code.
+     * The builds on the commit {@code sha} titled {@code title} that {@code checks} and {@code held} tell, the newest
+     * first: its check runs grouped by their workflow run, and its workflow runs waiting to start without a job, of an
+     * event that builds the code.
      */
-    private static List<Build> builds(String sha, String title, List<Tuple2<Check, Workflow>> checks) {
+    private static List<Build> builds(String sha, String title, List<Tuple2<Check, Workflow>> checks, List<Held> held) {
         List<Tuple3<String, CheckRun, Workflow>> runs = checks.flatMap(
                         check -> check._1().run().map(run -> Tuple.of(check._1().name(), run, check._2())))
                 .filter(named -> EVENTS.contains(named._2().event()));
@@ -173,6 +201,9 @@ final class BuildsQuery {
                             workflow.path(),
                             new Build.Origin(workflow.id(), Option.none(), Option.none()));
                 })
+                .appendAll(held.filter(waiting -> EVENTS.contains(waiting.event()))
+                        .filter(waiting -> runs.forAll(named -> named._2().runId() != waiting.runId()))
+                        .map(waiting -> waiting.build(sha, title)))
                 .sorted(Comparator.comparing(Build::createdAt).reversed());
     }
 
@@ -180,4 +211,24 @@ final class BuildsQuery {
      * The workflow of a check run: the path of its file and its id, as far as GitHub says.
      */
     record Workflow(Option<String> path, Option<String> id) {}
+
+    /**
+     * A workflow run that waits to start, without a job yet.
+     */
+    record Held(String workflow, String event, long runId, int attempt, Instant createdAt, Workflow of) {
+
+        Build build(String sha, String title) {
+            return new Build(
+                    workflow,
+                    event,
+                    runId,
+                    attempt,
+                    sha,
+                    title,
+                    createdAt,
+                    List.empty(),
+                    of.path(),
+                    new Build.Origin(of.id(), Option.none(), Option.none()));
+        }
+    }
 }
