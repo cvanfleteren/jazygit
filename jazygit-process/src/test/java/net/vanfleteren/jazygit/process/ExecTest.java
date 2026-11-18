@@ -246,11 +246,17 @@ class ExecTest {
     }
 
     @Test
-    void aLaunchedProgramThatPrintsMuchOnItsErrorOutputIsNotHeldUp() {
-        // Far more than a pipe holds: a program whose error output is not read stops at its next line.
-        List<String> chatty = List.of("sh", "-c", "i=0; while [ $i -lt 20000 ]; do echo line $i >&2; i=$((i+1)); done");
+    void aLaunchedProgramThatPrintsMuchOnItsErrorOutputIsNotHeldUpAndOnlyItsStartIsKept() {
+        // Far more than a pipe holds: a program whose error output is not read stops at its next line, so it would
+        // still be running once SETTLE is over and never be seen to fail.
+        List<String> chatty =
+                List.of("sh", "-c", "i=0; while [ $i -lt 20000 ]; do echo line $i >&2; i=$((i+1)); done; exit 3");
 
-        assertEquals(Either.right(new ExecutedCommand(chatty)), Exec.launch(dir, chatty, SETTLE));
+        ExecFailure.NonZero failed = assertInstanceOf(
+                ExecFailure.NonZero.class, Exec.launch(dir, chatty, SETTLE).getLeft());
+        assertEquals(3, failed.exitCode());
+        assertEquals(Exec.MAX_STDERR, failed.stderr().length());
+        assertTrue(failed.stderr().startsWith("line 0\n"));
     }
 
     @Test

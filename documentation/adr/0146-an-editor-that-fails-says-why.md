@@ -15,12 +15,13 @@ command log; an editor was not.
 
 ## Decision
 
-- **The error output is read.** A program left running (`Exec.launch`) has its error output read on a thread of its
-  own for as long as it writes it, of which the first 64 KiB are kept, as for git (ADR 79). Its standard output is
-  still thrown away. When it exits with an error before it settled, the error output it printed, read for at most half
-  a second more, is in the `ExecFailure.NonZero`.
-  Not: throwing it away once the program settled, by closing the pipe, which kills a program at its next line; nor a
-  file, which a program that runs for days fills.
+- **The error output is kept.** A program left running (`Exec.launch`) writes its error output to a temporary file
+  of its own. When it exits with an error before it settled, the first 64 KiB of that file, as for git (ADR 79), are in
+  the `ExecFailure.NonZero`. Once it settled, or failed, the file is removed: the program keeps writing to it while it
+  runs, and the space is freed when it stops. Its standard output is still thrown away. Without a temporary file, the
+  error output is thrown away, as before.
+  Not: a pipe that jazygit reads. A program left running is to outlive jazygit; once jazygit quits, or crashes, its
+  next line on a pipe nobody reads kills it by `SIGPIPE`.
 - **The error says why.** `GitError.EditorFailed` has the line that says why, chosen as for git
   (`Exec.explanation`): `The editor "claude" exited with code 1: 'claude agents' requires an interactive terminal`.
   An editor that has the terminal prints on it, and has none.
@@ -32,4 +33,6 @@ command log; an editor was not.
 
 - A misconfigured editor is found from jazygit: the command log has the command, the error why it failed.
 - A browser that fails has its error output in the `ExecFailure` too; its error does not show it yet.
-- Each program left running holds a thread, which ends when the program and what it started close their error output.
+- A program left running that prints on its error output without end fills the disk with a file no directory lists,
+  until it stops; before, that went to `/dev/null`. Editors and browsers print little there.
+- On Windows a file that is open cannot be removed: it is removed when jazygit exits instead.

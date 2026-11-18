@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -28,8 +29,6 @@ public final class Exec {
     static final int MAX_STDERR = 64 * 1024;
     // The most of any output that is read, which is far more than is ever meant to be (ADR 79).
     static final Limit MAX_OUTPUT = new Limit(Integer.MAX_VALUE, 64 * 1024 * 1024);
-    // How long the error output of a program that was left running and failed is still read after it exited.
-    private static final Duration ERROR_OUTPUT_WAIT = Duration.ofMillis(500);
     // How git starts the lines that say what went wrong.
     private static final List<String> ERROR_PREFIXES = List.of("fatal:", "error:", "CONFLICT");
     // What ran, for the debug log; never the environment, which may hold a token.
@@ -212,8 +211,9 @@ public final class Exec {
     /**
      * Starts {@code commandLine} in {@code directory} and leaves it running, like a browser (ADR 85): with its input
      * closed and its standard output thrown away, so it takes nothing from the terminal. It is waited for only
-     * {@code settle}: still running by then, it is taken to have started well. Its error output is read for as long as
-     * it runs, and its start kept, for a {@link ExecFailure.NonZero} to say why it failed (ADR 146).
+     * {@code settle}: still running by then, it is taken to have started well. Its error output goes to a temporary
+     * file, whose start a {@link ExecFailure.NonZero} has, to say why it failed; the file is removed once it settled,
+     * and the program keeps writing to it while it runs (ADR 146).
      *
      * @return the command as it was run, when it is still running after {@code settle}, or exited with 0
      */
@@ -225,21 +225,47 @@ public final class Exec {
 
     private static Either<ExecFailure, ExecutedCommand> detach(
             Path directory, List<String> commandLine, Duration settle) {
+        Path stderr;
+        try {
+            stderr = Files.createTempFile("jazygit-launched", ".stderr");
+        } catch (IOException e) {
+            // Without a file for it, its error output is thrown away, as it was before ADR 146.
+            return detach(directory, commandLine, settle, ProcessBuilder.Redirect.DISCARD, Option.none());
+        }
+        try {
+            return detach(
+                    directory, commandLine, settle, ProcessBuilder.Redirect.to(stderr.toFile()), Option.of(stderr));
+        } finally {
+            // The program keeps writing to it while it runs, and the space is freed once it stops: not a pipe, which
+            // kills it at its next line once jazygit is gone.
+            try {
+                Files.deleteIfExists(stderr);
+            } catch (IOException e) {
+                stderr.toFile().deleteOnExit();
+            }
+        }
+    }
+
+    /**
+     * Starts {@code commandLine} as {@link #launch} does, its error output going to {@code errorOutput}, which is read
+     * back from {@code file} when it failed.
+     */
+    private static Either<ExecFailure, ExecutedCommand> detach(
+            Path directory,
+            List<String> commandLine,
+            Duration settle,
+            ProcessBuilder.Redirect errorOutput,
+            Option<Path> file) {
         try {
             Process process = new ProcessBuilder(commandLine.toJavaList())
                     .directory(directory.toFile())
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .redirectError(errorOutput)
                     .start();
             process.getOutputStream().close();
-            FirstBytes stderr = new FirstBytes(MAX_STDERR);
-            Thread reader = drain(process.getErrorStream(), stderr);
-            if (!process.waitFor(settle.toMillis(), TimeUnit.MILLISECONDS) || process.exitValue() == 0) {
-                return Either.right(new ExecutedCommand(commandLine));
-            }
-            // What it started may hold the error output open after it exited: what came until then will do.
-            reader.join(ERROR_OUTPUT_WAIT);
-            return Either.left(
-                    new ExecFailure.NonZero(process.exitValue(), stderr.toString(StandardCharsets.UTF_8), ""));
+            return !process.waitFor(settle.toMillis(), TimeUnit.MILLISECONDS) || process.exitValue() == 0
+                    ? Either.right(new ExecutedCommand(commandLine))
+                    : Either.left(new ExecFailure.NonZero(process.exitValue(), start(file), ""));
         } catch (IOException e) {
             return Either.left(new ExecFailure.NotStarted(e));
         } catch (InterruptedException e) {
@@ -249,18 +275,17 @@ public final class Exec {
     }
 
     /**
-     * Reads {@code from} into {@code into} until it ends, on a thread of its own, which it gives: a program left running
-     * would stop once the pipe of its error output is full, or be killed by a signal once it is closed. {@code into}
-     * keeps only the start of it.
+     * The first {@link #MAX_STDERR} bytes in {@code file}, as text; none when there is no file, or it cannot be read.
      */
-    private static Thread drain(InputStream from, OutputStream into) {
-        return Thread.ofPlatform().daemon().name("jazygit-stderr").start(() -> {
-            try (from) {
-                from.transferTo(into);
-            } catch (IOException e) {
-                // The program is gone, or its output with it: what was read is kept.
-            }
-        });
+    private static String start(Option<Path> file) {
+        return file.map(path -> {
+                    try (InputStream in = Files.newInputStream(path)) {
+                        return new String(in.readNBytes(MAX_STDERR), StandardCharsets.UTF_8);
+                    } catch (IOException e) {
+                        return "";
+                    }
+                })
+                .getOrElse("");
     }
 
     /**
