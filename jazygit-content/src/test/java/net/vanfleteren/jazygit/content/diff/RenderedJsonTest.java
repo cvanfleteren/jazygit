@@ -401,12 +401,9 @@ class RenderedJsonTest {
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
                         HashMap.of("a.json", Expansion.Fold.of(version, cut, 1, true, nodes))),
-                true,
-                true,
                 Option.none(),
                 Option.none(),
-                Theme.SpanStyles.NONE,
-                40);
+                RichDiff.Drawing.of(Theme.SpanStyles.NONE).withWidth(40));
     }
 
     private static List<String> drawnText(RichDiff.Drawn drawn) {

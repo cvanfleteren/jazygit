@@ -11,6 +11,7 @@ import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
@@ -87,7 +88,8 @@ class RichDiffTest {
         Expansion.Folded reading = new Expansion.Folded(
                 diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.READING)));
 
-        RichDiff.Drawn drawn = RichDiff.drawn(known, true, true, Option.none(), Option.none(), Theme.SpanStyles.NONE);
+        RichDiff.Drawn drawn =
+                RichDiff.drawn(known, Option.none(), Option.none(), RichDiff.Drawing.of(Theme.SpanStyles.NONE));
 
         assertEquals(
                 List.of(
@@ -103,7 +105,7 @@ class RichDiffTest {
                 drawn.stops().map(stop -> stop.mark().anchor()).filter(Anchor.Gap.class::isInstance));
         assertEquals(
                 List.of("┄┄┄┄┄ │ reading the whole file ┄", "┄┄┄┄┄ │ reading the whole file ┄"),
-                text(RichDiff.drawn(reading, true, true, Option.none(), Option.none(), Theme.SpanStyles.NONE)
+                text(RichDiff.drawn(reading, Option.none(), Option.none(), RichDiff.Drawing.of(Theme.SpanStyles.NONE))
                                 .lines())
                         .filter(line -> line.startsWith("┄")));
     }
@@ -246,18 +248,16 @@ class RichDiffTest {
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
                         HashMap.of(whole.file().path(), Expansion.Fold.of(version, cut, digits))),
-                true,
-                true,
                 Option.none(),
                 Option.none(),
-                styles);
+                RichDiff.Drawing.of(styles));
     }
 
     /**
      * The markers {@code folded} is drawn with.
      */
     private static List<String> markers(Expansion.Folded folded) {
-        return text(RichDiff.drawn(folded, true, true, Option.none(), Option.none(), Theme.SpanStyles.NONE)
+        return text(RichDiff.drawn(folded, Option.none(), Option.none(), RichDiff.Drawing.of(Theme.SpanStyles.NONE))
                         .lines())
                 .filter(line -> line.startsWith("┄"));
     }
@@ -278,8 +278,11 @@ class RichDiffTest {
 
     @Test
     void changedLinesAreShownInPairsAndTheCursorStopsOnThemInThatOrder() {
-        RichDiff.Drawn drawn =
-                RichDiff.drawn(ParsedDiff.of(VERSIONS), true, true, Option.none(), Theme.SpanStyles.NONE);
+        RichDiff.Drawn drawn = RichDiff.drawn(
+                Expansion.Folded.of(ParsedDiff.of(VERSIONS)),
+                Option.none(),
+                Option.none(),
+                RichDiff.Drawing.of(Theme.SpanStyles.NONE));
 
         assertEquals(
                 List.of(
@@ -313,11 +316,9 @@ class RichDiffTest {
     void theHunkARangeIsOpenInIsShownAsGitGivesIt() {
         List<String> lines = text(RichDiff.drawn(
                                 Expansion.Folded.of(ParsedDiff.of(VERSIONS)),
-                                true,
-                                true,
                                 Option.none(),
                                 Option.of(new DiffStops.HunkAt(0, 0)),
-                                Theme.SpanStyles.NONE)
+                                RichDiff.Drawing.of(Theme.SpanStyles.NONE))
                         .lines())
                 .filter(line -> line.contains("│ -") || line.contains("│ +"))
                 .map(String::stripTrailing);
@@ -375,7 +376,8 @@ class RichDiffTest {
 
     @Test
     void aLineIsSearchedInItsCodeAfterItsGutterAndMarkerAndAConflictedOneWithoutItsPrefix() {
-        RichDiff.Drawn drawn = RichDiff.drawn(ParsedDiff.of("""
+        RichDiff.Drawn drawn = RichDiff.drawn(
+                Expansion.Folded.of(ParsedDiff.of("""
                         diff --git a/a.txt b/a.txt
                         --- a/a.txt
                         +++ b/a.txt
@@ -389,7 +391,10 @@ class RichDiffTest {
                         +++ b/f.txt
                         @@@ -1,2 -1,2 +1,3 @@@
                         ++<<<<<<< HEAD
-                        """), true, true, Option.none(), Theme.SpanStyles.NONE);
+                        """)),
+                Option.none(),
+                Option.none(),
+                RichDiff.Drawing.of(Theme.SpanStyles.NONE));
         Rows rows = drawn.rows();
 
         List<Tuple2<String, String>> searched = List.range(0, rows.size())
@@ -508,7 +513,11 @@ class RichDiffTest {
 
     @Test
     void withoutWordsAChangedLineIsDrawnInItsLineClassAlone() {
-        List<Line> lines = RichDiff.drawn(ParsedDiff.of(STRING_CHANGED), false, false, Option.none(), SYNTAX_STYLES)
+        List<Line> lines = RichDiff.drawn(
+                        Expansion.Folded.of(ParsedDiff.of(STRING_CHANGED)),
+                        Option.none(),
+                        Option.none(),
+                        RichDiff.Drawing.of(SYNTAX_STYLES).withHighlights(HashSet.empty()))
                 .lines();
 
         assertEquals(
@@ -664,7 +673,8 @@ class RichDiffTest {
             }
             return SYNTAX_STYLES.of(cssClass);
         };
-        RichDiff.Drawn drawn = RichDiff.drawn(ParsedDiff.of("""
+        RichDiff.Drawn drawn = RichDiff.drawn(
+                Expansion.Folded.of(ParsedDiff.of("""
                          a.txt | 2 +-
                          a summary longer than any line of the diff, which is measured as it is drawn
 
@@ -683,7 +693,7 @@ class RichDiffTest {
                         @@ -1 +1 @@
                         -a ❤️
                         +a ✔️
-                        """), true, true, Option.none(), counting);
+                        """)), Option.none(), Option.none(), RichDiff.Drawing.of(counting));
 
         // The markers of the lines left out are drawn already, and resolve the class of the gutter too.
         int markers = gutters.get();
@@ -698,7 +708,8 @@ class RichDiffTest {
 
     @Test
     void theWidestLineOfADiffIsItsBarWhenNoOtherLineIsWider() {
-        RichDiff.Drawn drawn = RichDiff.drawn(ParsedDiff.of("""
+        RichDiff.Drawn drawn = RichDiff.drawn(
+                Expansion.Folded.of(ParsedDiff.of("""
                         diff --git a/A.java b/A.java
                         --- a/A.java
                         +++ b/A.java
@@ -706,7 +717,10 @@ class RichDiffTest {
                          class A {
                         -    String s = "ab"; // a line longer than the others
                         +    String s = "ac"; // a line longer than the others, and longer still
-                        """), true, true, Option.none(), SYNTAX_STYLES);
+                        """)),
+                Option.none(),
+                Option.none(),
+                RichDiff.Drawing.of(SYNTAX_STYLES));
 
         assertEquals(
                 drawn.lines().map(RichDiffTest::width).max().get(),
@@ -795,7 +809,16 @@ class RichDiffTest {
      * The lines of {@code diff}, the changed words highlighted, as the tests of how a line is drawn expect.
      */
     private static List<Line> lines(ParsedDiff diff, boolean syntax, Theme.SpanStyles styles) {
-        return RichDiff.drawn(diff, syntax, true, Option.none(), styles).lines();
+        return RichDiff.drawn(
+                        Expansion.Folded.of(diff),
+                        Option.none(),
+                        Option.none(),
+                        RichDiff.Drawing.of(styles)
+                                .withHighlights(
+                                        syntax
+                                                ? HashSet.of(RichDiff.Highlight.SYNTAX, RichDiff.Highlight.WORDS)
+                                                : HashSet.of(RichDiff.Highlight.WORDS)))
+                .lines();
     }
 
     /**

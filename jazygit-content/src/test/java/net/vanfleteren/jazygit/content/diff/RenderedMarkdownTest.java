@@ -330,12 +330,9 @@ class RenderedMarkdownTest {
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
                         HashMap.of("README.md", Expansion.Fold.of(version, cut, 1, true))),
-                true,
-                true,
                 Option.none(),
                 Option.none(),
-                styles,
-                40);
+                RichDiff.Drawing.of(styles).withWidth(40));
     }
 
     private static List<String> text(List<Line> lines) {

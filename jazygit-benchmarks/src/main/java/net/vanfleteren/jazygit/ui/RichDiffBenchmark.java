@@ -7,9 +7,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.bench.WordDiffBenchmark.Shape;
+import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
-import net.vanfleteren.jazygit.content.diff.RichDiff;
+import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -66,6 +67,7 @@ public class RichDiffBenchmark {
      */
     @Benchmark
     public List<Line> draw() {
-        return RichDiff.drawn(parsed, true, true, Option.none(), STYLES).lines();
+        return RichDiff.drawn(Expansion.Folded.of(parsed), Option.none(), Option.none(), RichDiff.Drawing.of(STYLES))
+                .lines();
     }
 }

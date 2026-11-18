@@ -50,22 +50,17 @@ final class SplitRows {
     private SplitRows() {}
 
     /**
-     * The lines still to be drawn of {@code parsed}, the {@code index}th file of its diff, with the review threads
-     * {@code remarks} on it, folded as {@code fold} says, its code coloured by its syntax if {@code syntax}, its changed
-     * words highlighted if {@code words}, its threads drawn as {@code style} says, in an area {@code area} columns
-     * wide.
+     * The lines still to be drawn of the file {@code fileAt}, with the review threads on it, folded as {@code fold} says,
+     * its hunks hidden as {@code hiding} says, drawn as {@code drawing} says, in an area as wide as it says.
      */
     static List<Pending> file(
-            ParsedFile parsed,
-            Option<FileRemarks> remarks,
-            int index,
-            Expansion.Fold fold,
-            Filtering.Hiding hiding,
-            boolean syntax,
-            boolean words,
-            RemarkLines.RemarkStyle style,
-            Theme.SpanStyles styles,
-            int area) {
+            RichDiff.FileAt fileAt, Expansion.Fold fold, Filtering.Hiding hiding, RichDiff.Drawing drawing) {
+        ParsedFile parsed = fileAt.parsed();
+        Option<FileRemarks> remarks = fileAt.remarks();
+        int index = fileAt.index();
+        RemarkLines.RemarkStyle style = fileAt.style();
+        Theme.SpanStyles styles = drawing.styles();
+        int area = drawing.width();
         FileDiff file = parsed.file();
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
         int digits = lines.flatMap(line ->
@@ -73,6 +68,7 @@ final class SplitRows {
                 .max()
                 .map(number -> String.valueOf(number).length())
                 .getOrElse(1);
+        // Measured on the threads of the common pool, as the rich view measures (RichDiff.file).
         Vector<Integer> measured = RichDiff.inParallel(
                         lines.toList(), line -> RichDiff.width(line.line().text()))
                 .toVector();
@@ -81,7 +77,7 @@ final class SplitRows {
                 .getOrElse(() -> Vector.fill(lines.size(), () -> RichDiff.NO_REMARKS));
         int left = (area - 1) / 2;
         int gutter = digits + RichDiff.GUTTER_END.length();
-        Layout layout = new Layout(file.path(), index, digits, left, area - 1 - left, syntax, words, style, styles);
+        Layout layout = new Layout(file.path(), index, digits, left, area - 1 - left, style, drawing);
         Map<Integer, Folding.Gap> gapBefore = Folding.gaps(file, fold.length()).toMap(Folding.Gap::before, gap -> gap);
         Option<Folding.Gap> trailing = gapBefore.get(parsed.hunks().size());
         boolean unplaced = remarks.exists(placed -> !placed.unplaced().isEmpty());
@@ -134,8 +130,7 @@ final class SplitRows {
                                             row(row._1(), shown, followed || row._2() < rows.size() - 1, layout)));
                         }),
                         at -> gapBefore.get(at).toList().<Pending>map(gap -> () -> marker(gap, fold, layout)),
-                        (run, opened) -> RichDiff.filteredMarker(
-                                run, opened, file.path(), ruleOf(layout), layout.area(), styles)))
+                        (run, opened) -> RichDiff.filteredMarker(run, opened, markerAt(layout))))
                 .appendAll(trailing.toList().map(gap -> () -> marker(gap, fold, layout)))
                 .appendAll(remarks.toList().<Pending>map(placed -> () -> wide.unplaced(placed.unplaced(), styles)));
     }
@@ -144,8 +139,14 @@ final class SplitRows {
      * The marker of {@code gap}, as wide as the area, its rule as wide as the gutter of a half.
      */
     private static List<Marked> marker(Folding.Gap gap, Expansion.Fold fold, Layout layout) {
-        return RichDiff.marker(gap, fold, layout.path(), ruleOf(layout), layout.area(), layout.styles())
-                .draw();
+        return RichDiff.marker(gap, fold, markerAt(layout)).draw();
+    }
+
+    /**
+     * Where a marker goes: after the rule, as wide as the gutter of a half, tinted as wide as the area.
+     */
+    private static RichDiff.MarkerAt markerAt(Layout layout) {
+        return new RichDiff.MarkerAt(layout.path(), ruleOf(layout), layout.area(), layout.styles());
     }
 
     /**
@@ -439,8 +440,7 @@ final class SplitRows {
 
     /**
      * What drawing each row of a file takes: its path, its index in the diff, how many digits its numbers have, how
-     * wide the halves are, whether its code is coloured by its syntax and its changed words highlighted, how its
-     * threads are drawn, and the styles of the theme.
+     * wide the halves are, how its threads are drawn, and how the diff is drawn ({@link RichDiff.Drawing}).
      */
     private record Layout(
             String path,
@@ -448,10 +448,20 @@ final class SplitRows {
             int digits,
             int left,
             int right,
-            boolean syntax,
-            boolean words,
             RemarkLines.RemarkStyle style,
-            Theme.SpanStyles styles) {
+            RichDiff.Drawing drawing) {
+
+        boolean syntax() {
+            return drawing.has(RichDiff.Highlight.SYNTAX);
+        }
+
+        boolean words() {
+            return drawing.has(RichDiff.Highlight.WORDS);
+        }
+
+        Theme.SpanStyles styles() {
+            return drawing.styles();
+        }
 
         int area() {
             return left + 1 + right;
