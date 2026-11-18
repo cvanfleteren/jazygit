@@ -3,8 +3,12 @@ package net.vanfleteren.jazygit.changes.diff;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.Blame;
 import net.vanfleteren.jazygit.git.model.BlameAt;
@@ -25,6 +29,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
@@ -33,9 +38,12 @@ import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.ReadBlame;
 import net.vanfleteren.jazygit.state.load.ReadVersion;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.FilesShown;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
+import net.vanfleteren.jazygit.ui.keys.Keymap;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -101,6 +109,102 @@ class BlameUpdateTest {
         assertEquals(List.of(), back.cmds().filter(ReadBlame.class::isInstance));
         assertEquals(
                 Option.of(new Loadable.Loaded<>(BLAME)), version(back.model()).flatMap(Version::blame));
+    }
+
+    @Test
+    void enterOnABlamedLineOpensTheFilesOfItsCommitOnTheFileAsItWasNamedThere() {
+        Sha older = new Sha("c".repeat(40));
+        Blame.Commit commit = new Blame.Commit(older, "Alex Moreau", Instant.EPOCH, "first", false);
+        Blame.Commit stash = new Blame.Commit(STASH, "Alex Moreau", Instant.EPOCH, "WIP on main", false);
+        Blame blame = new Blame(Vector.of(
+                new Blame.Line(commit, 1, "old.txt", Option.none()),
+                new Blame.Line(stash, 2, "a.txt", Option.none()),
+                new Blame.Line(Blame.NOT_COMMITTED, 3, "a.txt", Option.none())));
+        Model read = blameRead(Update.update(newVersion(), new VersionMsg.BlameToggled(at())), blame);
+
+        Model opened = Update.update(read, new VersionMsg.LineOpened(onLine(1))).model();
+
+        CommitFilesView files = opened.repoView().files().commitFiles().get();
+        assertEquals(new Changes.OfCommit(older), files.of());
+        assertEquals(Scopes.COMMITS.pane(), files.pane());
+        assertEquals(Option.of("old.txt"), files.wanted());
+        // A line of the stash shown, and one not committed yet, open nothing.
+        assertEquals(
+                Option.none(),
+                Update.update(read, new VersionMsg.LineOpened(onLine(2)))
+                        .model()
+                        .repoView()
+                        .files()
+                        .commitFiles());
+        assertEquals(
+                Option.none(),
+                Update.update(read, new VersionMsg.LineOpened(onLine(3)))
+                        .model()
+                        .repoView()
+                        .files()
+                        .commitFiles());
+    }
+
+    @Test
+    void enterOnALineOfTheStashOrItsIndexOrNotCommittedYetOpensNothing() {
+        Blame.Commit index = new Blame.Commit(
+                new Sha("2".repeat(40)), "Alex Moreau", Instant.EPOCH, "index on main: 1234567 base", false);
+        Blame.Commit stash = new Blame.Commit(STASH, "Alex Moreau", Instant.EPOCH, "WIP on main", false);
+        Blame blame = new Blame(Vector.of(
+                new Blame.Line(index, 1, "a.txt", Option.none()),
+                new Blame.Line(stash, 2, "a.txt", Option.none()),
+                new Blame.Line(Blame.NOT_COMMITTED, 3, "a.txt", Option.none())));
+        Model read = blameRead(Update.update(newVersion(), new VersionMsg.BlameToggled(at())), blame);
+        Version blamed = version(read).get();
+
+        for (int line = 1; line <= 3; line++) {
+            Next next = Update.update(read, new VersionMsg.LineOpened(onLine(line)));
+
+            assertEquals(Option.none(), blamed.opening(onLine(line).cursor()), "line " + line);
+            assertEquals(List.of(), next.cmds(), "line " + line);
+            assertEquals(read, next.model(), "line " + line);
+        }
+    }
+
+    @Test
+    void enterWhileTheBlameIsReadOpensNothing() {
+        Model reading =
+                Update.update(newVersion(), new VersionMsg.BlameToggled(at())).model();
+
+        Next next = Update.update(reading, new VersionMsg.LineOpened(onLine(1)));
+
+        assertEquals(Option.none(), version(reading).get().opening(onLine(1).cursor()));
+        assertEquals(List.of(), next.cmds().filter(cmd -> !(cmd instanceof ReadBlame)));
+        assertEquals(Option.none(), next.model().repoView().files().commitFiles());
+    }
+
+    @Test
+    void enterSendsTheLineOpenedOnlyWhereTheContentPanelSaysItOpensACommit() {
+        Keymap keys = ExpandAction.ACTION.keys().apply(Keymap.empty());
+        DiffCursorAt line = onLine(1);
+        DiffCursorAt opening = new DiffCursorAt(
+                line.area(),
+                line.at(),
+                line.cursor(),
+                line.next(),
+                line.previous(),
+                line.marked(),
+                false,
+                Option.none(),
+                true);
+
+        assertEquals(Option.none(), keys.handle(Scopes.DIFF, KeyEvent.ofKey(KeyCode.ENTER), Option.of(line)));
+        assertEquals(
+                Option.of(new VersionMsg.LineOpened(opening)),
+                keys.handle(Scopes.DIFF, KeyEvent.ofKey(KeyCode.ENTER), Option.of(opening)));
+    }
+
+    @Test
+    void enterOnALineOfTheDiffOpensNothing() {
+        Next next = Update.update(loaded(), new VersionMsg.LineOpened(at()));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Option.none(), next.model().repoView().files().commitFiles());
     }
 
     @Test
@@ -379,9 +483,24 @@ class BlameUpdateTest {
      * {@code asked} once the one blame it reads is read.
      */
     private static Model blameRead(Next asked) {
+        return blameRead(asked, BLAME);
+    }
+
+    private static Model blameRead(Next asked, Blame blame) {
         ReadBlame read = onlyRead(asked.cmds());
-        return TestModels.done(TestModels.running(asked.model(), read), read, new LoadMsg.BlameRead(read, BLAME))
+        return TestModels.done(TestModels.running(asked.model(), read), read, new LoadMsg.BlameRead(read, blame))
                 .model();
+    }
+
+    private static DiffCursorAt onLine(int number) {
+        Anchor.OnLine line = new Anchor.OnLine("a.txt", Side.RIGHT, number);
+        return new DiffCursorAt(
+                AREA,
+                new Scrolled(CONTENT, 0, 0, Option.of(line), Option.none()),
+                line,
+                Option.none(),
+                Option.none(),
+                Option.none());
     }
 
     private static ReadBlame onlyRead(List<Cmd> cmds) {

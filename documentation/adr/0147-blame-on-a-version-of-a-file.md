@@ -111,8 +111,13 @@ hunks a filter hides (ADR 144): one binding, which does nothing on a line.
   of its author as the commits pane draws them (`CommitsPanel.initials`), and its author date:
   `▌ 9c4d2e8 AM 2026-09-14`. Not: the name of the author, or a relative time, which take more width and the second of
   which goes stale.
-- Of the lines of a run from one commit, only the first is labelled; the bar goes on beside the others. The line of the
-  cursor shows its label always.
+- A version blamed numbers its lines in one column, as wide as the widest of its numbers, right after the blame:
+  `▌ 9c4d2e8 AM 2026-09-14 12 │`. Not: the two columns of the diff a version keeps so its code does not move sideways
+  (ADR 102): the column of the blame moves it anyway, and the empty column of the other file's numbers would part the
+  blame from the numbers.
+- Of the lines of a run from one commit, only the first is labelled; the bar goes on beside the others. Not: the line
+  of the cursor labelled always: the last row of the area says its commit, and the rows drawn would be drawn again
+  for each move of the cursor.
 - A line of the commit whose version this is, which is tinted as changed already, is labelled `this commit`, dimmed.
   A line not committed yet, which git blames on a sha of zeros, is labelled `uncommitted`, dimmed, without a bar.
 - The bar is shaded by age in five groups: the commits the version is blamed on, newest first, split in five as

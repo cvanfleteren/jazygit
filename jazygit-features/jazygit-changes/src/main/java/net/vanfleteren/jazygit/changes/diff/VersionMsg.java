@@ -47,4 +47,10 @@ public sealed interface VersionMsg extends Msg {
      * or to stop to, in every area the content panel shows it in, as the unstaged area goes.
      */
     record FilesBlameToggled() implements VersionMsg {}
+
+    /**
+     * The user asked, on the line the cursor {@code at} is on, to open the files of the commit it is blamed on, if the
+     * version of the area is shown blamed (ADR 147).
+     */
+    record LineOpened(DiffCursorAt at) implements VersionMsg {}
 }

@@ -11,6 +11,7 @@ import dev.tamboui.tui.event.MouseEventKind;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import dev.tamboui.widgets.tree.TreeNode;
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
@@ -69,6 +70,10 @@ final class FileTreeList<T extends Pathed> {
     private Set<String> collapsedUnfiltered = HashSet.empty();
     // Whether the files have not been read since they were last loading, so the start highlight is still to place.
     private boolean unread;
+    // The path of the file to highlight once the files are read, if it is listed, until it is (ADR 147).
+    // What the files are of with it, so the same path among the files of another commit is wanted again.
+    private Option<Tuple2<Object, String>> wanted = Option.none();
+    private boolean wantedPlaced = true;
     // The nodes drawn for the frame being rendered, with what they were drawn as, to find the one clicked on.
     private List<Drawn<T>> drawn = List.of();
     // The node a step moved the highlight to (ADR 117), until the tree is drawn again: the widget says which node is
@@ -123,6 +128,18 @@ final class FileTreeList<T extends Pathed> {
      */
     void onKey(KeyEventHandler handler) {
         tree.onKeyEvent(handler);
+    }
+
+    /**
+     * Makes the highlight go to the file at {@code path} among the files of {@code of} once they are read, if it is
+     * listed, when another file was wanted before: else it stays where {@link #start} put it (ADR 147).
+     */
+    void wanting(Object of, Option<String> path) {
+        Option<Tuple2<Object, String>> want = path.map(file -> Tuple.of(of, file));
+        if (!wanted.equals(want)) {
+            wanted = want;
+            wantedPlaced = want.isEmpty();
+        }
     }
 
     /**
@@ -183,13 +200,22 @@ final class FileTreeList<T extends Pathed> {
             this.placeholder = placeholder;
             rebuild(files, collapsed(roots));
         }
-        // A load already lost the highlight, so it is placed afresh once the files are read again.
+        // A load already lost the highlight, so it is placed afresh once the files are read again, on the file
+        // wanted too, if one is: the same file of the same commit opened again is read again (ADR 147).
         if (!(files instanceof Loadable.Loaded<List<T>>)) {
             unread = true;
+            wantedPlaced = wanted.isEmpty();
         } else if (unread) {
             unread = false;
             steppedTo = Option.none();
             tree.selected(start.applyAsInt(visible(roots)));
+        }
+        if (!wantedPlaced && files instanceof Loadable.Loaded<List<T>>) {
+            wantedPlaced = true;
+            nodes(roots)
+                    .find(node -> node.data() instanceof FileTree.File<T> file
+                            && wanted.exists(want -> want._2().equals(file.path())))
+                    .forEach(this::highlight);
         }
         return tree;
     }

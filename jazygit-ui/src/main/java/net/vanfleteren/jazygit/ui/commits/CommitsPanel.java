@@ -217,7 +217,7 @@ public class CommitsPanel {
      * The capitalized first letters of the first two words of {@code name}; a name of a single word gives
      * its first two letters as they are. No more than two columns: a CJK or emoji letter takes both.
      */
-    static String initials(String name) {
+    public static String initials(String name) {
         List<String> words = List.of(name.strip().split("\\s+")).filter(word -> !word.isEmpty());
         if (words.size() < 2) {
             return TextWidth.start(name.strip(), INITIALS_WIDTH);

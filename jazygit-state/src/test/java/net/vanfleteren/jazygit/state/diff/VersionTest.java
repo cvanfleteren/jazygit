@@ -2,9 +2,13 @@ package net.vanfleteren.jazygit.state.diff;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
+import net.vanfleteren.jazygit.git.model.Blame;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
@@ -104,6 +108,34 @@ class VersionTest {
                         DiffOptions.DEFAULT.withIgnoreWhitespace(true))
                 .options()
                 .ignoreWhitespace());
+    }
+
+    @Test
+    void theLinesOfACommitOrOfTheThreeCommitsOfAStashAreItsOwn() {
+        CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED, Option.none());
+        Sha commit = new Sha("c".repeat(40));
+        Sha stash = new Sha("5".repeat(40));
+        Blame.Commit index = blamedOn('2', "index on main: 1234567 base");
+        Blame.Commit untracked = blamedOn('3', "untracked files on main: 1234567 base");
+        Blame.Commit older = blamedOn('1', "an older commit");
+        Blame blame =
+                new Blame(Vector.of(index, untracked, older).map(on -> new Blame.Line(on, 1, "a.txt", Option.none())));
+
+        assertEquals(HashSet.of(commit), Version.own(new WholeFile.Source.OfCommit(commit, file), Option.none()));
+        assertEquals(
+                HashSet.of(commit),
+                Version.own(new WholeFile.Source.OfFiles(new Changes.OfCommit(commit), file), Option.none()));
+        assertEquals(
+                HashSet.of(stash, index.sha(), untracked.sha()),
+                Version.own(new WholeFile.Source.OfStash(stash, file), Option.of(blame)));
+        assertFalse(Version.own(new WholeFile.Source.OfStash(stash, file), Option.of(blame))
+                .contains(older.sha()));
+        assertTrue(
+                Version.own(new WholeFile.Source.OnDisk("a.txt"), Option.none()).isEmpty());
+    }
+
+    private static Blame.Commit blamedOn(char digit, String summary) {
+        return new Blame.Commit(new Sha(String.valueOf(digit).repeat(40)), "A", Instant.EPOCH, summary, false);
     }
 
     private static Version version(Option<FileVersion> shown, Loadable<DiffText> whole) {

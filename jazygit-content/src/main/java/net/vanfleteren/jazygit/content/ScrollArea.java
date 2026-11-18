@@ -37,6 +37,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
+import net.vanfleteren.jazygit.content.diff.BlameFooter;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
 import net.vanfleteren.jazygit.content.diff.Halves;
 import net.vanfleteren.jazygit.content.diff.LineGoal;
@@ -137,6 +138,9 @@ public final class ScrollArea {
     private Option<String> number = Option.none();
     // Whether the area shows the original of a file whole, whose lines are numbered in the old file (ADR 102, 140).
     private boolean original = false;
+    // The version of its file the area shows, if it shows one: on a line of it blamed, Enter opens its commit (ADR
+    // 147).
+    private Option<Version> shownVersion = Option.none();
     // The number of the line asked for that a marker leaves out, and what the area showed when it was asked for, while
     // the area waits for it to show (ADR 140).
     private Option<Tuple2<ScrolledContent, Integer>> wanted = Option.none();
@@ -173,8 +177,18 @@ public final class ScrollArea {
         Option<StyledElement<?>> line = typing.filter(ignored -> focused)
                 .<StyledElement<?>>map(searchLine::field)
                 .orElse(() -> number.filter(ignored -> focused).map(numberLine::field));
-        return line.<Element>map(field -> new PasteTarget(column(field, fitted).fill(), id, this::pasted))
+        Element shownWithLine = line.<Element>map(
+                        field -> new PasteTarget(column(field, fitted).fill(), id, this::pasted))
                 .getOrElse(fitted);
+        // Under a version shown blamed, the commit of the line of the cursor (ADR 147).
+        return model.repoView()
+                .version(area.id(), shown.content())
+                .flatMap(version -> BlameFooter.text(version, cursor.map(DiffCursor::anchor), model.now()))
+                .<Element>map(said -> column(
+                                shownWithLine,
+                                text(" " + said).addClass(Theme.Classes.DIM).length(1))
+                        .fill())
+                .getOrElse(shownWithLine);
     }
 
     private void pasted(PasteEvent event) {
@@ -223,10 +237,8 @@ public final class ScrollArea {
         typing = model.contentSearch().filter(ContentSearch::typing).map(ContentSearch::text);
         // The line to type a line number in shows above the area with the focus, unless the line of a search does.
         number = model.lineNumber().filter(ignored -> typing.isEmpty());
-        original = model.repoView()
-                .version(area.id(), content)
-                .flatMap(Version::showing)
-                .contains(FileVersion.ORIGINAL);
+        shownVersion = model.repoView().version(area.id(), content);
+        original = shownVersion.flatMap(Version::showing).contains(FileVersion.ORIGINAL);
         // The matches are found once per body and query, not per frame (ADR 126).
         Styled current = last.filter(before -> before.asGiven().equals(asGiven))
                 .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width))
@@ -309,7 +321,7 @@ public final class ScrollArea {
                         state.viewportWidth(),
                         current::filling,
                         drawn::halvesOf,
-                        drawn::pinnedAt))
+                        drawn::keptAt))
                 .title(shown.title()
                         + drawn.note()
                                 .map(says -> Messages.get("content.search.notice", says))
@@ -676,7 +688,13 @@ public final class ScrollArea {
                         return Math.clamp(moved, 0, Math.max(0, columns));
                     }
                     int width = Math.max(1, element.state().viewportWidth());
-                    int shifted = start < column ? start : end > column + width ? end - width : column;
+                    // The gutter of a line of a version shown blamed stays where it is; its code scrolls after it
+                    // (ADR 147).
+                    int kept = shown.split().keptAt(hit.row());
+                    if (kept == RichDiff.Drawn.PINNED) {
+                        return column;
+                    }
+                    int shifted = start - kept < column ? start - kept : end > column + width ? end - width : column;
                     return Math.clamp(shifted, 0, Math.max(0, columns));
                 })
                 .getOrElse(column);
@@ -750,7 +768,8 @@ public final class ScrollArea {
                         : cursor.previousThread().map(previous -> movedTo(previous, content)),
                 cursor.marked().map(marked -> movedTo(marked, content)),
                 cursor.onHalf(),
-                Option.when(numbered(cursor), LineNumberMsg.Opened::new));
+                Option.when(numbered(cursor), LineNumberMsg.Opened::new),
+                shownVersion.exists(version -> version.opening(acting).isDefined()));
     }
 
     /**

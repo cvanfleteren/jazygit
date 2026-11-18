@@ -21,6 +21,8 @@ import net.vanfleteren.jazygit.state.Msg;
  *                 for a file it cannot pair the lines of, whatever the style asked for
  * @param goToLine what {@code :} sends: the line to type a line number in opened, where the area shows lines of a file
  *                 to go to; none elsewhere, as on a binary file (ADR 140)
+ * @param opens    whether the cursor is on a line of a version shown blamed whose commit Enter opens the files of
+ *                 (ADR 147): blamed on a commit, not the one shown
  */
 public record DiffCursorAt(
         AreaId area,
@@ -30,7 +32,23 @@ public record DiffCursorAt(
         Option<Msg> previous,
         Option<Msg> marked,
         boolean split,
-        Option<Msg> goToLine) {
+        Option<Msg> goToLine,
+        boolean opens) {
+
+    /**
+     * Where the cursor is, on no line whose commit Enter opens.
+     */
+    public DiffCursorAt(
+            AreaId area,
+            Scrolled at,
+            Anchor cursor,
+            Option<Msg> next,
+            Option<Msg> previous,
+            Option<Msg> marked,
+            boolean split,
+            Option<Msg> goToLine) {
+        this(area, at, cursor, next, previous, marked, split, goToLine, false);
+    }
 
     /**
      * Where the cursor is, in what has no line of a file to go to by its number.

@@ -198,12 +198,23 @@ public final class RichDiff {
                 .appendAll(inParallel(pending, Pending::draw).flatMap(lines -> lines)));
         // How many hunks the diff filters hide, or that they are switched off where they would hide some, which the
         // title says: drawn with the diff, so it is worked out once for it, not for each frame (ADR 144).
-        Drawn noted = folded.filtered() == 0
+        Drawn filtered = folded.filtered() == 0
                 ? drawn
                 : drawn.withNote(
                         folded.filtersOff()
                                 ? Messages.get("content.filtered.off")
                                 : Messages.get("content.filtered.hidden", folded.filtered()));
+        // The column of a version blamed shortened to fit its area, which the title says (ADR 147).
+        Drawn noted = diff.files()
+                .flatMap(file -> blameColumn(
+                                file.hunks().flatMap(ParsedHunk::lines).toVector(),
+                                folded.fold(file.file().path()),
+                                width,
+                                styles)
+                        .flatMap(BlameColumn::note))
+                .headOption()
+                .map(filtered::withNote)
+                .getOrElse(filtered);
         return split.map(area -> noted.withDivider((area - 1) / 2)).getOrElse(noted);
     }
 
@@ -261,23 +272,10 @@ public final class RichDiff {
                     .map(pending -> () -> pending.draw().map(Marked::pin));
         }
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
-        // A version keeps the gutter of the diff it is shown in place of, as wide, so its code does not move sideways
-        // (ADR 102): its numbers, of the whole file, may be longer than the diff's, but fit in both of its columns.
-        int digits = version.map(shown -> {
-                    int own = lines.flatMap(line -> shown.number(line.line()))
-                            .max()
-                            .map(number -> String.valueOf(number).length())
-                            .getOrElse(1);
-                    return Math.max(fold.digits(), own / 2);
-                })
-                .getOrElse(() -> lines.flatMap(line -> line.line()
-                                .oldNumber()
-                                .toList()
-                                .appendAll(line.line().newNumber()))
-                        .max()
-                        .map(number -> String.valueOf(number).length())
-                        .getOrElse(1));
-        int gutter = 2 * digits + 1 + GUTTER_END.length();
+        int digits = digits(lines, fold);
+        // A version shown blamed has the column of its blame before its numbers (ADR 147).
+        Option<BlameColumn> blame = blameColumn(lines, fold, rendering, styles);
+        int gutter = blame.map(BlameColumn::width).getOrElse(0) + numbersWidth(lines, fold);
         String bar = version.map(shown -> bar(parsed, shown)).getOrElse(() -> bar(file));
         // Each line is measured once, here: its width also tells how far a changed line is padded.
         Vector<Integer> measured =
@@ -286,8 +284,8 @@ public final class RichDiff {
                 width(bar),
                 gutter + measured.max().map(text -> text + 1 + MARGIN.length()).getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
-        Layout layout =
-                new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles, version);
+        Layout layout = new Layout(
+                file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles, version, blame);
         Vector<LineRemarks> onLines = remarks.map(
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
@@ -353,6 +351,62 @@ public final class RichDiff {
                 .appendAll(remarks.filter(ignored -> version.isEmpty())
                         .toList()
                         .<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
+    }
+
+    /**
+     * How many digits each column of numbers of the gutter of {@code lines}, a file folded as {@code fold} says, takes:
+     * as many as its widest number. A version keeps the gutter of the diff it is shown in place of, as wide, so its
+     * code does not move sideways (ADR 102): its numbers, of the whole file, may be longer than the diff's, but fit in
+     * both of its columns.
+     */
+    private static int digits(Vector<ParsedLine> lines, Expansion.Fold fold) {
+        return fold.version()
+                .map(shown -> shownBlamed(fold)
+                        ? ownDigits(lines, shown)
+                        : Math.max(fold.digits(), ownDigits(lines, shown) / 2))
+                .getOrElse(() -> lines.flatMap(line -> line.line()
+                                .oldNumber()
+                                .toList()
+                                .appendAll(line.line().newNumber()))
+                        .max()
+                        .map(number -> String.valueOf(number).length())
+                        .getOrElse(1));
+    }
+
+    /**
+     * How many digits the widest number of {@code lines} in {@code version} has.
+     */
+    private static int ownDigits(Vector<ParsedLine> lines, FileVersion version) {
+        return lines.flatMap(line -> version.number(line.line()))
+                .max()
+                .map(number -> String.valueOf(number).length())
+                .getOrElse(1);
+    }
+
+    /**
+     * Whether {@code fold} is of a version shown blamed (ADR 147). Its code moves sideways by the column of its blame
+     * anyway, so it does not keep the gutter of the diff: its numbers are in one column as wide as its own widest.
+     */
+    private static boolean shownBlamed(Expansion.Fold fold) {
+        return fold.version().isDefined() && fold.blame().isDefined();
+    }
+
+    /**
+     * How many columns the numbers of the gutter of {@code lines}, a file folded as {@code fold} says, take, with its
+     * end: two columns of {@link #digits} digits and a space between them, or one for a version shown blamed.
+     */
+    private static int numbersWidth(Vector<ParsedLine> lines, Expansion.Fold fold) {
+        int digits = digits(lines, fold);
+        return (shownBlamed(fold) ? digits : 2 * digits + 1) + GUTTER_END.length();
+    }
+
+    /**
+     * The column of the blame of {@code lines}, a file folded as {@code fold} says, in an area {@code area} columns
+     * wide: if it is a version shown blamed, as source (ADR 147).
+     */
+    private static Option<BlameColumn> blameColumn(
+            Vector<ParsedLine> lines, Expansion.Fold fold, int area, Theme.SpanStyles styles) {
+        return fold.version().flatMap(ignored -> BlameColumn.of(fold.blame(), area, numbersWidth(lines, fold), styles));
     }
 
     /**
@@ -614,6 +668,10 @@ public final class RichDiff {
                             List.empty(),
                             within,
                             () -> source(member._1(), prefix, layout)))
+                    // The gutter of a line of a version shown blamed stays where it is when the code scrolls sideways
+                    // (ADR 147).
+                    .map(marked ->
+                            layout.blame().isDefined() ? marked.keeping(layout.fileWidth() - layout.width()) : marked)
                     .appendAll(threaded.zipWithIndex()
                             .flatMap(row -> layout.blocks()
                                     .threads(
@@ -769,20 +827,37 @@ public final class RichDiff {
             case REMOVED -> styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_REMOVED_LINE_NUMBER);
             case CONTEXT, NOTE -> styles.of(Theme.Classes.DIFF_LINE_NUMBER);
         };
-        return !remarks.threads().isEmpty() || remarks.covered()
-                ? List.of(
-                        Span.styled(numbers + " ", numbered),
-                        styled(remarks.threads().isEmpty() ? "┃" : "●", Theme.Classes.DIFF_THREAD, styles),
-                        Span.styled(" ", numbered))
-                : List.of(Span.styled(numbers + GUTTER_END, numbered));
+        return blamed(line, layout)
+                .appendAll(
+                        !remarks.threads().isEmpty() || remarks.covered()
+                                ? List.of(
+                                        Span.styled(numbers + " ", numbered),
+                                        styled(
+                                                remarks.threads().isEmpty() ? "┃" : "●",
+                                                Theme.Classes.DIFF_THREAD,
+                                                styles),
+                                        Span.styled(" ", numbered))
+                                : List.of(Span.styled(numbers + GUTTER_END, numbered)));
     }
 
     /**
-     * The numbers of {@code line} in its gutter: in the old and the new file, or in the version shown (ADR 102).
+     * The column of the blame beside {@code line}, if the version shown is blamed (ADR 147).
+     */
+    private static List<Span> blamed(DiffLine line, Layout layout) {
+        return layout.blame()
+                .map(column -> column.beside(layout.version().flatMap(version -> version.number(line))))
+                .getOrElse(List.empty());
+    }
+
+    /**
+     * The numbers of {@code line} in its gutter: in the old and the new file, or in the version shown (ADR 102), in one
+     * column when it is shown blamed (ADR 147).
      */
     private static String numbers(DiffLine line, Layout layout) {
         return layout.version()
-                .map(version -> versionNumber(version, line, layout.digits()))
+                .map(version -> layout.blame().isDefined()
+                        ? number(version.number(line), layout.digits())
+                        : versionNumber(version, line, layout.digits()))
                 .getOrElse(() ->
                         number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits()));
     }
@@ -790,14 +865,20 @@ public final class RichDiff {
     /**
      * What the line of {@code row} is searched in (ADR 126): its text, without the first {@code prefix} characters
      * of a line kept as git printed it, after its gutter and its marker, which a note has none of. Its gutter is as
-     * long whatever marks are in it ({@link #gutter}).
+     * long whatever marks are in it ({@link #gutter}), after the column of its blame, if any, which is not searched
+     * (ADR 147).
      */
     private static Rows.Source source(Row row, int prefix, Layout layout) {
         DiffLine line = row.parsed().line();
         int marker = line.kind() == DiffLine.Kind.NOTE ? 0 : 1 + MARGIN.length();
         Rows.Source text = Rows.Source.cut(line.text(), prefix);
         return new Rows.Source(
-                text.text(), numbers(line, layout).length() + GUTTER_END.length() + marker + text.from());
+                text.text(),
+                BlameColumn.length(blamed(line, layout))
+                        + numbers(line, layout).length()
+                        + GUTTER_END.length()
+                        + marker
+                        + text.from());
     }
 
     /**
@@ -969,7 +1050,11 @@ public final class RichDiff {
      * each of its lines only to throw it away. With what it is searched in (ADR 126): the code of a line of a diff,
      * without drawing it; all the text of any other line, drawn already. A row of the split view has a stop for each
      * of its halves that holds a line, and where its halves are (ADR 139); a row of a file drawn split that is as wide
-     * as the area, as its bar, is pinned: it does not scroll sideways, as the halves scroll each on their own.
+     * as the area, as its bar, is pinned: it does not scroll sideways, as the halves scroll each on their own. A line
+     * of a version shown blamed keeps its gutter, the column of its blame and its numbers, where it is (ADR 147).
+     *
+     * @param kept how many columns at the start of the line stay where they are when the area scrolls sideways: none,
+     *             {@link Drawn#PINNED} for all of them
      */
     record Marked(
             Supplier<Line> line,
@@ -978,7 +1063,7 @@ public final class RichDiff {
             Option<Integer> width,
             Supplier<Rows.Source> source,
             Option<Halves> halves,
-            boolean pinned) {
+            int kept) {
 
         Marked(
                 Supplier<Line> line,
@@ -987,7 +1072,7 @@ public final class RichDiff {
                 Option<Integer> width,
                 Supplier<Rows.Source> source,
                 Option<Halves> halves) {
-            this(line, marks, places, width, source, halves, false);
+            this(line, marks, places, width, source, halves, 0);
         }
 
         Marked(Supplier<Line> line, Option<Mark> mark) {
@@ -1020,22 +1105,28 @@ public final class RichDiff {
         Marked mapped(UnaryOperator<Line> change) {
             Supplier<Line> drawn = line;
             Supplier<Line> changed = () -> change.apply(drawn.get());
-            return new Marked(
-                    changed, marks, places, Option.none(), () -> Rows.Source.of(changed.get()), halves, pinned);
+            return new Marked(changed, marks, places, Option.none(), () -> Rows.Source.of(changed.get()), halves, kept);
         }
 
         /**
          * This line with its stops on {@code side} (ADR 139).
          */
         Marked onSide(ReviewThread.Side side) {
-            return new Marked(line, marks.map(mark -> mark.onSide(side)), places, width, source, halves, pinned);
+            return new Marked(line, marks.map(mark -> mark.onSide(side)), places, width, source, halves, kept);
         }
 
         /**
          * This line pinned, when it has no halves: a row of a file drawn split, as wide as the area (ADR 139).
          */
         Marked pin() {
-            return new Marked(line, marks, places, width, source, halves, halves.isEmpty());
+            return new Marked(line, marks, places, width, source, halves, halves.isEmpty() ? Drawn.PINNED : 0);
+        }
+
+        /**
+         * This line with its first {@code columns} columns kept where they are when the area scrolls sideways.
+         */
+        Marked keeping(int columns) {
+            return new Marked(line, marks, places, width, source, halves, columns);
         }
 
         static Marked plain(Line line) {
@@ -1115,9 +1206,10 @@ public final class RichDiff {
      *                halves scroll sideways
      * @param halves  where the halves of each row of the split view are, by the index of the row; none for a row as
      *                wide as the area, and none at all in the unified view (ADR 139)
-     * @param pinned  the rows of the split view that do not scroll sideways, by their index: those as wide as the area
-     *                of a file drawn split. A line of a file the split view draws unified scrolls as in the unified
-     *                view (ADR 139)
+     * @param kept    how many columns at the start of each row stay where they are when the area scrolls sideways, by
+     *                the index of the row: all of those of a row of the split view as wide as the area of a file drawn
+     *                split, as a line of a file the split view draws unified scrolls as in the unified view (ADR 139);
+     *                the gutter of a line of a version shown blamed (ADR 147). None at all when no row keeps any
      * @param divider the column of the area the rule between the halves of the split view is at
      * @param note    what the title of the area says of how the diff is drawn: that the area is too narrow for the
      *                split view
@@ -1128,9 +1220,14 @@ public final class RichDiff {
             List<Place> places,
             IntSupplier widest,
             Vector<Option<Halves>> halves,
-            Vector<Boolean> pinned,
+            Vector<Integer> kept,
             Option<Integer> divider,
             Option<String> note) {
+
+        /**
+         * The columns {@link #keptAt} says a row keeps that does not scroll sideways at all, as wide as the area.
+         */
+        public static final int PINNED = Integer.MAX_VALUE;
 
         Drawn(Rows rows, List<Stop> stops) {
             this(rows, stops, List.empty(), rows::widest, Vector.empty(), Vector.empty(), Option.none(), Option.none());
@@ -1150,7 +1247,9 @@ public final class RichDiff {
                     marked.exists(line -> line.halves().isDefined())
                             ? marked.map(Marked::halves).toVector()
                             : Vector.empty(),
-                    marked.exists(Marked::pinned) ? marked.map(Marked::pinned).toVector() : Vector.empty(),
+                    marked.exists(line -> line.kept() > 0)
+                            ? marked.map(Marked::kept).toVector()
+                            : Vector.empty(),
                     Option.none(),
                     Option.none());
         }
@@ -1191,10 +1290,12 @@ public final class RichDiff {
         }
 
         /**
-         * Whether row {@code row} of the split view does not scroll sideways (ADR 139).
+         * How many columns at the start of row {@code row} stay where they are when the area scrolls sideways: all of
+         * those of a row of the split view as wide as the area (ADR 139), the gutter of a line of a version shown
+         * blamed (ADR 147), else none.
          */
-        public boolean pinnedAt(int row) {
-            return row >= 0 && row < pinned.size() && pinned.get(row);
+        public int keptAt(int row) {
+            return row >= 0 && row < kept.size() ? kept.get(row) : 0;
         }
 
         /**
@@ -1212,9 +1313,7 @@ public final class RichDiff {
                             ? halves
                             : Vector.<Option<Halves>>fill(before.size(), Option::none)
                                     .appendAll(halves),
-                    pinned.isEmpty()
-                            ? pinned
-                            : Vector.fill(before.size(), () -> false).appendAll(pinned),
+                    kept.isEmpty() ? kept : Vector.fill(before.size(), () -> 0).appendAll(kept),
                     divider,
                     note);
         }
@@ -1231,7 +1330,7 @@ public final class RichDiff {
                             places,
                             widest,
                             halves,
-                            pinned,
+                            kept,
                             divider,
                             note))
                     .getOrElse(this);
@@ -1241,7 +1340,7 @@ public final class RichDiff {
          * These lines with the rule between the halves of the split view at column {@code column} of the area.
          */
         Drawn withDivider(int column) {
-            return new Drawn(rows, stops, places, widest, halves, pinned, Option.some(column), note);
+            return new Drawn(rows, stops, places, widest, halves, kept, Option.some(column), note);
         }
 
         /**
@@ -1254,7 +1353,7 @@ public final class RichDiff {
                     places,
                     widest,
                     halves,
-                    pinned,
+                    kept,
                     divider,
                     Option.some(note.map(before -> Messages.get("content.notes", before, says))
                             .getOrElse(says)));
@@ -1265,7 +1364,8 @@ public final class RichDiff {
      * What drawing each line of a file takes from the file: how many {@code digits} its numbers have, how many
      * columns after the gutter its changed lines are padded to, its {@code width}, how the threads on its lines are
      * drawn, whether its code is coloured by its syntax, whether the changed words of a line are highlighted, the
-     * styles of the theme, and the version of the file shown in place of its diff, if one is (ADR 102).
+     * styles of the theme, the version of the file shown in place of its diff, if one is (ADR 102), and the column of
+     * its blame, if it is blamed (ADR 147).
      */
     private record Layout(
             String path,
@@ -1277,7 +1377,8 @@ public final class RichDiff {
             boolean syntax,
             boolean words,
             Theme.SpanStyles styles,
-            Option<FileVersion> version) {}
+            Option<FileVersion> version,
+            Option<BlameColumn> blame) {}
 
     /**
      * A line of a file with what drawing it takes besides the layout of its file: how many columns its text was

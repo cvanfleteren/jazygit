@@ -61,6 +61,8 @@ import net.vanfleteren.jazygit.state.diff.Collapsed;
  *                 than {@link #FOLLOWED_LIMIT} (ADR 141)
  * @param before   the files listed before, read, which the pane keeps listing while these are read, until a moment:
  *                 most are read before then, and the pane does not flash a placeholder for them (ADR 141)
+ * @param wanted   the path of the file to highlight once the files are listed, in place of the first directory with
+ *                 changes: the file of a line blamed on the commit whose files these are (ADR 147)
  */
 @With
 public record CommitFilesView(
@@ -83,7 +85,8 @@ public record CommitFilesView(
         Option<UnchangedNode> unchanged,
         boolean followed,
         boolean whole,
-        Option<Before> before) {
+        Option<Before> before,
+        Option<String> wanted) {
 
     /**
      * How many files that follow the highlight are listed as a tree: more are counted, and listed once asked for.
@@ -120,6 +123,7 @@ public record CommitFilesView(
                 Option.none(),
                 false,
                 false,
+                Option.none(),
                 Option.none());
     }
 
