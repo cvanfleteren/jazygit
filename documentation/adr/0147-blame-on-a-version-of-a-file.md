@@ -82,7 +82,8 @@ hunks a filter hides (ADR 144): one binding, which does nothing on a line.
 - Ctrl+W while a version is blamed drops the blame read of both versions: the version shown is blamed again at once,
   the other once it is shown blamed. The text of the version is not read again, as it is read without `-w` (ADR 102).
   A read of blame carries whether it ignores whitespace, as `ReadVersion` carries its options: a blame read with the
-  other setting holds for nothing once it is in, and is dropped, as when it is read still. Not: keeping the blame read with the other setting, which would blame by a whitespace the user turned off.
+  other setting holds for nothing once it is in, and is dropped, as when it is read still. Not: keeping the blame
+  read with the other setting, which would blame by a whitespace the user turned off.
 - A version cut where its read is cut (ADR 79) is blamed up to its last line shown: `-L 1,<last>`. Not: blaming the
   whole file, slowest for the files that are cut.
 
