@@ -251,6 +251,17 @@ public record Version(
     }
 
     /**
+     * The line of the blame the cursor {@code on} is on, if Enter opens the files of its commit (ADR 147): one blamed
+     * on a commit, not one not committed yet, nor one of the commit whose version this is.
+     */
+    public Option<Blame.Line> opening(Anchor on) {
+        return blamedLine(on)
+                .filter(line -> line.commit().committed())
+                .filter(line -> drawnBlame()
+                        .forAll(blame -> !blame.own().contains(line.commit().sha())));
+    }
+
+    /**
      * The commits whose new version of a file read as {@code source} says is shown, with {@code blame}: a line blamed on
      * them is of the changes shown, and tinted as changed already (ADR 147). A commit, or a stash: the stash itself, its
      * index and its untracked files, the commits of its index and its untracked files told by the messages git gives

@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.changes.diff;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -40,6 +42,7 @@ import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.FilesShown;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
+import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
@@ -140,6 +143,60 @@ class BlameUpdateTest {
                         .repoView()
                         .files()
                         .commitFiles());
+    }
+
+    @Test
+    void enterOnALineOfTheStashOrItsIndexOrNotCommittedYetOpensNothing() {
+        Blame.Commit index = new Blame.Commit(
+                new Sha("2".repeat(40)), "Alex Moreau", Instant.EPOCH, "index on main: 1234567 base", false);
+        Blame.Commit stash = new Blame.Commit(STASH, "Alex Moreau", Instant.EPOCH, "WIP on main", false);
+        Blame blame = new Blame(Vector.of(
+                new Blame.Line(index, 1, "a.txt", Option.none()),
+                new Blame.Line(stash, 2, "a.txt", Option.none()),
+                new Blame.Line(Blame.NOT_COMMITTED, 3, "a.txt", Option.none())));
+        Model read = blameRead(Update.update(newVersion(), new VersionMsg.BlameToggled(at())), blame);
+        Version blamed = version(read).get();
+
+        for (int line = 1; line <= 3; line++) {
+            Next next = Update.update(read, new VersionMsg.LineOpened(onLine(line)));
+
+            assertEquals(Option.none(), blamed.opening(onLine(line).cursor()), "line " + line);
+            assertEquals(List.of(), next.cmds(), "line " + line);
+            assertEquals(read, next.model(), "line " + line);
+        }
+    }
+
+    @Test
+    void enterWhileTheBlameIsReadOpensNothing() {
+        Model reading =
+                Update.update(newVersion(), new VersionMsg.BlameToggled(at())).model();
+
+        Next next = Update.update(reading, new VersionMsg.LineOpened(onLine(1)));
+
+        assertEquals(Option.none(), version(reading).get().opening(onLine(1).cursor()));
+        assertEquals(List.of(), next.cmds().filter(cmd -> !(cmd instanceof ReadBlame)));
+        assertEquals(Option.none(), next.model().repoView().files().commitFiles());
+    }
+
+    @Test
+    void enterSendsTheLineOpenedOnlyWhereTheContentPanelSaysItOpensACommit() {
+        Keymap keys = ExpandAction.ACTION.keys().apply(Keymap.empty());
+        DiffCursorAt line = onLine(1);
+        DiffCursorAt opening = new DiffCursorAt(
+                line.area(),
+                line.at(),
+                line.cursor(),
+                line.next(),
+                line.previous(),
+                line.marked(),
+                false,
+                Option.none(),
+                true);
+
+        assertEquals(Option.none(), keys.handle(Scopes.DIFF, KeyEvent.ofKey(KeyCode.ENTER), Option.of(line)));
+        assertEquals(
+                Option.of(new VersionMsg.LineOpened(opening)),
+                keys.handle(Scopes.DIFF, KeyEvent.ofKey(KeyCode.ENTER), Option.of(opening)));
     }
 
     @Test

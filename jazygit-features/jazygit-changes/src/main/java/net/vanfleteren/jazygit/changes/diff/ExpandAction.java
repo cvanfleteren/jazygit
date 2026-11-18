@@ -46,10 +46,9 @@ public final class ExpandAction {
                                 .map(cursor -> ((Anchor.Filtered) cursor.cursor()).opened()
                                         ? new FilteredMsg.Closed(cursor)
                                         : new FilteredMsg.Opened(cursor)))
-                        // A line of a version shown blamed opens the files of the commit it is blamed on (ADR 147);
-                        // a line of anything else, nothing.
-                        .orElse(() -> at.filter(cursor -> cursor.cursor() instanceof Anchor.OnLine)
-                                .map(VersionMsg.LineOpened::new)));
+                        // A line of a version shown blamed opens the files of the commit it is blamed on, as the
+                        // content panel says (ADR 147); a line of anything else, nothing.
+                        .orElse(() -> at.filter(DiffCursorAt::opens).map(VersionMsg.LineOpened::new)));
     }
 
     /**

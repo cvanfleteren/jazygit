@@ -67,11 +67,7 @@ public final class VersionUpdate {
     private static Next opened(Model model, DiffCursorAt at) {
         return model.repoView()
                 .version(at.area(), at.at().content())
-                .flatMap(version -> version.blamedLine(at.cursor())
-                        .filter(line -> line.commit().committed())
-                        .filter(line -> version.drawnBlame()
-                                .forAll(blame ->
-                                        !blame.own().contains(line.commit().sha()))))
+                .flatMap(version -> version.opening(at.cursor()))
                 .map(line -> CommitFilesUpdate.update(
                                 model,
                                 new CommitFilesMsg.Opened(

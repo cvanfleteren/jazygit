@@ -32,7 +32,6 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import java.time.Instant;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -139,6 +138,9 @@ public final class ScrollArea {
     private Option<String> number = Option.none();
     // Whether the area shows the original of a file whole, whose lines are numbered in the old file (ADR 102, 140).
     private boolean original = false;
+    // The version of its file the area shows, if it shows one: on a line of it blamed, Enter opens its commit (ADR
+    // 147).
+    private Option<Version> shownVersion = Option.none();
     // The number of the line asked for that a marker leaves out, and what the area showed when it was asked for, while
     // the area waits for it to show (ADR 140).
     private Option<Tuple2<ScrolledContent, Integer>> wanted = Option.none();
@@ -181,7 +183,7 @@ public final class ScrollArea {
         // Under a version shown blamed, the commit of the line of the cursor (ADR 147).
         return model.repoView()
                 .version(area.id(), shown.content())
-                .flatMap(version -> BlameFooter.text(version, cursor.map(DiffCursor::anchor), Instant.now()))
+                .flatMap(version -> BlameFooter.text(version, cursor.map(DiffCursor::anchor), model.now()))
                 .<Element>map(said -> column(
                                 shownWithLine,
                                 text(" " + said).addClass(Theme.Classes.DIM).length(1))
@@ -235,10 +237,8 @@ public final class ScrollArea {
         typing = model.contentSearch().filter(ContentSearch::typing).map(ContentSearch::text);
         // The line to type a line number in shows above the area with the focus, unless the line of a search does.
         number = model.lineNumber().filter(ignored -> typing.isEmpty());
-        original = model.repoView()
-                .version(area.id(), content)
-                .flatMap(Version::showing)
-                .contains(FileVersion.ORIGINAL);
+        shownVersion = model.repoView().version(area.id(), content);
+        original = shownVersion.flatMap(Version::showing).contains(FileVersion.ORIGINAL);
         // The matches are found once per body and query, not per frame (ADR 126).
         Styled current = last.filter(before -> before.asGiven().equals(asGiven))
                 .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width))
@@ -762,7 +762,8 @@ public final class ScrollArea {
                         : cursor.previousThread().map(previous -> movedTo(previous, content)),
                 cursor.marked().map(marked -> movedTo(marked, content)),
                 cursor.onHalf(),
-                Option.when(numbered(cursor), LineNumberMsg.Opened::new));
+                Option.when(numbered(cursor), LineNumberMsg.Opened::new),
+                shownVersion.exists(version -> version.opening(acting).isDefined()));
     }
 
     /**

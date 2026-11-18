@@ -200,9 +200,11 @@ final class FileTreeList<T extends Pathed> {
             this.placeholder = placeholder;
             rebuild(files, collapsed(roots));
         }
-        // A load already lost the highlight, so it is placed afresh once the files are read again.
+        // A load already lost the highlight, so it is placed afresh once the files are read again, on the file
+        // wanted too, if one is: the same file of the same commit opened again is read again (ADR 147).
         if (!(files instanceof Loadable.Loaded<List<T>>)) {
             unread = true;
+            wantedPlaced = wanted.isEmpty();
         } else if (unread) {
             unread = false;
             steppedTo = Option.none();

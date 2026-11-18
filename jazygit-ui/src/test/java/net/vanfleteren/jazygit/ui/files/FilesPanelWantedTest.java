@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.FileStepMsg.Step;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
@@ -42,6 +43,26 @@ class FilesPanelWantedTest {
     void theFileWantedIsHighlightedOnceTheFilesAreRead() throws Exception {
         Model model = opened(Option.of(WANTED.path()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
+
+            assertEquals(
+                    Option.of(new SelectionMsg.CommitFilesSelected(List.of(WANTED))), panel.selectionChange(model));
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void theSameFileOfTheSameCommitOpenedAgainIsHighlightedAgain() throws Exception {
+        Model model = opened(Option.of(WANTED.path()));
+        // Opened again, the files are read again.
+        Model reading = model.mapRepoView(view -> view.mapFiles(
+                files -> files.withCommitFiles(files.commitFiles().map(open -> open.withFiles(Loadable.loading())))));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
+            assertTrue(panel.step(model, Step.PREVIOUS));
+            assertEquals(Option.of(new SelectionMsg.CommitFilesSelected(List.of(FIRST))), panel.selectionChange(model));
+
+            RenderedText.ofLarge(testRunner, () -> panel.render(reading, FilesPanel.PANE));
             RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
 
             assertEquals(
