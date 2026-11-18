@@ -389,6 +389,109 @@ class ContentPanelTest {
     }
 
     @Test
+    void enterOpensTheCommitOfALineOfABlamedVersionOnlyWhenItIsBlamedOnAnotherCommit() throws Exception {
+        Model blamed = blamedVersion("");
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        AreaId area = content.areaOfPane(blamed, CommitsPanel.PANE).get();
+        ScrolledContent shown = ContentView.of(blamed, area).areas().head().content();
+
+        // Line 9 is blamed on another commit, line 10 on the commit shown; the bar of the file is no line.
+        for (Anchor on : List.<Anchor>of(onNew(9), onNew(10), new Anchor.File("a.txt"))) {
+            ContentPanel opening = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+            Model onLine = blamed.withScrolled(
+                    io.vavr.collection.HashMap.of(area, new Scrolled(shown, 0, 0, Option.of(on), Option.none())));
+            try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(onLine, area))) {
+                RenderedText.ofLarge(testRunner, () -> opening.render(onLine, area));
+                SettledPilot.focus(testRunner, area.id());
+                SettledPilot.of(testRunner).press(KeyCode.ENTER);
+                SettledPilot.of(testRunner).pause();
+            }
+        }
+
+        List<net.vanfleteren.jazygit.changes.diff.VersionMsg.LineOpened> opened = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.changes.diff.VersionMsg.LineOpened.class::isInstance)
+                .map(net.vanfleteren.jazygit.changes.diff.VersionMsg.LineOpened.class::cast);
+        assertEquals(List.of(onNew(9)), opened.map(msg -> msg.at().cursor()));
+    }
+
+    @Test
+    void theGutterOfABlamedVersionStaysWhereItIsWhenTheCodeScrollsSideways() throws Exception {
+        Model blamed = blamedVersion("wide ".repeat(40) + "END");
+        java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>();
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        model.set(blamed);
+        AreaId area = scrolling.areaOfPane(blamed, CommitsPanel.PANE).get();
+
+        String before;
+        String scrolled;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(140, 30))) {
+            SettledPilot.focus(testRunner, area.id());
+            RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            before = RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+            SettledPilot.of(testRunner).press('L');
+            SettledPilot.of(testRunner).pause();
+            scrolled = RenderedText.ofSize(testRunner, () -> scrolling.render(model.get(), area), 140, 30);
+        }
+
+        String line = before.split("\n")[row(before, "line1 ")];
+        String moved = scrolled.split("\n")[row(before, "line1 ")];
+        // The blame and the number stay; the code after them scrolled away.
+        String gutter = line.substring(0, line.indexOf(" │ ") + 2);
+        assertTrue(gutter.contains("bbbbbbb"), line);
+        assertTrue(moved.startsWith(gutter), moved);
+        assertFalse(moved.contains("line1 "), moved);
+        assertTrue(row(before, "END") < 0, before);
+        assertTrue(row(scrolled, "END") >= 0, scrolled);
+    }
+
+    private static Anchor.OnLine onNew(int number) {
+        return new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, number);
+    }
+
+    /**
+     * The new version of a file of 10 lines, of the commit shown, blamed: lines 1 to 9 on another commit, line 10, which
+     * it changed, on it. Line 1 ends in {@code tail}.
+     */
+    private static Model blamedVersion(String tail) {
+        String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
+        java.util.function.IntFunction<String> line =
+                n -> n == 10 ? "-line10\n+changed\n" : " line" + n + (n == 1 ? " " + tail : "") + "\n";
+        Model shown = showingCommit(header + "@@ -9,2 +9,2 @@\n" + line.apply(9) + line.apply(10))
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        AreaId area = new ContentPanel(Theme.SpanStyles.NONE, () -> false)
+                .areaOfPane(shown, CommitsPanel.PANE)
+                .get();
+        ScrolledContent content = ContentView.of(shown, area).areas().head().content();
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(onNew(9)), Option.none())));
+        DiffCursorAt at = new DiffCursorAt(
+                area, onLine.scrolled(area, content), onNew(9), Option.none(), Option.none(), Option.none());
+        Update.Next asked = Update.update(onLine, new net.vanfleteren.jazygit.changes.diff.VersionMsg.Cycled(at));
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        DiffText whole = DiffText.of(header + "@@ -1,10 +1,10 @@\n"
+                + List.rangeClosed(1, 10).map(line::apply).mkString());
+        Model version = TestModels.done(
+                        TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, whole))
+                .model();
+        Update.Next blaming =
+                Update.update(version, new net.vanfleteren.jazygit.changes.diff.VersionMsg.BlameToggled(at));
+        ReadBlame blame =
+                (ReadBlame) blaming.cmds().filter(ReadBlame.class::isInstance).head();
+        Blame.Commit other = new Blame.Commit(new Sha("b".repeat(40)), "Alex Moreau", Instant.EPOCH, "older", false);
+        Blame.Commit own = new Blame.Commit(new Sha("aaaa"), "Alex Moreau", Instant.EPOCH, "this", false);
+        Blame lines = new Blame(io.vavr.collection.Vector.rangeClosed(1, 10)
+                .map(n -> new Blame.Line(n == 10 ? own : other, n, "a.txt", Option.none())));
+        return TestModels.done(TestModels.running(blaming.model(), blame), blame, new LoadMsg.BlameRead(blame, lines))
+                .model();
+    }
+
+    @Test
     void yAsksToCopyWhatTheCursorIsOn() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel copying = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);

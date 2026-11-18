@@ -15,6 +15,7 @@ import java.util.AbstractList;
 import java.util.Locale;
 import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
+import java.util.function.IntUnaryOperator;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.content.diff.Halves;
@@ -227,14 +228,15 @@ public final class ContentText {
      * ({@link Rows}).
      */
     public static Text windowed(Rows lines, int column, int row, int height, int width, IntPredicate filling) {
-        return windowed(lines, column, row, height, width, filling, ignored -> Option.none(), ignored -> false);
+        return windowed(lines, column, row, height, width, filling, ignored -> Option.none(), ignored -> 0);
     }
 
     /**
      * {@code lines} as {@link #windowed(Rows, int, int, int, int, IntPredicate)} shows them, but those of the split
      * view: each half of a row its {@code halves} say it has cut to its width from {@code column}, its gutter staying;
-     * a row {@code pinned}, as wide as the area, not scrolled. Any other row, as a line of a file the split view draws
-     * unified, scrolls as in the unified view (ADR 139).
+     * a row as wide as the area, all of whose columns are {@code kept}, not scrolled. Any other row, as a line of a file
+     * the split view draws unified, scrolls as in the unified view (ADR 139), but for as many columns at its start as
+     * {@code kept} says: the gutter of a line of a version shown blamed, which stays where it is (ADR 147).
      */
     public static Text windowed(
             Rows lines,
@@ -244,7 +246,7 @@ public final class ContentText {
             int width,
             IntPredicate filling,
             IntFunction<Option<Halves>> halves,
-            IntPredicate pinned) {
+            IntUnaryOperator kept) {
         Tuple2<Integer, Integer> window = window(lines.size(), row, height);
         int top = window._1();
         int bottom = window._2();
@@ -260,11 +262,21 @@ public final class ContentText {
                 if (cut.isDefined()) {
                     return cut.get().shown(drawn, column);
                 }
-                if (pinned.test(index)) {
+                int keep = kept.applyAsInt(index);
+                if (keep == Integer.MAX_VALUE) {
                     return filling.test(index) ? filled(drawn, width) : drawn;
                 }
                 Line line = filling.test(index) ? filled(drawn, column + width) : drawn;
-                return column == 0 ? line : sideways(line, column);
+                if (column == 0) {
+                    return line;
+                }
+                if (keep == 0) {
+                    return sideways(line, column);
+                }
+                List<Span> spans = List.ofAll(line.spans());
+                return Line.from(Halves.slice(spans, 0, keep)
+                        .appendAll(Halves.slice(spans, keep + column, Integer.MAX_VALUE))
+                        .toJavaList());
             }
 
             @Override

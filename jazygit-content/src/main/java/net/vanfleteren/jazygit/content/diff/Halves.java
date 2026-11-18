@@ -122,7 +122,7 @@ public record Halves(int left, int right, int leftCode, int leftWidth, int right
      * The columns of {@code spans} from {@code from} up to {@code until}, their spans kept in their styles. A
      * character cut in two leaves a space for each of its columns that is kept.
      */
-    static List<Span> slice(List<Span> spans, int from, int until) {
+    public static List<Span> slice(List<Span> spans, int from, int until) {
         if (until <= from) {
             return List.empty();
         }

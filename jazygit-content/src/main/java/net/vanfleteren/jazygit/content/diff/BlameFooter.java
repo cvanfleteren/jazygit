@@ -42,7 +42,7 @@ public final class BlameFooter {
         return commit.committed()
                 ? Messages.get(
                         "content.blame.commit",
-                        commit.sha().value().substring(0, 7),
+                        commit.sha().shortSha(),
                         commit.author(),
                         ago(Duration.between(commit.authored(), now)),
                         commit.summary())

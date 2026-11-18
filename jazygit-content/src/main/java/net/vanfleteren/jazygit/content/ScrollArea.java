@@ -321,7 +321,7 @@ public final class ScrollArea {
                         state.viewportWidth(),
                         current::filling,
                         drawn::halvesOf,
-                        drawn::pinnedAt))
+                        drawn::keptAt))
                 .title(shown.title()
                         + drawn.note()
                                 .map(says -> Messages.get("content.search.notice", says))
@@ -688,7 +688,13 @@ public final class ScrollArea {
                         return Math.clamp(moved, 0, Math.max(0, columns));
                     }
                     int width = Math.max(1, element.state().viewportWidth());
-                    int shifted = start < column ? start : end > column + width ? end - width : column;
+                    // The gutter of a line of a version shown blamed stays where it is; its code scrolls after it
+                    // (ADR 147).
+                    int kept = shown.split().keptAt(hit.row());
+                    if (kept == Integer.MAX_VALUE) {
+                        return column;
+                    }
+                    int shifted = start - kept < column ? start - kept : end > column + width ? end - width : column;
                     return Math.clamp(shifted, 0, Math.max(0, columns));
                 })
                 .getOrElse(column);

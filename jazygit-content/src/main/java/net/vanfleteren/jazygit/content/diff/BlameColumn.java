@@ -107,7 +107,9 @@ record BlameColumn(Blamed blamed, boolean narrow, Map<Sha, Integer> shades, Them
     }
 
     private List<Span> committed(Blame.Commit commit) {
-        Span sha = Span.styled(commit.sha().value().substring(0, SHA_WIDTH), styles.of(Theme.Classes.SHA));
+        String shortSha = commit.sha().shortSha();
+        Span sha = Span.styled(
+                shortSha + " ".repeat(Math.max(0, SHA_WIDTH - shortSha.length())), styles.of(Theme.Classes.SHA));
         if (narrow) {
             return List.of(sha);
         }
