@@ -489,6 +489,11 @@ public final class CliHistory implements History {
     }
 
     @Override
+    public Either<GitError, Blame> blame(BlameAt at, BlameOptions options) {
+        return CliBlame.blame(worktree, at, options);
+    }
+
+    @Override
     public Either<GitError, Boolean> everHad(BranchName branch, Revision revision) {
         BranchRef local = new BranchRef.Local(branch);
         return GitProcess.read(

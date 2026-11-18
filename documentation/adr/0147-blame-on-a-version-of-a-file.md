@@ -70,8 +70,13 @@ hunks a filter hides (ADR 144): one binding, which does nothing on a line.
   blamed on any of them is a line of the stash: it is labelled `this commit`, as it is tinted as changed.
 - On a branch without commits, there is no `HEAD` to blame the index or the files on disk against: every line of
   them is not committed yet, without blame being read.
-- The index is written to a file with `TempFiles.using` and blamed with `--contents <file> HEAD`. Not: `--contents -`,
-  which needs `Exec` to give git stdin, which nothing else needs.
+- The index, where it holds the file as `HEAD` does, is blamed at `HEAD`. Where it holds a change, which a file added
+  with intent to add (`git add -N`) is, git writes the file itself into a temporary directory
+  (`git -c core.symlinks=false checkout-index --prefix=<dir>/`), and it is blamed with `--contents <file> HEAD`. Not:
+  `--contents -`, which needs `Exec` to give git stdin, which nothing else needs. Not: reading the file with
+  `cat-file` and writing it to a file again, as a string: a file that is not UTF-8 loses its bytes on the way, and
+  its unchanged lines are blamed as not committed yet. Not: always writing the file for `--contents`: a symbolic link
+  is written as a file holding its target, and git blames a file where `HEAD` holds a link as not committed yet.
 - A pull request is blamed in the repository, at the commits its files fetched. When they are not there, as when no
   remote is of its repository, the blame could not be read. Not: GitHub's blame through GraphQL, which is another
   read of its own for the rare case.

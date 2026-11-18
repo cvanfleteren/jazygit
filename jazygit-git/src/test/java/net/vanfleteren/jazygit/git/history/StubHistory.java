@@ -1,9 +1,13 @@
 package net.vanfleteren.jazygit.git.history;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.Blame;
+import net.vanfleteren.jazygit.git.model.BlameAt;
+import net.vanfleteren.jazygit.git.model.BlameOptions;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -70,5 +74,10 @@ public interface StubHistory extends History {
     @Override
     default Either<GitError, Boolean> everHad(BranchName branch, Revision revision) {
         return Either.right(true);
+    }
+
+    @Override
+    default Either<GitError, Blame> blame(BlameAt at, BlameOptions options) {
+        return Either.right(new Blame(Vector.empty()));
     }
 }

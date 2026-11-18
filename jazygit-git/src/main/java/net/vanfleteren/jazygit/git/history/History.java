@@ -4,6 +4,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.Blame;
+import net.vanfleteren.jazygit.git.model.BlameAt;
+import net.vanfleteren.jazygit.git.model.BlameOptions;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -87,4 +90,9 @@ public interface History {
      * here had what it was pushed as; one behind what someone else pushed never had that (ADR 74).
      */
     Either<GitError, Boolean> everHad(BranchName branch, Revision revision);
+
+    /**
+     * Who last changed each line of the file {@code at} names, blamed with {@code options} (ADR 147).
+     */
+    Either<GitError, Blame> blame(BlameAt at, BlameOptions options);
 }
