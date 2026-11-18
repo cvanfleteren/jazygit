@@ -59,12 +59,20 @@ final class CliBlame {
     /**
      * Whether the index holds a change to {@code path} since {@code HEAD}. A file staged as it is in {@code HEAD} is
      * blamed there: a symbolic link written to a file for {@code --contents} is a file, no longer the link
-     * {@code HEAD} holds, and its line would be blamed as not committed yet.
+     * {@code HEAD} holds, and its line would be blamed as not committed yet. A file added with intent to add
+     * ({@code git add -N}), which {@code diff --cached} hides by default, is a change: it is not in {@code HEAD}.
      */
     private static Either<GitError, Boolean> stagedChange(Path worktree, String path) {
         return GitProcess.ask(
                         worktree,
-                        GitCommand.reading("diff", "--cached", "--quiet", "--no-ext-diff", "--", path)
+                        GitCommand.reading(
+                                        "diff",
+                                        "--cached",
+                                        "--quiet",
+                                        "--no-ext-diff",
+                                        "--ita-visible-in-index",
+                                        "--",
+                                        path)
                                 .withLiteralPaths())
                 .mapLeft(GitFailure::error)
                 .map(Option::isEmpty);

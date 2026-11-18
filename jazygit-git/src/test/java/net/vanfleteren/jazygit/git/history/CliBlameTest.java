@@ -119,6 +119,15 @@ class CliBlameTest {
     }
 
     @Test
+    void aFileAddedWithIntentToAddHasNoLinesInTheIndex() throws Exception {
+        commit("f.txt", "a\n", "first");
+        Files.writeString(repo.resolve("ita.txt"), "new\n");
+        git("add", "-N", "ita.txt");
+
+        assertTrue(blame(new BlameAt.InIndex("ita.txt")).lines().isEmpty());
+    }
+
+    @Test
     void theUntrackedFilesOfAStashAreBlamedAtItsThirdParent() throws Exception {
         Sha first = commit("f.txt", "a\n", "first");
         Files.writeString(repo.resolve("f.txt"), "a\nchanged\n");
