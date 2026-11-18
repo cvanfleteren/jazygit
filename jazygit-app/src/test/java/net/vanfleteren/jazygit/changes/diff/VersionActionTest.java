@@ -21,6 +21,7 @@ class VersionActionTest {
     private static final Keymap KEYS = Keymap.standard();
     private static final KeyEvent CTRL_O = KeyEvent.ofChar('o', KeyModifiers.CTRL);
     private static final KeyEvent CTRL_T = KeyEvent.ofChar('t', KeyModifiers.CTRL);
+    private static final KeyEvent B = KeyEvent.ofChar('b');
 
     @Test
     void onAFileOfTheWorkingTreeTheKeysActOnItsAreas() {
@@ -29,6 +30,7 @@ class VersionActionTest {
 
         assertEquals(Option.<Msg>of(new VersionMsg.FilesCycled()), KEYS.handle(Scopes.FILES, CTRL_O, file));
         assertEquals(Option.<Msg>of(new VersionMsg.FilesRenderToggled()), KEYS.handle(Scopes.FILES, CTRL_T, file));
+        assertEquals(Option.<Msg>of(new VersionMsg.FilesBlameToggled()), KEYS.handle(Scopes.FILES, B, file));
     }
 
     @Test
@@ -39,6 +41,7 @@ class VersionActionTest {
         assertEquals(Option.<Msg>of(new VersionMsg.FilesCycled()), KEYS.handle(Scopes.COMMIT_FILES, CTRL_O, file));
         assertEquals(
                 Option.<Msg>of(new VersionMsg.FilesRenderToggled()), KEYS.handle(Scopes.COMMIT_FILES, CTRL_T, file));
+        assertEquals(Option.<Msg>of(new VersionMsg.FilesBlameToggled()), KEYS.handle(Scopes.COMMIT_FILES, B, file));
     }
 
     @Test
@@ -47,5 +50,6 @@ class VersionActionTest {
 
         assertEquals(Option.none(), KEYS.handle(Scopes.FILES, CTRL_O, directory));
         assertEquals(Option.none(), KEYS.handle(Scopes.FILES, CTRL_T, directory));
+        assertEquals(Option.none(), KEYS.handle(Scopes.FILES, B, directory));
     }
 }

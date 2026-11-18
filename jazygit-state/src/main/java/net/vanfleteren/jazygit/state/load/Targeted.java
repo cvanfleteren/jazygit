@@ -22,6 +22,7 @@ public sealed interface Targeted<T> extends Load
                 LoadFileDiff,
                 ReadWholeFile,
                 ReadVersion,
+                ReadBlame,
                 LoadAllFiles,
                 ReadFileContent,
                 LoadCommitTree,

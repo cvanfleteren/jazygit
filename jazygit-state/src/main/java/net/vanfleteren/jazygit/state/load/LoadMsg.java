@@ -323,6 +323,17 @@ public sealed interface LoadMsg extends Msg {
     }
 
     /**
+     * Who last changed each line of a version of a file (ADR 147).
+     */
+    record BlameRead(ReadBlame cmd, Blame blame) implements Read<Blame> {
+
+        @Override
+        public Blame value() {
+            return blame;
+        }
+    }
+
+    /**
      * The paths of all files of the working tree (ADR 108).
      */
     record AllFilesLoaded(List<String> paths) implements Read<List<String>> {

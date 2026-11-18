@@ -39,6 +39,7 @@ final class CliBlame {
                 mergeBase(worktree, base, tip)
                         .flatMap(fork ->
                                 read(worktree, options, List.of(GitArgs.revision(new Revision.Commit(fork))), path));
+            case BlameAt.AtHead(String path) -> read(worktree, options, List.of(head), path);
             case BlameAt.OnDisk(String path) -> read(worktree, options, List.empty(), path);
             case BlameAt.InIndex(String path) ->
                 stagedChange(worktree, path)

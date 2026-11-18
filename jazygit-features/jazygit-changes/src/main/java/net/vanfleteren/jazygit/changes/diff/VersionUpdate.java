@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileContent;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -22,6 +23,8 @@ import net.vanfleteren.jazygit.state.diff.Rendered;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.diff.WholeFile;
+import net.vanfleteren.jazygit.state.load.ReadBlame;
 import net.vanfleteren.jazygit.state.load.ReadVersion;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.RepoView;
@@ -37,13 +40,75 @@ public final class VersionUpdate {
 
     private VersionUpdate() {}
 
+    /**
+     * What {@code msg} asks for, and then the blame of each version that now shows blamed and is not read yet
+     * (ADR 147), as Ctrl+O to the other version of a blamed one shows that blamed too.
+     */
     public static Next update(Model model, VersionMsg msg) {
-        return switch (msg) {
+        Next next = switch (msg) {
             case VersionMsg.Cycled(DiffCursorAt at) -> shown(model, List.of(Tuple.of(at.area(), at.at())), false);
             case VersionMsg.RenderToggled(DiffCursorAt at) -> shown(model, List.of(Tuple.of(at.area(), at.at())), true);
             case VersionMsg.FilesCycled _ -> shown(model, filesAreas(model), false);
             case VersionMsg.FilesRenderToggled _ -> shown(model, filesAreas(model), true);
+            case VersionMsg.BlameToggled(DiffCursorAt at) -> blamed(model, List.of(Tuple.of(at.area(), at.at())));
+            case VersionMsg.FilesBlameToggled _ -> blamed(model, filesAreas(model));
         };
+        return next.then(ReadBlame::blamed);
+    }
+
+    /**
+     * Blames the version each of the {@code areas} shows as source, or stops to, as the first of them says: blamed
+     * unless it is already, or when its blame failed, so that it is read again. A file without changes, shown whole,
+     * is its new version blamed. Nothing happens in an area that shows a diff, a version rendered, an untracked file,
+     * which has no history, or several files.
+     */
+    private static Next blamed(Model model, List<Tuple2<AreaId, Scrolled>> areas) {
+        List<Tuple3<AreaId, Scrolled, ParsedFile>> blamable = areas.flatMap(
+                area -> blamable(model, area._1, area._2.content()).map(file -> Tuple.of(area._1, area._2, file)));
+        return blamable.headOption()
+                .map(first -> !model.repoView()
+                        .version(first._1, first._2.content())
+                        .exists(version -> version.blamed() && version.blame().forAll(blame -> !blame.isFailed())))
+                .map(on -> blamable.foldLeft(
+                        Next.of(model), (done, area) -> done.then(now -> blamed(now, area._1, area._2, area._3, on))))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * The area {@code area}, scrolled as {@code was} says, with the version of its one {@code file} blamed, if
+     * {@code on}, or not; a file without changes shows its new version first.
+     */
+    private static Next blamed(Model model, AreaId area, Scrolled was, ParsedFile file, boolean on) {
+        boolean ignore = model.preferences().ignoreWhitespace();
+        Option<Version> before = model.repoView().version(area, was.content());
+        Next shown = before.isDefined()
+                ? Next.of(model)
+                : showing(model, area, was, file, new Shows(Option.of(FileVersion.NEW), false))
+                        .getOrElse(() -> Next.of(model));
+        return shown.map(now -> now.repoView()
+                .version(area, was.content())
+                .map(version -> now.mapRepoView(view -> view.withVersion(area, version.blamed(on, ignore))))
+                .getOrElse(now));
+    }
+
+    /**
+     * The one file of the area {@code area}, showing {@code content}, if what it shows of it can be blamed: a version
+     * as source, or a file without changes not rendered.
+     */
+    private static Option<ParsedFile> blamable(Model model, AreaId area, ScrolledContent content) {
+        Option<Version> version = model.repoView().version(area, content);
+        boolean source = content instanceof ScrolledContent.Unchanged
+                ? version.forAll(shown -> !shown.rendered())
+                : version.exists(shown -> shown.shown().isDefined() && !shown.rendered());
+        boolean untracked = version.exists(
+                shown -> shown.read().source() instanceof WholeFile.Source.WorkingTree(FileEntry entry, var staged)
+                        && entry.type() == ChangeType.UNTRACKED);
+        return content.richDiff()
+                .map(diff -> diff.parsed().files())
+                .filter(files -> files.size() == 1)
+                .map(files -> files.head())
+                .filter(file -> FileVersion.shown(file.file()))
+                .filter(file -> source && !untracked && file.file().type() != ChangeType.UNTRACKED);
     }
 
     /**

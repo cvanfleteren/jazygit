@@ -35,4 +35,16 @@ public sealed interface VersionMsg extends Msg {
      * content panel shows it in, as the unstaged area goes.
      */
     record FilesRenderToggled() implements VersionMsg {}
+
+    /**
+     * The user asked to show who last changed each line of the version of the one file of the area the cursor
+     * {@code at} is in, or to stop to (ADR 147).
+     */
+    record BlameToggled(DiffCursorAt at) implements VersionMsg {}
+
+    /**
+     * The user asked, in the files pane, to show who last changed each line of the version of the file highlighted,
+     * or to stop to, in every area the content panel shows it in, as the unstaged area goes.
+     */
+    record FilesBlameToggled() implements VersionMsg {}
 }

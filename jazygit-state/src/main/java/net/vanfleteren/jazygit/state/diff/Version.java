@@ -6,6 +6,7 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
+import net.vanfleteren.jazygit.git.model.Blame;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
@@ -29,6 +30,9 @@ import net.vanfleteren.jazygit.state.Loadable;
  *                 the next version shown is
  * @param nodes    the nodes of a version of JSON rendered the user opened, true, or closed, false, by their paths; the
  *                 new version and the original share them, and a version read again keeps them (ADR 122)
+ * @param blamed   whether a version shown as source shows who last changed each of its lines (ADR 147): the new one
+ *                 and the original alike, rendered or not, until the area shows another file
+ * @param blames   the blame of each version read, which a version read again drops
  */
 @With
 public record Version(
@@ -38,7 +42,24 @@ public record Version(
         WholeFile read,
         Loadable<DiffText> whole,
         boolean rendered,
-        Map<String, Boolean> nodes) {
+        Map<String, Boolean> nodes,
+        boolean blamed,
+        Blames blames) {
+
+    /**
+     * A version shown rendered if {@code rendered}, with the nodes the user opened or closed as {@code nodes}, not
+     * blamed.
+     */
+    public Version(
+            ScrolledContent content,
+            String path,
+            Option<FileVersion> shown,
+            WholeFile read,
+            Loadable<DiffText> whole,
+            boolean rendered,
+            Map<String, Boolean> nodes) {
+        this(content, path, shown, read, whole, rendered, nodes, false, Blames.none(false));
+    }
 
     /**
      * A version shown rendered if {@code rendered}, none of its nodes opened or closed by the user.
@@ -104,6 +125,52 @@ public record Version(
      */
     public Option<FileVersion> rendering() {
         return showing().filter(ignored -> rendered);
+    }
+
+    /**
+     * The version shown blamed (ADR 147): shown as source, once the file is read whole, while it is blamed.
+     */
+    public Option<FileVersion> blaming() {
+        return showing().filter(ignored -> blamed && !rendered);
+    }
+
+    /**
+     * The blame of the version shown blamed: loading until it is read, as before its read is started.
+     */
+    public Option<Loadable<Blame>> blame() {
+        return blaming().map(version -> blames.read().get(version).getOrElse(Loadable::loading));
+    }
+
+    /**
+     * The version shown blamed whose blame is not read yet, nor being read, nor failed to be read.
+     */
+    public Option<FileVersion> unblamed() {
+        return blaming().filter(version -> !blames.read().containsKey(version));
+    }
+
+    /**
+     * This blamed, or not, as {@code on} says. Blamed, its blames read with whitespace not ignored as
+     * {@code ignoreWhitespace} says are dropped, and the blame of the version shown if it failed, so that it is read
+     * again.
+     */
+    public Version blamed(boolean on, boolean ignoreWhitespace) {
+        if (!on) {
+            return withBlamed(false);
+        }
+        Blames kept = blames.readIgnoring(ignoreWhitespace);
+        return withBlamed(true)
+                .withBlames(showing()
+                        .filter(version -> kept.read().get(version).exists(Loadable::isFailed))
+                        .map(kept::without)
+                        .getOrElse(kept));
+    }
+
+    /**
+     * The last line of the version shown to blame: that of a version cut where its read was cut (ADR 79), and none,
+     * all of them, for one that is not.
+     */
+    public Option<Integer> lastLine() {
+        return whole.toOption().exists(DiffText::truncated) ? text().map(Vector::size) : Option.none();
     }
 
     /**

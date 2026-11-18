@@ -87,6 +87,15 @@ class CliBlameTest {
     }
 
     @Test
+    void theOriginalOfTheStagedChangesIsBlamedAtHead() throws Exception {
+        Sha first = commit("f.txt", "a\n", "first");
+        Files.writeString(repo.resolve("f.txt"), "a\nstaged\n");
+        git("add", "f.txt");
+
+        assertEquals(List.of(first), shas(blame(new BlameAt.AtHead("f.txt"))));
+    }
+
+    @Test
     void theIndexOfAFileThatIsNotUtf8IsBlamedAsItIsStaged() throws Exception {
         byte[] latin1 = "café\nok\n".getBytes(StandardCharsets.ISO_8859_1);
         Sha first = commit("src/l.txt", latin1, "first");
