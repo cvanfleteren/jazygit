@@ -246,11 +246,11 @@ public record Model(
 
     /**
      * What the diff filters hide of the diff {@code content} the area with the id {@code area} shows (ADR 144): with
-     * the filters enabled, unless they are switched off or the diff is drawn plain, the hunks opened in that area, and
-     * the review threads on a pull request's files, whose hunks show.
+     * the filters enabled, unless the diff is drawn plain, the hunks opened in that area, and the review threads on a
+     * pull request's files, whose hunks show; switched off for the session, they hide nothing, but are counted.
      */
     public Filtering filtering(AreaId area, ScrolledContent content) {
-        List<DiffFilter> filters = preferences.diffFilters().active();
+        List<DiffFilter> filters = preferences.diffFilters().enabledFilters();
         if (filters.isEmpty() || !preferences.settings().diffStyle().rich()) {
             return Filtering.NONE;
         }
@@ -263,7 +263,12 @@ public record Model(
                         .map(ReviewRemarks::threads)
                         .getOrElse(List.empty())
                 : List.empty();
-        return new Filtering(filters, repoView.opened(area, content), threads, content instanceof ScrolledContent.Diff);
+        return new Filtering(
+                filters,
+                repoView.opened(area, content),
+                threads,
+                content instanceof ScrolledContent.Diff,
+                preferences.diffFilters().off());
     }
 
     /**

@@ -132,7 +132,8 @@ final class SplitRows {
                                             row(row._1(), shown, followed || row._2() < rows.size() - 1, layout)));
                         }),
                         at -> gapBefore.get(at).toList().<Pending>map(gap -> () -> marker(gap, fold, layout)),
-                        run -> RichDiff.filteredMarker(run, file.path(), ruleOf(layout), layout.area(), styles)))
+                        (run, opened) -> RichDiff.filteredMarker(
+                                run, opened, file.path(), ruleOf(layout), layout.area(), styles)))
                 .appendAll(trailing.toList().map(gap -> () -> marker(gap, fold, layout)))
                 .appendAll(remarks.toList().<Pending>map(placed -> () -> wide.unplaced(placed.unplaced(), styles)));
     }

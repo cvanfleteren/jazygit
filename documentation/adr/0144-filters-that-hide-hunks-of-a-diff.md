@@ -66,18 +66,21 @@ diff is read.
 - A hidden hunk draws as one line, a marker: `┄ 3 filtered changes · Java imports ┄`. Hidden hunks with nothing shown
   between them share one marker. Where the file is read whole and folded, the marker takes the hidden hunk's lines in
   the folded hunk they fall in, so expanding a gap never shows them.
-- Enter on a marker shows its hunks, as the changes they are; Enter on one of their lines hides them again. Which are
-  shown is kept for the session by where they start in both files, apart from the lines ADR 77 keeps expanded, which
-  are kept by their numbers in the new file as before. Not: a hidden hunk in the gap around it, whose expansions ADR 77
-  keeps by lines of the new file a removed-only hunk has none of, and which a fold after the first expansion would
-  merge into a hunk shown.
+- Enter on a marker shows its hunks, as the changes they are. The marker stays above them, saying they are shown
+  (`┄ 3 filtered changes shown · Java imports ┄`), and Enter on it hides them again. Not: Enter on one of their lines,
+  which would make Enter a key of every line, listed by `?` where it does nothing. Which are shown is kept for the
+  session by where they start in both files, apart from the lines ADR 77 keeps expanded, which are kept by their
+  numbers in the new file as before. Not: a hidden hunk in the gap around it, whose expansions ADR 77 keeps by lines of
+  the new file a removed-only hunk has none of, and which a fold after the first expansion would merge into a hunk
+  shown.
 - A file of a diff of several files, of a directory or the root, whose hunks are all hidden is left out of that diff,
   bar and all, in the diffs of a commit, a stash, a branch and a pull request. In the working tree's it keeps its bar
   and the one line that says all is hidden: staging the directory stages it, and the diff shows what is staged.
 - The diff of one file whose hunks are all hidden says so, naming the filters: `All changes hidden by filters (Java
   imports)`. An empty panel would look broken.
 - The title says `· N hunks filtered` when filters hid something in the diff shown, and `· filters off` when they are
-  switched off and would have. It says nothing otherwise, whatever is enabled.
+  switched off and would have. It says nothing otherwise, whatever is enabled. What it says is worked out as the diff
+  is drawn, so the drawn diff, which the content panel keeps while it stays the same, keeps it too.
 
 ### The keys
 
@@ -157,7 +160,7 @@ take a read of the attributes; renames without changes, which have no hunks to h
 - Imports spread over lines, as Python's `from x import (`, a Go `import (` block or Rust's `use a::{`, are not
   matched: their inner lines look like any other. The lexer's tokens could tell them later.
 - A file with nothing left still shows in the tree, and is only stepped past by `J` and `K` once read.
-- A hidden hunk still takes a line, its marker: less than its lines, more than nothing.
+- A hidden hunk still takes a line, its marker: less than its lines, more than nothing; an opened one too.
 - What is shown of a file is kept in two ways side by side: the lines ADR 77 expands, by the new file's numbers, and
   the hidden hunks opened, by where they start in both files.
 - Staging or discarding a file, a directory or all of them takes their hidden hunks too.

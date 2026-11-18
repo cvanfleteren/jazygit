@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.changes.diff;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -22,6 +24,8 @@ import net.vanfleteren.jazygit.state.diff.Opened;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.ui.keys.Keymap;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 import org.junit.jupiter.api.Test;
 
@@ -117,18 +121,18 @@ class DiffFiltersUpdateTest {
     }
 
     @Test
-    void enterOnAMarkerOpensItsHunksAndOnALineOfOneHidesItAgain() {
+    void enterOnAMarkerOpensItsHunksAndOnTheMarkerKeptAboveThemHidesThemAgain() {
         Model model = enabled(loaded());
-        Anchor.Filtered marker = new Anchor.Filtered("A.java", List.of(new Ranges(1, 3, 1, 3)));
+        List<Ranges> hunks = List.of(new Ranges(1, 3, 1, 3));
 
-        Model opened = Update.update(model, new FilteredMsg.Opened(at(marker))).model();
+        Model opened = Update.update(model, new FilteredMsg.Opened(at(new Anchor.Filtered("A.java", hunks, false))))
+                .model();
 
         assertEquals(
                 Option.of(HashSet.of(new Opened.Hunk("A.java", new HunkStart(1, 1)))),
                 opened.repoView().opened(AREA, CONTENT).map(Opened::hunks));
 
-        Model closed = Update.update(
-                        opened, new FilteredMsg.Closed(at(new Anchor.OnLine("A.java", ReviewThread.Side.RIGHT, 2))))
+        Model closed = Update.update(opened, new FilteredMsg.Closed(at(new Anchor.Filtered("A.java", hunks, true))))
                 .model();
 
         assertEquals(
@@ -137,13 +141,23 @@ class DiffFiltersUpdateTest {
     }
 
     @Test
-    void enterOnALineOfAHunkNotOpenedDoesNothing() {
+    void enterOnALineIsNoKeyOfTheFilters() {
+        DiffCursorAt line = at(new Anchor.OnLine("A.java", ReviewThread.Side.RIGHT, 2));
+
+        assertEquals(
+                Option.none(),
+                ExpandAction.ACTION
+                        .keys()
+                        .apply(Keymap.empty())
+                        .handle(Scopes.DIFF, KeyEvent.ofKey(KeyCode.ENTER), Option.of(line))
+                        .filter(FilteredMsg.class::isInstance));
+    }
+
+    @Test
+    void whatTheFiltersHideIsTheSameValueEachTimeItIsAskedFor() {
         Model model = enabled(loaded());
 
-        Next next = Update.update(
-                model, new FilteredMsg.Closed(at(new Anchor.OnLine("A.java", ReviewThread.Side.RIGHT, 2))));
-
-        assertSame(model, next.model());
+        assertEquals(model.filtering(AREA, CONTENT), model.filtering(AREA, CONTENT));
     }
 
     private static Model enabled(Model model) {

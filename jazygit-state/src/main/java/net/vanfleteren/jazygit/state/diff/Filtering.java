@@ -3,12 +3,12 @@ package net.vanfleteren.jazygit.state.diff;
 import io.vavr.Tuple;
 import io.vavr.Tuple3;
 import io.vavr.collection.List;
-import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.DiffFilter;
 import net.vanfleteren.jazygit.git.model.DiffFiltering;
+import net.vanfleteren.jazygit.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.git.model.HiddenHunks;
 import net.vanfleteren.jazygit.git.model.HiddenHunks.Hidden;
 import net.vanfleteren.jazygit.git.model.HiddenHunks.Piece;
@@ -23,26 +23,32 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
  * pieces of the hunks it is drawn in. The view and the model fold a diff alike, so a range and a hunk are the same
  * in both; so they hide alike, through this.
  *
- * @param filters        the filters that hide hunks: those enabled, none when they are switched off
- * @param opened         the hunks the user opened, which show
+ * @param filters        the filters that hide hunks: those enabled
+ * @param opened         the hunks the user opened, which show, under a marker that hides them again
  * @param threads        the review threads on the diff, if it is a pull request's: a hunk with one on its lines shows
  * @param keepEmptyFiles whether a file whose hunks are all hidden keeps its bar in a diff of several files, as in the
  *                       working tree, where staging a directory stages it
+ * @param off            whether the filters are switched off for this session: they hide nothing, but are counted
  */
 @With
 public record Filtering(
-        List<DiffFilter> filters, Option<Opened> opened, List<ReviewThread> threads, boolean keepEmptyFiles) {
+        List<DiffFilter> filters,
+        Option<Opened> opened,
+        List<ReviewThread> threads,
+        boolean keepEmptyFiles,
+        boolean off) {
 
     /**
      * Nothing hidden.
      */
-    public static final Filtering NONE = new Filtering(List.empty(), Option.none(), List.empty(), false);
+    public static final Filtering NONE = new Filtering(List.empty(), Option.none(), List.empty(), false, false);
 
     /**
      * {@code folded}, the diff {@code git} as it is drawn, with the hunks these filters hide cut out of its files'
      * hunks, and what they hide of each file. A file whose version is shown is left as it is (ADR 102). In a diff of
      * several files, one whose hunks are all hidden is left out, unless empty files are kept or all would be; it is
-     * kept without hunks otherwise.
+     * kept without hunks otherwise. It says how many hunks they hide; switched off, they hide none, and it says how
+     * many they would.
      */
     public Expansion.Folded hide(Expansion.Folded folded, ParsedDiff git) {
         if (filters.isEmpty()) {
@@ -50,6 +56,10 @@ public record Filtering(
         }
         List<ParsedFile> files = folded.diff().files();
         List<Option<Hiding>> hidings = files.map(file -> hiding(file, git, folded));
+        int count = hidings.flatMap(hiding -> hiding).map(Hiding::count).sum().intValue();
+        if (off) {
+            return new Expansion.Folded(folded.diff(), folded.files(), folded.hiding(), count, true);
+        }
         boolean several = files.size() > 1;
         boolean anyLeft = hidings.zip(files).exists(pair -> pair._1().forAll(hiding -> !hiding.all()));
         List<Tuple3<ParsedFile, Option<Hiding>, Boolean>> kept = files.zip(hidings)
@@ -72,19 +82,9 @@ public record Filtering(
                 kept.filter(Tuple3::_3)
                         .flatMap(file -> file._2()
                                 .map(hiding -> Tuple.of(file._1().file().path(), hiding)))
-                        .toMap(pair -> pair));
-    }
-
-    /**
-     * How many hunks of {@code git} these filters hide, opened ones and those with threads left out.
-     */
-    public int count(ParsedDiff git) {
-        return filters.isEmpty()
-                ? 0
-                : git.files()
-                        .map(file -> hidden(file, file.file().path()).size())
-                        .sum()
-                        .intValue();
+                        .toMap(pair -> pair),
+                count,
+                false);
     }
 
     /**
@@ -104,8 +104,14 @@ public record Filtering(
             return Option.none();
         }
         List<Piece> pieces = HiddenHunks.split(drawn, hidden);
-        boolean all = pieces.forAll(piece -> piece.hidden().isDefined() || unchanged(piece.hunk()));
-        return Option.of(new Hiding(pieces, all, hidden.flatMap(Hidden::filters).distinct(), hidden.size()));
+        io.vavr.collection.Set<HunkStart> shown = hidden.map(Hidden::start)
+                .filter(start -> opened.exists(kept -> kept.has(path, start)))
+                .toSet();
+        boolean all = pieces.forAll(
+                piece -> piece.hidden().exists(of -> !shown.contains(of.start())) || unchanged(piece.hunk()));
+        List<Hidden> closed = hidden.filter(of -> !shown.contains(of.start()));
+        return Option.of(
+                new Hiding(pieces, shown, all, closed.flatMap(Hidden::filters).distinct(), closed.size()));
     }
 
     private List<Hidden> hidden(ParsedFile file, String path) {
@@ -114,11 +120,7 @@ public record Filtering(
         List<ReviewThread> on = threads.filter(thread -> thread.isOn(path, origin));
         return applying.isEmpty()
                 ? List.empty()
-                : HiddenHunks.of(
-                        file,
-                        applying,
-                        hunk -> DiffFiltering.start(hunk).exists(start -> opened.exists(kept -> kept.has(path, start)))
-                                || on.exists(thread -> threadOn(thread, hunk)));
+                : HiddenHunks.of(file, applying, hunk -> on.exists(thread -> threadOn(thread, hunk)));
     }
 
     /**
@@ -146,31 +148,43 @@ public record Filtering(
      *
      * @param pieces  the hunks it is drawn in, cut around the hidden ones, each with the hunk of git's that hides it,
      *                if one does
+     * @param opened  the hunks of git's the filters hide that the user opened
      * @param all     whether all its changes are hidden
-     * @param filters the names of the filters that hide them, in their order
-     * @param count   how many of git's hunks they hide
+     * @param filters the names of the filters that hide those not opened, in their order
+     * @param count   how many of git's hunks they hide, those opened left out
      */
-    public record Hiding(List<Piece> pieces, boolean all, List<String> filters, int count) {
+    public record Hiding(
+            List<Piece> pieces,
+            io.vavr.collection.Set<HunkStart> opened,
+            boolean all,
+            List<String> filters,
+            int count) {
 
         /**
          * Nothing hidden.
          */
-        public static final Hiding NONE = new Hiding(List.empty(), false, List.empty(), 0);
+        public static final Hiding NONE =
+                new Hiding(List.empty(), io.vavr.collection.HashSet.empty(), false, List.empty(), 0);
 
         /**
-         * The hunk of git's that hides the piece at {@code index}, the index of a hunk of the file as it is drawn.
+         * The hunk of git's that hides the piece at {@code index}, the index of a hunk of the file as it is drawn,
+         * unless it is opened.
          */
         public Option<Hidden> of(int index) {
-            return all || index >= pieces.size()
-                    ? Option.none()
-                    : pieces.get(index).hidden();
+            return piece(index).filter(hidden -> !opened.contains(hidden.start()));
         }
 
         /**
-         * The pieces, as they are numbered among the hunks of the file drawn.
+         * The hunk of git's the filters hide that the piece at {@code index} is of, if the user opened it.
          */
-        public Vector<Option<Hidden>> byHunk() {
-            return pieces.map(Piece::hidden).toVector();
+        public Option<Hidden> openedAt(int index) {
+            return piece(index).filter(hidden -> opened.contains(hidden.start()));
+        }
+
+        private Option<Hidden> piece(int index) {
+            return all || index >= pieces.size()
+                    ? Option.none()
+                    : pieces.get(index).hidden();
         }
     }
 }

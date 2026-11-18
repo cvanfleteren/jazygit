@@ -51,10 +51,10 @@ public sealed interface Anchor {
 
     /**
      * A marker of hunks of the file with the path {@code path} that filters hide (ADR 144), each by the lines it has of
-     * the old file and the new one, as git gave it; the first is where the marker is. It is found again by its path and
-     * where its first hunk starts.
+     * the old file and the new one, as git gave it; the first is where the marker is. One the user {@code opened} stays
+     * above them, to hide them again. It is found again by its path and where its first hunk starts, opened or not.
      */
-    record Filtered(String path, List<Ranges> hunks) implements Anchor {
+    record Filtered(String path, List<Ranges> hunks, boolean opened) implements Anchor {
 
         /**
          * Where each of its hunks starts in the old file and the new one.

@@ -21,7 +21,7 @@ public sealed interface FilteredMsg extends Msg {
     record Opened(DiffCursorAt at) implements FilteredMsg {}
 
     /**
-     * The user asked to hide again the hunk opened that the line the cursor {@code at} is on is of, if it is of one.
+     * The user asked to hide again the hunks opened of the marker the cursor {@code at} is on.
      */
     record Closed(DiffCursorAt at) implements FilteredMsg {}
 }

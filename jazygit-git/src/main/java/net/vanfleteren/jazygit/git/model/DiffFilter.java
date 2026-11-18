@@ -6,7 +6,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.util.Locale;
-import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import net.vanfleteren.jazygit.syntax.Language;
 
@@ -23,7 +22,7 @@ import net.vanfleteren.jazygit.syntax.Language;
  *                  which hides all of a file
  */
 public record DiffFilter(
-        String id, String name, Set<Language> languages, List<PathGlob> paths, Option<List<Pattern>> lines) {
+        String id, String name, Set<Language> languages, List<PathGlob> paths, Option<List<Regex>> lines) {
 
     /**
      * The filter {@code id} as it is written, or what is wrong with it: a pattern that does not compile, a language
@@ -38,7 +37,7 @@ public record DiffFilter(
         if (unknown.isDefined()) {
             return Either.left(new Problem.UnknownLanguage(unknown.get()));
         }
-        Either<Problem, Option<List<Pattern>>> compiled = lines.fold(
+        Either<Problem, Option<List<Regex>>> compiled = lines.fold(
                 () -> Either.right(Option.none()),
                 patterns -> Either.sequenceRight(patterns.map(DiffFilter::compiled))
                         .map(List::ofAll)
@@ -63,9 +62,7 @@ public record DiffFilter(
      * Whether the changed line {@code text}, without its marker, matches it.
      */
     public boolean matches(String text) {
-        return lines.fold(
-                () -> true,
-                patterns -> patterns.exists(pattern -> pattern.matcher(text).find()));
+        return lines.fold(() -> true, patterns -> patterns.exists(pattern -> pattern.find(text)));
     }
 
     /**
@@ -76,8 +73,8 @@ public record DiffFilter(
                 .find(language -> language.name().toLowerCase(Locale.ROOT).equals(name));
     }
 
-    private static Either<Problem, Pattern> compiled(String pattern) {
-        return Try.of(() -> Pattern.compile(pattern))
+    private static Either<Problem, Regex> compiled(String pattern) {
+        return Try.of(() -> Regex.of(pattern))
                 .toEither()
                 .mapLeft(failure -> new Problem.BadPattern(
                         pattern,

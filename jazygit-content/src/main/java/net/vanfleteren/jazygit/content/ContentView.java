@@ -198,37 +198,7 @@ public final class ContentView {
                         ? Messages.get("content.panel.file.rendered", area.title())
                         : area.title()
                 : version.map(shown -> versioned(area.title(), shown)).getOrElse(area.title());
-        return new Shown.Area(area.area(), filteredTitle(model, area, title, filtering), area.content(), body);
-    }
-
-    /**
-     * {@code title}, saying how many hunks the diff filters hide of the diff {@code area} shows, or that they are
-     * switched off when they would hide some (ADR 144); as it is when they hide none.
-     */
-    private static String filteredTitle(Model model, Shown.Area area, String title, Filtering filtering) {
-        Option<ParsedDiff> git = switch (area.body()) {
-            case Body.Diff(ShownDiff diff, var look, var remarks) ->
-                Option.of(diff.diff().parsed());
-            case Body.CommitChanges(var commit, ShownDiff changes, var look) ->
-                Option.of(changes.diff().parsed());
-            case Body.StashChanges(var stash, ShownDiff changes, var look) ->
-                Option.of(changes.diff().parsed());
-            default -> Option.none();
-        };
-        if (git.isEmpty()) {
-            return title;
-        }
-        int hidden = filtering.count(git.get());
-        if (hidden > 0) {
-            return Messages.get("content.panel.filtered", title, hidden);
-        }
-        boolean off = model.preferences().diffFilters().off()
-                && model.preferences().settings().diffStyle().rich()
-                && filtering
-                                .withFilters(model.preferences().diffFilters().enabledFilters())
-                                .count(git.get())
-                        > 0;
-        return off ? Messages.get("content.panel.filtersOff", title) : title;
+        return new Shown.Area(area.area(), title, area.content(), body);
     }
 
     /**
@@ -907,7 +877,7 @@ public final class ContentView {
                     .getOrElse(() -> Expansion.Folded.of(diff.parsed()));
             Expansion.Folded folded =
                     filtering.hide(version.map(shown -> shown.applied(expanded)).getOrElse(expanded), diff.parsed());
-            return note.map(line -> new Expansion.Folded(folded.diff().withNote(line), folded.files(), folded.hiding()))
+            return note.map(line -> folded.withDiff(folded.diff().withNote(line)))
                     .getOrElse(folded);
         }
 

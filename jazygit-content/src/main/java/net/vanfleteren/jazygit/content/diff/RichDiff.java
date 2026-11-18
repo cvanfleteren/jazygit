@@ -13,6 +13,7 @@ import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
@@ -195,7 +196,15 @@ public final class RichDiff {
         Drawn drawn = Drawn.of(parsed.preamble()
                 .map(line -> new Marked(() -> Line.from(Span.raw(line)), Option.none()))
                 .appendAll(inParallel(pending, Pending::draw).flatMap(lines -> lines)));
-        return split.map(area -> drawn.withDivider((area - 1) / 2)).getOrElse(drawn);
+        // How many hunks the diff filters hide, or that they are switched off where they would hide some, which the
+        // title says: drawn with the diff, so it is worked out once for it, not for each frame (ADR 144).
+        Drawn noted = folded.filtered() == 0
+                ? drawn
+                : drawn.withNote(
+                        folded.filtersOff()
+                                ? Messages.get("content.filtered.off")
+                                : Messages.get("content.filtered.hidden", folded.filtered()));
+        return split.map(area -> noted.withDivider((area - 1) / 2)).getOrElse(noted);
     }
 
     /**
@@ -334,7 +343,8 @@ public final class RichDiff {
                                 fold,
                                 layout),
                         at -> gapBefore.get(at).toList().map(gap -> marker(gap, fold, layout)),
-                        run -> filteredMarker(run, file.path(), rule(layout), layout.fileWidth(), styles)))
+                        (run, opened) ->
+                                filteredMarker(run, opened, file.path(), rule(layout), layout.fileWidth(), styles)))
                 .appendAll(trailing.toList().map(gap -> marker(gap, fold, layout)))
                 .appendAll(cut.toList()
                         .<Pending>map(text ->
@@ -641,38 +651,51 @@ public final class RichDiff {
             Filtering.Hiding hiding,
             IntFunction<List<Pending>> shown,
             IntFunction<List<Pending>> gap,
-            Function<List<HiddenHunks.Hidden>, Pending> marker) {
+            BiFunction<List<HiddenHunks.Hidden>, Boolean, Pending> marker) {
+        // Each hunk is shown, hidden, or opened: hidden and opened ones run on while the next is too.
+        IntFunction<Integer> state =
+                at -> hiding.of(at).isDefined() ? 1 : hiding.openedAt(at).isDefined() ? 2 : 0;
         List<List<Integer>> runs = List.range(0, count)
                 .foldLeft(
                         List.<List<Integer>>empty(),
-                        (done, at) -> hiding.of(at).isDefined()
+                        (done, at) -> state.apply(at) != 0
                                         && done.headOption()
                                                 .exists(run ->
-                                                        hiding.of(run.last()).isDefined() && run.last() == at - 1)
+                                                        state.apply(run.last()).equals(state.apply(at))
+                                                                && run.last() == at - 1)
                                 ? done.tail().prepend(done.head().append(at))
                                 : done.prepend(List.of(at)))
                 .reverse();
-        return runs.flatMap(run -> hiding.of(run.head()).isDefined()
-                ? gap.apply(run.head())
-                        .append(marker.apply(run.flatMap(hiding::of).distinctBy(HiddenHunks.Hidden::start)))
-                : shown.apply(run.head()));
+        return runs.flatMap(run -> switch (state.apply(run.head())) {
+            case 1 ->
+                gap.apply(run.head())
+                        .append(marker.apply(run.flatMap(hiding::of).distinctBy(HiddenHunks.Hidden::start), false));
+            case 2 ->
+                run.flatMap(shown::apply)
+                        .prepend(marker.apply(
+                                run.flatMap(hiding::openedAt).distinctBy(HiddenHunks.Hidden::start), true));
+            default -> shown.apply(run.head());
+        });
     }
 
     /**
      * The marker of {@code run}, hunks of the file with the path {@code path} that filters hide, a stop of the cursor
-     * (ADR 144): {@code rule}, how many lines they change, and the filters that hide them; tinted {@code width} wide
-     * when the cursor is on it.
+     * (ADR 144): {@code rule}, how many lines they change, and the filters that hide them, or that they are shown, when
+     * the user {@code opened} them, which Enter on it hides again; tinted {@code width} wide when the cursor is on it.
      */
     static Pending filteredMarker(
-            List<HiddenHunks.Hidden> run, String path, Span rule, int width, Theme.SpanStyles styles) {
+            List<HiddenHunks.Hidden> run, boolean opened, String path, Span rule, int width, Theme.SpanStyles styles) {
         String says = Messages.get(
-                "content.filtered.marker",
+                opened ? "content.filtered.opened" : "content.filtered.marker",
                 run.map(HiddenHunks.Hidden::changes).sum().intValue(),
                 String.join(", ", run.flatMap(HiddenHunks.Hidden::filters).distinct()));
         return () -> List.of(new Marked(
                 Rows.kept(Line.from(rule, styled("┄ " + says + " ┄", Theme.Classes.DIFF_HUNK, styles))),
                 Option.of(new Mark(
-                        new Anchor.Filtered(path, run.map(HiddenHunks.Hidden::ranges)), 1, width, Option.none()))));
+                        new Anchor.Filtered(path, run.map(HiddenHunks.Hidden::ranges), opened),
+                        1,
+                        width,
+                        Option.none()))));
     }
 
     /**
@@ -1213,10 +1236,19 @@ public final class RichDiff {
         }
 
         /**
-         * These lines with {@code says} in the title of the area.
+         * These lines with {@code says} in the title of the area, after what it says already.
          */
         Drawn withNote(String says) {
-            return new Drawn(rows, stops, places, widest, halves, pinned, divider, Option.some(says));
+            return new Drawn(
+                    rows,
+                    stops,
+                    places,
+                    widest,
+                    halves,
+                    pinned,
+                    divider,
+                    Option.some(note.map(before -> Messages.get("content.notes", before, says))
+                            .getOrElse(says)));
         }
     }
 

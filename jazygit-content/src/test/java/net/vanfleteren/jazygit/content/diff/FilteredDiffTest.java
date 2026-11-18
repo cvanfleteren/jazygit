@@ -111,14 +111,41 @@ class FilteredDiffTest {
     }
 
     @Test
-    void aHunkOpenedShows() {
+    void aHunkOpenedShowsUnderAMarkerThatHidesItAgain() {
         Opened opened =
                 new Opened(new ScrolledContent.Note("x"), HashSet.of(new Opened.Hunk("A.java", new HunkStart(1, 1))));
 
-        List<String> lines = text(drawn(filtering().withOpened(Option.of(opened)), DIFF, false));
+        RichDiff.Drawn drawn = drawn(filtering().withOpened(Option.of(opened)), DIFF, false);
+        List<String> lines = text(drawn);
 
+        assertEquals(
+                "┄┄┄┄┄ │ ┄ 2 filtered changes shown · Java imports ┄",
+                lines.get(1).stripTrailing());
         assertTrue(lines.exists(line -> line.contains("+ import a.C;")), lines.mkString("\n"));
-        assertEquals(1, lines.count(line -> line.contains("filtered changes")));
+        assertEquals(
+                List.of(true, false),
+                drawn.stops()
+                        .map(stop -> stop.mark().anchor())
+                        .filter(Anchor.Filtered.class::isInstance)
+                        .map(anchor -> ((Anchor.Filtered) anchor).opened()));
+    }
+
+    @Test
+    void theTitleSaysHowManyHunksAreHiddenOrThatTheFiltersAreOff() {
+        assertEquals(
+                Option.of("2 hunks filtered"), drawn(filtering(), DIFF, false).note());
+        assertEquals(
+                Option.of("filters off"),
+                drawn(filtering().withOff(true), DIFF, false).note());
+        assertEquals(Option.none(), drawn(Filtering.NONE, DIFF, false).note());
+    }
+
+    @Test
+    void switchedOffTheyHideNothing() {
+        List<String> lines = text(drawn(filtering().withOff(true), DIFF, false));
+
+        assertTrue(lines.exists(line -> line.contains("+ import a.C;")));
+        assertTrue(lines.forAll(line -> !line.contains("filtered changes")));
     }
 
     @Test
@@ -163,7 +190,7 @@ class FilteredDiffTest {
     }
 
     private static Filtering filtering() {
-        return new Filtering(List.of(IMPORTS), Option.none(), List.empty(), false);
+        return new Filtering(List.of(IMPORTS), Option.none(), List.empty(), false, false);
     }
 
     private static RichDiff.Drawn drawn(Filtering filtering, ParsedDiff diff, boolean split) {

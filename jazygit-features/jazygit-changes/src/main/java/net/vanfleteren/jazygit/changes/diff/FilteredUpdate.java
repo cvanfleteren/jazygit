@@ -1,12 +1,6 @@
 package net.vanfleteren.jazygit.changes.diff;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.git.model.DiffFiltering;
-import net.vanfleteren.jazygit.git.model.DiffFiltering.HunkStart;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -34,13 +28,12 @@ public final class FilteredUpdate {
                                 opened.appendAll(marker.starts().map(start -> new Opened.Hunk(marker.path(), start)))));
             case FilteredMsg.Opened _ -> Next.of(model);
             case FilteredMsg.Closed(DiffCursorAt at)
-            when at.cursor() instanceof Anchor.OnLine line ->
-                Next.of(hunkOf(at.at().content(), line)
-                        .filter(hunk -> model.repoView()
-                                .opened(at.area(), at.at().content())
-                                .exists(opened -> opened.hunks().contains(hunk)))
-                        .map(hunk -> changed(model, at, opened -> opened.remove(hunk)))
-                        .getOrElse(model));
+            when at.cursor() instanceof Anchor.Filtered marker ->
+                Next.of(changed(
+                        model,
+                        at,
+                        opened ->
+                                opened.removeAll(marker.starts().map(start -> new Opened.Hunk(marker.path(), start)))));
             case FilteredMsg.Closed _ -> Next.of(model);
         };
     }
@@ -57,24 +50,5 @@ public final class FilteredUpdate {
                 area,
                 new Opened(
                         opened.content(), change.apply(opened.hunks().toList()).toSet())));
-    }
-
-    /**
-     * The hunk of git's that {@code line} of the diff {@code content} shows is of, if it is of one.
-     */
-    private static Option<Opened.Hunk> hunkOf(ScrolledContent content, Anchor.OnLine line) {
-        return content.richDiff()
-                .map(DiffText::parsed)
-                .flatMap(
-                        parsed -> parsed.files().find(file -> file.file().path().equals(line.path())))
-                .flatMap(file -> file.hunks()
-                        .map(ParsedHunk::hunk)
-                        .find(hunk -> hunk.lines()
-                                .exists(diffLine ->
-                                        Anchor.of(line.path(), diffLine).contains(line)
-                                                || (line.side() == ReviewThread.Side.LEFT
-                                                        && diffLine.oldNumber().contains(line.number()))))
-                        .flatMap(DiffFiltering::start))
-                .map((HunkStart start) -> new Opened.Hunk(line.path(), start));
     }
 }

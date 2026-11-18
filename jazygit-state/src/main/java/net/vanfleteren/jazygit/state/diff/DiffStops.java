@@ -66,9 +66,9 @@ public final class DiffStops {
                         .orElse(() -> nearest(stops, new Anchor.OnLine(path, ReviewThread.Side.RIGHT, from)));
             // A marker of hunks filters hide is found by its first hunk, which moves into another marker as those
             // around it are opened or closed; once opened, the cursor goes to the first line of that hunk.
-            case Anchor.Filtered(String path, var hunks) ->
+            case Anchor.Filtered(String path, var hunks, var opened) ->
                 stops.find(at::equals)
-                        .orElse(() -> stops.find(stop -> stop instanceof Anchor.Filtered(var p, var h)
+                        .orElse(() -> stops.find(stop -> stop instanceof Anchor.Filtered(var p, var h, var o)
                                 && p.equals(path)
                                 && h.exists(
                                         hunk -> hunk.start().equals(hunks.head().start()))))

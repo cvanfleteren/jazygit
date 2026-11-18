@@ -37,6 +37,19 @@ public record PathGlob(String glob, Pattern regex) {
     }
 
     /**
+     * Whether {@code other} is a glob written alike: a {@link Pattern} is equal only to itself (ADR 144).
+     */
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof PathGlob(String same, var ignored) && same.equals(glob);
+    }
+
+    @Override
+    public int hashCode() {
+        return glob.hashCode();
+    }
+
+    /**
      * The regex of the glob's characters {@code rest}, inside braces when {@code braced}.
      */
     private static String translated(List<Character> rest, boolean braced) {
