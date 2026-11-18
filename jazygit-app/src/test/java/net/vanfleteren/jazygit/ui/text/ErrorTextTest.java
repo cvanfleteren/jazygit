@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.process.GitError.CommandFailed;
-import net.vanfleteren.jazygit.git.process.GitError.EditorFailed;
+import net.vanfleteren.jazygit.git.process.GitError.EditorExitedAtStart;
 import net.vanfleteren.jazygit.git.process.GitError.StashNotRestored;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
@@ -28,12 +28,11 @@ class ErrorTextTest {
     }
 
     @Test
-    void anEditorThatFailedSaysWhyWhenItPrintedSo() {
+    void anEditorThatExitedAsItStartedHintsAtATerminal() {
         assertEquals(
-                "The editor \"claude\" exited with code 1: 'claude agents' requires an interactive terminal",
-                ErrorText.of(
-                        new EditorFailed("claude", 1, Option.of("'claude agents' requires an interactive terminal"))));
-        assertEquals("The editor \"nvim\" exited with code 1", ErrorText.of(new EditorFailed("nvim", 1)));
+                "The editor \"claude\" exited with code 1 as it started. If it runs in the terminal, set"
+                        + " terminal = true for it in the settings file.",
+                ErrorText.of(new EditorExitedAtStart("claude", 1)));
     }
 
     @Test

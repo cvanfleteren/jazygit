@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.process.GitCommand;
 import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitError.EditorExitedAtStart;
 import net.vanfleteren.jazygit.git.process.GitError.EditorFailed;
 import net.vanfleteren.jazygit.git.process.GitError.EditorNotStarted;
 import net.vanfleteren.jazygit.git.process.GitError.Interrupted;
@@ -119,7 +120,11 @@ public final class CliEditor implements Editor {
     @Override
     public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
         return Exec.launch(directory, commandLine, SETTLE)
-                .mapLeft(failure -> failed(program(commandLine), commandLine, failure))
+                .mapLeft(failure -> failed(
+                        commandLine,
+                        failure instanceof ExecFailure.NonZero(int exitCode, var stderr, var stdout)
+                                ? new EditorExitedAtStart(program(commandLine), exitCode)
+                                : error(program(commandLine), failure)))
                 .map(List::of);
     }
 
@@ -147,7 +152,7 @@ public final class CliEditor implements Editor {
     @Override
     public Either<GitFailure, List<ExecutedCommand>> open(Path directory, List<String> commandLine) {
         return Exec.interactive(directory, commandLine)
-                .mapLeft(failure -> failed(program(commandLine), commandLine, failure))
+                .mapLeft(failure -> failed(commandLine, error(program(commandLine), failure)))
                 .map(List::of);
     }
 
@@ -157,16 +162,16 @@ public final class CliEditor implements Editor {
     static Either<GitFailure, List<ExecutedCommand>> open(Path worktree, String editor, List<String> files) {
         List<String> commandLine = commandLine(editor, files);
         return Exec.interactive(worktree, commandLine)
-                .mapLeft(failure -> failed(editor, commandLine, failure))
+                .mapLeft(failure -> failed(commandLine, error(editor, failure)))
                 .map(List::of);
     }
 
     /**
-     * {@code editor} failing as {@code failure} says, with the {@code commandLine} it was run as, for the command
-     * log: that shows what was run, as the user wrote it or as git put it together.
+     * An editor failing with {@code error}, with the {@code commandLine} it was run as, for the command log: that
+     * shows what was run, as the user wrote it or as git put it together (ADR 146).
      */
-    private static GitFailure failed(String editor, List<String> commandLine, ExecFailure failure) {
-        return new GitFailure(error(editor, failure), List.of(new ExecutedCommand(commandLine)));
+    private static GitFailure failed(List<String> commandLine, GitError error) {
+        return new GitFailure(error, List.of(new ExecutedCommand(commandLine)));
     }
 
     private static Either<UnexpectedOutput, String> parseEditor(String raw) {
@@ -187,8 +192,7 @@ public final class CliEditor implements Editor {
     private static GitError error(String editor, ExecFailure failure) {
         return switch (failure) {
             case ExecFailure.NotStarted(var cause) -> new EditorNotStarted(editor, cause);
-            case ExecFailure.NonZero(int exitCode, var stderr, var stdout) ->
-                new EditorFailed(editor, exitCode, Exec.explanation(stderr, stdout));
+            case ExecFailure.NonZero(int exitCode, var stderr, var stdout) -> new EditorFailed(editor, exitCode);
             case ExecFailure.Interrupted() -> new Interrupted(editor);
             // The editor gets as long as the user takes.
             case ExecFailure.TimedOut() -> new Interrupted(editor);

@@ -5,10 +5,8 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -210,10 +208,8 @@ public final class Exec {
 
     /**
      * Starts {@code commandLine} in {@code directory} and leaves it running, like a browser (ADR 85): with its input
-     * closed and its standard output thrown away, so it takes nothing from the terminal. It is waited for only
-     * {@code settle}: still running by then, it is taken to have started well. Its error output goes to a temporary
-     * file, whose start a {@link ExecFailure.NonZero} has, to say why it failed; the file is removed once it settled,
-     * and the program keeps writing to it while it runs (ADR 146).
+     * closed and its output thrown away, so it takes nothing from the terminal. It is waited for only {@code settle}:
+     * still running by then, it is taken to have started well.
      *
      * @return the command as it was run, when it is still running after {@code settle}, or exited with 0
      */
@@ -225,67 +221,22 @@ public final class Exec {
 
     private static Either<ExecFailure, ExecutedCommand> detach(
             Path directory, List<String> commandLine, Duration settle) {
-        Path stderr;
-        try {
-            stderr = Files.createTempFile("jazygit-launched", ".stderr");
-        } catch (IOException e) {
-            // Without a file for it, its error output is thrown away, as it was before ADR 146.
-            return detach(directory, commandLine, settle, ProcessBuilder.Redirect.DISCARD, Option.none());
-        }
-        try {
-            return detach(
-                    directory, commandLine, settle, ProcessBuilder.Redirect.to(stderr.toFile()), Option.of(stderr));
-        } finally {
-            // The program keeps writing to it while it runs, and the space is freed once it stops: not a pipe, which
-            // kills it at its next line once jazygit is gone.
-            try {
-                Files.deleteIfExists(stderr);
-            } catch (IOException e) {
-                stderr.toFile().deleteOnExit();
-            }
-        }
-    }
-
-    /**
-     * Starts {@code commandLine} as {@link #launch} does, its error output going to {@code errorOutput}, which is read
-     * back from {@code file} when it failed.
-     */
-    private static Either<ExecFailure, ExecutedCommand> detach(
-            Path directory,
-            List<String> commandLine,
-            Duration settle,
-            ProcessBuilder.Redirect errorOutput,
-            Option<Path> file) {
         try {
             Process process = new ProcessBuilder(commandLine.toJavaList())
                     .directory(directory.toFile())
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                    .redirectError(errorOutput)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start();
             process.getOutputStream().close();
             return !process.waitFor(settle.toMillis(), TimeUnit.MILLISECONDS) || process.exitValue() == 0
                     ? Either.right(new ExecutedCommand(commandLine))
-                    : Either.left(new ExecFailure.NonZero(process.exitValue(), start(file), ""));
+                    : Either.left(new ExecFailure.NonZero(process.exitValue(), "", ""));
         } catch (IOException e) {
             return Either.left(new ExecFailure.NotStarted(e));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Either.left(new ExecFailure.Interrupted());
         }
-    }
-
-    /**
-     * The first {@link #MAX_STDERR} bytes in {@code file}, as text; none when there is no file, or it cannot be read.
-     */
-    private static String start(Option<Path> file) {
-        return file.map(path -> {
-                    try (InputStream in = Files.newInputStream(path)) {
-                        return new String(in.readNBytes(MAX_STDERR), StandardCharsets.UTF_8);
-                    } catch (IOException e) {
-                        return "";
-                    }
-                })
-                .getOrElse("");
     }
 
     /**
