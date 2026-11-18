@@ -211,4 +211,13 @@ public sealed interface GitError {
      * @param editor the editor as git names it
      */
     record EditorFailed(String editor, int exitCode) implements GitError {}
+
+    /**
+     * An editor that was started and left running, as a GUI editor is, exited with a non-zero code before it was taken
+     * to have started (ADR 146). What it printed was thrown away; a program that needs a terminal, set without
+     * {@code terminal = true}, fails so.
+     *
+     * @param editor the program it runs, as the user wrote it
+     */
+    record EditorExitedAtStart(String editor, int exitCode) implements GitError {}
 }

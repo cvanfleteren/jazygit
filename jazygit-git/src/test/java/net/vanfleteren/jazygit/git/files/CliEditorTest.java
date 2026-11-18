@@ -162,11 +162,29 @@ class CliEditorTest {
     }
 
     @Test
-    void anEditorLeftRunningThatExitsWithAnErrorAtOnceFails() {
-        GitFailure failure =
-                new CliEditor(repo).launch(repo, List.of("sh", "-c", "exit 2")).getLeft();
+    void anEditorLeftRunningThatExitsWithAnErrorAtOnceFailsAndIsInTheLog() {
+        List<String> commandLine = List.of("sh", "-c", "exit 2", repo.toString());
 
-        assertEquals(new GitError.EditorFailed("sh", 2), failure.error());
+        GitFailure failure = new CliEditor(repo).launch(repo, commandLine).getLeft();
+
+        assertEquals(new GitError.EditorExitedAtStart("sh", 2), failure.error());
+        assertEquals(List.of(new ExecutedCommand(commandLine)), failure.commands());
+    }
+
+    @Test
+    void anEditorThatCannotBeStartedIsInTheLog() {
+        List<String> commandLine = List.of("jazygit-no-such-editor", repo.toString());
+
+        GitFailure failure = new CliEditor(repo).open(repo, commandLine).getLeft();
+
+        assertEquals(List.of(new ExecutedCommand(commandLine)), failure.commands());
+    }
+
+    @Test
+    void gitsEditorThatFailsIsInTheLogAsItRan() {
+        GitFailure failure = CliEditor.open(repo, "false", List.of("a.txt")).getLeft();
+
+        assertEquals(List.of(ExecutedCommand.of("false", "a.txt")), failure.commands());
     }
 
     private void configureEditor(String editor) throws Exception {

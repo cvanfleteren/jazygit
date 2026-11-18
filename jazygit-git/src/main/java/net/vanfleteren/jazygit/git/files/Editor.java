@@ -46,7 +46,7 @@ public interface Editor {
     /**
      * Starts {@code commandLine}, an editor the user set, in {@code directory}, and leaves it running, as a browser
      * is (ADR 110): it gets no input, and its output is thrown away. Fails with a {@link GitError.EditorNotStarted}, or
-     * a {@link GitError.EditorFailed} when it exits with an error before it is taken to have started.
+     * a {@link GitError.EditorExitedAtStart} when it exits with an error before it is taken to have started.
      */
     Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine);
 }
