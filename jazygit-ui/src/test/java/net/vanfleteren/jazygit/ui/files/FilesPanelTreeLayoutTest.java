@@ -6,6 +6,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -53,6 +54,20 @@ class FilesPanelTreeLayoutTest {
             String screen = RenderedText.ofSize(testRunner, () -> panel.render(model, FilesPanel.PANE), 30, 8);
 
             assertTrue(screen.contains("module/src...t/feature"), screen);
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void anErrorTooLongForThePaneIsCutAtItsEnd() throws Exception {
+        String reason = "fatal: not a git repository (or any of the parent directories)";
+        Model failed =
+                TestModels.loaded().mapRepo(repo -> repo.withStatus(new Loadable.Failed<>(TestModels.refused(reason))));
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(failed, FilesPanel.PANE))) {
+            String screen = RenderedText.ofSize(testRunner, () -> panel.render(failed, FilesPanel.PANE), 30, 8);
+
+            assertTrue(screen.contains("fatal: not"), screen);
+            assertFalse(screen.contains("...directories"), screen);
             SettledPilot.of(testRunner).quit();
         }
     }
