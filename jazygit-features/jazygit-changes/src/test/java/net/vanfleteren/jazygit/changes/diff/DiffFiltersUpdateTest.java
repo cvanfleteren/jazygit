@@ -25,9 +25,11 @@ import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Opened;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.preferences.DiffFilters;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 import org.junit.jupiter.api.Test;
 
@@ -57,6 +59,28 @@ class DiffFiltersUpdateTest {
         Model back = Update.update(next.model(), new DiffFiltersMsg.Closed()).model();
         assertTrue(back.popup(DiffOptionsPopup.class).isDefined());
         assertEquals(Option.of(DiffOptionsDialog.FILTERS_ROW), back.listCursor().line());
+    }
+
+    @Test
+    void closingThePopupOfTheFiltersDoesNothingWhenItIsNotOpen() {
+        Model model = loaded().openPopup(new AmendPopup(new AmendTarget.LastCommit()));
+
+        Next next = Update.update(model, new DiffFiltersMsg.Closed());
+
+        assertSame(model, next.model());
+        assertEquals(List.empty(), next.cmds());
+    }
+
+    @Test
+    void whileAllAreSwitchedOffTheFiltersShowTheirBoxesDisabled() {
+        DiffFilters on = enabled(loaded()).preferences().diffFilters();
+        DiffFilters off = new DiffFilters(on.all(), true);
+
+        assertEquals(
+                Option.none(), DiffFiltersDialog.rows(on).head().cells().head().cssClass());
+        assertTrue(DiffFiltersDialog.rows(off)
+                .forAll(row -> row.cells().head().cssClass().contains(Theme.Classes.DISABLED)));
+        assertEquals("[x]", DiffFiltersDialog.rows(off).head().cells().head().text());
     }
 
     @Test

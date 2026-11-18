@@ -23,7 +23,10 @@ public final class DiffFiltersDialog {
     public static final PickDialog.Spec<DiffFiltersPopup, DiffFiltersMsg> SPEC = new PickDialog.Spec<>(
                     "diff-filters",
                     DiffFiltersPopup.class,
-                    popup -> Messages.get("changes.dialog.diffFilters.title"),
+                    popup -> Messages.get(
+                            popup.filters().off()
+                                    ? "changes.dialog.diffFilters.titleOff"
+                                    : "changes.dialog.diffFilters.title"),
                     popup -> rows(popup.filters()),
                     msg -> msg)
             .pickedBySpace()
@@ -54,10 +57,14 @@ public final class DiffFiltersDialog {
                         .filter(choice -> choice.definition().builtIn()
                                 && choice.definition().languages().isEmpty()))
                 .appendAll(filters.all().filter(choice -> !choice.definition().builtIn()));
-        return ordered.map(DiffFiltersDialog::row);
+        return ordered.map(choice -> row(choice, filters.off()));
     }
 
-    private static PickDialog.Row<DiffFiltersMsg> row(DiffFilters.Choice choice) {
+    /**
+     * The row of {@code choice}, its box disabled while all the filters are {@code off}, as switching it then hides
+     * nothing until they are on again.
+     */
+    private static PickDialog.Row<DiffFiltersMsg> row(DiffFilters.Choice choice, boolean off) {
         FilterDefinition definition = choice.definition();
         String scope = definition.languages().isEmpty()
                 ? String.join(", ", definition.paths())
@@ -71,7 +78,11 @@ public final class DiffFiltersDialog {
         return new PickDialog.Row<>(
                 new DiffFiltersMsg.Toggled(definition.id()),
                 List.of(
-                        Cell.of(box(choice.enabled() && choice.filter().isRight())),
+                        off
+                                ? Cell.styled(
+                                        box(choice.enabled() && choice.filter().isRight()), Theme.Classes.DISABLED)
+                                : Cell.of(
+                                        box(choice.enabled() && choice.filter().isRight())),
                         choice.filter().isRight()
                                 ? Cell.of(choice.name())
                                 : Cell.styled(choice.name(), Theme.Classes.DISABLED),

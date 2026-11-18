@@ -32,8 +32,8 @@ public final class DiffOptionsUpdate {
 
     public static Next update(Model model, DiffOptionsMsg msg) {
         return switch (msg) {
-            // The keys work everywhere, and in the popup of the options, but not in another dialog, whose diff
-            // does not change.
+            // Not while a dialog is open, whose diff does not change, but for the popup of the options, which
+            // sends these itself: the keys of their own do not reach past an open popup.
             case DiffOptionsMsg m
             when model.popup().isDefined()
                     && model.popup(DiffOptionsPopup.class).isEmpty() -> Next.of(model);

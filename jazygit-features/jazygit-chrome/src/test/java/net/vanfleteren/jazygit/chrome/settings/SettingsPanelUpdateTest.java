@@ -796,8 +796,7 @@ class SettingsPanelUpdateTest {
     @Test
     void aDiffStyleChangedInTheFileReadsTheDiffsAgain() {
         Model model = TestModels.loaded().openPopup(READ);
-        Settings edited =
-                Settings.DEFAULT.withDiffStyle(Settings.DEFAULT.diffStyle().toggled());
+        Settings edited = Settings.DEFAULT.withDiffStyle(net.vanfleteren.jazygit.settings.DiffStyle.PLAIN);
 
         Next next = Update.update(model, new SettingsPanelMsg.FileEdited(List.empty(), read(edited)));
 

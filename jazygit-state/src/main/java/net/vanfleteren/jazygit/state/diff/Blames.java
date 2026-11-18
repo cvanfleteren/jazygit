@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.state.Loadable;
 /**
  * The blame of each version of a file read, all read alike (ADR 147). A version not in {@code read} is not blamed yet.
  *
- * @param ignoreWhitespace whether they are read ignoring whitespace, as Ctrl+W had it when they were
+ * @param ignoreWhitespace whether they are read ignoring whitespace, as the diff options had it when they were
  * @param read             the blame of each version read, being read, or that failed to be
  */
 public record Blames(boolean ignoreWhitespace, Map<FileVersion, Loadable<Blame>> read) {

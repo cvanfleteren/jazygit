@@ -43,7 +43,9 @@ public final class DiffOptionsDialog {
      * The popups of this feature, which send what the user does to {@code dispatch}.
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningToFocus(new PickDialog<>(SPEC, dispatch)));
+        // Undimmed: each change shows at once in the diff behind it.
+        return List.of(
+                PopupSlot.returningToFocus(new PickDialog<>(SPEC, dispatch)).undimmed());
     }
 
     /**
