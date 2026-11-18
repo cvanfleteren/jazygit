@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.content.diff;
 
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
@@ -49,14 +47,15 @@ public sealed interface LineGoal {
      * marker of the new file leaves it out, else the closest line.
      */
     private static LineGoal onStops(Vector<RichDiff.Stop> stops, String path, Side side, int number) {
-        Vector<Tuple2<Integer, Integer>> lines = stops.zipWithIndex()
-                .flatMap(stop -> number(stop._1().mark(), path, side).map(its -> Tuple.of(its, stop._2())));
-        Option<Integer> exact = lines.find(line -> line._1() == number).map(Tuple2::_2);
+        Vector<NumberedRow> lines = stops.zipWithIndex(
+                        (stop, index) -> number(stop.mark(), path, side).map(its -> new NumberedRow(its, index)))
+                .flatMap(line -> line);
+        Option<Integer> exact = lines.find(line -> line.number() == number).map(NumberedRow::row);
         if (exact.isDefined()) {
             return new OnStop(exact.get(), true, number);
         }
-        Tuple2<Integer, Integer> closest =
-                lines.minBy(line -> Math.abs(line._1() - number)).getOrElse(Tuple.of(number, 0));
+        NumberedRow closest =
+                lines.minBy(line -> Math.abs(line.number() - number)).getOrElse(new NumberedRow(number, 0));
         // A line of a hunk the diff filters hide is shown by opening its marker (ADR 144).
         Option<Anchor.Filtered> filtered = stops.iterator()
                 .map(stop -> stop.mark().anchor())
@@ -66,7 +65,7 @@ public sealed interface LineGoal {
                         && marker.path().equals(path)
                         && marker.hunks().exists(hunk -> hunk.has(side == Side.LEFT, number)));
         if (filtered.isDefined()) {
-            return new Hidden(new Anchor.OnLine(path, side, number), filtered.get(), closest._2());
+            return new Hidden(new Anchor.OnLine(path, side, number), filtered.get(), closest.row());
         }
         Option<Anchor.Gap> hidden = Option.when(
                         side == Side.RIGHT,
@@ -86,8 +85,8 @@ public sealed interface LineGoal {
                                 Option.some(gap.until()
                                         .map(until -> Math.min(until, number + AROUND + 1))
                                         .getOrElse(number + AROUND + 1))),
-                        closest._2()))
-                .getOrElse(() -> new OnStop(closest._2(), false, closest._1()));
+                        closest.row()))
+                .getOrElse(() -> new OnStop(closest.row(), false, closest.number()));
     }
 
     /**
@@ -95,14 +94,14 @@ public sealed interface LineGoal {
      * before it that is drawn, as one in a closed node, else from the first.
      */
     private static LineGoal inRow(Vector<RichDiff.Place> places, String path, Side side, int number) {
-        Vector<Tuple2<Integer, Integer>> lines =
-                places.flatMap(place -> line(place.anchor(), path, side).map(its -> Tuple.of(its, place.row())));
-        return lines.find(line -> line._1() == number)
-                .map(line -> new InRow(line._2(), true, line._1()))
-                .orElse(() -> lines.filter(line -> line._1() < number)
-                        .maxBy(Tuple2::_1)
-                        .orElse(() -> lines.minBy(Tuple2::_1))
-                        .map(line -> new InRow(line._2(), false, line._1())))
+        Vector<NumberedRow> lines =
+                places.flatMap(place -> line(place.anchor(), path, side).map(its -> new NumberedRow(its, place.row())));
+        return lines.find(line -> line.number() == number)
+                .map(line -> new InRow(line.row(), true, line.number()))
+                .orElse(() -> lines.filter(line -> line.number() < number)
+                        .maxBy(NumberedRow::number)
+                        .orElse(() -> lines.minBy(NumberedRow::number))
+                        .map(line -> new InRow(line.row(), false, line.number())))
                 .<LineGoal>map(row -> row)
                 .getOrElse(Nowhere::new);
     }
@@ -189,4 +188,9 @@ public sealed interface LineGoal {
      * Nowhere: what is shown has no lines of a file.
      */
     record Nowhere() implements LineGoal {}
+
+    /**
+     * Line {@code number} of a file, at {@code row}: the index of its stop, or the row a version rendered draws it in.
+     */
+    record NumberedRow(int number, int row) {}
 }

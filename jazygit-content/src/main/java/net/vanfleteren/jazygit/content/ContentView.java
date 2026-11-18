@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.content;
 
-import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -97,19 +96,23 @@ public final class ContentView {
             case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
             default -> Option.<ShownDiff>none();
         });
-        return new Filtered(
-                areas.map(Shown.Area::content),
-                Option.when(
-                        diffs.nonEmpty() && diffs.forAll(Option::isDefined),
-                        () -> diffs.flatMap(diff -> diff).forAll(diff -> {
-                            Expansion.Folded folded = diff.folded();
-                            return folded.diff().files().nonEmpty()
-                                    && folded.diff()
-                                            .files()
-                                            .forAll(file -> folded.hiding(
-                                                            file.file().path())
-                                                    .all());
-                        })));
+        Hidden hidden;
+        if (diffs.isEmpty() || !diffs.forAll(Option::isDefined)) {
+            hidden = Hidden.NO_DIFF;
+        } else {
+            hidden = diffs.flatMap(diff -> diff).forAll(diff -> {
+                        Expansion.Folded folded = diff.folded();
+                        return folded.diff().files().nonEmpty()
+                                && folded.diff()
+                                        .files()
+                                        .forAll(file -> folded.hiding(
+                                                        file.file().path())
+                                                .all());
+                    })
+                    ? Hidden.ALL
+                    : Hidden.NOT_ALL;
+        }
+        return new Filtered(areas.map(Shown.Area::content), hidden);
     }
 
     /**
@@ -447,14 +450,14 @@ public final class ContentView {
                     title, Messages.get(options.ignoreWhitespace() ? "content.onlyWhitespace" : "content.noChanges"));
         }
         return new Shown.Stacked(List.of(
-                        Tuple.of(ContentArea.STAGED, "content.staged", diffs.staged()),
-                        Tuple.of(ContentArea.UNSTAGED, "content.unstaged", diffs.unstaged()))
-                .filter(area -> !shown(area._3).isBlank())
+                        new DiffArea(ContentArea.STAGED, "content.staged", diffs.staged()),
+                        new DiffArea(ContentArea.UNSTAGED, "content.unstaged", diffs.unstaged()))
+                .filter(area -> !shown(area.diff()).isBlank())
                 .map(area -> new Shown.Area(
-                        area._1,
-                        titled(Messages.get(area._2), options),
-                        new ScrolledContent.Diff(area._3),
-                        new Body.Diff(shown(area._3), look))));
+                        area.area(),
+                        titled(Messages.get(area.titleKey()), options),
+                        new ScrolledContent.Diff(area.diff()),
+                        new Body.Diff(shown(area.diff()), look))));
     }
 
     /**
@@ -949,8 +952,25 @@ public final class ContentView {
     /**
      * What the content panel shows, as {@link #filtered} gives it.
      *
-     * @param contents  what each of its areas shows
-     * @param allHidden whether the diff filters hide all the changes they show; none when one shows no diff
+     * @param contents what each of its areas shows
+     * @param hidden   whether the diff filters hide all the changes they show
      */
-    public record Filtered(List<ScrolledContent> contents, Option<Boolean> allHidden) {}
+    public record Filtered(List<ScrolledContent> contents, Hidden hidden) {}
+
+    /**
+     * How much of the changes the content panel shows the diff filters hide (ADR 144).
+     */
+    public enum Hidden {
+        /** All of them. */
+        ALL,
+        /** Not all of them. */
+        NOT_ALL,
+        /** An area shows no diff, as while one is read. */
+        NO_DIFF
+    }
+
+    /**
+     * One of the areas {@link #diffAreas} draws: the {@code area}, the key of its title and its {@code diff}.
+     */
+    private record DiffArea(ContentArea area, String titleKey, DiffText diff) {}
 }

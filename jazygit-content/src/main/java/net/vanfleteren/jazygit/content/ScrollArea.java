@@ -28,8 +28,6 @@ import dev.tamboui.tui.event.PasteEvent;
 import dev.tamboui.widgets.scrollbar.Scrollbar;
 import dev.tamboui.widgets.scrollbar.ScrollbarOrientation;
 import dev.tamboui.widgets.scrollbar.ScrollbarState;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.function.BooleanSupplier;
@@ -115,7 +113,7 @@ public final class ScrollArea {
     // the model has it, a frame drawn meanwhile shows the latter, so a key pressed right after another acts on
     // where that one took the cursor (ADR 60).
     private Scrolled shownAt = Scrolled.top(new ScrolledContent.Diff(DiffText.of("")));
-    private Option<Tuple2<Scrolled, Scrolled>> sent = Option.none();
+    private Option<Sent> sent = Option.none();
     // Whether it shows the diff of a pull request's files, whose keys comment on it (ADR 60).
     private boolean review = false;
     // How far the area is scrolled sideways, as last drawn, and how far it can be. TamboUI's text area keeps a
@@ -143,7 +141,7 @@ public final class ScrollArea {
     private Option<Version> shownVersion = Option.none();
     // The number of the line asked for that a marker leaves out, and what the area showed when it was asked for, while
     // the area waits for it to show (ADR 140).
-    private Option<Tuple2<ScrolledContent, Integer>> wanted = Option.none();
+    private Option<Wanted> wanted = Option.none();
 
     public ScrollArea(
             ContentArea area, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
@@ -208,8 +206,8 @@ public final class ScrollArea {
         ThemeName theme = model.preferences().theme();
         ScrolledContent content = shown.content();
         Scrolled known = model.scrolled(area.id(), content);
-        sent = sent.filter(told -> told._1().equals(known));
-        Scrolled told = sent.map(Tuple2::_2).getOrElse(known);
+        sent = sent.filter(given -> given.known().equals(known));
+        Scrolled told = sent.map(Sent::told).getOrElse(known);
         // What was drawn before, for the same changes drawn anew, as when a version of the file shows in place of
         // its diff (ADR 102): the line of the cursor stays where it was on the screen then too.
         Option<Styled> sameChanges = styled.filter(
@@ -264,7 +262,7 @@ public final class ScrollArea {
                             told.cursor(),
                             told.mark(),
                             told.found());
-                    sent = Option.of(Tuple.of(known, shifted));
+                    sent = Option.of(new Sent(known, shifted));
                     return shifted;
                 })
                 .getOrElse(told);
@@ -287,17 +285,17 @@ public final class ScrollArea {
         // A line asked for that a marker left out, once it shows, or what showed instead says it is not there, as past
         // the end of the file, which is only known once the file is read whole (ADR 140). Only while the area keeps
         // the focus and shows what it was asked in: reading the file whole does not change that, another file does.
-        wanted = wanted.filter(asked -> focused && asked._1().equals(content));
+        wanted = wanted.filter(asked -> focused && asked.content().equals(content));
         if (last.isEmpty()) {
-            wanted = wanted.filter(asked -> cursor.exists(on -> waitedFor(on, current, asked._2())));
+            wanted = wanted.filter(asked -> cursor.exists(on -> waitedFor(on, current, asked.line())));
         }
         // The size the element was last drawn in, which a frame in another size draws it in first (ADR 80).
         columns = Math.max(0, current.widest() - state.viewportWidth());
         column = Math.clamp(at.column(), 0, columns);
         int row = cursor.map(DiffCursor::row).getOrElse(at.row());
         // The lines that show are kept drawn for the frames after, and only they ({@link Rows}).
-        Tuple2<Integer, Integer> window = window(current.lines().size(), row, state.viewportHeight());
-        Rows kept = current.lines().keeping(window._1(), window._2());
+        ContentText.Window window = window(current.lines().size(), row, state.viewportHeight());
+        Rows kept = current.lines().keeping(window.top(), window.bottom());
         styled = Option.of(current.withLines(kept));
         Rows tinted = cursor.filter(ignored -> focused)
                 .map(on -> on.tinted(kept, styles.of(Theme.Classes.DIFF_CURSOR)))
@@ -306,8 +304,8 @@ public final class ScrollArea {
         Rows lines = current.hits()
                 .map(hits -> hits.tinted(
                         tinted,
-                        window._1(),
-                        window._2(),
+                        window.top(),
+                        window.bottom(),
                         currentMatch,
                         styles.of(Theme.Classes.SEARCH_MATCH),
                         styles.of(Theme.Classes.SEARCH_CURRENT)))
@@ -555,7 +553,7 @@ public final class ScrollArea {
             return EventResult.HANDLED;
         }
         notice = Option.none();
-        this.wanted = Option.of(Tuple.of(content, wanted.number()));
+        this.wanted = Option.of(new Wanted(content, wanted.number()));
         DiffCursor near = on.toLine(closest.row(), closest.mark().side()).getOrElse(on);
         cursor = Option.of(near);
         RichTextState state = element.state();
@@ -954,7 +952,7 @@ public final class ScrollArea {
      * Remembers that the model was told the area is now at {@code to}.
      */
     private void told(Scrolled to) {
-        sent = Option.of(Tuple.of(sent.map(Tuple2::_1).getOrElse(shownAt), to));
+        sent = Option.of(new Sent(sent.map(Sent::known).getOrElse(shownAt), to));
     }
 
     /**
@@ -1058,6 +1056,22 @@ public final class ScrollArea {
             return fitted.preferredSize(availableWidth, availableHeight, context);
         }
     }
+
+    /**
+     * Where the model had the area when it was last shown, and where the area told it it went from there (ADR 60).
+     *
+     * @param known where the model had the area
+     * @param told  where the area told the model it went
+     */
+    private record Sent(Scrolled known, Scrolled told) {}
+
+    /**
+     * A line asked for that a marker leaves out, while the area waits for it to show (ADR 140).
+     *
+     * @param content what the area showed when it was asked for
+     * @param line    the number of the line asked for
+     */
+    private record Wanted(ScrolledContent content, int line) {}
 
     /**
      * {@code body}, styled in {@code theme} as {@code lines}, each drawn when it shows ({@link Rows}), with where

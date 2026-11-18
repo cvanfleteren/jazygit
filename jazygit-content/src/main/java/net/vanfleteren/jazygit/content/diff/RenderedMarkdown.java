@@ -82,20 +82,20 @@ final class RenderedMarkdown {
                                 ? done
                                 : done.put(label(definition.getLabel()), text(source, definition)));
         LexedHighlighter highlighter = new LexedHighlighter(styles);
-        List<Tuple2<Tuple2<Node, Boolean>, Integer>> parts = top.filter(
-                        block -> !(block instanceof LinkReferenceDefinition))
+        // The first part has no blank line before it.
+        List<Part> parts = top.filter(block -> !(block instanceof LinkReferenceDefinition))
                 .flatMap(RenderedMarkdown::parts)
-                .zipWithIndex();
+                .zipWithIndex((part, index) -> new Part(part.node(), index > 0 && part.spaced()));
         // Collected, not read through an iterator, so the stream runs on the common pool (RichDiff.inParallel).
         return parts.toJavaParallelStream()
                 .map(part -> {
-                    Node node = part._1()._1();
+                    Node node = part.node();
                     String text = text(source, node);
                     return new Block(
                             drawn(text, definitions, width, styles, highlighter),
                             first(node),
                             last(node),
-                            part._2() > 0 && part._1()._2());
+                            part.spaced());
                 })
                 .collect(List.collector())
                 .filter(block -> !block.rows().isEmpty());
@@ -105,14 +105,13 @@ final class RenderedMarkdown {
      * The parts {@code block} is drawn in, each with whether a blank line comes before it: each item of a list, which
      * only an item of a loose list has after the first, else the block itself.
      */
-    private static List<Tuple2<Node, Boolean>> parts(Node block) {
+    private static List<Part> parts(Node block) {
         if (block instanceof ListBlock list) {
             return children(list)
                     .filter(item -> !item.getSourceSpans().isEmpty())
-                    .zipWithIndex()
-                    .map(item -> Tuple.of(item._1(), item._2() == 0 || !list.isTight()));
+                    .zipWithIndex((item, index) -> new Part(item, index == 0 || !list.isTight()));
         }
-        return List.of(Tuple.of(block, true));
+        return List.of(new Part(block, true));
     }
 
     /**
@@ -454,4 +453,9 @@ final class RenderedMarkdown {
      * but not an item of a tight list from the item before it.
      */
     record Block(List<Line> rows, int first, int last, boolean spaced) {}
+
+    /**
+     * A part a block is drawn in: its {@code node}, and whether a blank line comes before it, {@code spaced}.
+     */
+    private record Part(Node node, boolean spaced) {}
 }
