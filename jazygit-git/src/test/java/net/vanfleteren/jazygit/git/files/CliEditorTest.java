@@ -162,19 +162,12 @@ class CliEditorTest {
     }
 
     @Test
-    void anEditorLeftRunningThatExitsWithAnErrorAtOnceFails() {
-        GitFailure failure =
-                new CliEditor(repo).launch(repo, List.of("sh", "-c", "exit 2")).getLeft();
-
-        assertEquals(new GitError.EditorExitedAtStart("sh", 2), failure.error());
-    }
-
-    @Test
-    void anEditorLeftRunningThatFailsIsInTheLog() {
-        List<String> commandLine = List.of("sh", "-c", "exit 1", repo.toString());
+    void anEditorLeftRunningThatExitsWithAnErrorAtOnceFailsAndIsInTheLog() {
+        List<String> commandLine = List.of("sh", "-c", "exit 2", repo.toString());
 
         GitFailure failure = new CliEditor(repo).launch(repo, commandLine).getLeft();
 
+        assertEquals(new GitError.EditorExitedAtStart("sh", 2), failure.error());
         assertEquals(List.of(new ExecutedCommand(commandLine)), failure.commands());
     }
 

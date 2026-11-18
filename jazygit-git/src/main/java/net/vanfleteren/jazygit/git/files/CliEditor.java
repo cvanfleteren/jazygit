@@ -119,12 +119,13 @@ public final class CliEditor implements Editor {
 
     @Override
     public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
+        String program = program(commandLine);
         return Exec.launch(directory, commandLine, SETTLE)
                 .mapLeft(failure -> failed(
                         commandLine,
                         failure instanceof ExecFailure.NonZero(int exitCode, var stderr, var stdout)
-                                ? new EditorExitedAtStart(program(commandLine), exitCode)
-                                : error(program(commandLine), failure)))
+                                ? new EditorExitedAtStart(program, exitCode)
+                                : error(program, failure)))
                 .map(List::of);
     }
 
