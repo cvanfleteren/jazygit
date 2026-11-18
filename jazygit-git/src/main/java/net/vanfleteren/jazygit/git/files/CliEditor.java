@@ -119,7 +119,7 @@ public final class CliEditor implements Editor {
     @Override
     public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
         return Exec.launch(directory, commandLine, SETTLE)
-                .mapLeft(failure -> new GitFailure(error(program(commandLine), failure), List.empty()))
+                .mapLeft(failure -> failed(program(commandLine), commandLine, failure))
                 .map(List::of);
     }
 
@@ -147,7 +147,7 @@ public final class CliEditor implements Editor {
     @Override
     public Either<GitFailure, List<ExecutedCommand>> open(Path directory, List<String> commandLine) {
         return Exec.interactive(directory, commandLine)
-                .mapLeft(failure -> new GitFailure(error(program(commandLine), failure), List.empty()))
+                .mapLeft(failure -> failed(program(commandLine), commandLine, failure))
                 .map(List::of);
     }
 
@@ -155,9 +155,18 @@ public final class CliEditor implements Editor {
      * Opens {@code files} in {@code editor}, as git names it, and waits until it is closed.
      */
     static Either<GitFailure, List<ExecutedCommand>> open(Path worktree, String editor, List<String> files) {
-        return Exec.interactive(worktree, commandLine(editor, files))
-                .mapLeft(failure -> new GitFailure(error(editor, failure), List.empty()))
+        List<String> commandLine = commandLine(editor, files);
+        return Exec.interactive(worktree, commandLine)
+                .mapLeft(failure -> failed(editor, commandLine, failure))
                 .map(List::of);
+    }
+
+    /**
+     * {@code editor} failing as {@code failure} says, with the {@code commandLine} it was run as, for the command
+     * log: that shows what was run, as the user wrote it or as git put it together.
+     */
+    private static GitFailure failed(String editor, List<String> commandLine, ExecFailure failure) {
+        return new GitFailure(error(editor, failure), List.of(new ExecutedCommand(commandLine)));
     }
 
     private static Either<UnexpectedOutput, String> parseEditor(String raw) {
@@ -178,7 +187,8 @@ public final class CliEditor implements Editor {
     private static GitError error(String editor, ExecFailure failure) {
         return switch (failure) {
             case ExecFailure.NotStarted(var cause) -> new EditorNotStarted(editor, cause);
-            case ExecFailure.NonZero(int exitCode, var stderr, var stdout) -> new EditorFailed(editor, exitCode);
+            case ExecFailure.NonZero(int exitCode, var stderr, var stdout) ->
+                new EditorFailed(editor, exitCode, Exec.explanation(stderr, stdout));
             case ExecFailure.Interrupted() -> new Interrupted(editor);
             // The editor gets as long as the user takes.
             case ExecFailure.TimedOut() -> new Interrupted(editor);

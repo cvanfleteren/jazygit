@@ -208,7 +208,14 @@ public sealed interface GitError {
      * The editor exited with a non-zero code, as {@code vim} does after {@code :cq}, or a shell when it cannot find
      * the editor.
      *
-     * @param editor the editor as git names it
+     * @param editor      the editor as git names it
+     * @param explanation the line it printed on its error output about why, if it printed one there that jazygit
+     *                    read: an editor that has the terminal prints there itself
      */
-    record EditorFailed(String editor, int exitCode) implements GitError {}
+    record EditorFailed(String editor, int exitCode, Option<String> explanation) implements GitError {
+
+        public EditorFailed(String editor, int exitCode) {
+            this(editor, exitCode, Option.none());
+        }
+    }
 }

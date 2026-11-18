@@ -117,8 +117,10 @@ public final class ErrorText {
             case GitError.RefusedPath(String path) -> Messages.get("git.refusedPath", path);
             case GitError.EditorNotStarted(String editor, var cause) ->
                 Messages.get("git.editorNotStarted", editor, reason(cause));
-            case GitError.EditorFailed(String editor, int exitCode) ->
-                Messages.get("git.editorFailed", editor, String.valueOf(exitCode));
+            case GitError.EditorFailed(String editor, int exitCode, var explanation) ->
+                explanation
+                        .map(why -> Messages.get("git.editorFailedSaying", editor, String.valueOf(exitCode), why))
+                        .getOrElse(() -> Messages.get("git.editorFailed", editor, String.valueOf(exitCode)));
         };
     }
 

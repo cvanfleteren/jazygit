@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.CliGit;
@@ -167,6 +168,32 @@ class CliEditorTest {
                 new CliEditor(repo).launch(repo, List.of("sh", "-c", "exit 2")).getLeft();
 
         assertEquals(new GitError.EditorFailed("sh", 2), failure.error());
+    }
+
+    @Test
+    void anEditorLeftRunningThatFailsSaysWhyAndIsInTheLog() {
+        List<String> commandLine = List.of("sh", "-c", "echo 'needs a terminal' >&2; exit 1", repo.toString());
+
+        GitFailure failure = new CliEditor(repo).launch(repo, commandLine).getLeft();
+
+        assertEquals(new GitError.EditorFailed("sh", 1, Option.of("needs a terminal")), failure.error());
+        assertEquals(List.of(new ExecutedCommand(commandLine)), failure.commands());
+    }
+
+    @Test
+    void anEditorThatCannotBeStartedIsInTheLog() {
+        List<String> commandLine = List.of("jazygit-no-such-editor", repo.toString());
+
+        GitFailure failure = new CliEditor(repo).open(repo, commandLine).getLeft();
+
+        assertEquals(List.of(new ExecutedCommand(commandLine)), failure.commands());
+    }
+
+    @Test
+    void gitsEditorThatFailsIsInTheLogAsItRan() {
+        GitFailure failure = CliEditor.open(repo, "false", List.of("a.txt")).getLeft();
+
+        assertEquals(List.of(ExecutedCommand.of("false", "a.txt")), failure.commands());
     }
 
     private void configureEditor(String editor) throws Exception {

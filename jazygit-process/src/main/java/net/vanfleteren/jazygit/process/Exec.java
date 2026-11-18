@@ -5,6 +5,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -27,6 +28,8 @@ public final class Exec {
     static final int MAX_STDERR = 64 * 1024;
     // The most of any output that is read, which is far more than is ever meant to be (ADR 79).
     static final Limit MAX_OUTPUT = new Limit(Integer.MAX_VALUE, 64 * 1024 * 1024);
+    // How long the error output of a program that was left running and failed is still read after it exited.
+    private static final Duration ERROR_OUTPUT_WAIT = Duration.ofMillis(500);
     // How git starts the lines that say what went wrong.
     private static final List<String> ERROR_PREFIXES = List.of("fatal:", "error:", "CONFLICT");
     // What ran, for the debug log; never the environment, which may hold a token.
@@ -208,8 +211,9 @@ public final class Exec {
 
     /**
      * Starts {@code commandLine} in {@code directory} and leaves it running, like a browser (ADR 85): with its input
-     * closed and its output thrown away, so it takes nothing from the terminal. It is waited for only {@code settle}:
-     * still running by then, it is taken to have started well.
+     * closed and its standard output thrown away, so it takes nothing from the terminal. It is waited for only
+     * {@code settle}: still running by then, it is taken to have started well. Its error output is read for as long as
+     * it runs, and its start kept, for a {@link ExecFailure.NonZero} to say why it failed (ADR 146).
      *
      * @return the command as it was run, when it is still running after {@code settle}, or exited with 0
      */
@@ -225,18 +229,38 @@ public final class Exec {
             Process process = new ProcessBuilder(commandLine.toJavaList())
                     .directory(directory.toFile())
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                    .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start();
             process.getOutputStream().close();
-            return !process.waitFor(settle.toMillis(), TimeUnit.MILLISECONDS) || process.exitValue() == 0
-                    ? Either.right(new ExecutedCommand(commandLine))
-                    : Either.left(new ExecFailure.NonZero(process.exitValue(), "", ""));
+            FirstBytes stderr = new FirstBytes(MAX_STDERR);
+            Thread reader = drain(process.getErrorStream(), stderr);
+            if (!process.waitFor(settle.toMillis(), TimeUnit.MILLISECONDS) || process.exitValue() == 0) {
+                return Either.right(new ExecutedCommand(commandLine));
+            }
+            // What it started may hold the error output open after it exited: what came until then will do.
+            reader.join(ERROR_OUTPUT_WAIT);
+            return Either.left(
+                    new ExecFailure.NonZero(process.exitValue(), stderr.toString(StandardCharsets.UTF_8), ""));
         } catch (IOException e) {
             return Either.left(new ExecFailure.NotStarted(e));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Either.left(new ExecFailure.Interrupted());
         }
+    }
+
+    /**
+     * Reads {@code from} into {@code into} until it ends, on a thread of its own, which it gives: a program left running
+     * would stop once the pipe of its error output is full, or be killed by a signal once it is closed. {@code into}
+     * keeps only the start of it.
+     */
+    private static Thread drain(InputStream from, OutputStream into) {
+        return Thread.ofPlatform().daemon().name("jazygit-stderr").start(() -> {
+            try (from) {
+                from.transferTo(into);
+            } catch (IOException e) {
+                // The program is gone, or its output with it: what was read is kept.
+            }
+        });
     }
 
     /**

@@ -238,6 +238,22 @@ class ExecTest {
     }
 
     @Test
+    void aLaunchedProgramThatFailsSaysWhatItPrintedOnItsErrorOutput() {
+        List<String> failing = List.of("sh", "-c", "echo out; echo 'needs a terminal' >&2; exit 1");
+
+        assertEquals(
+                Either.left(new ExecFailure.NonZero(1, "needs a terminal\n", "")), Exec.launch(dir, failing, SETTLE));
+    }
+
+    @Test
+    void aLaunchedProgramThatPrintsMuchOnItsErrorOutputIsNotHeldUp() {
+        // Far more than a pipe holds: a program whose error output is not read stops at its next line.
+        List<String> chatty = List.of("sh", "-c", "i=0; while [ $i -lt 20000 ]; do echo line $i >&2; i=$((i+1)); done");
+
+        assertEquals(Either.right(new ExecutedCommand(chatty)), Exec.launch(dir, chatty, SETTLE));
+    }
+
+    @Test
     void theExplanationPrefersTheErrorOutput() {
         assertEquals(Option.of("error: boom"), Exec.explanation("\n error: boom\nmore", "On branch main"));
         assertEquals(Option.of("On branch main"), Exec.explanation("", "\nOn branch main\n"));

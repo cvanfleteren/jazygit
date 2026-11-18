@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.process.GitError.CommandFailed;
+import net.vanfleteren.jazygit.git.process.GitError.EditorFailed;
 import net.vanfleteren.jazygit.git.process.GitError.StashNotRestored;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
@@ -24,6 +25,15 @@ class ErrorTextTest {
         var error = new StashNotRestored(new CommandFailed(Option.none(), 1, "conflict"));
 
         assertTrue(ErrorText.of(error).startsWith("Checked out, but your stashed changes"));
+    }
+
+    @Test
+    void anEditorThatFailedSaysWhyWhenItPrintedSo() {
+        assertEquals(
+                "The editor \"claude\" exited with code 1: 'claude agents' requires an interactive terminal",
+                ErrorText.of(
+                        new EditorFailed("claude", 1, Option.of("'claude agents' requires an interactive terminal"))));
+        assertEquals("The editor \"nvim\" exited with code 1", ErrorText.of(new EditorFailed("nvim", 1)));
     }
 
     @Test
