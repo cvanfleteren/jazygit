@@ -161,7 +161,7 @@ public final class ContentPanel {
      * hunk a range is open in, as git gives them (ADR 83), and a version of a file rendered {@code width} columns wide
      * (ADR 103). Only the diff of a pull request's files has ranges.
      */
-    private RichDiff.Drawn bodyDrawn(Body body, Option<DiffStops.HunkAt> asGiven, int width) {
+    RichDiff.Drawn bodyDrawn(Body body, Option<DiffStops.HunkAt> asGiven, int width) {
         return switch (body) {
             case Body.Diff(ShownChanges(ShownDiff diff, DiffLook look), var remarks) ->
                 ContentText.diffDrawn(diff, look, remarks, asGiven, styles, width);

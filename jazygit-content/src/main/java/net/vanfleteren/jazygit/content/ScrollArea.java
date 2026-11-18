@@ -1,10 +1,6 @@
 package net.vanfleteren.jazygit.content;
 
 import static dev.tamboui.toolkit.Toolkit.*;
-import static net.vanfleteren.jazygit.content.ContentText.drawnToWidth;
-import static net.vanfleteren.jazygit.content.ContentText.markedHunk;
-import static net.vanfleteren.jazygit.content.ContentText.window;
-import static net.vanfleteren.jazygit.content.ContentText.windowed;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;
@@ -12,15 +8,12 @@ import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.RichTextState;
 import dev.tamboui.terminal.Frame;
-import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.bindings.Actions;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
@@ -33,38 +26,17 @@ import io.vavr.control.Option;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.content.AreaState.DrawnIn;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.content.diff.BlameFooter;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
-import net.vanfleteren.jazygit.content.diff.Halves;
-import net.vanfleteren.jazygit.content.diff.LineGoal;
 import net.vanfleteren.jazygit.content.diff.RichDiff;
-import net.vanfleteren.jazygit.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.FileVersion;
-import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.diff.Anchor;
-import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
-import net.vanfleteren.jazygit.state.diff.Found;
-import net.vanfleteren.jazygit.state.diff.Scrolled;
-import net.vanfleteren.jazygit.state.diff.ScrolledContent;
-import net.vanfleteren.jazygit.state.diff.Version;
-import net.vanfleteren.jazygit.state.github.builds.BuildsAt;
-import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
-import net.vanfleteren.jazygit.state.view.ContentSearch;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
-import net.vanfleteren.jazygit.state.view.FileStepMsg;
-import net.vanfleteren.jazygit.state.view.LineNumberMsg;
-import net.vanfleteren.jazygit.state.view.ViewMsg;
-import net.vanfleteren.jazygit.ui.i18n.Messages;
-import net.vanfleteren.jazygit.ui.keys.Keymap;
-import net.vanfleteren.jazygit.ui.keys.Scopes;
-import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.BorderBar;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
@@ -72,31 +44,11 @@ import net.vanfleteren.jazygit.ui.widgets.PasteTarget;
 
 /**
  * A scrollable area of the content panel. It shows what it is given at the position the model has for that, and tells
- * where the user scrolled it to; the element only keeps the layout of the text.
+ * where the user scrolled it to. What it knows of itself between frames is one {@link AreaState}, which
+ * {@link AreaFit} works out anew each frame and the keys and the mouse turn into another; the element only keeps the
+ * layout of the text, and how far down it is scrolled.
  */
 public final class ScrollArea {
-
-    private static final int WHEEL_LINES = 3;
-    // The keys that move the cursor of a rich diff by a stop besides the arrows, as the lists of the panes are
-    // moved (ADR 60).
-    private static final char UP = 'k';
-    private static final char DOWN = 'j';
-    // The keys that scroll an area sideways besides the arrows, to the end of a long line or a wide code block.
-    private static final char LEFT = 'h';
-    private static final char RIGHT = 'l';
-    // The keys that scroll an area all the way sideways, besides Shift with the arrows.
-    private static final char ALL_LEFT = 'H';
-    private static final char ALL_RIGHT = 'L';
-    // The keys that go to the next and the previous match while a search is kept (ADR 126).
-    private static final char NEXT_MATCH = 'n';
-    private static final char PREVIOUS_MATCH = 'N';
-    // The keys that take the cursor of the split view to the old and the new side of its row (ADR 139).
-    private static final char OLD_SIDE = '[';
-    private static final char NEW_SIDE = ']';
-    // The key that opens the line to type a line number in, and how many digits go in it (ADR 140).
-    private static final char GO_TO_LINE = ':';
-    private static final int MOST_DIGITS = 9;
-    private static final Keymap KEYMAP = Keymap.standard();
 
     private final ContentArea area;
     private final String id;
@@ -104,44 +56,12 @@ public final class ScrollArea {
     private final BooleanSupplier leaveScrollArea;
     private final Consumer<Focus> focus;
     private final Consumer<Msg> dispatch;
-    // The body last shown, the theme it was styled in and its text: a frame that shows the same, like one drawn
-    // only to turn a spinner, or a move of the cursor, does not style it again.
-    private Option<Styled> styled = Option.none();
-    // The cursor of the rich diff shown, as last drawn: what the keys and the wheel move (ADR 60).
-    private Option<DiffCursor> cursor = Option.none();
-    // Where the model had the area when it was last shown, and where the area told it it went from there: until
-    // the model has it, a frame drawn meanwhile shows the latter, so a key pressed right after another acts on
-    // where that one took the cursor (ADR 60).
-    private Scrolled shownAt = Scrolled.top(new ScrolledContent.Diff(DiffText.of("")));
-    private Option<Sent> sent = Option.none();
-    // Whether it shows the diff of a pull request's files, whose keys comment on it (ADR 60).
-    private boolean review = false;
-    // How far the area is scrolled sideways, as last drawn, and how far it can be. TamboUI's text area keeps a
-    // column it never draws at, so the area draws its lines with as many columns cut off their start itself, and
-    // shows where it is with TamboUI's scrollbar on its bottom border, as it shows how far down on its right one.
-    private int column = 0;
-    private int columns = 0;
-    // The size the area was last drawn in, which its lines are fitted to; none before it is first drawn (ADR 80).
-    private int drawnWidth = -1;
-    private int drawnHeight = -1;
-    // The search of the content panel as last shown (ADR 126): the text of its line while that is open, and which
-    // of the matches in the body shown the area went to, if one of them.
+    // The lines to type the query of a search in (ADR 126), and a line number (ADR 140), which keep where their cursor
+    // is; their text is the area's.
     private final FilterLine searchLine = new FilterLine();
-    private Option<String> typing = Option.none();
-    private Option<Integer> currentMatch = Option.none();
-    // What the title says until the next key: that n went past the last match, or could not go to one (ADR 126).
-    private Option<String> notice = Option.none();
-    // The line to type a line number in to go to, and its text while it is open, as last shown (ADR 140).
-    private final FilterLine numberLine = new FilterLine(GO_TO_LINE);
-    private Option<String> number = Option.none();
-    // Whether the area shows the original of a file whole, whose lines are numbered in the old file (ADR 102, 140).
-    private boolean original = false;
-    // The version of its file the area shows, if it shows one: on a line of it blamed, Enter opens its commit (ADR
-    // 147).
-    private Option<Version> shownVersion = Option.none();
-    // The number of the line asked for that a marker leaves out, and what the area showed when it was asked for, while
-    // the area waits for it to show (ADR 140).
-    private Option<Wanted> wanted = Option.none();
+    private final FilterLine numberLine = new FilterLine(AreaLines.GO_TO_LINE);
+    private final AreaKeys.Edits edits = new AreaKeys.Edits(searchLine::edit, numberLine::edit);
+    private AreaState state;
 
     public ScrollArea(
             ContentArea area, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
@@ -150,6 +70,7 @@ public final class ScrollArea {
         this.leaveScrollArea = leaveScrollArea;
         this.focus = focus;
         this.dispatch = dispatch;
+        this.state = AreaState.initial(area.id());
         // Without TamboUI's scrollbar, which takes a column inside the border: the area draws its own on the border.
         element = richTextArea().id(id).fill();
     }
@@ -168,20 +89,22 @@ public final class ScrollArea {
      */
     public Element show(Model model, Option<Focus> focus, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
         boolean focused = focus.contains(area.id());
-        Element fitted =
-                new Fitted(fit(model, focused, shown, style, styles), () -> fit(model, focused, shown, style, styles));
+        AreaFit.Showing showing = new AreaFit.Showing(model, focused, shown, style, styles);
+        Element fitted = new Fitted(fitted(showing), () -> fitted(showing));
         // The line to type the query of a search in, or a line number, above the area that has the focus, which keeps
         // it (ADR 126, 140).
-        Option<StyledElement<?>> line = typing.filter(ignored -> focused)
+        Option<StyledElement<?>> line = state.search()
+                .typing()
+                .filter(ignored -> focused)
                 .<StyledElement<?>>map(searchLine::field)
-                .orElse(() -> number.filter(ignored -> focused).map(numberLine::field));
+                .orElse(() -> state.line().number().filter(ignored -> focused).map(numberLine::field));
         Element shownWithLine = line.<Element>map(
                         field -> new PasteTarget(column(field, fitted).fill(), id, this::pasted))
                 .getOrElse(fitted);
         // Under a version shown blamed, the commit of the line of the cursor (ADR 147).
         return model.repoView()
                 .version(area.id(), shown.content())
-                .flatMap(version -> BlameFooter.text(version, cursor.map(DiffCursor::anchor), model.now()))
+                .flatMap(version -> BlameFooter.text(version, state.cursor().map(DiffCursor::anchor), model.now()))
                 .<Element>map(said -> column(
                                 shownWithLine,
                                 text(" " + said).addClass(Theme.Classes.DIM).length(1))
@@ -189,770 +112,75 @@ public final class ScrollArea {
                 .getOrElse(shownWithLine);
     }
 
+    /**
+     * The text area as {@code showing} shows it, its lines fitted to the size the area was last drawn in.
+     */
+    private RichTextAreaElement fitted(AreaFit.Showing showing) {
+        RichTextState scroll = element.state();
+        AreaFit.Fitted fitted = AreaFit.fit(state, showing, Viewport.of(scroll));
+        state = fitted.after();
+        AreaFit.Drawing drawing = fitted.drawing();
+        element.text(drawing.text()).title(drawing.title());
+        // The state clamps a scroll to the lines it was last drawn with: a longer body, as a version of the file in
+        // place of its diff, would show only the blank lines around where it was cut off (ADR 78, 102).
+        scroll.setContentHeight(drawing.lines());
+        scroll.scrollToTop();
+        scroll.scrollDown(drawing.row());
+        return element.onKeyEvent(this::keys).onMouseEvent(this::mouse);
+    }
+
     private void pasted(PasteEvent event) {
-        typing.forEach(text -> dispatch.accept(new ContentSearchMsg.Edited(searchLine.paste(text, event))));
-        number.filter(ignored -> typing.isEmpty())
+        state.search()
+                .typing()
+                .forEach(text -> dispatch.accept(new ContentSearchMsg.Edited(searchLine.paste(text, event))));
+        state.line()
+                .number()
+                .filter(ignored -> state.search().typing().isEmpty())
                 .map(text -> numberLine.paste(text, event))
-                .filter(ScrollArea::isNumber)
-                .forEach(this::numberEdited);
+                .filter(AreaLines::isNumber)
+                .map(text -> AreaLines.edited(state, Viewport.of(element.state()), text))
+                .forEach(this::apply);
     }
 
     /**
-     * The text area as {@code shown}, as {@link #show} says, its lines fitted to the size the area was last drawn
-     * in, which the text area only learns while it draws.
+     * What {@code event} does ({@link AreaKeys}): the area leaves on it, if nothing before that acts on it.
      */
-    private RichTextAreaElement fit(
-            Model model, boolean focused, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
-        ThemeName theme = model.preferences().theme();
-        ScrolledContent content = shown.content();
-        Scrolled known = model.scrolled(area.id(), content);
-        sent = sent.filter(given -> given.known().equals(known));
-        Scrolled told = sent.map(Sent::told).getOrElse(known);
-        // What was drawn before, for the same changes drawn anew, as when a version of the file shows in place of
-        // its diff (ADR 102): the line of the cursor stays where it was on the screen then too.
-        Option<Styled> sameChanges = styled.filter(
-                before -> before.theme() == theme && shownAt.content().sameChanges(content));
-        // The side of the split view the cursor keeps to while it is on no half: the new file's in a diff shown
-        // anew, else where it was (ADR 139). Kept by the area, as it is not where the cursor is but where it goes.
-        ReviewThread.Side side = cursor.filter(ignored -> shownAt.content().equals(content))
-                .map(DiffCursor::side)
-                .getOrElse(ReviewThread.Side.RIGHT);
-        shownAt = known;
-        Body body = shown.body();
-        // A version rendered, or the builds, are drawn as wide as the area, which it learns while it draws (ADR 80,
-        // 103, 131).
-        int width = element.state().viewportWidth() > 0 ? element.state().viewportWidth() : RichDiff.RENDERED_WIDTH;
-        Option<Styled> last = styled.filter(before -> before.body().equals(body)
-                && before.theme() == theme
-                && (!drawnToWidth(body) || before.width() == width));
-        // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
-        // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
-        // The stop the cursor was on, which the stops of the cursor and the range are looked for from.
-        int near = cursor.map(DiffCursor::stop).getOrElse(0);
-        Option<DiffStops.HunkAt> asGiven = told.mark()
-                .flatMap(mark -> last.map(before -> before.hunk(mark, near)).getOrElse(() -> markedHunk(body, mark)));
-        Option<String> query = ContentSearch.query(model.contentSearch());
-        typing = model.contentSearch().filter(ContentSearch::typing).map(ContentSearch::text);
-        // The line to type a line number in shows above the area with the focus, unless the line of a search does.
-        number = model.lineNumber().filter(ignored -> typing.isEmpty());
-        shownVersion = model.repoView().version(area.id(), content);
-        original = shownVersion.flatMap(Version::showing).contains(FileVersion.ORIGINAL);
-        // The matches are found once per body and query, not per frame (ADR 126).
-        Styled current = last.filter(before -> before.asGiven().equals(asGiven))
-                .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width))
-                .searched(query);
-        styled = Option.of(current);
-        // Shown in another order, or as another version of the file, the line of the cursor stays where it was on
-        // the screen: the view moves by as much as it does, which the model learns with the next move (ADR 83,
-        // 102). A line the cursor was moved to that was not drawn before takes the place of the line the cursor
-        // was drawn on.
-        Option<Anchor> drawnOn = cursor.map(DiffCursor::anchor);
-        Scrolled at = last.orElse(sameChanges)
-                .filter(before -> before != current)
-                .flatMap(before -> told.cursor()
-                        .flatMap(cursorAt -> before.row(cursorAt, near)
-                                .orElse(() -> drawnOn.flatMap(on -> before.row(on, near)))
-                                .flatMap(was -> current.row(cursorAt, near).map(is -> is - was))))
-                .filter(shift -> shift != 0)
-                .map(shift -> {
-                    Scrolled shifted = new Scrolled(
-                            told.content(),
-                            Math.max(0, told.row() + shift),
-                            told.column(),
-                            told.cursor(),
-                            told.mark(),
-                            told.found());
-                    sent = Option.of(new Sent(known, shifted));
-                    return shifted;
-                })
-                .getOrElse(told);
-        RichTextState state = element.state();
-        cursor = DiffCursor.of(
-                current.stops(),
-                near,
-                current.lines().size(),
-                state.viewportHeight(),
-                at.row(),
-                at.cursor(),
-                at.mark(),
-                side);
-        review = shown.body() instanceof Body.Diff(var _, var remarks) && remarks.isDefined();
-        // What the title said of the search lasts until the next key in the area: the area losing the focus, or
-        // showing another body, is past that too (ADR 126).
-        if (!focused || last.isEmpty()) {
-            notice = Option.none();
+    private EventResult keys(KeyEvent event) {
+        Reaction before = AreaKeys.beforeLeaving(state, Viewport.of(element.state()), event, edits);
+        if (before.handled()) {
+            return applied(before);
         }
-        // A line asked for that a marker left out, once it shows, or what showed instead says it is not there, as past
-        // the end of the file, which is only known once the file is read whole (ADR 140). Only while the area keeps
-        // the focus and shows what it was asked in: reading the file whole does not change that, another file does.
-        wanted = wanted.filter(asked -> focused && asked.content().equals(content));
-        if (last.isEmpty()) {
-            wanted = wanted.filter(asked -> cursor.exists(on -> waitedFor(on, current, asked.line())));
+        // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
+        if (AreaKeys.leaving(state, event) && leaveScrollArea.getAsBoolean()) {
+            return applied(Reaction.handled(before.state(), before.view()));
         }
-        // The size the element was last drawn in, which a frame in another size draws it in first (ADR 80).
-        columns = Math.max(0, current.widest() - state.viewportWidth());
-        column = Math.clamp(at.column(), 0, columns);
-        int row = cursor.map(DiffCursor::row).getOrElse(at.row());
-        // The lines that show are kept drawn for the frames after, and only they ({@link Rows}).
-        ContentText.Window window = window(current.lines().size(), row, state.viewportHeight());
-        Rows kept = current.lines().keeping(window.top(), window.bottom());
-        styled = Option.of(current.withLines(kept));
-        Rows tinted = cursor.filter(ignored -> focused)
-                .map(on -> on.tinted(kept, styles.of(Theme.Classes.DIFF_CURSOR)))
-                .getOrElse(kept);
-        currentMatch = current.hits().flatMap(hits -> at.found().flatMap(found -> current.match(hits, found, near)));
-        Rows lines = current.hits()
-                .map(hits -> hits.tinted(
-                        tinted,
-                        window.top(),
-                        window.bottom(),
-                        currentMatch,
-                        styles.of(Theme.Classes.SEARCH_MATCH),
-                        styles.of(Theme.Classes.SEARCH_CURRENT)))
-                .getOrElse(tinted);
-        RichDiff.Drawn drawn = current.split();
-        element.text(windowed(
-                        lines,
-                        column,
-                        row,
-                        state.viewportHeight(),
-                        state.viewportWidth(),
-                        current::filling,
-                        drawn::halvesOf,
-                        drawn::keptAt))
-                .title(shown.title()
-                        + drawn.note()
-                                .map(says -> Messages.get("content.search.notice", says))
-                                .getOrElse("")
-                        + searchTitle(current.hits()));
-        // The state clamps a scroll to the lines it was last drawn with: a longer body, as a version of the file
-        // in place of its diff, would show only the blank lines around where it was cut off (ADR 78, 102).
-        state.setContentHeight(current.lines().size());
-        state.scrollToTop();
-        state.scrollDown(row);
-        return element.onKeyEvent(event -> keys(event, focused, content)).onMouseEvent(event -> mouse(event, content));
+        return applied(AreaKeys.afterLeaving(before.state(), before.view(), event));
     }
 
     /**
-     * What {@code event} does: Left leaves the area as Escape does once it is scrolled all the way left, as Right in
-     * its pane moves into it. Left held down stops there: only pressing it again leaves (ADR 118).
+     * What {@code event} does ({@link AreaMouse}): a click gives the focus to the area first, even from the panes.
      */
-    private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
-        if (focused && typing.isDefined()) {
-            return typed(typing.get(), event, content);
-        }
-        if (focused && number.isDefined()) {
-            return numbered(number.get(), event, content);
-        }
-        if (focused) {
-            notice = Option.none();
-            wanted = Option.none();
-        }
-        // Only the arrow leaves: h scrolls, as j and k move, without going to another panel.
-        boolean atLeftEdge = focused && event.matches(Actions.MOVE_LEFT) && !event.hasShift() && column == 0;
-        if (atLeftEdge && event.isRepeat()) {
-            return EventResult.HANDLED;
-        }
-        boolean leaving = event.isCancel() || atLeftEdge;
-        // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
-        return cursor.filter(on -> leaving && focused && on.mark().isDefined())
-                .map(ranged -> moved(ranged.marked().get(), content))
-                // Then a search kept, before the area is left (ADR 126).
-                .orElse(() -> Option.when(
-                        focused
-                                && event.isCancel()
-                                && styled.exists(shown -> shown.hits().isDefined()),
-                        () -> sending(new ContentSearchMsg.Cleared())))
-                // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
-                .orElse(() -> Option.when(leaving && leaveScrollArea.getAsBoolean(), EventResult.HANDLED))
-                .orElse(() -> Option.when(!focused, EventResult.UNHANDLED))
-                .orElse(() ->
-                        Option.when(event.isChar(GO_TO_LINE) && !event.hasCtrl() && !event.hasAlt(), this::lineOpened))
-                .orElse(() -> searchStep(event, content))
-                .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(to, content)))
-                .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(
-                                review ? Scopes.PULL_REQUEST_DIFF : Scopes.DIFF, event, Option.of(at(on, content))))
-                        .map(this::reviewed))
-                // The builds of a branch have keys of their own, to show another workflow (ADR 131).
-                .orElse(() -> Option.when(
-                                content instanceof ScrolledContent.Builds,
-                                () -> KEYMAP.handle(
-                                        Scopes.BUILDS,
-                                        event,
-                                        Option.of(new BuildsAt(styled.exists(
-                                                shown -> shown.hits().isDefined())))))
-                        .flatMap(msg -> msg)
-                        .map(this::reviewed))
-                // Without a cursor, as in the plain style, only the keys that move to another file act (ADR 117).
-                .orElse(() -> Option.when(cursor.isEmpty(), () -> KEYMAP.handle(Scopes.DIFF, event, Option.none()))
-                        .flatMap(msg -> msg)
-                        .filter(msg -> msg instanceof FileStepMsg || msg instanceof ContentSearchMsg)
-                        .map(this::reviewed))
-                .getOrElse(() -> scroll(event) ? scrolled(content) : EventResult.UNHANDLED);
-    }
-
-    /**
-     * What {@code event} does while the line of the search is open with {@code text} (ADR 126): the keys that edit it
-     * do, Escape closes it, Enter closes it and goes to the first match from the cursor, or from the top of the screen
-     * without one. The other keys do nothing.
-     */
-    private EventResult typed(String text, KeyEvent event, ScrolledContent content) {
-        if (event.isCancel()) {
-            return sending(new ContentSearchMsg.Cancelled());
-        }
-        if (event.isConfirm()) {
-            dispatch.accept(new ContentSearchMsg.Submitted());
-            currentMatch = Option.none();
-            return styled.map(shown -> shown.searched(Option.when(!text.isEmpty(), text)))
-                    .peek(searched -> styled = Option.of(searched))
-                    .flatMap(Styled::hits)
-                    .filter(hits -> !hits.isEmpty())
-                    .map(hits -> goTo(hits, hits.forwardFrom(position()), content))
-                    .getOrElse(EventResult.HANDLED);
-        }
-        searchLine.edit(text, event).map(ContentSearchMsg.Edited::new).forEach(dispatch);
-        return EventResult.HANDLED;
-    }
-
-    /**
-     * {@code :} (ADR 140): opens the line to type a line number in, where the area shows lines of a file; elsewhere
-     * the title says there are none.
-     */
-    private EventResult lineOpened() {
-        if (!cursor.exists(this::numbered)) {
-            notice = Option.of(Messages.get("content.line.none"));
-            return EventResult.HANDLED;
-        }
-        number = Option.of("");
-        return sending(new LineNumberMsg.Opened());
-    }
-
-    /**
-     * Whether the area still waits for line {@code line} of the new file to show in {@code shown}, its cursor
-     * {@code on} (ADR 140): while a marker leaves it out, as while the file is read whole. Once it shows, the cursor
-     * is on it, as the model has it there; when it is not there, the title says so, and which line the cursor is on.
-     */
-    private boolean waitedFor(DiffCursor on, Styled shown, int line) {
-        return switch (LineGoal.of(shown.stops(), shown.places(), on.stop(), ReviewThread.Side.RIGHT, line)) {
-            case LineGoal.Hidden _ -> true;
-            case LineGoal.OnStop(var _, boolean exact, int at) -> {
-                if (!exact) {
-                    notice = Option.of(Messages.get("content.line.notShown", line, at));
-                }
-                yield false;
-            }
-            case LineGoal.InRow _, LineGoal.Nowhere _ -> false;
-        };
-    }
-
-    /**
-     * Whether the area, its cursor {@code on}, shows lines of a file to go to by their number (ADR 140): what
-     * {@code :} acts on, and the help lists it as acting on.
-     */
-    private boolean numbered(DiffCursor on) {
-        return styled.exists(shown -> LineGoal.numbered(shown.stops(), shown.places(), on.stop()));
-    }
-
-    /**
-     * What {@code event} does while the line to type a line number in is open with {@code text} (ADR 140): the keys
-     * that edit it do, as long as it holds only digits; Escape closes it; Enter closes it and goes to the line typed.
-     * The other keys do nothing.
-     */
-    private EventResult numbered(String text, KeyEvent event, ScrolledContent content) {
-        if (event.isCancel()) {
-            number = Option.none();
-            return sending(new LineNumberMsg.Closed());
-        }
-        if (event.isConfirm()) {
-            number = Option.none();
-            dispatch.accept(new LineNumberMsg.Closed());
-            return text.isEmpty()
-                    ? EventResult.HANDLED
-                    : cursor.flatMap(on -> styled.map(shown -> toLine(on, shown, Integer.parseInt(text), content)))
-                            .getOrElse(EventResult.HANDLED);
-        }
-        numberLine.edit(text, event).filter(ScrollArea::isNumber).forEach(this::numberEdited);
-        return EventResult.HANDLED;
-    }
-
-    /**
-     * Shows {@code text} in the line to type a line number in, and tells the model.
-     */
-    private void numberEdited(String text) {
-        number = Option.of(text);
-        dispatch.accept(new LineNumberMsg.Edited(text));
-    }
-
-    /**
-     * Whether {@code text} can be in the line to type a line number in: digits only, no more than fit a number.
-     */
-    private static boolean isNumber(String text) {
-        return text.length() <= MOST_DIGITS && text.chars().allMatch(c -> c >= '0' && c <= '9');
-    }
-
-    /**
-     * Goes to line {@code line} of the file of the cursor {@code on} in {@code shown} (ADR 140), numbered in the file
-     * of the side of the cursor in the split view, in the old file in the original, else in the new file.
-     */
-    private EventResult toLine(DiffCursor on, Styled shown, int line, ScrolledContent content) {
-        ReviewThread.Side side =
-                original ? ReviewThread.Side.LEFT : shown.split().split() ? on.side() : ReviewThread.Side.RIGHT;
-        currentMatch = Option.none();
-        return switch (LineGoal.of(shown.stops(), shown.places(), on.stop(), side, line)) {
-            case LineGoal.OnStop(int index, boolean exact, int at) -> {
-                RichDiff.Stop stop = shown.stops().get(index);
-                yield lineReached(
-                        on.toLine(stop.row(), stop.mark().side()),
-                        Option.when(!exact, () -> Messages.get("content.line.notShown", line, at)),
-                        content);
-            }
-            case LineGoal.Hidden(Anchor.OnLine wanted, Anchor lines, int closest) ->
-                hidden(on, wanted, lines, shown.stops().get(closest), content);
-            case LineGoal.InRow(int row, boolean exact, int at) -> {
-                Option<String> says = Option.when(!exact, () -> Messages.get("content.line.notShown", line, at));
-                // A row of JSON or YAML rendered is a stop; a block of Markdown is scrolled to the top, as Ctrl+T
-                // leaves it, which a key then acts on (ADR 103).
-                if (shown.stops().exists(stop -> stop.row() == row)) {
-                    yield lineReached(on.toLine(row), says, content);
-                }
-                notice = says;
-                RichTextState state = element.state();
-                state.scrollToTop();
-                state.scrollDown(row);
-                yield scrolled(content);
-            }
-            case LineGoal.Nowhere _ -> {
-                notice = Option.of(Messages.get("content.line.none"));
-                yield EventResult.HANDLED;
-            }
-        };
-    }
-
-    /**
-     * Moves the cursor {@code to} the line gone to, the title saying {@code says}; nowhere when a range is open and
-     * the line is outside its hunk, the title saying so.
-     */
-    private EventResult lineReached(Option<DiffCursor> to, Option<String> says, ScrolledContent content) {
-        if (to.isEmpty()) {
-            notice = Option.of(Messages.get("content.line.outsideRange"));
-            return EventResult.HANDLED;
-        }
-        notice = says;
-        return moved(to.get(), content);
-    }
-
-    /**
-     * Goes to the line {@code wanted}, which a marker leaves out (ADR 140): shows {@code lines}, those around it, as
-     * Enter on the marker shows its lines (ADR 77), and tells the model the cursor is on it, which the area finds once
-     * it shows; until then the cursor is on {@code closest}. Refused while a range is open: the line is in no hunk.
-     */
-    private EventResult hidden(
-            DiffCursor on, Anchor.OnLine wanted, Anchor lines, RichDiff.Stop closest, ScrolledContent content) {
-        if (on.mark().isDefined()) {
-            notice = Option.of(Messages.get("content.line.outsideRange"));
-            return EventResult.HANDLED;
-        }
-        notice = Option.none();
-        this.wanted = Option.of(new Wanted(content, wanted.number()));
-        DiffCursor near = on.toLine(closest.row(), closest.mark().side()).getOrElse(on);
-        cursor = Option.of(near);
-        RichTextState state = element.state();
-        state.scrollToTop();
-        state.scrollDown(near.row());
-        Scrolled to = new Scrolled(content, state.scrollRow(), column, Option.of(wanted), Option.none());
-        told(to);
-        dispatch.accept(new ViewMsg.ContentScrolled(area.id(), to));
-        KEYMAP.handle(
-                        Scopes.DIFF,
-                        KeyEvent.ofKey(KeyCode.ENTER),
-                        Option.of(new DiffCursorAt(area.id(), to, lines, Option.none(), Option.none(), Option.none())))
-                .forEach(dispatch);
-        return EventResult.HANDLED;
-    }
-
-    private EventResult sending(Msg msg) {
-        dispatch.accept(msg);
-        return EventResult.HANDLED;
-    }
-
-    /**
-     * Where {@code n} and {@code N} go while a search is kept (ADR 126), if {@code event} is one of them: from the
-     * match gone to, else from the cursor, or the top of the screen without one; nowhere when nothing matches.
-     */
-    private Option<EventResult> searchStep(KeyEvent event, ScrolledContent content) {
-        boolean forward = event.isChar(NEXT_MATCH);
-        return styled.flatMap(Styled::hits)
-                .filter(ignored -> forward || event.isChar(PREVIOUS_MATCH))
-                .map(hits -> hits.isEmpty() ? EventResult.HANDLED : goTo(hits, step(hits, forward), content));
-    }
-
-    /**
-     * Which of {@code hits} {@code n}, or {@code N} unless {@code forward}, goes to: from the match gone to, else from
-     * the cursor, or the top of the screen without one.
-     */
-    private SearchHits.Step step(SearchHits hits, boolean forward) {
-        return currentMatch
-                .map(at -> hits.from(at, forward))
-                .getOrElse(() -> forward ? hits.forwardFrom(position()) : hits.backwardFrom(position()));
-    }
-
-    /**
-     * Where {@code n}, or {@code N} unless {@code forward}, takes the cursor {@code on} while a search is kept
-     * (ADR 126), as the message that takes it there, which the keys of the area send and the help runs: none when
-     * nothing matches, or a range is open and the match is outside its hunk. The wrap is not said in the title then.
-     */
-    private Option<Msg> toMatch(DiffCursor on, boolean forward, ScrolledContent content) {
-        return styled.flatMap(Styled::hits).filter(hits -> !hits.isEmpty()).flatMap(hits -> {
-            SearchHits.Step step = step(hits, forward);
-            SearchHits.Hit hit = hits.get(step.index());
-            return on.toLine(hit.row(), sideOf(hits, hit))
-                    .map(to -> new ViewMsg.ContentScrolled(
-                            area.id(),
-                            new Scrolled(
-                                    content,
-                                    to.row(),
-                                    shownColumn(hits, hit),
-                                    Option.of(to.anchor()),
-                                    to.markAnchor(),
-                                    Option.of(new Found.InStop(to.anchor(), hits.nth(step.index(), to.stopStart()))))));
-        });
-    }
-
-    /**
-     * The line a search goes on from when no match is current: the first of the stop of the cursor, else the first
-     * on the screen.
-     */
-    private int position() {
-        return cursor.map(DiffCursor::stopStart).getOrElse(() -> element.state().scrollRow());
-    }
-
-    /**
-     * Goes to the match {@code step} says of {@code hits}: the cursor to its stop, or the view scrolled to it, and
-     * sideways until it shows, telling the model in one message. While a range is open, a match outside its hunk is
-     * refused, and the title says so.
-     */
-    private EventResult goTo(SearchHits hits, SearchHits.Step step, ScrolledContent content) {
-        SearchHits.Hit hit = hits.get(step.index());
-        Option<String> wrapped = Option.when(step.wrapped(), () -> Messages.get("content.search.wrapped"));
-        RichTextState state = element.state();
-        if (cursor.isDefined()) {
-            Option<DiffCursor> to = cursor.get().toLine(hit.row(), sideOf(hits, hit));
-            if (to.isEmpty()) {
-                notice = Option.of(Messages.get("content.search.outsideRange"));
-                return EventResult.HANDLED;
-            }
-            DiffCursor on = to.get();
-            notice = wrapped;
-            currentMatch = Option.of(step.index());
-            column = shownColumn(hits, hit);
-            cursor = Option.of(on);
-            state.scrollToTop();
-            state.scrollDown(on.row());
-            return scrolled(content, Option.of(new Found.InStop(on.anchor(), hits.nth(step.index(), on.stopStart()))));
-        }
-        int top = state.scrollRow();
-        int height = Math.max(1, state.viewportHeight());
-        int row = hit.row() >= top && hit.row() < top + height ? top : Math.max(0, hit.row() - height / 2);
-        notice = wrapped;
-        currentMatch = Option.of(step.index());
-        column = shownColumn(hits, hit);
-        state.scrollToTop();
-        state.scrollDown(row);
-        return scrolled(content, Option.of(new Found.OnLine(hit.row(), hits.nth(step.index(), hit.row()))));
-    }
-
-    /**
-     * How far the area is scrolled sideways to show {@code hit} of {@code hits}: as far as it is, when it shows the
-     * match already; else so the match starts at its left edge, or ends at its right one.
-     */
-    private int shownColumn(SearchHits hits, SearchHits.Hit hit) {
-        return styled.map(shown -> {
-                    String text = shown.lines().get(hit.row()).rawContent();
-                    int from = from(shown, hit);
-                    int until = Math.min(text.length(), from + hits.query().length());
-                    int start = Span.raw(text.substring(0, from)).width();
-                    int end = Span.raw(text.substring(0, until)).width();
-                    // In the split view, the code of each half scrolls from where it starts, in its own width,
-                    // which a cut-off marker at either end narrows (ADR 139).
-                    Option<Halves> halves = shown.split().halvesOf(hit.row());
-                    if (halves.isDefined()) {
-                        Halves cut = halves.get();
-                        boolean left = start < cut.rule();
-                        int code = left ? cut.leftCode() : cut.rightCode();
-                        int room = Math.max(1, (left ? cut.leftShown() : cut.rightShown()) - 2);
-                        int at = start - code;
-                        int to = end - code;
-                        int moved = at < column ? at : to > column + room ? to - room : column;
-                        return Math.clamp(moved, 0, Math.max(0, columns));
-                    }
-                    int width = Math.max(1, element.state().viewportWidth());
-                    // The gutter of a line of a version shown blamed stays where it is; its code scrolls after it
-                    // (ADR 147).
-                    int kept = shown.split().keptAt(hit.row());
-                    if (kept == RichDiff.Drawn.PINNED) {
-                        return column;
-                    }
-                    int shifted = start - kept < column ? start - kept : end > column + width ? end - width : column;
-                    return Math.clamp(shifted, 0, Math.max(0, columns));
-                })
-                .getOrElse(column);
-    }
-
-    /**
-     * The side of the split view {@code hit} is in (ADR 139); none in a row that is not split.
-     */
-    private Option<ReviewThread.Side> sideOf(SearchHits hits, SearchHits.Hit hit) {
-        return styled.flatMap(shown -> shown.split().halvesOf(hit.row()).map(cut -> {
-            String text = shown.lines().get(hit.row()).rawContent();
-            return Span.raw(text.substring(0, from(shown, hit))).width() < cut.rule()
-                    ? ReviewThread.Side.LEFT
-                    : ReviewThread.Side.RIGHT;
-        }));
-    }
-
-    /**
-     * Where in the text of its line {@code hit} starts.
-     */
-    private static int from(Styled shown, SearchHits.Hit hit) {
-        return Math.min(
-                shown.lines().get(hit.row()).rawContent().length(),
-                shown.lines().source(hit.row()).from() + hit.start());
-    }
-
-    /**
-     * What the title of the area says of the search after what it says already (ADR 126): the query and which of the
-     * matches is current, else how many there are, or that there are none; and what {@link #notice} says.
-     */
-    private String searchTitle(Option<SearchHits> hits) {
-        return hits.map(found -> found.isEmpty()
-                                ? Messages.get("content.search.none", found.query())
-                                : currentMatch
-                                        .map(at -> Messages.get(
-                                                "content.search.current", found.query(), at + 1, found.size()))
-                                        .getOrElse(() ->
-                                                Messages.get("content.search.count", found.query(), found.size())))
-                        .getOrElse("")
-                + notice.map(says -> Messages.get("content.search.notice", says))
-                        .getOrElse("");
-    }
-
-    /**
-     * Sends {@code msg}, which a key of the diff of a pull request made, telling the area first where it scrolls
-     * to if it does.
-     */
-    private EventResult reviewed(Msg msg) {
-        if (msg instanceof ViewMsg.ContentScrolled(var ignored, Scrolled to)) {
-            told(to);
-        }
-        dispatch.accept(msg);
-        return EventResult.HANDLED;
-    }
-
-    /**
-     * Where {@code cursor} is, as the keys of the diff of a pull request act on it, with where the keys that move
-     * it take it.
-     */
-    private DiffCursorAt at(DiffCursor cursor, ScrolledContent content) {
-        Anchor acting = acting(cursor);
-        // While a search is kept, n and N go to its matches rather than to the threads (ADR 126).
-        boolean searching = styled.exists(shown -> shown.hits().isDefined());
-        return new DiffCursorAt(
-                area.id(),
-                new Scrolled(content, cursor.row(), column, Option.of(acting), cursor.markAnchor()),
-                acting,
-                searching ? toMatch(cursor, true, content) : cursor.nextThread().map(next -> movedTo(next, content)),
-                searching
-                        ? toMatch(cursor, false, content)
-                        : cursor.previousThread().map(previous -> movedTo(previous, content)),
-                cursor.marked().map(marked -> movedTo(marked, content)),
-                cursor.onHalf(),
-                Option.when(numbered(cursor), LineNumberMsg.Opened::new),
-                shownVersion.exists(version -> version.opening(acting).isDefined()));
-    }
-
-    /**
-     * What a key acts on with the cursor on {@code cursor}: the stop it is on, but on the bar of a version
-     * rendered, which is its only stop, the first line of the block at the top of the area, so a version shown
-     * as source again has the cursor there (ADR 103).
-     */
-    private Anchor acting(DiffCursor cursor) {
-        return cursor.anchor() instanceof Anchor.File
-                ? styled.flatMap(shown -> shown.top(cursor.row())).getOrElse(cursor::anchor)
-                : cursor.anchor();
-    }
-
-    private Msg movedTo(DiffCursor cursor, ScrolledContent content) {
-        return new ViewMsg.ContentScrolled(area.id(), scrolledTo(cursor, content));
-    }
-
-    private Scrolled scrolledTo(DiffCursor cursor, ScrolledContent content) {
-        return new Scrolled(content, cursor.row(), column, Option.of(cursor.anchor()), cursor.markAnchor());
-    }
-
-    /**
-     * Where the keys that move the cursor of a rich diff take it, if {@code event} is one of them.
-     */
-    private static Option<DiffCursor> move(DiffCursor cursor, KeyEvent event) {
-        return Option.<DiffCursor>none()
-                .orElse(Option.when(event.matches(Actions.MOVE_UP) || event.isChar(UP), cursor::up))
-                .orElse(Option.when(event.matches(Actions.MOVE_DOWN) || event.isChar(DOWN), cursor::down))
-                .orElse(Option.when(event.matches(Actions.PAGE_UP), cursor::pageUp))
-                .orElse(Option.when(event.matches(Actions.PAGE_DOWN), cursor::pageDown))
-                .orElse(Option.when(event.matches(Actions.HOME), cursor::home))
-                .orElse(Option.when(event.matches(Actions.END), cursor::end))
-                // In the split view, on a line: to the old or the new side; on a marker, more lines (ADR 77, 138).
-                .orElse(() -> Option.when(event.isChar(OLD_SIDE), () -> cursor.toSide(ReviewThread.Side.LEFT))
-                        .flatMap(to -> to))
-                .orElse(() -> Option.when(event.isChar(NEW_SIDE), () -> cursor.toSide(ReviewThread.Side.RIGHT))
-                        .flatMap(to -> to));
-    }
-
-    /**
-     * Shows the cursor {@code moved}, and tells the model where it is and where the area is scrolled to, in one
-     * message, so the model never has the cursor off the screen.
-     */
-    private EventResult moved(DiffCursor moved, ScrolledContent content) {
-        cursor = Option.of(moved);
-        RichTextState state = element.state();
-        state.scrollToTop();
-        state.scrollDown(moved.row());
-        return scrolled(content);
-    }
-
-    /**
-     * A click gives the focus to an area, even from the panes, and puts the cursor of a rich diff
-     * on the line clicked; the wheel scrolls.
-     */
-    private EventResult mouse(MouseEvent event, ScrolledContent content) {
-        RichTextState state = element.state();
+    private EventResult mouse(MouseEvent event) {
         if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
             focus.accept(area.id());
-            // A click on a tab of the builds of a branch shows its workflow (ADR 131).
-            Option<Msg> tab = Option.of(element.renderedArea())
-                    .filter(drawn -> state.scrollRow() + event.y() - drawn.top() - 1 == 0)
-                    .flatMap(drawn -> styled.flatMap(shown -> shown.body() instanceof Body.Builds(var builds)
-                            ? BuildsText.tabAt(builds, shown.width(), column + event.x() - drawn.left() - 1)
-                            : Option.none()))
-                    .map(BuildsViewMsg.TabClicked::new);
-            if (tab.isDefined()) {
-                tab.forEach(dispatch);
-                return EventResult.HANDLED;
-            }
-            // A click on a build in the chart or the list shows its jobs on one time line (ADR 133).
-            Option<Msg> build = Option.of(element.renderedArea())
-                    .flatMap(drawn -> styled.flatMap(shown -> shown.body() instanceof Body.Builds(var builds)
-                            ? BuildsText.buildAt(
-                                    builds,
-                                    shown.width(),
-                                    state.scrollRow() + event.y() - drawn.top() - 1,
-                                    column + event.x() - drawn.left() - 1)
-                            : Option.none()))
-                    .map(BuildsViewMsg.BuildClicked::new);
-            if (build.isDefined()) {
-                build.forEach(dispatch);
-                return EventResult.HANDLED;
-            }
-            // The text starts a line below the top of the area, under its border.
-            return cursor.flatMap(on -> Option.of(element.renderedArea())
-                            .flatMap(drawn -> on.clicked(
-                                    event.y() - drawn.top() - 1,
-                                    event.x() - drawn.left() - 1,
-                                    styled.flatMap(shown -> shown.split().divider()))))
-                    .map(clicked -> {
-                        EventResult result = moved(clicked, content);
-                        // A click on a marker shows all the lines it leaves out, as Enter on it does (ADR 77), and
-                        // one of hunks the diff filters hide shows them, or hides them again (ADR 144).
-                        if (clicked.anchor() instanceof Anchor.Gap || clicked.anchor() instanceof Anchor.Filtered) {
-                            KEYMAP.handle(Scopes.DIFF, KeyEvent.ofKey(KeyCode.ENTER), Option.of(at(clicked, content)))
-                                    .forEach(dispatch);
-                        }
-                        return result;
-                    })
-                    .getOrElse(EventResult.HANDLED);
         }
-        if (event.kind() == MouseEventKind.SCROLL_UP) {
-            return cursor.map(on -> moved(on.scrolled(-WHEEL_LINES), content)).getOrElse(() -> {
-                state.scrollUp(WHEEL_LINES);
-                return scrolled(content);
-            });
-        }
-        if (event.kind() == MouseEventKind.SCROLL_DOWN) {
-            return cursor.map(on -> moved(on.scrolled(WHEEL_LINES), content)).getOrElse(() -> {
-                state.scrollDown(WHEEL_LINES);
-                return scrolled(content);
-            });
-        }
-        return EventResult.UNHANDLED;
+        return applied(AreaMouse.mouse(state, Viewport.of(element.state()), event, Option.of(element.renderedArea())));
     }
 
     /**
-     * Scrolls the area as it does on {@code event}, and says whether it was a key for that: up and down its
-     * element, sideways itself.
+     * Takes on the area {@code reaction} leaves, scrolled where it says, then sends what it sends.
      */
-    private boolean scroll(KeyEvent event) {
-        RichTextState state = element.state();
-        return Option.<Runnable>none()
-                .orElse(Option.when(event.matches(Actions.MOVE_UP), () -> state::scrollUp))
-                .orElse(Option.when(event.matches(Actions.MOVE_DOWN), () -> state::scrollDown))
-                .orElse(Option.when(event.matches(Actions.PAGE_UP), () -> state::pageUp))
-                .orElse(Option.when(event.matches(Actions.PAGE_DOWN), () -> state::pageDown))
-                .orElse(Option.when(event.matches(Actions.HOME), () -> state::scrollToTop))
-                .orElse(Option.when(event.matches(Actions.END), () -> state::scrollToBottom))
-                .orElse(Option.when(allLeft(event), () -> () -> column = 0))
-                .orElse(Option.when(allRight(event), () -> () -> column = columns))
-                .orElse(Option.when(left(event), () -> () -> column = Math.max(0, column - 1)))
-                .orElse(Option.when(right(event), () -> () -> column = Math.min(columns, column + 1)))
-                .peek(Runnable::run)
-                .isDefined();
+    private EventResult applied(Reaction reaction) {
+        apply(reaction);
+        return reaction.handled() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
-    private static boolean left(KeyEvent event) {
-        return event.matches(Actions.MOVE_LEFT) || event.isChar(LEFT);
-    }
-
-    private static boolean right(KeyEvent event) {
-        return event.matches(Actions.MOVE_RIGHT) || event.isChar(RIGHT);
-    }
-
-    // TamboUI's arrow actions also match the arrows with Shift: these are asked first.
-    private static boolean allLeft(KeyEvent event) {
-        return (event.isKey(KeyCode.LEFT) && event.hasShift()) || event.isChar(ALL_LEFT);
-    }
-
-    private static boolean allRight(KeyEvent event) {
-        return (event.isKey(KeyCode.RIGHT) && event.hasShift()) || event.isChar(ALL_RIGHT);
-    }
-
-    /**
-     * Tells the model where the area showing {@code content} is scrolled to now.
-     */
-    private EventResult scrolled(ScrolledContent content) {
-        return scrolled(content, Option.none());
-    }
-
-    /**
-     * Tells the model where the area showing {@code content} is scrolled to now, and the match of the search it went
-     * to, if it did (ADR 126): any other move lets go of it.
-     */
-    private EventResult scrolled(ScrolledContent content, Option<Found> found) {
-        RichTextState state = element.state();
-        Scrolled to = new Scrolled(
-                content,
-                state.scrollRow(),
-                column,
-                cursor.map(DiffCursor::anchor),
-                cursor.flatMap(DiffCursor::markAnchor),
-                found);
-        told(to);
-        dispatch.accept(new ViewMsg.ContentScrolled(area.id(), to));
-        return EventResult.HANDLED;
-    }
-
-    /**
-     * Remembers that the model was told the area is now at {@code to}.
-     */
-    private void told(Scrolled to) {
-        sent = Option.of(new Sent(sent.map(Sent::known).getOrElse(shownAt), to));
+    private void apply(Reaction reaction) {
+        state = reaction.state();
+        RichTextState scroll = element.state();
+        scroll.scrollToTop();
+        scroll.scrollDown(reaction.view().top());
+        reaction.sent().forEach(dispatch);
     }
 
     /**
@@ -974,11 +202,11 @@ public final class ScrollArea {
 
         @Override
         public void render(Frame frame, Rect at, RenderContext context) {
-            if (at.width() == drawnWidth && at.height() == drawnHeight) {
+            DrawnIn size = new DrawnIn(at.width(), at.height());
+            if (state.drawnIn().contains(size)) {
                 fitted.render(frame, at, context);
             } else {
-                drawnWidth = at.width();
-                drawnHeight = at.height();
+                state = state.withDrawnIn(Option.of(size));
                 Buffer buffer = frame.buffer();
                 Rect cells = buffer.area().intersection(at);
                 Vector<Cell> before = Vector.range(cells.top(), cells.bottom())
@@ -1000,30 +228,31 @@ public final class ScrollArea {
             if (at.width() < 3 || at.height() < 3) {
                 return;
             }
-            RichTextState state = element.state();
-            int height = state.viewportHeight();
-            int width = state.viewportWidth();
-            if (state.contentHeight() > height) {
+            RichTextState scroll = element.state();
+            int height = scroll.viewportHeight();
+            int width = scroll.viewportWidth();
+            if (scroll.contentHeight() > height) {
                 onBorder(
                         frame,
                         new Rect(at.right() - 1, at.y() + 1, 1, at.height() - 2),
                         ScrollbarOrientation.VERTICAL_RIGHT,
                         BorderBar.DOWNWARDS_THUMB,
                         new ScrollbarState()
-                                .contentLength(state.contentHeight())
+                                .contentLength(scroll.contentHeight())
                                 .viewportContentLength(height)
-                                .position(state.scrollRow()));
+                                .position(scroll.scrollRow()));
             }
-            if (columns > 0) {
+            AreaState.Columns columns = state.columns();
+            if (columns.furthest() > 0) {
                 onBorder(
                         frame,
                         new Rect(at.x() + 1, at.bottom() - 1, at.width() - 2, 1),
                         ScrollbarOrientation.HORIZONTAL_BOTTOM,
                         BorderBar.SIDEWAYS_THUMB,
                         new ScrollbarState()
-                                .contentLength(columns + width)
+                                .contentLength(columns.furthest() + width)
                                 .viewportContentLength(width)
-                                .position(column));
+                                .position(columns.column()));
             }
         }
 
@@ -1054,158 +283,6 @@ public final class ScrollArea {
         @Override
         public Size preferredSize(int availableWidth, int availableHeight, RenderContext context) {
             return fitted.preferredSize(availableWidth, availableHeight, context);
-        }
-    }
-
-    /**
-     * Where the model had the area when it was last shown, and where the area told it it went from there (ADR 60).
-     *
-     * @param known where the model had the area
-     * @param told  where the area told the model it went
-     */
-    private record Sent(Scrolled known, Scrolled told) {}
-
-    /**
-     * A line asked for that a marker leaves out, while the area waits for it to show (ADR 140).
-     *
-     * @param content what the area showed when it was asked for
-     * @param line    the number of the line asked for
-     */
-    private record Wanted(ScrolledContent content, int line) {}
-
-    /**
-     * {@code body}, styled in {@code theme} as {@code lines}, each drawn when it shows ({@link Rows}), with where
-     * the stops of its cursor start, if it has one.
-     *
-     * @param asGiven the hunk shown as git gives it, as a range is open in it (ADR 83)
-     * @param widest  how wide the widest of {@code lines} is, which the tint of the cursor never makes wider
-     * @param places  where each line of a version rendered is drawn, in order (ADR 103)
-     * @param width   how wide a version rendered was drawn
-     * @param hits    the matches of the search in {@code lines}, while one is kept (ADR 126)
-     * @param split   where the halves of the rows of the split view are, and what the title says of it (ADR 139)
-     */
-    private record Styled(
-            Body body,
-            ThemeName theme,
-            Option<DiffStops.HunkAt> asGiven,
-            Rows lines,
-            Vector<RichDiff.Stop> stops,
-            int widest,
-            Vector<RichDiff.Place> places,
-            int width,
-            Option<SearchHits> hits,
-            RichDiff.Drawn split) {
-
-        static Styled of(
-                Body body, ThemeName theme, Option<DiffStops.HunkAt> asGiven, RichDiff.Drawn drawn, int width) {
-            Rows lines = drawn.rows();
-            Vector<RichDiff.Stop> stops = drawn.stops().toVector();
-            return new Styled(
-                    body,
-                    theme,
-                    asGiven,
-                    lines,
-                    stops,
-                    // The render thread waits for it, as it does for the lines to be drawn; the lines of a diff
-                    // are not drawn for it.
-                    drawn.widest().getAsInt(),
-                    drawn.places().toVector(),
-                    width,
-                    Option.none(),
-                    drawn);
-        }
-
-        /**
-         * This body with {@code kept}, its lines with others kept drawn.
-         */
-        Styled withLines(Rows kept) {
-            return new Styled(body, theme, asGiven, kept, stops, widest, places, width, hits, split);
-        }
-
-        /**
-         * This body with the matches of {@code query} in it, found again only for another query.
-         */
-        Styled searched(Option<String> query) {
-            Option<SearchHits> found = query.map(text ->
-                    hits.filter(those -> those.query().equals(text)).getOrElse(() -> SearchHits.of(lines, text)));
-            return new Styled(body, theme, asGiven, lines, stops, widest, places, width, found, split);
-        }
-
-        /**
-         * The index among {@code hits} of the match {@code found}, if it is still one of this body: the {@code nth}
-         * of the rows of its stop, whose stop is looked for from the stop at {@code near}, or of its line.
-         */
-        Option<Integer> match(SearchHits hits, Found found, int near) {
-            return switch (found) {
-                case Found.InStop(Anchor stop, int nth) ->
-                    DiffCursor.index(stops, stop, near)
-                            .flatMap(index -> hits.at(
-                                    stops.get(index).row(),
-                                    index + 1 < stops.size()
-                                            ? stops.get(index + 1).row()
-                                            : lines.size(),
-                                    nth));
-                case Found.OnLine(int line, int nth) -> hits.at(line, line + 1, nth);
-            };
-        }
-
-        /**
-         * Whether line {@code row} is drawn to the edge of the area (ADR 80): the bar of each file, the lines of
-         * the diff and the markers of the lines it leaves out, not the threads on them. The stops are in the order
-         * of their lines, so those that start on it are looked up, not kept apart for each line.
-         */
-        boolean filling(int row) {
-            return stops.drop(firstFrom(row, 0, stops.size()))
-                    .takeWhile(stop -> stop.row() == row)
-                    .exists(stop -> switch (stop.mark().anchor()) {
-                        case Anchor.File _, Anchor.OnLine _, Anchor.Gap _, Anchor.Filtered _, Anchor.Node _ -> true;
-                        case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
-                    });
-        }
-
-        /**
-         * The index of the first of the stops from {@code low} up to {@code high} that starts on or after
-         * {@code row}, found by halving.
-         */
-        private int firstFrom(int row, int low, int high) {
-            if (low >= high) {
-                return low;
-            }
-            int middle = (low + high) >>> 1;
-            return stops.get(middle).row() < row ? firstFrom(row, middle + 1, high) : firstFrom(row, low, middle);
-        }
-
-        /**
-         * The hunk of the line {@code anchor}, if it is a line of this body, looked for from the stop at
-         * {@code near} ({@link DiffCursor#index}).
-         */
-        Option<DiffStops.HunkAt> hunk(Anchor anchor, int near) {
-            return DiffCursor.index(stops, anchor, near)
-                    .flatMap(index -> stops.get(index).mark().hunk());
-        }
-
-        /**
-         * The line the stop {@code anchor} starts on, if it is a stop of this body, looked for from the stop at
-         * {@code near} ({@link DiffCursor#index}).
-         */
-        Option<Integer> row(Anchor anchor, int near) {
-            return DiffCursor.index(stops, anchor, near)
-                    .map(index -> stops.get(index).row())
-                    .orElse(() ->
-                            places.find(place -> place.anchor().equals(anchor)).map(RichDiff.Place::row));
-        }
-
-        /**
-         * The first line of the block of a version rendered at the top of the area scrolled to {@code row}, or of
-         * its first block when none is at or above it; none for a body that is no version rendered (ADR 103).
-         */
-        Option<Anchor> top(int row) {
-            return places.filter(place -> place.row() <= row)
-                    .lastOption()
-                    // Above the first block, as with the bar of the file at the top, the first block.
-                    .orElse(places.headOption())
-                    .flatMap(last -> places.find(place -> place.row() == last.row()))
-                    .map(RichDiff.Place::anchor);
         }
     }
 
