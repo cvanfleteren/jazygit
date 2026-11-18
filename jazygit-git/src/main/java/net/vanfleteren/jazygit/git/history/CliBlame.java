@@ -2,8 +2,6 @@ package net.vanfleteren.jazygit.git.history;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.Blame;
 import net.vanfleteren.jazygit.git.model.BlameAt;
@@ -27,7 +25,7 @@ final class CliBlame {
 
     /**
      * Who last changed each line of the file {@code at} names, blamed with {@code options}. The index is written to a
-     * temporary file and blamed with {@code --contents <file> HEAD}, as jazygit gives git no standard input.
+     * temporary directory and blamed with {@code --contents <file> HEAD}, as jazygit gives git no standard input.
      */
     static Either<GitError, Blame> blame(Path worktree, BlameAt at, BlameOptions options) {
         return switch (at) {
@@ -39,17 +37,35 @@ final class CliBlame {
                                 read(worktree, options, List.of(GitArgs.revision(new Revision.Commit(fork))), path));
             case BlameAt.OnDisk(String path) -> read(worktree, options, List.empty(), path);
             case BlameAt.InIndex(String path) ->
-                GitProcess.read(worktree, GitCommand.reading("cat-file", "blob", ":" + path), Either::right)
-                        .flatMap(staged -> TempFiles.using(
-                                "jazygit-blame",
-                                file -> Files.writeString(file, staged, StandardCharsets.UTF_8),
-                                failed -> failed,
-                                file -> read(
+                TempFiles.usingDirectory(
+                        "jazygit-blame",
+                        failed -> failed,
+                        directory -> staged(worktree, directory, path)
+                                .flatMap(file -> read(
                                         worktree,
                                         options,
                                         List.of("--contents", file.toString(), GitArgs.revision(new Revision.Head())),
                                         path)));
         };
+    }
+
+    /**
+     * The file staged at {@code path}, written by git into {@code directory} as it would be checked out. Not read
+     * through jazygit: a file that is not UTF-8 would not be written back byte for byte, and its lines would then
+     * differ from {@code HEAD}. {@code --contents} converts it back as git stores it.
+     */
+    private static Either<GitError, Path> staged(Path worktree, Path directory, String path) {
+        return GitProcess.read(
+                        worktree,
+                        GitCommand.reading(
+                                        "checkout-index",
+                                        "--ignore-skip-worktree-bits",
+                                        "--prefix=" + directory + "/",
+                                        "--",
+                                        path)
+                                .withLiteralPaths(),
+                        Either::right)
+                .map(written -> directory.resolve(path));
     }
 
     /**

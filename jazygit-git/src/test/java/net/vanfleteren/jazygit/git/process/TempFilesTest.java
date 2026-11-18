@@ -50,4 +50,23 @@ class TempFilesTest {
         assertEquals("disk full", failed.cause().getMessage());
         assertFalse(Files.exists(used.get()));
     }
+
+    @Test
+    void aDirectoryIsDeletedWithAllThatWasPutInIt() {
+        AtomicReference<Path> used = new AtomicReference<>();
+
+        Either<GitError, String> outcome = TempFiles.usingDirectory("test", failed -> failed, directory -> {
+            used.set(directory);
+            try {
+                Path nested = Files.createDirectories(directory.resolve("a/b"));
+                Files.writeString(nested.resolve("f.txt"), "content");
+                return Either.right(readQuietly(nested.resolve("f.txt")));
+            } catch (IOException e) {
+                return Either.right(e.toString());
+            }
+        });
+
+        assertEquals(Either.right("content"), outcome);
+        assertFalse(Files.exists(used.get()));
+    }
 }

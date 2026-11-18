@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.CliGit;
@@ -84,6 +85,46 @@ class CliBlameTest {
     }
 
     @Test
+    void theIndexOfAFileThatIsNotUtf8IsBlamedAsItIsStaged() throws Exception {
+        byte[] latin1 = "café\nok\n".getBytes(StandardCharsets.ISO_8859_1);
+        Sha first = commit("src/l.txt", latin1, "first");
+        Files.write(repo.resolve("src/l.txt"), "café\nok\nstaged\n".getBytes(StandardCharsets.ISO_8859_1));
+        git("add", "src/l.txt");
+
+        Blame index = blame(new BlameAt.InIndex("src/l.txt"));
+
+        assertEquals(3, index.lines().size());
+        assertEquals(List.of(first, first), shas(index).take(2));
+        assertFalse(index.at(3).get().commit().committed());
+    }
+
+    @Test
+    void theUntrackedFilesOfAStashAreBlamedAtItsThirdParent() throws Exception {
+        Sha first = commit("f.txt", "a\n", "first");
+        Files.writeString(repo.resolve("f.txt"), "a\nchanged\n");
+        Files.writeString(repo.resolve("u.txt"), "u\nv\n");
+        git("stash", "-qu");
+        Sha stash = Sha.parse(git("rev-parse", "stash@{0}").strip()).get();
+        Sha untracked = Sha.parse(git("rev-parse", "stash@{0}^3").strip()).get();
+
+        assertEquals(List.of(untracked, untracked), shas(blame(new BlameAt.InCommit(stash, 3, "u.txt"))));
+        assertEquals(List.of(first), shas(blame(new BlameAt.InCommit(stash, 1, "f.txt"))));
+    }
+
+    @Test
+    void theOriginalOfAMergeIsBlamedAtItsFirstParent() throws Exception {
+        Sha base = commit("f.txt", "a\nb\nc\nd\ne\n", "base");
+        git("checkout", "-qb", "topic");
+        commit("f.txt", "topic\nb\nc\nd\ne\n", "topic");
+        git("checkout", "-q", "main");
+        Sha main = commit("f.txt", "a\nb\nc\nd\nmain\n", "main");
+        git("merge", "-q", "--no-ff", "-m", "merge", "topic");
+        Sha merge = Sha.parse(git("rev-parse", "HEAD").strip()).get();
+
+        assertEquals(List.of(base, base, base, base, main), shas(blame(new BlameAt.InCommit(merge, 1, "f.txt"))));
+    }
+
+    @Test
     void whitespaceIsIgnoredOnlyWhenAsked() throws Exception {
         Sha first = commit("f.txt", "a\nb\n", "first");
         Sha indented = commit("f.txt", "a\n  b\n", "indented");
@@ -157,12 +198,17 @@ class CliBlameTest {
     }
 
     private Sha commit(String path, String text, String message) throws Exception {
+        return commit(path, text.getBytes(StandardCharsets.UTF_8), message);
+    }
+
+    private Sha commit(String path, byte[] content, String message) throws Exception {
         if (!Files.exists(repo.resolve(".git"))) {
             git("init", "-q", "-b", "main");
             git("config", "user.email", "t@t");
             git("config", "user.name", "Alex Moreau");
         }
-        Files.writeString(repo.resolve(path), text);
+        Files.createDirectories(repo.resolve(path).getParent());
+        Files.write(repo.resolve(path), content);
         git("add", "--", path);
         git("commit", "-qm", message);
         return Sha.parse(git("rev-parse", "HEAD").strip()).get();
