@@ -176,11 +176,33 @@ class BuildsTextTest {
         List<Line> lines = BuildsText.lines(picked(PUBLISH, 25), ZoneOffset.UTC, styles, 80);
 
         Line row = lines.find(line -> text(line).startsWith("✓▸")).get();
-        assertEquals(80, row.width());
+        assertEquals(lines.map(Line::width).append(80).max().get(), row.width());
         assertTrue(List.ofAll(row.spans()).forAll(span -> span.style().bg().isPresent()), text(row));
         assertFalse(lines.filter(line -> text(line).startsWith("✓ "))
                 .exists(line -> List.ofAll(line.spans())
                         .exists(span -> span.style().bg().isPresent())));
+    }
+
+    @Test
+    void theRowOfTheBuildPickedIsTintedAsFarAsALongerLineTheAreaScrollsTo() {
+        Style tint = Style.EMPTY.bg(Color.BLUE);
+        Theme.SpanStyles styles = cssClass -> cssClass.equals(Theme.Classes.DIFF_CURSOR) ? tint : Style.EMPTY;
+        Build plain = build("Publish", 29, "SUCCESS", 240);
+        Build long_ = new Build(
+                plain.workflow(),
+                plain.event(),
+                plain.runId(),
+                plain.attempt(),
+                plain.sha(),
+                "A title far too long for the panel ".repeat(4),
+                plain.createdAt(),
+                plain.jobs());
+        List<Line> lines = BuildsText.lines(picked(PUBLISH.update(0, long_), 25), ZoneOffset.UTC, styles, 80);
+
+        int widest = lines.map(Line::width).max().get();
+        assertTrue(widest > 80, String.valueOf(widest));
+        assertEquals(
+                widest, lines.find(line -> text(line).startsWith("✓▸")).get().width());
     }
 
     @Test

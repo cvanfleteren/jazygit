@@ -315,13 +315,23 @@ final class BuildsText {
          */
         List<Line> workflow(List<Build> builds) {
             Option<Duration> median = median(passed(builds));
-            return List.of(title(builds), summary(builds, median), Line.from(""))
+            List<Line> above = List.of(title(builds), summary(builds, median), Line.from(""))
                     .appendAll(chart(builds.take(chart).reverse(), median))
                     .append(Line.from(""))
                     .appendAll(jobs(builds.take(JOB_BUILDS).reverse()))
                     .appendAll(timeLine(builds))
-                    .append(Line.from(""))
-                    .appendAll(list(builds, median));
+                    .append(Line.from(""));
+            List<Line> all = above.appendAll(list(builds, median));
+            // The row of the build picked is in the tint of the cursor of a diff, so it stands out among the others:
+            // as far as the edge of the panel, or of the widest line when a long one lets the area scroll sideways.
+            int widest = all.map(Line::width).append(width).max().getOrElse(width);
+            int row = builds.indexWhere(build -> picked.contains(build.runId()));
+            return row < 0
+                    ? all
+                    : all.update(
+                            above.size() + 1 + row,
+                            line -> line.append(Span.raw(" ".repeat(Math.max(0, widest - line.width()))))
+                                    .patchStyle(styles.of(Theme.Classes.DIFF_CURSOR)));
         }
 
         private Span span(String text, String cssClass) {
@@ -760,10 +770,9 @@ final class BuildsText {
                                                         : Theme.Classes.DIM))
                                 .getOrElse(() -> Span.raw(" ".repeat(columns.vsMedian())));
                         // The build picked is marked after how it ended, and its title is in bold: a mark at the
-                        // end of its row would be cut off with a long title (ADR 133). Its row is in the tint of the
-                        // cursor of a diff, as far as the edge of the panel, so it stands out among the others.
+                        // end of its row would be cut off with a long title (ADR 133). Its row is tinted after.
                         boolean chosen = picked.contains(build.runId());
-                        Line row = Line.from(List.of(
+                        return Line.from(List.of(
                                         outcome(build.outcome()),
                                         chosen ? span(PICKED, Theme.Classes.BOLD) : Span.raw(" "))
                                 .appendAll(forWhat)
@@ -787,10 +796,6 @@ final class BuildsText {
                                                 ? span(GAP + build.title(), Theme.Classes.BOLD)
                                                 : Span.raw(GAP + build.title())))
                                 .toJavaList());
-                        return chosen
-                                ? row.append(Span.raw(" ".repeat(Math.max(0, width - row.width()))))
-                                        .patchStyle(styles.of(Theme.Classes.DIFF_CURSOR))
-                                : row;
                     })
                     .prepend(Line.from(dim("  " + (allBranches ? "  " + pad(forLabel, forWidth) : "")
                             + padRight(Messages.get("content.builds.commit"), columns.commit())
