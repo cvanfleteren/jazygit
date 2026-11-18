@@ -271,6 +271,7 @@ class KeymapTest {
                 descriptions(Scopes.COMMIT_FILES));
         assertEquals(
                 List.of(
+                        "changes.help.diff.edit",
                         "changes.help.diff.nextFile",
                         "changes.help.diff.previousFile",
                         "changes.help.diff.expandDown",

@@ -158,3 +158,5 @@ option of a `ChoiceDialog` is chosen; while the filter is open, the letters are 
 - The settings file gets its first list of tables; `SettingsFile` reads, and reports, each entry on its own.
 - Opening a worktree starts a program the user wrote down, with no confirmation, as `e` on a file does.
 - Nothing works until the user lists an editor; the message says how.
+
+Amended by ADR 145: `command` is read as `dir-command`, and an editor can have a `file-command` that opens a file at a line.

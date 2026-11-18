@@ -118,7 +118,7 @@ public sealed interface WorktreeError extends AppError {
             return Phrase.of(
                     "branches.error.openInEditor.noEditor",
                     // On lines of their own, as TOML has them, so it can be pasted as it is.
-                    "[[editors]]\nname = \"IntelliJ\"\ncommand = [\"idea\", \"" + EditorProgram.DIR + "\"]");
+                    "[[editors]]\nname = \"IntelliJ\"\ndir-command = [\"idea\", \"" + EditorProgram.DIR + "\"]");
         }
     }
 

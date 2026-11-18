@@ -7,8 +7,8 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 
 /**
- * The editors the user set in the settings file, as its {@code [[editors]]} tables list them, in their order
- * (ADR 110). Only read: the app never writes them.
+ * The editors the user set in the settings file, as its {@code [[editors]]} tables list them, in their order:
+ * those that open a worktree (ADR 110), and those that open a file (ADR 145). Only read: the app never writes them.
  *
  * @param all the editors, in the order of the file
  */
@@ -35,7 +35,14 @@ public record Editors(List<EditorProgram> all) {
     private static final char FILTER = '/';
 
     private static final String NAME = "name";
-    private static final String COMMAND = "command";
+    private static final String DIR_COMMAND = "dir-command";
+    private static final String FILE_COMMAND = "file-command";
+
+    /**
+     * What ADR 110 called the command that opens a worktree, read when there is no {@link #DIR_COMMAND}.
+     */
+    private static final String FORMER_DIR_COMMAND = "command";
+
     private static final String TERMINAL = "terminal";
     private static final String SHORTCUT = "shortcut";
 
@@ -44,6 +51,20 @@ public record Editors(List<EditorProgram> all) {
      */
     public boolean isEmpty() {
         return all.isEmpty();
+    }
+
+    /**
+     * The editors that open a worktree, in the order of the file.
+     */
+    public Editors worktrees() {
+        return new Editors(all.filter(EditorProgram::opensDirectories));
+    }
+
+    /**
+     * The editors that open a file, in the order of the file (ADR 145).
+     */
+    public Editors files() {
+        return new Editors(all.filter(EditorProgram::opensFiles));
     }
 
     /**
@@ -71,8 +92,9 @@ public record Editors(List<EditorProgram> all) {
 
     /**
      * The editors {@code value} holds, an array of tables as the settings file is read, with the keys of what is wrong
-     * in it, such as {@code editors[2].command}, counted from 1 as the tables are in the file. An entry without a
-     * name, with no command, or with a {@code terminal} that is not a boolean is left out; a shortcut that is not one
+     * in it, such as {@code editors[2].file-command}, counted from 1 as the tables are in the file. An entry without a
+     * name, with neither command, with a command that is not a list of words, or with a {@code terminal} that is not a
+     * boolean is left out; a shortcut that is not one
      * character, is {@code /}, or is an earlier entry's is dropped. When {@code value} is no array, there are none,
      * and {@code editors} itself is wrong.
      */
@@ -99,12 +121,19 @@ public record Editors(List<EditorProgram> all) {
             return new Read(NONE, List.of(KEY + "[" + number + "]"));
         }
         Option<String> name = text(table.get(NAME));
-        Option<List<String>> command = command(table.get(COMMAND));
+        String dirKey = table.containsKey(DIR_COMMAND) ? DIR_COMMAND : FORMER_DIR_COMMAND;
+        Object dirValue = table.get(dirKey);
+        Object fileValue = table.get(FILE_COMMAND);
+        Option<List<String>> dirCommand = command(dirValue);
+        Option<List<String>> fileCommand = command(fileValue);
         Object terminal = table.get(TERMINAL);
         boolean validTerminal = terminal == null || terminal instanceof Boolean;
+        boolean neither = dirValue == null && fileValue == null;
         List<String> wrong = Option.when(name.isEmpty(), at + NAME)
                 .toList()
-                .appendAll(Option.when(command.isEmpty(), at + COMMAND))
+                .appendAll(Option.when(neither, at + DIR_COMMAND))
+                .appendAll(Option.when(dirValue != null && dirCommand.isEmpty(), at + dirKey))
+                .appendAll(Option.when(fileValue != null && fileCommand.isEmpty(), at + FILE_COMMAND))
                 .appendAll(Option.when(!validTerminal, at + TERMINAL));
         if (wrong.nonEmpty()) {
             return new Read(NONE, wrong);
@@ -119,7 +148,7 @@ public record Editors(List<EditorProgram> all) {
                 .map(letter -> letter.charAt(0))
                 .filter(letter -> letter != FILTER && !Character.isWhitespace(letter) && !taken.contains(letter));
         EditorProgram editor =
-                new EditorProgram(name.get(), command.get(), Boolean.TRUE.equals(terminal), validShortcut);
+                new EditorProgram(name.get(), dirCommand, fileCommand, Boolean.TRUE.equals(terminal), validShortcut);
         return new Read(
                 new Editors(List.of(editor)),
                 Option.when(shortcut != null && validShortcut.isEmpty(), at + SHORTCUT)

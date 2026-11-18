@@ -159,8 +159,8 @@ class SettingsFileTest {
         assertEquals(Option.none(), loaded.problem());
         assertEquals(
                 new Editors(List.of(
-                        new EditorProgram("IntelliJ", List.of("idea", "{dir}"), false, Option.of('i')),
-                        new EditorProgram("Neovim", List.of("nvim", "."), true, Option.none()))),
+                        EditorProgram.ofDir("IntelliJ", List.of("idea", "{dir}"), false, Option.of('i')),
+                        EditorProgram.ofDir("Neovim", List.of("nvim", "."), true, Option.none()))),
                 loaded.settings().editors());
     }
 
@@ -172,12 +172,13 @@ class SettingsFileTest {
 
                 [[editors]]
                 name = "Kate"
-                command = ["kate"]
+                dir-command = ["kate"]
                 """);
 
         Loaded loaded = settingsFile().load();
 
-        assertEquals(Option.of(new SettingsProblem.Invalid(file(), List.of("editors[1].command"))), loaded.problem());
+        assertEquals(
+                Option.of(new SettingsProblem.Invalid(file(), List.of("editors[1].dir-command"))), loaded.problem());
         assertEquals(List.of("Kate"), loaded.settings().editors().all().map(EditorProgram::name));
     }
 

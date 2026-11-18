@@ -399,7 +399,7 @@ def editors(env, *entries: tuple[str, str, str | None]):
     config = Path(env["XDG_CONFIG_HOME"]) / "jazygit" / "config.toml"
     with config.open("a") as file:
         for name, marker, shortcut in entries:
-            file.write(f'\n[[editors]]\nname = "{name}"\ncommand = ["touch", "{{dir}}/{marker}"]\n')
+            file.write(f'\n[[editors]]\nname = "{name}"\ndir-command = ["touch", "{{dir}}/{marker}"]\n')
             if shortcut is not None:
                 file.write(f'shortcut = "{shortcut}"\n')
 
