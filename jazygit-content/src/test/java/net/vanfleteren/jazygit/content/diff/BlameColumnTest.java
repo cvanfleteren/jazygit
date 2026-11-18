@@ -60,10 +60,10 @@ class BlameColumnTest {
         assertEquals(
                 List.of(
                         " new version  f.txt",
-                        "▌ aaaaaaa AM 2025-03-01   1 │   one",
-                        "▌                         2 │   two",
-                        "  uncommitted             3 │ + THREE",
-                        "▌ bbbbbbb Sa 2026-09-14   4 │   four"),
+                        "▌ aaaaaaa AM 2025-03-01 1 │   one",
+                        "▌                       2 │   two",
+                        "  uncommitted           3 │ + THREE",
+                        "▌ bbbbbbb Sa 2026-09-14 4 │   four"),
                 lines.map(String::stripTrailing));
     }
 
@@ -75,8 +75,8 @@ class BlameColumnTest {
                         .lines())
                 .map(String::stripTrailing);
 
-        assertEquals("▌ this commit             3 │ + THREE", lines.get(3));
-        assertEquals("▌ aaaaaaa AM 2025-03-01   4 │   four", lines.get(4));
+        assertEquals("▌ this commit           3 │ + THREE", lines.get(3));
+        assertEquals("▌ aaaaaaa AM 2025-03-01 4 │   four", lines.get(4));
     }
 
     @Test
@@ -84,7 +84,7 @@ class BlameColumnTest {
         List<String> lines = text(drawn(blamed(blame(OLD, OLD, OLD, OLD)), 120, Theme.SpanStyles.NONE)
                 .lines());
 
-        assertEquals("  aaaaaaa AM 2025-03-01   1 │   one", lines.get(1).stripTrailing());
+        assertEquals("  aaaaaaa AM 2025-03-01 1 │   one", lines.get(1).stripTrailing());
     }
 
     @Test
@@ -92,7 +92,7 @@ class BlameColumnTest {
         List<String> lines =
                 text(drawn(new Blamed(new Loadable.Loading<>()), 120, SHADED).lines());
 
-        assertEquals("                          1 │   one", lines.get(1).stripTrailing());
+        assertEquals("                        1 │   one", lines.get(1).stripTrailing());
     }
 
     @Test
@@ -103,7 +103,7 @@ class BlameColumnTest {
         RichDiff.Drawn narrow = drawn(blamed(blame), 70, SHADED);
 
         assertEquals(
-                List.of("▌ aaaaaaa   1 │   one", "▌           2 │   two", "  not yet   3 │ + THREE"),
+                List.of("▌ aaaaaaa 1 │   one", "▌         2 │   two", "  not yet 3 │ + THREE"),
                 text(narrow.lines()).drop(1).take(3).map(String::stripTrailing));
         assertEquals(Option.of("blame shortened to fit"), narrow.note());
         assertTrue(wide.note().isEmpty());

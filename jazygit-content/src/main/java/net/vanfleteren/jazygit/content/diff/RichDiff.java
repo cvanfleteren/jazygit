@@ -275,7 +275,7 @@ public final class RichDiff {
         int digits = digits(lines, fold);
         // A version shown blamed has the column of its blame before its numbers (ADR 147).
         Option<BlameColumn> blame = blameColumn(lines, fold, rendering, styles);
-        int gutter = blame.map(BlameColumn::width).getOrElse(0) + numbersWidth(digits);
+        int gutter = blame.map(BlameColumn::width).getOrElse(0) + numbersWidth(lines, fold);
         String bar = version.map(shown -> bar(parsed, shown)).getOrElse(() -> bar(file));
         // Each line is measured once, here: its width also tells how far a changed line is padded.
         Vector<Integer> measured =
@@ -361,13 +361,9 @@ public final class RichDiff {
      */
     private static int digits(Vector<ParsedLine> lines, Expansion.Fold fold) {
         return fold.version()
-                .map(shown -> {
-                    int own = lines.flatMap(line -> shown.number(line.line()))
-                            .max()
-                            .map(number -> String.valueOf(number).length())
-                            .getOrElse(1);
-                    return Math.max(fold.digits(), own / 2);
-                })
+                .map(shown -> shownBlamed(fold)
+                        ? ownDigits(lines, shown)
+                        : Math.max(fold.digits(), ownDigits(lines, shown) / 2))
                 .getOrElse(() -> lines.flatMap(line -> line.line()
                                 .oldNumber()
                                 .toList()
@@ -378,10 +374,30 @@ public final class RichDiff {
     }
 
     /**
-     * How many columns the numbers of a gutter whose numbers have {@code digits} digits take, with its end.
+     * How many digits the widest number of {@code lines} in {@code version} has.
      */
-    private static int numbersWidth(int digits) {
-        return 2 * digits + 1 + GUTTER_END.length();
+    private static int ownDigits(Vector<ParsedLine> lines, FileVersion version) {
+        return lines.flatMap(line -> version.number(line.line()))
+                .max()
+                .map(number -> String.valueOf(number).length())
+                .getOrElse(1);
+    }
+
+    /**
+     * Whether {@code fold} is of a version shown blamed (ADR 147). Its code moves sideways by the column of its blame
+     * anyway, so it does not keep the gutter of the diff: its numbers are in one column as wide as its own widest.
+     */
+    private static boolean shownBlamed(Expansion.Fold fold) {
+        return fold.version().isDefined() && fold.blame().isDefined();
+    }
+
+    /**
+     * How many columns the numbers of the gutter of {@code lines}, a file folded as {@code fold} says, take, with its
+     * end: two columns of {@link #digits} digits and a space between them, or one for a version shown blamed.
+     */
+    private static int numbersWidth(Vector<ParsedLine> lines, Expansion.Fold fold) {
+        int digits = digits(lines, fold);
+        return (shownBlamed(fold) ? digits : 2 * digits + 1) + GUTTER_END.length();
     }
 
     /**
@@ -390,8 +406,7 @@ public final class RichDiff {
      */
     private static Option<BlameColumn> blameColumn(
             Vector<ParsedLine> lines, Expansion.Fold fold, int area, Theme.SpanStyles styles) {
-        return fold.version()
-                .flatMap(ignored -> BlameColumn.of(fold.blame(), area, numbersWidth(digits(lines, fold)), styles));
+        return fold.version().flatMap(ignored -> BlameColumn.of(fold.blame(), area, numbersWidth(lines, fold), styles));
     }
 
     /**
@@ -831,11 +846,14 @@ public final class RichDiff {
     }
 
     /**
-     * The numbers of {@code line} in its gutter: in the old and the new file, or in the version shown (ADR 102).
+     * The numbers of {@code line} in its gutter: in the old and the new file, or in the version shown (ADR 102), in one
+     * column when it is shown blamed (ADR 147).
      */
     private static String numbers(DiffLine line, Layout layout) {
         return layout.version()
-                .map(version -> versionNumber(version, line, layout.digits()))
+                .map(version -> layout.blame().isDefined()
+                        ? number(version.number(line), layout.digits())
+                        : versionNumber(version, line, layout.digits()))
                 .getOrElse(() ->
                         number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits()));
     }
