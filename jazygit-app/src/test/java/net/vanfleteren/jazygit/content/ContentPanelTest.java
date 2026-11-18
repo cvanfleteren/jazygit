@@ -449,6 +449,59 @@ class ContentPanelTest {
         assertTrue(row(scrolled, "END") >= 0, scrolled);
     }
 
+    @Test
+    void aSearchInABlamedVersionScrollsItsCodePastTheGutterItKeeps() throws Exception {
+        Model blamed = blamedVersion("wide ".repeat(40) + "END");
+        java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>();
+        ContentPanel searching = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        model.set(blamed);
+        AreaId area = searching.areaOfPane(blamed, CommitsPanel.PANE).get();
+        java.util.function.Supplier<dev.tamboui.toolkit.element.StyledElement<?>> render =
+                () -> searching.render(model.get(), area);
+
+        String right;
+        String left;
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(render::get, new dev.tamboui.layout.Size(140, 30))) {
+            SettledPilot.focus(testRunner, area.id());
+            RenderedText.ofSize(testRunner, render, 140, 30);
+            right = searched(testRunner, render, "/END");
+            // Escape clears the search kept, so / starts another.
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            left = searched(testRunner, render, "/line1");
+        }
+
+        // The match far to the right shows, the gutter still at the start of its row.
+        String end = right.split("\n")[row(right, "wide END")];
+        assertTrue(end.contains("bbbbbbb") && end.indexOf("bbbbbbb") < end.indexOf("END"), right);
+        // Searched back to the left, the code shows from its start again, right after the gutter.
+        assertTrue(row(left, " │ line1 wide") >= 0, left);
+    }
+
+    /**
+     * The screen once {@code keys} are typed into the area and Enter is pressed, each key drawn as the app would.
+     */
+    private static String searched(
+            ToolkitTestRunner testRunner,
+            java.util.function.Supplier<dev.tamboui.toolkit.element.StyledElement<?>> render,
+            String keys)
+            throws Exception {
+        for (char key : keys.toCharArray()) {
+            SettledPilot.of(testRunner).press(key);
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofSize(testRunner, render, 140, 30);
+        }
+        SettledPilot.of(testRunner).press(KeyCode.ENTER);
+        SettledPilot.of(testRunner).pause();
+        RenderedText.ofSize(testRunner, render, 140, 30);
+        return RenderedText.ofSize(testRunner, render, 140, 30);
+    }
+
     private static Anchor.OnLine onNew(int number) {
         return new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, number);
     }

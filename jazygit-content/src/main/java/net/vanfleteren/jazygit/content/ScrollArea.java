@@ -691,7 +691,7 @@ public final class ScrollArea {
                     // The gutter of a line of a version shown blamed stays where it is; its code scrolls after it
                     // (ADR 147).
                     int kept = shown.split().keptAt(hit.row());
-                    if (kept == Integer.MAX_VALUE) {
+                    if (kept == RichDiff.Drawn.PINNED) {
                         return column;
                     }
                     int shifted = start - kept < column ? start - kept : end > column + width ? end - width : column;

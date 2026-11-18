@@ -1054,7 +1054,7 @@ public final class RichDiff {
      * of a version shown blamed keeps its gutter, the column of its blame and its numbers, where it is (ADR 147).
      *
      * @param kept how many columns at the start of the line stay where they are when the area scrolls sideways: none,
-     *             {@link #PINNED} for all of them
+     *             {@link Drawn#PINNED} for all of them
      */
     record Marked(
             Supplier<Line> line,
@@ -1064,11 +1064,6 @@ public final class RichDiff {
             Supplier<Rows.Source> source,
             Option<Halves> halves,
             int kept) {
-
-        /**
-         * The columns kept of a line that does not scroll sideways at all.
-         */
-        static final int PINNED = Integer.MAX_VALUE;
 
         Marked(
                 Supplier<Line> line,
@@ -1124,7 +1119,7 @@ public final class RichDiff {
          * This line pinned, when it has no halves: a row of a file drawn split, as wide as the area (ADR 139).
          */
         Marked pin() {
-            return new Marked(line, marks, places, width, source, halves, halves.isEmpty() ? PINNED : 0);
+            return new Marked(line, marks, places, width, source, halves, halves.isEmpty() ? Drawn.PINNED : 0);
         }
 
         /**
@@ -1228,6 +1223,11 @@ public final class RichDiff {
             Vector<Integer> kept,
             Option<Integer> divider,
             Option<String> note) {
+
+        /**
+         * The columns {@link #keptAt} says a row keeps that does not scroll sideways at all, as wide as the area.
+         */
+        public static final int PINNED = Integer.MAX_VALUE;
 
         Drawn(Rows rows, List<Stop> stops) {
             this(rows, stops, List.empty(), rows::widest, Vector.empty(), Vector.empty(), Option.none(), Option.none());

@@ -263,7 +263,7 @@ public final class ContentText {
                     return cut.get().shown(drawn, column);
                 }
                 int keep = kept.applyAsInt(index);
-                if (keep == Integer.MAX_VALUE) {
+                if (keep == RichDiff.Drawn.PINNED) {
                     return filling.test(index) ? filled(drawn, width) : drawn;
                 }
                 Line line = filling.test(index) ? filled(drawn, column + width) : drawn;
