@@ -55,14 +55,21 @@ hunks a filter hides (ADR 144): one binding, which does nothing on a line.
   |----------------------------------------|---------------------------------|-----------------------------------|
   | A commit, or a file of its files       | `<sha>`                         | `<sha>^`, the first parent        |
   | A stash, or a file of its files        | `<stash>`                       | `<stash>^1`                       |
-  | The files of a branch                  | its tip                         | its base                          |
-  | The files of a pull request            | its head                        | its base                          |
+  | An untracked file of a stash           | `<stash>^3`                     | —                                 |
+  | The files of a branch                  | its tip                         | the merge base of it and its base |
+  | The files of a pull request            | its head                        | the merge base of it and its base |
   | The working tree, unstaged             | the file on disk                | the index                         |
   | The working tree, staged               | the index                       | `HEAD`                            |
   | A file without changes (ADR 108, 128)  | its commit, or the file on disk | —                                 |
 
-  The original of a merge is blamed at its first parent, as the rich view reads a merge (ADR 44). The original of a
-  renamed file is blamed at its old path.
+  Each is the revision the version is read at: the files of a branch and of a pull request are read as
+  `<base>...<tip>`, from their merge base (`CliDiffs.range`), and a stash reads its untracked files from its third
+  parent (`CliStashes.fileChanges`). The original of a merge is blamed at its first parent, as the rich view reads a
+  merge (ADR 44). The original of a renamed file is blamed at its old path.
+- A stash is three commits: the stash, the index it held (`<stash>^2`) and its untracked files (`<stash>^3`). A line
+  blamed on any of them is a line of the stash: it is labelled `this commit`, as it is tinted as changed.
+- On a branch without commits, there is no `HEAD` to blame the index or the files on disk against: every line of
+  them is not committed yet, without blame being read.
 - The index is written to a file with `TempFiles.using` and blamed with `--contents <file> HEAD`. Not: `--contents -`,
   which needs `Exec` to give git stdin, which nothing else needs.
 - A pull request is blamed in the repository, at the commits its files fetched. When they are not there, as when no
@@ -72,6 +79,9 @@ hunks a filter hides (ADR 144): one binding, which does nothing on a line.
 - Blame is read with `-M`, so a block moved within a file keeps its author, and with `-w` while Ctrl+W ignores
   whitespace, as that is how the user is reading the changes. Not: `-C`, which can take minutes on a large
   repository, and a read jazygit cannot stop.
+- Ctrl+W while a version is blamed drops the blame read of both versions: the version shown is blamed again at once,
+  the other once it is shown blamed. The text of the version is not read again, as it is read without `-w` (ADR 102).
+  Not: keeping the blame read with the other setting, which would blame by a whitespace the user turned off.
 - A version cut where its read is cut (ADR 79) is blamed up to its last line shown: `-L 1,<last>`. Not: blaming the
   whole file, slowest for the files that are cut.
 
@@ -85,8 +95,8 @@ hunks a filter hides (ADR 144): one binding, which does nothing on a line.
   what it printed until then is not a blame of the first lines.
 - A read that holds for nothing any more, as once the area shows another file, is dropped, as the read of a version
   is.
-- The porcelain is read by a pure function in `git.model`, with the `previous` of each commit kept, though nothing
-  uses it yet.
+- The porcelain is read by a pure function in `git.model`. Of each commit it keeps the path of the file in it
+  (`filename`), which Enter goes by, and its `previous`, which nothing uses yet.
 
 ### How it is drawn
 
@@ -118,7 +128,8 @@ hunks a filter hides (ADR 144): one binding, which does nothing on a line.
 ### Acting on a line
 
 - Enter on a line of a blamed version opens the files of its commit where the commits are, as `F` does
-  (`CommitFilesMsg.Opened`), with the file of the version highlighted when the commit changed it. It is a part of the
+  (`CommitFilesMsg.Opened`), with the file highlighted by the path blame gives it in that commit, which is an older
+  one when the file was renamed since. It is a part of the
   one binding of Enter in the diff, as a version has no markers. On a line of `this commit`, or not committed yet,
   Enter does nothing. Not: highlighting the commit in the log, which holds only the commits it read, and has nothing
   to move its highlight to a sha.
