@@ -74,6 +74,7 @@ public final class BuildsUpdate {
                         .getOrElse(() -> Next.of(model));
             case BuildsMsg.BuildPicked(Option<Long> run) ->
                 BuildsReads.next(changed(model.withoutPopup(BuildPickPopup.class), view -> view.withPicked(run)));
+            case BuildsMsg.BuildStepped(int by) -> BuildsReads.next(changed(model, view -> view.steppedPick(by)));
             case BuildsMsg.WindowRequested() ->
                 PopupUpdate.ask(
                         model, model.repoView().branches().builds().map(view -> new BuildsWindowPopup(view.window())));

@@ -633,7 +633,13 @@ class BuildsContentTest {
                 Option.of(new BuildsMsg.AllToggled()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('a'), Option.none()));
         assertEquals(
                 Option.of(new BuildsMsg.WindowRequested()),
+                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('c'), Option.none()));
+        assertEquals(
+                Option.of(new BuildsMsg.BuildStepped(1)),
                 keys.handle(Scopes.BUILDS, KeyEvent.ofChar('n'), Option.none()));
+        assertEquals(
+                Option.of(new BuildsMsg.BuildStepped(-1)),
+                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('N'), Option.none()));
     }
 
     @Test
@@ -694,7 +700,7 @@ class BuildsContentTest {
     }
 
     @Test
-    void nAsksHowManyBuildsShowAndTheChoiceStaysForAnotherBranch() {
+    void cAsksHowManyBuildsShowAndTheChoiceStaysForAnotherBranch() {
         Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
         Model read = Update.update(
                         shown,
@@ -790,6 +796,42 @@ class BuildsContentTest {
         assertEquals(Option.none(), again.repoView().branches().builds().get().picked());
         Model clicked = Update.update(again, new BuildsViewMsg.BuildClicked(1)).model();
         assertEquals(Option.of(1L), clicked.repoView().branches().builds().get().picked());
+    }
+
+    @Test
+    void nAndNStepThroughTheBuildsThatShowFromTheOneOnTheTimeLine() {
+        Build tip = withFile(new Build("Build", "push", 1, 1, "abcdef0", "Running", BUILD.createdAt(), List.empty()));
+        Build done = withFile(new Build(
+                "Build", "push", 2, 1, "1234567", "Done", BUILD.createdAt().minusSeconds(60), BUILD.jobs()));
+        Build older = withFile(new Build(
+                "Build", "push", 3, 1, "7654321", "Older", BUILD.createdAt().minusSeconds(120), BUILD.jobs()));
+        Model read = Update.update(
+                        Update.update(model(), new BuildsMsg.Toggled(MAIN)).model(),
+                        new BuildsMsg.Read(
+                                ORIGIN_MAIN,
+                                Option.none(),
+                                Option.of(new BuildsPage(List.of(tip, done, older), 3, Option.none()))))
+                .model();
+
+        // From the last build that is done, not the newest, which runs.
+        Model next = Update.update(read, new BuildsMsg.BuildStepped(1)).model();
+        assertEquals(Option.of(3L), picked(next));
+        // It stops at the oldest.
+        assertEquals(
+                Option.of(3L),
+                picked(Update.update(next, new BuildsMsg.BuildStepped(1)).model()));
+        Model back = Update.update(next, new BuildsMsg.BuildStepped(-1)).model();
+        assertEquals(Option.of(2L), picked(back));
+        Model newest = Update.update(back, new BuildsMsg.BuildStepped(-1)).model();
+        assertEquals(Option.of(1L), picked(newest));
+        // And at the newest.
+        assertEquals(
+                Option.of(1L),
+                picked(Update.update(newest, new BuildsMsg.BuildStepped(-1)).model()));
+    }
+
+    private static Option<Long> picked(Model model) {
+        return model.repoView().branches().builds().get().picked();
     }
 
     private static Build withFile(Build build) {

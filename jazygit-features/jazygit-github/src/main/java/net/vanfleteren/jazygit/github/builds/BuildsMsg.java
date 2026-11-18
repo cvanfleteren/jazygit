@@ -75,6 +75,12 @@ public sealed interface BuildsMsg extends Msg {
     record BuildPicked(Option<Long> run) implements BuildsMsg {}
 
     /**
+     * The user asked for the build {@code by} rows after the one on the time line, an older one when positive, to
+     * show its jobs there (ADR 133).
+     */
+    record BuildStepped(int by) implements BuildsMsg {}
+
+    /**
      * The user asked to choose the workflow whose builds show from all of them.
      */
     record PickRequested() implements BuildsMsg {}

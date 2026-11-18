@@ -27,7 +27,14 @@ public final class BuildsAction {
                     .add(Scopes.BUILDS, Binding.always("m", "github.help.builds.more", BuildsMsg.MoreRequested::new))
                     .add(
                             Scopes.BUILDS,
-                            Binding.always("n", "github.help.builds.window", BuildsMsg.WindowRequested::new))
+                            Binding.always("n", "github.help.builds.nextBuild", () -> new BuildsMsg.BuildStepped(1)))
+                    .add(
+                            Scopes.BUILDS,
+                            Binding.always(
+                                    "N", "github.help.builds.previousBuild", () -> new BuildsMsg.BuildStepped(-1)))
+                    .add(
+                            Scopes.BUILDS,
+                            Binding.always("c", "github.help.builds.window", BuildsMsg.WindowRequested::new))
                     .add(Scopes.BUILDS, Binding.always("B", "github.help.builds.close", BuildsMsg.Closed::new)),
             BuildsDialog::popups);
 

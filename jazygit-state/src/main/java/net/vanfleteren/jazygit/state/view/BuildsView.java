@@ -302,6 +302,28 @@ public record BuildsView(
     }
 
     /**
+     * This, with the build {@code by} rows after the one on the time line picked among the builds that show, the
+     * newest first: an older one when positive. It stops at the newest and the oldest; with none on the time line it
+     * picks the newest (ADR 133).
+     */
+    public BuildsView steppedPick(int by) {
+        return shownOf()
+                .flatMap(shown -> shown.builds()
+                        .toOption()
+                        .filter(builds -> !builds.isEmpty())
+                        .map(builds -> {
+                            Option<Integer> at = shown.picked()
+                                    .flatMap(run -> builds.find(build -> build.runId() == run))
+                                    .orElse(() -> lastDoneOf(builds))
+                                    .map(builds::indexOf);
+                            int to = at.map(from -> Math.clamp((long) from + by, 0, builds.size() - 1))
+                                    .getOrElse(0);
+                            return withPicked(Option.of(builds.get(to).runId()));
+                        }))
+                .getOrElse(this);
+    }
+
+    /**
      * The files of the workflows of the last builds that are done, that are not read yet, nor being read.
      */
     public List<FileAt> unread() {
