@@ -117,6 +117,24 @@ class BuildsQueryTest {
     }
 
     @Test
+    void aRunWhoseFirstJobShowsWhileItsSuiteStillWaitsIsOneBuild() {
+        // GitHub can answer while the run gets its first job: its suite still counts none, the commit has one.
+        BuildsPage page = page(history(
+                        false,
+                        commit(
+                                "aaa",
+                                "Tip",
+                                job(1, "build", "SUCCESS", 12, 1, "push"),
+                                suite("QUEUED", 0, 12, "push"))))
+                .get()
+                .get();
+
+        Build build = page.builds().single();
+        assertEquals(12, build.runId());
+        assertEquals(List.of("build"), build.jobs().map(Build.Job::name));
+    }
+
+    @Test
     void aWaitingRunWhoseIdCannotBeReadIsNoBuild() {
         BuildsPage page =
                 page(history(false, commit("aaa", "Tip", "", """

@@ -215,7 +215,7 @@ final class BuildsQuery {
     /**
      * A workflow run that waits to start, without a job yet.
      */
-    record Held(String workflow, String event, long runId, int attempt, Instant createdAt, Workflow of) {
+    record Held(String workflow, String event, long runId, int attempt, Instant createdAt, Workflow source) {
 
         Build build(String sha, String title) {
             return new Build(
@@ -227,8 +227,8 @@ final class BuildsQuery {
                     title,
                     createdAt,
                     List.empty(),
-                    of.path(),
-                    new Build.Origin(of.id(), Option.none(), Option.none()));
+                    source.path(),
+                    new Build.Origin(source.id(), Option.none(), Option.none()));
         }
     }
 }
