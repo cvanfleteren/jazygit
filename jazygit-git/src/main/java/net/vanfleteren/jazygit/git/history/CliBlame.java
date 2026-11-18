@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git.history;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.Blame;
 import net.vanfleteren.jazygit.git.model.BlameAt;
@@ -11,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.process.GitArgs;
 import net.vanfleteren.jazygit.git.process.GitCommand;
 import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.git.process.GitOutput;
 import net.vanfleteren.jazygit.git.process.GitProcess;
 import net.vanfleteren.jazygit.git.process.TempFiles;
@@ -24,10 +26,12 @@ final class CliBlame {
     private CliBlame() {}
 
     /**
-     * Who last changed each line of the file {@code at} names, blamed with {@code options}. The index is written to a
-     * temporary directory and blamed with {@code --contents <file> HEAD}, as jazygit gives git no standard input.
+     * Who last changed each line of the file {@code at} names, blamed with {@code options}. The index, when it holds
+     * a change to the file, is written to a temporary directory and blamed with {@code --contents <file> HEAD}, as
+     * jazygit gives git no standard input; when it holds none, the file is blamed at {@code HEAD}.
      */
     static Either<GitError, Blame> blame(Path worktree, BlameAt at, BlameOptions options) {
+        String head = GitArgs.revision(new Revision.Head());
         return switch (at) {
             case BlameAt.InCommit(Sha sha, int parent, String path) ->
                 read(worktree, options, List.of(GitArgs.parent(new Revision.Commit(sha), parent)), path);
@@ -37,27 +41,48 @@ final class CliBlame {
                                 read(worktree, options, List.of(GitArgs.revision(new Revision.Commit(fork))), path));
             case BlameAt.OnDisk(String path) -> read(worktree, options, List.empty(), path);
             case BlameAt.InIndex(String path) ->
-                TempFiles.usingDirectory(
-                        "jazygit-blame",
-                        failed -> failed,
-                        directory -> staged(worktree, directory, path)
-                                .flatMap(file -> read(
-                                        worktree,
-                                        options,
-                                        List.of("--contents", file.toString(), GitArgs.revision(new Revision.Head())),
-                                        path)));
+                stagedChange(worktree, path)
+                        .flatMap(changed -> changed
+                                ? TempFiles.usingDirectory(
+                                        "jazygit-blame",
+                                        failed -> failed,
+                                        directory -> staged(worktree, directory, path)
+                                                .flatMap(file -> read(
+                                                        worktree,
+                                                        options,
+                                                        List.of("--contents", file.toString(), head),
+                                                        path)))
+                                : read(worktree, options, List.of(head), path));
         };
+    }
+
+    /**
+     * Whether the index holds a change to {@code path} since {@code HEAD}. A file staged as it is in {@code HEAD} is
+     * blamed there: a symbolic link written to a file for {@code --contents} is a file, no longer the link
+     * {@code HEAD} holds, and its line would be blamed as not committed yet.
+     */
+    private static Either<GitError, Boolean> stagedChange(Path worktree, String path) {
+        return GitProcess.ask(
+                        worktree,
+                        GitCommand.reading("diff", "--cached", "--quiet", "--no-ext-diff", "--", path)
+                                .withLiteralPaths())
+                .mapLeft(GitFailure::error)
+                .map(Option::isEmpty);
     }
 
     /**
      * The file staged at {@code path}, written by git into {@code directory} as it would be checked out. Not read
      * through jazygit: a file that is not UTF-8 would not be written back byte for byte, and its lines would then
-     * differ from {@code HEAD}. {@code --contents} converts it back as git stores it.
+     * differ from {@code HEAD}. {@code --contents} converts it back as git stores it. A symbolic link is written as a
+     * file that holds its target: a link would point nowhere from the temporary directory, and {@code --contents}
+     * follows it.
      */
     private static Either<GitError, Path> staged(Path worktree, Path directory, String path) {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading(
+                                        "-c",
+                                        "core.symlinks=false",
                                         "checkout-index",
                                         "--ignore-skip-worktree-bits",
                                         "--prefix=" + directory + "/",

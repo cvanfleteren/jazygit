@@ -15,6 +15,8 @@ import net.vanfleteren.jazygit.git.model.BlameAt;
 import net.vanfleteren.jazygit.git.model.BlameOptions;
 import net.vanfleteren.jazygit.git.model.Sha;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
 
@@ -96,6 +98,24 @@ class CliBlameTest {
         assertEquals(3, index.lines().size());
         assertEquals(List.of(first, first), shas(index).take(2));
         assertFalse(index.at(3).get().commit().committed());
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void aSymbolicLinkInTheIndexIsBlamedByItsTarget() throws Exception {
+        commit("f.txt", "a\n", "first");
+        Files.createSymbolicLink(repo.resolve("link"), Path.of("f.txt"));
+        git("add", "link");
+        git("commit", "-qm", "link");
+        Sha linked = Sha.parse(git("rev-parse", "HEAD").strip()).get();
+
+        assertEquals(List.of(linked), shas(blame(new BlameAt.InIndex("link"))));
+
+        Files.delete(repo.resolve("link"));
+        Files.createSymbolicLink(repo.resolve("link"), Path.of("elsewhere.txt"));
+        git("add", "link");
+
+        assertFalse(blame(new BlameAt.InIndex("link")).at(1).get().commit().committed());
     }
 
     @Test
