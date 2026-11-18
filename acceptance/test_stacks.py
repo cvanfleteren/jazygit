@@ -213,7 +213,9 @@ def test_a_branch_without_a_pull_request_on_the_top_of_a_stack_gets_one_from_the
     ui.app.press("enter")
 
     ui.app.eventually(
-        lambda: repo("config", "branch.feat/c.gh-merge-base") == "feat/b", "feat/b recorded as its parent")
+        # Unset until it is recorded: --default keeps git config from failing while it is waited for.
+        lambda: repo("config", "--default", "", "branch.feat/c.gh-merge-base") == "feat/b",
+        "feat/b recorded as its parent")
     ui.app.wait_for("Stack on #2")
 
 
