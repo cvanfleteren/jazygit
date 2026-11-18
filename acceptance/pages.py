@@ -202,6 +202,8 @@ class Jazygit:
         self.app.press("enter")
         self.app.wait_for("‹ rich ›")
         self.app.press("escape")
+        # The rich diff shows behind the popup already; what it covers only shows once it is closed.
+        self.app.eventually(lambda: "Diff options" not in self.app.text(), "the diff options closed")
 
     def confirm_stage_all(self, asked: bool):
         """Answers the question whether to add all changes, which an amend with nothing staged asks, when asked."""
