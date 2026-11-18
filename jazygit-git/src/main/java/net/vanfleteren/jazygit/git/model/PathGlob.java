@@ -14,9 +14,9 @@ import java.util.regex.Pattern;
  * {@code regex} that is not {@code glob} translated.
  *
  * @param glob  the glob as it was written
- * @param regex what it matches
+ * @param regex what it matches, equal for globs written alike (ADR 144)
  */
-public record PathGlob(String glob, Pattern regex) {
+public record PathGlob(String glob, Regex regex) {
 
     /**
      * {@code glob}, ready to match.
@@ -25,7 +25,7 @@ public record PathGlob(String glob, Pattern regex) {
         String leading = "**/";
         String body = glob.startsWith(leading) ? glob.substring(leading.length()) : glob;
         String prefix = glob.startsWith(leading) ? "(?:.*/)?" : "";
-        return new PathGlob(glob, Pattern.compile(prefix + translated(List.ofAll(body.toCharArray()), false)));
+        return new PathGlob(glob, Regex.of(prefix + translated(List.ofAll(body.toCharArray()), false)));
     }
 
     /**
@@ -33,20 +33,7 @@ public record PathGlob(String glob, Pattern regex) {
      */
     public boolean matches(String path) {
         String subject = glob.contains("/") ? path : path.substring(path.lastIndexOf('/') + 1);
-        return regex.matcher(subject).matches();
-    }
-
-    /**
-     * Whether {@code other} is a glob written alike: a {@link Pattern} is equal only to itself (ADR 144).
-     */
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof PathGlob(String same, var ignored) && same.equals(glob);
-    }
-
-    @Override
-    public int hashCode() {
-        return glob.hashCode();
+        return regex.matches(subject);
     }
 
     /**
