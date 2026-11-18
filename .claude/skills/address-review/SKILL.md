@@ -45,7 +45,7 @@ Re-read `git diff origin/main...HEAD` as the bot would: off-by-one in line/col m
 
 ## 7. Watch
 `gh pr checks <n> --watch`, then wait for the next claude[bot] review. New findings → back to step 1.
-Nothing pushed this round (only "disagree" replies), or the verdict isn't "Ready to merge" but no thread needs action → no new review will come: report the open disagreements and stop for the user.
+Nothing pushed this round (only "disagree" replies), or the verdict isn't "Ready to merge" but no thread, summary-only finding or CI failure needs action → no new review will come: report the open disagreements and stop for the user.
 Flaky-looking CI failure: re-run once (`gh run rerun <run-id> --failed`, the run id from the failing check's URL in `gh pr checks <n>`); if it fails again, report it, don't loop.
 
 ## Report
