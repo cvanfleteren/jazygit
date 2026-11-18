@@ -176,7 +176,7 @@ public record ReadBlame(AreaId area, WholeFile read, FileVersion version, List<B
         if (original) {
             return List.of(new BlameAt.InCommit(sha, 1, file.origin().getOrElse(path)));
         }
-        return file.type() == ChangeType.ADDED || file.type() == ChangeType.UNTRACKED
+        return file.type() == ChangeType.ADDED
                 ? List.of(new BlameAt.InCommit(sha, path), new BlameAt.InCommit(sha, 3, path))
                 : List.of(new BlameAt.InCommit(sha, path));
     }

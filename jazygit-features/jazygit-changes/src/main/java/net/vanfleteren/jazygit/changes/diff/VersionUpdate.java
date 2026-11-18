@@ -41,7 +41,7 @@ public final class VersionUpdate {
     private VersionUpdate() {}
 
     /**
-     * What {@code msg} asks for, and then the blame of each version that now shows blamed and is not read yet read
+     * What {@code msg} asks for, and then the blame of each version that now shows blamed and is not read yet
      * (ADR 147), as Ctrl+O to the other version of a blamed one shows that blamed too.
      */
     public static Next update(Model model, VersionMsg msg) {
