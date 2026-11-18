@@ -8,12 +8,13 @@ description: Work through claude[bot]'s review findings on the current PR (asses
 Arg: optional PR number; default is the PR for the current branch (`gh pr view --json number`).
 
 ## 1. Collect
-- Latest review verdict: `gh api repos/{owner}/{repo}/pulls/<n>/reviews` — take the last claude[bot] entry (CHANGES_REQUESTED "Merge after minor fixes" / APPROVED "Ready to merge").
+- Latest review verdict: `gh api --paginate repos/{owner}/{repo}/pulls/<n>/reviews` — take the last claude[bot] entry and read the verdict from its body's first line ("Ready to merge" / "Merge after minor fixes" / "Needs changes"); the state may be APPROVED, CHANGES_REQUESTED or COMMENTED (the bot comments on PRs it authored).
 - Unresolved inline threads: GraphQL `reviewThreads(first:100){nodes{id isResolved comments(first:10){nodes{databaseId author{login} body path line}}}}`; keep `isResolved == false`.
+  Skip a thread whose last comment is our reply: it was answered (usually "disagree") and the bot leaves those open. It needs action again only once the bot comments after our reply.
 - The summary comment (`gh pr view <n> --comments`) for findings that have no thread.
 - CI: `gh pr checks <n>`.
 
-If the verdict is "Ready to merge", CI is green and no threads are open → report that and stop.
+If the verdict is "Ready to merge", CI is green and no thread still needs action → report that and stop.
 
 ## 2. Assess — then STOP
 A table: finding · severity tag · file:line · verdict (fix / disagree + reason / needs design call).
@@ -31,6 +32,7 @@ Re-read `git diff origin/main...HEAD` as the bot would: off-by-one in line/col m
 ## 5. Verify
 - `git merge origin/main` first if behind — CI tests the merge.
 - `env -u GH_TOKEN ./mvnw verify` (not `test`; checkstyle only runs in verify). With `-pl`, add `-am`.
+- After a UI change (pane layout, row text): `python3 -m pytest acceptance -q -n 8` against the jar verify built. After a Markdown change: `markdownlint-cli2`.
 - Spotless reformats locally: make no edits after the last verify, or verify again.
 - In a worktree: `nix develop <wt> -c ./mvnw verify` (direnv is blocked there).
 
@@ -43,7 +45,7 @@ Re-read `git diff origin/main...HEAD` as the bot would: off-by-one in line/col m
 
 ## 7. Watch
 `gh pr checks <n> --watch`, then wait for the next claude[bot] review. New findings → back to step 1.
-Flaky-looking CI failure: re-run once (`gh run rerun --failed`); if it fails again, report it, don't loop.
+Flaky-looking CI failure: re-run once (`gh run rerun <run-id> --failed`, the run id from the failing check's URL in `gh pr checks <n>`); if it fails again, report it, don't loop.
 
 ## Report
 Table: finding · action · commit · test · status. Then the final verdict and CI state.
