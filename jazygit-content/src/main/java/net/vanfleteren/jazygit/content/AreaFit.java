@@ -168,8 +168,8 @@ final class AreaFit {
      */
     private static Fitted drawn(AreaState shown, Showing showing, Viewport view, Restyled restyled, Scrolled at) {
         Styled current = restyled.current();
-        int widest = Math.max(0, current.widest() - view.width());
-        Columns columns = new Columns(Math.clamp(at.column(), 0, widest), widest);
+        int furthest = Math.max(0, current.widest() - view.width());
+        Columns columns = new Columns(Math.clamp(at.column(), 0, furthest), furthest);
         int row = shown.cursor().map(DiffCursor::row).getOrElse(at.row());
         ContentText.Window window = window(current.lines().size(), row, view.height());
         Rows kept = current.lines().keeping(window.top(), window.bottom());

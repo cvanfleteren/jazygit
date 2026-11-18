@@ -243,14 +243,14 @@ public final class ScrollArea {
                                 .position(scroll.scrollRow()));
             }
             AreaState.Columns columns = state.columns();
-            if (columns.widest() > 0) {
+            if (columns.furthest() > 0) {
                 onBorder(
                         frame,
                         new Rect(at.x() + 1, at.bottom() - 1, at.width() - 2, 1),
                         ScrollbarOrientation.HORIZONTAL_BOTTOM,
                         BorderBar.SIDEWAYS_THUMB,
                         new ScrollbarState()
-                                .contentLength(columns.widest() + width)
+                                .contentLength(columns.furthest() + width)
                                 .viewportContentLength(width)
                                 .position(columns.column()));
             }

@@ -112,7 +112,7 @@ record AreaState(
     }
 
     AreaState withColumn(int column) {
-        return withColumns(new Columns(column, columns.widest()));
+        return withColumns(new Columns(column, columns.furthest()));
     }
 
     AreaState withColumns(Columns columns) {
@@ -175,10 +175,10 @@ record AreaState(
      * How far the area is scrolled sideways, as last drawn, and how far it can be. TamboUI's text area keeps a column
      * it never draws at, so the area draws its lines with as many columns cut off their start itself.
      *
-     * @param column the first column shown
-     * @param widest the column it can be scrolled to at most
+     * @param column   the first column shown
+     * @param furthest the column it can be scrolled to at most: how much wider than the area its widest line is
      */
-    record Columns(int column, int widest) {}
+    record Columns(int column, int furthest) {}
 
     /**
      * The size an area was drawn in.

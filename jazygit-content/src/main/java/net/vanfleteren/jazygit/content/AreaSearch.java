@@ -151,7 +151,7 @@ final class AreaSearch {
      */
     private static int shownColumn(AreaState state, Viewport view, SearchHits hits, SearchHits.Hit hit) {
         int column = state.columns().column();
-        int widest = Math.max(0, state.columns().widest());
+        int furthest = Math.max(0, state.columns().furthest());
         return state.styled()
                 .map(shown -> {
                     String text = shown.lines().get(hit.row()).rawContent();
@@ -170,7 +170,7 @@ final class AreaSearch {
                         int at = start - code;
                         int to = end - code;
                         int moved = at < column ? at : to > column + room ? to - room : column;
-                        return Math.clamp(moved, 0, widest);
+                        return Math.clamp(moved, 0, furthest);
                     }
                     int width = Math.max(1, view.width());
                     // The gutter of a line of a version shown blamed stays where it is; its code scrolls after it
@@ -180,7 +180,7 @@ final class AreaSearch {
                         return column;
                     }
                     int shifted = start - kept < column ? start - kept : end > column + width ? end - width : column;
-                    return Math.clamp(shifted, 0, widest);
+                    return Math.clamp(shifted, 0, furthest);
                 })
                 .getOrElse(column);
     }

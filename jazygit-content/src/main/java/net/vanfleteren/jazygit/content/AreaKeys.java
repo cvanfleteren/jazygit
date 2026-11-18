@@ -153,7 +153,7 @@ final class AreaKeys {
      */
     private static Option<Reaction> scroll(AreaState state, Viewport view, KeyEvent event) {
         int column = state.columns().column();
-        int widest = state.columns().widest();
+        int furthest = state.columns().furthest();
         Option<Viewport> down = Option.<Viewport>none()
                 .orElse(Option.when(event.matches(Actions.MOVE_UP), () -> view.by(-1)))
                 .orElse(Option.when(event.matches(Actions.MOVE_DOWN), () -> view.by(1)))
@@ -163,9 +163,9 @@ final class AreaKeys {
                 .orElse(Option.when(event.matches(Actions.END), view::bottom));
         Option<Integer> sideways = Option.<Integer>none()
                 .orElse(Option.when(allLeft(event), 0))
-                .orElse(Option.when(allRight(event), widest))
+                .orElse(Option.when(allRight(event), furthest))
                 .orElse(Option.when(left(event), () -> Math.max(0, column - 1)))
-                .orElse(Option.when(right(event), () -> Math.min(widest, column + 1)));
+                .orElse(Option.when(right(event), () -> Math.min(furthest, column + 1)));
         return down.map(to -> scrolled(state, to))
                 .orElse(() -> sideways.map(to -> scrolled(state.withColumn(to), view)));
     }
