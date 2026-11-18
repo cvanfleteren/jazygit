@@ -1,12 +1,19 @@
 package net.vanfleteren.jazygit.content;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaModifier;
+import com.tngtech.archunit.core.domain.JavaType;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.junit.ArchTests;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import net.vanfleteren.jazygit.AppRules;
 
 /**
@@ -26,4 +33,37 @@ class ContentArchitectureTest {
     @ArchTest
     static final ArchRule partsAreFreeOfCycles =
             slices().matching("net.vanfleteren.jazygit.content.(*)..").should().beFreeOfCycles();
+
+    /**
+     * What the content holds and hands around is named: no vavr tuple in a field, a record component, a parameter or
+     * a return type. A tuple within a method, as a fold carries, is left to it; so are the lambdas the compiler makes
+     * methods of.
+     */
+    @ArchTest
+    static final ArchRule noTuplesInSignatures = classes()
+            .should(
+                    new ArchCondition<JavaClass>(
+                            "hold no io.vavr.Tuple in a field, record component, parameter or return type") {
+                        @Override
+                        public void check(JavaClass item, ConditionEvents events) {
+                            item.getFields().stream()
+                                    .filter(field -> !field.getModifiers().contains(JavaModifier.SYNTHETIC))
+                                    .filter(field -> holdsTuple(field.getType()))
+                                    .forEach(field -> events.add(SimpleConditionEvent.violated(
+                                            field, field.getFullName() + " holds a tuple")));
+                            item.getCodeUnits().stream()
+                                    .filter(unit -> !unit.getModifiers().contains(JavaModifier.SYNTHETIC))
+                                    .filter(unit -> holdsTuple(unit.getReturnType())
+                                            || unit.getParameterTypes().stream()
+                                                    .anyMatch(ContentArchitectureTest::holdsTuple))
+                                    .forEach(unit -> events.add(SimpleConditionEvent.violated(
+                                            unit, unit.getFullName() + " takes or gives a tuple")));
+                        }
+                    });
+
+    private static boolean holdsTuple(JavaType type) {
+        return type.getAllInvolvedRawTypes().stream()
+                .anyMatch(raw -> raw.getPackageName().equals("io.vavr")
+                        && raw.getSimpleName().startsWith("Tuple"));
+    }
 }

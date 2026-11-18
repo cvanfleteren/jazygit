@@ -3,8 +3,6 @@ package net.vanfleteren.jazygit.content;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
-import io.vavr.Tuple2;
-import io.vavr.Tuple3;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
@@ -193,35 +191,33 @@ final class JobTrain {
      * The lines between the bars, as the directions each cell they pass through connects to: down from the end of a
      * job, along the row of a job that needs it, to the arrow before its bar.
      */
-    private static Map<Tuple2<Integer, Integer>, Set<Direction>> connectors(
-            List<Group> rows, List<Bar> bars, int width) {
-        List<Tuple3<Integer, Integer, Direction>> segments = rows.zipWithIndex().flatMap(row -> {
-            int index = row._2();
-            List<Integer> from = row._1()
-                    .needs()
-                    .toList()
-                    .map(needed -> rows.indexWhere(other -> other.name().equals(needed)))
-                    .filter(at -> at >= 0 && at < index);
-            if (from.isEmpty()) {
-                return List.empty();
-            }
-            int arrow = bars.get(index).first() - 1;
-            List<Integer> columns =
-                    from.map(at -> Math.min(width - 1, bars.get(at).end() + 1));
-            int leftmost = columns.min().get();
-            List<Tuple3<Integer, Integer, Direction>> along = List.range(leftmost, arrow)
-                    .flatMap(column -> List.of(
-                            Tuple.of(index, column, Direction.RIGHT), Tuple.of(index, column + 1, Direction.LEFT)));
-            List<Tuple3<Integer, Integer, Direction>> down = from.zip(columns)
-                    .flatMap(needed -> List.range(needed._1(), index)
-                            .flatMap(at -> List.of(
-                                    Tuple.of(at, needed._2(), Direction.DOWN),
-                                    Tuple.of(at + 1, needed._2(), Direction.UP)))
-                            .prepend(Tuple.of(needed._1(), needed._2(), Direction.LEFT)));
-            return along.appendAll(down);
-        });
-        return segments.groupBy(segment -> Tuple.of(segment._1(), segment._2()))
-                .mapValues(cell -> HashSet.ofAll(cell.map(Tuple3::_3)));
+    private static Map<Cell, Set<Direction>> connectors(List<Group> rows, List<Bar> bars, int width) {
+        List<Segment> segments = rows.zipWithIndex((row, index) -> {
+                    List<Integer> from = row.needs()
+                            .toList()
+                            .map(needed -> rows.indexWhere(other -> other.name().equals(needed)))
+                            .filter(at -> at >= 0 && at < index);
+                    if (from.isEmpty()) {
+                        return List.<Segment>empty();
+                    }
+                    int arrow = bars.get(index).first() - 1;
+                    List<Integer> columns =
+                            from.map(at -> Math.min(width - 1, bars.get(at).end() + 1));
+                    int leftmost = columns.min().get();
+                    List<Segment> along = List.range(leftmost, arrow)
+                            .flatMap(column -> List.of(
+                                    new Segment(new Cell(index, column), Direction.RIGHT),
+                                    new Segment(new Cell(index, column + 1), Direction.LEFT)));
+                    List<Segment> down = from.zipWith(columns, Cell::new)
+                            .flatMap(needed -> List.range(needed.row(), index)
+                                    .flatMap(at -> List.of(
+                                            new Segment(new Cell(at, needed.column()), Direction.DOWN),
+                                            new Segment(new Cell(at + 1, needed.column()), Direction.UP)))
+                                    .prepend(new Segment(needed, Direction.LEFT)));
+                    return along.appendAll(down);
+                })
+                .flatMap(row -> row);
+        return segments.groupBy(Segment::cell).mapValues(cell -> HashSet.ofAll(cell.map(Segment::direction)));
     }
 
     private static int column(Instant at, Instant start, long whole, int width) {
@@ -243,11 +239,11 @@ final class JobTrain {
             }
             if (column == bar.first() - 1
                     && !group.needs().isEmpty()
-                    && layout.connectors().containsKey(Tuple.of(index, column))) {
+                    && layout.connectors().containsKey(new Cell(index, column))) {
                 return Span.styled("▶", styles.of(Theme.Classes.DIM));
             }
             return layout.connectors()
-                    .get(Tuple.of(index, column))
+                    .get(new Cell(index, column))
                     .map(directions -> Span.styled(Direction.box(directions), styles.of(Theme.Classes.DIM)))
                     .getOrElse(() -> Span.raw(" "));
         });
@@ -379,7 +375,18 @@ final class JobTrain {
     /**
      * The rows, their bars, and the lines between them by the cell they pass through.
      */
-    private record Layout(List<Group> rows, List<Bar> bars, Map<Tuple2<Integer, Integer>, Set<Direction>> connectors) {}
+    private record Layout(List<Group> rows, List<Bar> bars, Map<Cell, Set<Direction>> connectors) {}
+
+    /**
+     * A cell of the train: the index of its {@code row} and its {@code column}.
+     */
+    private record Cell(int row, int column) {}
+
+    /**
+     * A piece of a line between the bars: the {@code cell} it passes through and the {@code direction} it leaves it
+     * in.
+     */
+    private record Segment(Cell cell, Direction direction) {}
 
     /**
      * Which way a line leaves a cell.

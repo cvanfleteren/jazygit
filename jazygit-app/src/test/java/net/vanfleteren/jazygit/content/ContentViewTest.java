@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.branches.branch.commits.BranchCommitsMsg;
@@ -169,11 +170,14 @@ class ContentViewTest {
         return Update.update(logRead, new BranchCommitsMsg.Opened(feature)).model();
     }
 
-    @Test
-    void theTitleSaysWhichVersionShowsWhileItIsReadAndWhenItCouldNotBe() {
-        String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
-        DiffText changes = DiffText.of(header + "@@ -1 +1 @@\n-a\n+b\n");
-        ScrolledContent content = new ScrolledContent.StashChanges(new Sha("5555"), changes);
+    private static final DiffText STASHED =
+            DiffText.of("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-a\n+b\n");
+
+    /**
+     * The new version of the file a stash changed, {@link #STASHED}, as it is asked for: still read.
+     */
+    private static Version stashVersion() {
+        ScrolledContent content = new ScrolledContent.StashChanges(new Sha("5555"), STASHED);
         ReadVersion read = ReadVersion.of(
                 new AreaId("stash-changes"),
                 content,
@@ -181,7 +185,13 @@ class ContentViewTest {
                         new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
                 "a.txt",
                 DiffOptions.DEFAULT);
-        Version asked = new Version(content, "a.txt", Option.of(FileVersion.NEW), read.file(), Loadable.loading());
+        return new Version(content, "a.txt", Option.of(FileVersion.NEW), read.file(), Loadable.loading());
+    }
+
+    @Test
+    void theTitleSaysWhichVersionShowsWhileItIsReadAndWhenItCouldNotBe() {
+        DiffText changes = STASHED;
+        Version asked = stashVersion();
 
         assertEquals("Stash · new version (reading)", ContentView.versioned("Stash", asked));
         assertEquals(
@@ -207,6 +217,33 @@ class ContentViewTest {
                         asked.withShown(Option.of(FileVersion.ORIGINAL))
                                 .withRendered(true)
                                 .withWhole(new Loadable.Loaded<>(changes))));
+    }
+
+    @Test
+    void theTitleSaysAVersionIsBlamedAndWhileItsBlameIsReadOrWhenItCouldNotBe() {
+        Version blamed = stashVersion().withBlamed(true);
+        Version read = blamed.withWhole(new Loadable.Loaded<>(STASHED));
+
+        // While the file is read, that is what the title says (ADR 147).
+        assertEquals("Stash · new version, blamed (reading)", ContentView.versioned("Stash", blamed));
+        assertEquals("Stash · new version, blamed (reading blame)", ContentView.versioned("Stash", read));
+        assertEquals(
+                "Stash · new version, blamed",
+                ContentView.versioned(
+                        "Stash",
+                        read.withBlames(Blames.none(false)
+                                .with(FileVersion.NEW, new Loadable.Loaded<>(new Blame(Vector.empty()))))));
+        assertEquals(
+                "Stash · original, blamed (blame could not be read)",
+                ContentView.versioned(
+                        "Stash",
+                        read.withShown(Option.of(FileVersion.ORIGINAL))
+                                .withBlames(Blames.none(false)
+                                        .with(
+                                                FileVersion.ORIGINAL,
+                                                new Loadable.Failed<>(TestModels.refused("boom"))))));
+        // Rendered, it is not blamed, so the title says only that it is rendered.
+        assertEquals("Stash · new version, rendered", ContentView.versioned("Stash", read.withRendered(true)));
     }
 
     @Test

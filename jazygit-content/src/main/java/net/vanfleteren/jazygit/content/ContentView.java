@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.content;
 
-import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -8,7 +7,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.content.diff.ShownRemarks;
-import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -91,24 +89,39 @@ public final class ContentView {
 
     /**
      * What the content panel shows next to the pane that has the focus, {@code focus}, as far as a step of {@code J}
-     * or {@code K} past a file the diff filters hide all of needs it (ADR 144): what each area shows, and whether all
-     * the changes they show are hidden; none when an area shows no diff, as while one is read.
+     * or {@code K} past a file the diff filters hide all of needs it (ADR 144): what each area shows, and how much of
+     * the changes they show the filters hide: all of them, not all, or {@link Hidden#NO_DIFF} when no area or not
+     * every area shows a diff.
      */
     public static Filtered filtered(Model model, Option<Focus> focus) {
         List<Shown.Area> areas = of(model, focus).areas();
         List<Option<ShownDiff>> diffs =
                 areas.map(area -> area.body().changesShown().map(ShownChanges::diff));
-        return new Filtered(
-                areas.map(Shown.Area::content),
-                Option.when(
-                        diffs.nonEmpty() && diffs.forAll(Option::isDefined),
-                        () -> diffs.flatMap(diff -> diff).forAll(ContentView::allHidden)));
+        return new Filtered(areas.map(Shown.Area::content), hidden(diffs));
     }
 
     /**
-     * Whether the diff filters hide all the changes {@code diff} shows (ADR 144).
+     * How much of the changes {@code diffs} show the diff filters hide, {@code diffs} holding what each area shows if
+     * it is a diff.
      */
-    private static boolean allHidden(ShownDiff diff) {
+    private static Hidden hidden(List<Option<ShownDiff>> diffs) {
+        if (!allShowDiffs(diffs)) {
+            return Hidden.NO_DIFF;
+        }
+        return diffs.flatMap(diff -> diff).forAll(ContentView::hidesAll) ? Hidden.ALL : Hidden.NOT_ALL;
+    }
+
+    /**
+     * Whether there are areas, {@code diffs} holding what each shows if it is a diff, and each of them shows a diff.
+     */
+    private static boolean allShowDiffs(List<Option<ShownDiff>> diffs) {
+        return diffs.nonEmpty() && diffs.forAll(Option::isDefined);
+    }
+
+    /**
+     * Whether the diff filters hide all the changes of {@code diff}: it has files, and of each of them all its hunks.
+     */
+    private static boolean hidesAll(ShownDiff diff) {
         Expansion.Folded folded = diff.folded();
         return folded.diff().files().nonEmpty()
                 && folded.diff()
@@ -476,14 +489,14 @@ public final class ContentView {
                     title, Messages.get(options.ignoreWhitespace() ? "content.onlyWhitespace" : "content.noChanges"));
         }
         return new Shown.Stacked(List.of(
-                        Tuple.of(ContentArea.STAGED, "content.staged", diffs.staged()),
-                        Tuple.of(ContentArea.UNSTAGED, "content.unstaged", diffs.unstaged()))
-                .filter(area -> !shown(area._3).isBlank())
+                        new DiffArea(ContentArea.STAGED, "content.staged", diffs.staged()),
+                        new DiffArea(ContentArea.UNSTAGED, "content.unstaged", diffs.unstaged()))
+                .filter(area -> !shown(area.diff()).isBlank())
                 .map(area -> new Shown.Area(
-                        area._1,
-                        titled(Messages.get(area._2), options),
-                        new ScrolledContent.Diff(area._3),
-                        new Body.Diff(new ShownChanges(shown(area._3), look)))));
+                        area.area(),
+                        titled(Messages.get(area.titleKey()), options),
+                        new ScrolledContent.Diff(area.diff()),
+                        new Body.Diff(new ShownChanges(shown(area.diff()), look)))));
     }
 
     /**
@@ -539,31 +552,26 @@ public final class ContentView {
         return whenLoaded(
                 title,
                 view.builds(),
-                // Builds show only for a branch that follows one on GitHub.
-                builds -> view.shownOf()
-                        .filter(drawn -> view.onGitHub().isDefined())
-                        .<Shown>map(drawn -> new Shown.Area(
-                                ContentArea.BUILDS,
+                _ -> view.onGitHub()
+                        .map(remote -> view.shownOf()
+                                .<Shown>map(drawn -> new Shown.Area(
+                                        ContentArea.BUILDS,
+                                        title,
+                                        new ScrolledContent.Builds(view.branch()),
+                                        new Body.Builds(drawn)))
+                                .getOrElse(() -> noBuilds(view, title, remote)))
+                        .getOrElse(() -> dim(
                                 title,
-                                new ScrolledContent.Builds(view.branch()),
-                                new Body.Builds(drawn)))
-                        .getOrElse(() -> noBuilds(view, title, NoBuilds.of(view, builds))));
+                                Messages.get(
+                                        "content.builds.offGitHub",
+                                        view.branch().value()))));
     }
 
     /**
      * The title of the builds {@code view} shows: of which branch, whether more are read, and whether more can be.
      */
     private static String buildsTitle(BuildsView view) {
-        String branch = view.branch().value();
-        String commits = String.valueOf(view.commits());
-        String ofBranch;
-        if (view.reading()) {
-            ofBranch = Messages.get("content.panel.builds.reading", branch, commits);
-        } else if (view.stopped().isDefined()) {
-            ofBranch = Messages.get("content.panel.builds.stopped", branch, commits);
-        } else {
-            ofBranch = Messages.get("content.panel.builds.title", branch, commits);
-        }
+        String ofBranch = ofBranch(view);
         Option<WorkflowRuns> runs = view.shownTab().flatMap(tab -> view.runsOf(tab.workflow()));
         // On every branch, the title says when more runs of the tab are being read, as m asked: the first ones say so
         // in the body.
@@ -584,48 +592,50 @@ public final class ContentView {
     }
 
     /**
-     * What the content panel says in place of the builds of {@code view}, titled {@code title}, as {@code state} has
-     * it.
+     * What the title of the builds {@code view} shows says of its branch: whether more commits are read, or reading
+     * them stopped, and how many were read.
      */
-    private static Shown noBuilds(BuildsView view, String title, NoBuilds state) {
-        String remote = view.onGitHub().map(RemoteBranch::shortName).getOrElse("");
-        return switch (state) {
-            case OFF_GITHUB ->
-                dim(
-                        title,
-                        Messages.get("content.builds.offGitHub", view.branch().value()));
+    private static String ofBranch(BuildsView view) {
+        String branch = view.branch().value();
+        String commits = String.valueOf(view.commits());
+        if (view.reading()) {
+            return Messages.get("content.panel.builds.reading", branch, commits);
+        }
+        if (view.stopped().isDefined()) {
+            return Messages.get("content.panel.builds.stopped", branch, commits);
+        }
+        return Messages.get("content.panel.builds.title", branch, commits);
+    }
+
+    /**
+     * What the content panel says, titled {@code title}, in place of the builds of {@code view}, whose branch follows
+     * {@code remote} on GitHub, while it has none to show.
+     */
+    private static Shown noBuilds(BuildsView view, String title, RemoteBranch remote) {
+        return switch (NoBuilds.of(view)) {
             case READING -> loading(title);
-            case NOT_ON_GITHUB -> dim(title, Messages.get("content.builds.notOnGitHub", remote));
-            case NONE -> dim(title, Messages.get("content.builds.none", remote, String.valueOf(view.commits())));
-            case NONE_AHEAD -> dim(title, Messages.get("content.builds.noneAhead"));
+            case NOT_ON_GITHUB -> dim(title, Messages.get("content.builds.notOnGitHub", remote.shortName()));
+            case NONE ->
+                dim(title, Messages.get("content.builds.none", remote.shortName(), String.valueOf(view.commits())));
         };
     }
 
     /**
-     * Why the content panel shows no builds of a branch (ADR 131).
+     * Why the content panel shows no builds of a branch that follows one on GitHub (ADR 131). Once any is read, a tab
+     * shows it.
      */
     private enum NoBuilds {
-        /** The branch follows no branch on GitHub. */
-        OFF_GITHUB,
         /** None is read yet, while the first commits are. */
         READING,
         /** The branch it follows is not on GitHub. */
         NOT_ON_GITHUB,
         /** None of the commits read has builds. */
-        NONE,
-        /** Some were read, but none on the commits not on the base. */
-        NONE_AHEAD;
+        NONE;
 
         /**
-         * Why {@code view}, which read {@code builds}, shows none.
+         * Why {@code view} shows no builds.
          */
-        static NoBuilds of(BuildsView view, List<Build> builds) {
-            if (view.onGitHub().isEmpty()) {
-                return OFF_GITHUB;
-            }
-            if (builds.nonEmpty()) {
-                return NONE_AHEAD;
-            }
+        static NoBuilds of(BuildsView view) {
             if (view.reading()) {
                 return READING;
             }
@@ -1097,8 +1107,25 @@ public final class ContentView {
     /**
      * What the content panel shows, as {@link #filtered} gives it.
      *
-     * @param contents  what each of its areas shows
-     * @param allHidden whether the diff filters hide all the changes they show; none when one shows no diff
+     * @param contents what each of its areas shows
+     * @param hidden   how much of the changes they show the diff filters hide: all, not all, or no diff is shown
      */
-    public record Filtered(List<ScrolledContent> contents, Option<Boolean> allHidden) {}
+    public record Filtered(List<ScrolledContent> contents, Hidden hidden) {}
+
+    /**
+     * How much of the changes the content panel shows the diff filters hide (ADR 144).
+     */
+    public enum Hidden {
+        /** All of them. */
+        ALL,
+        /** Not all of them. */
+        NOT_ALL,
+        /** No area shows a diff, as the log, or one of them does not, as while one is read. */
+        NO_DIFF
+    }
+
+    /**
+     * One of the areas {@link #diffAreas} draws: the {@code area}, the key of its title and its {@code diff}.
+     */
+    private record DiffArea(ContentArea area, String titleKey, DiffText diff) {}
 }

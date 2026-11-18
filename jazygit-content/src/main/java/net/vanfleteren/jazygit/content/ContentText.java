@@ -4,7 +4,6 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.text.Text;
 import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -179,8 +178,8 @@ public final class ContentText {
     public static Text logText(List<Commit> commits, ZoneId zone, AheadView ahead, Theme.SpanStyles styles) {
         DateTimeFormatter dateTime = dateTime(zone);
         return styledText(drawn(commits).flatMap(node -> {
-            Sha sha = node._1.commit().sha();
-            List<String> lines = logLines(node._1, node._2, dateTime);
+            Sha sha = node.node().commit().sha();
+            List<String> lines = logLines(node.node(), node.gutter(), dateTime);
             return ahead.dimmed(sha)
                     ? lines.map(line -> Line.from(styled(line, Theme.Classes.DIM, styles)))
                     : lines.map(line -> line.startsWith("* ")
@@ -248,9 +247,9 @@ public final class ContentText {
             IntPredicate filling,
             IntFunction<Option<Halves>> halves,
             IntUnaryOperator kept) {
-        Tuple2<Integer, Integer> window = window(lines.size(), row, height);
-        int top = window._1();
-        int bottom = window._2();
+        Window window = window(lines.size(), row, height);
+        int top = window.top();
+        int bottom = window.bottom();
         // Text copies the lines it is given, so each line that shows is cut once.
         return Text.from(new AbstractList<Line>() {
             @Override
@@ -291,10 +290,10 @@ public final class ContentText {
      * The lines of {@code size} that {@link #windowed} shows from {@code row} in an area {@code height} lines high: from
      * the first up to, not with, the second; none at {@code row} while the area was never drawn, its height 0.
      */
-    public static Tuple2<Integer, Integer> window(int size, int row, int height) {
+    public static Window window(int size, int row, int height) {
         int high = Math.max(0, 2 * height);
         int top = Math.clamp(row, 0, Math.max(0, size - high));
-        return Tuple.of(top, Math.max(top, Math.min(size, row + high)));
+        return new Window(top, Math.max(top, Math.min(size, row + high)));
     }
 
     /**
@@ -338,7 +337,7 @@ public final class ContentText {
      */
     public static List<String> logLines(List<Commit> commits, ZoneId zone) {
         DateTimeFormatter dateTime = dateTime(zone);
-        return drawn(commits).flatMap(node -> logLines(node._1, node._2, dateTime));
+        return drawn(commits).flatMap(node -> logLines(node.node(), node.gutter(), dateTime));
     }
 
     /**
@@ -361,9 +360,9 @@ public final class ContentText {
     /**
      * The nodes of the graph of {@code commits}, each with the gutter its lines are drawn with.
      */
-    private static List<Tuple2<CommitGraph.Node, LogGraph.Gutter>> drawn(List<Commit> commits) {
+    private static List<GraphRow> drawn(List<Commit> commits) {
         List<CommitGraph.Node> nodes = CommitGraph.layout(commits);
-        return nodes.zip(LogGraph.gutters(nodes));
+        return nodes.zipWith(LogGraph.gutters(nodes), GraphRow::new);
     }
 
     /**
@@ -597,4 +596,14 @@ public final class ContentText {
                                         : preview.diff())
                         .map(line -> diffLine(line, styles))));
     }
+
+    /**
+     * The lines {@link #windowed} shows: from {@code top} up to, not with, {@code bottom}.
+     */
+    public record Window(int top, int bottom) {}
+
+    /**
+     * A node of the graph of the log, with the gutter its lines are drawn with.
+     */
+    private record GraphRow(CommitGraph.Node node, LogGraph.Gutter gutter) {}
 }
