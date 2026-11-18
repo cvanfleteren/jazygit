@@ -108,7 +108,7 @@ def test_ctrl_d_draws_the_changes_of_a_commit_rich_and_keeps_that(repo, jazygit)
     ui.commits.select("Change one")
     ui.app.wait_for("diff --git a/one.txt b/one.txt")
 
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
 
     ui.app.wait_for("modified  one.txt")
     assert "1   │ - count = 1" in ui.app.text()

@@ -195,6 +195,16 @@ class Jazygit:
         shown.caught_up()
         return shown
 
+    def show_rich_diffs(self):
+        """Draws the diffs in the rich style, from the plain one, in the popup of the diff options."""
+        self.app.press("ctrl+d")
+        self.app.wait_for("‹ plain ›")
+        self.app.press("enter")
+        self.app.wait_for("‹ rich ›")
+        self.app.press("escape")
+        # The rich diff shows behind the popup already; what it covers only shows once it is closed.
+        self.app.eventually(lambda: "Diff options" not in self.app.text(), "the diff options closed")
+
     def confirm_stage_all(self, asked: bool):
         """Answers the question whether to add all changes, which an amend with nothing staged asks, when asked."""
         if asked:

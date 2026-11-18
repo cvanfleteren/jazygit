@@ -32,19 +32,36 @@ public final class DiffOptionsUpdate {
 
     public static Next update(Model model, DiffOptionsMsg msg) {
         return switch (msg) {
-            // The keys work everywhere, but not in a dialog, whose diff does not change.
-            case DiffOptionsMsg m when model.popup().isDefined() -> Next.of(model);
+            // Not while a dialog is open, whose diff does not change, but for the popup of the options, which
+            // sends these itself: the keys of their own do not reach past an open popup.
+            case DiffOptionsMsg m
+            when model.popup().isDefined()
+                    && model.popup(DiffOptionsPopup.class).isEmpty() -> Next.of(model);
+            case DiffOptionsMsg.Requested() -> Next.of(model.openPopup(DiffOptionsPopup.of(model.preferences())));
             // A version blamed is blamed again, as whitespace changes whom a line is blamed on (ADR 147).
             case DiffOptionsMsg.WhitespaceToggled() ->
-                changed(model.mapPreferences(
+                shown(changed(model.mapPreferences(
                                 preferences -> preferences.withIgnoreWhitespace(!preferences.ignoreWhitespace())))
-                        .then(ReadBlame::blamed);
-            case DiffOptionsMsg.StyleToggled() -> styled(model, DiffStyle::toggled);
-            case DiffOptionsMsg.SplitToggled() -> styled(model, DiffStyle::splitToggled);
-            case DiffOptionsMsg.WordsToggled() -> wordsToggled(model);
-            case DiffOptionsMsg.ContextWidened() -> stepped(model, DiffContext::wider);
-            case DiffOptionsMsg.ContextNarrowed() -> stepped(model, DiffContext::narrower);
+                        .then(ReadBlame::blamed));
+            case DiffOptionsMsg.StyleChosen(DiffStyle style) -> shown(styled(model, previous -> style));
+            case DiffOptionsMsg.SplitToggled() -> shown(styled(model, DiffStyle::splitToggled));
+            case DiffOptionsMsg.WordsToggled() -> shown(wordsToggled(model));
+            case DiffOptionsMsg.ContextWidened() -> shown(stepped(model, DiffContext::wider));
+            case DiffOptionsMsg.ContextNarrowed() -> shown(stepped(model, DiffContext::narrower));
         };
+    }
+
+    /**
+     * {@code model} with the popup of the options showing them as they are now, if it is open.
+     */
+    static Model shown(Model model) {
+        return model.popup(DiffOptionsPopup.class)
+                .map(open -> model.openPopup(DiffOptionsPopup.of(model.preferences())))
+                .getOrElse(model);
+    }
+
+    private static Next shown(Next next) {
+        return new Next(shown(next.model()), next.cmds());
     }
 
     /**
@@ -67,6 +84,9 @@ public final class DiffOptionsUpdate {
     private static Next styled(Model model, UnaryOperator<DiffStyle> next) {
         Settings previous = model.preferences().settings();
         Settings chosen = previous.withDiffStyle(next.apply(previous.diffStyle()));
+        if (chosen.equals(previous)) {
+            return Next.of(model);
+        }
         Model styled = model.mapPreferences(preferences -> preferences.withSettings(chosen));
         SaveSettings save = new SaveSettings(previous, chosen);
         return chosen.diffStyle().rich() == previous.diffStyle().rich()
@@ -76,10 +96,14 @@ public final class DiffOptionsUpdate {
 
     /**
      * Highlights the changed words of a line from now on, or stops to, keeping it for the next session. It only
-     * changes how the diffs are drawn, so they are not read again.
+     * changes how the diffs are drawn, so they are not read again. The plain style highlights no words, so there it
+     * changes nothing: the popup shows it disabled.
      */
     private static Next wordsToggled(Model model) {
         Settings previous = model.preferences().settings();
+        if (!previous.diffStyle().rich()) {
+            return Next.of(model);
+        }
         Settings chosen = previous.withDiffWords(!previous.diffWords());
         return Next.of(
                 model.mapPreferences(preferences -> preferences.withSettings(chosen)),

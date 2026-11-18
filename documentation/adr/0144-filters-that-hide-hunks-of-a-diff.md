@@ -2,6 +2,9 @@
 
 Date: 2026-11-17
 
+Amended: `Ctrl+W` and `Ctrl+F` are no longer keys. Ignoring whitespace is a switch in the popup of the diff options
+(`Ctrl+D`), and the popup of the filters opens from there; Escape goes back to the options.
+
 ## Context
 
 Reviewing a diff, much of what changed is not worth reading: imports added and removed as the code around them

@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.app.keys;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.branches.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.changes.cherrypick.CherryPickMsg;
-import net.vanfleteren.jazygit.changes.diff.DiffFiltersMsg;
 import net.vanfleteren.jazygit.changes.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.changes.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpPopup;
@@ -41,31 +40,15 @@ final class GlobalKeys {
                         GlobalKeys::isSettingsKey,
                         SettingsPanelMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching(
-                        "ctrl+f",
-                        "app.help.global.diffFilters",
-                        GlobalKeys::isDiffFiltersKey,
-                        DiffFiltersMsg.Requested::new))
-                .global(new Keymap.Global.Dispatching(
-                        "ctrl+w",
-                        "app.help.global.ignoreWhitespace",
-                        GlobalKeys::isWhitespaceKey,
-                        DiffOptionsMsg.WhitespaceToggled::new))
-                .global(new Keymap.Global.Dispatching(
                         "ctrl+d",
-                        "app.help.global.diffStyle",
-                        GlobalKeys::isDiffStyleKey,
-                        DiffOptionsMsg.StyleToggled::new))
+                        "app.help.global.diffOptions",
+                        GlobalKeys::isDiffOptionsKey,
+                        DiffOptionsMsg.Requested::new))
                 .global(new Keymap.Global.Dispatching(
                         "|",
                         "app.help.global.diffSplit",
                         event -> isChar(event, '|'),
                         DiffOptionsMsg.SplitToggled::new))
-                // Not ctrl+i: a terminal sends it as Tab, which moves the focus before any handler sees it.
-                .global(new Keymap.Global.Dispatching(
-                        "ctrl+e",
-                        "app.help.global.diffWords",
-                        GlobalKeys::isDiffWordsKey,
-                        DiffOptionsMsg.WordsToggled::new))
                 .global(new Keymap.Global.Dispatching(
                         "}",
                         "app.help.global.moreContext",
@@ -142,13 +125,6 @@ final class GlobalKeys {
     }
 
     /**
-     * Whether {@code event} is the shortcut that shows the diff filters (ADR 144).
-     */
-    static boolean isDiffFiltersKey(KeyEvent event) {
-        return event.hasCtrl() && event.isCharIgnoreCase('f');
-    }
-
-    /**
      * Whether {@code event} is the shortcut that shows the settings.
      */
     static boolean isSettingsKey(KeyEvent event) {
@@ -163,25 +139,11 @@ final class GlobalKeys {
     }
 
     /**
-     * Whether {@code event} is the shortcut that shows changes to whitespace only in the diffs, or leaves them out.
+     * Whether {@code event} is the shortcut that shows the diff options: the style, the context, the changed words,
+     * whitespace and the diff filters.
      */
-    static boolean isWhitespaceKey(KeyEvent event) {
-        return event.hasCtrl() && event.isCharIgnoreCase('w');
-    }
-
-    /**
-     * Whether {@code event} is the shortcut that draws the diffs of the working tree, of a commit and of a stash in the
-     * other style.
-     */
-    static boolean isDiffStyleKey(KeyEvent event) {
+    static boolean isDiffOptionsKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('d');
-    }
-
-    /**
-     * Whether {@code event} is the shortcut that highlights the changed words of a line in the rich view, or stops to.
-     */
-    static boolean isDiffWordsKey(KeyEvent event) {
-        return event.hasCtrl() && event.isCharIgnoreCase('e');
     }
 
     /**

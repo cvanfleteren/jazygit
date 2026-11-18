@@ -144,7 +144,7 @@ class CommitDialogTest {
     void ctrlWInTheDescriptionStaysOnItsLine() throws Exception {
         java.util.List<KeyEvent> global = new ArrayList<>();
         try (ToolkitTestRunner runner = start()) {
-            // The app's global Ctrl+W shows whitespace in the diffs, after the field had its chance.
+            // The app's global keys get what the field leaves; Ctrl+W must not reach them.
             runner.runner().eventRouter().addGlobalHandler(event -> {
                 if (event instanceof KeyEvent key && key.hasCtrl() && key.isChar('w')) {
                     global.add(key);

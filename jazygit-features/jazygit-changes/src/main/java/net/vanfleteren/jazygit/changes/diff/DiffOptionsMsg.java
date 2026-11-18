@@ -1,9 +1,13 @@
 package net.vanfleteren.jazygit.changes.diff;
 
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 
+/**
+ * Changing how the diffs are read and drawn, from the popup of the diff options or with a key of their own.
+ */
 public sealed interface DiffOptionsMsg extends Msg {
 
     @Override
@@ -12,14 +16,19 @@ public sealed interface DiffOptionsMsg extends Msg {
     }
 
     /**
+     * The user asked for the popup of the diff options.
+     */
+    record Requested() implements DiffOptionsMsg {}
+
+    /**
      * The user asked to show changes to whitespace only, or to leave them out.
      */
     record WhitespaceToggled() implements DiffOptionsMsg {}
 
     /**
-     * The user asked to draw the diffs of the working tree, of a commit and of a stash in the other style.
+     * The user asked to draw the diffs of the working tree, of a commit and of a stash in {@code style}.
      */
-    record StyleToggled() implements DiffOptionsMsg {}
+    record StyleChosen(DiffStyle style) implements DiffOptionsMsg {}
 
     /**
      * The user asked to draw the diffs with the old and the new file side by side, or unified again (ADR 139).

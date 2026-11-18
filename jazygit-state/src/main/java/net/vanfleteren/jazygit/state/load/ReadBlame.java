@@ -85,8 +85,8 @@ public record ReadBlame(AreaId area, WholeFile read, FileVersion version, List<B
 
     /**
      * Starts reading the blame of each version shown blamed that is not read yet, nor being read (ADR 147), keeping
-     * that it is being read. The blames of a version read with whitespace ignored otherwise than Ctrl+W has it now are
-     * dropped first, of both versions: the one shown is read again at once, the other once it is shown. On a branch
+     * that it is being read. The blames of a version read with whitespace ignored otherwise than the diff options have
+     * it now are dropped first, of both versions: the one shown is read again at once, the other once it is shown. On a branch
      * without commits, a version of the working tree is not committed yet in any of its lines, and no blame is read.
      */
     public static Next blamed(Model model) {

@@ -124,9 +124,9 @@ def test_the_review_remarks_of_a_pull_request_show_next_to_their_lines(repo, ori
     ui.app.move_cursor("Files", "b.txt")
 
     # The plain view counts them.
-    ui.app.wait_for("2 review remarks, Ctrl+D shows them")
+    ui.app.wait_for("2 review remarks, the rich style (Ctrl+D) shows them")
 
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
 
     ui.app.wait_for("Why b?")
     assert "● + b" in ui.app.text()
@@ -161,7 +161,7 @@ def test_o_opens_the_browser_on_the_remark_of_the_cursor_or_else_on_the_pull_req
     ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
     ui.app.wait_for("Why b?")
     ui.app.press("enter")
 
@@ -202,7 +202,7 @@ def test_o_opens_the_browser_set_for_the_account_rather_than_the_one_gh_would(
     ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
     ui.app.wait_for("Why b?")
     ui.app.press("enter")
 
@@ -295,7 +295,7 @@ def test_a_thread_and_each_of_its_comments_are_collapsed_and_opened_with_space(r
     ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
     ui.app.wait_for("┃  Because")
     # A hidden comment is collapsed to its header.
     assert "· hidden · spam" in ui.app.text()
@@ -340,7 +340,7 @@ def test_the_remarks_of_a_pull_request_are_resolved_replied_to_and_started_from_
     ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
     ui.app.wait_for("Why b?")
     ui.app.press("enter")
 
@@ -400,7 +400,7 @@ def test_a_comment_of_a_thread_is_deleted_after_asking_without_reading_the_threa
     ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
     ui.app.wait_for("┃  Because")
     ui.app.press("enter")
 
@@ -440,7 +440,7 @@ def test_a_comment_of_a_thread_is_edited_from_its_body_and_shows_what_github_hol
     ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
     ui.app.wait_for("┃  Because")
     ui.app.press("enter")
 
@@ -484,7 +484,7 @@ def test_a_comment_of_a_thread_shows_its_reactions_and_is_reacted_to_without_rea
     ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
     ui.app.wait_for("┃  👀 2")
     ui.app.press("enter")
 

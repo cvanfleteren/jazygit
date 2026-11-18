@@ -18,9 +18,11 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -32,6 +34,7 @@ import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 import org.junit.jupiter.api.Test;
 
 class DiffOptionsUpdateTest {
@@ -96,7 +99,8 @@ class DiffOptionsUpdateTest {
 
     @Test
     void togglingWordsKeepsItForTheNextSessionWithoutReadingTheDiffsAgain() {
-        Model model = shown();
+        Model model = shown().mapPreferences(preferences ->
+                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
 
         Next next = Update.update(model, new DiffOptionsMsg.WordsToggled());
 
@@ -204,6 +208,62 @@ class DiffOptionsUpdateTest {
 
         assertDropped(
                 next.model(), new LoadMsg.Failed(new LoadStashDetail(stash, DiffOptions.DEFAULT), refused("boom")));
+    }
+
+    @Test
+    void ctrlDOpensThePopupOfTheOptionsWhichShowsEachChangeAtOnce() {
+        Model open = Update.update(shown(), new DiffOptionsMsg.Requested()).model();
+        assertEquals(DiffStyle.PLAIN, open.popup(DiffOptionsPopup.class).get().style());
+
+        Model rich = Update.update(open, new DiffOptionsMsg.StyleChosen(DiffStyle.RICH))
+                .model();
+        Model whitespace =
+                Update.update(rich, new DiffOptionsMsg.WhitespaceToggled()).model();
+        Model wider =
+                Update.update(whitespace, new DiffOptionsMsg.ContextWidened()).model();
+        Model words = Update.update(wider, new DiffOptionsMsg.WordsToggled()).model();
+        Model split = Update.update(words, new DiffOptionsMsg.SplitToggled()).model();
+
+        assertEquals(
+                new DiffOptionsPopup(
+                        DiffStyle.SPLIT,
+                        !open.preferences().settings().diffWords(),
+                        true,
+                        DiffContext.DEFAULT.wider(),
+                        open.preferences().diffFilters()),
+                split.popup(DiffOptionsPopup.class).get());
+    }
+
+    @Test
+    void theChangedWordsCannotBeSwitchedInThePlainStyle() {
+        Model plain = Update.update(shown(), new DiffOptionsMsg.StyleChosen(DiffStyle.PLAIN))
+                .model();
+
+        Next next = Update.update(plain, new DiffOptionsMsg.WordsToggled());
+
+        assertSame(plain, next.model());
+        assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void theRowsStepTheStyleRoundAndTheContextAndSendSpaceForTheFiltersSwitch() {
+        Model open = Update.update(shown(), new DiffOptionsMsg.Requested()).model();
+        List<PickDialog.Row<Msg>> rows =
+                DiffOptionsDialog.rows(open.popup(DiffOptionsPopup.class).get());
+
+        assertEquals(new DiffOptionsMsg.StyleChosen(DiffStyle.RICH), rows.head().value());
+        assertEquals(
+                Option.of(new PickDialog.Steps<Msg>(
+                        new DiffOptionsMsg.StyleChosen(DiffStyle.SPLIT),
+                        new DiffOptionsMsg.StyleChosen(DiffStyle.RICH))),
+                rows.head().steps());
+        assertEquals(
+                Option.of(new PickDialog.Steps<Msg>(
+                        new DiffOptionsMsg.ContextNarrowed(), new DiffOptionsMsg.ContextWidened())),
+                rows.get(1).steps());
+        PickDialog.Row<Msg> filters = rows.get(DiffOptionsDialog.FILTERS_ROW);
+        assertEquals(new DiffFiltersMsg.Requested(), filters.value());
+        assertEquals(Option.of(new DiffFiltersMsg.AllToggled()), filters.spaced());
     }
 
     @Test

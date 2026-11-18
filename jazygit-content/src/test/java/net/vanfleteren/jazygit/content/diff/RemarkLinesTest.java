@@ -879,7 +879,7 @@ class RemarkLinesTest {
                 Theme.SpanStyles.NONE));
 
         assertEquals(
-                "diff --git a/a.txt b/a.txt  · 2 review remarks, Ctrl+D shows them",
+                "diff --git a/a.txt b/a.txt  · 2 review remarks, the rich style (Ctrl+D) shows them",
                 text.lines().head());
         assertFalse(text.lines().exists(line -> line.contains("bob")));
     }

@@ -48,13 +48,6 @@ public enum DiffStyle {
     }
 
     /**
-     * The style Ctrl+D switches to: the rich view from the plain one, else the plain one.
-     */
-    public DiffStyle toggled() {
-        return this == PLAIN ? RICH : PLAIN;
-    }
-
-    /**
      * The style {@code |} switches to (ADR 139): the rich view from the split one, else the split one.
      */
     public DiffStyle splitToggled() {

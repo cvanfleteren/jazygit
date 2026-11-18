@@ -10,6 +10,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -32,8 +33,9 @@ import net.vanfleteren.jazygit.ui.theme.Theme;
  * their widest cell; a cell longer than its cap is cut, and when one of the highlighted row is, the row shows in
  * full in a box under the popup. When there are no rows, it can say so in a dimmed line, which cannot be picked.
  * {@code /} opens a {@link ListFilter}: then only the rows with a cell that contains it stay shown, and Escape
- * closes it instead of cancelling. Whether the popup is open lives in the {@link Model}, as a popup of type {@code P},
- * and so do the highlighted row and the filter, as its {@link ListCursor}.
+ * closes it instead of cancelling. A row can also hold a value the arrows to the sides step back and forth through,
+ * as a setting with a few choices does. Whether the popup is open lives in the {@link Model}, as a popup of type
+ * {@code P}, and so do the highlighted row and the filter, as its {@link ListCursor}.
  *
  * @param <P> the popup that makes this dialog show
  * @param <T> what a row stands for, which picking it sends
@@ -104,12 +106,13 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
             int width = widths.sum().intValue() + GAP * Math.max(0, widths.size() - 1);
             ListElement<?> rows =
                     all.isEmpty() ? empty.getOrElse(list) : view.lines().isEmpty() ? noMatches : list;
+            String hintKey = spec.hint().getOrElse(HINT);
             // Wide enough for the hint, which would wrap otherwise.
-            int hint = Math.max(TextWidth.of(Messages.get(HINT)), TextWidth.of(Messages.get(FILTERING_HINT)));
+            int hint = Math.max(TextWidth.of(Messages.get(hintKey)), TextWidth.of(Messages.get(FILTERING_HINT)));
             Element frame = DialogFrame.withHint(
                             spec.title().apply(popup),
                             Math.max(DialogFrame.LIST_WIDTH, Math.max(width, hint) + DialogFrame.FRAME),
-                            cursor.filter().isDefined() ? FILTERING_HINT : HINT,
+                            cursor.filter().isDefined() ? FILTERING_HINT : hintKey,
                             cursor.filter()
                                     .map(typed -> List.of(
                                             filter.field(typed),
@@ -194,17 +197,32 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                                 .map(row -> send(spec.onPick().apply(row.value())))
                                 .getOrElse(EventResult.UNHANDLED);
                 })
-                // While the filter is open, the letters are its own.
-                .getOrElse(() -> view.cursor().filter().isDefined()
-                        ? EventResult.UNHANDLED
-                        : spec.spacePicks() && event.isChar(' ')
-                                ? view.highlighted()
-                                        .map(row -> send(spec.onPick().apply(row.value())))
-                                        .getOrElse(EventResult.UNHANDLED)
-                                : view.lines()
-                                        .find(row -> row.key().exists(event::isChar))
-                                        .map(row -> send(spec.onPick().apply(row.value())))
-                                        .getOrElse(EventResult.UNHANDLED));
+                // While the filter is open, the letters and the arrows to the sides are its own.
+                .getOrElse(() -> view.cursor().filter().isDefined() ? EventResult.UNHANDLED : unlisted(view, event));
+    }
+
+    /**
+     * What {@code event}, which is not a key of the list, does with the filter closed: Space switches the highlighted
+     * row when the dialog has it so, the arrows to the sides step its value, and a letter picks its row.
+     */
+    private EventResult unlisted(FilteredCursor<Row<T>> view, KeyEvent event) {
+        Option<Row<T>> highlighted = view.highlighted();
+        if (spec.spacePicks() && event.isChar(' ')) {
+            return highlighted
+                    .map(row -> send(spec.onPick().apply(row.spaced().getOrElse(row.value()))))
+                    .getOrElse(EventResult.UNHANDLED);
+        }
+        boolean back = event.matches(Actions.MOVE_LEFT);
+        if (back || event.matches(Actions.MOVE_RIGHT)) {
+            return highlighted
+                    .flatMap(Row::steps)
+                    .map(steps -> send(spec.onPick().apply(back ? steps.back() : steps.forward())))
+                    .getOrElse(EventResult.UNHANDLED);
+        }
+        return view.lines()
+                .find(row -> row.key().exists(event::isChar))
+                .map(row -> send(spec.onPick().apply(row.value())))
+                .getOrElse(EventResult.UNHANDLED);
     }
 
     private EventResult send(Msg msg) {
@@ -219,18 +237,28 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     /**
      * A row to pick.
      *
-     * @param value what picking it sends
-     * @param cells what it shows, one per column
-     * @param key   the letter that picks it at once, as an option of a {@link ChoiceDialog} is chosen, shown before
-     *              its cells; none for a row picked only with the arrows and Enter
+     * @param value  what picking it sends
+     * @param cells  what it shows, one per column
+     * @param key    the letter that picks it at once, as an option of a {@link ChoiceDialog} is chosen, shown before
+     *               its cells; none for a row picked only with the arrows and Enter
+     * @param spaced what Space sends instead of {@code value}, in a dialog Space picks in, if anything else
+     * @param steps  what the arrows to the sides send, for a row that holds a value they step through; none for a row
+     *               they do nothing on
      */
-    public record Row<T>(T value, List<Cell> cells, Option<Character> key) {
+    public record Row<T>(T value, List<Cell> cells, Option<Character> key, Option<T> spaced, Option<Steps<T>> steps) {
 
         /**
          * A row picked with the arrows and Enter only.
          */
         public Row(T value, List<Cell> cells) {
             this(value, cells, Option.none());
+        }
+
+        /**
+         * A row picked with the arrows and Enter, and with {@code key} if it has one.
+         */
+        public Row(T value, List<Cell> cells, Option<Character> key) {
+            this(value, cells, key, Option.none(), Option.none());
         }
 
         /**
@@ -244,7 +272,22 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
          * This row, picked at once with {@code letter}.
          */
         public Row<T> withKey(char letter) {
-            return new Row<>(value, cells, Option.of(letter));
+            return new Row<>(value, cells, Option.of(letter), spaced, steps);
+        }
+
+        /**
+         * This row, sending {@code onSpace} for Space instead of what Enter sends.
+         */
+        public Row<T> withSpace(T onSpace) {
+            return new Row<>(value, cells, key, Option.of(onSpace), steps);
+        }
+
+        /**
+         * This row, holding a value that the arrow to the left steps back, sending {@code back}, and the one to the
+         * right forth, sending {@code forward}.
+         */
+        public Row<T> withSteps(T back, T forward) {
+            return new Row<>(value, cells, key, spaced, Option.of(new Steps<>(back, forward)));
         }
 
         /**
@@ -254,6 +297,14 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
             return key.map(letter -> Cell.of("(" + letter + ")")).toList().appendAll(cells);
         }
     }
+
+    /**
+     * What the arrows to the sides send on a row that holds a value they step through.
+     *
+     * @param back    what the arrow to the left sends
+     * @param forward what the arrow to the right sends
+     */
+    public record Steps<T>(T back, T forward) {}
 
     /**
      * A cell of a row.
@@ -302,6 +353,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      * @param emptyKey  the message key of the line shown when there are no rows to pick, if any
      * @param spacePicks whether Space picks the highlighted row too, as in a list whose rows are switched on and off
      *                   in place, while the filter is closed
+     * @param hint       the message key of the hint under the rows while the filter is closed, if not the usual one
      */
     public record Spec<P extends Popup, T>(
             String id,
@@ -311,7 +363,8 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
             Function<T, Msg> onPick,
             Supplier<Msg> onCancel,
             Option<String> emptyKey,
-            boolean spacePicks) {
+            boolean spacePicks,
+            Option<String> hint) {
 
         /**
          * A dialog whose rows Enter picks, and their letters, but not Space.
@@ -324,7 +377,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                 Function<T, Msg> onPick,
                 Supplier<Msg> onCancel,
                 Option<String> emptyKey) {
-            this(id, popupType, title, rows, onPick, onCancel, emptyKey, false);
+            this(id, popupType, title, rows, onPick, onCancel, emptyKey, false, Option.none());
         }
 
         /**
@@ -356,14 +409,21 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
          * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
          */
         public Spec<P, T> cancelledBy(Supplier<Msg> onCancel) {
-            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, spacePicks);
+            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, spacePicks, hint);
         }
 
         /**
          * This dialog, whose highlighted row Space picks too.
          */
         public Spec<P, T> pickedBySpace() {
-            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, true);
+            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, true, hint);
+        }
+
+        /**
+         * This dialog, with the hint of the message key {@code key} under its rows while the filter is closed.
+         */
+        public Spec<P, T> hintedBy(String key) {
+            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, spacePicks, Option.of(key));
         }
     }
 }

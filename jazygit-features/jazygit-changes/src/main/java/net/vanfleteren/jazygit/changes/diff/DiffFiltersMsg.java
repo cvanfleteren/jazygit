@@ -20,6 +20,11 @@ public sealed interface DiffFiltersMsg extends Msg {
     record Requested() implements DiffFiltersMsg {}
 
     /**
+     * The user closed the popup of the diff filters, going back to the one of the diff options.
+     */
+    record Closed() implements DiffFiltersMsg {}
+
+    /**
      * The user switched the filter with the id {@code id} on or off.
      */
     record Toggled(String id) implements DiffFiltersMsg {}

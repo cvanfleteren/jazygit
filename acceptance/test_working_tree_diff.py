@@ -13,7 +13,7 @@ def test_ctrl_d_draws_the_staged_and_unstaged_changes_rich(repo, jazygit):
     ui.files.select(FilesPane.ALL)
     ui.app.wait_for("diff --git a/two.txt b/two.txt")
 
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
 
     ui.app.wait_for("modified  one.txt")
     text = ui.app.text()
@@ -51,7 +51,7 @@ def test_a_removed_line_is_followed_by_the_line_it_became(repo, jazygit):
     ui.files.select("versions.txt")
     ui.app.wait_for("diff --git a/versions.txt b/versions.txt")
 
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
 
     ui.app.wait_for("modified  versions.txt")
     rows = ui.app.text().splitlines()
@@ -74,7 +74,7 @@ def test_ctrl_t_shows_the_new_version_of_a_markdown_file_rendered(repo, jazygit)
     ui = jazygit()
     ui.files.select("README.md")
     ui.app.wait_for("diff --git a/README.md b/README.md")
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
     ui.app.wait_for("modified  README.md")
     ui.app.press("enter")
 

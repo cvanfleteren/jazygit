@@ -1,9 +1,11 @@
 package net.vanfleteren.jazygit.changes.diff;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 
 /**
@@ -17,9 +19,17 @@ public final class DiffFiltersUpdate {
 
     public static Next update(Model model, DiffFiltersMsg msg) {
         return switch (msg) {
-            case DiffFiltersMsg.Requested() when model.popup().isDefined() -> Next.of(model);
+            // Opened from the popup of the diff options, which it replaces.
+            case DiffFiltersMsg.Requested()
+            when model.popup().isDefined()
+                    && model.popup(DiffOptionsPopup.class).isEmpty() -> Next.of(model);
             case DiffFiltersMsg.Requested() ->
                 Next.of(model.openPopup(new DiffFiltersPopup(model.preferences().diffFilters())));
+            case DiffFiltersMsg.Closed()
+            when model.popup(DiffFiltersPopup.class).isEmpty() -> Next.of(model);
+            case DiffFiltersMsg.Closed() ->
+                Next.of(model.openPopup(DiffOptionsPopup.of(model.preferences()))
+                        .withListCursor(new ListCursor(Option.of(DiffOptionsDialog.FILTERS_ROW), Option.none())));
             case DiffFiltersMsg.Toggled(String id) -> toggled(model, id);
             case DiffFiltersMsg.AllToggled() -> {
                 Model switched =
@@ -51,12 +61,13 @@ public final class DiffFiltersUpdate {
     }
 
     /**
-     * {@code model} with the popup of the filters showing them as they are now, if it is open.
+     * {@code model} with the popup of the filters, or the one of the options, showing them as they are now, if it is
+     * open.
      */
     private static Model shown(Model model) {
-        return model.popup(DiffFiltersPopup.class)
+        return DiffOptionsUpdate.shown(model.popup(DiffFiltersPopup.class)
                 .map(open ->
                         model.openPopup(new DiffFiltersPopup(model.preferences().diffFilters())))
-                .getOrElse(model);
+                .getOrElse(model));
     }
 }

@@ -213,7 +213,8 @@ class ContentViewTest {
         String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
         Model dirty = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(TestModels.DIRTY))
                 .model();
-        Model rich = Update.update(dirty, new DiffOptionsMsg.StyleToggled()).model();
+        Model rich = Update.update(dirty, new DiffOptionsMsg.StyleChosen(DiffStyle.RICH))
+                .model();
         Model model = Update.update(rich, new SelectionMsg.FilesSelected(TestModels.DIRTY.files()))
                 .model();
         model = Update.update(
