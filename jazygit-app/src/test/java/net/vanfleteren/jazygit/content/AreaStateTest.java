@@ -2,20 +2,28 @@ package net.vanfleteren.jazygit.content;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.layout.Rect;
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseButton;
+import dev.tamboui.tui.event.MouseEvent;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.LineNumberMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
@@ -38,6 +46,21 @@ class AreaStateTest {
             +three
              four
             """;
+    // Two hunks, with a marker for the lines between them.
+    private static final String GAPPED = """
+            diff --git a/a.txt b/a.txt
+            --- a/a.txt
+            +++ b/a.txt
+            @@ -1,2 +1,2 @@
+             one
+            -two
+            +zwei
+            @@ -20,2 +20,2 @@
+             twenty
+            -twenty-one
+            +einundzwanzig
+            """;
+    private static final Option<Rect> NOWHERE = Option.none();
     private static final AreaKeys.Edits NO_EDITS =
             new AreaKeys.Edits((text, event) -> Option.none(), (text, event) -> Option.none());
     private static final ContentPanel PANEL = new ContentPanel(Theme.SpanStyles.NONE, () -> false, focus -> {});
@@ -113,14 +136,90 @@ class AreaStateTest {
     }
 
     @Test
-    void theViewIsClampedAsTheTextAreaClampsIt() {
-        Viewport view = new Viewport(0, 30, 80, 10);
+    void enterInTheSearchLineSendsSubmittedBeforeGoingToTheFirstMatch() {
+        Model model = commit();
+        AreaFit.Fitted fitted = fit(model, initial(model));
 
-        assertEquals(20, view.at(25).top());
-        assertEquals(0, view.by(-3).top());
-        assertEquals(9, view.pageDown().top());
-        assertEquals(20, view.bottom().top());
-        assertEquals(0, new Viewport(0, 5, 80, 10).bottom().top());
+        Reaction pressed = AreaSearch.typed(
+                fitted.after(), view(fitted), "three", KeyEvent.ofKey(KeyCode.ENTER), NO_EDITS.search());
+
+        assertEquals(2, pressed.sent().size(), pressed.sent().toString());
+        assertEquals(new ContentSearchMsg.Submitted(), pressed.sent().get(0));
+        ViewMsg.ContentScrolled moved = (ViewMsg.ContentScrolled) pressed.sent().get(1);
+        assertTrue(moved.to().found().isDefined());
+    }
+
+    @Test
+    void enterInTheLineNumberLineSendsClosedBeforeGoingToTheLine() {
+        Model model = commit();
+        AreaFit.Fitted fitted = fit(model, initial(model));
+
+        Reaction pressed =
+                AreaLines.typed(fitted.after(), view(fitted), "3", KeyEvent.ofKey(KeyCode.ENTER), NO_EDITS.number());
+
+        assertEquals(2, pressed.sent().size(), pressed.sent().toString());
+        assertEquals(new LineNumberMsg.Closed(), pressed.sent().get(0));
+        ViewMsg.ContentScrolled moved = (ViewMsg.ContentScrolled) pressed.sent().get(1);
+        assertEquals(
+                Option.of(new Anchor.OnLine("a.txt", ReviewThread.Side.RIGHT, 3)),
+                moved.to().cursor());
+    }
+
+    @Test
+    void theWheelScrollsAnAreaWithoutACursorThreeLinesClampedToItsLines() {
+        AreaState plain = AreaState.initial(new AreaId("content"));
+
+        Reaction down = AreaMouse.mouse(plain, new Viewport(0, 30, 80, 10), MouseEvent.scrollDown(5, 5), NOWHERE);
+        assertEquals(3, down.view().top());
+        assertEquals(3, ((ViewMsg.ContentScrolled) down.sent().single()).to().row());
+
+        Reaction atBottom = AreaMouse.mouse(plain, new Viewport(19, 30, 80, 10), MouseEvent.scrollDown(5, 5), NOWHERE);
+        assertEquals(20, atBottom.view().top());
+
+        Reaction up = AreaMouse.mouse(plain, new Viewport(1, 30, 80, 10), MouseEvent.scrollUp(5, 5), NOWHERE);
+        assertEquals(0, up.view().top());
+        assertEquals(0, ((ViewMsg.ContentScrolled) up.sent().single()).to().row());
+    }
+
+    @Test
+    void theWheelMovesTheCursorOfARichDiffThreeLines() {
+        Model model = commit();
+        AreaFit.Fitted fitted = fit(model, initial(model));
+        DiffCursor expected = fitted.after().cursor().get().scrolled(3);
+
+        Reaction down = AreaMouse.mouse(fitted.after(), view(fitted), MouseEvent.scrollDown(5, 5), NOWHERE);
+
+        assertEquals(Option.of(expected), down.state().cursor());
+        ViewMsg.ContentScrolled sent = (ViewMsg.ContentScrolled) down.sent().single();
+        assertEquals(Option.of(expected.anchor()), sent.to().cursor());
+    }
+
+    @Test
+    void aClickOnAMarkerMovesTheCursorThereBeforeShowingItsLines() {
+        Model model = commit(GAPPED);
+        AreaFit.Fitted fitted = fit(model, initial(model));
+        int gap = fitted.after()
+                .styled()
+                .get()
+                .stops()
+                .find(stop -> stop.mark().anchor() instanceof Anchor.Gap)
+                .get()
+                .row();
+        Viewport view = view(fitted);
+
+        // The text starts a line below the top of the area, under its border.
+        Reaction clicked = AreaMouse.mouse(
+                fitted.after(),
+                view,
+                MouseEvent.press(MouseButton.LEFT, 5, gap - view.top() + 1),
+                Option.of(new Rect(0, 0, 82, 22)));
+
+        assertTrue(clicked.state().cursor().get().anchor() instanceof Anchor.Gap);
+        assertEquals(2, clicked.sent().size(), clicked.sent().toString());
+        assertInstanceOf(ViewMsg.ContentScrolled.class, clicked.sent().get(0));
+        assertFalse(
+                clicked.sent().get(1) instanceof ViewMsg.ContentScrolled,
+                clicked.sent().toString());
     }
 
     private static AreaFit.Fitted fit(Model model, AreaState before) {
@@ -143,6 +242,10 @@ class AreaStateTest {
     }
 
     private static Model commit() {
+        return commit(DIFF);
+    }
+
+    private static Model commit(String diff) {
         Model model = TestModels.loaded()
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
@@ -150,7 +253,7 @@ class AreaStateTest {
                         Update.update(model, new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(
-                                new Sha("aaaa"), model.preferences().diffOptions(), DiffText.of(DIFF)))
+                                new Sha("aaaa"), model.preferences().diffOptions(), DiffText.of(diff)))
                 .model();
     }
 }
