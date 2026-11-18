@@ -118,7 +118,7 @@ class JazygitAppPilotTest {
                 new ArrayList<>(),
                 new FilesPanel(dispatched::add, () -> {}),
                 new BranchesPanel(dispatched::add, tab -> {}),
-                new CommitsPanel(dispatched::add, () -> {}),
+                new CommitsPanel(dispatched::add),
                 new StashPanel(dispatched::add),
                 new AtomicReference<>());
 
@@ -197,8 +197,7 @@ class JazygitAppPilotTest {
                         new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("+a\n")))
                 .model();
 
-        assertRightEntersAndLeftLeaves(
-                model, CommitsPanel.PANE, new CommitsPanel(msg -> {}, () -> {})::render, AreaId.COMMIT);
+        assertRightEntersAndLeftLeaves(model, CommitsPanel.PANE, new CommitsPanel(msg -> {})::render, AreaId.COMMIT);
     }
 
     @Test
@@ -314,7 +313,7 @@ class JazygitAppPilotTest {
                 new ArrayList<>(),
                 new FilesPanel(dispatched::add, () -> {}),
                 new BranchesPanel(dispatched::add, tab -> {}),
-                new CommitsPanel(dispatched::add, () -> {}),
+                new CommitsPanel(dispatched::add),
                 new StashPanel(dispatched::add),
                 new AtomicReference<>());
 
@@ -553,7 +552,7 @@ class JazygitAppPilotTest {
                     new ArrayList<>(),
                     new FilesPanel(dispatched::add, () -> {}),
                     new BranchesPanel(dispatched::add, tab -> {}),
-                    new CommitsPanel(dispatched::add, () -> {}),
+                    new CommitsPanel(dispatched::add),
                     new StashPanel(dispatched::add),
                     new AtomicReference<>());
         }

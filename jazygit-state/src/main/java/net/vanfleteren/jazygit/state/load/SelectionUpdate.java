@@ -54,6 +54,11 @@ public final class SelectionUpdate {
             case SelectionMsg.WholeListed() ->
                 Next.of(model.mapRepoView(repoView -> repoView.mapFiles(
                         files -> files.withCommitFiles(files.commitFiles().map(view -> view.withWhole(true))))));
+            case SelectionMsg.FilesLockedAt(var at) ->
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(
+                        files -> files.withLocked(files.locked().map(lock -> lock.at(at))))));
+            case SelectionMsg.FilesUnlocked() ->
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withLocked(Option.none()))));
         };
     }
 
@@ -225,6 +230,13 @@ public final class SelectionUpdate {
      * focus: its files, nothing, or the files of the working tree again (ADR 141).
      */
     private static Next followed(Model model, Followed followed, PaneId from, PaneId listedIn) {
+        // The list the pane is locked to has listed for what it follows now (ADR 149).
+        Model locked = model.mapRepoView(repoView -> repoView.mapFiles(files ->
+                files.withLocked(files.locked().map(lock -> lock.pane().equals(from) ? lock.at(followed) : lock))));
+        return listed(locked, followed, from, listedIn);
+    }
+
+    private static Next listed(Model model, Followed followed, PaneId from, PaneId listedIn) {
         return switch (followed) {
             case Followed.Files(Changes of) -> filesFollowed(model, of, from, listedIn);
             case Followed.Nothing(var why) ->

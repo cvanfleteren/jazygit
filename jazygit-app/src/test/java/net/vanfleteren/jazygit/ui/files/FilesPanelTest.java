@@ -856,11 +856,15 @@ class FilesPanelTest {
             assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE))
                     .contains("WordDiff.java"));
 
-            // The second goes back to the list they are of, which the app does: they stay listed (ADR 141).
+            // The second goes back to the list they are of, which the app does: they stay listed (ADR 141), and
+            // follow the list with the focus again (ADR 149).
             Model unfiltered = model.get();
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
-            assertSame(unfiltered, model.get());
+            assertEquals(
+                    unfiltered.repoView().files().commitFiles(),
+                    model.get().repoView().files().commitFiles());
+            assertEquals(Option.none(), model.get().repoView().files().locked());
             SettledPilot.of(testRunner).quit();
         }
     }

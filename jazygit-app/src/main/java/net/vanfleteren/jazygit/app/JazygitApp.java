@@ -164,15 +164,17 @@ public class JazygitApp extends ToolkitApp {
             // The focus is the app's, not the model's: it moves it into the command log itself (ADR 129).
             case CommandLogFocused() -> focus.moveToCommandLog();
             // Escape in the files of a commit is back to the list they were listed from, where they follow the
-            // highlight; the list says which files the pane lists then (ADR 141).
-            case CommitFilesMsg.Closed() -> {
+            // highlight; the list says which files the pane lists then (ADR 141). The model lets go of the lock that
+            // kept them to that list (ADR 149).
+            case CommitFilesMsg.Closed closed -> {
                 model().repoView().files().backTo().forEach(focus::moveTo);
-                requestRedraw();
+                session.dispatch(closed);
             }
             // The help gives the focus back to the files as it closes, so the list takes it in the frame after.
-            case HelpMsg.Chosen(CommitFilesMsg.Closed()) -> {
+            case HelpMsg.Chosen(CommitFilesMsg.Closed closed) -> {
                 listAfterPopup = model().repoView().files().backTo();
                 session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
+                session.dispatch(closed);
             }
             // The help gives the focus back as it closes, so the log takes it in the frame after.
             case HelpMsg.Chosen(CommandLogFocused()) -> {

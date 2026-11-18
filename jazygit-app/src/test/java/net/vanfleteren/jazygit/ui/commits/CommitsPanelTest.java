@@ -315,7 +315,7 @@ class CommitsPanelTest {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
                 TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
@@ -337,7 +337,7 @@ class CommitsPanelTest {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
                 TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
@@ -356,7 +356,7 @@ class CommitsPanelTest {
     void theListScrollsAlongWithTheSelection() throws Exception {
         List<Commit> log = List.range(0, 80).map(i -> commit("s" + i));
         Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
@@ -379,7 +379,7 @@ class CommitsPanelTest {
     void clickingACommitHighlightsItAndFocusesThePane() throws Exception {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             // The border, s1, then s0.
@@ -419,12 +419,10 @@ class CommitsPanelTest {
         AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0"))))));
         java.util.List<Msg> sent = new java.util.ArrayList<>();
-        CommitsPanel panel = new CommitsPanel(
-                msg -> {
-                    sent.add(msg);
-                    model.set(Update.update(model.get(), msg).model());
-                },
-                () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {
+            sent.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
@@ -470,12 +468,10 @@ class CommitsPanelTest {
         AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0"))))));
         java.util.List<Msg> sent = new java.util.ArrayList<>();
-        CommitsPanel panel = new CommitsPanel(
-                msg -> {
-                    sent.add(msg);
-                    model.set(Update.update(model.get(), msg).model());
-                },
-                () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {
+            sent.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
@@ -497,7 +493,7 @@ class CommitsPanelTest {
         Model model = TestModels.loaded(SampleData.git())
                 .mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withCommitSearch(
                         Option.of(CommitSearch.loading("nothing").withResults(new Loadable.Loaded<>(List.empty()))))));
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             assertTrue(RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE))
@@ -514,7 +510,7 @@ class CommitsPanelTest {
     void aCommitCopiedAfterThePaneWasDrawnStandsOut() {
         Model model = TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0")))));
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {});
 
         panel.render(model, CommitsPanel.PANE);
         List<Option<String>> before = shaClasses(panel);
@@ -541,7 +537,7 @@ class CommitsPanelTest {
         Model listed = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(log));
         Model found = listed.mapRepoView(repoView -> repoView.mapCommits(commits ->
                 commits.withCommitSearch(Option.of(CommitSearch.loading("a").withResults(log)))));
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {});
 
         panel.render(listed, CommitsPanel.PANE);
         String first = panel.shownRows().head().text();

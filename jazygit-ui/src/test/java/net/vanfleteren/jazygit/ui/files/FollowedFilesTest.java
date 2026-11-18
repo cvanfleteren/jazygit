@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
+import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.Unlisted;
@@ -155,6 +156,65 @@ class FollowedFilesTest {
         assertEquals(
                 Option.none(),
                 FollowedFiles.change(listing(MODEL), Option.none(), Option.of(new Followed.WorkingTree())));
+    }
+
+    @Test
+    void theFrameAfterALockTellsWhatTheLockedListFollowsWithoutChangingTheFiles() {
+        // Enter on the highlighted commit locks the files to the commits (ADR 149).
+        Model locked = lockedTo(listing(MODEL), Scopes.COMMITS.pane(), FilesLock.In.LIST, Option.none());
+
+        assertEquals(
+                Option.of(new SelectionMsg.FilesLockedAt(new Followed.Files(new Changes.OfCommit(COMMIT)))),
+                change(locked, Scopes.BRANCHES.pane(), new Followed.Files(BRANCH)));
+    }
+
+    @Test
+    void whileLockedAnotherListWithTheFocusChangesNothing() {
+        Followed commit = new Followed.Files(new Changes.OfCommit(COMMIT));
+        Model locked = lockedTo(listing(MODEL), Scopes.COMMITS.pane(), FilesLock.In.LIST, Option.of(commit));
+
+        for (PaneId inUse : java.util.List.of(
+                Scopes.BRANCHES.pane(), Scopes.STASH.pane(), Scopes.WORKTREES.pane(), FilesPanel.PANE)) {
+            assertEquals(Option.none(), change(locked, inUse, new Followed.Files(BRANCH)), inUse.value());
+        }
+    }
+
+    @Test
+    void whileLockedTheFilesFollowTheHighlightOfTheLockedListWhereverTheFocusIs() {
+        Followed before = new Followed.Files(new Changes.OfCommit(new Sha("0000")));
+        Model locked = lockedTo(listing(MODEL), Scopes.COMMITS.pane(), FilesLock.In.LIST, Option.of(before));
+
+        assertEquals(
+                Option.of(followed(new Followed.Files(new Changes.OfCommit(COMMIT)), Scopes.COMMITS.pane())),
+                change(locked, Scopes.BRANCHES.pane(), new Followed.Files(BRANCH)));
+    }
+
+    @Test
+    void whatFListedStaysUntilTheLockedListFollowsSomethingElse() {
+        // F on a branch with a pull request lists those of the pull request; the branch follows its own files.
+        Model locked = lockedTo(
+                        listing(MODEL),
+                        Scopes.BRANCHES.pane(),
+                        FilesLock.In.LIST,
+                        Option.of(new Followed.Files(BRANCH)))
+                .mapRepoView(view -> view.mapFiles(
+                        files -> files.withCommitFiles(files.commitFiles().map(open -> open.withFollowed(false)))));
+
+        assertEquals(Option.none(), change(locked, Scopes.COMMITS.pane(), new Followed.Files(BRANCH)));
+    }
+
+    @Test
+    void aLockedListThatClosedLetsGoOfTheLock() {
+        Model locked = lockedTo(listing(MODEL), Scopes.BRANCHES.pane(), FilesLock.In.DIVERGENCE, Option.none());
+
+        assertEquals(
+                Option.of(new SelectionMsg.FilesUnlocked()),
+                change(locked, Scopes.BRANCHES.pane(), new Followed.Files(BRANCH)));
+    }
+
+    private static Model lockedTo(Model model, PaneId pane, FilesLock.In list, Option<Followed> at) {
+        return model.mapRepoView(
+                view -> view.mapFiles(files -> files.withLocked(Option.of(new FilesLock(pane, list, at, 1)))));
     }
 
     private static Option<?> change(Model model, PaneId inUse) {

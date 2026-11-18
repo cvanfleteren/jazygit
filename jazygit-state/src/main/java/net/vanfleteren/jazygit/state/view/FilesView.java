@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.state.PaneId;
  * @param unlisted    why the row highlighted in the pane with the focus has no files to list, and that pane, which the
  *                    pane says in place of the files of the working tree while no files of a commit are listed (ADR
  *                    141)
+ * @param locked      the list the pane is locked to, whose highlight it follows whichever pane has the focus (ADR 149)
  */
 @With
 public record FilesView(
@@ -24,10 +25,11 @@ public record FilesView(
         Option<CommitFilesView> commitFiles,
         Option<FileFilter> filter,
         Option<UnchangedNode> unchanged,
-        Option<UnlistedFor> unlisted) {
+        Option<UnlistedFor> unlisted,
+        Option<FilesLock> locked) {
 
-    public static final FilesView INITIAL =
-            new FilesView(FilesShown.CHANGED, Option.none(), Option.none(), Option.none(), Option.none());
+    public static final FilesView INITIAL = new FilesView(
+            FilesShown.CHANGED, Option.none(), Option.none(), Option.none(), Option.none(), Option.none());
 
     /**
      * What the pane lists for the pane with the focus that follows its highlight: the files of a commit, nothing, or
@@ -41,10 +43,20 @@ public record FilesView(
     }
 
     /**
-     * The list {@code Esc} in the pane goes back to: the one the files of a commit are of, or the one whose row has
-     * none to list; none while the pane lists the files of the working tree (ADR 141).
+     * The list {@code Esc} in the pane goes back to: the one it is locked to (ADR 149), the one the files of a commit
+     * are of, or the one whose row has none to list; none while the pane lists the files of the working tree (ADR
+     * 141).
      */
     public Option<PaneId> backTo() {
-        return commitFiles.map(CommitFilesView::pane).orElse(() -> unlisted.map(UnlistedFor::from));
+        return locked.map(FilesLock::pane)
+                .orElse(() -> commitFiles.map(CommitFilesView::pane))
+                .orElse(() -> unlisted.map(UnlistedFor::from));
+    }
+
+    /**
+     * This locked to {@code list} of the pane {@code pane}, anew (ADR 149).
+     */
+    public FilesView lockedTo(PaneId pane, FilesLock.In list) {
+        return withLocked(Option.of(FilesLock.of(pane, list, locked)));
     }
 }
