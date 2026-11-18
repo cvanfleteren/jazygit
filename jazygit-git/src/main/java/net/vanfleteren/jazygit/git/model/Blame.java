@@ -24,7 +24,22 @@ public record Blame(Vector<Line> lines) {
      */
     public static final int SHADES = 5;
 
+    /**
+     * The commit git blames the lines not committed yet on: a sha of zeros.
+     */
+    public static final Commit NOT_COMMITTED =
+            new Commit(new Sha("0".repeat(40)), "Not Committed Yet", Instant.EPOCH, "Version of the file", false);
+
     private static final Pattern HEADER = Pattern.compile("^([0-9a-f]{40}|[0-9a-f]{64}) (\\d+) (\\d+)(?: \\d+)?$");
+
+    /**
+     * {@code count} lines of the file at {@code path}, none of them committed yet: a file of a branch without commits,
+     * which has no {@code HEAD} to blame it against (ADR 147).
+     */
+    public static Blame uncommitted(int count, String path) {
+        return new Blame(
+                Vector.rangeClosed(1, count).map(number -> new Line(NOT_COMMITTED, number, path, Option.none())));
+    }
 
     /**
      * The line numbered {@code number}, from 1; none past the last line.

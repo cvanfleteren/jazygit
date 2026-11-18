@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.DiffLoad;
 import net.vanfleteren.jazygit.state.load.LoadFileDiff;
+import net.vanfleteren.jazygit.state.load.ReadBlame;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
@@ -33,9 +34,11 @@ public final class DiffOptionsUpdate {
         return switch (msg) {
             // The keys work everywhere, but not in a dialog, whose diff does not change.
             case DiffOptionsMsg m when model.popup().isDefined() -> Next.of(model);
+            // A version blamed is blamed again, as whitespace changes whom a line is blamed on (ADR 147).
             case DiffOptionsMsg.WhitespaceToggled() ->
                 changed(model.mapPreferences(
-                        preferences -> preferences.withIgnoreWhitespace(!preferences.ignoreWhitespace())));
+                                preferences -> preferences.withIgnoreWhitespace(!preferences.ignoreWhitespace())))
+                        .then(ReadBlame::blamed);
             case DiffOptionsMsg.StyleToggled() -> styled(model, DiffStyle::toggled);
             case DiffOptionsMsg.SplitToggled() -> styled(model, DiffStyle::splitToggled);
             case DiffOptionsMsg.WordsToggled() -> wordsToggled(model);

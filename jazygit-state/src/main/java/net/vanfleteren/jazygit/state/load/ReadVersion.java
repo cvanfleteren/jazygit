@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.diff.Blames;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.state.diff.WholeFile;
@@ -54,14 +55,27 @@ public record ReadVersion(
     }
 
     /**
-     * The file read whole of the version of the area, while it is read this way.
+     * The file read whole of the version of the area, while it is read this way. A file read again that changed since
+     * drops the blames read of it (ADR 147), whose lines are no longer its lines.
      */
     @Override
     public Target<DiffText> target() {
         return Target.inView(new Lens<RepoView, Loadable<DiffText>>(
                 view -> version(view).map(Version::whole),
                 (view, change) -> version(view)
-                        .map(version -> view.withVersion(area, version.withWhole(change.apply(version.whole()))))
+                        .map(version -> {
+                            Loadable<DiffText> whole = change.apply(version.whole());
+                            boolean changed = whole.toOption().isDefined()
+                                    && !whole.toOption().equals(version.whole().toOption());
+                            return view.withVersion(
+                                    area,
+                                    version.withWhole(whole)
+                                            .withBlames(
+                                                    changed
+                                                            ? Blames.none(version.blames()
+                                                                    .ignoreWhitespace())
+                                                            : version.blames()));
+                        })
                         .getOrElse(view)));
     }
 

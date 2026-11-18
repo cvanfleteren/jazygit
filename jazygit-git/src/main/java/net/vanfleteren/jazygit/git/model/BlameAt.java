@@ -31,6 +31,11 @@ public sealed interface BlameAt {
     record AtMergeBase(Sha base, Sha tip, String path) implements BlameAt {}
 
     /**
+     * The file at {@code HEAD}: the original of the staged changes.
+     */
+    record AtHead(String path) implements BlameAt {}
+
+    /**
      * The file in the index, blamed as if it were committed on {@code HEAD}.
      */
     record InIndex(String path) implements BlameAt {}

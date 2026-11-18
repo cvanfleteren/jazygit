@@ -102,6 +102,18 @@ class BlameTest {
     }
 
     @Test
+    void aFileOfABranchWithoutCommitsIsOneRunNotCommittedYet() {
+        Blame blame = Blame.uncommitted(3, "g.txt");
+
+        assertEquals(3, blame.lines().size());
+        assertTrue(blame.lines().forAll(line -> !line.commit().committed()));
+        assertEquals(List.of(1, 2, 3), blame.lines().map(Blame.Line::original).toList());
+        assertTrue(blame.startsRun(1));
+        assertFalse(blame.startsRun(2));
+        assertTrue(blame.shades().isEmpty());
+    }
+
+    @Test
     void whatIsNoPorcelainIsNoBlame() {
         assertTrue(Blame.parse("fatal: no such path").isEmpty());
         // A commit named for the first time without its details.

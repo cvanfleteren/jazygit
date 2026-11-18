@@ -267,7 +267,8 @@ class KeymapTest {
                         "changes.help.commitFiles.listed",
                         "changes.help.commitFiles.refresh",
                         "changes.help.commitFiles.version",
-                        "changes.help.commitFiles.render"),
+                        "changes.help.commitFiles.render",
+                        "changes.help.commitFiles.blame"),
                 descriptions(Scopes.COMMIT_FILES));
         assertEquals(
                 List.of(
@@ -280,6 +281,7 @@ class KeymapTest {
                         "changes.help.diff.foldAll",
                         "changes.help.diff.version",
                         "changes.help.diff.render",
+                        "changes.help.diff.blame",
                         "changes.help.diff.search",
                         "changes.help.diff.nextMatch",
                         "changes.help.diff.previousMatch",
@@ -297,6 +299,7 @@ class KeymapTest {
                         "changes.help.diff.foldAll",
                         "changes.help.diff.version",
                         "changes.help.diff.render",
+                        "changes.help.diff.blame",
                         "changes.help.diff.search",
                         "changes.help.diff.goToLine",
                         "changes.help.diff.copy"),

@@ -83,8 +83,9 @@ public final class LoadUpdate {
                         ? metadataChecked(done, List.of(Tuple.of((Load) load, stamp)))
                         : Next.of(done);
             // The cursor goes from the diff, which showed while the file was read, to the version asked for (ADR 102).
+            // A version shown blamed is blamed once it is read, and again once it is read again changed (ADR 147).
             case VersionRead read ->
-                Next.of(versionShown(read.kept(done), read.cmd().area()));
+                ReadBlame.blamed(versionShown(read.kept(done), read.cmd().area()));
             // What arrives after another search was run or another item was highlighted, or for a view closed since,
             // finds no target, and is dropped.
             case Read<?> read -> Next.of(read.kept(done));

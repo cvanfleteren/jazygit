@@ -42,7 +42,13 @@ public final class VersionAction {
                                         new Binding<DiffCursorAt>(
                                                 "ctrl+t",
                                                 "changes.help.diff.render",
-                                                at -> at.map(VersionMsg.RenderToggled::new))));
+                                                at -> at.map(VersionMsg.RenderToggled::new)))
+                                .add(
+                                        scope,
+                                        new Binding<DiffCursorAt>(
+                                                "b",
+                                                "changes.help.diff.blame",
+                                                at -> at.map(VersionMsg.BlameToggled::new))));
     }
 
     /**
@@ -52,11 +58,13 @@ public final class VersionAction {
         return keys.add(
                         Scopes.FILES,
                         onFile("ctrl+o", "changes.help.files.version", VersionMsg.FilesCycled::new),
-                        onFile("ctrl+t", "changes.help.files.render", VersionMsg.FilesRenderToggled::new))
+                        onFile("ctrl+t", "changes.help.files.render", VersionMsg.FilesRenderToggled::new),
+                        onFile("b", "changes.help.files.blame", VersionMsg.FilesBlameToggled::new))
                 .add(
                         Scopes.COMMIT_FILES,
                         onFile("ctrl+o", "changes.help.commitFiles.version", VersionMsg.FilesCycled::new),
-                        onFile("ctrl+t", "changes.help.commitFiles.render", VersionMsg.FilesRenderToggled::new));
+                        onFile("ctrl+t", "changes.help.commitFiles.render", VersionMsg.FilesRenderToggled::new),
+                        onFile("b", "changes.help.commitFiles.blame", VersionMsg.FilesBlameToggled::new));
     }
 
     /**
