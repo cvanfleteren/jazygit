@@ -32,11 +32,13 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import java.time.Instant;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
+import net.vanfleteren.jazygit.content.diff.BlameFooter;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
 import net.vanfleteren.jazygit.content.diff.Halves;
 import net.vanfleteren.jazygit.content.diff.LineGoal;
@@ -173,8 +175,18 @@ public final class ScrollArea {
         Option<StyledElement<?>> line = typing.filter(ignored -> focused)
                 .<StyledElement<?>>map(searchLine::field)
                 .orElse(() -> number.filter(ignored -> focused).map(numberLine::field));
-        return line.<Element>map(field -> new PasteTarget(column(field, fitted).fill(), id, this::pasted))
+        Element shownWithLine = line.<Element>map(
+                        field -> new PasteTarget(column(field, fitted).fill(), id, this::pasted))
                 .getOrElse(fitted);
+        // Under a version shown blamed, the commit of the line of the cursor (ADR 147).
+        return model.repoView()
+                .version(area.id(), shown.content())
+                .flatMap(version -> BlameFooter.text(version, cursor.map(DiffCursor::anchor), Instant.now()))
+                .<Element>map(said -> column(
+                                shownWithLine,
+                                text(" " + said).addClass(Theme.Classes.DIM).length(1))
+                        .fill())
+                .getOrElse(shownWithLine);
     }
 
     private void pasted(PasteEvent event) {
