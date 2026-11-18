@@ -412,7 +412,7 @@ class BlameUpdateTest {
      * A loaded model drawing diffs in the rich view, where a version shows, as the tests start in the plain one.
      */
     private static Model rich() {
-        Model rich = Update.update(loaded(), new DiffOptionsMsg.StyleToggled()).model();
+        Model rich = Update.update(loaded(), new DiffOptionsMsg.StyleChosen(DiffStyle.RICH)).model();
         assertEquals(DiffStyle.RICH, rich.preferences().diffLook().style());
         return rich;
     }

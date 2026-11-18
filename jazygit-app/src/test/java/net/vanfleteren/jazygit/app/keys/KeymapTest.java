@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.branches.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.branches.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.branches.repos.RecentReposMsg;
-import net.vanfleteren.jazygit.changes.diff.DiffFiltersMsg;
 import net.vanfleteren.jazygit.changes.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.changes.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpMsg;
@@ -63,21 +62,15 @@ class KeymapTest {
     }
 
     @Test
-    void ctrlFShowsTheDiffFilters() {
+    void ctrlDShowsTheDiffOptionsAndTheirSwitchesHaveNoKeysOfTheirOwn() {
         assertEquals(
-                Option.of(new DiffFiltersMsg.Requested()),
-                keymap.handleGlobal(KeyEvent.ofChar('f', dev.tamboui.tui.event.KeyModifiers.CTRL)));
-        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('f')));
-        assertTrue(keymap.globals().exists(global -> global.label().equals("ctrl+f")));
-    }
-
-    @Test
-    void ctrlWTogglesWhetherChangesToWhitespaceOnlyAreShown() {
-        assertEquals(
-                Option.of(new DiffOptionsMsg.WhitespaceToggled()),
-                keymap.handleGlobal(KeyEvent.ofChar('w', dev.tamboui.tui.event.KeyModifiers.CTRL)));
-        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('w')));
-        assertTrue(keymap.globals().exists(global -> global.label().equals("ctrl+w")));
+                Option.of(new DiffOptionsMsg.Requested()),
+                keymap.handleGlobal(KeyEvent.ofChar('d', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+        assertTrue(keymap.globals().exists(global -> global.label().equals("ctrl+d")));
+        for (char key : new char[] {'f', 'w', 'e'}) {
+            assertEquals(
+                    Option.none(), keymap.handleGlobal(KeyEvent.ofChar(key, dev.tamboui.tui.event.KeyModifiers.CTRL)));
+        }
     }
 
     @Test

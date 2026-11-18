@@ -13,9 +13,10 @@ import net.vanfleteren.jazygit.ui.widgets.PickDialog;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog.Cell;
 
 /**
- * The popup of the diff filters (ADR 144): first the switch that turns them all off for this session, then each filter,
- * enabled or not, the built-in ones by language before those by path, then the user's. Space or Enter switches the
- * highlighted row, at once; the popup stays open. A filter that cannot be used says why, and is not enabled.
+ * The popup of the diff filters (ADR 144), opened from the one of the diff options, which Escape goes back to: each
+ * filter, enabled or not, the built-in ones by language before those by path, then the user's. Space or Enter switches
+ * the highlighted row, at once; the popup stays open. A filter that cannot be used says why, and is not enabled. The
+ * switch that turns them all off for this session is in the popup of the options.
  */
 public final class DiffFiltersDialog {
 
@@ -25,7 +26,9 @@ public final class DiffFiltersDialog {
                     popup -> Messages.get("changes.dialog.diffFilters.title"),
                     popup -> rows(popup.filters()),
                     msg -> msg)
-            .pickedBySpace();
+            .pickedBySpace()
+            .cancelledBy(DiffFiltersMsg.Closed::new)
+            .hintedBy("changes.dialog.diffFilters.hint");
     /**
      * The columns of what a filter applies to shown at most.
      */
@@ -41,20 +44,9 @@ public final class DiffFiltersDialog {
     }
 
     /**
-     * The rows of {@code filters}: the switch, then each filter.
+     * The rows of {@code filters}, one for each filter.
      */
     static List<PickDialog.Row<DiffFiltersMsg>> rows(DiffFilters filters) {
-        PickDialog.Row<DiffFiltersMsg> all = new PickDialog.Row<>(
-                new DiffFiltersMsg.AllToggled(),
-                List.of(
-                        Cell.of(box(!filters.off())),
-                        Cell.of(Messages.get("changes.dialog.diffFilters.all")),
-                        Cell.styled(
-                                Messages.get(
-                                        filters.off()
-                                                ? "changes.dialog.diffFilters.off"
-                                                : "changes.dialog.diffFilters.on"),
-                                Theme.Classes.DIM)));
         List<DiffFilters.Choice> ordered = filters.all()
                 .filter(choice -> choice.definition().builtIn()
                         && !choice.definition().languages().isEmpty())
@@ -62,7 +54,7 @@ public final class DiffFiltersDialog {
                         .filter(choice -> choice.definition().builtIn()
                                 && choice.definition().languages().isEmpty()))
                 .appendAll(filters.all().filter(choice -> !choice.definition().builtIn()));
-        return ordered.map(DiffFiltersDialog::row).prepend(all);
+        return ordered.map(DiffFiltersDialog::row);
     }
 
     private static PickDialog.Row<DiffFiltersMsg> row(DiffFilters.Choice choice) {
@@ -86,7 +78,7 @@ public final class DiffFiltersDialog {
                         said.capped(SCOPE)));
     }
 
-    private static String box(boolean on) {
+    static String box(boolean on) {
         return on ? "[x]" : "[ ]";
     }
 

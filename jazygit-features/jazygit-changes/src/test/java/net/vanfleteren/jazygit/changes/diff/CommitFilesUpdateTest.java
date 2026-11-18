@@ -159,7 +159,7 @@ class CommitFilesUpdateTest {
                         new LoadMsg.CommitFileDiffLoaded(COMMIT, List.of(A), DiffOptions.DEFAULT, DiffText.of("+a")))
                 .model();
 
-        Next next = Update.update(open, new DiffOptionsMsg.StyleToggled());
+        Next next = Update.update(open, new DiffOptionsMsg.StyleChosen(DiffStyle.RICH));
 
         DiffOptions rich = DiffOptions.DEFAULT.withFirstParent(true);
         assertEquals(DiffStyle.RICH, next.model().preferences().diffLook().style());
@@ -208,7 +208,7 @@ class CommitFilesUpdateTest {
                         split.model().preferences().settings().withDiffStyle(DiffStyle.RICH))));
         assertEquals(
                 DiffStyle.PLAIN,
-                Update.update(split.model(), new DiffOptionsMsg.StyleToggled())
+                Update.update(split.model(), new DiffOptionsMsg.StyleChosen(DiffStyle.PLAIN))
                         .model()
                         .preferences()
                         .diffLook()

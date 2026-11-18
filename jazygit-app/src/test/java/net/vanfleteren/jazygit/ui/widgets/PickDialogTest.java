@@ -296,6 +296,49 @@ class PickDialogTest {
         assertEquals(java.util.List.of(new PopupMsg.Dismissed(BranchPopup.class)), dispatched);
     }
 
+    @Test
+    void theArrowsToTheSidesStepARowThatHoldsAValueAndSpaceSendsWhatTheRowSays() throws Exception {
+        PickDialog<BranchPopup, String> settings = new PickDialog<>(
+                new PickDialog.Spec<>(
+                                "pick",
+                                BranchPopup.class,
+                                popup -> "Options",
+                                popup -> List.of(
+                                        PickDialog.Row.of("style").withSteps("previous style", "next style"),
+                                        PickDialog.Row.of("filters").withSpace("all filters")),
+                                Picked::new)
+                        .pickedBySpace()
+                        .hintedBy("changes.dialog.diffOptions.hint"),
+                cursor);
+        Supplier<Element> view = () -> stack(
+                text("background"),
+                settings.render(cursor.on(TestModels.loaded().openPopup(new BranchPopup(List.empty()))))
+                        .get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            String screen = RenderedText.ofLarge(runner, view);
+            assertTrue(screen.contains("(←/→) change"), screen);
+            SettledPilot.of(runner).press(KeyCode.RIGHT);
+            SettledPilot.of(runner).press(KeyCode.LEFT);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.RIGHT);
+            type(runner, " ");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(
+                        new Picked("next style"),
+                        new Picked("previous style"),
+                        new Picked("style"),
+                        new Picked("all filters"),
+                        new Picked("filters")),
+                dispatched.stream().filter(Picked.class::isInstance).toList());
+    }
+
     private static void type(ToolkitTestRunner runner, String keys) {
         keys.chars().forEach(key -> SettledPilot.of(runner).press((char) key));
         SettledPilot.of(runner).pause();

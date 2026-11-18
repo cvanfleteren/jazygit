@@ -16,7 +16,7 @@ def staged_java_change(repo, jazygit, env, settings=""):
     ui = jazygit()
     ui.files.select(FilesPane.ALL)
     ui.app.wait_for("diff --git a/A.java b/A.java")
-    ui.app.press("ctrl+d")
+    ui.show_rich_diffs()
     ui.app.wait_for("modified  A.java")
     return ui
 

@@ -8,6 +8,8 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.changes.commit.amend.AmendPopup;
+import net.vanfleteren.jazygit.changes.commit.amend.AmendTarget;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -43,13 +45,25 @@ class DiffFiltersUpdateTest {
             """));
 
     @Test
-    void ctrlFOpensThePopupOfTheFilters() {
-        Next next = Update.update(loaded(), new DiffFiltersMsg.Requested());
+    void enterOnTheFiltersOfTheDiffOptionsOpensThePopupOfTheFiltersAndEscapeGoesBack() {
+        Model options = Update.update(loaded(), new DiffOptionsMsg.Requested()).model();
+
+        Next next = Update.update(options, new DiffFiltersMsg.Requested());
 
         DiffFiltersPopup popup = next.model().popup(DiffFiltersPopup.class).get();
         assertTrue(
                 popup.filters().all().exists(choice -> choice.definition().id().equals("java-imports")));
         assertEquals(List.empty(), next.cmds());
+        Model back = Update.update(next.model(), new DiffFiltersMsg.Closed()).model();
+        assertTrue(back.popup(DiffOptionsPopup.class).isDefined());
+        assertEquals(Option.of(DiffOptionsDialog.FILTERS_ROW), back.listCursor().line());
+    }
+
+    @Test
+    void thePopupOfTheFiltersDoesNotOpenOverAnotherDialog() {
+        Model model = loaded().openPopup(new AmendPopup(new AmendTarget.LastCommit()));
+
+        assertSame(model, Update.update(model, new DiffFiltersMsg.Requested()).model());
     }
 
     @Test
@@ -90,8 +104,9 @@ class DiffFiltersUpdateTest {
     }
 
     @Test
-    void theSwitchTurnsAllOffForTheSessionWithoutSaving() {
-        Model model = enabled(loaded());
+    void theSwitchTurnsAllOffForTheSessionWithoutSavingAndShowsItInTheDiffOptions() {
+        Model model =
+                Update.update(enabled(loaded()), new DiffOptionsMsg.Requested()).model();
 
         Next off = Update.update(model, new DiffFiltersMsg.AllToggled());
 
@@ -99,6 +114,7 @@ class DiffFiltersUpdateTest {
         assertEquals(
                 List.of("java-imports"), off.model().preferences().settings().diffFilters());
         assertEquals(List.empty(), off.cmds());
+        assertTrue(off.model().popup(DiffOptionsPopup.class).get().filters().off());
         assertFalse(Update.update(off.model(), new DiffFiltersMsg.AllToggled())
                 .model()
                 .preferences()
@@ -108,14 +124,13 @@ class DiffFiltersUpdateTest {
     }
 
     @Test
-    void theDialogListsTheSwitchFirstThenTheFiltersByLanguageThenByPath() {
+    void theDialogListsTheFiltersByLanguageThenByPath() {
         List<PickDialog.Row<DiffFiltersMsg>> rows =
                 DiffFiltersDialog.rows(enabled(loaded()).preferences().diffFilters());
 
-        assertEquals(new DiffFiltersMsg.AllToggled(), rows.head().value());
-        assertEquals(new DiffFiltersMsg.Toggled("java-imports"), rows.get(1).value());
-        assertEquals("[x]", rows.get(1).cells().head().text());
-        assertEquals("[ ]", rows.get(2).cells().head().text());
+        assertEquals(new DiffFiltersMsg.Toggled("java-imports"), rows.head().value());
+        assertEquals("[x]", rows.head().cells().head().text());
+        assertEquals("[ ]", rows.get(1).cells().head().text());
         assertTrue(rows.indexWhere(row -> row.value().equals(new DiffFiltersMsg.Toggled("java-imports")))
                 < rows.indexWhere(row -> row.value().equals(new DiffFiltersMsg.Toggled("lockfiles"))));
     }

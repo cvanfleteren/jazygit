@@ -16,8 +16,8 @@ import net.vanfleteren.jazygit.git.model.Sha;
 public sealed interface ScrolledContent {
 
     /**
-     * Whether {@code other} shows the changes this shows, read again, as after {@code R} or Ctrl+W: the cursor of a
-     * rich diff then stays on its stop (ADR 60).
+     * Whether {@code other} shows the changes this shows, read again, as after {@code R} or ignoring whitespace:
+     * the cursor of a rich diff then stays on its stop (ADR 60).
      */
     default boolean sameChanges(ScrolledContent other) {
         return switch (this) {
