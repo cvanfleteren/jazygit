@@ -85,8 +85,9 @@ public final class ContentView {
 
     /**
      * What the content panel shows next to the pane that has the focus, {@code focus}, as far as a step of {@code J}
-     * or {@code K} past a file the diff filters hide all of needs it (ADR 144): what each area shows, and whether all
-     * the changes they show are hidden; none when an area shows no diff, as while one is read.
+     * or {@code K} past a file the diff filters hide all of needs it (ADR 144): what each area shows, and how much of
+     * the changes they show the filters hide: all of them, not all, or {@link Hidden#NO_DIFF} when no area or not
+     * every area shows a diff.
      */
     public static Filtered filtered(Model model, Option<Focus> focus) {
         List<Shown.Area> areas = of(model, focus).areas();
@@ -96,23 +97,28 @@ public final class ContentView {
             case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
             default -> Option.<ShownDiff>none();
         });
-        Hidden hidden;
-        if (diffs.isEmpty() || !diffs.forAll(Option::isDefined)) {
-            hidden = Hidden.NO_DIFF;
-        } else {
-            hidden = diffs.flatMap(diff -> diff).forAll(diff -> {
-                        Expansion.Folded folded = diff.folded();
-                        return folded.diff().files().nonEmpty()
-                                && folded.diff()
-                                        .files()
-                                        .forAll(file -> folded.hiding(
-                                                        file.file().path())
-                                                .all());
-                    })
-                    ? Hidden.ALL
-                    : Hidden.NOT_ALL;
-        }
+        Hidden hidden = !allShowDiffs(diffs)
+                ? Hidden.NO_DIFF
+                : diffs.flatMap(diff -> diff).forAll(ContentView::hidesAll) ? Hidden.ALL : Hidden.NOT_ALL;
         return new Filtered(areas.map(Shown.Area::content), hidden);
+    }
+
+    /**
+     * Whether there are areas, {@code diffs} holding what each shows if it is a diff, and each of them shows a diff.
+     */
+    private static boolean allShowDiffs(List<Option<ShownDiff>> diffs) {
+        return diffs.nonEmpty() && diffs.forAll(Option::isDefined);
+    }
+
+    /**
+     * Whether the diff filters hide all the changes of {@code diff}: it has files, and of each of them all its hunks.
+     */
+    private static boolean hidesAll(ShownDiff diff) {
+        Expansion.Folded folded = diff.folded();
+        return folded.diff().files().nonEmpty()
+                && folded.diff()
+                        .files()
+                        .forAll(file -> folded.hiding(file.file().path()).all());
     }
 
     /**
@@ -953,7 +959,7 @@ public final class ContentView {
      * What the content panel shows, as {@link #filtered} gives it.
      *
      * @param contents what each of its areas shows
-     * @param hidden   whether the diff filters hide all the changes they show
+     * @param hidden   how much of the changes they show the diff filters hide: all, not all, or no diff is shown
      */
     public record Filtered(List<ScrolledContent> contents, Hidden hidden) {}
 
@@ -965,7 +971,7 @@ public final class ContentView {
         ALL,
         /** Not all of them. */
         NOT_ALL,
-        /** An area shows no diff, as while one is read. */
+        /** No area shows a diff, as the log, or one of them does not, as while one is read. */
         NO_DIFF
     }
 
