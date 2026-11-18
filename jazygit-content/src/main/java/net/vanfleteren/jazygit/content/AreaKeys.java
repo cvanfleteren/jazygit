@@ -9,8 +9,8 @@ import static net.vanfleteren.jazygit.content.Reaction.unhandled;
 import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.Seq;
 import io.vavr.control.Option;
-import java.util.function.BiFunction;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.Msg;
@@ -51,21 +51,21 @@ final class AreaKeys {
     private AreaKeys() {}
 
     /**
-     * What {@code event} does before the area is left on it: the lines above the area take the keys while one is open;
-     * else Escape, and Left where it leaves as Escape does, drop an open range, then a search kept (ADR 60, 126). Left
-     * held down at the left edge stops there: only pressing it again leaves (ADR 118). Unhandled, the area has let go
-     * of what the title said.
+     * What {@code event} does before the area is left on it: the line above the area of one of its {@code tools} takes
+     * the keys while it is open; else Escape, and Left where it leaves as Escape does, drop an open range, then what a
+     * tool drops on it, as a search kept (ADR 60, 126). Left held down at the left edge stops there: only pressing it
+     * again leaves (ADR 118). Unhandled, the area has let go of what the title said, and the tools of what they waited
+     * for.
      */
-    static Reaction beforeLeaving(AreaState state, Viewport view, KeyEvent event, Edits edits) {
+    static Reaction beforeLeaving(AreaState state, Viewport view, KeyEvent event, Seq<AreaTool> tools) {
         boolean focused = state.focused();
-        if (focused && state.search().typing().isDefined()) {
-            return AreaSearch.typed(state, view, state.search().typing().get(), event, edits.search());
-        }
-        if (focused && state.line().number().isDefined()) {
-            return AreaLines.typed(state, view, state.line().number().get(), event, edits.number());
+        Option<Reaction> typed =
+                focused ? AreaTool.first(tools, tool -> tool.typed(state, view, event)) : Option.none();
+        if (typed.isDefined()) {
+            return typed.get();
         }
         AreaState pressed =
-                focused ? state.withNotice(Option.none()).withLine(state.line().withWanted(Option.none())) : state;
+                focused ? tools.foldLeft(state.withNotice(Option.none()), (at, tool) -> tool.pressed(at)) : state;
         if (atLeftEdge(state, event) && event.isRepeat()) {
             return handled(pressed, view);
         }
@@ -73,9 +73,9 @@ final class AreaKeys {
         return pressed.cursor()
                 .filter(on -> leaving && focused && on.mark().isDefined())
                 .map(ranged -> moved(pressed, view, ranged.marked().get()))
-                .orElse(() -> Option.when(
-                        focused && event.isCancel() && pressed.searching(),
-                        () -> handled(pressed, view).sending(new ContentSearchMsg.Cleared())))
+                .orElse(() -> focused
+                        ? AreaTool.first(tools, tool -> tool.beforeLeaving(pressed, view, event))
+                        : Option.none())
                 .getOrElse(() -> unhandled(pressed, view));
     }
 
@@ -96,18 +96,15 @@ final class AreaKeys {
     }
 
     /**
-     * What {@code event} does in the area with the focus, as it did not leave on it: key handlers also see keys typed
-     * elsewhere, which the area does not act on.
+     * What {@code event} does in the area with the focus, as it did not leave on it: the keys of its {@code tools}
+     * first. Key handlers also see keys typed elsewhere, which the area does not act on.
      */
-    static Reaction afterLeaving(AreaState state, Viewport view, KeyEvent event) {
+    static Reaction afterLeaving(AreaState state, Viewport view, KeyEvent event, Seq<AreaTool> tools) {
         if (!state.focused()) {
             return unhandled(state, view);
         }
         Option<DiffCursor> cursor = state.cursor();
-        return Option.when(
-                        event.isChar(AreaLines.GO_TO_LINE) && !event.hasCtrl() && !event.hasAlt(),
-                        () -> AreaLines.opened(state, view))
-                .orElse(() -> AreaSearch.step(state, view, event))
+        return AreaTool.first(tools, tool -> tool.key(state, view, event))
                 .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(state, view, to)))
                 .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(
                                 state.review() ? Scopes.PULL_REQUEST_DIFF : Scopes.DIFF,
@@ -237,13 +234,4 @@ final class AreaKeys {
                         Option.of(cursor.anchor()),
                         cursor.markAnchor()));
     }
-
-    /**
-     * How the lines above an area edit their text on a key: the text after it, if it edits it.
-     *
-     * @param search the line to type the query of a search in (ADR 126)
-     * @param number the line to type a line number in (ADR 140)
-     */
-    record Edits(
-            BiFunction<String, KeyEvent, Option<String>> search, BiFunction<String, KeyEvent, Option<String>> number) {}
 }
