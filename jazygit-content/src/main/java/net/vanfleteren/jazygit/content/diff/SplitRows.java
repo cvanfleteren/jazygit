@@ -110,7 +110,7 @@ final class SplitRows {
                 .appendAll(RichDiff.hunks(
                         parsed.hunks().size(),
                         hiding,
-                        at -> List.of(() -> {
+                        (at, headed) -> List.of(() -> {
                             ParsedHunk hunk = parsed.hunks().get(at);
                             int start = starts.get(at);
                             Hunk shown = new Hunk(
@@ -121,11 +121,13 @@ final class SplitRows {
                             boolean followed = unplaced
                                     || trailing.isDefined()
                                     || at < parsed.hunks().size() - 1;
-                            List<Marked> header = gapBefore
-                                    .get(at)
-                                    .map(gap -> marker(gap, fold, layout))
-                                    .orElse(Option.when(at > 0, () -> List.of(Marked.plain(rule(layout)))))
-                                    .getOrElse(List.empty());
+                            List<Marked> header = !headed
+                                    ? List.<Marked>empty()
+                                    : gapBefore
+                                            .get(at)
+                                            .map(gap -> marker(gap, fold, layout))
+                                            .orElse(Option.when(at > 0, () -> List.of(Marked.plain(rule(layout)))))
+                                            .getOrElse(List.empty());
                             List<LinePairs.Row> rows = LinePairs.rows(hunk.lines());
                             return header.appendAll(rows.zipWithIndex()
                                     .flatMap(row ->

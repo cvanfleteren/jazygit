@@ -333,13 +333,14 @@ public final class RichDiff {
                 .appendAll(hunks(
                         parsed.hunks().size(),
                         hiding,
-                        at -> hunk(
+                        (at, headed) -> hunk(
                                 parsed.hunks().get(at).hunk(),
                                 byHunk.get(at),
                                 groups.get(at),
                                 at,
                                 afterLast || at < parsed.hunks().size() - 1,
                                 gapBefore.get(at),
+                                headed,
                                 fold,
                                 layout),
                         at -> gapBefore.get(at).toList().map(gap -> marker(gap, fold, layout)),
@@ -563,6 +564,7 @@ public final class RichDiff {
             int index,
             boolean followed,
             Option<Folding.Gap> gap,
+            boolean headed,
             Expansion.Fold fold,
             Layout layout) {
         boolean first = index == 0;
@@ -575,14 +577,18 @@ public final class RichDiff {
         // have none, so no range is started on them: a range is of the diff (ADR 102).
         Option<DiffStops.HunkAt> at =
                 Option.when(layout.version().isEmpty(), () -> new DiffStops.HunkAt(layout.file(), index));
-        List<Pending> header = gap.isDefined()
-                ? gap.toList().map(before -> marker(before, fold, layout))
-                : hunk.header().isEmpty() || (first && hunk.numbered())
-                        ? List.empty()
-                        : List.of(() -> List.of(Marked.plain(
-                                hunk.numbered()
-                                        ? Line.from(rule)
-                                        : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)))));
+        List<Pending> header = !headed
+                ? List.<Pending>empty()
+                : gap.isDefined()
+                        ? gap.toList().map(before -> marker(before, fold, layout))
+                        : hunk.header().isEmpty() || (first && hunk.numbered())
+                                ? List.empty()
+                                : List.of(() -> List.of(Marked.plain(
+                                        hunk.numbered()
+                                                ? Line.from(rule)
+                                                : Line.from(
+                                                        rule,
+                                                        styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)))));
         // No line of the diff is wider than the bar of its file, which is as wide as the file: each is measured at most
         // that wide without being drawn.
         Option<Integer> within = Option.some(layout.fileWidth());
@@ -649,7 +655,7 @@ public final class RichDiff {
     static List<Pending> hunks(
             int count,
             Filtering.Hiding hiding,
-            IntFunction<List<Pending>> shown,
+            BiFunction<Integer, Boolean, List<Pending>> shown,
             IntFunction<List<Pending>> gap,
             BiFunction<List<HiddenHunks.Hidden>, Boolean, Pending> marker) {
         // Each hunk is shown, hidden, or opened: hidden and opened ones run on while the next is too.
@@ -670,11 +676,14 @@ public final class RichDiff {
             case 1 ->
                 gap.apply(run.head())
                         .append(marker.apply(run.flatMap(hiding::of).distinctBy(HiddenHunks.Hidden::start), false));
+            // The marker of hunks opened takes the place of the rule of the first, under the marker of the lines left
+            // out before it, as the marker of hunks hidden does.
             case 2 ->
-                run.flatMap(shown::apply)
-                        .prepend(marker.apply(
-                                run.flatMap(hiding::openedAt).distinctBy(HiddenHunks.Hidden::start), true));
-            default -> shown.apply(run.head());
+                gap.apply(run.head())
+                        .append(marker.apply(run.flatMap(hiding::openedAt).distinctBy(HiddenHunks.Hidden::start), true))
+                        .appendAll(shown.apply(run.head(), false))
+                        .appendAll(run.tail().flatMap(at -> shown.apply(at, true)));
+            default -> shown.apply(run.head(), true);
         });
     }
 

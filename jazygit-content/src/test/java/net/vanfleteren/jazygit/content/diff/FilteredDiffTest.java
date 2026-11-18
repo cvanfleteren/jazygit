@@ -131,6 +131,19 @@ class FilteredDiffTest {
     }
 
     @Test
+    void anOpenedMarkerStaysUnderTheMarkerOfTheLinesLeftOutBeforeIt() {
+        Opened opened =
+                new Opened(new ScrolledContent.Note("x"), HashSet.of(new Opened.Hunk("A.java", new HunkStart(40, 40))));
+
+        List<String> lines = text(drawn(filtering().withOpened(Option.of(opened)), DIFF, false))
+                .map(String::stripTrailing);
+        int gap = lines.indexOf("┄┄┄┄┄ │ 17 lines hidden ┄");
+
+        assertEquals("┄┄┄┄┄ │ ┄ 2 filtered changes shown · Java imports ┄", lines.get(gap + 1));
+        assertEquals("40 40 │   y", lines.get(gap + 2));
+    }
+
+    @Test
     void theTitleSaysHowManyHunksAreHiddenOrThatTheFiltersAreOff() {
         assertEquals(
                 Option.of("2 hunks filtered"), drawn(filtering(), DIFF, false).note());

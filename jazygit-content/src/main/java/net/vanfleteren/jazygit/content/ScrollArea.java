@@ -838,8 +838,9 @@ public final class ScrollArea {
                                     styled.flatMap(shown -> shown.split().divider()))))
                     .map(clicked -> {
                         EventResult result = moved(clicked, content);
-                        // A click on a marker shows all the lines it leaves out, as Enter on it does (ADR 77).
-                        if (clicked.anchor() instanceof Anchor.Gap) {
+                        // A click on a marker shows all the lines it leaves out, as Enter on it does (ADR 77), and
+                        // one of hunks the diff filters hide shows them, or hides them again (ADR 144).
+                        if (clicked.anchor() instanceof Anchor.Gap || clicked.anchor() instanceof Anchor.Filtered) {
                             KEYMAP.handle(Scopes.DIFF, KeyEvent.ofKey(KeyCode.ENTER), Option.of(at(clicked, content)))
                                     .forEach(dispatch);
                         }

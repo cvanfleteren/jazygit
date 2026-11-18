@@ -1674,6 +1674,47 @@ class ContentPanelTest {
     }
 
     @Test
+    void aClickOnAMarkerOfHunksTheDiffFiltersHideShowsThem() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel clicking = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        Model model = showingCommit("""
+                diff --git a/A.java b/A.java
+                --- a/A.java
+                +++ b/A.java
+                @@ -1,2 +1,2 @@
+                 package a;
+                -import a.B;
+                +import a.C;
+                @@ -20,2 +20,2 @@
+                 x
+                -int a;
+                +int b;
+                """)
+                .mapPreferences(preferences -> preferences.withSettings(
+                        preferences.settings().withDiffStyle(DiffStyle.RICH).withDiffFilters(List.of("java-imports"))));
+        AreaId area = clicking.areaOfPane(model, CommitsPanel.PANE).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> clicking.render(model, area))) {
+            java.util.List<String> screen = RenderedText.ofLarge(testRunner, () -> clicking.render(model, area))
+                    .lines()
+                    .toList();
+            assertTrue(screen.stream().anyMatch(line -> line.contains("filtered changes")), String.join("\n", screen));
+            int marker = java.util.stream.IntStream.range(0, screen.size())
+                    .filter(row -> screen.get(row).contains("filtered changes"))
+                    .findFirst()
+                    .getAsInt();
+            dev.tamboui.layout.Rect drawn = SettledPilot.of(testRunner).findElement(area.id());
+
+            SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, marker);
+        }
+
+        assertTrue(
+                List.ofAll(dispatched)
+                        .exists(net.vanfleteren.jazygit.changes.diff.FilteredMsg.Opened.class::isInstance),
+                dispatched.toString());
+    }
+
+    @Test
     void aClickPutsTheCursorOfARichDiffOnTheRowClickedButNotOnItsBorder() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel clicking = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
