@@ -45,6 +45,9 @@ final class FileTreeList<T extends Pathed> {
     private static final String ROOT_NAME = "/";
     // TamboUI's default, which indents every node.
     private static final String HIGHLIGHT_SYMBOL = "> ";
+    // The cells a level of depth takes: the guides shortened to "├─", "│ " and "└─", half of TamboUI's default, so
+    // that deep files keep room for their names.
+    private static final int INDENT_WIDTH = 2;
 
     private final TreeElement<FileTree<T>> tree;
     private final Function<FileTree.File<T>, String> label;
@@ -108,6 +111,7 @@ final class FileTreeList<T extends Pathed> {
         tree = Toolkit.<FileTree<T>>tree()
                 .id(id)
                 .focusable()
+                .indentWidth(INDENT_WIDTH)
                 .scrollbar(ScrollBarPolicy.AS_NEEDED)
                 .scrollbarThumbColor(BorderBar.FOUND)
                 .nodeRenderer(this::drawNode);
@@ -344,8 +348,13 @@ final class FileTreeList<T extends Pathed> {
     private StyledElement<?> drawNode(TreeNode<FileTree<T>> node) {
         // Drawn again, the widget knows the rows a step opened.
         steppedTo = Option.none();
-        StyledElement<?> element =
-                node.data() instanceof FileTree.File<T> file ? drawFile.apply(file) : Toolkit.text(node.label());
+        // A directory merged with its only child directories can be long, so it keeps both ends when it does not fit.
+        // What the tree says instead of files, such as an error, is cut at its end like any other text.
+        StyledElement<?> element = switch (node.data()) {
+            case FileTree.File<T> file -> drawFile.apply(file);
+            case FileTree.Dir<T> dir -> Toolkit.text(node.label()).ellipsisMiddle();
+            case null -> Toolkit.text(node.label());
+        };
         drawn = drawn.prepend(new Drawn<>(node, element));
         return element;
     }
