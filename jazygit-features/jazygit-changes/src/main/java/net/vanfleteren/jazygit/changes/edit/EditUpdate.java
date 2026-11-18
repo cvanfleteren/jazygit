@@ -93,8 +93,9 @@ public final class EditUpdate {
     }
 
     /**
-     * Where the line {@code on} of the old file is in the new one: the first line of the new file after it in its
-     * file, else the last one before it, else the first.
+     * Where the line {@code on} of the old file is in the new one: its own number there, as a context line on the left
+     * of the split view has (ADR 139); for a removed line, the first line of the new file after it in its file, else
+     * the last one before it, else the first.
      */
     private static int removed(DiffLines diff, Anchor.OnLine on) {
         Vector<DiffLines.Line> lines = diff.lines();
@@ -102,7 +103,7 @@ public final class EditUpdate {
         if (at < 0) {
             return 1;
         }
-        Vector<Integer> after = numbers(lines.drop(at + 1), on.path());
+        Vector<Integer> after = numbers(lines.drop(at), on.path());
         Vector<Integer> before = numbers(lines.take(at), on.path());
         return after.headOption().orElse(before::lastOption).getOrElse(1);
     }

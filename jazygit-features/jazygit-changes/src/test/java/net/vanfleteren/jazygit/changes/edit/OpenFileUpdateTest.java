@@ -11,11 +11,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.files.StubEditor;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.HiddenHunks.Ranges;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -70,10 +72,21 @@ class OpenFileUpdateTest {
                 preferences.withSettings(preferences.settings().withEditors(new Editors(List.of(editors)))));
     }
 
+    /**
+     * What {@code e} on {@code cursor} in the changes of the stash runs, with Neovim the one editor that opens files.
+     */
+    private static List<?> opened(Anchor cursor) {
+        return Update.update(model(NVIM), new EditMsg.AtCursor(at(cursor))).cmds();
+    }
+
     private static DiffCursorAt at(Anchor cursor) {
+        return at(CONTENT, cursor);
+    }
+
+    private static DiffCursorAt at(ScrolledContent content, Anchor cursor) {
         return new DiffCursorAt(
                 AREA,
-                new Scrolled(CONTENT, 0, 0, Option.of(cursor), Option.none()),
+                new Scrolled(content, 0, 0, Option.of(cursor), Option.none()),
                 cursor,
                 Option.none(),
                 Option.none(),
@@ -129,6 +142,59 @@ class OpenFileUpdateTest {
         assertEquals(
                 List.of(new OpenFileCmd(NVIM, "a.txt", 10)),
                 Update.update(model(NVIM), new EditMsg.AtCursor(at(removed))).cmds());
+    }
+
+    @Test
+    void aContextLineOnTheLeftOfTheSplitViewOpensAtItsOwnLineOfTheNewFile() {
+        // A context line is a stop on the left by its number in the old file (ADR 139); here the same as in the new.
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), opened(new Anchor.OnLine("a.txt", Side.LEFT, 9)));
+    }
+
+    @Test
+    void aRemovedLineAtTheEndOfTheFileOpensAtTheLastLineBeforeIt() {
+        DiffText removedLast = DiffText.of(
+                "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1,3 +1,2 @@\n one\n two\n-three\n");
+        Anchor.OnLine three = new Anchor.OnLine("a.txt", Side.LEFT, 3);
+
+        assertEquals(
+                List.of(new OpenFileCmd(NVIM, "a.txt", 2)),
+                Update.update(
+                                model(NVIM),
+                                new EditMsg.AtCursor(
+                                        at(new ScrolledContent.StashChanges(new Sha("6666"), removedLast), three)))
+                        .cmds());
+    }
+
+    @Test
+    void onAMarkerOfFilteredHunksItOpensAtTheFirstLineOfItsFirstHunk() {
+        Anchor.Filtered filtered =
+                new Anchor.Filtered("a.txt", List.of(new Ranges(20, 2, 21, 3), new Ranges(40, 1, 42, 1)), false);
+
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 21)), opened(filtered));
+    }
+
+    @Test
+    void onARowOfJsonRenderedItOpensAtTheLineItWasDrawnFrom() {
+        Anchor.Node node = new Anchor.Node("a.txt", "/name", right(11));
+
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 11)), opened(node));
+    }
+
+    @Test
+    void onAThreadOrACommentItOpensAtTheLineOfTheThread() {
+        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("t1"), Option.of(right(12)));
+        Anchor.Comment comment = new Anchor.Comment(new ReviewThread.Comment.Id("c2"), thread);
+
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 12)), opened(thread));
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 12)), opened(comment));
+    }
+
+    @Test
+    void aThreadOnNoLineHasNoFileToOpen() {
+        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("t1"), Option.none());
+
+        assertEquals(Option.none(), EditUpdate.file(thread));
+        assertEquals(List.empty(), opened(thread));
     }
 
     @Test
