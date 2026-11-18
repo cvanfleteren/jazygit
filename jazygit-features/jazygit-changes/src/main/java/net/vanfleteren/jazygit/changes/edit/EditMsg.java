@@ -1,9 +1,14 @@
 package net.vanfleteren.jazygit.changes.edit;
 
+import net.vanfleteren.jazygit.settings.EditorProgram;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 
+/**
+ * Opening a file in an editor: one the user set to open files, or else git's editor (ADR 145).
+ */
 public sealed interface EditMsg extends Msg {
 
     @Override
@@ -12,7 +17,17 @@ public sealed interface EditMsg extends Msg {
     }
 
     /**
-     * The user asked to open the file at {@code path}, relative to the working tree, in the editor.
+     * The user asked to open the file at {@code path}, relative to the working tree, in an editor, at its first line.
      */
     record Requested(String path) implements EditMsg {}
+
+    /**
+     * The user asked to open the file the cursor {@code at} of a rich diff is in, at the line it is on, in an editor.
+     */
+    record AtCursor(DiffCursorAt at) implements EditMsg {}
+
+    /**
+     * The user chose {@code editor} in the menu of the editors that open files.
+     */
+    record Chosen(EditorProgram editor) implements EditMsg {}
 }

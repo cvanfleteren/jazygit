@@ -120,3 +120,5 @@ editor that cannot start, or fails, is reported as there.
 - A setting whose save failed, or a typo, never undoes a setting in use; a hand edit of a key always wins over what
   the session has for it.
 - The editors of ADR 110 still open worktrees only.
+
+Amended by ADR 145: an editor of ADR 110 opens a file with a `file-command`; the settings file still opens in git's editor.

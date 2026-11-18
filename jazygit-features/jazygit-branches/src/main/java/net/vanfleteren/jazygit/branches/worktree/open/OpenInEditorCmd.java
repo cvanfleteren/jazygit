@@ -36,7 +36,8 @@ public record OpenInEditorCmd(EditorProgram editor, String worktree) implements 
     @Override
     public Msg run(Env env) {
         Path directory = Path.of(worktree);
-        List<String> commandLine = editor.commandLine(worktree);
+        // Only an editor that opens a worktree is offered for one.
+        List<String> commandLine = editor.commandLine(worktree).get();
         Either<GitFailure, List<ExecutedCommand>> opened = editor.terminal()
                 ? env.terminal().handOver(() -> env.git().editor().open(directory, commandLine))
                 : env.git().editor().launch(directory, commandLine);

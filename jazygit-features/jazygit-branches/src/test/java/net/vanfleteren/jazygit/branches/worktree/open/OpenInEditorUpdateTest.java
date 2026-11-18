@@ -4,6 +4,7 @@ import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
@@ -64,8 +65,10 @@ class OpenInEditorUpdateTest {
             Option.none(),
             true);
     private static final EditorProgram IDEA =
-            new EditorProgram("IntelliJ", List.of("idea", EditorProgram.DIR), false, Option.of('i'));
-    private static final EditorProgram NVIM = new EditorProgram("Neovim", List.of("nvim"), true, Option.none());
+            EditorProgram.ofDir("IntelliJ", List.of("idea", EditorProgram.DIR), false, Option.of('i'));
+    private static final EditorProgram NVIM = EditorProgram.ofDir("Neovim", List.of("nvim"), true, Option.none());
+    private static final EditorProgram FILES_ONLY =
+            EditorProgram.ofFile("Helix", List.of("hx", EditorProgram.FILE), true, Option.none());
 
     /**
      * {@code main} is checked out in the main worktree, which is shown; {@code taken} in a linked one;
@@ -149,8 +152,24 @@ class OpenInEditorUpdateTest {
         assertEquals(List.empty(), next.cmds());
         assertEquals(
                 Option.of("No editor is set to open a worktree in. Add one to the settings file, config.toml, such as:"
-                        + "\n\n[[editors]]\nname = \"IntelliJ\"\ncommand = [\"idea\", \"{dir}\"]"),
+                        + "\n\n[[editors]]\nname = \"IntelliJ\"\ndir-command = [\"idea\", \"{dir}\"]"),
                 errorText(next.model()));
+    }
+
+    @Test
+    void anEditorThatOnlyOpensFilesIsNotOfferedForAWorktree() {
+        Next next = Update.update(
+                model(List.of(FILES_ONLY, IDEA)), new OpenInEditorMsg.WorktreeRequested(LINKED.location()));
+
+        assertEquals(List.of(new OpenInEditorCmd(IDEA, LINKED.location())), next.cmds());
+    }
+
+    @Test
+    void onlyEditorsThatOpenFilesAreAsGoodAsNone() {
+        Next next = Update.update(model(List.of(FILES_ONLY)), new OpenInEditorMsg.WorktreeRequested(LINKED.location()));
+
+        assertEquals(List.empty(), next.cmds());
+        assertTrue(errorText(next.model()).exists(text -> text.startsWith("No editor is set")));
     }
 
     @Test

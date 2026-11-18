@@ -8,7 +8,7 @@ import io.vavr.control.Option;
 import org.junit.jupiter.api.Test;
 
 /**
- * The editors of the settings file, which a worktree is opened in (ADR 110).
+ * The editors of the settings file, which a worktree is opened in (ADR 110), or a file (ADR 145).
  */
 class EditorsTest {
 
@@ -17,7 +17,7 @@ class EditorsTest {
     private static final EditorProgram CODE = editor("Code", Option.none());
 
     private static EditorProgram editor(String name, Option<Character> shortcut) {
-        return new EditorProgram(name, List.of(name.toLowerCase(java.util.Locale.ROOT)), false, shortcut);
+        return EditorProgram.ofDir(name, List.of(name.toLowerCase(java.util.Locale.ROOT)), false, shortcut);
     }
 
     private static java.util.Map<String, Object> table(Object... keysAndValues) {
@@ -30,7 +30,7 @@ class EditorsTest {
 
     @Test
     void theWorktreeTakesThePlaceOfDirWhereverAndHoweverOftenItIs() {
-        EditorProgram konsole = new EditorProgram(
+        EditorProgram konsole = EditorProgram.ofDir(
                 "Konsole",
                 List.of("konsole", "--workdir", "{dir}", "-e", "nvim", "--cmd=cd {dir}"),
                 false,
@@ -38,14 +38,58 @@ class EditorsTest {
 
         assertEquals(
                 List.of("konsole", "--workdir", "/repos/app", "-e", "nvim", "--cmd=cd /repos/app"),
-                konsole.commandLine("/repos/app"));
+                konsole.commandLine("/repos/app").get());
     }
 
     @Test
     void withoutDirTheWorktreeIsTheLastArgument() {
-        EditorProgram idea = new EditorProgram("IntelliJ", List.of("idea", "--wait"), false, Option.none());
+        EditorProgram idea = EditorProgram.ofDir("IntelliJ", List.of("idea", "--wait"), false, Option.none());
 
-        assertEquals(List.of("idea", "--wait", "/repos/app"), idea.commandLine("/repos/app"));
+        assertEquals(
+                List.of("idea", "--wait", "/repos/app"),
+                idea.commandLine("/repos/app").get());
+    }
+
+    @Test
+    void theFileTheLineAndTheWorktreeTakeTheirPlacesInTheFileCommand() {
+        EditorProgram code =
+                EditorProgram.ofFile("Code", List.of("code", "{dir}", "-g", "{file}:{line}"), false, Option.none());
+
+        assertEquals(
+                List.of("code", "/repos/app", "-g", "/repos/app/src/A.java:12"),
+                code.fileCommandLine("/repos/app", "/repos/app/src/A.java", 12).get());
+    }
+
+    @Test
+    void withoutFileTheFileIsTheLastArgument() {
+        EditorProgram nvim = EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}"), true, Option.none());
+
+        assertEquals(
+                List.of("nvim", "+3", "/repos/app/A.java"),
+                nvim.fileCommandLine("/repos/app", "/repos/app/A.java", 3).get());
+    }
+
+    @Test
+    void aPlaceholderInThePathItselfIsLeftAsItIs() {
+        EditorProgram nvim = EditorProgram.ofFile("Neovim", List.of("nvim", "{file}"), true, Option.none());
+
+        assertEquals(
+                List.of("nvim", "/repos/{line}/A.java"),
+                nvim.fileCommandLine("/repos/{line}", "/repos/{line}/A.java", 3).get());
+    }
+
+    @Test
+    void anEditorOpensOnlyWhatItHasACommandFor() {
+        EditorProgram idea = EditorProgram.ofDir("IntelliJ", List.of("idea"), false, Option.none());
+        EditorProgram nvim = EditorProgram.ofFile("Neovim", List.of("nvim"), true, Option.none());
+        EditorProgram code = new EditorProgram(
+                "Code", Option.of(List.of("code")), Option.of(List.of("code", "-g")), false, Option.none());
+        Editors editors = new Editors(List.of(idea, nvim, code));
+
+        assertEquals(List.of(idea, code), editors.worktrees().all());
+        assertEquals(List.of(nvim, code), editors.files().all());
+        assertEquals(Option.none(), idea.fileCommandLine("/r", "/r/A", 1));
+        assertEquals(Option.none(), nvim.commandLine("/r"));
     }
 
     @Test
@@ -77,9 +121,55 @@ class EditorsTest {
         assertEquals(List.empty(), read.invalid());
         assertEquals(
                 List.of(
-                        new EditorProgram("IntelliJ", List.of("idea", "{dir}"), false, Option.of('i')),
-                        new EditorProgram("Neovim", List.of("nvim"), true, Option.none())),
+                        EditorProgram.ofDir("IntelliJ", List.of("idea", "{dir}"), false, Option.of('i')),
+                        EditorProgram.ofDir("Neovim", List.of("nvim"), true, Option.none())),
                 read.editors().all());
+    }
+
+    @Test
+    void readsTheCommandsThatOpenADirectoryAndAFile() {
+        Editors.Read read = Editors.read(java.util.List.of(
+                table(
+                        "name",
+                        "Code",
+                        "dir-command",
+                        java.util.List.of("code", "{dir}"),
+                        "file-command",
+                        java.util.List.of("code", "-g", "{file}:{line}")),
+                table("name", "Neovim", "file-command", java.util.List.of("nvim", "+{line}"), "terminal", true)));
+
+        assertEquals(List.empty(), read.invalid());
+        assertEquals(
+                List.of(
+                        new EditorProgram(
+                                "Code",
+                                Option.of(List.of("code", "{dir}")),
+                                Option.of(List.of("code", "-g", "{file}:{line}")),
+                                false,
+                                Option.none()),
+                        EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}"), true, Option.none())),
+                read.editors().all());
+    }
+
+    @Test
+    void theDirCommandGoesBeforeTheFormerCommand() {
+        Editors.Read read = Editors.read(java.util.List.of(
+                table("name", "Kate", "dir-command", java.util.List.of("kate"), "command", java.util.List.of("old"))));
+
+        assertEquals(List.of(Option.of(List.of("kate"))), read.editors().all().map(EditorProgram::dirCommand));
+    }
+
+    @Test
+    void anEntryWithoutACommandOrWithAFileCommandThatIsNoListIsLeftOut() {
+        Editors.Read read = Editors.read(java.util.List.of(
+                table("name", "None"),
+                table("name", "Words", "file-command", "nvim {file}"),
+                table("name", "Half", "dir-command", java.util.List.of("kate"), "file-command", java.util.List.of())));
+
+        assertEquals(
+                List.of("editors[1].dir-command", "editors[2].file-command", "editors[3].file-command"),
+                read.invalid());
+        assertEquals(List.empty(), read.editors().all());
     }
 
     @Test

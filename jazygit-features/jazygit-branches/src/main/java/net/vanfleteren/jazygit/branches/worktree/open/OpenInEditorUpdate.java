@@ -57,11 +57,11 @@ public final class OpenInEditorUpdate {
     }
 
     /**
-     * Opens the worktree at {@code location} in the editor set, or asks which one when there are more; none set is
-     * said, with how to set one.
+     * Opens the worktree at {@code location} in the editor set to open one, or asks which one when there are more;
+     * none set is said, with how to set one. An editor that only opens files is not among them (ADR 145).
      */
     private static Next editors(Model model, String location) {
-        Editors editors = model.preferences().settings().editors();
+        Editors editors = model.preferences().settings().editors().worktrees();
         if (editors.isEmpty()) {
             return Next.of(model.fail(new WorktreeError.NoEditorSet()));
         }
