@@ -23,6 +23,13 @@ public final class GitArgs {
     }
 
     /**
+     * {@code <revision>^<parent>}: the {@code parent}th parent of {@code revision}; {@code revision} itself for 0.
+     */
+    public static String parent(Revision revision, int parent) {
+        return parent == 0 ? revision.toArg() : revision.toArg() + "^" + parent;
+    }
+
+    /**
      * {@code ^<revision>}: what is not on {@code revision}, for a command that walks the history.
      */
     public static String not(Revision revision) {
