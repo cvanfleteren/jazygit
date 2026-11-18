@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.changes.diff.VersionMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
+import net.vanfleteren.jazygit.content.ContentView.ShownChanges;
 import net.vanfleteren.jazygit.content.ContentView.Tone;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
@@ -335,7 +336,7 @@ class ContentViewTest {
                         ContentArea.COMMIT,
                         "Commit: aaaa",
                         new ScrolledContent.CommitChanges(commit, DiffText.of("+added line\n")),
-                        new Body.CommitChanges(commit, whole("+added line\n"), PLAIN_LOOK)),
+                        new Body.CommitChanges(commit, new ShownChanges(whole("+added line\n"), PLAIN_LOOK))),
                 ContentView.of(selected, CommitsPanel.PANE));
     }
 
@@ -363,7 +364,7 @@ class ContentViewTest {
                         ContentArea.COMMIT_FILE,
                         "aaaa · src/a.txt",
                         new ScrolledContent.FileChanges(of, List.of(file), DiffText.of("+a\n")),
-                        new Body.Diff(whole("+a\n"), RICH_LOOK)),
+                        new Body.Diff(new ShownChanges(whole("+a\n"), RICH_LOOK))),
                 ContentView.of(selected, FilesPanel.PANE));
         assertEquals(note("Files of aaaa", Placeholders.loading()), ContentView.of(open, FilesPanel.PANE));
     }
@@ -486,14 +487,16 @@ class ContentViewTest {
                 List.of(PLAIN_LOOK, PLAIN_LOOK),
                 ContentView.of(selected, FilesPanel.PANE)
                         .areas()
-                        .map(area ->
-                                assertInstanceOf(Body.Diff.class, area.body()).look()));
+                        .map(area -> assertInstanceOf(Body.Diff.class, area.body())
+                                .changes()
+                                .look()));
         assertEquals(
                 List.of(RICH_LOOK, RICH_LOOK),
                 ContentView.of(rich, FilesPanel.PANE)
                         .areas()
-                        .map(area ->
-                                assertInstanceOf(Body.Diff.class, area.body()).look()));
+                        .map(area -> assertInstanceOf(Body.Diff.class, area.body())
+                                .changes()
+                                .look()));
     }
 
     @Test
@@ -506,6 +509,7 @@ class ContentViewTest {
                 "No changes besides whitespace\n",
                 assertInstanceOf(Body.CommitChanges.class, commit.body())
                         .changes()
+                        .diff()
                         .text());
     }
 
@@ -522,7 +526,7 @@ class ContentViewTest {
                         ContentArea.DIVERGENCE,
                         "Commit: cccc",
                         new ScrolledContent.CommitChanges(plain("cccc"), DiffText.of("+added line")),
-                        new Body.CommitChanges(plain("cccc"), whole("+added line"), PLAIN_LOOK)),
+                        new Body.CommitChanges(plain("cccc"), new ShownChanges(whole("+added line"), PLAIN_LOOK))),
                 ContentView.of(selected, BranchesPanel.PANE));
     }
 
@@ -572,6 +576,7 @@ class ContentViewTest {
                 "+added line",
                 assertInstanceOf(Body.CommitChanges.class, commit.body())
                         .changes()
+                        .diff()
                         .text());
     }
 
@@ -604,7 +609,7 @@ class ContentViewTest {
                         ContentArea.STASH,
                         "Stash: stash@{0}",
                         new ScrolledContent.StashChanges(stash.sha(), DiffText.of("+added line\n")),
-                        new Body.StashChanges(stash, whole("+added line\n"), PLAIN_LOOK)),
+                        new Body.StashChanges(stash, new ShownChanges(whole("+added line\n"), PLAIN_LOOK))),
                 ContentView.of(selected, StashPanel.PANE));
     }
 

@@ -258,6 +258,20 @@ final class BuildsText {
     }
 
     /**
+     * The style of a time that changed by {@code change}: slower or faster by more than {@code steady}, or about the
+     * same.
+     */
+    private static String trend(Duration change, Duration steady) {
+        if (change.compareTo(steady) > 0) {
+            return Theme.Classes.CHECKS_FAILED;
+        }
+        if (change.compareTo(steady.negated()) < 0) {
+            return Theme.Classes.CHECKS_PASSED;
+        }
+        return Theme.Classes.DIM;
+    }
+
+    /**
      * The widths of the columns of the jobs, before their numbers.
      *
      * @param name   of the names of the jobs
@@ -276,9 +290,10 @@ final class BuildsText {
     }
 
     /**
-     * The widths of the columns of the list of builds, each as wide as its widest value or its header.
+     * The widths of the columns of the list of builds, each as wide as its widest value or its header; what a build
+     * ran for only shows for the runs of a workflow on every branch.
      */
-    private record ListColumns(int commit, int when, int time, int queued, int vsMedian) {}
+    private record ListColumns(int ranFor, int commit, int when, int time, int queued, int vsMedian) {}
 
     /**
      * How the builds are drawn.
@@ -406,13 +421,8 @@ final class BuildsText {
                                     .map(took -> List.of(
                                             dim("   " + Messages.get("content.builds.last", duration(took))),
                                             median.map(middle -> took.minus(middle))
-                                                    .map(difference -> span(
-                                                            " " + signed(difference),
-                                                            difference.compareTo(STEADY) > 0
-                                                                    ? Theme.Classes.CHECKS_FAILED
-                                                                    : difference.compareTo(STEADY.negated()) < 0
-                                                                            ? Theme.Classes.CHECKS_PASSED
-                                                                            : Theme.Classes.DIM))
+                                                    .map(difference ->
+                                                            span(" " + signed(difference), trend(difference, STEADY)))
                                                     .getOrElse(() -> dim("")))))
                             .getOrElse(List.empty()));
             List<Span> everyBranch = baseline.map(known -> List.of(dim(Messages.get(
@@ -721,16 +731,24 @@ final class BuildsText {
          * it waited for its first job to start, against the median, and the commit's title.
          */
         private List<Line> list(List<Build> builds, Option<Duration> median) {
-            String forLabel = Messages.get("content.builds.for");
-            // As wide as what the builds ran for and its header, with a column after it, up to FOR.
-            int forWidth = Math.min(
-                    FOR,
-                    builds.map(build -> TextWidth.of(ranFor(build)))
-                                    .append(TextWidth.of(forLabel))
-                                    .max()
-                                    .getOrElse(0)
-                            + 1);
-            ListColumns columns = new ListColumns(
+            ListColumns columns = listColumns(builds, median);
+            return builds.map(build -> row(build, difference(build, median), columns))
+                    .prepend(header(columns));
+        }
+
+        /**
+         * The widths of the columns of the list of {@code builds}, each as wide as its widest value or its header.
+         */
+        private ListColumns listColumns(List<Build> builds, Option<Duration> median) {
+            return new ListColumns(
+                    // As wide as what the builds ran for and its header, with a column after it, up to FOR.
+                    Math.min(
+                            FOR,
+                            builds.map(build -> TextWidth.of(ranFor(build)))
+                                            .append(TextWidth.of(Messages.get("content.builds.for")))
+                                            .max()
+                                            .getOrElse(0)
+                                    + 1),
                     widest(builds.map(build -> shortSha(build.sha())), "content.builds.commit"),
                     // A day of two digits is reserved for, so that the column stays put as older builds are read.
                     widest(
@@ -750,65 +768,78 @@ final class BuildsText {
                     widest(
                             builds.flatMap(build -> difference(build, median)).map(BuildsText::signed),
                             "content.builds.vsMedian"));
-            return builds.map(build -> {
-                        Option<Duration> difference = difference(build, median);
-                        List<Span> forWhat = allBranches
-                                ? List.of(
-                                        isMine(build) ? span(MINE, Theme.Classes.CURRENT_BRANCH) : Span.raw(" "),
-                                        Span.raw(" "),
-                                        span(
-                                                pad(ranFor(build), forWidth),
-                                                isMine(build) ? Theme.Classes.CURRENT_BRANCH : Theme.Classes.DIM))
-                                : List.empty();
-                        Span vsMedian = difference
-                                .map(change -> span(
-                                        padLeft(signed(change), columns.vsMedian()),
-                                        change.compareTo(Duration.ofSeconds(30)) > 0
-                                                ? Theme.Classes.CHECKS_FAILED
-                                                : change.compareTo(Duration.ofSeconds(-30)) < 0
-                                                        ? Theme.Classes.CHECKS_PASSED
-                                                        : Theme.Classes.DIM))
-                                .getOrElse(() -> Span.raw(" ".repeat(columns.vsMedian())));
-                        // The build picked is marked after how it ended, and its title is in bold: a mark at the
-                        // end of its row would be cut off with a long title (ADR 133). Its row is tinted after.
-                        boolean chosen = picked.contains(build.runId());
-                        return Line.from(List.of(
-                                        outcome(build.outcome()),
-                                        chosen ? span(PICKED, Theme.Classes.BOLD) : Span.raw(" "))
-                                .appendAll(forWhat)
-                                .appendAll(List.of(
-                                        span(padRight(shortSha(build.sha()), columns.commit()), Theme.Classes.SHA),
-                                        dim(GAP + padLeft(when.format(build.createdAt()), columns.when()) + GAP),
-                                        Span.raw(padLeft(
-                                                build.duration()
-                                                        .map(BuildsText::duration)
-                                                        .getOrElse("–"),
-                                                columns.time())),
-                                        dim(GAP
-                                                + padLeft(
-                                                        build.queued()
-                                                                .map(BuildsText::duration)
-                                                                .getOrElse(build.attempt() == 1 ? "–" : ""),
-                                                        columns.queued())
-                                                + GAP),
-                                        vsMedian,
-                                        chosen
-                                                ? span(GAP + build.title(), Theme.Classes.BOLD)
-                                                : Span.raw(GAP + build.title())))
-                                .toJavaList());
-                    })
-                    .prepend(Line.from(dim("  " + (allBranches ? "  " + pad(forLabel, forWidth) : "")
-                            + padRight(Messages.get("content.builds.commit"), columns.commit())
-                            + GAP
-                            + padRight(Messages.get("content.builds.when"), columns.when())
-                            + GAP
-                            + padLeft(Messages.get("content.builds.time"), columns.time())
-                            + GAP
-                            + padLeft(Messages.get("content.builds.queuedHeader"), columns.queued())
-                            + GAP
-                            + padLeft(Messages.get("content.builds.vsMedian"), columns.vsMedian())
-                            + GAP
-                            + Messages.get("content.builds.title"))));
+        }
+
+        /**
+         * The header of the list of builds, over its {@code columns}.
+         */
+        private Line header(ListColumns columns) {
+            return Line.from(dim("  "
+                    + (allBranches ? "  " + pad(Messages.get("content.builds.for"), columns.ranFor()) : "")
+                    + padRight(Messages.get("content.builds.commit"), columns.commit())
+                    + GAP
+                    + padRight(Messages.get("content.builds.when"), columns.when())
+                    + GAP
+                    + padLeft(Messages.get("content.builds.time"), columns.time())
+                    + GAP
+                    + padLeft(Messages.get("content.builds.queuedHeader"), columns.queued())
+                    + GAP
+                    + padLeft(Messages.get("content.builds.vsMedian"), columns.vsMedian())
+                    + GAP
+                    + Messages.get("content.builds.title")));
+        }
+
+        /**
+         * The row of {@code build} in the list of builds, which took {@code difference} longer than their median.
+         */
+        private Line row(Build build, Option<Duration> difference, ListColumns columns) {
+            // The build picked is marked after how it ended, and its title is in bold: a mark at the end of its row
+            // would be cut off with a long title (ADR 133). Its row is tinted after.
+            boolean chosen = picked.contains(build.runId());
+            return Line.from(List.of(
+                            outcome(build.outcome()), chosen ? span(PICKED, Theme.Classes.BOLD) : Span.raw(" "))
+                    .appendAll(forWhat(build, columns))
+                    .appendAll(List.of(
+                            span(padRight(shortSha(build.sha()), columns.commit()), Theme.Classes.SHA),
+                            dim(GAP + padLeft(when.format(build.createdAt()), columns.when()) + GAP),
+                            Span.raw(padLeft(
+                                    build.duration().map(BuildsText::duration).getOrElse("–"), columns.time())),
+                            dim(GAP
+                                    + padLeft(
+                                            build.queued()
+                                                    .map(BuildsText::duration)
+                                                    .getOrElse(build.attempt() == 1 ? "–" : ""),
+                                            columns.queued())
+                                    + GAP),
+                            vsMedian(difference, columns.vsMedian()),
+                            chosen ? span(GAP + build.title(), Theme.Classes.BOLD) : Span.raw(GAP + build.title())))
+                    .toJavaList());
+        }
+
+        /**
+         * What {@code build} ran for, marked when it ran for the branch, when the builds are the runs of their
+         * workflow on every branch; nothing else.
+         */
+        private List<Span> forWhat(Build build, ListColumns columns) {
+            if (!allBranches) {
+                return List.empty();
+            }
+            boolean mine = isMine(build);
+            return List.of(
+                    mine ? span(MINE, Theme.Classes.CURRENT_BRANCH) : Span.raw(" "),
+                    Span.raw(" "),
+                    span(
+                            pad(ranFor(build), columns.ranFor()),
+                            mine ? Theme.Classes.CURRENT_BRANCH : Theme.Classes.DIM));
+        }
+
+        /**
+         * How much longer a build took than the median, {@code difference}, {@code width} columns wide.
+         */
+        private Span vsMedian(Option<Duration> difference, int width) {
+            return difference
+                    .map(change -> span(padLeft(signed(change), width), trend(change, Duration.ofSeconds(30))))
+                    .getOrElse(() -> Span.raw(" ".repeat(width)));
         }
     }
 }

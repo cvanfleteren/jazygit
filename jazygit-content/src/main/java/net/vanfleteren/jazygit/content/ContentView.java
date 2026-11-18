@@ -6,7 +6,9 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.content.diff.ShownRemarks;
+import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -21,6 +23,8 @@ import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.settings.DiffLook;
@@ -40,6 +44,7 @@ import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.BuildsShown;
+import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.NoLog;
 import net.vanfleteren.jazygit.state.view.Preview;
@@ -91,25 +96,24 @@ public final class ContentView {
      */
     public static Filtered filtered(Model model, Option<Focus> focus) {
         List<Shown.Area> areas = of(model, focus).areas();
-        List<Option<ShownDiff>> diffs = areas.map(area -> switch (area.body()) {
-            case Body.Diff(ShownDiff diff, var look, var remarks) -> Option.of(diff);
-            case Body.CommitChanges(var commit, ShownDiff changes, var look) -> Option.of(changes);
-            case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
-            default -> Option.<ShownDiff>none();
-        });
+        List<Option<ShownDiff>> diffs =
+                areas.map(area -> area.body().changesShown().map(ShownChanges::diff));
         return new Filtered(
                 areas.map(Shown.Area::content),
                 Option.when(
                         diffs.nonEmpty() && diffs.forAll(Option::isDefined),
-                        () -> diffs.flatMap(diff -> diff).forAll(diff -> {
-                            Expansion.Folded folded = diff.folded();
-                            return folded.diff().files().nonEmpty()
-                                    && folded.diff()
-                                            .files()
-                                            .forAll(file -> folded.hiding(
-                                                            file.file().path())
-                                                    .all());
-                        })));
+                        () -> diffs.flatMap(diff -> diff).forAll(ContentView::allHidden)));
+    }
+
+    /**
+     * Whether the diff filters hide all the changes {@code diff} shows (ADR 144).
+     */
+    private static boolean allHidden(ShownDiff diff) {
+        Expansion.Folded folded = diff.folded();
+        return folded.diff().files().nonEmpty()
+                && folded.diff()
+                        .files()
+                        .forAll(file -> folded.hiding(file.file().path()).all());
     }
 
     /**
@@ -176,33 +180,27 @@ public final class ContentView {
                 .orElse(() -> asVersion(model, area.content()));
         DiffContext context = model.preferences().context();
         Filtering filtering = model.filtering(area.area().id(), area.content());
-        Body body = switch (area.body()) {
-            case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
-                new Body.Diff(
-                        diff.expanded(expansion, context).versioned(version).filtered(filtering), look, remarks);
-            case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
-                new Body.CommitChanges(
-                        commit,
-                        changes.expanded(expansion, context).versioned(version).filtered(filtering),
-                        look);
-            case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
-                new Body.StashChanges(
-                        stash,
-                        changes.expanded(expansion, context).versioned(version).filtered(filtering),
-                        look);
-            case Body other -> other;
-        };
+        Body body = area.body()
+                .withDiff(diff ->
+                        diff.expanded(expansion, context).versioned(version).filtered(filtering));
+        return new Shown.Area(area.area(), expandedTitle(area, version), area.content(), body);
+    }
+
+    /**
+     * The title of {@code area}, saying which {@code version} of its file it shows, if it shows one.
+     */
+    private static String expandedTitle(Shown.Area area, Option<Version> version) {
+        if (!(area.content() instanceof ScrolledContent.Unchanged)) {
+            return version.map(shown -> versioned(area.title(), shown)).getOrElse(area.title());
+        }
         // A file without changes has one version: the title says only whether it is rendered (ADR 108), or blamed
         // (ADR 147).
-        String title = area.content() instanceof ScrolledContent.Unchanged
-                ? version.exists(Version::rendered)
-                        ? Messages.get("content.panel.file.rendered", area.title())
-                        : version.filter(shown -> shown.blaming().isDefined())
-                                .map(shown ->
-                                        blameNoted(Messages.get("content.panel.file.blamed", area.title()), shown))
-                                .getOrElse(area.title())
-                : version.map(shown -> versioned(area.title(), shown)).getOrElse(area.title());
-        return new Shown.Area(area.area(), title, area.content(), body);
+        if (version.exists(Version::rendered)) {
+            return Messages.get("content.panel.file.rendered", area.title());
+        }
+        return version.filter(shown -> shown.blaming().isDefined())
+                .map(shown -> blameNoted(Messages.get("content.panel.file.blamed", area.title()), shown))
+                .getOrElse(area.title());
     }
 
     /**
@@ -259,7 +257,8 @@ public final class ContentView {
                         commit.isDefined() ? ContentArea.COMMIT_FILE : ContentArea.FILE_CONTENT,
                         title,
                         new ScrolledContent.Unchanged(path, asDiff, commit),
-                        new Body.Diff(shown(asDiff), new DiffLook(DiffStyle.RICH, look.syntax(), look.words())));
+                        new Body.Diff(new ShownChanges(
+                                shown(asDiff), new DiffLook(DiffStyle.RICH, look.syntax(), look.words()))));
             }
             case FileContent.Binary(long size) -> dim(title, Messages.get("content.file.binarySize", size(size)));
             case FileContent.Link(String target) -> dim(title, Messages.get("content.file.link", target));
@@ -275,11 +274,13 @@ public final class ContentView {
      * {@code bytes} as a size to read: in bytes, KiB or MiB.
      */
     static String size(long bytes) {
-        return bytes < 1024
-                ? bytes + " B"
-                : bytes < 1024 * 1024
-                        ? (bytes + 512) / 1024 + " KiB"
-                        : String.format(java.util.Locale.ROOT, "%.1f MiB", bytes / (1024.0 * 1024.0));
+        if (bytes < 1024) {
+            return bytes + " B";
+        }
+        if (bytes < 1024 * 1024) {
+            return (bytes + 512) / 1024 + " KiB";
+        }
+        return String.format(java.util.Locale.ROOT, "%.1f MiB", bytes / (1024.0 * 1024.0));
     }
 
     /**
@@ -288,26 +289,40 @@ public final class ContentView {
      * so too (ADR 102). Blamed, it says so, and while its blame is read, or when it could not be (ADR 147).
      */
     static String versioned(String title, Version version) {
-        boolean blamed = version.blamed() && !version.rendered();
         return version.shown()
-                .map(shown -> Messages.get(
-                        shown == FileVersion.NEW
-                                ? version.rendered()
-                                        ? "content.panel.version.newRendered"
-                                        : blamed ? "content.panel.version.newBlamed" : "content.panel.version.new"
-                                : version.rendered()
-                                        ? "content.panel.version.originalRendered"
-                                        : blamed
-                                                ? "content.panel.version.originalBlamed"
-                                                : "content.panel.version.original",
-                        title))
-                // A read that has no such file shows the diff, as a failed one does, and says so as well.
-                .map(named -> version.failed()
-                        ? Messages.get("content.panel.version.failed", named)
-                        : version.whole() instanceof Loadable.Loading<DiffText>
-                                ? Messages.get("content.panel.version.reading", named)
-                                : blameNoted(named, version))
+                .map(shown -> Messages.get(versionKey(shown, version), title))
+                .map(named -> readNoted(named, version))
                 .getOrElse(title);
+    }
+
+    /**
+     * The key of the message that says the area shows the version {@code shown} of its file, as {@code version} shows
+     * it: rendered, blamed, or as it is.
+     */
+    private static String versionKey(FileVersion shown, Version version) {
+        boolean isNew = shown == FileVersion.NEW;
+        if (version.rendered()) {
+            return isNew ? "content.panel.version.newRendered" : "content.panel.version.originalRendered";
+        }
+        if (version.blamed()) {
+            return isNew ? "content.panel.version.newBlamed" : "content.panel.version.originalBlamed";
+        }
+        return isNew ? "content.panel.version.new" : "content.panel.version.original";
+    }
+
+    /**
+     * {@code named}, saying that the file of {@code version} is read, or could not be, if it is; or else whether its
+     * blame is.
+     */
+    private static String readNoted(String named, Version version) {
+        // A read that has no such file shows the diff, as a failed one does, and says so as well.
+        if (version.failed()) {
+            return Messages.get("content.panel.version.failed", named);
+        }
+        if (version.whole() instanceof Loadable.Loading<DiffText>) {
+            return Messages.get("content.panel.version.reading", named);
+        }
+        return blameNoted(named, version);
     }
 
     /**
@@ -315,11 +330,11 @@ public final class ContentView {
      */
     private static String blameNoted(String title, Version version) {
         return version.blame()
-                .map(blame -> blame.isFailed()
-                        ? Messages.get("content.panel.version.blameFailed", title)
-                        : blame instanceof Loadable.Loading<?>
-                                ? Messages.get("content.panel.version.readingBlame", title)
-                                : title)
+                .map(blame -> switch (blame) {
+                    case Loadable.Failed<?> _ -> Messages.get("content.panel.version.blameFailed", title);
+                    case Loadable.Loading<?> _ -> Messages.get("content.panel.version.readingBlame", title);
+                    case Loadable.Loaded<?> _ -> title;
+                })
                 .getOrElse(title);
     }
 
@@ -345,13 +360,20 @@ public final class ContentView {
      * whitespace only are left out when they are.
      */
     static String titled(String title, DiffOptions options) {
-        DiffContext context = options.context();
-        String withContext = context.equals(DiffContext.DEFAULT)
-                ? title
-                : context.wholeFile()
-                        ? Messages.get("content.panel.wholeFile", title)
-                        : Messages.get("content.panel.context", title, context.lines());
+        String withContext = withContext(title, options.context());
         return options.ignoreWhitespace() ? Messages.get("content.panel.ignoringWhitespace", withContext) : withContext;
+    }
+
+    /**
+     * {@code title}, saying how much context is shown when it is not git's own (ADR 76).
+     */
+    private static String withContext(String title, DiffContext context) {
+        if (context.equals(DiffContext.DEFAULT)) {
+            return title;
+        }
+        return context.wholeFile()
+                ? Messages.get("content.panel.wholeFile", title)
+                : Messages.get("content.panel.context", title, context.lines());
     }
 
     /**
@@ -401,18 +423,23 @@ public final class ContentView {
         return model.prOverview()
                 .preview()
                 .map(Preview::shown)
-                .map(preview -> whenLoaded(
-                        title,
-                        preview.value(),
-                        read -> new Shown.Area(
-                                ContentArea.PULL_REQUEST,
-                                Messages.get(
-                                        "content.panel.pullRequest.titleFor",
-                                        preview.key().repository(),
-                                        String.valueOf(preview.key().number().value())),
-                                new ScrolledContent.PullRequest(preview.key(), read),
-                                new Body.PullRequest(preview.key(), read))))
+                .map(preview -> pullRequest(title, preview))
                 .getOrElse(() -> dim(title, Messages.get("content.noPullRequest")));
+    }
+
+    private static Shown pullRequest(String title, Preview<PullRequestSummary, PullRequestPreview> preview) {
+        PullRequestSummary pullRequest = preview.key();
+        return whenLoaded(
+                title,
+                preview.value(),
+                read -> new Shown.Area(
+                        ContentArea.PULL_REQUEST,
+                        Messages.get(
+                                "content.panel.pullRequest.titleFor",
+                                pullRequest.repository(),
+                                String.valueOf(pullRequest.number().value())),
+                        new ScrolledContent.PullRequest(pullRequest, read),
+                        new Body.PullRequest(pullRequest, read)));
     }
 
     /**
@@ -421,21 +448,23 @@ public final class ContentView {
     private static Shown fileDiffs(Model model) {
         DiffOptions options = model.preferences().diffOptions();
         String title = titled(Messages.get("panel.diff.title"), options);
+        Option<RepoStatus> status = model.repo().status().toOption();
         // With no files there is nothing to highlight, so no diff is ever requested.
-        return model.repo().status().toOption().exists(status -> status.files().isEmpty())
-                ? dim(title, Messages.get("content.noChangedFiles"))
-                : model.repo().status().toOption().exists(status -> FilesPanel.noneMatch(model, status.files()))
-                        ? dim(title, Messages.get("panel.files.noMatches"))
-                        : model.repoView()
-                                .preview()
-                                .fileDiff()
-                                .map(Preview::shown)
-                                .map(diff -> whenLoaded(
-                                        title,
-                                        diff.value(),
-                                        diffs -> diffAreas(
-                                                options, model.preferences().diffLook(), title, diffs)))
-                                .getOrElse(() -> loading(title));
+        if (status.exists(read -> read.files().isEmpty())) {
+            return dim(title, Messages.get("content.noChangedFiles"));
+        }
+        if (status.exists(read -> FilesPanel.noneMatch(model, read.files()))) {
+            return dim(title, Messages.get("panel.files.noMatches"));
+        }
+        return model.repoView()
+                .preview()
+                .fileDiff()
+                .map(Preview::shown)
+                .map(diff -> whenLoaded(
+                        title,
+                        diff.value(),
+                        diffs -> diffAreas(options, model.preferences().diffLook(), title, diffs)))
+                .getOrElse(() -> loading(title));
     }
 
     /**
@@ -454,7 +483,7 @@ public final class ContentView {
                         area._1,
                         titled(Messages.get(area._2), options),
                         new ScrolledContent.Diff(area._3),
-                        new Body.Diff(shown(area._3), look))));
+                        new Body.Diff(new ShownChanges(shown(area._3), look)))));
     }
 
     /**
@@ -498,60 +527,109 @@ public final class ContentView {
                                 .preview()
                                 .branchLog()
                                 .exists(log -> log.key().equals(new BranchRef.Local(view.branch()))))
-                .map(view -> {
-                    String branch = view.branch().value();
-                    String commits = String.valueOf(view.commits());
-                    String ofBranch = view.reading()
-                            ? Messages.get("content.panel.builds.reading", branch, commits)
-                            : view.stopped().isDefined()
-                                    ? Messages.get("content.panel.builds.stopped", branch, commits)
-                                    : Messages.get("content.panel.builds.title", branch, commits);
-                    Option<WorkflowRuns> runs = view.shownTab().flatMap(tab -> view.runsOf(tab.workflow()));
-                    // On every branch, the title says when more runs of the tab are being read, as m asked: the
-                    // first ones say so in the body.
-                    String every = view.allBranches()
-                            ? runs.filter(ofTab -> ofTab.reading() && ofTab.count() > 0)
-                                    .map(ofTab -> Messages.get(
-                                            "content.panel.builds.everyBranchReading",
-                                            ofBranch,
-                                            String.valueOf(ofTab.count())))
-                                    .getOrElse(() -> Messages.get("content.panel.builds.everyBranch", ofBranch))
-                            : ofBranch;
-                    // Older builds can be read with m, or read again after failing: of the branch, or on every
-                    // branch, of the tab (ADR 132).
-                    boolean more = view.allBranches() ? runs.exists(WorkflowRuns::hasMore) : view.hasMore();
-                    boolean failed = view.allBranches() ? runs.exists(WorkflowRuns::hasFailed) : view.hasFailed();
-                    String title = more
-                            ? Messages.get(failed ? "content.panel.builds.retry" : "content.panel.builds.more", every)
-                            : every;
-                    return whenLoaded(
-                            title,
-                            view.builds(),
-                            builds -> view.onGitHub()
-                                    .map(remote -> view.shownOf()
-                                            .<Shown>map(drawn -> new Shown.Area(
-                                                    ContentArea.BUILDS,
-                                                    title,
-                                                    new ScrolledContent.Builds(view.branch()),
-                                                    new Body.Builds(drawn)))
-                                            .getOrElse(() -> builds.isEmpty()
-                                                    ? view.reading()
-                                                            ? loading(title)
-                                                            : view.commits() == 0
-                                                                    ? dim(
-                                                                            title,
-                                                                            Messages.get(
-                                                                                    "content.builds.notOnGitHub",
-                                                                                    remote.shortName()))
-                                                                    : dim(
-                                                                            title,
-                                                                            Messages.get(
-                                                                                    "content.builds.none",
-                                                                                    remote.shortName(),
-                                                                                    String.valueOf(view.commits())))
-                                                    : dim(title, Messages.get("content.builds.noneAhead"))))
-                                    .getOrElse(() -> dim(title, Messages.get("content.builds.offGitHub", branch))));
-                });
+                .map(ContentView::builds);
+    }
+
+    /**
+     * The builds {@code view} shows of its branch: the chart and list of them once some are read, or else why there
+     * are none.
+     */
+    private static Shown builds(BuildsView view) {
+        String title = buildsTitle(view);
+        return whenLoaded(
+                title,
+                view.builds(),
+                builds -> view.onGitHub()
+                        .flatMap(remote -> view.shownOf())
+                        .<Shown>map(drawn -> new Shown.Area(
+                                ContentArea.BUILDS,
+                                title,
+                                new ScrolledContent.Builds(view.branch()),
+                                new Body.Builds(drawn)))
+                        .getOrElse(() -> noBuilds(view, title, NoBuilds.of(view, builds))));
+    }
+
+    /**
+     * The title of the builds {@code view} shows: of which branch, whether more are read, and whether more can be.
+     */
+    private static String buildsTitle(BuildsView view) {
+        String branch = view.branch().value();
+        String commits = String.valueOf(view.commits());
+        String ofBranch;
+        if (view.reading()) {
+            ofBranch = Messages.get("content.panel.builds.reading", branch, commits);
+        } else if (view.stopped().isDefined()) {
+            ofBranch = Messages.get("content.panel.builds.stopped", branch, commits);
+        } else {
+            ofBranch = Messages.get("content.panel.builds.title", branch, commits);
+        }
+        Option<WorkflowRuns> runs = view.shownTab().flatMap(tab -> view.runsOf(tab.workflow()));
+        // On every branch, the title says when more runs of the tab are being read, as m asked: the first ones say so
+        // in the body.
+        String every = view.allBranches()
+                ? runs.filter(ofTab -> ofTab.reading() && ofTab.count() > 0)
+                        .map(ofTab -> Messages.get(
+                                "content.panel.builds.everyBranchReading", ofBranch, String.valueOf(ofTab.count())))
+                        .getOrElse(() -> Messages.get("content.panel.builds.everyBranch", ofBranch))
+                : ofBranch;
+        // Older builds can be read with m, or read again after failing: of the branch, or on every branch, of the tab
+        // (ADR 132).
+        boolean more = view.allBranches() ? runs.exists(WorkflowRuns::hasMore) : view.hasMore();
+        if (!more) {
+            return every;
+        }
+        boolean failed = view.allBranches() ? runs.exists(WorkflowRuns::hasFailed) : view.hasFailed();
+        return Messages.get(failed ? "content.panel.builds.retry" : "content.panel.builds.more", every);
+    }
+
+    /**
+     * What the content panel says in place of the builds of {@code view}, titled {@code title}, as {@code state} has
+     * it.
+     */
+    private static Shown noBuilds(BuildsView view, String title, NoBuilds state) {
+        String remote = view.onGitHub().map(RemoteBranch::shortName).getOrElse("");
+        return switch (state) {
+            case OFF_GITHUB ->
+                dim(
+                        title,
+                        Messages.get("content.builds.offGitHub", view.branch().value()));
+            case READING -> loading(title);
+            case NOT_ON_GITHUB -> dim(title, Messages.get("content.builds.notOnGitHub", remote));
+            case NONE -> dim(title, Messages.get("content.builds.none", remote, String.valueOf(view.commits())));
+            case NONE_AHEAD -> dim(title, Messages.get("content.builds.noneAhead"));
+        };
+    }
+
+    /**
+     * Why the content panel shows no builds of a branch (ADR 131).
+     */
+    private enum NoBuilds {
+        /** The branch follows no branch on GitHub. */
+        OFF_GITHUB,
+        /** None is read yet, while the first commits are. */
+        READING,
+        /** The branch it follows is not on GitHub. */
+        NOT_ON_GITHUB,
+        /** None of the commits read has builds. */
+        NONE,
+        /** Some were read, but none on the commits not on the base. */
+        NONE_AHEAD;
+
+        /**
+         * Why {@code view}, which read {@code builds}, shows none.
+         */
+        static NoBuilds of(BuildsView view, List<Build> builds) {
+            if (view.onGitHub().isEmpty()) {
+                return OFF_GITHUB;
+            }
+            if (builds.nonEmpty()) {
+                return NONE_AHEAD;
+            }
+            if (view.reading()) {
+                return READING;
+            }
+            return view.commits() == 0 ? NOT_ON_GITHUB : NONE;
+        }
     }
 
     private static Shown branchLog(Model model) {
@@ -559,31 +637,40 @@ public final class ContentView {
                 .preview()
                 .branchLog()
                 .map(Preview::shown)
-                .map(log -> {
-                    String title =
-                            Messages.get("content.panel.log.titleFor", log.key().name());
-                    AheadView ahead =
-                            new AheadView(AheadUpdate.branch(model, log.key()), AheadUpdate.distance(model, log.key()));
-                    return whenLoaded(
-                            ahead.title(title),
-                            log.value(),
-                            commits -> new Shown.Area(
-                                    ContentArea.LOG,
-                                    ahead.title(title),
-                                    new ScrolledContent.BranchLog(commits),
-                                    new Body.BranchLog(commits, ahead)));
-                })
+                .map(log -> branchLog(model, log))
                 .getOrElse(() -> model.repoView()
                         .branches()
                         .noLog()
-                        .map(noLog -> dim(
-                                Messages.get("content.panel.log.title"),
-                                switch (noLog) {
-                                    case NoLog.Unfetched(var pullRequest) ->
-                                        Messages.get("content.unfetched", String.valueOf(pullRequest.value()));
-                                    case NoLog.Detached(var at) -> Messages.get("content.detached", at.shortSha());
-                                }))
+                        .map(noLog -> dim(Messages.get("content.panel.log.title"), noLogText(noLog)))
                         .getOrElse(() -> loading(Messages.get("content.panel.log.title"))));
+    }
+
+    /**
+     * The log of the branch {@code log} is of, titled with how far the branch is ahead; the one shown before stays
+     * while it is read.
+     */
+    private static Shown branchLog(Model model, Preview<BranchRef, List<Commit>> log) {
+        String title = Messages.get("content.panel.log.titleFor", log.key().name());
+        AheadView ahead = new AheadView(AheadUpdate.branch(model, log.key()), AheadUpdate.distance(model, log.key()));
+        return whenLoaded(
+                ahead.title(title),
+                log.value(),
+                commits -> new Shown.Area(
+                        ContentArea.LOG,
+                        ahead.title(title),
+                        new ScrolledContent.BranchLog(commits),
+                        new Body.BranchLog(commits, ahead)));
+    }
+
+    /**
+     * Why there is no log to show, {@code noLog}, as it is said.
+     */
+    private static String noLogText(NoLog noLog) {
+        return switch (noLog) {
+            case NoLog.Unfetched(var pullRequest) ->
+                Messages.get("content.unfetched", String.valueOf(pullRequest.value()));
+            case NoLog.Detached(var at) -> Messages.get("content.detached", at.shortSha());
+        };
     }
 
     /**
@@ -599,17 +686,13 @@ public final class ContentView {
             Option<String> nothing) {
         DiffOptions options = model.preferences().diffOptions();
         String title = Messages.get("content.panel.commit.title");
+        DiffLook look = model.preferences().diffLook();
         return detail.map(Preview::shown)
                 .map(shown -> whenLoaded(
                         title,
                         shown.value(),
                         changes -> commit.apply(shown.key())
-                                .<Shown>map(found -> commitArea(
-                                        area,
-                                        found,
-                                        changes,
-                                        options,
-                                        model.preferences().diffLook()))
+                                .<Shown>map(found -> commitArea(area, found, changes, options, look))
                                 .getOrElse(() -> loading(title))))
                 .getOrElse(() -> nothing.map(message -> dim(title, Messages.get(message)))
                         .getOrElse(() -> loading(title)));
@@ -621,7 +704,7 @@ public final class ContentView {
                 area,
                 titled(Messages.get("content.panel.commit.titleFor", commit.shortSha()), options),
                 new ScrolledContent.CommitChanges(commit, changes),
-                new Body.CommitChanges(commit, shownChanges(changes, options), look));
+                new Body.CommitChanges(commit, new ShownChanges(shownChanges(changes, options), look)));
     }
 
     /**
@@ -639,12 +722,7 @@ public final class ContentView {
                 .map(node -> unchanged(
                         model,
                         node,
-                        node instanceof UnchangedNode.File(var content)
-                                ? Messages.get(
-                                        "content.panel.commitFile.titleFor",
-                                        name,
-                                        content.shown().key())
-                                : Messages.get("panel.commitFiles.titleFor", name),
+                        unchangedTitle(name, node),
                         Option.of(view.of().sha())));
         if (unchanged.isDefined()) {
             return unchanged.get();
@@ -665,23 +743,43 @@ public final class ContentView {
                         diff.value(),
                         changes -> diff.key().isEmpty()
                                 ? dim(title, Messages.get("content.noDirectFiles"))
-                                : new Shown.Area(
-                                        ContentArea.COMMIT_FILE,
-                                        titled(
-                                                Messages.get(
-                                                        "content.panel.commitFile.titleFor",
-                                                        name,
-                                                        nodePath(diff.key())),
-                                                options),
-                                        new ScrolledContent.FileChanges(view.of(), diff.key(), changes),
-                                        new Body.Diff(
-                                                shownChanges(changes, options),
-                                                model.preferences().diffLook(),
-                                                remarks(model, view, diff.key())))))
+                                : fileChanges(model, view, name, diff.key(), changes)))
                 .getOrElse(() -> whenLoaded(
                         title,
                         view.files(),
                         files -> files.isEmpty() ? dim(title, Messages.get("content.noChanges")) : loading(title))));
+    }
+
+    /**
+     * The title of the node without changes {@code node} among the files of the commit or stash named {@code name}.
+     */
+    private static String unchangedTitle(String name, UnchangedNode node) {
+        return switch (node) {
+            case UnchangedNode.File(var content) ->
+                Messages.get(
+                        "content.panel.commitFile.titleFor",
+                        name,
+                        content.shown().key());
+            case UnchangedNode.Directory _ -> Messages.get("panel.commitFiles.titleFor", name);
+        };
+    }
+
+    /**
+     * What the commit or the stash {@code view} lists the files of, named {@code name}, changed in its direct
+     * {@code files}, {@code changes}, with the review threads of a pull request on them.
+     */
+    private static Shown.Area fileChanges(
+            Model model, CommitFilesView view, String name, List<CommitFile> files, DiffText changes) {
+        DiffOptions options = model.preferences().diffOptions();
+        return new Shown.Area(
+                ContentArea.COMMIT_FILE,
+                titled(Messages.get("content.panel.commitFile.titleFor", name, nodePath(files)), options),
+                new ScrolledContent.FileChanges(view.of(), files, changes),
+                new Body.Diff(
+                        new ShownChanges(
+                                shownChanges(changes, options),
+                                model.preferences().diffLook()),
+                        remarks(model, view, files)));
     }
 
     /**
@@ -731,7 +829,6 @@ public final class ContentView {
      * there are none.
      */
     private static Shown stash(Model model) {
-        DiffOptions options = model.preferences().diffOptions();
         String title = Messages.get("panel.stash.title");
         return model.repoView()
                 .preview()
@@ -739,21 +836,24 @@ public final class ContentView {
                 .map(Preview::shown)
                 .flatMap(detail -> model.repo()
                         .stash(detail.key())
-                        .map(stash -> whenLoaded(
-                                title,
-                                detail.value(),
-                                (DiffText changes) -> new Shown.Area(
-                                        ContentArea.STASH,
-                                        titled(Messages.get("content.panel.stash.titleFor", stash.ref()), options),
-                                        new ScrolledContent.StashChanges(stash.sha(), changes),
-                                        new Body.StashChanges(
-                                                stash,
-                                                shownChanges(changes, options),
-                                                model.preferences().diffLook())))))
+                        .map(stash -> whenLoaded(title, detail.value(), changes -> stashArea(model, stash, changes))))
                 .getOrElse(() -> whenLoaded(
                         title,
                         model.repo().stashes(),
                         stashes -> stashes.isEmpty() ? dim(title, Messages.get("content.noStashes")) : loading(title)));
+    }
+
+    private static Shown stashArea(Model model, Stash stash, DiffText changes) {
+        DiffOptions options = model.preferences().diffOptions();
+        return new Shown.Area(
+                ContentArea.STASH,
+                titled(Messages.get("content.panel.stash.titleFor", stash.ref()), options),
+                new ScrolledContent.StashChanges(stash.sha(), changes),
+                new Body.StashChanges(
+                        stash,
+                        new ShownChanges(
+                                shownChanges(changes, options),
+                                model.preferences().diffLook())));
     }
 
     /**
@@ -803,17 +903,42 @@ public final class ContentView {
     public sealed interface Body {
 
         /**
-         * A unified diff, drawn as {@code look} says: the staged or the unstaged changes of the working tree, or what a
-         * commit, a stash or a pull request changed in some of its files, with the review threads of a pull request
-         * (ADR 55).
+         * The diff this shows and how it is drawn, if it shows one.
          */
-        record Diff(ShownDiff diff, DiffLook look, Option<ShownRemarks> remarks) implements Body {
+        default Option<ShownChanges> changesShown() {
+            return switch (this) {
+                case Diff(ShownChanges changes, var _) -> Option.of(changes);
+                case CommitChanges(var _, ShownChanges changes) -> Option.of(changes);
+                case StashChanges(var _, ShownChanges changes) -> Option.of(changes);
+                case BranchLog _, Builds _, PullRequest _, Note _ -> Option.none();
+            };
+        }
+
+        /**
+         * This, with the diff it shows, if it shows one, changed by {@code change}.
+         */
+        default Body withDiff(UnaryOperator<ShownDiff> change) {
+            return switch (this) {
+                case Diff(ShownChanges changes, var remarks) -> new Diff(changes.withDiff(change), remarks);
+                case CommitChanges(Commit commit, ShownChanges changes) ->
+                    new CommitChanges(commit, changes.withDiff(change));
+                case StashChanges(Stash stash, ShownChanges changes) ->
+                    new StashChanges(stash, changes.withDiff(change));
+                case BranchLog _, Builds _, PullRequest _, Note _ -> this;
+            };
+        }
+
+        /**
+         * A unified diff: the staged or the unstaged changes of the working tree, or what a commit, a stash or a pull
+         * request changed in some of its files, with the review threads of a pull request (ADR 55).
+         */
+        record Diff(ShownChanges changes, Option<ShownRemarks> remarks) implements Body {
 
             /**
              * A diff without review threads.
              */
-            public Diff(ShownDiff diff, DiffLook look) {
-                this(diff, look, Option.none());
+            public Diff(ShownChanges changes) {
+                this(changes, Option.none());
             }
         }
 
@@ -828,14 +953,14 @@ public final class ContentView {
         record Builds(BuildsShown shown) implements Body {}
 
         /**
-         * A commit and what it changed, drawn as {@code look} says.
+         * A commit and what it changed.
          */
-        record CommitChanges(Commit commit, ShownDiff changes, DiffLook look) implements Body {}
+        record CommitChanges(Commit commit, ShownChanges changes) implements Body {}
 
         /**
-         * A stash and what it stashed, drawn as {@code look} says.
+         * A stash and what it stashed.
          */
-        record StashChanges(Stash stash, ShownDiff changes, DiffLook look) implements Body {}
+        record StashChanges(Stash stash, ShownChanges changes) implements Body {}
 
         /**
          * A pull request, and what it says and changes.
@@ -846,6 +971,19 @@ public final class ContentView {
          * What the files pane says in place of a diff or a file's content, drawn as {@code tone} says (ADR 117).
          */
         record Note(String text, Tone tone) implements Body {}
+    }
+
+    /**
+     * A diff an area shows, {@code diff}, drawn as {@code look} says.
+     */
+    public record ShownChanges(ShownDiff diff, DiffLook look) {
+
+        /**
+         * These changes with their diff changed by {@code change}.
+         */
+        ShownChanges withDiff(UnaryOperator<ShownDiff> change) {
+            return new ShownChanges(change.apply(diff), look);
+        }
     }
 
     /**

@@ -15,6 +15,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
+import net.vanfleteren.jazygit.content.ContentView.ShownChanges;
 import net.vanfleteren.jazygit.content.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.content.ContentView.Tone;
 import net.vanfleteren.jazygit.content.diff.RichDiff;
@@ -162,15 +163,15 @@ public final class ContentPanel {
      */
     private RichDiff.Drawn bodyDrawn(Body body, Option<DiffStops.HunkAt> asGiven, int width) {
         return switch (body) {
-            case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
+            case Body.Diff(ShownChanges(ShownDiff diff, DiffLook look), var remarks) ->
                 ContentText.diffDrawn(diff, look, remarks, asGiven, styles, width);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 plain(ContentText.logText(commits, ZoneId.systemDefault(), ahead, styles));
             case Body.Builds(var shown) ->
                 RichDiff.Drawn.plain(BuildsText.lines(shown, ZoneId.systemDefault(), styles, width));
-            case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
+            case Body.CommitChanges(Commit commit, ShownChanges(ShownDiff changes, DiffLook look)) ->
                 ContentText.commitDrawn(commit, changes, look, styles, width);
-            case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
+            case Body.StashChanges(Stash stash, ShownChanges(ShownDiff changes, DiffLook look)) ->
                 ContentText.stashDrawn(stash, changes, look, styles, width);
             case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
                 plain(ContentText.pullRequestText(pullRequest, preview, styles));
