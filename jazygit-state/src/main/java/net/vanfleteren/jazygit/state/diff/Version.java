@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.state.diff;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import lombok.With;
@@ -13,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedLine;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.state.Loadable;
 
@@ -223,7 +226,44 @@ public record Version(
      * the title says.
      */
     public Option<Blamed> drawnBlame() {
-        return blame().filter(read -> !read.isFailed()).map(Blamed::new);
+        return blame().filter(read -> !read.isFailed())
+                .map(read -> new Blamed(
+                        read,
+                        showing().contains(FileVersion.NEW)
+                                ? own(this.read.source(), read.toOption())
+                                : HashSet.empty()));
+    }
+
+    /**
+     * The commits whose new version of a file read as {@code source} says is shown, with {@code blame}: a line blamed on
+     * them is of the changes shown, and tinted as changed already (ADR 147). A commit, or a stash: the stash itself, its
+     * index and its untracked files, the commits of its index and its untracked files told by the messages git gives
+     * them, which it does not translate. None for the working tree, a branch, a pull request, or a file without changes.
+     */
+    static Set<Sha> own(WholeFile.Source source, Option<Blame> blame) {
+        return switch (source) {
+            case WholeFile.Source.OfCommit(Sha sha, var file) -> HashSet.of(sha);
+            case WholeFile.Source.OfStash(Sha sha, var file) -> stash(sha, blame);
+            case WholeFile.Source.OfFiles(Changes of, var file) ->
+                switch (of) {
+                    case Changes.OfCommit(Sha sha) -> HashSet.of(sha);
+                    case Changes.OfTip(var branch, Sha sha) -> HashSet.of(sha);
+                    case Changes.OfStash(Sha sha) -> stash(sha, blame);
+                    case Changes.OfBranch _, Changes.OfPullRequest _ -> HashSet.empty();
+                };
+            case WholeFile.Source.WorkingTree _, WholeFile.Source.OnDisk _, WholeFile.Source.AtCommit _ ->
+                HashSet.empty();
+        };
+    }
+
+    private static Set<Sha> stash(Sha sha, Option<Blame> blame) {
+        return HashSet.of(sha)
+                .addAll(blame.toList()
+                        .flatMap(Blame::lines)
+                        .map(Blame.Line::commit)
+                        .filter(commit -> commit.summary().startsWith("index on ")
+                                || commit.summary().startsWith("untracked files on "))
+                        .map(Blame.Commit::sha));
     }
 
     /**
