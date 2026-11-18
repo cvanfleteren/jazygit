@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffLines;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
+import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.ui.commits.AheadView;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
@@ -497,10 +498,11 @@ public final class ContentText {
 
     /**
      * Whether {@code body} is drawn for the width of its area, so drawn anew when that changes: a version of a file
-     * rendered (ADR 103), or the builds of a branch, whose chart has a column for as many builds as fit (ADR 131).
+     * rendered (ADR 103), or blamed, whose blame is shortened in a narrow area (ADR 147), or the builds of a branch,
+     * whose chart has a column for as many builds as fit (ADR 131).
      */
     public static boolean drawnToWidth(Body body) {
-        return body instanceof Body.Builds || rendering(body) || split(body);
+        return body instanceof Body.Builds || rendering(body) || blaming(body) || split(body);
     }
 
     /**
@@ -521,14 +523,24 @@ public final class ContentText {
      * Whether {@code body} shows a version of a file rendered (ADR 103), which is drawn as wide as its area.
      */
     public static boolean rendering(Body body) {
+        return version(body).exists(version -> version.rendering().isDefined());
+    }
+
+    /**
+     * Whether {@code body} shows a version of a file blamed (ADR 147), whose blame is shortened in a narrow area.
+     */
+    static boolean blaming(Body body) {
+        return version(body).exists(version -> version.blaming().isDefined());
+    }
+
+    private static Option<Version> version(Body body) {
         Option<ShownDiff> diff = switch (body) {
             case Body.Diff(ShownDiff shown, var look, var remarks) -> Option.of(shown);
             case Body.CommitChanges(var commit, ShownDiff changes, var look) -> Option.of(changes);
             case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
             case Body.BranchLog _, Body.Builds _, Body.PullRequest _, Body.Note _ -> Option.none();
         };
-        return diff.flatMap(ShownDiff::version)
-                .exists(version -> version.rendering().isDefined());
+        return diff.flatMap(ShownDiff::version);
     }
 
     /**

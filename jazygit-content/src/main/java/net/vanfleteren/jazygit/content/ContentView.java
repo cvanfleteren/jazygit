@@ -192,11 +192,15 @@ public final class ContentView {
                         look);
             case Body other -> other;
         };
-        // A file without changes has one version: the title says only whether it is rendered (ADR 108).
+        // A file without changes has one version: the title says only whether it is rendered (ADR 108), or blamed
+        // (ADR 147).
         String title = area.content() instanceof ScrolledContent.Unchanged
                 ? version.exists(Version::rendered)
                         ? Messages.get("content.panel.file.rendered", area.title())
-                        : area.title()
+                        : version.filter(shown -> shown.blaming().isDefined())
+                                .map(shown ->
+                                        blameNoted(Messages.get("content.panel.file.blamed", area.title()), shown))
+                                .getOrElse(area.title())
                 : version.map(shown -> versioned(area.title(), shown)).getOrElse(area.title());
         return new Shown.Area(area.area(), title, area.content(), body);
     }
@@ -281,23 +285,41 @@ public final class ContentView {
     /**
      * {@code title}, saying which version of its file the area shows in place of its diff, if it shows one, from the
      * moment it was asked for, and whether rendered (ADR 103): while the file is read, or when it could not be, it says
-     * so too (ADR 102).
+     * so too (ADR 102). Blamed, it says so, and while its blame is read, or when it could not be (ADR 147).
      */
     static String versioned(String title, Version version) {
+        boolean blamed = version.blamed() && !version.rendered();
         return version.shown()
                 .map(shown -> Messages.get(
                         shown == FileVersion.NEW
-                                ? version.rendered() ? "content.panel.version.newRendered" : "content.panel.version.new"
+                                ? version.rendered()
+                                        ? "content.panel.version.newRendered"
+                                        : blamed ? "content.panel.version.newBlamed" : "content.panel.version.new"
                                 : version.rendered()
                                         ? "content.panel.version.originalRendered"
-                                        : "content.panel.version.original",
+                                        : blamed
+                                                ? "content.panel.version.originalBlamed"
+                                                : "content.panel.version.original",
                         title))
                 // A read that has no such file shows the diff, as a failed one does, and says so as well.
                 .map(named -> version.failed()
                         ? Messages.get("content.panel.version.failed", named)
                         : version.whole() instanceof Loadable.Loading<DiffText>
                                 ? Messages.get("content.panel.version.reading", named)
-                                : named)
+                                : blameNoted(named, version))
+                .getOrElse(title);
+    }
+
+    /**
+     * {@code title}, saying that the blame of the version shown is read, or could not be, if it is (ADR 147).
+     */
+    private static String blameNoted(String title, Version version) {
+        return version.blame()
+                .map(blame -> blame.isFailed()
+                        ? Messages.get("content.panel.version.blameFailed", title)
+                        : blame instanceof Loadable.Loading<?>
+                                ? Messages.get("content.panel.version.readingBlame", title)
+                                : title)
                 .getOrElse(title);
     }
 

@@ -140,3 +140,10 @@ MarkdownElement {
     task-checked-color: $added;
     html-color: $muted;
 }
+
+/* The bar of the age of the commit each line of a version is blamed on, newest first (ADR 147). */
+Span.blame-age-0 { color: #d9731a; }
+Span.blame-age-1 { color: #d6955a; }
+Span.blame-age-2 { color: #c9ad91; }
+Span.blame-age-3 { color: #c4c0bb; }
+Span.blame-age-4 { color: #dedede; }

@@ -143,7 +143,8 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
      * whole, and, when its read was {@link Read#CUT cut}, how many lines of its new file the read has: up to there,
      * what it leaves out can still be shown; and the version of it shown in place of its diff, if one is, with how many
      * digits the line numbers of that diff have, so the gutter of the version is as wide (ADR 102), whether it is
-     * rendered (ADR 103), and which nodes of a version of JSON rendered the user opened or closed (ADR 122).
+     * rendered (ADR 103), which nodes of a version of JSON rendered the user opened or closed (ADR 122), and the blame
+     * it is drawn with, if it is blamed (ADR 147).
      */
     public record Fold(
             Option<Integer> length,
@@ -152,9 +153,24 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
             Option<FileVersion> version,
             int digits,
             boolean rendered,
-            Map<String, Boolean> nodes) {
+            Map<String, Boolean> nodes,
+            Option<Blamed> blame) {
 
         public static final Fold UNKNOWN = new Fold(Option.none(), Read.NOT);
+
+        /**
+         * What is known of a file, not blamed.
+         */
+        public Fold(
+                Option<Integer> length,
+                Read read,
+                Option<Integer> reach,
+                Option<FileVersion> version,
+                int digits,
+                boolean rendered,
+                Map<String, Boolean> nodes) {
+            this(length, read, reach, version, digits, rendered, nodes, Option.none());
+        }
 
         /**
          * What is known of a file whose read, if any, was not cut.
@@ -212,6 +228,13 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
                     digits,
                     rendered,
                     nodes);
+        }
+
+        /**
+         * This, drawn with {@code blame}.
+         */
+        public Fold withBlame(Option<Blamed> blame) {
+            return new Fold(length, read, reach, version, digits, rendered, nodes, blame);
         }
 
         /**

@@ -198,12 +198,23 @@ public final class RichDiff {
                 .appendAll(inParallel(pending, Pending::draw).flatMap(lines -> lines)));
         // How many hunks the diff filters hide, or that they are switched off where they would hide some, which the
         // title says: drawn with the diff, so it is worked out once for it, not for each frame (ADR 144).
-        Drawn noted = folded.filtered() == 0
+        Drawn filtered = folded.filtered() == 0
                 ? drawn
                 : drawn.withNote(
                         folded.filtersOff()
                                 ? Messages.get("content.filtered.off")
                                 : Messages.get("content.filtered.hidden", folded.filtered()));
+        // The column of a version blamed shortened to fit its area, which the title says (ADR 147).
+        Drawn noted = diff.files()
+                .flatMap(file -> blameColumn(
+                                file.hunks().flatMap(ParsedHunk::lines).toVector(),
+                                folded.fold(file.file().path()),
+                                width,
+                                styles)
+                        .flatMap(BlameColumn::note))
+                .headOption()
+                .map(filtered::withNote)
+                .getOrElse(filtered);
         return split.map(area -> noted.withDivider((area - 1) / 2)).getOrElse(noted);
     }
 
@@ -261,23 +272,10 @@ public final class RichDiff {
                     .map(pending -> () -> pending.draw().map(Marked::pin));
         }
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
-        // A version keeps the gutter of the diff it is shown in place of, as wide, so its code does not move sideways
-        // (ADR 102): its numbers, of the whole file, may be longer than the diff's, but fit in both of its columns.
-        int digits = version.map(shown -> {
-                    int own = lines.flatMap(line -> shown.number(line.line()))
-                            .max()
-                            .map(number -> String.valueOf(number).length())
-                            .getOrElse(1);
-                    return Math.max(fold.digits(), own / 2);
-                })
-                .getOrElse(() -> lines.flatMap(line -> line.line()
-                                .oldNumber()
-                                .toList()
-                                .appendAll(line.line().newNumber()))
-                        .max()
-                        .map(number -> String.valueOf(number).length())
-                        .getOrElse(1));
-        int gutter = 2 * digits + 1 + GUTTER_END.length();
+        int digits = digits(lines, fold);
+        // A version shown blamed has the column of its blame before its numbers (ADR 147).
+        Option<BlameColumn> blame = blameColumn(lines, fold, rendering, styles);
+        int gutter = blame.map(BlameColumn::width).getOrElse(0) + numbersWidth(digits);
         String bar = version.map(shown -> bar(parsed, shown)).getOrElse(() -> bar(file));
         // Each line is measured once, here: its width also tells how far a changed line is padded.
         Vector<Integer> measured =
@@ -286,8 +284,8 @@ public final class RichDiff {
                 width(bar),
                 gutter + measured.max().map(text -> text + 1 + MARGIN.length()).getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
-        Layout layout =
-                new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles, version);
+        Layout layout = new Layout(
+                file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles, version, blame);
         Vector<LineRemarks> onLines = remarks.map(
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
@@ -353,6 +351,47 @@ public final class RichDiff {
                 .appendAll(remarks.filter(ignored -> version.isEmpty())
                         .toList()
                         .<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
+    }
+
+    /**
+     * How many digits each column of numbers of the gutter of {@code lines}, a file folded as {@code fold} says, takes:
+     * as many as its widest number. A version keeps the gutter of the diff it is shown in place of, as wide, so its
+     * code does not move sideways (ADR 102): its numbers, of the whole file, may be longer than the diff's, but fit in
+     * both of its columns.
+     */
+    private static int digits(Vector<ParsedLine> lines, Expansion.Fold fold) {
+        return fold.version()
+                .map(shown -> {
+                    int own = lines.flatMap(line -> shown.number(line.line()))
+                            .max()
+                            .map(number -> String.valueOf(number).length())
+                            .getOrElse(1);
+                    return Math.max(fold.digits(), own / 2);
+                })
+                .getOrElse(() -> lines.flatMap(line -> line.line()
+                                .oldNumber()
+                                .toList()
+                                .appendAll(line.line().newNumber()))
+                        .max()
+                        .map(number -> String.valueOf(number).length())
+                        .getOrElse(1));
+    }
+
+    /**
+     * How many columns the numbers of a gutter whose numbers have {@code digits} digits take, with its end.
+     */
+    private static int numbersWidth(int digits) {
+        return 2 * digits + 1 + GUTTER_END.length();
+    }
+
+    /**
+     * The column of the blame of {@code lines}, a file folded as {@code fold} says, in an area {@code area} columns
+     * wide: if it is a version shown blamed, as source (ADR 147).
+     */
+    private static Option<BlameColumn> blameColumn(
+            Vector<ParsedLine> lines, Expansion.Fold fold, int area, Theme.SpanStyles styles) {
+        return fold.version()
+                .flatMap(ignored -> BlameColumn.of(fold.blame(), area, numbersWidth(digits(lines, fold)), styles));
     }
 
     /**
@@ -769,12 +808,26 @@ public final class RichDiff {
             case REMOVED -> styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_REMOVED_LINE_NUMBER);
             case CONTEXT, NOTE -> styles.of(Theme.Classes.DIFF_LINE_NUMBER);
         };
-        return !remarks.threads().isEmpty() || remarks.covered()
-                ? List.of(
-                        Span.styled(numbers + " ", numbered),
-                        styled(remarks.threads().isEmpty() ? "┃" : "●", Theme.Classes.DIFF_THREAD, styles),
-                        Span.styled(" ", numbered))
-                : List.of(Span.styled(numbers + GUTTER_END, numbered));
+        return blamed(line, layout)
+                .appendAll(
+                        !remarks.threads().isEmpty() || remarks.covered()
+                                ? List.of(
+                                        Span.styled(numbers + " ", numbered),
+                                        styled(
+                                                remarks.threads().isEmpty() ? "┃" : "●",
+                                                Theme.Classes.DIFF_THREAD,
+                                                styles),
+                                        Span.styled(" ", numbered))
+                                : List.of(Span.styled(numbers + GUTTER_END, numbered)));
+    }
+
+    /**
+     * The column of the blame beside {@code line}, if the version shown is blamed (ADR 147).
+     */
+    private static List<Span> blamed(DiffLine line, Layout layout) {
+        return layout.blame()
+                .map(column -> column.beside(layout.version().flatMap(version -> version.number(line))))
+                .getOrElse(List.empty());
     }
 
     /**
@@ -790,14 +843,20 @@ public final class RichDiff {
     /**
      * What the line of {@code row} is searched in (ADR 126): its text, without the first {@code prefix} characters
      * of a line kept as git printed it, after its gutter and its marker, which a note has none of. Its gutter is as
-     * long whatever marks are in it ({@link #gutter}).
+     * long whatever marks are in it ({@link #gutter}), after the column of its blame, if any, which is not searched
+     * (ADR 147).
      */
     private static Rows.Source source(Row row, int prefix, Layout layout) {
         DiffLine line = row.parsed().line();
         int marker = line.kind() == DiffLine.Kind.NOTE ? 0 : 1 + MARGIN.length();
         Rows.Source text = Rows.Source.cut(line.text(), prefix);
         return new Rows.Source(
-                text.text(), numbers(line, layout).length() + GUTTER_END.length() + marker + text.from());
+                text.text(),
+                BlameColumn.length(blamed(line, layout))
+                        + numbers(line, layout).length()
+                        + GUTTER_END.length()
+                        + marker
+                        + text.from());
     }
 
     /**
@@ -1265,7 +1324,8 @@ public final class RichDiff {
      * What drawing each line of a file takes from the file: how many {@code digits} its numbers have, how many
      * columns after the gutter its changed lines are padded to, its {@code width}, how the threads on its lines are
      * drawn, whether its code is coloured by its syntax, whether the changed words of a line are highlighted, the
-     * styles of the theme, and the version of the file shown in place of its diff, if one is (ADR 102).
+     * styles of the theme, the version of the file shown in place of its diff, if one is (ADR 102), and the column of
+     * its blame, if it is blamed (ADR 147).
      */
     private record Layout(
             String path,
@@ -1277,7 +1337,8 @@ public final class RichDiff {
             boolean syntax,
             boolean words,
             Theme.SpanStyles styles,
-            Option<FileVersion> version) {}
+            Option<FileVersion> version,
+            Option<BlameColumn> blame) {}
 
     /**
      * A line of a file with what drawing it takes besides the layout of its file: how many columns its text was

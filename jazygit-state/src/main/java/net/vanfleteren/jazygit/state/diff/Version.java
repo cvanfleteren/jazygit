@@ -203,18 +203,27 @@ public record Version(
                                 .put(
                                         path,
                                         Expansion.Fold.of(
-                                                version,
-                                                this.whole.toOption().exists(DiffText::truncated),
-                                                folded.diff()
-                                                        .files()
-                                                        .find(file -> file.file()
-                                                                .path()
-                                                                .equals(path))
-                                                        .map(Version::digits)
-                                                        .getOrElse(1),
-                                                rendered,
-                                                nodes)))))
+                                                        version,
+                                                        this.whole.toOption().exists(DiffText::truncated),
+                                                        folded.diff()
+                                                                .files()
+                                                                .find(file -> file.file()
+                                                                        .path()
+                                                                        .equals(path))
+                                                                .map(Version::digits)
+                                                                .getOrElse(1),
+                                                        rendered,
+                                                        nodes)
+                                                .withBlame(drawnBlame())))))
                 .getOrElse(folded);
+    }
+
+    /**
+     * The blame the version shown blamed is drawn with: none when it is not blamed, or its blame failed to be read, as
+     * the title says.
+     */
+    public Option<Blamed> drawnBlame() {
+        return blame().filter(read -> !read.isFailed()).map(Blamed::new);
     }
 
     /**
