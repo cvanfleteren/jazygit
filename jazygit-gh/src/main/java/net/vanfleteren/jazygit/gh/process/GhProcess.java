@@ -35,6 +35,13 @@ public final class GhProcess {
     }
 
     /**
+     * The directory gh runs in.
+     */
+    public Path directory() {
+        return worktree;
+    }
+
+    /**
      * Runs the same gh, as the same account, in {@code directory}, taken relative to the working tree of this one.
      */
     public GhProcess in(Path directory) {

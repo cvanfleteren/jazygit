@@ -11,15 +11,22 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**
- * Every popup of the app, those of {@link Features#ALL}, with where the focus goes when it closes. At most one is
- * open, so their order does not matter.
+ * Every popup of the app, those of {@link Features#ALL} and those of the app itself, with where the focus goes when it
+ * closes. At most one is open, so their order does not matter.
  */
 final class Popups {
 
     private final List<PopupSlot> slots;
 
     Popups(Consumer<Msg> dispatch) {
-        this.slots = Features.ALL.flatMap(feature -> feature.popups(dispatch));
+        this(dispatch, List.empty());
+    }
+
+    /**
+     * The popups of the features, and {@code own}, those of the app itself.
+     */
+    Popups(Consumer<Msg> dispatch, List<PopupSlot> own) {
+        this.slots = Features.ALL.flatMap(feature -> feature.popups(dispatch)).appendAll(own);
     }
 
     /**

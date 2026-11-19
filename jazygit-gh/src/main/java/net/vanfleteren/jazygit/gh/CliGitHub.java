@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.gh.process.GhToken;
 import net.vanfleteren.jazygit.gh.pullrequests.CliPullRequests;
 import net.vanfleteren.jazygit.gh.reviews.CliReviews;
 import net.vanfleteren.jazygit.gh.stacks.CliStacks;
+import net.vanfleteren.jazygit.process.SshAsking;
 
 /**
  * Gives the {@link GitHub} of the repository in a working tree, whose roles go through the {@code gh} command line
@@ -70,9 +71,47 @@ public final class CliGitHub {
             Function<GhAccount, Option<String>> browsers,
             Function<String, Option<String>> environment,
             String os) {
+        return of(worktree, executable, token, host, browsers, environment, os, SshAsking.Unchanged.INSTANCE);
+    }
+
+    /**
+     * GitHub as {@link #of(Path, String, GhToken, Supplier, Function)}, where ssh may ask the user as {@code ssh} lets
+     * it while gh checks a pull request out (ADR 150).
+     */
+    public static GitHub of(
+            Path worktree,
+            String executable,
+            GhToken token,
+            Supplier<String> host,
+            Function<GhAccount, Option<String>> browsers,
+            SshAsking ssh) {
+        return of(
+                worktree,
+                executable,
+                token,
+                host,
+                browsers,
+                name -> Option.of(System.getenv(name)),
+                System.getProperty("os.name", ""),
+                ssh);
+    }
+
+    /**
+     * GitHub as {@link #of(Path, String, GhToken, Supplier, Function, SshAsking)}, choosing the browser by the
+     * variables {@code environment} gives and the system {@code os}.
+     */
+    public static GitHub of(
+            Path worktree,
+            String executable,
+            GhToken token,
+            Supplier<String> host,
+            Function<GhAccount, Option<String>> browsers,
+            Function<String, Option<String>> environment,
+            String os,
+            SshAsking ssh) {
         GhProcess process = new GhProcess(worktree, executable, token);
         return new GitHub(
-                new CliPullRequests(process),
+                new CliPullRequests(process, ssh),
                 new CliReviews(process),
                 new CliChecks(process),
                 new CliStacks(process),

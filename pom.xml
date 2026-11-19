@@ -24,6 +24,7 @@
         <module>jazygit-process</module>
         <module>jazygit-git</module>
         <module>jazygit-gh</module>
+        <module>jazygit-askpass</module>
         <module>jazygit-lens</module>
         <module>jazygit-image</module>
         <module>jazygit-settings</module>
@@ -114,6 +115,11 @@
             <dependency>
                 <groupId>net.vanfleteren</groupId>
                 <artifactId>jazygit-gh</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-askpass</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

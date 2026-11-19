@@ -16,8 +16,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The rules every module of the core keeps: jazygit-process, jazygit-git and jazygit-gh. Each takes them in with
- * {@code ArchTests.in(CoreRules.class)}. That git and gh know nothing of each other, and the process layer of
+ * The rules every module of the core keeps: jazygit-process, jazygit-git, jazygit-gh and jazygit-askpass. Each takes
+ * them in with {@code ArchTests.in(CoreRules.class)}. That git and gh know nothing of each other, and the process layer of
  * neither, the compiler sees to: they are not on each other's classpath.
  */
 public final class CoreRules {

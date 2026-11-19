@@ -22,6 +22,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.app.askpass.PopupAsking;
+import net.vanfleteren.jazygit.app.askpass.SshPromptDialog;
+import net.vanfleteren.jazygit.askpass.AskpassServer;
 import net.vanfleteren.jazygit.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.changes.files.step.FileStepEnded;
@@ -30,6 +33,8 @@ import net.vanfleteren.jazygit.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.chrome.layout.LayoutMsg;
 import net.vanfleteren.jazygit.content.ContentPanel;
 import net.vanfleteren.jazygit.content.ContentView;
+import net.vanfleteren.jazygit.git.branches.BatchSsh;
+import net.vanfleteren.jazygit.process.SshAsking;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Focus;
@@ -73,7 +78,10 @@ public class JazygitApp extends ToolkitApp {
     private final RepositorySession session;
     // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
     private final Consumer<Msg> dispatch = this::send;
-    private final Popups popups = new Popups(dispatch);
+    // Asks the user what ssh asks, in a popup of the app's own (ADR 150).
+    private final PopupAsking asking =
+            new PopupAsking(action -> runner().runOnRenderThread(action), dispatch, terminal::pasteAsKeys);
+    private final Popups popups = new Popups(dispatch, List.of(SshPromptDialog.slot(asking)));
     private final ContentPanel contentPanel;
     private final FocusKeeper focus;
     private final LeftColumn leftColumn;
@@ -123,6 +131,20 @@ public class JazygitApp extends ToolkitApp {
      */
     public JazygitApp(
             Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, StyleEngine styleEngine) {
+        this(env, settings, themeOverride, styleEngine, Option.none());
+    }
+
+    /**
+     * The app as {@link #JazygitApp(Env, SettingsStore.Loaded, Option, StyleEngine)}, where ssh asks the user through
+     * {@code askpass}, if it listens, for what the user starts (ADR 150); {@code env} runs ssh through it already.
+     */
+    public JazygitApp(
+            Env env,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            StyleEngine styleEngine,
+            Option<AskpassServer> askpass) {
+        askpass.forEach(server -> server.answeredBy(asking));
         this.settings = settings;
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
@@ -139,7 +161,14 @@ public class JazygitApp extends ToolkitApp {
                 id -> runner().focusManager().setFocus(id),
                 this::leaveCommandLog);
         this.session = new RepositorySession(
-                env, terminal, this::runner, clock, this::requestRedraw, this::quit, this::started);
+                env,
+                terminal,
+                askpass.<SshAsking>map(server -> server).getOrElse(BatchSsh.INSTANCE),
+                this::runner,
+                clock,
+                this::requestRedraw,
+                this::quit,
+                this::started);
     }
 
     /**
@@ -351,6 +380,7 @@ public class JazygitApp extends ToolkitApp {
 
     @Override
     protected void onStop() {
+        asking.withdrawAll();
         session.close();
     }
 
@@ -359,6 +389,13 @@ public class JazygitApp extends ToolkitApp {
      */
     Model model() {
         return session.model();
+    }
+
+    /**
+     * What asks the user what ssh asks, as the server hands it questions.
+     */
+    PopupAsking asking() {
+        return asking;
     }
 
     @Override

@@ -28,6 +28,7 @@
           ./jazygit-process
           ./jazygit-git
           ./jazygit-gh
+          ./jazygit-askpass
           ./jazygit-lens
           ./jazygit-image
           ./jazygit-settings

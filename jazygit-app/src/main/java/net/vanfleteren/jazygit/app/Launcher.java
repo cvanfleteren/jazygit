@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.app;
 
 import dev.tamboui.css.engine.StyleEngine;
+import io.vavr.Lazy;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -8,11 +9,15 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.app.cli.StartupCli;
 import net.vanfleteren.jazygit.app.cli.StartupOptions;
+import net.vanfleteren.jazygit.askpass.AskpassHelper;
+import net.vanfleteren.jazygit.askpass.AskpassServer;
 import net.vanfleteren.jazygit.branches.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.git.CliGit;
 import net.vanfleteren.jazygit.git.Git;
+import net.vanfleteren.jazygit.git.branches.BatchSsh;
 import net.vanfleteren.jazygit.git.files.RepositoryIdentity;
 import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.process.SshAsking;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
@@ -32,6 +37,11 @@ final class Launcher {
      * @param args as {@link StartupCli} reads them; {@code --help} lists them
      */
     static void main(String[] args) {
+        // Run by ssh as its SSH_ASKPASS, jazygit only passes what ssh asks to the jazygit that runs ssh (ADR 150).
+        if (AskpassHelper.asked()) {
+            AskpassHelper.main(args);
+            return;
+        }
         // What a thread does not catch, as zt-exec's when memory runs out, would be printed over the TUI; and so would
         // what the handler throws, as when memory is still short.
         Thread.setDefaultUncaughtExceptionHandler((thread, bug) -> {
@@ -47,6 +57,27 @@ final class Launcher {
     }
 
     private static void start(StartupOptions options) {
+        // ssh asks the user through the app for what the user starts; without the socket, ssh asks nothing (ADR 150).
+        // Only started once the app is, after the debug log: the first logger made fixes where the log goes.
+        Lazy<Option<AskpassServer>> askpass = Lazy.of(() -> {
+            Option<AskpassServer> started = AskpassServer.start(Path.of(System.getProperty("java.io.tmpdir")))
+                    .onFailure(failed -> LoggerFactory.getLogger(Launcher.class)
+                            .debug("ssh cannot ask through jazygit: the socket could not be opened", failed))
+                    .toOption();
+            // Also when the app exits without returning here.
+            started.forEach(server -> Runtime.getRuntime().addShutdownHook(new Thread(server::close)));
+            return started;
+        });
+        try {
+            start(options, askpass);
+        } finally {
+            if (askpass.isEvaluated()) {
+                askpass.get().forEach(AskpassServer::close);
+            }
+        }
+    }
+
+    private static void start(StartupOptions options, Lazy<Option<AskpassServer>> askpass) {
         Path start = options.path().getOrElse(Path.of("")).toAbsolutePath();
         Option<Path> debugLog = Option.when(options.debug(), SettingsPaths::debugLog);
         Either<String, Option<JazygitApp>> app = keymap(Keymap.standard())
@@ -78,8 +109,11 @@ final class Launcher {
                                         new CheckTimingsFile(SettingsPaths.repositories()),
                                         new CollapsedFile(SettingsPaths.repositories()),
                                         Repositories.NONE,
-                                        Terminal.NONE);
-                                return new JazygitApp(env, loaded, options.theme(), engine);
+                                        Terminal.NONE,
+                                        askpass.get()
+                                                .<SshAsking>map(server -> server)
+                                                .getOrElse(BatchSsh.INSTANCE));
+                                return new JazygitApp(env, loaded, options.theme(), engine, askpass.get());
                             }));
                 });
         // Quitting instead of choosing what to open starts no app.

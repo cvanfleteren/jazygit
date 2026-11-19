@@ -8,6 +8,7 @@ import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.git.branches.BatchSsh;
 import net.vanfleteren.jazygit.git.branches.CliBranches;
 import net.vanfleteren.jazygit.git.branches.CliCheckout;
 import net.vanfleteren.jazygit.git.branches.CliConfig;
@@ -30,6 +31,7 @@ import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.git.process.GitError.*;
 import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.git.process.GitProcess;
+import net.vanfleteren.jazygit.process.SshAsking;
 
 /**
  * Gives the {@link Git} of a real repository, whose roles go through the {@code git} command line tool only, so the
@@ -110,6 +112,14 @@ public final class CliGit {
      * not the real ones.
      */
     public static Git withCredentials(Git git, Supplier<Map<String, String>> credentials) {
-        return git.withRemotes(new CliRemotes(git.worktree(), credentials));
+        return withCredentials(git, credentials, BatchSsh.INSTANCE);
+    }
+
+    /**
+     * {@code git} with {@code credentials}, as {@link #withCredentials(Git, Supplier)}, where ssh may ask the user as
+     * {@code ssh} lets it for what the user starts (ADR 150).
+     */
+    public static Git withCredentials(Git git, Supplier<Map<String, String>> credentials, SshAsking ssh) {
+        return git.withRemotes(new CliRemotes(git.worktree(), credentials, ssh));
     }
 }

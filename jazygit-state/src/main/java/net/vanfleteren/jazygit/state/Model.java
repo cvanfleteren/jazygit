@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.operation.Outcome;
 import net.vanfleteren.jazygit.state.popup.ErrorPopup;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
 import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.popup.SshPromptPopup;
 import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
@@ -316,11 +317,15 @@ public record Model(
 
     /**
      * This model with {@code popup} open, replacing the one that was open. A popup of the kind that was open, which
-     * shows what changed in it, keeps where the user was in its list; any other one starts at the top.
+     * shows what changed in it, keeps where the user was in its list; any other one starts at the top. While ssh asks
+     * the user something, its popup stays on top, and {@code popup} goes under it (ADR 150).
      */
     public Model openPopup(Popup popup) {
         boolean same = this.popup.exists(open -> open.getClass() == popup.getClass());
-        return withPopup(Option.of(popup)).withListCursor(same ? listCursor : ListCursor.START);
+        return this.popup(SshPromptPopup.class)
+                .filter(asking -> !same)
+                .map(asking -> withPopup(Option.of(asking.over(popup))))
+                .getOrElse(() -> withPopup(Option.of(popup)).withListCursor(same ? listCursor : ListCursor.START));
     }
 
     /**
@@ -336,6 +341,10 @@ public record Model(
      * opened in the meantime stays open.
      */
     public Model withoutPopup(Class<? extends Popup> type) {
-        return popup(type).isDefined() ? withPopup(Option.none()).withListCursor(ListCursor.START) : this;
+        return popup(type).isDefined()
+                ? withPopup(Option.none()).withListCursor(ListCursor.START)
+                : popup(SshPromptPopup.class)
+                        .map(asking -> withPopup(Option.of(asking.without(type))))
+                        .getOrElse(this);
     }
 }

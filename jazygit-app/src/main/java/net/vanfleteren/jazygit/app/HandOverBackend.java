@@ -88,6 +88,22 @@ final class HandOverBackend implements Backend {
     }
 
     /**
+     * Turns bracketed paste on, or off, so that the terminal sends a paste as keys, as a popup asking for a secret
+     * wants it (ADR 150). Nothing is written while the terminal is handed over.
+     */
+    void bracketedPaste(boolean on) throws IOException {
+        if (muted) {
+            return;
+        }
+        if (on) {
+            backend.enableBracketedPaste();
+        } else {
+            backend.disableBracketedPaste();
+        }
+        backend.flush();
+    }
+
+    /**
      * Hands the terminal over: stops reading keys, and puts the terminal back as it was before the app started, as
      * {@code config} set it up, keyboard enhancements included.
      */

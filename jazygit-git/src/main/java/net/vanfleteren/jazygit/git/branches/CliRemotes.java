@@ -11,6 +11,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.history.CliRebase;
 import net.vanfleteren.jazygit.git.history.Unfinished;
@@ -31,11 +32,13 @@ import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.git.process.GitOutput;
 import net.vanfleteren.jazygit.git.process.GitProcess;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.process.SshAsking;
 
 /**
  * The {@link Remotes} of a repository: talks to the remotes through the {@code git} command line tool, with the
- * user's own configuration and the credentials it was given, in the background: nothing may ask the user anything.
- * The files of a pull request are fetched through {@link CliPullRequest}, which runs git through {@link #run} and
+ * user's own configuration and the credentials it was given. Git itself asks nothing; ssh may ask the user through
+ * jazygit for what the user starts, as {@link SshAsking} lets it, but never for a fetch, which runs in the background
+ * (ADR 150). The files of a pull request are fetched through {@link CliPullRequest}, which runs git through {@link #run} and
  * reads the URLs of the remotes through {@link #remoteUrls(Path)}.
  */
 public final class CliRemotes implements Remotes {
@@ -58,10 +61,25 @@ public final class CliRemotes implements Remotes {
     // Asked each time git talks to a remote: the environment variables that tell the credential helper which account
     // to use.
     private final Supplier<Map<String, String>> credentials;
+    // How ssh may ask the user, for what the user starts.
+    private final SshAsking ssh;
 
+    /**
+     * The remotes of the repository at {@code worktree}, with ssh in batch mode for everything.
+     */
     public CliRemotes(Path worktree, Supplier<Map<String, String>> credentials) {
+        this(worktree, credentials, BatchSsh.INSTANCE);
+    }
+
+    /**
+     * The remotes of the repository at {@code worktree}, where ssh may ask the user as {@code ssh} lets it for what the
+     * user starts: a pull, a push, a fast-forward, deleting or renaming a branch on its remote, and fetching chosen
+     * branches. A fetch and the files of a pull request run in the background, with ssh in batch mode.
+     */
+    public CliRemotes(Path worktree, Supplier<Map<String, String>> credentials, SshAsking ssh) {
         this.worktree = worktree;
         this.credentials = credentials;
+        this.ssh = ssh;
     }
 
     /**
@@ -149,16 +167,13 @@ public final class CliRemotes implements Remotes {
                 .flatMap(setting -> PushDefault.parse(setting)
                         .flatMap(pushDefault -> target(pushDefault, name, upstream))
                         .toEither(() -> new GitFailure(new PushRefused(setting, upstream), List.empty())))
-                .flatMap(target -> run(
-                        worktree,
-                        git(List.of("push")
-                                .appendAll(
-                                        mode == PushMode.FORCE_WITH_LEASE
-                                                ? List.of("--force-with-lease", "--force-if-includes")
-                                                : List.empty())
-                                .append(GitArgs.remote(target.remote()))
-                                .append(refspec(name, target))),
-                        credentials.get()));
+                .flatMap(target -> talking(git(List.of("push")
+                        .appendAll(
+                                mode == PushMode.FORCE_WITH_LEASE
+                                        ? List.of("--force-with-lease", "--force-if-includes")
+                                        : List.empty())
+                        .append(GitArgs.remote(target.remote()))
+                        .append(refspec(name, target)))));
     }
 
     /**
@@ -183,10 +198,7 @@ public final class CliRemotes implements Remotes {
      */
     @Override
     public Either<GitFailure, List<ExecutedCommand>> pushSettingUpstream(BranchName name, RemoteBranch upstream) {
-        return run(
-                worktree,
-                git("push", "--set-upstream", GitArgs.remote(upstream.remote()), refspec(name, upstream)),
-                credentials.get());
+        return talking(git("push", "--set-upstream", GitArgs.remote(upstream.remote()), refspec(name, upstream)));
     }
 
     /**
@@ -198,18 +210,14 @@ public final class CliRemotes implements Remotes {
     @Override
     public Either<GitFailure, List<ExecutedCommand>> pushAll(
             RemoteName remote, List<Tuple2<BranchName, BranchName>> branches) {
-        return run(
-                worktree,
-                git(List.of(
-                                "push",
-                                "--force-with-lease",
-                                "--force-if-includes",
-                                "--atomic",
-                                "--set-upstream",
-                                GitArgs.remote(remote))
-                        .appendAll(
-                                branches.map(pushed -> refspec(pushed._1(), new RemoteBranch(remote, pushed._2()))))),
-                credentials.get());
+        return talking(git(List.of(
+                        "push",
+                        "--force-with-lease",
+                        "--force-if-includes",
+                        "--atomic",
+                        "--set-upstream",
+                        GitArgs.remote(remote))
+                .appendAll(branches.map(pushed -> refspec(pushed._1(), new RemoteBranch(remote, pushed._2()))))));
     }
 
     /**
@@ -229,13 +237,10 @@ public final class CliRemotes implements Remotes {
      */
     @Override
     public Either<GitFailure, List<ExecutedCommand>> pull() {
-        return toRemote(
-                        worktree,
-                        git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":")),
-                        credentials.get())
-                .flatMap(pull ->
-                        Unfinished.runOrUndo(worktree, pull, left -> Option.when(left.rebasing(), CliRebase.ABORT)))
-                .mapLeft(CliRemotes::refusedKey);
+        return asking(remote -> Unfinished.runOrUndo(
+                worktree,
+                remote.apply(git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":"))),
+                left -> Option.when(left.rebasing(), CliRebase.ABORT)));
     }
 
     @Override
@@ -275,13 +280,9 @@ public final class CliRemotes implements Remotes {
      */
     @Override
     public Either<GitFailure, List<ExecutedCommand>> fetchBranches(RemoteName remote, List<BranchName> branches) {
-        return run(
-                worktree,
-                git(List.of("fetch", "--no-write-fetch-head", GitArgs.remote(remote))
-                        .appendAll(branches.map(branch -> "+"
-                                + GitArgs.refspec(
-                                        new BranchRef.Local(branch), new RemoteBranch(remote, branch).tracking())))),
-                credentials.get());
+        return talking(git(List.of("fetch", "--no-write-fetch-head", GitArgs.remote(remote))
+                .appendAll(branches.map(branch -> "+"
+                        + GitArgs.refspec(new BranchRef.Local(branch), new RemoteBranch(remote, branch).tracking())))));
     }
 
     /**
@@ -299,13 +300,10 @@ public final class CliRemotes implements Remotes {
 
     private Either<GitFailure, List<ExecutedCommand>> fastForward(
             BranchName name, RemoteName remote, BranchName branch) {
-        return run(
-                worktree,
-                git(
-                        "fetch",
-                        GitArgs.remote(remote),
-                        GitArgs.refspec(new BranchRef.Local(branch), new BranchRef.Local(name))),
-                credentials.get());
+        return talking(git(
+                "fetch",
+                GitArgs.remote(remote),
+                GitArgs.refspec(new BranchRef.Local(branch), new BranchRef.Local(name))));
     }
 
     /**
@@ -326,14 +324,11 @@ public final class CliRemotes implements Remotes {
      */
     @Override
     public Either<GitFailure, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
-        return run(
-                worktree,
-                git(
-                        "push",
-                        GitArgs.remote(remote.remote()),
-                        "--delete",
-                        GitArgs.revision(new BranchRef.Local(remote.branch()))),
-                credentials.get());
+        return talking(git(
+                "push",
+                GitArgs.remote(remote.remote()),
+                "--delete",
+                GitArgs.revision(new BranchRef.Local(remote.branch()))));
     }
 
     /**
@@ -350,23 +345,26 @@ public final class CliRemotes implements Remotes {
     public Either<GitFailure, List<ExecutedCommand>> renameUpstream(BranchName branch, RemoteBranch upstream) {
         BranchRef.Local old = new BranchRef.Local(upstream.branch());
         BranchRef.Local target = new BranchRef.Local(branch);
-        return GitFailure.sequence(
-                        () -> run(
+        // One operation: ssh asks for the push what it asked for the fetch again, and a cancel refuses both.
+        return asking(remote -> GitFailure.sequence(
+                        () -> GitProcess.log(
                                 worktree,
-                                git("fetch", "--prune", "--no-write-fetch-head", GitArgs.remote(upstream.remote())),
-                                credentials.get()),
+                                remote.apply(git(
+                                        "fetch",
+                                        "--prune",
+                                        "--no-write-fetch-head",
+                                        GitArgs.remote(upstream.remote())))),
                         () -> stillOnRemote(upstream, branch),
-                        () -> run(
+                        () -> GitProcess.log(
                                 worktree,
-                                git(
+                                remote.apply(git(
                                         "push",
                                         "--atomic",
                                         GitArgs.leaseAbsent(target),
                                         GitArgs.lease(old),
                                         GitArgs.remote(upstream.remote()),
                                         GitArgs.refspec(upstream.tracking(), target),
-                                        GitArgs.deletion(old)),
-                                credentials.get()))
+                                        GitArgs.deletion(old))))))
                 .mapLeft(failure -> failure.error() instanceof GitError.UpstreamNotOnRemote
                         ? failure
                         : new GitFailure(
@@ -399,6 +397,41 @@ public final class CliRemotes implements Remotes {
     @Override
     public Either<GitError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
         return CliPullRequest.files(worktree, commits, credentials.get());
+    }
+
+    /**
+     * Runs {@code command}, which talks to a remote, for its effect, as the user started it: ssh may ask the user.
+     */
+    private Either<GitFailure, List<ExecutedCommand>> talking(GitCommand command) {
+        return asking(remote -> GitProcess.log(worktree, remote.apply(command)));
+    }
+
+    /**
+     * What {@code talk} gives, which runs the commands it is given ready to talk to a remote, as one operation the
+     * user started: ssh may ask the user while it runs, as {@link #ssh} lets it. Its failure is a refused key as
+     * {@link #refusedKey} says, or what the user cancelled.
+     */
+    private <T> Either<GitFailure, T> asking(Function<Function<GitCommand, GitCommand>, Either<GitFailure, T>> talk) {
+        Map<String, String> given = credentials.get();
+        SshAsking.Asked<Either<GitFailure, T>> asked = ssh.asking(
+                worktree,
+                variables -> talk.apply(command ->
+                        command.withEnvironment(given.merge(variables)).withTimeout(TIMEOUT)));
+        return asked.result().mapLeft(failure -> cancelled(refusedKey(failure), asked.cancelled()));
+    }
+
+    /**
+     * {@code failure}, once the user cancelled {@code cancelled}, if anything: a cancelled passphrase of a key fails as
+     * a refused key, whose hint to add the key to the agent holds; anything else ssh asked fails as cancelled.
+     */
+    static GitFailure cancelled(GitFailure failure, Option<SshAsking.Cancelled> cancelled) {
+        return cancelled.fold(
+                () -> failure,
+                prompt -> failure.map(error -> prompt.passphrase()
+                        ? error instanceof GitError.SshKeyRefused
+                                ? error
+                                : new GitError.SshKeyRefused(prompt.prompt().strip())
+                        : new GitError.SshCancelled(prompt.prompt().strip())));
     }
 
     /**
@@ -453,7 +486,7 @@ public final class CliRemotes implements Remotes {
      * The ssh command git would run, or none when it runs plain {@code ssh}: {@code GIT_SSH_COMMAND}, else
      * {@code core.sshCommand}. Only looked up, so not logged.
      */
-    private static Either<GitFailure, Option<String>> configuredSsh(Path worktree, Option<String> environment) {
+    static Either<GitFailure, Option<String>> configuredSsh(Path worktree, Option<String> environment) {
         Option<String> set = environment.filter(command -> !command.isBlank());
         // git config --get exits with 1, saying nothing, when the key is not set.
         return set.isDefined()
