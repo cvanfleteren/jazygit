@@ -3,10 +3,10 @@ package net.vanfleteren.jazygit.content;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.content.ContentView.Tone;
 import net.vanfleteren.jazygit.ui.content.Body;
 import net.vanfleteren.jazygit.ui.content.DrawContext;
 import net.vanfleteren.jazygit.ui.content.Drawn;
+import net.vanfleteren.jazygit.ui.content.Tone;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**

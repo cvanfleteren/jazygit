@@ -11,7 +11,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.checks.StubChecks;
 import net.vanfleteren.jazygit.gh.model.Build;
@@ -53,6 +52,8 @@ import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
 import net.vanfleteren.jazygit.state.view.Workflow;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.content.Shown;
+import net.vanfleteren.jazygit.ui.content.Tone;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
@@ -130,7 +131,7 @@ class BuildsContentTest {
         Next again = Update.update(shown, new BuildsMsg.Toggled(MAIN));
 
         assertEquals(Option.none(), again.model().repoView().branches().builds());
-        assertEquals(ContentArea.LOG, ((Shown.Area) content(again.model())).area());
+        assertEquals(BranchLogSource.AREA, ((Shown.Area) content(again.model())).area());
     }
 
     @Test
@@ -142,7 +143,7 @@ class BuildsContentTest {
 
         assertEquals(List.of(new LoadBuilds(ORIGIN_MAIN, Option.of("c25"))), read.cmds());
         Shown.Area area = (Shown.Area) content(read.model());
-        assertEquals(ContentArea.BUILDS, area.area());
+        assertEquals(BuildsSource.AREA, area.area());
         assertEquals("Builds: main · reading, 25 commits so far", area.title());
         BuildsShown drawn = ((BuildsBody) area.body()).shown();
         assertEquals(new BuildsView.Pipeline("Build", "push"), drawn.shown());
@@ -267,8 +268,7 @@ class BuildsContentTest {
                 .model();
 
         assertEquals(
-                new Shown.Message(
-                        "Builds: main · last 0 commits", "origin/main is not on GitHub", ContentView.Tone.DIM),
+                new Shown.Message("Builds: main · last 0 commits", "origin/main is not on GitHub", Tone.DIM),
                 content(read));
     }
 
@@ -286,7 +286,7 @@ class BuildsContentTest {
                 new Shown.Message(
                         "Builds: main · last 25 commits",
                         "No builds on the last 25 commits of origin/main on GitHub",
-                        ContentView.Tone.DIM),
+                        Tone.DIM),
                 content(read));
     }
 
@@ -303,8 +303,7 @@ class BuildsContentTest {
                 .model();
 
         assertEquals(
-                new Shown.Message(
-                        "Builds: main · reading, 25 commits so far", Placeholders.loading(), ContentView.Tone.DIM),
+                new Shown.Message("Builds: main · reading, 25 commits so far", Placeholders.loading(), Tone.DIM),
                 content(read));
     }
 
@@ -336,7 +335,7 @@ class BuildsContentTest {
         assertInstanceOf(
                 Loadable.Failed.class,
                 failed.repoView().branches().builds().get().builds());
-        assertEquals(ContentView.Tone.ERROR, ((Shown.Message) content(failed)).tone());
+        assertEquals(Tone.ERROR, ((Shown.Message) content(failed)).tone());
     }
 
     @Test
@@ -398,7 +397,7 @@ class BuildsContentTest {
         other = Update.update(other, TestModels.branchLogLoaded(new BranchRef.Local(LOCAL), List.empty()))
                 .model();
 
-        assertEquals(ContentArea.LOG, ((Shown.Area) content(other)).area());
+        assertEquals(BranchLogSource.AREA, ((Shown.Area) content(other)).area());
     }
 
     @Test

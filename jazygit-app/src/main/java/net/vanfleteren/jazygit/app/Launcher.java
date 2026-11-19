@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.git.files.RepositoryIdentity;
 import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.ui.content.ContentSources;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
@@ -77,7 +78,8 @@ final class Launcher {
         Path start = options.path().getOrElse(Path.of("")).toAbsolutePath();
         Option<Path> debugLog = Option.when(options.debug(), SettingsPaths::debugLog);
         Either<String, Option<JazygitApp>> app = keymap(Keymap.standard())
-                .flatMap(keys -> DebugLog.start(debugLog)
+                .flatMap(keys -> contents(ContentSources.standard()))
+                .flatMap(contents -> DebugLog.start(debugLog)
                         .toEither()
                         .mapLeft(failed ->
                                 Messages.get("app.debugLog.failed", debugLog.get(), ErrorText.reason(failed))))
@@ -132,6 +134,16 @@ final class Launcher {
     static Either<String, Keymap> keymap(Keymap standard) {
         return standard.globals().isEmpty()
                 ? Either.left(Messages.get("app.keymap.missing", Keymap.Source.class.getName()))
+                : Either.right(standard);
+    }
+
+    /**
+     * The sources of what the content panel shows, or why there are none: the content panel finds them as a service
+     * ({@link ContentSources.Provider}), and without it would show nothing but that it is loading (ADR 154).
+     */
+    static Either<String, ContentSources> contents(ContentSources standard) {
+        return standard.sources().isEmpty()
+                ? Either.left(Messages.get("app.contents.missing", ContentSources.Provider.class.getName()))
                 : Either.right(standard);
     }
 

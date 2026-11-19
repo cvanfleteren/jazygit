@@ -1,0 +1,33 @@
+package net.vanfleteren.jazygit.content;
+
+import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.ui.content.ContentArea;
+import net.vanfleteren.jazygit.ui.content.Shown;
+import net.vanfleteren.jazygit.ui.content.Tone;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
+
+/**
+ * What the files pane shows in place of a diff or a file's content, such as that a file is binary, or still read: a
+ * note, in an area that holds the focus while the files are walked from the content panel (ADR 117).
+ */
+final class FileNote {
+
+    /**
+     * The area of the note, which the focus is not moved into from the files pane.
+     */
+    static final ContentArea AREA = ContentArea.of(AreaId.FILE_NOTE, FilesPanel.PANE);
+
+    private FileNote() {}
+
+    /**
+     * {@code shown}, a message in it as a note.
+     */
+    static Shown noted(Shown shown) {
+        return switch (shown) {
+            case Shown.Message(String title, String text, Tone tone) ->
+                new Shown.Area(AREA, title, new ScrolledContent.Note(text), new NoteBody(text, tone));
+            case Shown other -> other;
+        };
+    }
+}

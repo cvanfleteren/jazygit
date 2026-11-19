@@ -376,7 +376,7 @@ class ContentSearchTest {
                                 "a.txt", net.vanfleteren.jazygit.git.model.ChangeType.MODIFIED, true, false),
                         new net.vanfleteren.jazygit.git.model.FileEntry(
                                 "b.txt", net.vanfleteren.jazygit.git.model.ChangeType.MODIFIED, false, true)));
-        Driven driven = new Driven(selected, FilesPanel.PANE, ContentArea.UNSTAGED.id());
+        Driven driven = new Driven(selected, FilesPanel.PANE, FileDiffsSource.UNSTAGED.id());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
             SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);

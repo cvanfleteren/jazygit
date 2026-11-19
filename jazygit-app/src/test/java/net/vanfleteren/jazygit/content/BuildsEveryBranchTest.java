@@ -8,7 +8,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.checks.StubChecks;
 import net.vanfleteren.jazygit.gh.model.Build;
@@ -41,6 +40,7 @@ import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.state.view.WorkflowRuns;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.content.Shown;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 

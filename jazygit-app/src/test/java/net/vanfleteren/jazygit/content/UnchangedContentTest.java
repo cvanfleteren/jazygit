@@ -85,7 +85,7 @@ class UnchangedContentTest {
     void ctrlODoesNothingAndCtrlTRendersItWithoutReadingItAgain() {
         Model shown = showing("README.md", new FileContent.Text(DiffText.of(README)));
         ScrolledContent.Unchanged file = new ScrolledContent.Unchanged("README.md", DiffText.of(README));
-        AreaId area = ContentArea.FILE_CONTENT.id();
+        AreaId area = UnchangedSource.AREA.id();
         Anchor line = new Anchor.OnLine("README.md", ReviewThread.Side.RIGHT, 1);
         DiffCursorAt at = new DiffCursorAt(
                 area,
@@ -113,7 +113,7 @@ class UnchangedContentTest {
         assertTrue(rendered.model()
                 .repoView()
                 .versions()
-                .get(ContentArea.FILE_CONTENT.id())
+                .get(UnchangedSource.AREA.id())
                 .exists(version -> version.rendered()));
         // Kept with what the area shows, so drawn: the title says it is rendered.
         String screen = screen(rendered.model());
@@ -135,8 +135,8 @@ class UnchangedContentTest {
 
     @Test
     void sizesAreSaidInBytesKibOrMib() {
-        assertEquals("512 B", ContentView.size(512));
-        assertEquals("2 KiB", ContentView.size(2048));
-        assertEquals("1.5 MiB", ContentView.size(1024 * 1024 * 3 / 2));
+        assertEquals("512 B", UnchangedSource.size(512));
+        assertEquals("2 KiB", UnchangedSource.size(2048));
+        assertEquals("1.5 MiB", UnchangedSource.size(1024 * 1024 * 3 / 2));
     }
 }

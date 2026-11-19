@@ -3,25 +3,35 @@ package net.vanfleteren.jazygit.ui;
 import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.content.ContentSource;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 
 /**
- * A feature, as the app knows it: its actions, which bring its keys and its popups. Each feature package declares
- * one, as {@code XxxFeature.FEATURE}, and {@code Features.ALL} lists it; that is all a new feature changes outside its
- * package (ADR 127).
+ * A feature, as the app knows it: its actions, which bring its keys and its popups, and what it shows in the content
+ * panel. Each feature package declares one, as {@code XxxFeature.FEATURE}, and {@code Features.ALL} lists it; that is
+ * all a new feature changes outside its package (ADR 127).
  *
  * <p>Making the standard keymap makes every feature, so a feature does not ask for {@code Keymap.standard()} while its
  * class is initialised.
  *
- * @param actions the actions, in the order their keys are listed in a panel
+ * @param actions  the actions, in the order their keys are listed in a panel
+ * @param contents what the feature shows in the content panel, asked in this order, before the content panel's own
+ *                 (ADR 154)
  */
-public record Feature(List<FeatureAction> actions) {
+public record Feature(List<FeatureAction> actions, List<ContentSource> contents) {
 
     /**
-     * The feature of {@code actions}, in that order.
+     * The feature of {@code actions}, in that order, which shows nothing in the content panel of its own.
      */
     public static Feature of(FeatureAction... actions) {
-        return new Feature(List.of(actions));
+        return new Feature(List.of(actions), List.empty());
+    }
+
+    /**
+     * This feature, showing {@code contents} in the content panel as well, asked in that order.
+     */
+    public Feature showing(ContentSource... contents) {
+        return new Feature(actions, this.contents.appendAll(List.of(contents)));
     }
 
     /**
