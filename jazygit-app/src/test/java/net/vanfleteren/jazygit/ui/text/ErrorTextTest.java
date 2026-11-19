@@ -42,6 +42,8 @@ class ErrorTextTest {
 
         assertTrue(text.startsWith("git@github.com: Permission denied (publickey). "));
         assertTrue(text.contains("ssh-add"));
+        // A push the user cancelled the passphrase of, or one kept in batch mode, fails so too (ADR 150).
+        assertTrue(!text.contains("fetch"), text);
     }
 
     @Test
