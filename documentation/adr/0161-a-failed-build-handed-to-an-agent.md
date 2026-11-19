@@ -98,9 +98,11 @@ checks on the tip of a branch, which can come from several workflow runs, and on
 - The agent starts in the worktree that has the branch checked out (ADR 110). Without one, `I` is disabled: the
   branch is not checked out in a worktree, as `e` says (ADR 110). Not: starting in the worktree jazygit shows, where
   another branch is checked out and the agent's fix would land on it.
-- The branch of the checks of a remote branch is the local branch that follows it; without one, its name on the
-  remote, which no worktree has, so `I` says it is not checked out. Not: a local branch of the same name, which may
-  follow another remote. With every branch shown in the builds (`a`), only a run of the branch itself is handed over.
+- The branch of the checks of a remote branch is, of the local branches that follow it, the one named as it is, else
+  the only one; else its name on the remote, which no worktree has, so `I` says it is not checked out. Not: the first
+  that follows it, as `git switch -c feature origin/main` makes `feature` follow it too, until it is pushed; nor a
+  local branch of the same name, which may follow another remote. With every branch shown in the builds (`a`), only
+  a run of the branch itself is handed over.
 - The failed commit need not be what is checked out: the builds can show an older build than the tip (ADR 133), and
   both views read the branch on the forge, which local commits not pushed yet, or not pulled yet, differ from.
   jazygit's prompt says so for either view, with the `git log` that shows how.
