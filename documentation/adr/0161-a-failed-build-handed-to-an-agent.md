@@ -98,14 +98,19 @@ checks on the tip of a branch, which can come from several workflow runs, and on
 - The agent starts in the worktree that has the branch checked out (ADR 110). Without one, `I` is disabled: the
   branch is not checked out in a worktree, as `e` says (ADR 110). Not: starting in the worktree jazygit shows, where
   another branch is checked out and the agent's fix would land on it.
-- The builds can show an older build than the tip (ADR 133): the prompt says that `{commit}` may not be what is
-  checked out.
+- The branch of the checks of a remote branch is the local branch that follows it; without one, its name on the
+  remote, which no worktree has, so `I` says it is not checked out. Not: a local branch of the same name, which may
+  follow another remote. With every branch shown in the builds (`a`), only a run of the branch itself is handed over.
+- The failed commit need not be what is checked out: the builds can show an older build than the tip (ADR 133), and
+  both views read the branch on the forge, which local commits not pushed yet, or not pulled yet, differ from.
+  jazygit's prompt says so for either view, with the `git log` that shows how.
 - It starts at once, without asking; the command log has its command, and a failed one is shown as a failed editor is
   (ADR 146). Not: a popup to edit the prompt first, until one is wanted.
 - Once an agent handed the terminal exits, the repository is read again, as after the editor (`EditCmd`), as the
   agent may have changed it. One left running is seen by the reads every so often (ADR 125).
 - `I` stays in the hint, disabled when it cannot start: without an agent in `config.toml` it says to add one; with
-  nothing failed it says so, or that the build still runs. One failed job is enough, while others still run.
+  nothing failed it says so, or that the build still runs; with no build handed over yet, or the worktrees not read
+  yet, it says that. One failed job is enough, while others still run.
 
 ## Consequences
 
