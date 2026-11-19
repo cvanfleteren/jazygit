@@ -4,10 +4,10 @@ import dev.tamboui.text.Line;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.content.diff.Drawn.Mark;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
+import net.vanfleteren.jazygit.ui.content.Drawn.Mark;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 

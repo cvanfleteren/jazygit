@@ -16,8 +16,6 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.content.ContentText;
-import net.vanfleteren.jazygit.content.ContentView;
-import net.vanfleteren.jazygit.content.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.Reactions;
@@ -33,8 +31,9 @@ import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Collapsed;
-import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.ui.content.Drawn;
+import net.vanfleteren.jazygit.ui.content.ShownDiff;
 import net.vanfleteren.jazygit.ui.markdown.MarkdownImages;
 import net.vanfleteren.jazygit.ui.markdown.MarkdownLines;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
@@ -249,21 +248,6 @@ class RemarkLinesTest {
                                                 .withHighlights(HashSet.of(RichDiff.Highlight.WORDS)))
                                 .lines())
                         .map(String::stripTrailing));
-    }
-
-    @Test
-    void theHunkOfARangeIsFoundInTheDiffWithoutDrawingIt() {
-        ContentView.Body body = new ContentView.Body.Diff(new ContentView.ShownChanges(
-                new ShownDiff(DiffText.of(PAIRS + DIFF.replace("a.txt", "b.txt")), Option.none()),
-                new DiffLook(DiffStyle.RICH, true, true)));
-
-        assertEquals(
-                Option.of(new DiffStops.HunkAt(0, 0)),
-                ContentText.markedHunk(body, new Anchor.OnLine("a.txt", Side.LEFT, 2)));
-        assertEquals(
-                Option.of(new DiffStops.HunkAt(1, 0)),
-                ContentText.markedHunk(body, new Anchor.OnLine("b.txt", Side.RIGHT, 2)));
-        assertEquals(Option.none(), ContentText.markedHunk(body, new Anchor.OnLine("c.txt", Side.RIGHT, 2)));
     }
 
     @Test

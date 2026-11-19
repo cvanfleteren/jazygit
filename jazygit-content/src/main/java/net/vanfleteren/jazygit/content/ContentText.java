@@ -16,11 +16,6 @@ import java.util.Locale;
 import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 import java.util.function.IntUnaryOperator;
-import net.vanfleteren.jazygit.content.ContentView.Body;
-import net.vanfleteren.jazygit.content.ContentView.ShownChanges;
-import net.vanfleteren.jazygit.content.ContentView.ShownDiff;
-import net.vanfleteren.jazygit.content.diff.Drawn;
-import net.vanfleteren.jazygit.content.diff.Halves;
 import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.content.diff.ShownRemarks;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
@@ -33,11 +28,11 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
-import net.vanfleteren.jazygit.state.diff.Anchor;
-import net.vanfleteren.jazygit.state.diff.DiffLines;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
-import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.ui.commits.AheadView;
+import net.vanfleteren.jazygit.ui.content.Drawn;
+import net.vanfleteren.jazygit.ui.content.Halves;
+import net.vanfleteren.jazygit.ui.content.ShownDiff;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.text.Rows;
@@ -502,57 +497,6 @@ public final class ContentText {
 
     private static Span styled(String text, String cssClass, Theme.SpanStyles styles) {
         return Span.styled(text, styles.of(cssClass));
-    }
-
-    /**
-     * Whether {@code body} is drawn for the width of its area, so drawn anew when that changes: a version of a file
-     * rendered (ADR 103), or blamed, whose blame is shortened in a narrow area (ADR 147), or the builds of a branch,
-     * whose chart has a column for as many builds as fit (ADR 131).
-     */
-    public static boolean drawnToWidth(Body body) {
-        return body instanceof Body.Builds || rendering(body) || blaming(body) || split(body);
-    }
-
-    /**
-     * Whether {@code body} is a diff drawn with the old and the new file side by side, which is drawn as wide as its
-     * area, its halves each half of it (ADR 139).
-     */
-    public static boolean split(Body body) {
-        return body.changesShown().exists(changes -> changes.look().style() == DiffStyle.SPLIT);
-    }
-
-    /**
-     * Whether {@code body} shows a version of a file rendered (ADR 103), which is drawn as wide as its area.
-     */
-    public static boolean rendering(Body body) {
-        return version(body).exists(version -> version.rendering().isDefined());
-    }
-
-    /**
-     * Whether {@code body} shows a version of a file blamed (ADR 147), whose blame is shortened in a narrow area.
-     */
-    static boolean blaming(Body body) {
-        return version(body).exists(version -> version.blaming().isDefined());
-    }
-
-    private static Option<Version> version(Body body) {
-        return body.changesShown().flatMap(changes -> changes.diff().version());
-    }
-
-    /**
-     * The hunk of the line {@code mark} in {@code body}, found in its diff without drawing it: the hunk a range from
-     * that line is open in (ADR 83). Numbered as the rich view numbers them, among the hunks of the diff as its lines
-     * left out are shown (ADR 77). None unless {@code body} is a diff with that line: only the diff of a pull request's
-     * files has ranges.
-     */
-    public static Option<DiffStops.HunkAt> markedHunk(Body body, Anchor mark) {
-        return body instanceof Body.Diff(ShownChanges(ShownDiff diff, var look), var remarks)
-                ? DiffLines.of(diff.folded().diff().diff())
-                        .lines()
-                        // A context line by either anchor, as the split view has it a stop on both sides (ADR 139).
-                        .find(line -> mark instanceof Anchor.OnLine on && line.answers(on))
-                        .map(DiffLines.Line::hunk)
-                : Option.none();
     }
 
     /**

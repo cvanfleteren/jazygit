@@ -106,10 +106,7 @@ final class AreaKeys {
         Option<DiffCursor> cursor = state.cursor();
         return AreaTool.first(tools, tool -> tool.key(state, view, event))
                 .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(state, view, to)))
-                .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(
-                                state.review() ? Scopes.PULL_REQUEST_DIFF : Scopes.DIFF,
-                                event,
-                                Option.of(at(state, view, on))))
+                .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(state.keys(), event, Option.of(at(state, view, on))))
                         .map(msg -> reviewed(state, view, msg)))
                 // The builds of a branch have keys of their own, to show another workflow (ADR 131).
                 .orElse(() -> Option.when(

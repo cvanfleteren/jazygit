@@ -2,12 +2,15 @@ package net.vanfleteren.jazygit.content.diff;
 
 import dev.tamboui.text.Line;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
-import net.vanfleteren.jazygit.content.diff.Drawn.Mark;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.ui.content.Drawn;
+import net.vanfleteren.jazygit.ui.content.Drawn.Mark;
+import net.vanfleteren.jazygit.ui.content.Halves;
 import net.vanfleteren.jazygit.ui.text.Rows;
 
 /**
@@ -54,6 +57,31 @@ sealed interface Marked permits Marked.Unified, Marked.Split {
      * This line as a row of the split view: one without halves is as wide as the area, and pinned (ADR 139).
      */
     Split split();
+
+    /**
+     * The lines {@code marked}, drawn when they show, with their stops and places in order. How wide the widest is,
+     * is worked out from how wide each is at most, on the threads of the common pool, as {@link Rows#widest}
+     * measures, for the lines drawn for it.
+     */
+    static Drawn drawn(List<Marked> marked) {
+        return new Drawn(
+                Rows.drawn(marked.map(Marked::line), marked.map(Marked::source)),
+                marked.zipWithIndex().flatMap(line -> line._1().marks().map(mark -> new Drawn.Stop(mark, line._2()))),
+                marked.zipWithIndex()
+                        .flatMap(line -> line._1().places().map(anchor -> new Drawn.Place(anchor, line._2()))),
+                () -> marked.toJavaParallelStream()
+                        .mapToInt(Marked::measured)
+                        .max()
+                        .orElse(0),
+                marked.exists(line -> line.halves().isDefined())
+                        ? marked.map(Marked::halves).toVector()
+                        : Vector.empty(),
+                marked.exists(line -> line.kept() > 0)
+                        ? marked.map(Marked::kept).toVector()
+                        : Vector.empty(),
+                Option.none(),
+                Option.none());
+    }
 
     /**
      * How wide the line is, at most: drawn to be measured when that is not known.

@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.content.diff.Drawn.Mark;
 import net.vanfleteren.jazygit.content.diff.Pieces.Piece;
 import net.vanfleteren.jazygit.content.diff.RichDiff.Change;
 import net.vanfleteren.jazygit.content.diff.RichDiff.Highlight;
@@ -22,6 +21,8 @@ import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks.LineRemarks;
 import net.vanfleteren.jazygit.syntax.Token;
+import net.vanfleteren.jazygit.ui.content.Drawn.Mark;
+import net.vanfleteren.jazygit.ui.content.Halves;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 

@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.state.diff.PlacedRemarks;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks.FileRemarks;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks.LineRemarks;
 import net.vanfleteren.jazygit.state.diff.Rendered;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
@@ -108,7 +109,7 @@ public final class RichDiff {
                                         .map(DiffStops.HunkAt::hunk),
                                 drawing)
                         .flatMap(Pending::draw));
-        Drawn drawn = Drawn.of(parsed.preamble()
+        Drawn drawn = Marked.drawn(parsed.preamble()
                 .<Marked>map(line -> Marked.of(() -> Line.from(Span.raw(line)), Option.none()))
                 .appendAll(files.intersperse(BLANK.draw()).flatMap(lines -> lines)));
         // How many hunks the diff filters hide, or that they are switched off where they would hide some, which the

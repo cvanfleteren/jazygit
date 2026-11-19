@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content.diff;
+package net.vanfleteren.jazygit.ui.content;
 
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;

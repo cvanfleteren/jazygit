@@ -32,6 +32,7 @@ public final class AppRules {
     static final String MSG = ROOT + ".state.Msg";
     static final String CMD = ROOT + ".state.Cmd";
     static final String POPUP = ROOT + ".state.popup.Popup";
+    static final String BODY = ROOT + ".ui.content.Body";
     static final String APP_ERROR = ROOT + ".state.AppError";
     static final String PROGRAM = ROOT + ".state.Program";
     static final String BUG = ROOT + ".state.Failure$Bug";
@@ -210,6 +211,19 @@ public final class AppRules {
             .beAssignableTo(Record.class)
             .orShould()
             .beAssignableTo(Enum.class)
+            .allowEmptyShould(true);
+    /**
+     * What an area of the content panel shows is a value: a record, so two bodies that show the same are equal, as the
+     * content panel draws a body anew only when it changes (ADR 152).
+     */
+    @ArchTest
+    static final ArchRule bodiesAreRecords = classes()
+            .that()
+            .areAssignableTo(BODY)
+            .and()
+            .areNotInterfaces()
+            .should()
+            .beAssignableTo(Record.class)
             .allowEmptyShould(true);
     /**
      * The messages of a feature are a sealed set, so that its update switches over all of them, without a default.

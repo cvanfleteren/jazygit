@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.content;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -15,6 +16,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import net.vanfleteren.jazygit.AppRules;
+import net.vanfleteren.jazygit.ui.content.Body;
 
 /**
  * The rules of jazygit-content: those of the whole application, and that its parts depend on each other one way.
@@ -60,6 +62,28 @@ class ContentArchitectureTest {
                                             unit, unit.getFullName() + " takes or gives a tuple")));
                         }
                     });
+
+    /**
+     * Each kind of content draws itself and says what sets it apart ({@link Body}), so nothing but a body asks which
+     * kind of body a value is: a new kind of content adds a file, not a case to each place that tells them apart.
+     */
+    @ArchTest
+    static final ArchRule noneAsksWhichBodyItIs = noClasses()
+            .that()
+            .doNotImplement(Body.class)
+            .should(new ArchCondition<JavaClass>("check whether a value is one kind of body") {
+                @Override
+                public void check(JavaClass item, ConditionEvents events) {
+                    item.getInstanceofChecks().stream()
+                            .filter(check -> check.getRawType().isAssignableTo(Body.class)
+                                    && !check.getRawType().isEquivalentTo(Body.class))
+                            .forEach(check -> events.add(SimpleConditionEvent.satisfied(
+                                    check,
+                                    item.getName() + " checks for "
+                                            + check.getRawType().getSimpleName() + " in "
+                                            + check.getSourceCodeLocation())));
+                }
+            });
 
     private static boolean holdsTuple(JavaType type) {
         return type.getAllInvolvedRawTypes().stream()

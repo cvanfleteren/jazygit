@@ -10,7 +10,6 @@ import io.vavr.control.Option;
 import java.util.function.BiFunction;
 import net.vanfleteren.jazygit.content.AreaState.Wanted;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
-import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.content.diff.LineGoal;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.diff.Anchor;
@@ -18,6 +17,7 @@ import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.view.LineNumberMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 

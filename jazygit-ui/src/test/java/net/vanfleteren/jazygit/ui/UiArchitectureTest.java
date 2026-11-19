@@ -39,4 +39,24 @@ class UiArchitectureTest {
             .should()
             .dependOnClassesThat()
             .resideInAPackage("net.vanfleteren.jazygit.ui");
+
+    /**
+     * What a kind of content is ({@code ui.content}) uses none of the panes, nor the widgets that draw them, so a group
+     * of features can add a kind of its own without them.
+     */
+    @ArchTest
+    static final ArchRule contentUsesNoPane = noClasses()
+            .that()
+            .resideInAPackage("net.vanfleteren.jazygit.ui.content..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage(
+                    "net.vanfleteren.jazygit.ui.branches..",
+                    "net.vanfleteren.jazygit.ui.commits..",
+                    "net.vanfleteren.jazygit.ui.files..",
+                    "net.vanfleteren.jazygit.ui.stash..",
+                    "net.vanfleteren.jazygit.ui.github..",
+                    "net.vanfleteren.jazygit.ui.markdown..",
+                    "net.vanfleteren.jazygit.ui.widgets..",
+                    "net.vanfleteren.jazygit.ui.edit..");
 }

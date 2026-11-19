@@ -8,14 +8,14 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
 import java.util.function.BiFunction;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
-import net.vanfleteren.jazygit.content.diff.Drawn;
-import net.vanfleteren.jazygit.content.diff.Halves;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.Found;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
+import net.vanfleteren.jazygit.ui.content.Drawn;
+import net.vanfleteren.jazygit.ui.content.Halves;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 
 /**

@@ -6,6 +6,7 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 
 /**
  * Where {@code :} with a line number goes in what an area shows (ADR 140): a line of the file the cursor is in, in the

@@ -5,7 +5,6 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.content.diff.ShownRemarks;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -20,7 +19,6 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileVersion;
-import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -41,7 +39,6 @@ import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
-import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.NoLog;
@@ -51,6 +48,9 @@ import net.vanfleteren.jazygit.state.view.WorkflowRuns;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.AheadView;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.content.Body;
+import net.vanfleteren.jazygit.ui.content.ShownChanges;
+import net.vanfleteren.jazygit.ui.content.ShownDiff;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.stash.StashPanel;
@@ -179,7 +179,7 @@ public final class ContentView {
         return switch (repository(model, mirrored)) {
             case Shown.Message(String title, String text, Tone tone)
             when mirrored == Mirrored.FILES ->
-                new Shown.Area(ContentArea.FILE_NOTE, title, new ScrolledContent.Note(text), new Body.Note(text, tone));
+                new Shown.Area(ContentArea.FILE_NOTE, title, new ScrolledContent.Note(text), new NoteBody(text, tone));
             case Shown.Area area -> expanded(model, area);
             case Shown.Stacked(List<Shown.Area> areas) -> new Shown.Stacked(areas.map(area -> expanded(model, area)));
             case Shown other -> other;
@@ -270,7 +270,7 @@ public final class ContentView {
                         commit.isDefined() ? ContentArea.COMMIT_FILE : ContentArea.FILE_CONTENT,
                         title,
                         new ScrolledContent.Unchanged(path, asDiff, commit),
-                        new Body.Diff(new ShownChanges(
+                        new DiffBody(new ShownChanges(
                                 shown(asDiff), new DiffLook(DiffStyle.RICH, look.syntax(), look.words()))));
             }
             case FileContent.Binary(long size) -> dim(title, Messages.get("content.file.binarySize", size(size)));
@@ -452,7 +452,7 @@ public final class ContentView {
                                 pullRequest.repository(),
                                 String.valueOf(pullRequest.number().value())),
                         new ScrolledContent.PullRequest(pullRequest, read),
-                        new Body.PullRequest(pullRequest, read)));
+                        new PullRequestBody(pullRequest, read)));
     }
 
     /**
@@ -496,7 +496,7 @@ public final class ContentView {
                         area.area(),
                         titled(Messages.get(area.titleKey()), options),
                         new ScrolledContent.Diff(area.diff()),
-                        new Body.Diff(new ShownChanges(shown(area.diff()), look)))));
+                        new DiffBody(new ShownChanges(shown(area.diff()), look)))));
     }
 
     /**
@@ -558,7 +558,7 @@ public final class ContentView {
                                         ContentArea.BUILDS,
                                         title,
                                         new ScrolledContent.Builds(view.branch()),
-                                        new Body.Builds(drawn)))
+                                        new BuildsBody(drawn)))
                                 .getOrElse(() -> noBuilds(view, title, remote)))
                         .getOrElse(() -> dim(
                                 title,
@@ -670,7 +670,7 @@ public final class ContentView {
                         ContentArea.LOG,
                         ahead.title(title),
                         new ScrolledContent.BranchLog(commits),
-                        new Body.BranchLog(commits, ahead)));
+                        new BranchLogBody(commits, ahead)));
     }
 
     /**
@@ -715,7 +715,7 @@ public final class ContentView {
                 area,
                 titled(Messages.get("content.panel.commit.titleFor", commit.shortSha()), options),
                 new ScrolledContent.CommitChanges(commit, changes),
-                new Body.CommitChanges(commit, new ShownChanges(shownChanges(changes, options), look)));
+                new CommitBody(commit, new ShownChanges(shownChanges(changes, options), look)));
     }
 
     /**
@@ -786,7 +786,7 @@ public final class ContentView {
                 ContentArea.COMMIT_FILE,
                 titled(Messages.get("content.panel.commitFile.titleFor", name, nodePath(files)), options),
                 new ScrolledContent.FileChanges(view.of(), files, changes),
-                new Body.Diff(
+                new DiffBody(
                         new ShownChanges(
                                 shownChanges(changes, options),
                                 model.preferences().diffLook()),
@@ -869,7 +869,7 @@ public final class ContentView {
                 ContentArea.STASH,
                 titled(Messages.get("content.panel.stash.titleFor", stash.ref()), options),
                 new ScrolledContent.StashChanges(stash.sha(), changes),
-                new Body.StashChanges(
+                new StashBody(
                         stash,
                         new ShownChanges(
                                 shownChanges(changes, options),
@@ -915,172 +915,6 @@ public final class ContentView {
          * The areas one above the other.
          */
         record Stacked(List<Area> areas) implements Shown {}
-    }
-
-    /**
-     * What an area shows, as it is styled.
-     */
-    public sealed interface Body {
-
-        /**
-         * The diff this shows and how it is drawn, if it shows one.
-         */
-        default Option<ShownChanges> changesShown() {
-            return switch (this) {
-                case Diff(ShownChanges changes, var _) -> Option.of(changes);
-                case CommitChanges(var _, ShownChanges changes) -> Option.of(changes);
-                case StashChanges(var _, ShownChanges changes) -> Option.of(changes);
-                case BranchLog _, Builds _, PullRequest _, Note _ -> Option.none();
-            };
-        }
-
-        /**
-         * This, with the diff it shows, if it shows one, changed by {@code change}.
-         */
-        default Body withDiff(UnaryOperator<ShownDiff> change) {
-            return switch (this) {
-                case Diff(ShownChanges changes, var remarks) -> new Diff(changes.withDiff(change), remarks);
-                case CommitChanges(Commit commit, ShownChanges changes) ->
-                    new CommitChanges(commit, changes.withDiff(change));
-                case StashChanges(Stash stash, ShownChanges changes) ->
-                    new StashChanges(stash, changes.withDiff(change));
-                case BranchLog _, Builds _, PullRequest _, Note _ -> this;
-            };
-        }
-
-        /**
-         * A unified diff: the staged or the unstaged changes of the working tree, or what a commit, a stash or a pull
-         * request changed in some of its files, with the review threads of a pull request (ADR 55).
-         */
-        record Diff(ShownChanges changes, Option<ShownRemarks> remarks) implements Body {
-
-            /**
-             * A diff without review threads.
-             */
-            public Diff(ShownChanges changes) {
-                this(changes, Option.none());
-            }
-        }
-
-        /**
-         * The log of a branch, as far as {@code ahead} shows it.
-         */
-        record BranchLog(List<Commit> commits, AheadView ahead) implements Body {}
-
-        /**
-         * The builds of a branch, of the newest commit first (ADR 131).
-         */
-        record Builds(BuildsShown shown) implements Body {}
-
-        /**
-         * A commit and what it changed.
-         */
-        record CommitChanges(Commit commit, ShownChanges changes) implements Body {}
-
-        /**
-         * A stash and what it stashed.
-         */
-        record StashChanges(Stash stash, ShownChanges changes) implements Body {}
-
-        /**
-         * A pull request, and what it says and changes.
-         */
-        record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) implements Body {}
-
-        /**
-         * What the files pane says in place of a diff or a file's content, drawn as {@code tone} says (ADR 117).
-         */
-        record Note(String text, Tone tone) implements Body {}
-    }
-
-    /**
-     * A diff an area shows, {@code diff}, drawn as {@code look} says.
-     */
-    public record ShownChanges(ShownDiff diff, DiffLook look) {
-
-        /**
-         * These changes with their diff changed by {@code change}.
-         */
-        ShownChanges withDiff(UnaryOperator<ShownDiff> change) {
-            return new ShownChanges(change.apply(diff), look);
-        }
-    }
-
-    /**
-     * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one, with
-     * the lines {@code expansion} expanded around its hunks, folded to {@code context} lines (ADR 77), and its file
-     * shown as the {@code version} of it the area shows, if it shows one (ADR 102).
-     */
-    public record ShownDiff(
-            DiffText diff,
-            Option<String> note,
-            Option<Expansion> expansion,
-            DiffContext context,
-            Option<Version> version,
-            Filtering filtering) {
-
-        /**
-         * {@code diff} and its note, as git gives it.
-         */
-        public ShownDiff(DiffText diff, Option<String> note) {
-            this(diff, note, Option.none(), DiffContext.DEFAULT, Option.none(), Filtering.NONE);
-        }
-
-        /**
-         * This diff with the lines of {@code expanded} shown, folded to {@code folding} lines of context (ADR 77).
-         */
-        ShownDiff expanded(Option<Expansion> expanded, DiffContext folding) {
-            return new ShownDiff(diff, note, expanded, folding, version, filtering);
-        }
-
-        /**
-         * This diff with its file shown as {@code shown} has it, if it shows a version of it (ADR 102).
-         */
-        ShownDiff versioned(Option<Version> shown) {
-            return new ShownDiff(diff, note, expansion, context, shown, filtering);
-        }
-
-        /**
-         * This diff with the hunks {@code hiding} hides cut out (ADR 144).
-         */
-        ShownDiff filtered(Filtering hiding) {
-            return new ShownDiff(diff, note, expansion, context, version, hiding);
-        }
-
-        /**
-         * The diff shown parsed, its files read whole folded, with what is known of each of them (ADR 77), its file
-         * replaced by the version of it shown, if one is (ADR 102).
-         */
-        public Expansion.Folded folded() {
-            Expansion.Folded expanded = expansion
-                    .map(kept -> kept.folded(diff.parsed(), context))
-                    .getOrElse(() -> Expansion.Folded.of(diff.parsed()));
-            Expansion.Folded folded =
-                    filtering.hide(version.map(shown -> shown.applied(expanded)).getOrElse(expanded), diff.parsed());
-            return note.map(line -> folded.withDiff(folded.diff().withNote(line)))
-                    .getOrElse(folded);
-        }
-
-        /**
-         * Whether nothing is shown.
-         */
-        boolean isBlank() {
-            return diff.isBlank() && note.isEmpty();
-        }
-
-        /**
-         * The text shown, as the plain view draws it.
-         */
-        public String text() {
-            return diff.text() + note.map(line -> line + "\n").getOrElse("");
-        }
-
-        /**
-         * The diff shown parsed, as the rich view draws it; parsed when it was read, but for the note.
-         */
-        public ParsedDiff parsed() {
-            return folded().diff();
-        }
     }
 
     /**

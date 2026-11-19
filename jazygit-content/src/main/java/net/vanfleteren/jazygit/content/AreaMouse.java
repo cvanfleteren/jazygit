@@ -11,10 +11,8 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.Anchor;
-import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
@@ -51,30 +49,19 @@ final class AreaMouse {
     }
 
     /**
-     * A click on a tab of the builds of a branch shows its workflow (ADR 131), one on a build in the chart or the list
-     * its jobs on one time line (ADR 133); elsewhere it puts the cursor on the line clicked.
+     * A click does what the body clicked says it does there, as on a tab or a build of the builds of a branch (ADR 131,
+     * 133); elsewhere it puts the cursor on the line clicked.
      */
     private static Reaction clicked(AreaState state, Viewport view, MouseEvent event, Option<Rect> at) {
         // The text starts a line below the top of the area, under its border.
         int column = state.columns().column();
-        Option<Msg> tab = at.filter(drawn -> view.top() + event.y() - drawn.top() - 1 == 0)
-                .flatMap(drawn -> state.styled()
-                        .flatMap(shown -> shown.body() instanceof Body.Builds(var builds)
-                                ? BuildsText.tabAt(builds, shown.width(), column + event.x() - drawn.left() - 1)
-                                : Option.none()))
-                .map(BuildsViewMsg.TabClicked::new);
-        Option<Msg> build = at.flatMap(drawn -> state.styled()
-                        .flatMap(shown -> shown.body() instanceof Body.Builds(var builds)
-                                ? BuildsText.buildAt(
-                                        builds,
-                                        shown.width(),
-                                        view.top() + event.y() - drawn.top() - 1,
-                                        column + event.x() - drawn.left() - 1)
-                                : Option.none()))
-                .map(BuildsViewMsg.BuildClicked::new);
-        return tab.orElse(build)
-                .map(msg -> handled(state, view).sending(msg))
-                .getOrElse(() -> onLine(state, view, event, at));
+        Option<Msg> clicked = at.flatMap(drawn -> state.styled()
+                .flatMap(shown -> shown.body()
+                        .clicked(
+                                shown.width(),
+                                view.top() + event.y() - drawn.top() - 1,
+                                column + event.x() - drawn.left() - 1)));
+        return clicked.map(msg -> handled(state, view).sending(msg)).getOrElse(() -> onLine(state, view, event, at));
     }
 
     /**
