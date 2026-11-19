@@ -43,9 +43,9 @@ final class RenderedTree {
     private RenderedTree() {}
 
     /**
-     * The rows of the {@code lines} of a file of {@code kind}, JSON, YAML or XML, packed to {@code width} columns, its nodes
-     * open as {@code chose} says ({@link TreeFolds#open}), styled as {@code styles} says; or, when they cannot be read,
-     * or are {@code cut} short, the line that says why, to show over them as source.
+     * The rows of the {@code lines} of a file of {@code kind}, JSON, YAML or XML, packed to {@code width} columns, its
+     * nodes open as {@code chose} says ({@link TreeFolds#open}), styled as {@code styles} says; or, when they cannot be
+     * read, or are {@code cut} short, the line that says why, to show over them as source.
      */
     static Either<String, List<TreeRow>> rows(
             Rendered kind,
@@ -54,17 +54,48 @@ final class RenderedTree {
             int width,
             Map<String, Boolean> chose,
             Theme.SpanStyles styles) {
+        return read(kind, lines, cut, width, chose, styles).mapLeft(NotRendered::why);
+    }
+
+    /**
+     * As {@link #rows}, but when they cannot be read, also where reading stopped, when that is known.
+     */
+    static Either<NotRendered, List<TreeRow>> read(
+            Rendered kind,
+            Vector<String> lines,
+            boolean cut,
+            int width,
+            Map<String, Boolean> chose,
+            Theme.SpanStyles styles) {
         if (cut) {
-            return Either.left(Messages.get(
-                    switch (kind) {
-                        case YAML -> "content.yaml.cut";
-                        case XML -> "content.xml.cut";
-                        default -> "content.json.cut";
-                    }));
+            return Either.left(new NotRendered(
+                    Messages.get(
+                            switch (kind) {
+                                case YAML -> "content.yaml.cut";
+                                case XML -> "content.xml.cut";
+                                default -> "content.json.cut";
+                            }),
+                    Option.none()));
         }
         return Tree.read(kind, lines.mkString("\n"))
-                .mapLeft(RenderedTree::why)
+                .mapLeft(unread -> new NotRendered(why(unread), place(unread)))
                 .map(documents -> new Drawing(width, chose, styles).documents(documents));
+    }
+
+    /**
+     * Where reading a file stopped, when it says so.
+     */
+    static Option<Place> place(Tree.Unread unread) {
+        return switch (unread) {
+            case Tree.Unread.NoJson(NotJson.Broken(int line, int column, var found)) ->
+                Option.of(new Place(line, column));
+            case Tree.Unread.NoJson(NotJson.MoreAfter(int line)) -> Option.of(new Place(line, 1));
+            case Tree.Unread.NoYaml(NotYaml.Broken(int line, int column, var problem)) ->
+                Option.of(new Place(line, column));
+            case Tree.Unread.NoXml(NotXml.Broken(int line, int column, var problem)) ->
+                Option.of(new Place(line, column));
+            default -> Option.none();
+        };
     }
 
     /**
@@ -376,6 +407,21 @@ final class RenderedTree {
     private static String padLeft(String text, int width) {
         return TextWidth.alignRight(text, width);
     }
+
+    /**
+     * Why a version is not rendered, and where in its source reading stopped, when that is known.
+     *
+     * @param why what the line over its source says
+     */
+    record NotRendered(String why, Option<Place> at) {}
+
+    /**
+     * A place in the source of a version.
+     *
+     * @param line   counted from 1
+     * @param column counted from 1
+     */
+    record Place(int line, int column) {}
 
     /**
      * A row of a version of JSON, YAML or XML rendered.

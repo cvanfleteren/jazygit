@@ -2,6 +2,9 @@ package net.vanfleteren.jazygit.content.diff;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
+import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -257,11 +260,30 @@ class RenderedXmlTest {
                 + " \n";
 
         assertEquals(
-                List.of("Not rendered: line 1, column 4, </b> closes <a>", "+ <a></b>", ""),
+                List.of("Not rendered: line 1, column 4, </b> closes <a>", "+ <a></b>", "     ^", ""),
                 drawnText(drawn(diff, FileVersion.NEW)).tail());
     }
 
+    @Test
+    void theLineThatSaysWhyAndTheMarkOfWhereReadingStoppedAreInTheColourOfAnError() {
+        String diff = "diff --git a/a.xml b/a.xml\n--- a/a.xml\n+++ b/a.xml\n"
+                + "@@ -1,1 +1,1 @@\n"
+                + "-<a></a>\n"
+                + "+<a></b>\n";
+        Style error = Style.EMPTY.fg(Color.RED);
+        Theme.SpanStyles styles = cssClass -> cssClass.equals(Theme.Classes.ERROR) ? error : Style.EMPTY;
+
+        List<Line> lines = drawn(diff, FileVersion.NEW, styles).lines().tail();
+
+        assertEquals(error, lines.get(0).spans().getFirst().style());
+        assertEquals(error, lines.get(2).spans().getLast().style());
+    }
+
     private static Drawn drawn(String diff, FileVersion version) {
+        return drawn(diff, version, Theme.SpanStyles.NONE);
+    }
+
+    private static Drawn drawn(String diff, FileVersion version, Theme.SpanStyles styles) {
         ParsedDiff.ParsedFile whole = ParsedDiff.of(diff).files().head();
         return RichDiff.drawn(
                 new Expansion.Folded(
@@ -269,7 +291,7 @@ class RenderedXmlTest {
                         HashMap.of("a.xml", Expansion.Fold.of(version, false, 1, true, HashMap.empty()))),
                 Option.none(),
                 Option.none(),
-                RichDiff.Drawing.of(Theme.SpanStyles.NONE).withWidth(60));
+                RichDiff.Drawing.of(styles).withWidth(60));
     }
 
     private static List<String> drawnText(Drawn drawn) {
