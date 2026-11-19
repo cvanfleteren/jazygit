@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -212,6 +213,26 @@ class BuildsTextTest {
 
         assertTrue(lines.exists(line -> line.contains("· the last build, 4m00")), lines.mkString("\n"));
         assertFalse(lines.exists(line -> line.contains("▸")), lines.mkString("\n"));
+    }
+
+    @Test
+    void theBuildsOfABranchAreDrawnToTheWidthOfTheirArea() {
+        assertTrue(new BuildsBody(shown(PUBLISH, Option.none())).drawnToWidth());
+    }
+
+    @Test
+    void aClickOnATabOfTheFirstLineShowsItsWorkflowAndOneOnABuildItsJobs() {
+        BuildsBody body = new BuildsBody(shown(PUBLISH.prepend(build("Nix", 40, "FAILURE", 100)), Option.none()));
+        // "✗ Nix │ ✓ Publish": the tab of Publish starts at column 8.
+        int publish = 10;
+        int list = drawn(PUBLISH.prepend(build("Nix", 40, "FAILURE", 100)))
+                .indexWhere(line -> line.contains("commit   when"));
+
+        assertEquals(
+                Option.of(new BuildsViewMsg.TabClicked(new BuildsView.Pipeline("Publish", "push"))),
+                body.clicked(80, 0, publish));
+        assertFalse(body.clicked(80, 1, publish).exists(BuildsViewMsg.TabClicked.class::isInstance));
+        assertEquals(Option.of(new BuildsViewMsg.BuildClicked(40L)), body.clicked(80, list + 1, 3));
     }
 
     @Test

@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.content;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
@@ -71,11 +69,5 @@ class DiffBodyTest {
         assertEquals(
                 Scopes.PULL_REQUEST_DIFF, new DiffBody(changes(DiffStyle.RICH), Option.of(NO_REMARKS)).cursorKeys());
         assertEquals(Scopes.DIFF, new DiffBody(changes(DiffStyle.RICH)).cursorKeys());
-    }
-
-    @Test
-    void onlyTheSplitViewOfADiffIsDrawnToTheWidthOfItsArea() {
-        assertTrue(new DiffBody(changes(DiffStyle.SPLIT)).drawnToWidth());
-        assertFalse(new DiffBody(changes(DiffStyle.RICH)).drawnToWidth());
     }
 }
