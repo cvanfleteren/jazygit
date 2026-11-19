@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.state.Msg;
  * Reads part of the repository state into the {@link Model}.
  */
 public sealed interface Load extends Cmd
-        permits Targeted, DiffLoad, LoadBranches, CheckMetadata, LoadWorktreeChanges, LoadAhead, CheckFileDiff {
+        permits Targeted, LoadBranches, CheckMetadata, LoadWorktreeChanges, LoadAhead, CheckFileDiff {
 
     @Override
     default Msg failed(Failure failure) {

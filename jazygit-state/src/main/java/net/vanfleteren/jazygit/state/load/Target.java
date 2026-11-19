@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.lens.Lens;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Part;
 import net.vanfleteren.jazygit.state.Repo;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
@@ -39,6 +40,20 @@ public record Target<T>(Lens<Model, Loadable<T>> lens, boolean keepsRead) {
      */
     public static <T> Target<T> inView(Lens<RepoView, Loadable<T>> lens) {
         return new Target<>(REPO_VIEW.andThen(lens), false);
+    }
+
+    /**
+     * A loadable of what a feature keeps in {@code part}, where {@code lens} finds it (ADR 158). What is read while
+     * the part is not kept finds no target, as it finds none in a view that closed.
+     */
+    public static <S, T> Target<T> inPart(Part<S> part, Lens<S, Loadable<T>> lens) {
+        return new Target<>(
+                Lens.<Model, S>some(
+                                model -> Option.when(
+                                        model.parts().kept().containsKey(part.name()), () -> model.part(part)),
+                                (model, value) -> value.fold(() -> model, kept -> model.withPart(part, kept)))
+                        .andThen(lens),
+                false);
     }
 
     /**

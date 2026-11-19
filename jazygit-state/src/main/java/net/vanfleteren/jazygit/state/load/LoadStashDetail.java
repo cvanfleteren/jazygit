@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.PreviewView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
-public record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad, Targeted<DiffText> {
+public record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad<DiffText> {
 
     @Override
     public Option<Label> label() {

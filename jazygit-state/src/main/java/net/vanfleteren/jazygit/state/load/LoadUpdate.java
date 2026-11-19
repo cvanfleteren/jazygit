@@ -13,8 +13,10 @@ import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.BaseBranchError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.KernelEvent;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Parts;
 import net.vanfleteren.jazygit.state.Repo;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.UpstreamError;
@@ -161,24 +163,18 @@ public final class LoadUpdate {
     }
 
     /**
-     * Runs the search again on the log just read, unless keeping what is not on its base already did.
+     * Tells the parts that the log was read again, as what they read of it, as a search, changed with it (ADR 158).
+     * A load asked for twice in the step runs once (ADR 39).
      */
     private static Next commitsLoaded(Next read) {
-        return read.then(model -> new Next(
-                model,
-                model.repoView()
-                        .commits()
-                        .commitSearch()
-                        .<Cmd>map(SearchCommits::of)
-                        .filter(search -> !read.cmds().contains(search))
-                        .toList()));
+        return read.then(model -> Parts.reacting(model, new KernelEvent.LogRead()));
     }
 
     /**
      * Whether {@code load} read with other diff options than the ones now chosen, so that what came of it is outdated.
      */
     private static boolean stale(Model model, Load load) {
-        return load instanceof DiffLoad diff
+        return load instanceof DiffLoad<?> diff
                 && !diff.options().equals(model.preferences().diffOptions());
     }
 

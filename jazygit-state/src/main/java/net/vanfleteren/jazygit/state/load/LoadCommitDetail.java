@@ -22,7 +22,7 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * the commits pane, of a divergence or of the commits of a branch. Each takes its own slot, so that highlighting
  * a commit in one does not skip the read another one waits for.
  */
-public record LoadCommitDetail(Sha sha, DiffOptions options, Slot preview) implements DiffLoad, Targeted<DiffText> {
+public record LoadCommitDetail(Sha sha, DiffOptions options, Slot preview) implements DiffLoad<DiffText> {
 
     /**
      * Reads the changes of the commit {@code sha} highlighted in the commits pane.

@@ -11,7 +11,7 @@ import java.time.format.DateTimeFormatter;
 import net.vanfleteren.jazygit.git.model.Blame;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.diff.Blamed;
-import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.commits.CommitRows;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
@@ -113,7 +113,7 @@ record BlameColumn(Blamed blamed, boolean narrow, Map<Sha, Integer> shades, Them
         if (narrow) {
             return List.of(sha);
         }
-        String initials = CommitsPanel.initials(commit.author());
+        String initials = CommitRows.initials(commit.author());
         String rest = " "
                 + initials
                 + " ".repeat(Math.max(0, INITIALS_WIDTH - RichDiff.width(initials)))

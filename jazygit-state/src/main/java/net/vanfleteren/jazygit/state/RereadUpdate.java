@@ -19,7 +19,6 @@ import net.vanfleteren.jazygit.state.load.LoadDivergence;
 import net.vanfleteren.jazygit.state.load.LoadStashDetail;
 import net.vanfleteren.jazygit.state.load.LoadStatus;
 import net.vanfleteren.jazygit.state.load.LoadWorktreeChanges;
-import net.vanfleteren.jazygit.state.load.SearchCommits;
 import net.vanfleteren.jazygit.state.load.Targeted;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
@@ -92,14 +91,15 @@ public final class RereadUpdate {
     }
 
     /**
-     * The loads that read what the views that are open show, as the model would ask for them now. The diff of the
-     * files highlighted is not one of them: every status reads it again when its files changed (ADR 58).
+     * The loads that read what the views that are open show, as the model would ask for them now, those of the parts
+     * it keeps first (ADR 158). The diff of the files highlighted is not one of them: every status reads it again
+     * when its files changed (ADR 58).
      */
     public static List<Targeted<?>> shown(Model model) {
         RepoView repoView = model.repoView();
         DiffOptions options = model.preferences().diffOptions();
-        return List.<Targeted<?>>empty()
-                .appendAll(repoView.commits().commitSearch().map(SearchCommits::of))
+        return model.parts()
+                .rereads(model)
                 .appendAll(repoView.preview()
                         .branchLog()
                         .map(log -> new LoadBranchLog(log.key(), AheadUpdate.of(model, log.key()))))

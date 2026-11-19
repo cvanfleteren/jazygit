@@ -31,7 +31,7 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * It reads with {@code options} but for the context, so what it read with options changed since is dropped.
  */
 public record ReadWholeFile(AreaId area, ScrolledContent content, Source source, String path, DiffOptions options)
-        implements DiffLoad, Targeted<DiffText> {
+        implements DiffLoad<DiffText> {
 
     @Override
     public Option<Label> label() {

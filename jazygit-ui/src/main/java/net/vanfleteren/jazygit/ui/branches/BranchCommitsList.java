@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.ui.commits.AheadView;
-import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.commits.CommitRows;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
@@ -79,8 +79,8 @@ class BranchCommitsList {
                 new AheadView(AheadUpdate.branch(model, view.branch()), AheadUpdate.distance(model, view.branch()));
         return list.renderItems(
                 view.commits(model),
-                commits -> drawn.get(
-                        Tuple.of(commits, copied, ahead), key -> CommitsPanel.graphed(commits, copied, ahead)),
+                commits ->
+                        drawn.get(Tuple.of(commits, copied, ahead), key -> CommitRows.graphed(commits, copied, ahead)),
                 focused,
                 active,
                 Pane.title(ahead.title(view.branch().name())),

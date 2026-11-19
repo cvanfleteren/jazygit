@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.load;
+package net.vanfleteren.jazygit.changes.commit.search;
 
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;

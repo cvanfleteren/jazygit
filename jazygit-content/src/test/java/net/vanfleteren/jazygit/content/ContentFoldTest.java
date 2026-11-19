@@ -7,9 +7,9 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
-import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.content.ContentArea;
 import net.vanfleteren.jazygit.ui.content.ContentSource;
 import net.vanfleteren.jazygit.ui.content.ContentSources;
@@ -45,8 +45,8 @@ class ContentFoldTest {
                 List.<ContentSource>of(new Says(Mirrored.BRANCHES)).appendAll(PanelSources.ALL));
 
         assertEquals(
-                ContentView.of(MODEL, Option.of(CommitsPanel.PANE), own),
-                ContentView.of(MODEL, Option.of(CommitsPanel.PANE), sources));
+                ContentView.of(MODEL, Option.of(PaneId.COMMITS), own),
+                ContentView.of(MODEL, Option.of(PaneId.COMMITS), sources));
     }
 
     /**

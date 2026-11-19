@@ -29,11 +29,12 @@ public sealed interface LoadMsg extends Msg {
     Load cmd();
 
     /**
-     * What a {@link Targeted} load read, to keep in its {@link Target}.
+     * What a {@link Targeted} load read, to keep in its {@link Target}; a feature declares what its own loads read
+     * (ADR 158).
      *
      * @param <T> what the load read
      */
-    sealed interface Read<T> extends LoadMsg {
+    non-sealed interface Read<T> extends LoadMsg {
 
         @Override
         Targeted<T> cmd();
@@ -144,19 +145,6 @@ public sealed interface LoadMsg extends Msg {
         @Override
         public LoadCommits cmd() {
             return new LoadCommits(load);
-        }
-    }
-
-    record CommitSearchLoaded(CommitQuery query, List<Commit> commits) implements Read<List<Commit>> {
-
-        @Override
-        public List<Commit> value() {
-            return commits;
-        }
-
-        @Override
-        public SearchCommits cmd() {
-            return new SearchCommits(query);
         }
     }
 

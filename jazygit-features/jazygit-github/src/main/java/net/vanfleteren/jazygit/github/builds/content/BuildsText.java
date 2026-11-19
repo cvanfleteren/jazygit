@@ -84,7 +84,8 @@ final class BuildsText {
                 shown.onTimeLine(),
                 DateTimeFormatter.ofPattern(Messages.get("github.builds.dayPattern"))
                         .withZone(zone),
-                DateTimeFormatter.ofPattern(Messages.get("builds.whenPattern")).withZone(zone),
+                DateTimeFormatter.ofPattern(Messages.get("github.builds.whenPattern"))
+                        .withZone(zone),
                 width,
                 Math.max(10, width - SCALE - 1));
         String workflow = shown.shown().workflow();

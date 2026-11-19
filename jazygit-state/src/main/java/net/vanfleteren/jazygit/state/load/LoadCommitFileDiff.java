@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.state.view.Preview;
  * files.
  */
 public record LoadCommitFileDiff(Changes of, List<CommitFile> files, DiffOptions options)
-        implements DiffLoad, Targeted<DiffText> {
+        implements DiffLoad<DiffText> {
 
     /**
      * The load of the diff of {@code files} of {@code view}, read with {@code options}.

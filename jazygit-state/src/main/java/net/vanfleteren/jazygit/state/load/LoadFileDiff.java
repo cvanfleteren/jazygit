@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.PreviewView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
-public record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad, Targeted<Diffs> {
+public record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad<Diffs> {
 
     @Override
     public Option<Label> label() {

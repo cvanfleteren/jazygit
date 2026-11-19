@@ -21,7 +21,6 @@ import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.FileStepMsg;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
-import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.github.PullRequestsPanel;
 import net.vanfleteren.jazygit.ui.stash.StashPanel;
@@ -48,7 +47,7 @@ public final class LeftColumn {
     private final StyleEngine styleEngine;
     private final FilesPanel filesPanel;
     private final BranchesPanel branchesPanel;
-    private final CommitsPanel commitsPanel;
+    private final LeftPane commitsPanel;
     private final StashPanel stashPanel;
     private final List<PullRequestsPanel> pullRequestsPanels;
 
@@ -57,20 +56,22 @@ public final class LeftColumn {
      * @param clock           tells the time the branches are drawn at
      * @param openContent     moves the focus to the content shown for the pane given
      * @param showBranchesTab moves the focus to the branches pane, and shows the list given in it
+     * @param commits         makes the commits pane, which lives in a group of features (ADR 158)
      */
     public LeftColumn(
             Consumer<Msg> dispatch,
             StyleEngine styleEngine,
             Clock clock,
             Consumer<PaneId> openContent,
-            Consumer<BranchesTab> showBranchesTab) {
+            Consumer<BranchesTab> showBranchesTab,
+            LeftPane.Factory commits) {
         this.dispatch = dispatch;
         this.styleEngine = styleEngine;
         // How the active theme highlights the selected row of a pane, in use or not.
         Theme.Highlights highlight = active -> Theme.highlights(styleEngine).of(active);
         this.filesPanel = new FilesPanel(dispatch, () -> openContent.accept(FilesPanel.PANE), highlight);
         this.branchesPanel = new BranchesPanel(dispatch, showBranchesTab, clock, highlight);
-        this.commitsPanel = new CommitsPanel(dispatch, highlight);
+        this.commitsPanel = commits.of(highlight);
         this.stashPanel = new StashPanel(dispatch, highlight);
         this.pullRequestsPanels = PullRequestsPanel.all(dispatch, openContent, highlight);
     }

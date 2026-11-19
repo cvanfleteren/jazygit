@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.askpass.AskpassServer;
 import net.vanfleteren.jazygit.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.changes.files.step.FileStepEnded;
+import net.vanfleteren.jazygit.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.chrome.help.HelpMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.chrome.layout.LayoutMsg;
@@ -156,7 +157,13 @@ public class JazygitApp extends ToolkitApp {
                 area -> runner().focusManager().setFocus(area.id()),
                 dispatch);
         this.focus = new FocusKeeper(this::runner, this::model, contentPanel, popups, this::requestRedraw);
-        this.leftColumn = new LeftColumn(dispatch, styleEngine, clock, focus::openContent, this::showBranchesTab);
+        this.leftColumn = new LeftColumn(
+                dispatch,
+                styleEngine,
+                clock,
+                focus::openContent,
+                this::showBranchesTab,
+                highlights -> new CommitsPanel(dispatch, highlights));
         this.commandLogPanel = new CommandLogPanel(
                 Theme.spanStyles(styleEngine),
                 ZoneId.systemDefault(),

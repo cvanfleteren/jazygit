@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
-import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -13,12 +12,6 @@ import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.content.LogText;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.ui.RenderedText;
-import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
 import org.junit.jupiter.api.Test;
@@ -87,7 +80,7 @@ class AheadViewTest {
         AheadView ahead = new AheadView(Option.of(AHEAD), Option.none());
 
         List<LoadableList.Row> rows =
-                CommitsPanel.graphed(LOG, Option.none(), ahead).map(LoadableList.Item::row);
+                CommitRows.graphed(LOG, Option.none(), ahead).map(LoadableList.Item::row);
 
         assertEquals("aaaaaaa Ad ○ msg a", rows.get(2).text());
         assertTrue(rows.drop(2)
@@ -100,7 +93,7 @@ class AheadViewTest {
     void eachRowOfALogIsOneLineWithTheCopiedShaStandingOutAndTheCommitsOnTheBaseDimmed() {
         AheadView ahead = new AheadView(Option.of(AHEAD), Option.none());
 
-        List<LoadableList.Item> items = CommitsPanel.graphed(LOG, Option.of(MIDDLE.sha()), ahead);
+        List<LoadableList.Item> items = CommitRows.graphed(LOG, Option.of(MIDDLE.sha()), ahead);
 
         assertTrue(items.forAll(item -> item.height() == 1 && item.row().height() == 1));
         assertEquals(
@@ -132,23 +125,5 @@ class AheadViewTest {
         // Only the blocks of the commits on the base, the last two, are dimmed.
         assertEquals(List.of(false, true), dim.distinct());
         assertTrue(dim.dropWhile(isDim -> !isDim).forAll(isDim -> isDim));
-    }
-
-    @Test
-    void theCommitsPaneSaysHowManyCommitsAreNotOnTheBaseAndListsTheWholeLog() throws Exception {
-        Model model = TestModels.loaded(SampleData.git())
-                .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(LOG))
-                        .withAhead(new Loadable.Loaded<>(Option.of(AHEAD))));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
-
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
-            String shown = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE));
-
-            // The title names the branch whose log it lists.
-            assertTrue(shown.contains("Commits of main · 2 ahead of origin/ma"), shown);
-            assertTrue(shown.contains("1/4"), shown);
-            assertFalse(shown.contains("⑂"), shown);
-            SettledPilot.of(testRunner).quit();
-        }
     }
 }

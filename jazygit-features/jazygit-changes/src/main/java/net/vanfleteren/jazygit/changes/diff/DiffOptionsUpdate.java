@@ -124,7 +124,7 @@ public final class DiffOptionsUpdate {
                 model.repoView().files().commitFiles().map(view -> view.withDiff(reloading(view.diff())));
         List<Cmd> loads = List.<Cmd>empty()
                 .appendAll(model.repoView().preview().fileDiff().map(diff -> new LoadFileDiff(diff.key(), options)))
-                .appendAll(RereadUpdate.shown(model).filter(load -> load instanceof DiffLoad));
+                .appendAll(RereadUpdate.shown(model).filter(load -> load instanceof DiffLoad<?>));
         return new Next(
                 model.mapRepoView(repoView -> repoView.mapPreview(
                                 preview -> preview.withFileDiff(reloading(preview.fileDiff()))

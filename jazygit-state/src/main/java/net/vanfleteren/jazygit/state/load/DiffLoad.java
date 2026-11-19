@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 /**
  * A load whose result depends on the diff options it was started with.
  */
-public sealed interface DiffLoad extends Load
+public sealed interface DiffLoad<T> extends Targeted<T>
         permits LoadCommitDetail, LoadStashDetail, LoadCommitFileDiff, LoadFileDiff, ReadWholeFile {
 
     DiffOptions options();

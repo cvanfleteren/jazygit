@@ -34,7 +34,6 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
-import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import org.junit.jupiter.api.Test;
@@ -103,12 +102,6 @@ class PanePositionTest {
     void branchesShowSelectedPositionAndFollowSelection() throws Exception {
         BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
         assertPositions(() -> panel.render(MODEL, BranchesPanel.PANE), BranchesPanel.ID, KeyCode.DOWN, "1/2", "2/2");
-    }
-
-    @Test
-    void commitsShowSelectedPositionAndFollowSelection() throws Exception {
-        CommitsPanel panel = new CommitsPanel(msg -> {});
-        assertPositions(() -> panel.render(MODEL, CommitsPanel.PANE), CommitsPanel.ID, KeyCode.DOWN, "1/3", "2/3");
     }
 
     @Test
