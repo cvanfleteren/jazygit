@@ -58,7 +58,7 @@ final class Gutter {
      * Whether {@code fold} is of a version shown blamed (ADR 147). Its code moves sideways by the column of its blame
      * anyway, so it does not keep the gutter of the diff: its numbers are in one column as wide as its own widest.
      */
-    static boolean shownBlamed(Expansion.Fold fold) {
+    private static boolean shownBlamed(Expansion.Fold fold) {
         return fold.version().isDefined() && fold.blame().isDefined();
     }
 
