@@ -19,7 +19,8 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 ## Modules
 
 The modules are in four groups, a folder each whose pom is the parent of its modules, and a module's name starts with
-its group's (ADR 159). A group uses the groups above it in this table, never one below it. The packages below are
+its group's (ADR 159). A group uses the groups above it in this table, never one below it, as `GroupsTest` in the app
+checks: the build only stops cycles. The packages below are
 named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.state`, `git.model` is
 `net.vanfleteren.jazygit.core.git.model`.
 

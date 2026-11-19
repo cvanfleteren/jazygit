@@ -40,8 +40,9 @@ libraries and the core, the features all three.
    the app keeps `net.vanfleteren.jazygit.app`, as it is in no group. The keys of a bundle keep starting with the
    module's name without its group (`github.dialog.…`): `Messages` looks for the bundle of `github` in the groups that
    have text, the kernel and the features, then in the app.
-4. **A group uses only the groups before it**: lib, core, kernel, features, then the app. The compiler keeps this, as
-   it keeps the layers inside them.
+4. **A group uses only the groups before it**: lib, core, kernel, features, then the app. The build only stops a cycle
+   between two modules, so a kernel module could still use a feature that does not use it: `GroupsTest`, in the app,
+   which sees every module, checks the order on the packages of the groups.
 
 ## Consequences
 
