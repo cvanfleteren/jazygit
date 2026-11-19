@@ -11,7 +11,11 @@ import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.features.changes.edit.EditCmd;
+import net.vanfleteren.jazygit.features.changes.edit.OpenFileCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
+import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -23,12 +27,13 @@ import net.vanfleteren.jazygit.kernel.state.github.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.operation.CommandLog;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
 /**
  * Showing the checks on the tip of a branch one by one, with how long they took or run, and reading them again by
  * hand and by itself, as the pull request dialog does (ADR 19, ADR 32, ADR 34); running the failed ones again
- * (ADR 135).
+ * (ADR 135); picking one, and opening its log in an editor (ADR 160).
  */
 public final class ChecksUpdate {
 
@@ -81,7 +86,83 @@ public final class ChecksUpdate {
             case ChecksMsg.RerunConfirmed() -> rerunConfirmed(model);
             case ChecksMsg.Rerun(RerunCmd cmd, List<RerunCmd.Outcome> outcomes, var commands) ->
                 rerun(model, cmd, outcomes, commands);
+            case ChecksMsg.Stepped(int by) -> Next.of(stepped(model, by));
+            case ChecksMsg.Clicked(CheckPick pick) ->
+                Next.of(model.popup(ChecksPopup.class)
+                        .flatMap(popup -> popup.checksRead()
+                                .find(pick::matches)
+                                .map(check -> model.openPopup(popup.withPicked(check))))
+                        .getOrElse(model));
+            case ChecksMsg.LogRequested() -> logRequested(model);
+            case ChecksMsg.LogRead(CheckLogCmd cmd, String file, int line, var commands) ->
+                logRead(model, cmd, file, line, commands);
+            case ChecksMsg.LogEditorChosen(EditorProgram editor) ->
+                model.popup(LogEditorPopup.class)
+                        .map(asking -> OperationUpdate.start(
+                                asking.back(model), new OpenFileCmd(editor, asking.file(), asking.line())))
+                        .getOrElse(() -> Next.of(model));
+            case ChecksMsg.LogEditorCancelled() ->
+                Next.of(model.popup(LogEditorPopup.class)
+                        .map(asking -> asking.back(model))
+                        .getOrElse(model));
         };
+    }
+
+    /**
+     * The check {@code by} rows after the one picked picked, in the order they are listed, as far as there are; the
+     * checks scrolled as little as it takes to show it (ADR 160).
+     */
+    private static Model stepped(Model model, int by) {
+        return model.popup(ChecksPopup.class)
+                .filter(popup -> !popup.checksRead().isEmpty())
+                .map(popup -> {
+                    List<Check> ordered = popup.ordered(model);
+                    int at = popup.pickedCheck(model).map(ordered::indexOf).getOrElse(0);
+                    int to = Math.clamp((long) at + by, 0, ordered.size() - 1);
+                    ListCursor cursor = model.listCursor();
+                    int last = Math.max(0, ordered.size() - ChecksPopup.VISIBLE_CHECKS);
+                    int first = Math.clamp(cursor.line().getOrElse(0), 0, last);
+                    int shown = Math.clamp(first, Math.max(0, to - ChecksPopup.VISIBLE_CHECKS + 1), Math.min(to, last));
+                    return model.openPopup(popup.withPicked(ordered.get(to))).withListCursor(cursor.at(shown));
+                })
+                .getOrElse(model);
+    }
+
+    /**
+     * Reads the log of the check picked, to open it in an editor (ADR 160); or says why it has none. Not before the
+     * checks were read.
+     */
+    private static Next logRequested(Model model) {
+        return model.popup(ChecksPopup.class)
+                .flatMap(popup -> popup.pickedCheck(model)
+                        .flatMap(check -> NoLog.of(check)
+                                .map(why -> Next.of(model.openPopup(popup.withNoLog(why))))
+                                .orElse(() -> check.run()
+                                        .flatMap(run -> popup.repository()
+                                                .map(repository -> OperationUpdate.start(
+                                                        model.openPopup(popup.withPicked(check)),
+                                                        new CheckLogCmd(repository, check.name(), run)))))))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Once the log of a check was read: the commands are logged, and it opens as a file does (ADR 145): in git's editor
+     * without an editor set to open files, at its start; else in the one set, or the one chosen in a menu of them, over
+     * the checks popup.
+     */
+    private static Next logRead(Model model, CheckLogCmd cmd, String file, int line, List<ExecutedCommand> commands) {
+        Model done = OperationUpdate.done(model, cmd, commands).clearError();
+        Editors editors = done.preferences().settings().editors().files();
+        if (editors.isEmpty()) {
+            return OperationUpdate.start(done, new EditCmd(List.of(file)));
+        }
+        if (editors.all().size() == 1) {
+            return OperationUpdate.start(done, new OpenFileCmd(editors.all().head(), file, line));
+        }
+        Option<ChecksPopup> checks = done.popup(ChecksPopup.class);
+        LogEditorPopup asking =
+                new LogEditorPopup(checks, done.listCursor(), cmd.name(), file, line, editors.lettered());
+        return Next.of(checks.isDefined() ? done.openPopup(asking) : done.openPopupIfFree(asking));
     }
 
     /**
@@ -236,6 +317,10 @@ public final class ChecksUpdate {
                         .filter(asking -> asking.checks().onGitHub().equals(branch))
                         .map(asking ->
                                 model.openPopup(asking.over(asking.checks().with(read, model)))))
+                .orElse(() -> model.popup(LogEditorPopup.class)
+                        .flatMap(asking -> asking.checks()
+                                .filter(checks -> checks.onGitHub().equals(branch))
+                                .map(checks -> model.openPopup(asking.over(checks.with(read, model))))))
                 .getOrElse(model);
     }
 }

@@ -24,11 +24,6 @@ import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
  */
 public final class CheckRows {
 
-    // The order of the checks by how they are doing: failed, running, queued, passed.
-    private static final int FAILED = 0;
-    private static final int RUNNING = 1;
-    private static final int QUEUED = 2;
-    private static final int PASSED = 3;
     // How wide how far the checks are together is written, after their bar and a space: "100%".
     private static final int PERCENT = 4;
 
@@ -68,14 +63,7 @@ public final class CheckRows {
      * queued ones and the passed ones; those not done the soonest done first, and those not known last.
      */
     public static List<Check> order(List<Check> checks, List<Check> all, Option<CheckTimes> times) {
-        return checks.sortBy(check -> eta(check, all, times) instanceof Eta.Expected(Instant at) ? at : Instant.MAX)
-                .sortBy(CheckRows::rank);
-    }
-
-    private static int rank(Check check) {
-        return check.state() == Checks.FAILING
-                ? FAILED
-                : check.state() == Checks.PASSING ? PASSED : check.queued() ? QUEUED : RUNNING;
+        return CheckTimes.order(checks, all, times);
     }
 
     /**
@@ -106,6 +94,15 @@ public final class CheckRows {
                                     text(TextWidth.alignRight(text, doingWidth)).addClass(Theme.Classes.DIM));
                         })
                         .getOrElse(() -> List.of(text(" " + TextWidth.cut(check.name(), left)))));
+    }
+
+    /**
+     * {@code row}, the row of {@code check} as {@link #filling} or {@link #barred} draw it, with its name in bold: the
+     * check picked (ADR 160).
+     */
+    public static List<StyledElement<?>> picked(Check check, List<StyledElement<?>> row) {
+        int name = PullRequestSymbols.check(check).toList().size();
+        return name < row.size() ? row.update(name, row.get(name).addClass(Theme.Classes.BOLD)) : row;
     }
 
     /**
