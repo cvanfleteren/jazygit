@@ -32,13 +32,14 @@ import net.vanfleteren.jazygit.lib.json.Decoder;
  */
 public final class CheckFragment {
 
-    // What there is to know of a check run of a workflow and when it ran, in GraphQL (ADR 32).
+    // What there is to know of a check run of a workflow, when it ran and where it links to, in GraphQL (ADR 32): all
+    // that CHECK reads of a check run.
     public static final String CHECK_RUN_FIELDS = """
-            databaseId name status conclusion startedAt completedAt \
+            databaseId name status conclusion startedAt completedAt detailsUrl \
             checkSuite { workflowRun { databaseId createdAt runAttempt event workflow { name } } }""";
     // A check with its name, its state and how it ran, in GraphQL.
-    public static final String FIELDS = "__typename ... on CheckRun { " + CHECK_RUN_FIELDS
-            + " detailsUrl } ... on StatusContext { context state targetUrl }";
+    public static final String FIELDS =
+            "__typename ... on CheckRun { " + CHECK_RUN_FIELDS + " } ... on StatusContext { context state targetUrl }";
     // A check with only its state, in GraphQL.
     static final String STATE_FIELDS =
             "__typename ... on CheckRun { status conclusion } ... on StatusContext { state }";
