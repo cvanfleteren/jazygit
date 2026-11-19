@@ -120,8 +120,8 @@ The updates, messages, popups and the model are pure. Pure code:
 - integration tests are written in java, use a Pilot from Tamboui, and test the rendering and interaction of the UI.
 - A rendering or scrolling test asserts on the rendered screen, not only on the message it dispatched. Click behaviour
   is tested at app level (`JazygitAppReportsTest`), where the full layout routes the click.
-- Per-module JUnit configuration goes in that module's surefire `configurationParameters`. jazygit-git, jazygit-gh,
-  jazygit-state, jazygit-ui, jazygit-branches and jazygit-github ship test-jars, so their `src/test/resources`
+- Per-module JUnit configuration goes in that module's surefire `configurationParameters`. core-git, core-gh,
+  kernel-state, kernel-ui, features-branches and features-github ship test-jars, so their `src/test/resources`
   lands on the test classpath of the modules above them.
 - A test goes in the module of what it tests, unless it needs what that module cannot see: a feature's messages or
   text, or the app's keymap (`Keymap.standard()` is empty without the app). Then it goes in `jazygit-app`, in the

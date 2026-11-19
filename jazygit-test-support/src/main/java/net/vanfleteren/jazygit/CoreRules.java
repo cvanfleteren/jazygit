@@ -16,14 +16,14 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The rules every module of the core keeps: jazygit-process, jazygit-git, jazygit-gh and jazygit-askpass. Each takes
+ * The rules every module of the core keeps: core-process, core-git, core-gh and core-askpass. Each takes
  * them in with {@code ArchTests.in(CoreRules.class)}. That git and gh know nothing of each other, and the process layer of
  * neither, the compiler sees to: they are not on each other's classpath.
  */
 public final class CoreRules {
 
     /**
-     * {@code Exec} is the only place that starts a program. Inside jazygit-process there is nothing else to check.
+     * {@code Exec} is the only place that starts a program. Inside core-process there is nothing else to check.
      */
     @ArchTest
     static final ArchRule onlyExecStartsPrograms = noClasses()
@@ -39,7 +39,7 @@ public final class CoreRules {
             .callMethod(Runtime.class, "exec", String.class)
             .allowEmptyShould(true);
     /**
-     * JSON is read through jazygit-json's {@code Json} and {@code Decoder}; Parsson, which comes along with it, is
+     * JSON is read through lib-json's {@code Json} and {@code Decoder}; Parsson, which comes along with it, is
      * not used here (ADR 42).
      */
     @ArchTest

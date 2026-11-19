@@ -22,21 +22,9 @@
           ./checkstyle.xml
           ./errorprone-ignorable-results.txt
           ./jazygit-test-support
-          ./jazygit-base
-          ./jazygit-json
-          ./jazygit-yaml
-          ./jazygit-xml
-          ./jazygit-syntax
-          ./jazygit-process
-          ./jazygit-git
-          ./jazygit-gh
-          ./jazygit-askpass
-          ./jazygit-lens
-          ./jazygit-image
-          ./jazygit-settings
-          ./jazygit-state
-          ./jazygit-ui
-          ./jazygit-content
+          ./jazygit-lib
+          ./jazygit-core
+          ./jazygit-kernel
           ./jazygit-features
           ./jazygit-app
         ];

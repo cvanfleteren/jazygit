@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.ui.content.Drawn;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import io.vavr.collection.HashSet;
@@ -23,6 +22,7 @@ import net.vanfleteren.jazygit.state.diff.Collapsed;
 import net.vanfleteren.jazygit.state.diff.DiffLines;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;

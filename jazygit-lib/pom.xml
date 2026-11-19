@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>net.vanfleteren</groupId>
+        <artifactId>jazygit-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>jazygit-lib</artifactId>
+    <packaging>pom</packaging>
+
+    <name>jazygit-lib</name>
+    <description>The libraries of jazygit: values and formats that know nothing of git, GitHub or the application</description>
+
+    <!-- A library uses no other module of jazygit. -->
+    <modules>
+        <module>lib-base</module>
+        <module>lib-lens</module>
+        <module>lib-json</module>
+        <module>lib-yaml</module>
+        <module>lib-xml</module>
+        <module>lib-syntax</module>
+        <module>lib-image</module>
+    </modules>
+</project>

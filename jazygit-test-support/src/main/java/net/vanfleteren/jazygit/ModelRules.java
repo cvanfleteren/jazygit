@@ -7,14 +7,14 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 /**
- * The rules of the models of jazygit-git and jazygit-gh, the data read from git and GitHub. Each takes them in with
+ * The rules of the models of core-git and core-gh, the data read from git and GitHub. Each takes them in with
  * {@code ArchTests.in(ModelRules.class)}.
  */
 public final class ModelRules {
 
     /**
-     * The data read from git and GitHub is plain values, with nothing that runs anything. jazygit-syntax, which lexes
-     * the code of a diff, is pure too, as is jazygit-base, which guards against a call that breaks what a method
+     * The data read from git and GitHub is plain values, with nothing that runs anything. lib-syntax, which lexes
+     * the code of a diff, is pure too, as is lib-base, which guards against a call that breaks what a method
      * needs.
      */
     @ArchTest

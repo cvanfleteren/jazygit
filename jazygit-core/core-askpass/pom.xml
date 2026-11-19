@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>net.vanfleteren</groupId>
+        <artifactId>jazygit-core</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>core-askpass</artifactId>
+
+    <name>core-askpass</name>
+    <description>Lets ssh ask the user through jazygit: the socket, the helper ssh runs, and its launcher (ADR 150)</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>core-process</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>core-git</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vavr</groupId>
+            <artifactId>vavr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Keeps the tests' output free of SLF4J's "no provider" warning. -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- The tests choose which ssh git runs: a core.sshCommand in the user's own git configuration
+                         would go before the GIT_SSH a test sets, and the ssh variables of the shell before what the
+                         tests configure. -->
+                    <environmentVariables>
+                        <GIT_CONFIG_GLOBAL>/dev/null</GIT_CONFIG_GLOBAL>
+                        <GIT_CONFIG_NOSYSTEM>1</GIT_CONFIG_NOSYSTEM>
+                    </environmentVariables>
+                    <excludedEnvironmentVariables>GH_TOKEN,GITHUB_TOKEN,GH_ENTERPRISE_TOKEN,GITHUB_ENTERPRISE_TOKEN,GIT_SSH_COMMAND,GIT_SSH,GIT_ASKPASS,SSH_ASKPASS</excludedEnvironmentVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

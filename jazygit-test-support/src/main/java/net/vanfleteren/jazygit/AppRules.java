@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
- * The rules every module of the application keeps, from jazygit-lens up to jazygit-app (ADR 136). Each takes them in
+ * The rules every module of the application keeps, from lib-lens up to jazygit-app (ADR 136). Each takes them in
  * with {@code ArchTests.in(AppRules.class)} and runs them on its own classes; a rule about classes a module does not
  * have finds nothing there. That a module does not use one above it the compiler sees to. The rules name the types of
  * the state and of the core as text, as this module is below them.
@@ -108,7 +108,7 @@ public final class AppRules {
             .resideInAPackage("com.electronwill.nightconfig..")
             .allowEmptyShould(true);
     /**
-     * JSON is read through jazygit-json's {@code Json} and {@code Decoder}; Parsson, which comes along with it, is
+     * JSON is read through lib-json's {@code Json} and {@code Decoder}; Parsson, which comes along with it, is
      * not used here (ADR 42).
      */
     @ArchTest
@@ -118,7 +118,7 @@ public final class AppRules {
             .resideInAnyPackage("jakarta.json..", "org.eclipse.parsson..")
             .allowEmptyShould(true);
     /**
-     * YAML is read through jazygit-yaml's {@code YamlTree}; SnakeYAML, which comes along with it, is not used here
+     * YAML is read through lib-yaml's {@code YamlTree}; SnakeYAML, which comes along with it, is not used here
      * (ADR 123).
      */
     @ArchTest

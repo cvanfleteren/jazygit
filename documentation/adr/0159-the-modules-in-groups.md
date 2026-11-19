@@ -1,0 +1,46 @@
+# 159. The modules in groups
+
+Date: 2026-11-19
+
+## Context
+
+Only the features are grouped (ADR 136): `jazygit-features` gathers their four modules. The other fifteen modules sit
+side by side in the root, in the order they were made: `jazygit-base` beside `jazygit-state`, `jazygit-lens` between
+`jazygit-askpass` and `jazygit-image`. Their layers are there, but only the module table of `ARCHITECTURE.md` and the
+dependencies of each pom show them:
+
+- seven modules are libraries that know nothing of git, GitHub or the application: `base`, `lens`, `json`, `yaml`,
+  `xml`, `syntax` and `image`. None uses another module of jazygit.
+- four run a program and give back what it did as values: `process`, `git`, `gh` and `askpass`. They use only the
+  libraries and each other, and `CoreRules` already calls them the core.
+- four are what every feature builds on, which the ADRs call the kernel: `settings`, `state`, `ui` and `content`.
+
+A group of these never uses one above it: the libraries use nothing of jazygit, the core the libraries, the kernel the
+libraries and the core, the features all three.
+
+## Decision
+
+1. **The modules are in four groups**, a folder each, whose pom is both the aggregator and the parent of its modules,
+   as `jazygit-features` is:
+
+   | Group | Modules |
+   |---|---|
+   | `jazygit-lib` | `lib-base`, `lib-lens`, `lib-json`, `lib-yaml`, `lib-xml`, `lib-syntax`, `lib-image` |
+   | `jazygit-core` | `core-process`, `core-git`, `core-gh`, `core-askpass` |
+   | `jazygit-kernel` | `kernel-settings`, `kernel-state`, `kernel-ui`, `kernel-content` |
+   | `jazygit-features` | `features-changes`, `features-branches`, `features-github`, `features-chrome` |
+
+   `jazygit-app`, `jazygit-test-support` and `jazygit-benchmarks` stay in the root: the app is the one module above
+   every group, and the other two serve the build.
+2. **A module's name starts with its group's**, not with `jazygit-`: its folder and its artifact id are
+   `<group>-<name>`. It still ends in its root package (`kernel-state`, `net.vanfleteren.jazygit.state`), and no
+   package changes.
+3. **A group uses only the groups before it**: lib, core, kernel, features, then the app. The compiler keeps this, as
+   it keeps the layers inside them.
+
+## Consequences
+
+- The folders show the layers; a new module goes in the group of what it may use.
+- One module is built by its artifact id, `-pl :core-git`; a bare `-pl core-git` is a path, and no longer one.
+- The fat jar and the native image keep their names: `jazygit-app` names them.
+- The group poms share nothing yet; what all the modules of a group need may move up into its pom.
