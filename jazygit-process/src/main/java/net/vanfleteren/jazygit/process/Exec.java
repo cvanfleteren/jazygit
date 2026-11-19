@@ -62,6 +62,27 @@ public final class Exec {
     }
 
     /**
+     * Runs {@code commandLine} as {@link #run} does, for the start of what it printed on both its outputs, its error
+     * output last: for a program that prints what is asked there, as {@code ssh -V} prints its version.
+     *
+     * @return what it printed, when it exited with 0
+     */
+    public static Either<ExecFailure, String> printed(
+            Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout) {
+        long started = System.nanoTime();
+        FirstBytes stdout = new FirstBytes(MAX_STDERR);
+        return logged(
+                directory,
+                commandLine,
+                started,
+                started(directory, commandLine, environment, timeout, stdout, stdout::whenOver)
+                        .flatMap(exited -> exited.exitCode() == 0
+                                ? Either.right(stdout.toString(StandardCharsets.UTF_8) + exited.stderr())
+                                : Either.left(new ExecFailure.NonZero(
+                                        exited.exitCode(), exited.stderr(), stdout.toString(StandardCharsets.UTF_8)))));
+    }
+
+    /**
      * Runs {@code commandLine} as {@link #run} does, reading its standard output only up to {@code limit}: once it
      * printed more, it is stopped, and what it printed is cut off, however it exited. When it takes too long, the
      * whole lines it printed until then are what it printed, cut off, unless there are none (ADR 79).

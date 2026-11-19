@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.chrome.settings.SettingsPanelUpdate;
 import net.vanfleteren.jazygit.git.CliGit;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.process.SshAsking;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.*;
@@ -33,6 +34,8 @@ final class RepositorySession {
     private static final int BACKGROUND_THREADS = 4;
 
     private final Env env;
+    // How ssh may ask the user in each repository opened (ADR 150).
+    private final SshAsking ssh;
     private final Supplier<ToolkitRunner> runner;
     private final Clock clock;
     private final Runnable requestRedraw;
@@ -44,6 +47,7 @@ final class RepositorySession {
     /**
      * @param env           what the repository the app starts in is read with; other repositories are opened here
      * @param terminal      the terminal the app is shown on
+     * @param ssh           how ssh may ask the user in another repository opened, as it may in {@code env}'s
      * @param runner        the runner of the app, once it is started
      * @param requestRedraw asks for a frame, on the render thread
      * @param quit          stops the app, as the model asks
@@ -52,12 +56,14 @@ final class RepositorySession {
     RepositorySession(
             Env env,
             Terminal terminal,
+            SshAsking ssh,
             Supplier<ToolkitRunner> runner,
             Clock clock,
             Runnable requestRedraw,
             Runnable quit,
             Consumer<Model> started) {
         this.env = env.withApp(this::switchTo, terminal);
+        this.ssh = ssh;
         this.runner = runner;
         this.clock = clock;
         this.requestRedraw = requestRedraw;
@@ -191,7 +197,7 @@ final class RepositorySession {
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
             open(
-                    RepositoryEnv.reopen(env, git, last.preferences().settings()),
+                    RepositoryEnv.reopen(env, git, last.preferences().settings(), ssh),
                     new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
                     last.preferences().themeOverride(),
                     repositoryTheme,

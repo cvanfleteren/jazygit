@@ -241,7 +241,9 @@ operation a subpackage holding all of the above; adding an operation is adding i
   roles and the errors. Tests replace the roles they
   need on `StubGit.of()` and `StubGitHub.of()`.
 - **One place starts a process:** `GitProcess` and `GhProcess`, both through `process.Exec`. A command is data
-  (arguments, environment, timeout) and never prompts: no terminal credentials, no editor, ssh in batch mode.
+  (arguments, environment, timeout) and never prompts: no terminal credentials, no editor, ssh in batch mode. Only
+  for what the user starts, ssh asks through the app: it runs jazygit as its `SSH_ASKPASS`, which passes the question
+  to the running app over a socket (`app.askpass`, ADR 150).
 - **gh's JSON** is decoded with the `Decoder`s of `jazygit-json` (ADR 42), one query class per read.
 - **Errors as values.** Nothing throws on purpose. A read returns `Either<GitError, T>`; a write returns
   `Either<GitFailure, List<ExecutedCommand>>`, the failure carrying the commands that ran (ADR 75). Parsers return

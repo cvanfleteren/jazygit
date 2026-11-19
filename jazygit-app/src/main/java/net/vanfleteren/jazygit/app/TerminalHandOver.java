@@ -83,6 +83,17 @@ final class TerminalHandOver implements Terminal {
     }
 
     /**
+     * Has the terminal send a paste as keys, {@code asKeys}, or as one paste again, if the app takes pastes at all;
+     * called on the render thread, while a popup asking for a secret is open (ADR 150).
+     */
+    void pasteAsKeys(boolean asKeys) {
+        if (config.bracketedPaste()) {
+            backend.forEach(
+                    pasting -> Try.run(() -> pasting.bracketedPaste(!asKeys)).onFailure(BugLog::log));
+        }
+    }
+
+    /**
      * Asks the terminal to copy {@code text} with OSC 52, on the render thread between two frames, and waits for that
      * to be written; called on the thread of a command (ADR 94). Without a backend of its own, nothing is written.
      */

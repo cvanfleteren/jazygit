@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.gh.process.GhProcess;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.process.SshAsking;
 
 /**
  * {@link PullRequests} through gh, of the repository gh finds from the git remotes of its working tree (ADR 114).
@@ -24,9 +25,20 @@ public final class CliPullRequests implements PullRequests {
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
 
     private final GhProcess process;
+    // How ssh may ask the user while gh checks a pull request out, which runs git (ADR 150).
+    private final SshAsking ssh;
 
     public CliPullRequests(GhProcess process) {
+        this(process, SshAsking.Unchanged.INSTANCE);
+    }
+
+    /**
+     * Pull requests through gh run by {@code process}, where checking one out lets ssh ask the user as {@code ssh}
+     * lets it.
+     */
+    public CliPullRequests(GhProcess process, SshAsking ssh) {
         this.process = process;
+        this.ssh = ssh;
     }
 
     /**
@@ -112,12 +124,24 @@ public final class CliPullRequests implements PullRequests {
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number) {
-        return process.log(gh("pr", "checkout", String.valueOf(number.value())));
+        return checkout(process, number);
     }
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number, Path in) {
-        return process.in(in).log(gh("pr", "checkout", String.valueOf(number.value())));
+        return checkout(process.in(in), number);
+    }
+
+    /**
+     * Runs {@code gh pr checkout} with {@code process}: gh fetches the pull request with git, and git talks to the
+     * remote, so ssh may ask the user, or runs in batch mode where it cannot.
+     */
+    private Either<GhFailure, List<ExecutedCommand>> checkout(GhProcess process, PrNumber number) {
+        return ssh.asking(
+                        process.directory(),
+                        variables -> process.log(gh("pr", "checkout", String.valueOf(number.value()))
+                                .withEnvironment(variables)))
+                .result();
     }
 
     @Override

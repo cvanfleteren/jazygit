@@ -33,6 +33,13 @@ public record GhCommand(List<String> args, Map<String, String> environment, Dura
     }
 
     /**
+     * The same command, with {@code variables} set in its environment too, over what it set already.
+     */
+    public GhCommand withEnvironment(Map<String, String> variables) {
+        return new GhCommand(args, environment.merge(variables, (current, given) -> given), timeout);
+    }
+
+    /**
      * The command line that runs this command with the gh at {@code executable}.
      */
     public List<String> commandLine(String executable) {

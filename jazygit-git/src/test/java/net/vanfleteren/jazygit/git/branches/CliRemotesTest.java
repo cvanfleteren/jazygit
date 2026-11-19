@@ -5,18 +5,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.process.GitCommand;
 import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.git.process.GitFailure;
+import net.vanfleteren.jazygit.process.SshAsking;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -119,6 +122,87 @@ class CliRemotesTest {
                 .exists(error -> error instanceof GitError.CommandFailed));
         assertTrue(failedWith(new CliRemotes(repo, HashMap::empty).pull())
                 .exists(error -> error instanceof GitError.CommandFailed));
+    }
+
+    /**
+     * What the user starts runs ssh with what {@link SshAsking} sets, which the fake ssh says back, as one operation
+     * each, renaming an upstream too, which fetches and then pushes; a fetch runs in batch mode, without asking.
+     */
+    @Test
+    void whatTheUserStartsLetsSshAskAndAFetchDoesNot(@TempDir Path dir) throws Exception {
+        Path repo = behindSayingSsh(dir);
+        Asking asking = new Asking(Option.none());
+        CliRemotes remotes = new CliRemotes(repo, HashMap::empty, asking);
+        RemoteBranch main = new RemoteBranch("origin", new BranchName("main"));
+        Option<GitError> refused = Option.of(new GitError.SshKeyRefused("asking: Permission denied (publickey)."));
+
+        assertEquals(refused, failedWith(remotes.pull()));
+        assertEquals(refused, failedWith(remotes.pushSettingUpstream(new BranchName("main"), main)));
+        assertEquals(refused, failedWith(remotes.deleteRemoteBranch(main)));
+        assertEquals(
+                Option.of(new GitError.UpstreamNotRenamed(main, new BranchName("renamed"), refused.get())),
+                failedWith(remotes.renameUpstream(new BranchName("renamed"), main)));
+        assertEquals(
+                Option.of(new GitError.SshKeyRefused(": Permission denied (publickey).")),
+                failedWith(remotes.fetch(new RemoteName("origin"))));
+
+        assertEquals(java.util.List.of(repo, repo, repo, repo), asking.asked);
+    }
+
+    /**
+     * A passphrase the user cancelled fails as a refused key, whose hint to add the key to the agent holds; anything
+     * else ssh asked, as cancelled.
+     */
+    @Test
+    void whatTheUserCancelledSaysWhy(@TempDir Path dir) throws Exception {
+        Path repo = behindSayingSsh(dir);
+        SshAsking.Cancelled passphrase = new SshAsking.Cancelled("Enter passphrase for key '/home/u/.ssh/id': ");
+        SshAsking.Cancelled code = new SshAsking.Cancelled("Verification code: ");
+
+        assertEquals(
+                Option.of(new GitError.SshKeyRefused("asking: Permission denied (publickey).")),
+                failedWith(new CliRemotes(repo, HashMap::empty, new Asking(Option.of(passphrase))).pull()));
+        assertEquals(
+                Option.of(new GitError.SshCancelled("Verification code:")),
+                failedWith(new CliRemotes(repo, HashMap::empty, new Asking(Option.of(code))).pull()));
+    }
+
+    @Test
+    void aPromptForThePassphraseOfAKeyIsToldApart() {
+        assertTrue(new SshAsking.Cancelled("Enter passphrase for key '/home/u/.ssh/id_ed25519': ").passphrase());
+        assertTrue(!new SshAsking.Cancelled("git@github.com's password: ").passphrase());
+    }
+
+    /**
+     * A repository whose {@code main} follows {@code origin/main}, on a remote reached through a fake ssh that says
+     * {@code JAZYGIT_SAID} as it refuses the key, as ssh says that it was refused.
+     */
+    private static Path behindSayingSsh(Path dir) throws Exception {
+        Path repo = behindFakeSsh(dir, "unused");
+        Files.writeString(
+                dir.resolve("ssh.sh"),
+                "#!/bin/sh\necho \"$JAZYGIT_SAID: Permission denied (publickey).\" >&2\nexit 255\n");
+        return repo;
+    }
+
+    /**
+     * An {@link SshAsking} that sets {@code JAZYGIT_SAID} to {@code asking}, and keeps the directories it was asked
+     * for; as if the user cancelled {@code cancelled}, if anything.
+     */
+    private static final class Asking implements SshAsking {
+
+        private final Option<Cancelled> cancelled;
+        private final java.util.List<Path> asked = new java.util.ArrayList<>();
+
+        Asking(Option<Cancelled> cancelled) {
+            this.cancelled = cancelled;
+        }
+
+        @Override
+        public <T> Asked<T> asking(Path directory, Function<Map<String, String>, T> talk) {
+            asked.add(directory);
+            return new Asked<>(talk.apply(HashMap.of("JAZYGIT_SAID", "asking")), cancelled);
+        }
     }
 
     /**

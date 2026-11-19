@@ -176,13 +176,21 @@ public sealed interface GitError {
     record PushRefused(String pushDefault, RemoteBranch upstream) implements GitError {}
 
     /**
-     * The remote's ssh server refused every key ssh offered. As nothing may ask the user anything, ssh skips a key
-     * whose passphrase it would have to ask for, so this is also how a key that has a passphrase, but is not in the
-     * ssh agent, fails.
+     * The remote's ssh server refused every key ssh offered. Where ssh may not ask the user, as for a fetch, it skips a
+     * key whose passphrase it would have to ask for, so this is also how a key that has a passphrase, but is not in the
+     * ssh agent, fails; and so does one whose passphrase the user cancelled (ADR 150).
      *
      * @param explanation the line ssh printed about it
      */
     record SshKeyRefused(String explanation) implements GitError {}
+
+    /**
+     * The user cancelled what ssh asked for, other than the passphrase of a key, such as a password or a code, and ssh
+     * was refused anything else it asked (ADR 150).
+     *
+     * @param prompt what ssh asked, as it asked it
+     */
+    record SshCancelled(String prompt) implements GitError {}
 
     /**
      * The branch was renamed to {@code newName}, but its upstream could not be renamed with it on its remote, so it
