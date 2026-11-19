@@ -373,6 +373,17 @@ public final class AppRules {
                             && !access.getTargetOwner().isEquivalentTo(MatchException.class)))
             .allowEmptyShould(true);
     /**
+     * Nor through {@code Require}, which throws for it. Named as text, as the base is not below test-support.
+     */
+    @ArchTest
+    static final ArchRule pureCodeRequiresNothing = noClasses()
+            .that()
+            .haveNameMatching(PURE)
+            .should()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("net.vanfleteren.jazygit.base.Require")
+            .allowEmptyShould(true);
+    /**
      * The commands report how they failed as messages: none declares an exception.
      */
     @ArchTest

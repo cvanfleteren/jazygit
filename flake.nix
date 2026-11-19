@@ -22,6 +22,7 @@
           ./checkstyle.xml
           ./errorprone-ignorable-results.txt
           ./jazygit-test-support
+          ./jazygit-base
           ./jazygit-json
           ./jazygit-yaml
           ./jazygit-xml

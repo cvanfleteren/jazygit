@@ -20,19 +20,20 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 
 | Module | Holds | Depends on |
 |---|---|---|
+| `jazygit-base` | `base`: `Require`, the guard against a call that breaks what a method needs; a tool any part may use. | |
 | `jazygit-json` | `json`: JSON as plain values, and decoders into records (ADR 42). | vavr, Parsson |
 | `jazygit-yaml` | `yaml`: YAML as it is written, to be drawn (ADR 123). | vavr, SnakeYAML Engine |
 | `jazygit-xml` | `xml`: XML as it is written, to be drawn (ADR 151). | vavr |
 | `jazygit-syntax` | `syntax`: the lexer that finds the tokens of a line of code (ADR 53, 113). | vavr |
 | `jazygit-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
-| `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | process, syntax |
+| `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | base, process, syntax |
 | `jazygit-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
 | `jazygit-askpass` | `askpass`: lets ssh ask the user through jazygit: the socket, the helper ssh runs, its launcher (ADR 150). | process, git |
 | `jazygit-lens` | `lens`: `Lens`, where a value sits in another; a tool any part may use. | vavr |
 | `jazygit-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
 | `jazygit-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
 | `jazygit-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, and a subpackage per part of the model. | lens, image, settings, git, gh, json, yaml, xml |
-| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), and `Feature`, `FeatureAction` in the shell. | state, TamboUI, commonmark |
+| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
 | `jazygit-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | ui |
 | ↳ `jazygit-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress. | ui |
