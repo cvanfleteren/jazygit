@@ -376,11 +376,11 @@ final class FileTreeList<T extends Pathed> {
         steppedTo = Option.none();
         // A directory merged with its only child directories can be long, so it keeps both ends when it does not fit.
         // What the tree says instead of files, such as an error, is cut at its end like any other text.
-        StyledElement<?> element = switch (node.data()) {
+        StyledElement<?> element = net.vanfleteren.jazygit.ui.widgets.KnownHeight.line(() -> switch (node.data()) {
             case FileTree.File<T> file -> drawFile.apply(file);
             case FileTree.Dir<T> dir -> Toolkit.text(node.label()).ellipsisMiddle();
             case null -> Toolkit.text(node.label());
-        };
+        });
         drawn = drawn.prepend(new Drawn<>(node, element));
         return element;
     }
