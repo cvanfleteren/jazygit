@@ -71,6 +71,8 @@ public class FilesPanel {
     private boolean focused;
     // Whether the files of a commit the pane lists are counted in place of their tree, as there are many (ADR 141).
     private boolean held;
+    // Whether the pane was locked to a list at the last render, which Escape in the working tree lets go of (ADR 149).
+    private boolean locked;
     // All files of the working tree, as last merged, with the status and the paths they were merged from: merging
     // them again on every frame would cost tens of milliseconds in a repository of 100 000 files (ADR 108).
     private Option<Merged> merged = Option.none();
@@ -126,6 +128,11 @@ public class FilesPanel {
                 .forEach(tree -> tree.onKey(PaneKeys.whileFocused(
                         () -> focused,
                         event -> filtered(event, dispatch)
+                                // Locked, the working tree is what the list follows: Escape lets go there as in the
+                                // files of a commit, once the filter is cleared (ADR 149).
+                                .orElse(() -> locked && event.isCancel()
+                                        ? PaneKeys.sending(Option.of(new SelectionMsg.FilesUnlocked()), dispatch)
+                                        : Option.none())
                                 .orElse(() -> opensDiff(event, tree)
                                         ? Option.of(openDiff)
                                         : PaneKeys.sending(
@@ -534,6 +541,7 @@ public class FilesPanel {
                 .map(CommitFilesView::threads)
                 .getOrElse(List.empty()));
         filter = FileFilterUpdate.shown(model);
+        locked = model.repoView().files().locked().isDefined();
         Option<String> shown = FileFilter.shown(filter);
         return model.repoView()
                 .files()

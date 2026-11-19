@@ -31,8 +31,10 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.diff.BaseTip;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.FileFilter;
 import net.vanfleteren.jazygit.state.view.FileFilterMsg;
+import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
@@ -831,6 +833,42 @@ class FilesPanelTest {
             assertEquals("src/main", panel.tree().selectedNode().data().path());
             SettledPilot.of(testRunner).quit();
         }
+    }
+
+    @Test
+    void escapeInTheWorkingTreeOfALockLetsGoOfItAfterClearingTheFilter() throws Exception {
+        // Locked to the branches, the checked-out branch lists the working tree; Escape lets go there too (ADR 149).
+        Model locked = TestModels.loaded(fixed(List.of()))
+                .mapRepoView(repoView ->
+                        repoView.mapFiles(files -> files.lockedTo(Scopes.BRANCHES.pane(), FilesLock.In.LIST)));
+        Model filtered = locked.mapRepoView(repoView ->
+                repoView.mapFiles(files -> files.withFilter(Option.of(new FileFilter("x", Option.none())))));
+
+        assertEquals(java.util.List.of(new SelectionMsg.FilesUnlocked()), escaped(locked));
+        assertEquals(java.util.List.of(new FileFilterMsg.Cleared()), escaped(filtered));
+        assertEquals(
+                java.util.List.of(),
+                escaped(TestModels.loaded(fixed(List.of()))),
+                "not locked, Escape in the working tree does nothing");
+    }
+
+    /**
+     * What Escape in the files pane of {@code model}, with the focus, sends.
+     */
+    private static java.util.List<Msg> escaped(Model model) throws Exception {
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        FilesPanel panel = new FilesPanel(sent::add, () -> {});
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            sent.clear();
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
+        }
+        return sent.stream()
+                .filter(msg -> !(msg instanceof SelectionMsg.FilesSelected))
+                .toList();
     }
 
     @Test

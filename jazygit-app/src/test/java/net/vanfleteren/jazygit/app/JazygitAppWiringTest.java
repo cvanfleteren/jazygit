@@ -193,6 +193,43 @@ class JazygitAppWiringTest {
     }
 
     @Test
+    void escapeInTheWorkingTreeTheLockedBranchesFollowGoesBackAndLetsGo() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            awaitModel(testRunner, app, model -> AheadUpdate.main(model).isDefined());
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            // F on the main branch, the first listed, locks the files to the branches.
+            SettledPilot.of(testRunner, app.drawnAt::size).press('F');
+            awaitModel(
+                    testRunner, app, model -> model.repoView().files().locked().isDefined());
+
+            // Back on the main branch, checked out here, the branches follow the working tree, still locked.
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press(KeyCode.DOWN);
+            pilot.pause();
+            pilot.press(KeyCode.UP);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().files().commitFiles().isEmpty()
+                            && model.repoView().files().locked().isDefined());
+
+            SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
+            SettledPilot.of(testRunner, app.drawnAt::size).press(KeyCode.ESCAPE);
+
+            awaitModel(
+                    testRunner, app, model -> model.repoView().files().locked().isEmpty());
+            await(
+                    () -> BranchesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
+                    "the branches focused again");
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
     void backToTheListChosenFromTheHelpGoesBackAsEscapeDoes() throws Exception {
         TestApp app = new TestApp();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {

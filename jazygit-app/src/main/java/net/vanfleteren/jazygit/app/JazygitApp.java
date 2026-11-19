@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -43,6 +44,7 @@ import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.*;
 
@@ -169,6 +171,14 @@ public class JazygitApp extends ToolkitApp {
             case CommitFilesMsg.Closed closed -> {
                 model().repoView().files().backTo().forEach(focus::moveTo);
                 session.dispatch(closed);
+            }
+            // Escape in the working tree the locked list follows lets go there too, back to that list (ADR 149);
+            // Escape in the list itself keeps the focus where it is.
+            case SelectionMsg.FilesUnlocked unlocked -> {
+                if (focus.focus().contains(Scopes.FILES.pane())) {
+                    model().repoView().files().backTo().forEach(focus::moveTo);
+                }
+                session.dispatch(unlocked);
             }
             // The help gives the focus back to the files as it closes, so the list takes it in the frame after.
             case HelpMsg.Chosen(CommitFilesMsg.Closed closed) -> {
