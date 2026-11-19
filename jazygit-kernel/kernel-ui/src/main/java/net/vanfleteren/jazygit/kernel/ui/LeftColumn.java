@@ -23,7 +23,6 @@ import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
-import net.vanfleteren.jazygit.kernel.ui.stash.StashPanel;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.Pane;
 
@@ -48,7 +47,7 @@ public final class LeftColumn {
     private final FilesPanel filesPanel;
     private final BranchesPanel branchesPanel;
     private final LeftPane commitsPanel;
-    private final StashPanel stashPanel;
+    private final LeftPane stashPanel;
     private final List<PullRequestsPanel> pullRequestsPanels;
 
     /**
@@ -57,6 +56,7 @@ public final class LeftColumn {
      * @param openContent     moves the focus to the content shown for the pane given
      * @param showBranchesTab moves the focus to the branches pane, and shows the list given in it
      * @param commits         makes the commits pane, which lives in a group of features (ADR 158)
+     * @param stash           makes the stash pane, which lives in a group of features
      */
     public LeftColumn(
             Consumer<Msg> dispatch,
@@ -64,7 +64,8 @@ public final class LeftColumn {
             Clock clock,
             Consumer<PaneId> openContent,
             Consumer<BranchesTab> showBranchesTab,
-            LeftPane.Factory commits) {
+            LeftPane.Factory commits,
+            LeftPane.Factory stash) {
         this.dispatch = dispatch;
         this.styleEngine = styleEngine;
         // How the active theme highlights the selected row of a pane, in use or not.
@@ -72,7 +73,7 @@ public final class LeftColumn {
         this.filesPanel = new FilesPanel(dispatch, () -> openContent.accept(FilesPanel.PANE), highlight);
         this.branchesPanel = new BranchesPanel(dispatch, showBranchesTab, clock, highlight);
         this.commitsPanel = commits.of(highlight);
-        this.stashPanel = new StashPanel(dispatch, highlight);
+        this.stashPanel = stash.of(highlight);
         this.pullRequestsPanels = PullRequestsPanel.all(dispatch, openContent, highlight);
     }
 

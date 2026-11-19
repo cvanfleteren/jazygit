@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.changes.panes.stash.StashPanel;
 import net.vanfleteren.jazygit.features.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Focus;
@@ -29,7 +30,6 @@ import net.vanfleteren.jazygit.kernel.ui.content.ShownChanges;
 import net.vanfleteren.jazygit.kernel.ui.content.Tone;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
-import net.vanfleteren.jazygit.kernel.ui.stash.StashPanel;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import org.junit.jupiter.api.Test;
 
