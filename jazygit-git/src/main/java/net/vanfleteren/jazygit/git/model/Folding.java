@@ -25,11 +25,9 @@ public final class Folding {
      */
     public static List<Gap> gaps(FileDiff file, Option<Integer> length) {
         List<Option<Covered>> covered = file.hunks().map(Hunk::covered);
-        if (file.binary()
-                || file.type() == ChangeType.ADDED
-                || file.type() == ChangeType.DELETED
-                || covered.isEmpty()
-                || covered.exists(Option::isEmpty)) {
+        boolean whole = file.binary() || file.type() == ChangeType.ADDED || file.type() == ChangeType.DELETED;
+        boolean unread = covered.isEmpty() || covered.exists(Option::isEmpty);
+        if (whole || unread) {
             return List.empty();
         }
         Vector<Covered> hunks = covered.map(Option::get).toVector();

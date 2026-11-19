@@ -6,6 +6,7 @@ import io.vavr.collection.*;
 import io.vavr.control.Option;
 import java.util.Arrays;
 import java.util.PriorityQueue;
+import java.util.function.IntPredicate;
 import java.util.stream.IntStream;
 
 /**
@@ -290,11 +291,11 @@ public final class CommitGraph {
             Array<Option<Sha>> next = Array.of(Arrays.copyOf(below, size));
             int[] leftAbove = leftmost(rails);
             int[] leftBelow = leftmost(next);
+            // A rail that already met another one above, waiting for the same commit, does not meet it again.
+            IntPredicate metAbove = at ->
+                    at < rails.size() && leftAbove[at] < at && rails.get(at).equals(next.get(at));
             List<Meet> meets = List.ofAll(IntStream.range(0, next.size())
-                    .filter(at -> leftBelow[at] < at
-                            && !(at < rails.size()
-                                    && leftAbove[at] < at
-                                    && rails.get(at).equals(next.get(at))))
+                    .filter(at -> leftBelow[at] < at && !metAbove.test(at))
                     .mapToObj(at -> new Meet(at, leftBelow[at]))
                     .toList());
             return Tuple.of(

@@ -352,11 +352,11 @@ public class JazygitApp extends ToolkitApp {
         }
         // A click on a collapsed left column opens it (ADR 104).
         Model model = model();
-        if (mouse.kind() == MouseEventKind.PRESS
-                && mouse.isLeftButton()
-                && model.popup().isEmpty()
+        boolean leftPress = mouse.kind() == MouseEventKind.PRESS && mouse.isLeftButton();
+        boolean onCollapsedLeft = model.popup().isEmpty()
                 && model.preferences().leftCollapsed(model.screen())
-                && borderDrag.onLeftColumn(mouse.x(), mouse.y())) {
+                && borderDrag.onLeftColumn(mouse.x(), mouse.y());
+        if (leftPress && onCollapsedLeft) {
             dispatch.accept(new LayoutMsg.Expanded(model.screen()));
             return EventResult.HANDLED;
         }

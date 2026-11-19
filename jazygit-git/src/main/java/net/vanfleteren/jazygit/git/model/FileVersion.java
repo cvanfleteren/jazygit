@@ -94,12 +94,10 @@ public enum FileVersion {
      */
     public static boolean shown(FileDiff file) {
         List<DiffLine> lines = file.hunks().flatMap(Hunk::lines);
-        return !file.binary()
-                && file.type() != ChangeType.CONFLICTED
-                && !file.hunks().isEmpty()
-                && file.hunks().forAll(Hunk::numbered)
-                && !lines.filter(line -> line.kind() != DiffLine.Kind.NOTE)
-                        .forAll(line -> line.kind() != DiffLine.Kind.CONTEXT
-                                && line.text().startsWith(SUBPROJECT));
+        boolean submodule = lines.filter(line -> line.kind() != DiffLine.Kind.NOTE)
+                .forAll(line ->
+                        line.kind() != DiffLine.Kind.CONTEXT && line.text().startsWith(SUBPROJECT));
+        boolean numbered = !file.hunks().isEmpty() && file.hunks().forAll(Hunk::numbered);
+        return !file.binary() && file.type() != ChangeType.CONFLICTED && numbered && !submodule;
     }
 }

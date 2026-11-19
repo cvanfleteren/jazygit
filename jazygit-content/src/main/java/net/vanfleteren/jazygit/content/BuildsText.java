@@ -132,9 +132,8 @@ final class BuildsText {
             boolean drawn = charted.exists(build -> build.duration().isDefined()
                     && (build.outcome() == Outcome.PASSED || build.outcome() == Outcome.FAILED));
             int at = (column - SCALE) / each;
-            return Option.when(
-                    drawn && row >= top && row < top + CHART_ROWS + 3 && column >= SCALE && at < charted.size(),
-                    () -> charted.get(at).runId());
+            boolean onChart = row >= top && row < top + CHART_ROWS + 3 && column >= SCALE && at < charted.size();
+            return Option.when(drawn && onChart, () -> charted.get(at).runId());
         });
     }
 
