@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSpan;
+import net.vanfleteren.jazygit.core.git.model.Branch;
 import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.features.github.failed.FailedBuilds;
@@ -404,7 +405,16 @@ public final class ChecksDialog implements PopupView {
     static Option<FailedBuild> failedBuild(ChecksPopup popup, Model model) {
         BranchName branch = switch (popup.branch()) {
             case BranchRef.Local(BranchName name) -> name;
-            case BranchRef.Remote(var remote) -> remote.branch();
+            // The local branch that follows it; else its name on the remote, which no worktree has checked out, rather
+            // than a local branch of the same name that may follow another remote, or none.
+            case BranchRef.Remote(var remote) ->
+                model.repo()
+                        .branches()
+                        .toOption()
+                        .flatMap(local -> local.find(
+                                candidate -> candidate.remoteUpstream().contains(remote)))
+                        .map(Branch::name)
+                        .getOrElse(() -> new BranchName(remote.shortName()));
         };
         return popup.checks()
                 .flatMap(read -> read.toOption())
