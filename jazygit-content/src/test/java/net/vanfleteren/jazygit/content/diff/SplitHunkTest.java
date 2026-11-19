@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 /**
  * The split view: the old file on the left and the new one on the right (ADR 139).
  */
-class SplitRowsTest {
+class SplitHunkTest {
 
     // An area of 101 columns: two halves of 50, and the rule between them.
     private static final int AREA = 101;
@@ -57,7 +57,7 @@ class SplitRowsTest {
 
     @Test
     void eachHalfThatHoldsALineIsAStopAContextLineOnTheLeftByItsOldNumber() {
-        RichDiff.Drawn drawn = drawn(DIFF, AREA);
+        Drawn drawn = drawn(DIFF, AREA);
 
         assertEquals(
                 List.of(
@@ -74,7 +74,7 @@ class SplitRowsTest {
                 drawn.stops().map(stop -> stop.mark().anchor()));
         // Both halves of a row start on it, each on its side.
         assertEquals(
-                List.of(1, 1, 2, 2, 3, 4, 4, 5), drawn.stops().tail().init().map(RichDiff.Stop::row));
+                List.of(1, 1, 2, 2, 3, 4, 4, 5), drawn.stops().tail().init().map(Drawn.Stop::row));
         assertEquals(
                 List.of(Side.LEFT, Side.RIGHT),
                 drawn.stops().drop(1).take(2).flatMap(stop -> stop.mark().side()));
@@ -82,7 +82,7 @@ class SplitRowsTest {
 
     @Test
     void theUnifiedViewFindsAContextLineByItsAnchorOnTheLeftToo() {
-        RichDiff.Drawn unified = RichDiff.drawn(
+        Drawn unified = RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of(DIFF)),
                 Option.none(),
                 Option.none(),
@@ -97,11 +97,21 @@ class SplitRowsTest {
 
     @Test
     void anAreaTooNarrowToSplitIsDrawnUnifiedAndSaysSo() {
-        RichDiff.Drawn drawn = drawn(DIFF, RichDiff.SPLIT_WIDTH - 1);
+        Drawn drawn = drawn(DIFF, RichDiff.SPLIT_WIDTH - 1);
 
         assertEquals(Option.of("too narrow to split, needs 100 columns"), drawn.note());
         assertEquals("1 1 │   enum DiffStyle {", text(drawn.lines()).get(1).stripTrailing());
         assertTrue(drawn.halves().isEmpty());
+    }
+
+    @Test
+    void aRowAsWideAsTheAreaIsPinnedARowOfHalvesScrollsEachHalf() {
+        Drawn drawn = drawn(DIFF, AREA);
+
+        // The bar of the file has no halves, so it does not scroll sideways; a row of halves keeps no columns.
+        assertEquals(Drawn.PINNED, drawn.keptAt(0));
+        assertTrue(drawn.halvesOf(1).isDefined());
+        assertEquals(0, drawn.keptAt(1));
     }
 
     @Test
@@ -120,7 +130,7 @@ class SplitRowsTest {
 
     @Test
     void aRowIsSearchedInTheCodeOfEachHalfAContextLineOnTheRightOnly() {
-        RichDiff.Drawn drawn = drawn(DIFF, AREA);
+        Drawn drawn = drawn(DIFF, AREA);
 
         String changed = drawn.rows().source(2).text().replace('\0', '.');
         String context = drawn.rows().source(1).text().replace('\0', '.');
@@ -131,7 +141,7 @@ class SplitRowsTest {
         assertTrue(context.endsWith("enum DiffStyle {"), context);
     }
 
-    private static RichDiff.Drawn drawn(String diff, int width) {
+    private static Drawn drawn(String diff, int width) {
         return RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of(diff)),
                 Option.none(),
@@ -146,7 +156,7 @@ class SplitRowsTest {
      * The rows of {@code drawn} as the area shows them scrolled {@code column} columns sideways, past what comes
      * before the first file, but the markers of lines left out.
      */
-    private static List<String> shown(RichDiff.Drawn drawn, int column) {
+    private static List<String> shown(Drawn drawn, int column) {
         return drawn.lines()
                 .zipWithIndex()
                 .map(row -> drawn.halvesOf(row._2())

@@ -99,8 +99,8 @@ class BlameColumnTest {
     void inANarrowAreaTheColumnIsTheBarAndTheShaAndTheTitleSaysSo() {
         Blame blame = blame(OLD, OLD, Blame.NOT_COMMITTED, NEW);
 
-        RichDiff.Drawn wide = drawn(blamed(blame), 120, SHADED);
-        RichDiff.Drawn narrow = drawn(blamed(blame), 70, SHADED);
+        Drawn wide = drawn(blamed(blame), 120, SHADED);
+        Drawn narrow = drawn(blamed(blame), 70, SHADED);
 
         assertEquals(
                 List.of("▌ aaaaaaa 1 │   one", "▌         2 │   two", "  not yet 3 │ + THREE"),
@@ -120,7 +120,7 @@ class BlameColumnTest {
         assertEquals(List.of("one", "two", "THREE", "four"), searched.map(String::stripTrailing));
     }
 
-    private static RichDiff.Drawn drawn(Blamed blamed, int width, Theme.SpanStyles styles) {
+    private static Drawn drawn(Blamed blamed, int width, Theme.SpanStyles styles) {
         return RichDiff.drawn(
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(FileVersion.NEW.of(WHOLE))),

@@ -18,7 +18,7 @@ class LineGoalTest {
 
     // a.txt: lines 1 to 9 left out, a hunk of context 10, removed old 11, added new 11, context 12, then more left
     // out; b.txt: an added line 1.
-    private static final Vector<RichDiff.Stop> DIFF = Vector.of(
+    private static final Vector<Drawn.Stop> DIFF = Vector.of(
             stop(new Anchor.Lead(), 0),
             stop(new Anchor.File("a.txt"), 1),
             stop(new Anchor.Gap("a.txt", 1, Option.some(10)), 2),
@@ -58,7 +58,7 @@ class LineGoalTest {
     @Test
     void aLinePastTheEndOfAFileWhoseLengthIsKnownIsTheClosestLineShown() {
         // The file read whole: the marker after the last hunk knows the file ends at line 30.
-        Vector<RichDiff.Stop> read = DIFF.update(7, stop(new Anchor.Gap("a.txt", 13, Option.some(31)), 7));
+        Vector<Drawn.Stop> read = DIFF.update(7, stop(new Anchor.Gap("a.txt", 13, Option.some(31)), 7));
 
         assertEquals(new LineGoal.OnStop(6, false, 12), LineGoal.of(read, Vector.empty(), 6, Side.RIGHT, 99));
         assertInstanceOf(LineGoal.Hidden.class, LineGoal.of(read, Vector.empty(), 6, Side.RIGHT, 30));
@@ -78,7 +78,7 @@ class LineGoalTest {
 
     @Test
     void aFileWithoutLinesOnTheSideAskedIsNumberedOnItsOtherSide() {
-        Vector<RichDiff.Stop> deleted = Vector.of(
+        Vector<Drawn.Stop> deleted = Vector.of(
                 stop(new Anchor.File("gone.txt"), 0),
                 stop(new Anchor.OnLine("gone.txt", Side.LEFT, 1), 1),
                 stop(new Anchor.OnLine("gone.txt", Side.LEFT, 2), 2));
@@ -89,8 +89,8 @@ class LineGoalTest {
 
     @Test
     void aVersionRenderedGoesToTheRowOfItsLineElseOfTheLastLineBeforeItDrawn() {
-        Vector<RichDiff.Stop> bar = Vector.of(stop(new Anchor.File("README.md"), 0));
-        Vector<RichDiff.Place> places =
+        Vector<Drawn.Stop> bar = Vector.of(stop(new Anchor.File("README.md"), 0));
+        Vector<Drawn.Place> places =
                 Vector.of(place(1, 1), place(2, 1), place(3, 4), place(4, 4), place(9, 7), place(10, 7));
 
         assertEquals(new LineGoal.InRow(4, true, 4), LineGoal.of(bar, places, 0, Side.RIGHT, 4));
@@ -102,7 +102,7 @@ class LineGoalTest {
 
     @Test
     void whatHasNoLinesOfAFileHasNowhereToGo() {
-        Vector<RichDiff.Stop> binary = Vector.of(stop(new Anchor.Lead(), 0), stop(new Anchor.File("logo.png"), 1));
+        Vector<Drawn.Stop> binary = Vector.of(stop(new Anchor.Lead(), 0), stop(new Anchor.File("logo.png"), 1));
 
         assertInstanceOf(LineGoal.Nowhere.class, LineGoal.of(binary, Vector.empty(), 1, Side.RIGHT, 1));
         assertInstanceOf(LineGoal.Nowhere.class, LineGoal.of(Vector.empty(), Vector.empty(), 0, Side.RIGHT, 1));
@@ -110,16 +110,16 @@ class LineGoalTest {
         assertTrue(LineGoal.numbered(DIFF, Vector.empty(), 0));
     }
 
-    private static RichDiff.Stop stop(Anchor anchor, int row) {
-        return new RichDiff.Stop(new RichDiff.Mark(anchor, 1, 10, Option.some(HUNK)), row);
+    private static Drawn.Stop stop(Anchor anchor, int row) {
+        return new Drawn.Stop(new Drawn.Mark(anchor, 1, 10, Option.some(HUNK)), row);
     }
 
     /**
      * A context line, by its number in the new file, and in the old one as its other anchor.
      */
-    private static RichDiff.Stop context(String path, int number, int old, int row) {
-        return new RichDiff.Stop(
-                new RichDiff.Mark(
+    private static Drawn.Stop context(String path, int number, int old, int row) {
+        return new Drawn.Stop(
+                new Drawn.Mark(
                         new Anchor.OnLine(path, Side.RIGHT, number),
                         1,
                         10,
@@ -131,7 +131,7 @@ class LineGoalTest {
                 row);
     }
 
-    private static RichDiff.Place place(int line, int row) {
-        return new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, line), row);
+    private static Drawn.Place place(int line, int row) {
+        return new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, line), row);
     }
 }

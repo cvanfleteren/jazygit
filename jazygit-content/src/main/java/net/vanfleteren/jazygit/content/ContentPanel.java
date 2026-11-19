@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.content.ContentView.ShownChanges;
 import net.vanfleteren.jazygit.content.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.content.ContentView.Tone;
-import net.vanfleteren.jazygit.content.diff.RichDiff;
+import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -163,14 +163,13 @@ public final class ContentPanel {
      * hunk a range is open in, as git gives them (ADR 83), and a version of a file rendered {@code width} columns wide
      * (ADR 103). Only the diff of a pull request's files has ranges.
      */
-    RichDiff.Drawn bodyDrawn(Body body, Option<DiffStops.HunkAt> asGiven, int width) {
+    Drawn bodyDrawn(Body body, Option<DiffStops.HunkAt> asGiven, int width) {
         return switch (body) {
             case Body.Diff(ShownChanges(ShownDiff diff, DiffLook look), var remarks) ->
                 ContentText.diffDrawn(diff, look, remarks, asGiven, styles, width);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 plain(ContentText.logText(commits, ZoneId.systemDefault(), ahead, styles));
-            case Body.Builds(var shown) ->
-                RichDiff.Drawn.plain(BuildsText.lines(shown, ZoneId.systemDefault(), styles, width));
+            case Body.Builds(var shown) -> Drawn.plain(BuildsText.lines(shown, ZoneId.systemDefault(), styles, width));
             case Body.CommitChanges(Commit commit, ShownChanges(ShownDiff changes, DiffLook look)) ->
                 ContentText.commitDrawn(commit, changes, look, styles, width);
             case Body.StashChanges(Stash stash, ShownChanges(ShownDiff changes, DiffLook look)) ->
@@ -178,7 +177,7 @@ public final class ContentPanel {
             case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
                 plain(ContentText.pullRequestText(pullRequest, preview, styles));
             case Body.Note(String text, Tone tone) ->
-                RichDiff.Drawn.plain(List.of(text.split("\n", -1))
+                Drawn.plain(List.of(text.split("\n", -1))
                         .map(line -> Line.from(Span.styled(
                                 line,
                                 styles.of(
@@ -189,8 +188,8 @@ public final class ContentPanel {
         };
     }
 
-    private static RichDiff.Drawn plain(Text text) {
-        return RichDiff.Drawn.plain(List.ofAll(text.lines()));
+    private static Drawn plain(Text text) {
+        return Drawn.plain(List.ofAll(text.lines()));
     }
 
     /**

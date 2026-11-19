@@ -8,8 +8,8 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
 import java.util.function.BiFunction;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
+import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.content.diff.Halves;
-import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.Found;
@@ -176,7 +176,7 @@ final class AreaSearch {
                     // The gutter of a line of a version shown blamed stays where it is; its code scrolls after it
                     // (ADR 147).
                     int kept = shown.split().keptAt(hit.row());
-                    if (kept == RichDiff.Drawn.PINNED) {
+                    if (kept == Drawn.PINNED) {
                         return column;
                     }
                     int shifted = start - kept < column ? start - kept : end > column + width ? end - width : column;

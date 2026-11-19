@@ -4,7 +4,7 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
-import net.vanfleteren.jazygit.content.diff.RichDiff;
+import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
@@ -27,16 +27,16 @@ record Styled(
         ThemeName theme,
         Option<DiffStops.HunkAt> asGiven,
         Rows lines,
-        Vector<RichDiff.Stop> stops,
+        Vector<Drawn.Stop> stops,
         int widest,
-        Vector<RichDiff.Place> places,
+        Vector<Drawn.Place> places,
         int width,
         Option<SearchHits> hits,
-        RichDiff.Drawn split) {
+        Drawn split) {
 
-    static Styled of(Body body, ThemeName theme, Option<DiffStops.HunkAt> asGiven, RichDiff.Drawn drawn, int width) {
+    static Styled of(Body body, ThemeName theme, Option<DiffStops.HunkAt> asGiven, Drawn drawn, int width) {
         Rows lines = drawn.rows();
-        Vector<RichDiff.Stop> stops = drawn.stops().toVector();
+        Vector<Drawn.Stop> stops = drawn.stops().toVector();
         return new Styled(
                 body,
                 theme,
@@ -127,7 +127,7 @@ record Styled(
         return DiffCursor.index(stops, anchor, near)
                 .map(index -> stops.get(index).row())
                 .orElse(() ->
-                        places.find(place -> place.anchor().equals(anchor)).map(RichDiff.Place::row));
+                        places.find(place -> place.anchor().equals(anchor)).map(Drawn.Place::row));
     }
 
     /**
@@ -140,7 +140,7 @@ record Styled(
                 // Above the first block, as with the bar of the file at the top, the first block.
                 .orElse(places.headOption())
                 .flatMap(last -> places.find(place -> place.row() == last.row()))
-                .map(RichDiff.Place::anchor);
+                .map(Drawn.Place::anchor);
     }
 
     /**
