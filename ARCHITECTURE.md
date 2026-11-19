@@ -45,7 +45,7 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `kernel-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
 | ↳ `kernel-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | kernel |
-| ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits`, the commits pane (ADR 158). | ui |
+| ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits` and `changes.panes.stash`, the commits and stash panes (ADR 158). | ui |
 | ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
 | ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds. | branches, changes |
 | ↳ `features-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
@@ -115,7 +115,7 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   subpackages of `state` (`diff`, `view`, `load`, `github`, `operation`, `popup`, `index`, `preferences`;
   `state` itself uses them all, and they all use it, as the `Model` holds them), and those of `ui`.
 - **The subpackages of `ui` follow the panes**: the shell (`ui` itself: `LeftColumn`, the status and command log
-  panels, `Feature`, `LeftPane`) → the panes (`branches`, `commits`: the rows of commits, `files`, `stash`,
+  panels, `Feature`, `LeftPane`) → the panes (`branches`, `commits`: the rows of commits, `files`,
   `github`) → `markdown`, `widgets`, `edit` → `content`, `keys`, `text`, `theme`, `i18n`. The content panel, which
   uses the panes, and the rich diff are `kernel-content`, beside the features: no feature draws them. Nothing in
   them uses the shell (`UiArchitectureTest`).

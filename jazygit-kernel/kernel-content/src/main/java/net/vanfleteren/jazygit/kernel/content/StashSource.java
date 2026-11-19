@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.Stash;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
@@ -15,7 +16,6 @@ import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownChanges;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
-import net.vanfleteren.jazygit.kernel.ui.stash.StashPanel;
 
 /**
  * What the highlighted stash stashed; the stash shown before stays while it is read. Without stashes, it says there
@@ -26,7 +26,7 @@ record StashSource() implements ContentSource {
     /**
      * What the stash highlighted in the stash pane stashed.
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.STASH, StashPanel.PANE);
+    static final ContentArea AREA = ContentArea.of(AreaId.STASH, PaneId.STASH);
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {

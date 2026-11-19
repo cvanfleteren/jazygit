@@ -29,21 +29,18 @@ class LeftColumnTest {
 
     private static final Rect AREA = new Rect(0, 0, 40, 60);
 
-    // The commits pane lives in a group of features (ADR 158): a pane of its id stands in for it.
-    private static final LeftPane COMMITS = new LeftPane() {
-        @Override
-        public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
-            return panel().id(PaneId.COMMITS.id());
-        }
-
-        @Override
-        public Option<Msg> selectionChange(Model model) {
-            return Option.none();
-        }
-    };
+    // The commits and stash panes live in a group of features (ADR 158): a pane of its id stands in for each.
+    private static final LeftPane COMMITS = standIn(PaneId.COMMITS);
+    private static final LeftPane STASH = standIn(PaneId.STASH);
 
     private final LeftColumn leftColumn = new LeftColumn(
-            msg -> {}, StyleEngine.create(), Clock.systemUTC(), id -> {}, tab -> {}, highlights -> COMMITS);
+            msg -> {},
+            StyleEngine.create(),
+            Clock.systemUTC(),
+            id -> {},
+            tab -> {},
+            highlights -> COMMITS,
+            highlights -> STASH);
 
     // The keys that resize and maximize a pane find the focused one by its place in Scopes.leftPanes (ADR 92).
     @ParameterizedTest
@@ -93,5 +90,19 @@ class LeftColumnTest {
                 .map(y -> List.range(area.x(), area.right())
                         .map(x -> buffer.get(x, y).symbol())
                         .mkString());
+    }
+
+    private static LeftPane standIn(PaneId id) {
+        return new LeftPane() {
+            @Override
+            public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
+                return panel().id(id.id());
+            }
+
+            @Override
+            public Option<Msg> selectionChange(Model model) {
+                return Option.none();
+            }
+        };
     }
 }

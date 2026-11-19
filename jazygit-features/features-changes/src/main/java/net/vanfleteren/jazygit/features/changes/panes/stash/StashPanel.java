@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.stash;
+package net.vanfleteren.jazygit.features.changes.panes.stash;
 
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.kernel.ui.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -21,14 +22,14 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
  * Bottom-left panel listing the stashes, newest first. The highlighted stash is unstashed with {@code g} and deleted with {@code d};
  * Enter moves the focus to its changes.
  */
-public final class StashPanel {
-
-    public static final String ID = Scopes.STASH.id();
+public final class StashPanel implements LeftPane {
 
     /**
      * The pane, as the focus is on it.
      */
-    public static final PaneId PANE = Scopes.STASH.pane();
+    public static final PaneId PANE = PaneId.STASH;
+
+    public static final String ID = PANE.id();
 
     private final LoadableList<List<Stash>> list;
     private final Keymap keymap = Keymap.standard();
@@ -72,6 +73,7 @@ public final class StashPanel {
      * @param focus what has the focus, if anything
      * @param inUse the left pane in use, whose highlighted row shows
      */
+    @Override
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         locked = PaneKeys.lockedTo(model, PANE);
         return list.render(
@@ -91,6 +93,7 @@ public final class StashPanel {
     /**
      * The message to send when the highlighted stash is not the one whose changes {@code model} holds.
      */
+    @Override
     public Option<Msg> selectionChange(Model model) {
         return PaneKeys.selectionChange(
                 selectedStash().map(Stash::sha),

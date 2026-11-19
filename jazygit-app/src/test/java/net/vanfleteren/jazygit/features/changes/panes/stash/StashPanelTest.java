@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.stash;
+package net.vanfleteren.jazygit.features.changes.panes.stash;
 
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -4,10 +4,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
-import net.vanfleteren.jazygit.kernel.ui.stash.StashPanel;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.TextInputDialog;
 
@@ -42,7 +42,7 @@ public final class StashDialogs {
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(StashPanel.PANE, new ConfirmDialog<>(DROP, dispatch)),
+                PopupSlot.returningTo(PaneId.STASH, new ConfirmDialog<>(DROP, dispatch)),
                 PopupSlot.returningTo(FilesPanel.PANE, new TextInputDialog<>(STASH, dispatch)));
     }
 }
