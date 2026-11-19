@@ -191,6 +191,45 @@ class AskpassServerTest {
         assertTrue(server.asking(repository, variables -> variables).result().containsKey("SSH_ASKPASS"));
     }
 
+    /**
+     * Git asks through {@code GIT_ASKPASS}, else {@code core.askPass}, else {@code SSH_ASKPASS}, which jazygit takes
+     * over for ssh: git is given what the user had in that order, and nothing, so not jazygit's helper, only when the
+     * user had none.
+     */
+    @Test
+    void gitStillAsksThroughWhatTheUserSetForIt() throws Exception {
+        Path repository = repository();
+
+        assertEquals(Option.of(""), gitAskPass(repository, name -> Option.none()));
+        assertEquals(
+                Option.of("/usr/lib/ssh/x11-ssh-askpass"),
+                gitAskPass(
+                        repository, name -> Option.when(name.equals("SSH_ASKPASS"), "/usr/lib/ssh/x11-ssh-askpass")));
+        new ProcessExecutor()
+                .command("git", "-C", repository.toString(), "config", "core.askPass", "/home/u/bin/vault-askpass")
+                .exitValueNormal()
+                .execute();
+        assertEquals(
+                Option.of("/home/u/bin/vault-askpass"),
+                gitAskPass(
+                        repository, name -> Option.when(name.equals("SSH_ASKPASS"), "/usr/lib/ssh/x11-ssh-askpass")));
+        assertEquals(
+                Option.of("/home/u/bin/own-askpass"),
+                gitAskPass(repository, name -> Option.when(name.equals("GIT_ASKPASS"), "/home/u/bin/own-askpass")));
+    }
+
+    /**
+     * What an operation that lets ssh ask sets {@code GIT_ASKPASS} to in {@code repository}, for jazygit started with
+     * the variables {@code environment} gives.
+     */
+    private Option<String> gitAskPass(Path repository, Function<String, Option<String>> environment) {
+        start((d, ssh) -> true, environment);
+        Option<String> askPass =
+                server.asking(repository, variables -> variables).result().get("GIT_ASKPASS");
+        server.close();
+        return askPass;
+    }
+
     private void start(boolean asks) {
         start((d, ssh) -> asks, name -> Option.none());
     }

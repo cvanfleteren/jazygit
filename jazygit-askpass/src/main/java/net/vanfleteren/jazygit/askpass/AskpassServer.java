@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.git.branches.BatchSsh;
+import net.vanfleteren.jazygit.git.branches.GitAskPass;
 import net.vanfleteren.jazygit.process.SshAsking;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,7 +150,7 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
         Operation operation = new Operation();
         operations.put(token, operation);
         try {
-            return new Asked<>(talk.apply(environment(token)), operation.cancelled());
+            return new Asked<>(talk.apply(environment(token, directory)), operation.cancelled());
         } finally {
             operations.remove(token);
             operation.end().forEach(request -> user.withdraw(request));
@@ -163,11 +164,12 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
     }
 
     /**
-     * The variables that have ssh ask through jazygit, for the operation of {@code token}. Git would ask through the
-     * same helper for what it asks itself, as a user name over https, when nothing else is set for that: an empty
-     * {@code GIT_ASKPASS} keeps it from that, unless the user set one.
+     * The variables that have ssh ask through jazygit, for the operation of {@code token} in {@code directory}. Git
+     * asks for what it asks itself, as a user name over https, through {@code GIT_ASKPASS}, else {@code core.askPass},
+     * else {@code SSH_ASKPASS}, which is now jazygit's helper: {@code GIT_ASKPASS} is set to what the user had in that
+     * order, and to nothing when they had none, which keeps git from asking.
      */
-    Map<String, String> environment(String token) {
+    Map<String, String> environment(String token, Path directory) {
         return HashMap.of(
                 "SSH_ASKPASS",
                 helper.toString(),
@@ -176,7 +178,11 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
                 AskpassProtocol.VARIABLE,
                 new AskpassProtocol.Address(token, socket).variable(),
                 "GIT_ASKPASS",
-                environment.apply("GIT_ASKPASS").getOrElse(""));
+                environment
+                        .apply("GIT_ASKPASS")
+                        .orElse(() -> GitAskPass.configured(directory))
+                        .orElse(() -> environment.apply("SSH_ASKPASS"))
+                        .getOrElse(""));
     }
 
     /**

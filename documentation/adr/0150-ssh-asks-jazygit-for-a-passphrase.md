@@ -107,8 +107,9 @@ Not:
 - **Handing the terminal to `ssh-add`** on a refused key: simpler, but it needs a running agent, leaves the TUI, and
   still fails the operation first.
 - **Git's own `GIT_ASKPASS`**, for user names and passwords over https: credentials there come from a helper, such as
-  gh's, and `GIT_TERMINAL_PROMPT=0` stays. Without a `GIT_ASKPASS`, git would ask through `SSH_ASKPASS` too, so an
-  operation that lets ssh ask sets `GIT_ASKPASS` empty, unless the user set one.
+  gh's, and `GIT_TERMINAL_PROMPT=0` stays. Git asks through `GIT_ASKPASS`, else `core.askPass`, else `SSH_ASKPASS`,
+  which is now jazygit's helper: an operation that lets ssh ask sets `GIT_ASKPASS` to what the user had in that
+  order, and empty when they had none.
 
 ## Consequences
 
