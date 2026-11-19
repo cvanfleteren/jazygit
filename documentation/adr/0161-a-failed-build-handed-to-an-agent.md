@@ -78,7 +78,11 @@ checks on the tip of a branch, which can come from several workflow runs, and on
 - `I` investigates the failed build in the builds of a branch and in the checks popup. With one agent it starts it,
   with more it opens a menu of them.
 - The prompt names the build; the agent reads the logs itself. Not: jazygit reading the logs and handing them over.
-- The agent starts in the worktree that has the branch checked out, else in the one jazygit shows.
+- The agent starts in the worktree that has the branch checked out (ADR 110). Without one, `I` is disabled: the
+  branch is not checked out in a worktree, as `e` says (ADR 110). Not: starting in the worktree jazygit shows, where
+  another branch is checked out and the agent's fix would land on it.
+- The builds can show an older build than the tip (ADR 133): the prompt says that `{commit}` may not be what is
+  checked out.
 - It starts at once, without asking; the command log has its command, and a failed one is shown as a failed editor is
   (ADR 146). Not: a popup to edit the prompt first, until one is wanted.
 - Once an agent handed the terminal exits, the repository is read again, as after the editor (`EditCmd`), as the
