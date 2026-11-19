@@ -48,6 +48,28 @@ public sealed interface InvestigateError extends AppError {
     }
 
     /**
+     * The view had no build to hand over: it is still being read, or none is done.
+     */
+    record NothingYet() implements InvestigateError {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("agent.error.investigate.nothingYet");
+        }
+    }
+
+    /**
+     * The worktrees are not read yet, so which one has the branch is not known.
+     */
+    record WorktreesNotRead() implements InvestigateError {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("agent.error.investigate.worktreesNotRead");
+        }
+    }
+
+    /**
      * No worktree has the branch checked out, so the agent has nowhere to work on it.
      */
     record NotInWorktree(BranchName branch) implements InvestigateError {

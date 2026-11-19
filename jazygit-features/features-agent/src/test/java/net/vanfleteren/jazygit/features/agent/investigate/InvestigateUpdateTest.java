@@ -156,6 +156,40 @@ class InvestigateUpdateTest {
     }
 
     @Test
+    void withNothingHandedOverItSaysSo() {
+        Next next = Update.update(model(List.of(CLAUDE)), new InvestigateMsg.Unavailable());
+
+        assertEquals(List.empty(), next.cmds());
+        assertEquals(
+                Option.of("Nothing to investigate yet: the build is still being read, or none is done"),
+                errorText(next.model()));
+    }
+
+    @Test
+    void beforeTheWorktreesAreReadItSaysSo() {
+        Model unread = model(List.of(CLAUDE))
+                .mapRepo(repo -> repo.withWorktrees(Loadable.loading()))
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withAgents(new Agents(List.of(CLAUDE)))));
+
+        Next next = Update.update(unread, new InvestigateMsg.Requested(failed(MAIN_BRANCH)));
+
+        assertEquals(List.empty(), next.cmds());
+        assertEquals(Option.of("The worktrees are not read yet; try again in a moment"), errorText(next.model()));
+    }
+
+    @Test
+    void jazygitsPromptSaysTheBuildIsOfTheBranchOnTheForgeEvenWithoutItsCommit() {
+        FailedBuild tip =
+                new FailedBuild(Option.of("o/r"), FEATURE, Option.none(), Option.none(), List.of(VERIFY), false, "");
+
+        String prompt = Prompt.of(tip, Option.none());
+
+        assertTrue(prompt.contains("may differ from what is checked out here"), prompt);
+        assertTrue(prompt.contains("git log"), prompt);
+    }
+
+    @Test
     void oneFailedJobIsEnoughWhileOthersStillRun() {
         Next next = Update.update(
                 model(List.of(CLAUDE)), new InvestigateMsg.Requested(build(MAIN_BRANCH, List.of(VERIFY), true)));
@@ -168,7 +202,7 @@ class InvestigateUpdateTest {
         String prompt = Prompt.of(failed(MAIN_BRANCH), Option.none());
 
         assertTrue(prompt.contains("branch main of o/r (pull request #12)"), prompt);
-        assertTrue(prompt.contains("may not be the one checked out"), prompt);
+        assertTrue(prompt.contains("may differ from what is checked out here"), prompt);
         assertTrue(
                 prompt.contains("<forge-data>\nFailed jobs:\n- verify (https://ci/401)\n\nHow to read their logs:\n"
                         + "gh run view 401 --log-failed --repo o/r\n</forge-data>"),

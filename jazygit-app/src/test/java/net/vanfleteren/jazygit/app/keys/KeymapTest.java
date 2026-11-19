@@ -346,5 +346,13 @@ class KeymapTest {
                         KeyEvent.ofChar('I'),
                         Option.none(),
                         new Keymap.Hosted<>(Scopes.FAILED_BUILD, Option.of(failed))));
+        // Without a build handed over, it still says why it does nothing.
+        assertEquals(
+                Option.of(new InvestigateMsg.Unavailable()),
+                keymap.handle(
+                        BuildsAction.SCOPE,
+                        KeyEvent.ofChar('I'),
+                        Option.none(),
+                        new Keymap.Hosted<>(Scopes.FAILED_BUILD, Option.none())));
     }
 }

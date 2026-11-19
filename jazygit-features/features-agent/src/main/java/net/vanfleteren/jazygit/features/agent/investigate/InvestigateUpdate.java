@@ -19,6 +19,7 @@ public final class InvestigateUpdate {
     public static Next update(Model model, InvestigateMsg msg) {
         return switch (msg) {
             case InvestigateMsg.Requested(FailedBuild build) -> requested(model, build);
+            case InvestigateMsg.Unavailable() -> Next.of(model.fail(new InvestigateError.NothingYet()));
             case InvestigateMsg.Chosen(AgentProgram agent) ->
                 model.popup(InvestigatePopup.class)
                         .map(popup -> start(
@@ -29,8 +30,8 @@ public final class InvestigateUpdate {
 
     /**
      * Hands {@code build} to the agent set, or asks which one when there are more, in the worktree that works on its
-     * branch. Without an agent, without a failed job, or without such a worktree, it says why; nothing is done before
-     * the worktrees are read.
+     * branch. Without an agent, without a failed job, without such a worktree, or before the worktrees are read, it
+     * says why.
      */
     private static Next requested(Model model, FailedBuild build) {
         Agents agents = model.preferences().settings().agents();
@@ -52,7 +53,7 @@ public final class InvestigateUpdate {
                                 : Next.of(model.clearError()
                                         .openPopup(new InvestigatePopup(build, location, agents.lettered()))))
                         .getOrElse(() -> Next.of(model.fail(new InvestigateError.NotInWorktree(build.branch())))))
-                .getOrElse(() -> Next.of(model));
+                .getOrElse(() -> Next.of(model.fail(new InvestigateError.WorktreesNotRead())));
     }
 
     private static Next start(Model model, AgentProgram agent, FailedBuild build, String worktree) {

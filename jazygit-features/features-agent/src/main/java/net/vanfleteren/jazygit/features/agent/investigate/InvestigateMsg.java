@@ -22,6 +22,11 @@ public sealed interface InvestigateMsg extends Msg {
     record Requested(FailedBuild build) implements InvestigateMsg {}
 
     /**
+     * The user asked an agent to investigate, but the view had no build to hand over yet.
+     */
+    record Unavailable() implements InvestigateMsg {}
+
+    /**
      * The user chose {@code agent} in the menu of the agents.
      */
     record Chosen(AgentProgram agent) implements InvestigateMsg {}
