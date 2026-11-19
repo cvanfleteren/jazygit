@@ -40,8 +40,9 @@ checks on the tip of a branch, which can come from several workflow runs, and on
 - The views show a contributed action as one of their own, in their keys, their hints and the help. A keymap test
   fails when a contributed key is one the view already has, as a contributor cannot see the view's keys.
 - `features-github` gives the subject: the builds give the failed jobs of the build shown; the checks popup the
-  failed checks of the tip of the branch, across runs. Not: a subject of one job, as neither view picks a job; nor of
-  a whole branch with several failed builds.
+  failed checks of the tip of the branch, across runs. The agent works out which of them matter. Not: a subject of
+  one job, nor of the check picked once ADR 160 picks one, as more than one may have failed; nor of a whole branch
+  with several failed builds.
 
 ### The agents
 
@@ -95,4 +96,5 @@ checks on the tip of a branch, which can come from several workflow runs, and on
 - What the agent does is its own: jazygit does not show its output, and does not know when one left running is done.
 - Moving the editors onto the shared type of program changes no setting of theirs.
 - ADR 160 (#587), still open, picks a check in the checks popup and keeps the logs of checks in a cache directory.
-  Once it is in, `I` could hand over only the check picked, and the logs already kept: that is for a later change.
+  The check picked changes nothing for `I`: it hands over every failed check. Naming the logs already kept in the
+  prompt is for a later change.
