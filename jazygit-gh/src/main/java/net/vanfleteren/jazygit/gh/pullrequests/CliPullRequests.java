@@ -129,6 +129,17 @@ public final class CliPullRequests implements PullRequests {
     }
 
     @Override
+    public Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(
+            String pullRequest, MergeMethod method, Option<GhCommit> head) {
+        return process.log(AutoMergeMutation.enable(pullRequest, method, head));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> disableAutoMerge(String pullRequest) {
+        return process.log(AutoMergeMutation.disable(pullRequest));
+    }
+
+    @Override
     public Either<GhError, MergeStatus> mergeStatus(PrNumber number, String id) {
         return process.readJson(MergeQuery.statusCommand(number, id), MergeQuery.DECODER);
     }

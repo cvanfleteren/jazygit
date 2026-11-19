@@ -74,6 +74,18 @@ public interface PullRequests {
     Either<GhFailure, Merging> merge(PrNumber number, Option<GhCommit> head, MergeMethod method);
 
     /**
+     * Turns auto-merge on for the pull request with node id {@code pullRequest} (ADR 112): GitHub merges it as
+     * {@code method} says once nothing blocks it any more, only when its branch is at {@code head}, if given, now.
+     */
+    Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(
+            String pullRequest, MergeMethod method, Option<GhCommit> head);
+
+    /**
+     * Turns auto-merge off for the pull request with node id {@code pullRequest} (ADR 112).
+     */
+    Either<GhFailure, List<ExecutedCommand>> disableAutoMerge(String pullRequest);
+
+    /**
      * How the merge {@code id} of pull request {@code number} is doing.
      */
     Either<GhError, MergeStatus> mergeStatus(PrNumber number, String id);

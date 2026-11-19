@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.AutoMerge;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
@@ -169,21 +170,85 @@ public final class PullRequestDialog implements PopupView {
 
     /**
      * Merging as {@code method} says; only for a pull request that can be merged, as far as is known. One with others
-     * below it in its stack says how many it merges, as it merges those too.
+     * below it in its stack says how many it merges, as it merges those too. What it does depends on what GitHub says
+     * of the pull request (ADR 112): merging it now, when ready, or cancelling its auto-merge; when it does nothing,
+     * its details say why.
      */
     private static Choice<PullRequestPopup> merge(char key, String labelKey, MergeMethod method) {
         return new Choice<PullRequestPopup>(
                         key,
-                        popup -> popup.stack()
-                                .filter(stack -> stack.below() > 0)
-                                .map(stack -> Messages.get(labelKey + ".stack", String.valueOf(stack.below() + 1)))
-                                .getOrElse(() -> Messages.get(labelKey)),
+                        popup -> popup.mergeKey(method)
+                                .map(mergeKey -> switch (mergeKey) {
+                                    case MergeKey.WhenReady() -> Messages.get(labelKey + ".whenReady");
+                                    case MergeKey.Cancel() ->
+                                        Messages.get("github.dialog.pullRequest.autoMerge.cancel");
+                                    case MergeKey.Now(), MergeKey.Disabled(var _) -> mergeNow(popup, labelKey);
+                                })
+                                .getOrElse(() -> mergeNow(popup, labelKey)),
                         () -> new PullRequestMsg.MergeChosen(method),
-                        PullRequestUpdate::mergeable)
-                .withDetails(popup -> popup.stack().exists(stack -> stack.below() > 0)
-                        ? Messages.get(labelKey + ".details") + " "
-                                + Messages.get("github.dialog.pullRequest.merge.stack.details")
-                        : Messages.get(labelKey + ".details"));
+                        (model, popup) -> PullRequestUpdate.mergeChoosable(model, popup, method))
+                .withDetails(popup -> popup.mergeKey(method)
+                        .map(mergeKey -> switch (mergeKey) {
+                            case MergeKey.WhenReady() -> Messages.get("github.dialog.pullRequest.whenReady.details");
+                            case MergeKey.Cancel() ->
+                                Messages.get("github.dialog.pullRequest.autoMerge.cancel.details");
+                            case MergeKey.Disabled(var why) -> why(why);
+                            case MergeKey.Now() -> mergeNowDetails(popup, labelKey);
+                        })
+                        .getOrElse(() -> mergeNowDetails(popup, labelKey)));
+    }
+
+    private static String mergeNow(PullRequestPopup popup, String labelKey) {
+        return popup.stack()
+                .filter(stack -> stack.below() > 0)
+                .map(stack -> Messages.get(labelKey + ".stack", String.valueOf(stack.below() + 1)))
+                .getOrElse(() -> Messages.get(labelKey));
+    }
+
+    private static String mergeNowDetails(PullRequestPopup popup, String labelKey) {
+        return popup.stack().exists(stack -> stack.below() > 0)
+                ? Messages.get(labelKey + ".details") + " "
+                        + Messages.get("github.dialog.pullRequest.merge.stack.details")
+                : Messages.get(labelKey + ".details");
+    }
+
+    /**
+     * Why a merge key does nothing (ADR 112).
+     */
+    static String why(MergeKey.Why why) {
+        return switch (why) {
+            case MergeKey.Why.AutoMergeOn(var on) ->
+                on.enabledBy().isEmpty()
+                        ? Messages.get("github.dialog.pullRequest.autoMerge.on", method(on.method()))
+                        : Messages.get("github.dialog.pullRequest.autoMerge.onBy", method(on.method()), on.enabledBy());
+            case MergeKey.Why.NotAllowed() -> Messages.get("github.dialog.pullRequest.autoMerge.notAllowed");
+            case MergeKey.Why.Blocked() -> Messages.get("github.dialog.pullRequest.autoMerge.blocked");
+            case MergeKey.Why.Behind() -> Messages.get("github.dialog.pullRequest.autoMerge.behind");
+        };
+    }
+
+    private static String method(MergeMethod method) {
+        return Messages.get(
+                switch (method) {
+                    case MERGE -> "github.dialog.pullRequest.autoMerge.method.merge";
+                    case SQUASH -> "github.dialog.pullRequest.autoMerge.method.squash";
+                    case REBASE -> "github.dialog.pullRequest.autoMerge.method.rebase";
+                });
+    }
+
+    /**
+     * Its auto-merge, while it is on (ADR 112): how, by whom and how long ago it was turned on, as far as GitHub says.
+     */
+    private static Line autoMerge(AutoMerge on, Instant now) {
+        return Line.labelled(
+                "github.dialog.pullRequest.autoMerge",
+                text(List.of(method(on.method()))
+                                .appendAll(Option.when(
+                                        !on.enabledBy().isEmpty(),
+                                        () -> Messages.get("github.dialog.pullRequest.autoMerge.by", on.enabledBy())))
+                                .appendAll(on.enabledAt().map(at -> TimeText.ago(Duration.between(at, now))))
+                                .mkString(" · "))
+                        .addClass(Theme.Classes.CHECKS_RUNNING));
     }
 
     /**
@@ -323,7 +388,8 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * The times the dialog shows (ADR 124): how long ago the pull request was opened and pushed to, and every second
+     * The times the dialog shows (ADR 124): how long ago the pull request was opened and pushed to, and its auto-merge
+     * turned on (ADR 112), and every second
      * while one of its checks is not done.
      */
     public static List<ShownTime> shownTimes(Model model) {
@@ -333,7 +399,12 @@ public final class PullRequestDialog implements PopupView {
                 .flatMap(pr -> List.of(ShownTime.reading(now -> TimeText.ago(
                                         Duration.between(pr.activity().createdAt(), now))
                                 + " "
-                                + TimeText.ago(Duration.between(pr.activity().pushedAt(), now))))
+                                + TimeText.ago(Duration.between(pr.activity().pushedAt(), now))
+                                + pr.merging()
+                                        .autoMerge()
+                                        .flatMap(AutoMerge::enabledAt)
+                                        .map(at -> " " + TimeText.ago(Duration.between(at, now)))
+                                        .getOrElse("")))
                         .appendAll(Option.when(
                                 pr.checks().exists(check -> !check.done()),
                                 () -> ShownTime.every(Duration.ofSeconds(1)))));
@@ -421,6 +492,8 @@ public final class PullRequestDialog implements PopupView {
                                         + pr.branches().base().name()))
                         .appendAll(behindBase(pr))))
                 .appendAll(pr.stack().map(PullRequestDialog::stack))
+                // In place of the stack: GitHub has no auto-merge for stacked pull requests.
+                .appendAll(pr.merging().autoMerge().map(on -> autoMerge(on, now)))
                 .appendAll(List.of(
                         Line.labelled(
                                 "github.dialog.pullRequest.created",

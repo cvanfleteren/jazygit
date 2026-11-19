@@ -882,6 +882,49 @@ class PullRequestDialogTest {
         assertFalse(screens.get(2).contains("Merges it on GitHub with a merge commit."), screens.get(2));
     }
 
+    private static PullRequestPopup merging(PullRequestDetails.Merging merging) {
+        return PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY.withMerging(merging)), 0);
+    }
+
+    @Test
+    void aBlockedPullRequestIsMergedWhenReady() throws Exception {
+        String screen = screen(merging(new PullRequestDetails.Merging(
+                PullRequestDetails.MergeState.BLOCKED, true, Option.none(), true, false)));
+
+        assertTrue(screen.contains("(m) Merge when ready"), screen);
+        assertTrue(screen.contains("(s) Squash and merge when ready"), screen);
+        assertTrue(screen.contains("(r) Rebase and merge when ready"), screen);
+        assertFalse(screen.contains("Auto-merge"), screen);
+    }
+
+    @Test
+    void autoMergeThatIsOnShowsHowByWhomAndSinceWhenAndItsKeyCancelsIt() throws Exception {
+        String screen = screen(merging(new PullRequestDetails.Merging(
+                PullRequestDetails.MergeState.BLOCKED,
+                true,
+                Option.of(new PullRequestDetails.AutoMerge(
+                        MergeMethod.SQUASH, "cvanfleteren", Option.of(NOW.minusSeconds(180)))),
+                false,
+                true)));
+
+        assertTrue(screen.contains("Auto-merge  squash · by cvanfleteren · 3m ago"), screen);
+        assertTrue(screen.contains("(s) Cancel auto-merge"), screen);
+        assertTrue(screen.contains("(m) Merge "), screen);
+    }
+
+    @Test
+    void aMergeKeyThatDoesNothingSaysWhy() throws Exception {
+        String merge = movingRight(
+                        READY.withMerging(new PullRequestDetails.Merging(
+                                PullRequestDetails.MergeState.BLOCKED, false, Option.none(), false, false)),
+                        120,
+                        50)
+                .get(1);
+
+        assertTrue(merge.contains("Auto-merge is off for this repository."), merge);
+    }
+
     @Test
     void filesChangedTellsWhereTheFilesShow() throws Exception {
         // Down from Open in browser to Files changed, at the bottom of the first column.

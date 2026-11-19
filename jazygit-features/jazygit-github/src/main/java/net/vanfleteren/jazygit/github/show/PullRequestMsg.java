@@ -92,6 +92,17 @@ public sealed interface PullRequestMsg extends Msg {
             implements PullRequestMsg {}
 
     /**
+     * The auto-merge of the pull request was turned on or off, as {@code cmd} says, by running {@code commands}
+     * (ADR 112).
+     */
+    record AutoMergeSet(PullRequestCmd.AutoMergeCmd cmd, List<ExecutedCommand> commands) implements PullRequestMsg {}
+
+    /**
+     * Turning the auto-merge of the pull request on or off, as {@code cmd} says, failed (ADR 112).
+     */
+    record AutoMergeFailed(PullRequestCmd.AutoMergeCmd cmd, Failure failure) implements PullRequestMsg {}
+
+    /**
      * Periodic prompt to ask GitHub how the merges it is doing are going.
      */
     record MergeTick() implements PullRequestMsg {}

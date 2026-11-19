@@ -67,6 +67,9 @@ public final class PullRequestUpdate {
             case PullRequestMsg.MergeChosen(MergeMethod method) -> mergeChosen(model, method);
             case PullRequestMsg.MergeAsked(MergePullRequest cmd, var status, var commands) ->
                 MergeUpdate.asked(model, cmd, status, commands);
+            case PullRequestMsg.AutoMergeSet(AutoMergeCmd cmd, var commands) -> autoMergeSet(model, cmd, commands);
+            case PullRequestMsg.AutoMergeFailed(AutoMergeCmd cmd, Failure failure) ->
+                autoMergeFailed(model, cmd, failure);
             case PullRequestMsg.MergeTick() -> MergeUpdate.tick(model);
             case PullRequestMsg.MergeChecked(PrNumber number, String id, var status) ->
                 MergeUpdate.checked(model, number, id, status);
@@ -161,16 +164,74 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Asks to confirm merging the pull request shown as {@code method} says, when it can be merged.
+     * What the merge key of {@code method} does to the pull request shown, when it can be merged (ADR 112): merging it
+     * now closes the dialog, as GitHub merges it in the background (ADR 24); turning its auto-merge on or off keeps
+     * the dialog open, which shows the pull request read again once that is done.
      */
     private static Next mergeChosen(Model model, MergeMethod method) {
-        return PopupUpdate.confirm(
-                model,
-                PullRequestPopup.class,
-                popup -> Option.when(
-                        mergeable(model, popup),
-                        () -> new MergePullRequest(
-                                popup.branch(), popup.pullRequest().number(), popup.head(), method)));
+        return model.popup(PullRequestPopup.class)
+                .filter(popup -> mergeChoosable(model, popup, method))
+                .flatMap(popup -> popup.readDetails().map(pr -> switch (MergeKey.of(pr, method)) {
+                    case MergeKey.Now() ->
+                        PopupUpdate.confirm(
+                                model,
+                                PullRequestPopup.class,
+                                shown -> Option.of(new MergePullRequest(
+                                        shown.branch(), shown.pullRequest().number(), shown.head(), method)));
+                    case MergeKey.WhenReady() ->
+                        OperationUpdate.start(
+                                model.clearError(),
+                                new EnableAutoMerge(
+                                        popup.branch(),
+                                        popup.number(),
+                                        pr.conversation().reviewing().pullRequest(),
+                                        method,
+                                        popup.head()));
+                    case MergeKey.Cancel() ->
+                        OperationUpdate.start(
+                                model.clearError(),
+                                new DisableAutoMerge(
+                                        popup.branch(),
+                                        popup.number(),
+                                        pr.conversation().reviewing().pullRequest()));
+                    case MergeKey.Disabled(var _) -> Next.of(model);
+                }))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Done like any operation, which reads the pull requests again; then the pull request shown is read again, as
+     * GitHub tells what it now merges by itself. A read of it that started before is not taken (ADR 34). Turning
+     * auto-merge on forgets how an earlier merge of it went, as a new merge replaces it (ADR 112).
+     */
+    private static Next autoMergeSet(Model model, AutoMergeCmd cmd, List<ExecutedCommand> commands) {
+        return PrOverviewUpdate.reloadIfShown(OperationUpdate.succeeded(model, cmd, commands)
+                        .map(done -> done.mapGitHub(
+                                gitHub -> forgettingMerge(gitHub, cmd).withChanged(cmd.number()))))
+                .then(done -> readAgainOf(done, cmd.number()));
+    }
+
+    /**
+     * Shown as any failed operation; then the pull request shown is read again, as GitHub may have refused for what
+     * changed since it was read, like it being mergeable now, which its keys then do (ADR 112).
+     */
+    private static Next autoMergeFailed(Model model, AutoMergeCmd cmd, Failure failure) {
+        return OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
+                .map(done -> done.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())))
+                .then(done -> readAgainOf(done, cmd.number()));
+    }
+
+    private static GitHubState forgettingMerge(GitHubState gitHub, AutoMergeCmd cmd) {
+        return cmd instanceof EnableAutoMerge
+                ? gitHub.withMerges(gitHub.merges().filterValues(merge -> !merge.merges(cmd.number())))
+                : gitHub;
+    }
+
+    /**
+     * {@code model} reading the pull request {@code number} again by itself, when its dialog is open.
+     */
+    private static Next readAgainOf(Model model, PrNumber number) {
+        return readAgain(model, popup -> popup.number().equals(number), Reading.BY_ITSELF);
     }
 
     /**
@@ -242,6 +303,20 @@ public final class PullRequestUpdate {
      */
     static boolean mergeable(Model model, PullRequestPopup popup) {
         return popup.mergeable() && !model.gitHub().merging(popup.pullRequest().number());
+    }
+
+    /**
+     * Whether the merge key of {@code method} does something to the pull request {@code popup} shows (ADR 112): it
+     * can be merged, and the key is not disabled by what GitHub says of it. Turning its auto-merge on or off waits
+     * while its branch is busy, as with doing that already.
+     */
+    static boolean mergeChoosable(Model model, PullRequestPopup popup, MergeMethod method) {
+        return mergeable(model, popup)
+                && popup.mergeKey(method).exists(key -> switch (key) {
+                    case MergeKey.Now() -> true;
+                    case MergeKey.WhenReady(), MergeKey.Cancel() -> !busy(model, popup);
+                    case MergeKey.Disabled(var _) -> false;
+                });
     }
 
     /**
