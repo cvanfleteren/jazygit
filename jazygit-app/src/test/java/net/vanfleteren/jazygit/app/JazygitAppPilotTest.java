@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.features.changes.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.changes.panes.stash.StashPanel;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
 import net.vanfleteren.jazygit.kernel.content.ContentPanel;
 import net.vanfleteren.jazygit.kernel.state.*;
@@ -41,7 +42,6 @@ import net.vanfleteren.jazygit.kernel.ui.*;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
-import net.vanfleteren.jazygit.kernel.ui.stash.StashPanel;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 

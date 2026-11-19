@@ -14,6 +14,12 @@ public record PaneId(String value) implements Focus.OnScreen {
      */
     public static final PaneId COMMITS = new PaneId("commits");
 
+    /**
+     * The pane of the stashes, which lives in a group of features: the content panel and the focus name it by this id
+     * (ADR 158).
+     */
+    public static final PaneId STASH = new PaneId("stash");
+
     @Override
     public String id() {
         return value;

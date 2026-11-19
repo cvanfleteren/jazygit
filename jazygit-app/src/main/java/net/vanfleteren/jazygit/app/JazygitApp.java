@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.files.step.FileStepEnded;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.changes.panes.stash.StashPanel;
 import net.vanfleteren.jazygit.features.chrome.help.HelpMsg;
 import net.vanfleteren.jazygit.features.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.features.chrome.layout.LayoutMsg;
@@ -163,7 +164,8 @@ public class JazygitApp extends ToolkitApp {
                 clock,
                 focus::openContent,
                 this::showBranchesTab,
-                highlights -> new CommitsPanel(dispatch, highlights));
+                highlights -> new CommitsPanel(dispatch, highlights),
+                highlights -> new StashPanel(dispatch, highlights));
         this.commandLogPanel = new CommandLogPanel(
                 Theme.spanStyles(styleEngine),
                 ZoneId.systemDefault(),
