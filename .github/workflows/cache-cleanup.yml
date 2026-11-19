@@ -1,0 +1,51 @@
+name: Cache cleanup
+
+# The caches are kept to 10 GB, beyond which GitHub evicts the least recently used: the Maven repository too, after
+# which every job downloads every dependency again and Maven Central answers with 429. Most of it was dead weight.
+# A cache key can't be written twice, so the build caches take the run in their key and every run saves new ones, but
+# a restore only ever takes the newest of those that match. And a pull request's caches serve only that pull request.
+# So this deletes every cache of a pull request that isn't open, and of the rest keeps the newest two of each kind for
+# each branch: the kind being the key without the hash of its files and the run, which is what restore-keys match.
+# The second is there for when the newest was saved by a run that was cut short.
+on:
+  pull_request:
+    types: [closed]
+  workflow_run:
+    workflows: [Publish fat-jar and native image]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  pull-requests: read
+
+concurrency:
+  group: cache-cleanup
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the caches no run will restore
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          caches=$(gh api --paginate "repos/$GH_REPO/actions/caches?per_page=100" \
+            --jq '.actions_caches[] | {id, key, ref, created_at, size_in_bytes}' | jq -s .)
+          open=$(gh pr list --state open --limit 1000 --json number --jq 'map("refs/pull/\(.number)/merge")')
+          doomed=$(jq --argjson open "$open" '
+            map(.kind = (.key | sub("-[0-9]+-[0-9]+$"; "") | sub("-[0-9a-f]{40,}$"; "")))
+            | (map(select((.ref | startswith("refs/pull/")) and (.ref as $ref | $open | index($ref) | not))))
+              + (group_by([.ref, .kind]) | map(sort_by(.created_at) | reverse | .[2:]) | add // [])
+            | unique_by(.id)' <<< "$caches")
+          echo "Deleting $(jq length <<< "$doomed") of $(jq length <<< "$caches") caches," \
+            "$(jq 'map(.size_in_bytes) | add // 0 | . / 1048576 | floor' <<< "$doomed") MB."
+          # One already gone, deleted by a run alongside or evicted, isn't a failure.
+          jq -r '.[] | "\(.id) \(.key)"' <<< "$doomed" | while read -r id key; do
+            echo "$key"
+            gh cache delete "$id" || true
+          done

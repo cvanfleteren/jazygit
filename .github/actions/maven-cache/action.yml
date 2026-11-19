@@ -1,0 +1,17 @@
+name: Maven repository cache
+description: The local Maven repository and the Maven of the wrapper, restored from the latest cache when the poms changed.
+
+# In place of the cache of setup-java and setup-graalvm, whose key is the hash of the poms with no fallback: a pom that
+# changed had every job download every dependency again, all at once, and Maven Central answers that with 429. Here a
+# changed pom restores the latest cache, and a job only downloads what's new; it saves the result under the new key.
+# Old versions stay in the repository it saves, a few megabytes for each upgrade.
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v6
+      with:
+        path: |
+          ~/.m2/repository
+          ~/.m2/wrapper
+        key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml', '.mvn/extensions.xml', '.mvn/wrapper/maven-wrapper.properties') }}
+        restore-keys: maven-${{ runner.os }}-

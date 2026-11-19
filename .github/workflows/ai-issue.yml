@@ -30,7 +30,9 @@ jobs:
         with:
           distribution: temurin
           java-version: 25
-          cache: maven
+
+      - name: Restore the Maven repository
+        uses: ./.github/actions/maven-cache
 
       - uses: anthropics/claude-code-action@v1
         with:

@@ -30,8 +30,10 @@ jobs:
         with:
           distribution: graalvm-community
           java-version: '25'
-          cache: maven
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore the Maven repository
+        uses: ./.github/actions/maven-cache
 
       - name: Set version from the release tag
         if: github.event_name == 'release'
