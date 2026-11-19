@@ -269,7 +269,9 @@ class RenderedXmlTest {
 
         assertEquals(20_003, table.size());
         assertEquals(60_001, rows.size());
-        assertTrue(millis < 3_000, millis + " ms");
+        // Linear, it takes under a second here and four seconds on a busy CI runner; naming the siblings
+        // quadratically took eighty-seven.
+        assertTrue(millis < 10_000, millis + " ms");
     }
 
     @Test
