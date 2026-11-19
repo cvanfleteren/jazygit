@@ -134,6 +134,20 @@ class BuildsContentTest {
         assertEquals(BranchLogSource.AREA, ((Shown.Area) content(again.model())).area());
     }
 
+    /**
+     * The builds take the focus from the branches for the branch B opened them for, and give it back once B closes
+     * them (ADR 155).
+     */
+    @Test
+    void theAreaOfTheBuildsHasOpenTheBranchBOpenedThemFor() {
+        Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();
+        Model closed = Update.update(shown, new BuildsMsg.Toggled(MAIN)).model();
+
+        assertEquals(Option.none(), BuildsSource.AREA.opened(model()));
+        assertEquals(Option.of(MAIN), BuildsSource.AREA.opened(shown));
+        assertEquals(Option.none(), BuildsSource.AREA.opened(closed));
+    }
+
     @Test
     void theFirstCommitsShowWhileTheNextAreRead() {
         Model shown = Update.update(model(), new BuildsMsg.Toggled(MAIN)).model();

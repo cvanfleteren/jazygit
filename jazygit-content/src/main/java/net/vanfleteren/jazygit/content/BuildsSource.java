@@ -25,9 +25,11 @@ import net.vanfleteren.jazygit.ui.i18n.Messages;
 record BuildsSource() implements ContentSource {
 
     /**
-     * The builds of the branch highlighted in the branches pane, in place of its log (ADR 131).
+     * The builds of the branch highlighted in the branches pane, in place of its log (ADR 131), which take the focus
+     * from the branches once they show after {@code B} opened them.
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.BUILDS, BranchesPanel.PANE);
+    static final ContentArea AREA = ContentArea.of(AreaId.BUILDS, BranchesPanel.PANE)
+            .opening(model -> model.repoView().branches().builds().map(BuildsView::branch));
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {

@@ -6,11 +6,12 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.content.ContentPanel;
-import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
@@ -18,13 +19,11 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.preferences.Screen;
-import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
-import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.content.ContentArea;
 import net.vanfleteren.jazygit.ui.content.ContentSources;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
@@ -48,9 +47,9 @@ final class FocusKeeper {
     private Option<CommitFilesView> shownFiles = Option.none();
     // The lock of the files pane at the last frame, by its serial: a new one moves the focus into the files (ADR 149).
     private Option<Integer> shownLock = Option.none();
-    // The branch whose builds the last frame had open, and whether they are to take the focus once they show.
-    private Option<BranchName> shownBuilds = Option.none();
-    private boolean buildsToFocus = false;
+    // Of each area that takes the focus for what is opened in it, what the last frame had open, and whether the area is
+    // to take the focus once it shows it (ADR 155).
+    private Map<AreaId, Opened> opened = HashMap.empty();
 
     /**
      * @param runner        the runner of the app, once it is started
@@ -105,7 +104,7 @@ final class FocusKeeper {
             moveToPaneOf(model);
         }
         followCommitFiles(model);
-        followBuilds(model);
+        contentPanel.sources().areas().forEach(area -> followOpened(model, area));
         leaveCollapsedColumn(model);
         // An area that no longer shows gives the focus to the one that took its place, not to the first pane.
         focus().flatMap(focus -> contentPanel.replacing(model, focus)).forEach(this::moveTo);
@@ -115,28 +114,34 @@ final class FocusKeeper {
     }
 
     /**
-     * Moves the focus from the branches into the builds of a branch once they show, after {@code B} opened them, and
-     * back to the branches once they are closed while they have it (ADR 131).
+     * Moves the focus from the pane of {@code area} into it once it shows what was opened in it, as the builds of a
+     * branch after {@code B} (ADR 131), and back to the pane once that is closed while the area has it (ADR 155).
      */
-    private void followBuilds(Model model) {
-        Option<BranchName> builds = model.repoView().branches().builds().map(BuildsView::branch);
-        if (!builds.equals(shownBuilds)) {
-            if (builds.isEmpty() && focus().contains(AreaId.BUILDS)) {
-                moveTo(BranchesPanel.PANE);
+    private void followOpened(Model model, ContentArea area) {
+        Option<?> now = area.opened(model);
+        Opened before = opened.get(area.id()).getOrElse(Opened.NOTHING);
+        if (now.isEmpty() && before.equals(Opened.NOTHING)) {
+            return;
+        }
+        PaneId pane = area.pane(model);
+        boolean toFocus = before.toFocus();
+        if (!now.equals(before.what())) {
+            if (now.isEmpty() && focus().contains(area.id())) {
+                moveTo(pane);
             }
-            buildsToFocus = builds.isDefined();
-            shownBuilds = builds;
+            toFocus = now.isDefined();
         }
         // The area takes the focus only once a frame drew it: until then, the next frame tries again.
-        if (buildsToFocus && contentPanel.areaOfPane(model, BranchesPanel.PANE).contains(AreaId.BUILDS)) {
-            if (focus().contains(BranchesPanel.PANE)) {
-                moveTo(AreaId.BUILDS);
+        if (toFocus && contentPanel.areaOfPane(model, pane).contains(area.id())) {
+            if (focus().contains(pane)) {
+                moveTo(area.id());
             }
-            buildsToFocus = focus().contains(BranchesPanel.PANE);
-            if (buildsToFocus) {
+            toFocus = focus().contains(pane);
+            if (toFocus) {
                 requestRedraw.run();
             }
         }
+        opened = opened.put(area.id(), new Opened(now, toFocus));
     }
 
     /**
@@ -324,5 +329,12 @@ final class FocusKeeper {
 
     private FocusManager manager() {
         return runner.get().focusManager();
+    }
+
+    /**
+     * What an area had open at the last frame, and whether it is to take the focus once it shows it.
+     */
+    private record Opened(Option<?> what, boolean toFocus) {
+        static final Opened NOTHING = new Opened(Option.none(), false);
     }
 }
