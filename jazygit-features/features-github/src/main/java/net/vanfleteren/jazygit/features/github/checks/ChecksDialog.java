@@ -17,13 +17,16 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.BranchRef;
+import net.vanfleteren.jazygit.features.github.failed.FailedBuilds;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
@@ -31,6 +34,8 @@ import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.github.CheckRows;
 import net.vanfleteren.jazygit.kernel.ui.github.CheckTimesText;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
@@ -67,21 +72,32 @@ public final class ChecksDialog implements PopupView {
 
     private final Consumer<Msg> dispatch;
     private final Clock clock;
+    private final Supplier<Keymap> keymap;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public ChecksDialog(Consumer<Msg> dispatch) {
-        this(dispatch, Clock.systemDefaultZone());
+        this(dispatch, Clock.systemDefaultZone(), Keymap::standard);
     }
 
     /**
+     * The popup with only its own keys, as without the app.
+     *
      * @param clock animates the spinner, and its zone is the one times of day are shown in; how long checks run is
      *              told by the time of the model
      */
     ChecksDialog(Consumer<Msg> dispatch, Clock clock) {
+        this(dispatch, clock, () -> ChecksAction.KEYS.apply(Keymap.empty()));
+    }
+
+    /**
+     * @param keymap the keys of the popup, asked for when a key is pressed, as the app makes it of every feature
+     */
+    ChecksDialog(Consumer<Msg> dispatch, Clock clock, Supplier<Keymap> keymap) {
         this.dispatch = dispatch;
         this.clock = clock;
+        this.keymap = keymap;
     }
 
     @Override
@@ -111,14 +127,18 @@ public final class ChecksDialog implements PopupView {
                                     clock.getZone())))
                     .getOrElse(this::loading);
             int blanks = CONTENT_HEIGHT - lines.size();
-            return DialogFrame.withHint(
+            Option<FailedBuild> failed = failed(popup, model);
+            return DialogFrame.of(
                             title(popup, model.now()),
                             WIDTH,
-                            "github.dialog.checks.hint",
-                            lines.appendAll(List.fill(Math.max(0, blanks), () -> text(""))))
+                            lines.<Element>map(line -> line)
+                                    .appendAll(List.fill(Math.max(0, blanks), () -> text("")))
+                                    .append(text(""))
+                                    .append(hint())
+                                    .toJavaArray(Element[]::new))
                     .id(ID)
                     .focusable()
-                    .onKeyEvent(event -> keys(event, cursor, first, last))
+                    .onKeyEvent(event -> keys(event, cursor, first, last, popup, failed))
                     // The lines, the blank line and the hint, plus the border.
                     .length(CONTENT_HEIGHT + 2 + 2);
         });
@@ -306,13 +326,10 @@ public final class ChecksDialog implements PopupView {
      * @param first the check shown first, as drawn
      * @param last  the furthest the checks scroll to: the first one shown when the last one is at the bottom
      */
-    private EventResult keys(KeyEvent event, ListCursor cursor, int first, int last) {
+    private EventResult keys(
+            KeyEvent event, ListCursor cursor, int first, int last, ChecksPopup popup, Option<FailedBuild> failed) {
         if (event.isCancel() || event.isConfirm()) {
             dispatch.accept(new ChecksMsg.Closed());
-        } else if (event.isChar('R')) {
-            dispatch.accept(new ChecksMsg.RefreshChosen());
-        } else if (event.isChar('r')) {
-            dispatch.accept(new ChecksMsg.RerunRequested());
         } else if (event.isChar('j') || event.code() == KeyCode.DOWN) {
             scroll(cursor, first + 1, last);
         } else if (event.isChar('k') || event.code() == KeyCode.UP) {
@@ -321,10 +338,50 @@ public final class ChecksDialog implements PopupView {
             scroll(cursor, first + VISIBLE_CHECKS, last);
         } else if (event.code() == KeyCode.PAGE_UP) {
             scroll(cursor, first - VISIBLE_CHECKS, last);
-        } else {
+        } else if (event.isChar('?')) {
+            // The help of a popup is not shown over it.
             return EventResult.UNHANDLED;
+        } else {
+            // Its keys, and those other features add to the failed build it shows (ADR 161).
+            Option<Msg> msg = keymap.get()
+                    .handle(
+                            ChecksAction.SCOPE,
+                            event,
+                            Option.of(popup),
+                            new Keymap.Hosted<>(Scopes.FAILED_BUILD, failed));
+            msg.forEach(dispatch);
+            return msg.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
         }
         return EventResult.HANDLED;
+    }
+
+    /**
+     * What failed of the checks {@code popup} shows in {@code model}, once they were read, for the keys other features
+     * add to a failed build (ADR 161).
+     */
+    static Option<FailedBuild> failed(ChecksPopup popup, Model model) {
+        BranchName branch = switch (popup.branch()) {
+            case BranchRef.Local(BranchName name) -> name;
+            case BranchRef.Remote(var remote) -> remote.branch();
+        };
+        return popup.checks()
+                .flatMap(read -> read.toOption())
+                .map(read -> FailedBuilds.of(
+                        branch,
+                        read.repository(),
+                        popup.checksRead(),
+                        model.gitHub().pullRequest(popup.onGitHub())));
+    }
+
+    /**
+     * The hint, with the keys other features add to the failed build it shows.
+     */
+    private Element hint() {
+        String added = keymap.get()
+                .bindings(Scopes.FAILED_BUILD.id())
+                .map(binding -> "   (" + binding.label() + ") " + Messages.get(binding.descriptionKey()))
+                .mkString();
+        return text(Messages.get("github.dialog.checks.hint") + added).addClass(Theme.Classes.DIM);
     }
 
     private void scroll(ListCursor cursor, int first, int last) {

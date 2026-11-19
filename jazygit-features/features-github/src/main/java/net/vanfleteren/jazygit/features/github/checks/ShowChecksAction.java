@@ -14,7 +14,9 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
 public final class ShowChecksAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
-            keys -> keys.add(
+            keys -> ChecksAction.KEYS
+                    .apply(keys)
+                    .add(
                             Scopes.BRANCHES,
                             Binding.onSelected(
                                     "C",

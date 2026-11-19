@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimesMsg;
 import net.vanfleteren.jazygit.kernel.state.github.PendingChecks;
@@ -49,6 +50,8 @@ import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import net.vanfleteren.jazygit.kernel.ui.github.CheckRows;
 import net.vanfleteren.jazygit.kernel.ui.github.CheckTimesText;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
@@ -657,6 +660,40 @@ class ChecksDialogTest {
         }
 
         assertEquals(java.util.List.of(new ChecksMsg.RerunRequested()), dispatched);
+    }
+
+    @Test
+    void aKeyAnotherFeatureAddsToAFailedBuildActsOnTheFailedChecksAndIsInTheHint() throws Exception {
+        java.util.List<FailedBuild> handed = new java.util.ArrayList<>();
+        Keymap keymap = ChecksAction.KEYS
+                .apply(Keymap.empty())
+                .add(Scopes.FAILED_BUILD, Keymap.Binding.onSelected("I", "github.help.checks.rerun", failed -> {
+                    handed.add(failed);
+                    return new ChecksMsg.Closed();
+                }));
+        ChecksDialog hosting = new ChecksDialog(dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC), () -> keymap);
+        Model model = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(read(List.of(
+                        check("verify", Checks.FAILING, 300, Option.of(60)),
+                        check("lint", Checks.PASSING, 300, Option.of(60)))));
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(
+                () -> stack(text("background"), hosting.render(model).get()))) {
+            SettledPilot.focus(runner, ChecksDialog.ID);
+            String screen = RenderedText.ofSize(
+                    runner,
+                    () -> stack(text("background"), hosting.render(model).get()),
+                    120,
+                    50);
+            SettledPilot.of(runner).press('I');
+            SettledPilot.of(runner).pause();
+
+            assertTrue(screen.contains("(I) Rerun failed"), screen);
+        }
+        assertEquals(1, handed.size());
+        assertEquals(List.of("verify"), handed.getFirst().jobs().map(FailedBuild.Job::name));
+        assertEquals(Option.of("owner/repo"), handed.getFirst().repository());
     }
 
     @Test
