@@ -179,10 +179,9 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
 
     /**
      * The variables that have ssh ask through jazygit, for the operation of {@code token} in {@code directory}, over
-     * what {@code listens}. Git
-     * asks for what it asks itself, as a user name over https, through {@code GIT_ASKPASS}, else {@code core.askPass},
-     * else {@code SSH_ASKPASS}, which is now jazygit's helper: {@code GIT_ASKPASS} is set to what the user had in that
-     * order, and to nothing when they had none, which keeps git from asking.
+     * what {@code listens}. Git asks for what it asks itself, as a user name over https, through {@code GIT_ASKPASS},
+     * else {@code core.askPass}, else {@code SSH_ASKPASS}, which is now jazygit's helper: {@code GIT_ASKPASS} is set to
+     * what the user had in that order, and to nothing when they had none, which keeps git from asking.
      */
     private Map<String, String> environment(String token, Path directory, Listening listens) {
         return HashMap.of(
