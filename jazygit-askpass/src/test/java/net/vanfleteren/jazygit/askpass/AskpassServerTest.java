@@ -195,21 +195,27 @@ class AskpassServerTest {
     }
 
     /**
-     * A socket that cannot be opened leaves the operation in batch mode, and nothing behind.
+     * A socket that cannot be opened leaves the operation in batch mode, and nothing behind; it is tried once.
      */
     @Test
-    void aSocketThatCannotOpenKeepsBatchMode() throws Exception {
+    void aSocketThatCannotOpenKeepsBatchModeAndIsNotTriedAgain() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger tries = new java.util.concurrent.atomic.AtomicInteger();
         server = AskpassServer.in(
                 temporary,
-                directory -> Try.failure(new java.io.IOException("no launcher")),
+                directory -> {
+                    tries.incrementAndGet();
+                    return Try.failure(new java.io.IOException("no launcher"));
+                },
                 (d, ssh) -> true,
                 name -> Option.none());
 
+        server.asking(temporary, variables -> variables);
         Map<String, String> environment =
                 server.asking(temporary, variables -> variables).result();
 
         assertTrue(environment.get("GIT_SSH_COMMAND").exists(ssh -> ssh.endsWith(" -o BatchMode=yes")));
         assertFalse(environment.containsKey("SSH_ASKPASS"));
+        assertEquals(1, tries.get());
         assertEquals(java.util.List.of(), sockets());
     }
 
