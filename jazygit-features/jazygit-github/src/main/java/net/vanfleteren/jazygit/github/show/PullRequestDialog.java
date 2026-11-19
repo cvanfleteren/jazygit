@@ -169,8 +169,9 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * Merging as {@code method} says; only for a pull request that can be merged, as far as is known. One with others
-     * below it in its stack says how many it merges, as it merges those too. What it does depends on what GitHub says
+     * Merging as {@code method} says; merging now or when ready only for a pull request that can be merged, as far as
+     * is known, while cancelling auto-merge only needs it open. One with others below it in its stack says how many it
+     * merges, as it merges those too. What it does depends on what GitHub says
      * of the pull request (ADR 112): merging it now, when ready, or cancelling its auto-merge; when it does nothing,
      * its details say why.
      */
