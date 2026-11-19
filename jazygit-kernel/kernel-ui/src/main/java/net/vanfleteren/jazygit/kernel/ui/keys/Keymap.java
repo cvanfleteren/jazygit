@@ -207,37 +207,6 @@ public final class Keymap {
     }
 
     /**
-     * What a view gives the keys of a scope it hosts to act on (ADR 161).
-     *
-     * @param scope   the scope hosted
-     * @param subject what its keys act on, if anything
-     */
-    public record Hosted<T>(Scope<T> scope, Option<T> subject) {
-
-        private static <T> Hosted<T> nothing(Scope<T> scope) {
-            return new Hosted<>(scope, Option.none());
-        }
-
-        private Option<Msg> handled(Keymap keymap, KeyEvent event) {
-            return keymap.own(scope.id())
-                    .find(binding -> binding.matches(event))
-                    .flatMap(binding -> {
-                        @SuppressWarnings("unchecked")
-                        Binding<T> typed = (Binding<T>) binding;
-                        return typed.action().apply(subject);
-                    });
-        }
-
-        private List<Option<Msg>> actions(Keymap keymap) {
-            return keymap.own(scope.id()).map(binding -> {
-                @SuppressWarnings("unchecked")
-                Binding<T> typed = (Binding<T>) binding;
-                return typed.action().apply(subject);
-            });
-        }
-    }
-
-    /**
      * The message key of the title of the panel {@code scopeId}, if it has keys.
      */
     public Option<String> titleKey(String scopeId) {
@@ -390,6 +359,37 @@ public final class Keymap {
         // Looked up once, when the standard keymap is first asked for.
         private static final Keymap KEYMAP =
                 ServiceLoader.load(Source.class).findFirst().map(Source::keymap).orElseGet(Keymap::empty);
+    }
+
+    /**
+     * What a view gives the keys of a scope it hosts to act on (ADR 161).
+     *
+     * @param scope   the scope hosted
+     * @param subject what its keys act on, if anything
+     */
+    public record Hosted<T>(Scope<T> scope, Option<T> subject) {
+
+        private static <T> Hosted<T> nothing(Scope<T> scope) {
+            return new Hosted<>(scope, Option.none());
+        }
+
+        private Option<Msg> handled(Keymap keymap, KeyEvent event) {
+            return keymap.own(scope.id())
+                    .find(binding -> binding.matches(event))
+                    .flatMap(binding -> {
+                        @SuppressWarnings("unchecked")
+                        Binding<T> typed = (Binding<T>) binding;
+                        return typed.action().apply(subject);
+                    });
+        }
+
+        private List<Option<Msg>> actions(Keymap keymap) {
+            return keymap.own(scope.id()).map(binding -> {
+                @SuppressWarnings("unchecked")
+                Binding<T> typed = (Binding<T>) binding;
+                return typed.action().apply(subject);
+            });
+        }
     }
 
     private record Section(Scope<?> scope, List<Binding<?>> bindings) {}

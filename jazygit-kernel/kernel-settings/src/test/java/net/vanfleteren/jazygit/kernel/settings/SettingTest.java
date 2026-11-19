@@ -48,8 +48,8 @@ class SettingTest {
                 .filter(setting -> !setting.differs(Settings.DEFAULT, CHANGED))
                 .map(Setting::key);
 
-        // Only the user writes the editors and the diff filters.
-        assertEquals(List.of(Editors.KEY, FilterDefinitions.KEY), same);
+        // Only the user writes the editors, the diff filters and the agents.
+        assertEquals(List.of(Editors.KEY, FilterDefinitions.KEY, Agents.KEY), same);
     }
 
     @Test

@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Each feature package declares its {@link Feature} once, and {@link Features#ALL} lists it (ADR 127). The feature
  * packages are those of the groups of features (ADR 136): each package right under {@code changes}, {@code branches}
- * and {@code chrome}, and {@code github} as a whole.
+ * and {@code chrome}, and {@code github} and {@code agent} (ADR 161) as a whole.
  */
 class FeaturesTest {
 
@@ -33,9 +33,9 @@ class FeaturesTest {
     private static final List<String> GROUPS = List.of("changes", "branches", "chrome");
 
     /**
-     * The group that is one feature.
+     * The groups that are one feature each.
      */
-    private static final String GITHUB = "github";
+    private static final List<String> WHOLE = List.of("github", "agent");
 
     /**
      * The top-level feature packages that are no feature: {@code layout} has only global keys, {@code start} has
@@ -45,7 +45,7 @@ class FeaturesTest {
 
     private static final JavaClasses CLASSES = new ClassFileImporter()
             .withImportOption(new ImportOption.DoNotIncludeTests())
-            .importPackages(GROUPS.append(GITHUB).map(ROOT::concat).toJavaList());
+            .importPackages(GROUPS.appendAll(WHOLE).map(ROOT::concat).toJavaList());
 
     /**
      * Each declared feature, with the feature package it is declared in.
@@ -64,7 +64,7 @@ class FeaturesTest {
      */
     private static String featurePackage(String packageName) {
         String[] parts = packageName.substring(ROOT.length()).split("\\.");
-        return parts[0].equals(GITHUB) || parts.length < 2 ? parts[0] : parts[0] + "." + parts[1];
+        return WHOLE.contains(parts[0]) || parts.length < 2 ? parts[0] : parts[0] + "." + parts[1];
     }
 
     private static Feature value(JavaField field) {
@@ -94,7 +94,7 @@ class FeaturesTest {
         Set<String> all = HashSet.ofAll(CLASSES)
                 .map(JavaClass::getPackageName)
                 .map(FeaturesTest::featurePackage)
-                .filter(name -> name.contains(".") || name.equals(GITHUB));
+                .filter(name -> name.contains(".") || WHOLE.contains(name));
         Set<String> withFeature = HashSet.ofAll(declared().map(Tuple2::_1));
         assertEquals(NO_FEATURE, all.diff(withFeature));
     }

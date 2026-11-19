@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.git.model.Commit;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.features.agent.investigate.InvestigateMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchMsg;
@@ -24,7 +25,10 @@ import net.vanfleteren.jazygit.features.chrome.help.HelpMsg;
 import net.vanfleteren.jazygit.features.chrome.layout.LayoutMsg;
 import net.vanfleteren.jazygit.features.chrome.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.features.github.browse.BrowseMsg;
+import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
+import net.vanfleteren.jazygit.features.github.checks.ChecksAction;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -318,5 +322,29 @@ class KeymapTest {
             assertEquals(keys.size(), keys.distinct().size(), scope.id() + " " + keys);
             assertTrue(keymap.titleKey(scope.id()).isDefined());
         }
+    }
+
+    @Test
+    void iHandsTheFailedBuildTheBuildsAndTheChecksShowToAnAgent() {
+        FailedBuild failed = new FailedBuild(
+                Option.of("o/r"),
+                new BranchName("feat"),
+                Option.none(),
+                Option.none(),
+                List.of(new FailedBuild.Job("verify", Option.of("401"), Option.none())),
+                false,
+                "gh run view 401 --log-failed --repo o/r");
+
+        for (Keymap.Scope<?> host : List.of(BuildsAction.SCOPE, ChecksAction.SCOPE)) {
+            assertTrue(
+                    keymap.bindings(host.id()).exists(binding -> binding.key().equals("I")), host.id());
+        }
+        assertEquals(
+                Option.of(new InvestigateMsg.Requested(failed)),
+                keymap.handle(
+                        ChecksAction.SCOPE,
+                        KeyEvent.ofChar('I'),
+                        Option.none(),
+                        new Keymap.Hosted<>(Scopes.FAILED_BUILD, Option.of(failed))));
     }
 }

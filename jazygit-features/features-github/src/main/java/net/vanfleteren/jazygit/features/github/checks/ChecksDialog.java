@@ -127,7 +127,7 @@ public final class ChecksDialog implements PopupView {
                                     clock.getZone())))
                     .getOrElse(this::loading);
             int blanks = CONTENT_HEIGHT - lines.size();
-            Option<FailedBuild> failed = failed(popup, model);
+            Option<FailedBuild> failed = failedBuild(popup, model);
             return DialogFrame.of(
                             title(popup, model.now()),
                             WIDTH,
@@ -359,7 +359,7 @@ public final class ChecksDialog implements PopupView {
      * What failed of the checks {@code popup} shows in {@code model}, once they were read, for the keys other features
      * add to a failed build (ADR 161).
      */
-    static Option<FailedBuild> failed(ChecksPopup popup, Model model) {
+    static Option<FailedBuild> failedBuild(ChecksPopup popup, Model model) {
         BranchName branch = switch (popup.branch()) {
             case BranchRef.Local(BranchName name) -> name;
             case BranchRef.Remote(var remote) -> remote.branch();
