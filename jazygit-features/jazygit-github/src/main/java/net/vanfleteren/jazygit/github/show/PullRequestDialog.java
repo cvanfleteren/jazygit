@@ -205,11 +205,19 @@ public final class PullRequestDialog implements PopupView {
                 .getOrElse(() -> Messages.get(labelKey));
     }
 
+    /**
+     * What merging now does: one with others below it in its stack merges those too, and a stacked one is merged now
+     * also while it is blocked, as GitHub has no auto-merge for stacked pull requests (ADR 112).
+     */
     private static String mergeNowDetails(PullRequestPopup popup, String labelKey) {
-        return popup.stack().exists(stack -> stack.below() > 0)
-                ? Messages.get(labelKey + ".details") + " "
-                        + Messages.get("github.dialog.pullRequest.merge.stack.details")
-                : Messages.get(labelKey + ".details");
+        return List.of(Messages.get(labelKey + ".details"))
+                .appendAll(Option.when(
+                        popup.stack().exists(stack -> stack.below() > 0),
+                        () -> Messages.get("github.dialog.pullRequest.merge.stack.details")))
+                .appendAll(Option.when(
+                        popup.stack().isDefined(),
+                        () -> Messages.get("github.dialog.pullRequest.merge.stack.noAutoMerge")))
+                .mkString(" ");
     }
 
     /**
@@ -492,7 +500,8 @@ public final class PullRequestDialog implements PopupView {
                                         + pr.branches().base().name()))
                         .appendAll(behindBase(pr))))
                 .appendAll(pr.stack().map(PullRequestDialog::stack))
-                // In place of the stack: GitHub has no auto-merge for stacked pull requests.
+                // Next to the stack, which GitHub has no auto-merge for: both only show when it was turned on
+                // elsewhere.
                 .appendAll(pr.merging().autoMerge().map(on -> autoMerge(on, now)))
                 .appendAll(List.of(
                         Line.labelled(

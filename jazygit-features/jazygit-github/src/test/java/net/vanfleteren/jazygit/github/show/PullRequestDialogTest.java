@@ -926,6 +926,57 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void aBlockedPullRequestGitHubDoesNotLetBeMergedWhenReadySaysSo() throws Exception {
+        String merge = movingRight(
+                        READY.withMerging(new PullRequestDetails.Merging(
+                                PullRequestDetails.MergeState.BLOCKED, true, Option.none(), false, false)),
+                        120,
+                        50)
+                .get(1);
+
+        assertTrue(merge.contains("GitHub does not allow merging it yet."), merge);
+    }
+
+    @Test
+    void aPullRequestBehindItsBaseSaysToUpdateTheBranchFirst() throws Exception {
+        String merge = movingRight(
+                        READY.withMerging(new PullRequestDetails.Merging(
+                                PullRequestDetails.MergeState.BEHIND, true, Option.none(), false, false)),
+                        120,
+                        50)
+                .get(1);
+
+        assertTrue(merge.contains("It is behind its base: update the branch first."), merge);
+    }
+
+    @Test
+    void aStackedPullRequestSaysGitHubHasNoAutoMergeForIt() throws Exception {
+        PullRequestDetails blocked = stacked(new PullRequestStack(
+                        96, 1, 1, List.of(new PullRequestStack.Entry(1, new PrNumber(42), State.OPEN))))
+                .withMerging(new PullRequestDetails.Merging(
+                        PullRequestDetails.MergeState.BLOCKED, true, Option.none(), true, false));
+
+        String merge = movingRight(blocked, 120, 50).get(1);
+
+        assertTrue(merge.contains("(m) Merge "), merge);
+        assertTrue(merge.contains("no auto-merge for stacked"), merge);
+    }
+
+    @Test
+    void theDialogIsWokenWhenHowLongAgoAutoMergeWasTurnedOnChanges() {
+        Model on = TestModels.loaded()
+                .openPopup(merging(new PullRequestDetails.Merging(
+                        PullRequestDetails.MergeState.BLOCKED,
+                        true,
+                        Option.of(new PullRequestDetails.AutoMerge(
+                                MergeMethod.SQUASH, "cvanfleteren", Option.of(NOW.minusSeconds(30)))),
+                        false,
+                        true)));
+
+        assertEquals(Option.of(NOW.plusSeconds(30)), ShownTime.next(PullRequestDialog.shownTimes(on), NOW));
+    }
+
+    @Test
     void filesChangedTellsWhereTheFilesShow() throws Exception {
         // Down from Open in browser to Files changed, at the bottom of the first column.
         java.util.List<String> screens = pressing(
