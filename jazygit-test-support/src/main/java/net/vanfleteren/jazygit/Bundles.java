@@ -120,12 +120,16 @@ public final class Bundles {
                 .get();
     }
 
+    // A name has its keys in one module: with a bundle in two groups, the check of either could read the other's.
     private static ResourceBundle bundle(String root) {
-        return GROUPS.iterator()
-                .flatMap(group -> Try.of(
-                                () -> ResourceBundle.getBundle(PACKAGE + group + root + ".messages", Locale.ROOT))
-                        .toOption())
-                .headOption()
+        List<String> groups = GROUPS.filter(
+                group -> Try.of(() -> ResourceBundle.getBundle(PACKAGE + group + root + ".messages", Locale.ROOT))
+                        .isSuccess());
+        if (groups.size() > 1) {
+            throw new IllegalStateException(root + " has a bundle in more than one group: " + groups.mkString(", "));
+        }
+        return groups.headOption()
+                .map(group -> ResourceBundle.getBundle(PACKAGE + group + root + ".messages", Locale.ROOT))
                 .getOrElseThrow(() -> new IllegalArgumentException("no bundle for " + root));
     }
 
