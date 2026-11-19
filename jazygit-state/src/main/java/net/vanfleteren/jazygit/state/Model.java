@@ -52,7 +52,7 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * @param lineNumber     what is typed in the line to type a line number in to go to, while it is open (ADR 140)
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
  * @param parts          what the features keep for themselves, each in a {@link Part} declared in its own package
- * @param now           the time the last message was handled at, which tells how long ago things happened
+ * @param now            the time the last message was handled at, which tells how long ago things happened
  */
 @With
 public record Model(
