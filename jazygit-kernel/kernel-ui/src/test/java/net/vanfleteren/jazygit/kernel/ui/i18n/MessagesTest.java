@@ -38,6 +38,34 @@ class MessagesTest {
     }
 
     /**
+     * A module's bundle is in its group's package (ADR 159), and its keys start with its name without the group.
+     */
+    @Test
+    void aKeyIsLookedUpInTheBundleOfItsModuleInTheKernel() {
+        assertEquals(
+                "Hello from the kernel, Ada", Messages.forLocale(Locale.ENGLISH).format("probekernel.greeting", "Ada"));
+    }
+
+    @Test
+    void aKeyIsLookedUpInTheBundleOfItsModuleInTheFeatures() {
+        assertEquals(
+                "Hello from the features, Ada",
+                Messages.forLocale(Locale.ENGLISH).format("probefeature.greeting", "Ada"));
+    }
+
+    /**
+     * When two groups have a bundle for one name, neither hides the other's keys; for a key both have, the kernel's
+     * wins, as the kernel comes first.
+     */
+    @Test
+    void aNameWithABundleInTwoGroupsKeepsTheKeysOfBoth() {
+        Messages messages = Messages.forLocale(Locale.ENGLISH);
+        assertEquals("Only the kernel has this", messages.format("probeboth.kernel"));
+        assertEquals("Only the features have this", messages.format("probeboth.feature"));
+        assertEquals("From the kernel", messages.format("probeboth.shared"));
+    }
+
+    /**
      * A key of the views that starts as the name of a module does is still the views' own, when that module has no
      * such key.
      */

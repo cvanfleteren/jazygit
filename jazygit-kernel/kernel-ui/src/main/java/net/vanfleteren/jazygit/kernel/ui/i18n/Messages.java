@@ -11,8 +11,8 @@ import java.util.ResourceBundle;
 /**
  * The user-visible text, looked up by key in the {@code messages} bundles. Each module of the application has its own
  * bundle, {@code net/vanfleteren/jazygit/<group>/<root>/messages.properties}, and its keys start with its root, as
- * {@code github.dialog.rerunChecks.title} (ADR 136, 159): a key is looked up in the bundle its first part names, in
- * the first group that has one, and otherwise in the bundle of the views, which holds the keys of no module. So the
+ * {@code github.dialog.rerunChecks.title} (ADR 136, 159): a key is looked up in the bundles its first part names, in
+ * each group that has one in the order of the groups, and otherwise in the bundle of the views, which holds the keys of no module. So the
  * views find the text of a feature without naming it. The bundle is chosen by the locale; a key without a translation
  * falls back to the English base bundle.
  */
@@ -22,22 +22,22 @@ public final class Messages {
     // The groups whose modules have text, then the app, whose package is in no group (ADR 159).
     private static final List<String> GROUPS = List.of("kernel.", "features.", "");
     private static final String BUNDLE = "messages";
-    private static final String OWN = "kernel.ui";
+    private static final String OWN_GROUP = "kernel.";
+    private static final String OWN = "ui";
     // The locale of the user does not change while the app runs.
     private static final Messages DEFAULT = forDefaultLocale();
     private final Locale locale;
     private final ResourceBundle own;
-    // The bundle of each module a key named, looked up once: none for a part that names no module with a bundle.
-    private final Function1<String, Option<ResourceBundle>> bundles;
+    // The bundles of the modules a key named, looked up once, in the order of GROUPS: none for a part that names no
+    // module with a bundle, more than one when groups share a name, so none hides the keys of another.
+    private final Function1<String, List<ResourceBundle>> bundles;
 
     private Messages(Locale locale) {
         this.locale = locale;
-        this.own = ResourceBundle.getBundle(PACKAGE + OWN + "." + BUNDLE, locale);
-        this.bundles = Function1.<String, Option<ResourceBundle>>of(root -> GROUPS.iterator()
-                        .flatMap(group -> Try.of(
-                                        () -> ResourceBundle.getBundle(PACKAGE + group + root + "." + BUNDLE, locale))
-                                .toOption())
-                        .headOption())
+        this.own = ResourceBundle.getBundle(PACKAGE + OWN_GROUP + OWN + "." + BUNDLE, locale);
+        this.bundles = Function1.<String, List<ResourceBundle>>of(root -> GROUPS.flatMap(
+                        group -> Try.of(() -> ResourceBundle.getBundle(PACKAGE + group + root + "." + BUNDLE, locale))
+                                .toOption()))
                 .memoized();
     }
 
@@ -86,9 +86,9 @@ public final class Messages {
      */
     private Option<String> pattern(String key) {
         int dot = key.indexOf('.');
-        Option<ResourceBundle> module =
-                dot > 0 && !key.substring(0, dot).equals(OWN) ? bundles.apply(key.substring(0, dot)) : Option.none();
-        return module.filter(bundle -> bundle.containsKey(key))
+        List<ResourceBundle> modules =
+                dot > 0 && !key.substring(0, dot).equals(OWN) ? bundles.apply(key.substring(0, dot)) : List.empty();
+        return modules.find(bundle -> bundle.containsKey(key))
                 .orElse(() -> Option.when(own.containsKey(key), own))
                 .map(bundle -> bundle.getString(key));
     }
