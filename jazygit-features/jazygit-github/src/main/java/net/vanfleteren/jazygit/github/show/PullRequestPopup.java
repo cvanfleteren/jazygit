@@ -4,6 +4,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
@@ -237,6 +238,13 @@ public record PullRequestPopup(
                 && readDetails()
                         .exists(details -> !details.status().draft()
                                 && details.status().mergeable() != PullRequestDetails.Mergeable.CONFLICTING);
+    }
+
+    /**
+     * What the merge key of {@code method} does to it (ADR 112); none before it is read.
+     */
+    Option<MergeKey> mergeKey(MergeMethod method) {
+        return readDetails().map(read -> MergeKey.of(read, method));
     }
 
     /**

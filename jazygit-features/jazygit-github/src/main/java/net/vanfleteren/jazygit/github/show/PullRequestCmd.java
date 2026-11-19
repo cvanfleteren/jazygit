@@ -20,6 +20,14 @@ public sealed interface PullRequestCmd extends Cmd {
     Operation MERGE_PR = Operation.of("github.log.title.mergePr", "github.error.mergePr.failed")
             .labelledWhenBusy("github.branches.busy.mergePr");
 
+    Operation ENABLE_AUTO_MERGE = Operation.of(
+                    "github.log.title.enableAutoMerge", "github.error.enableAutoMerge.failed")
+            .labelledWhenBusy("github.branches.busy.enableAutoMerge");
+
+    Operation DISABLE_AUTO_MERGE = Operation.of(
+                    "github.log.title.disableAutoMerge", "github.error.disableAutoMerge.failed")
+            .labelledWhenBusy("github.branches.busy.disableAutoMerge");
+
     Operation CLOSE_PR = Operation.of("github.log.title.closePr", "github.error.closePr.failed")
             .labelledWhenBusy("github.branches.busy.closePr");
 
@@ -101,6 +109,88 @@ public sealed interface PullRequestCmd extends Cmd {
                     .fold(
                             this::failed,
                             merging -> new PullRequestMsg.MergeAsked(this, merging.status(), merging.commands()));
+        }
+    }
+
+    /**
+     * Turns the auto-merge of pull request {@code number}, from {@code branch}, on or off (ADR 112): its branch is busy
+     * meanwhile, and once it is done, also when it failed, the pull request is read again.
+     */
+    sealed interface AutoMergeCmd extends OperationCmd {
+
+        BranchName branch();
+
+        PrNumber number();
+
+        @Override
+        default Option<String> subject() {
+            return Option.of(branch().value());
+        }
+
+        @Override
+        default Option<BranchRef> busyBranch() {
+            return Option.of(new BranchRef.Local(branch()));
+        }
+
+        @Override
+        default boolean changesGitHub() {
+            return true;
+        }
+
+        @Override
+        default Msg succeeded(List<ExecutedCommand> commands) {
+            return new PullRequestMsg.AutoMergeSet(this, commands);
+        }
+
+        @Override
+        default Msg failed(Failure failure) {
+            return new PullRequestMsg.AutoMergeFailed(this, failure);
+        }
+    }
+
+    /**
+     * Turns auto-merge on for pull request {@code number}, from {@code branch}, with node id {@code pullRequest}:
+     * GitHub merges it as {@code method} says once nothing blocks it any more, when its branch is at {@code head}, if
+     * given, now (ADR 112).
+     */
+    record EnableAutoMerge(
+            BranchName branch, PrNumber number, String pullRequest, MergeMethod method, Option<GhCommit> head)
+            implements PullRequestCmd, AutoMergeCmd {
+
+        @Override
+        public Operation operation() {
+            return ENABLE_AUTO_MERGE;
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.gitHub()
+                    .pullRequests()
+                    .enableAutoMerge(pullRequest, method, head)
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, this::succeeded);
+        }
+    }
+
+    /**
+     * Turns auto-merge off for pull request {@code number}, from {@code branch}, with node id {@code pullRequest}
+     * (ADR 112).
+     */
+    record DisableAutoMerge(BranchName branch, PrNumber number, String pullRequest)
+            implements PullRequestCmd, AutoMergeCmd {
+
+        @Override
+        public Operation operation() {
+            return DISABLE_AUTO_MERGE;
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.gitHub()
+                    .pullRequests()
+                    .disableAutoMerge(pullRequest)
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, this::succeeded);
         }
     }
 

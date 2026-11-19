@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param repository   the repository it is of, as {@code owner/name}; empty when not known
  * @param url          the URL of that repository, which names the host it is on; empty when not known
  * @param body         its description, which may be empty; read to edit it from (ADR 59), not shown
+ * @param merging      whether GitHub can merge it now, and its auto-merge (ADR 112)
  */
 @With
 public record PullRequestDetails(
@@ -41,7 +42,43 @@ public record PullRequestDetails(
         Option<PullRequestStack> stack,
         String repository,
         String url,
-        String body) {
+        String body,
+        Merging merging) {
+
+    /**
+     * One of the repository {@code repository} at {@code url}, with description {@code body}, of which it is not
+     * known how GitHub would merge it.
+     */
+    public PullRequestDetails(
+            PrNumber number,
+            String title,
+            String author,
+            Status status,
+            Branches branches,
+            Activity activity,
+            Size size,
+            Conversation conversation,
+            List<Check> checks,
+            Option<PullRequestStack> stack,
+            String repository,
+            String url,
+            String body) {
+        this(
+                number,
+                title,
+                author,
+                status,
+                branches,
+                activity,
+                size,
+                conversation,
+                checks,
+                stack,
+                repository,
+                url,
+                body,
+                Merging.UNKNOWN);
+    }
 
     /**
      * One of the repository {@code repository} at {@code url}, without a description.
@@ -171,6 +208,79 @@ public record PullRequestDetails(
          */
         REQUESTED
     }
+
+    /**
+     * Whether GitHub can merge a pull request now, as its {@code mergeStateStatus} says (ADR 112).
+     */
+    public enum MergeState {
+        /**
+         * It can be merged now.
+         */
+        CLEAN,
+        /**
+         * It can be merged now, though a check that is not required failed.
+         */
+        UNSTABLE,
+        /**
+         * It can be merged now, and hooks run when it is.
+         */
+        HAS_HOOKS,
+        /**
+         * Something its base branch requires stops it: a check, a review or another rule.
+         */
+        BLOCKED,
+        /**
+         * Its base branch has to be caught up with first.
+         */
+        BEHIND,
+        /**
+         * It conflicts.
+         */
+        DIRTY,
+        /**
+         * It is a draft.
+         */
+        DRAFT,
+        /**
+         * GitHub has not worked it out yet.
+         */
+        UNKNOWN
+    }
+
+    /**
+     * How GitHub would merge a pull request now, and whether it merges it by itself once nothing blocks it any more
+     * (ADR 112).
+     *
+     * @param state      whether GitHub can merge it now
+     * @param allowed    whether its repository allows auto-merge
+     * @param autoMerge  its auto-merge, while it is on
+     * @param canEnable  whether the viewer can turn auto-merge on, which GitHub only lets them while it is blocked
+     * @param canDisable whether the viewer can turn auto-merge off, also when someone else turned it on
+     */
+    public record Merging(
+            MergeState state, boolean allowed, Option<AutoMerge> autoMerge, boolean canEnable, boolean canDisable) {
+
+        /**
+         * Nothing known: it is merged now, as before auto-merge was read.
+         */
+        public static final Merging UNKNOWN = new Merging(MergeState.UNKNOWN, false, Option.none(), false, false);
+
+        /**
+         * This, of a repository that allows auto-merge when {@code allowed}.
+         */
+        public Merging allowing(boolean allowed) {
+            return new Merging(state, allowed, autoMerge, canEnable, canDisable);
+        }
+    }
+
+    /**
+     * The auto-merge of a pull request, which GitHub merges by itself once nothing blocks it any more (ADR 112).
+     *
+     * @param method    how it is merged then
+     * @param enabledBy the login of who turned it on, empty when GitHub does not say
+     * @param enabledAt when it was turned on, if GitHub says
+     */
+    public record AutoMerge(MergeMethod method, String enabledBy, Option<Instant> enabledAt) {}
 
     /**
      * Whether a pull request is open, a draft, and merges.

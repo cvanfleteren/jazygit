@@ -15,15 +15,19 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.AutoMerge;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.MergeState;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Merging;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
@@ -287,6 +291,53 @@ class DetailsQueryTest {
         assertEquals(
                 Option.none(),
                 read(MERGED.put("headRefOid", "\"abc123\"")).get().branches().behindBase());
+    }
+
+    @Test
+    void howGitHubWouldMergeItAndItsAutoMergeAreRead() {
+        String answer = answer(MERGED.put("mergeStateStatus", "\"BLOCKED\"")
+                        .put("viewerCanEnableAutoMerge", "false")
+                        .put("viewerCanDisableAutoMerge", "true")
+                        .put("autoMergeRequest", """
+                                { "mergeMethod": "SQUASH", "enabledAt": "2026-01-01T00:00:00Z",
+                                  "enabledBy": { "login": "cvanfleteren" } }"""))
+                .replace("\"url\":", "\"autoMergeAllowed\": true, \"url\":");
+        assertEquals(
+                new Merging(
+                        MergeState.BLOCKED,
+                        true,
+                        Option.of(new AutoMerge(
+                                MergeMethod.SQUASH, "cvanfleteren", Option.of(Instant.parse("2026-01-01T00:00:00Z")))),
+                        false,
+                        true),
+                GhProcess.decoded(answer, DetailsQuery.DECODER).get().merging());
+    }
+
+    @Test
+    void autoMergeByNobodyKnownIsByNoName() {
+        assertEquals(
+                Option.of(new AutoMerge(MergeMethod.REBASE, "", Option.none())),
+                read(MERGED.put("mergeStateStatus", "\"CLEAN\"")
+                                .put("viewerCanEnableAutoMerge", "false")
+                                .put("viewerCanDisableAutoMerge", "false")
+                                .put("autoMergeRequest", """
+                                        { "mergeMethod": "REBASE", "enabledAt": null, "enabledBy": null }"""))
+                        .get()
+                        .merging()
+                        .autoMerge());
+    }
+
+    @Test
+    void withoutWhatGitHubSaysOfMergingItIsNotKnownAndTheRepositoryNotKnownToAllowAutoMerge() {
+        assertEquals(Merging.UNKNOWN, read(MERGED).get().merging());
+        assertEquals(
+                Merging.UNKNOWN,
+                read(MERGED.put("mergeStateStatus", "\"WHATEVER\"")
+                                .put("viewerCanEnableAutoMerge", "null")
+                                .put("viewerCanDisableAutoMerge", "false")
+                                .put("autoMergeRequest", "null"))
+                        .get()
+                        .merging());
     }
 
     @Test
