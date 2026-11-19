@@ -102,6 +102,18 @@ public interface StubPullRequests extends PullRequests {
     }
 
     @Override
+    default Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(
+            String pullRequest, MergeMethod method, Option<GhCommit> head) {
+        return Either.right(
+                List.of(AutoMergeMutation.enable(pullRequest, method, head).executed()));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> disableAutoMerge(String pullRequest) {
+        return Either.right(List.of(AutoMergeMutation.disable(pullRequest).executed()));
+    }
+
+    @Override
     default Either<GhFailure, List<ExecutedCommand>> close(PrNumber number) {
         return Either.right(List.of(ExecutedCommand.of("gh", "pr", "close", String.valueOf(number))));
     }

@@ -16,11 +16,12 @@ import static net.vanfleteren.jazygit.json.Decoder.map5;
 import static net.vanfleteren.jazygit.json.Decoder.map6;
 import static net.vanfleteren.jazygit.json.Decoder.map8;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
 
 import io.vavr.Tuple;
-import io.vavr.Tuple4;
+import io.vavr.Tuple5;
 import io.vavr.Tuple8;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -33,13 +34,17 @@ import net.vanfleteren.jazygit.gh.graphql.StackFragment;
 import net.vanfleteren.jazygit.gh.graphql.SuiteFragment;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.AutoMerge;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.MergeState;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Merging;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
@@ -64,6 +69,8 @@ final class DetailsQuery {
             repository(owner: $owner, name: $name) { \
             nameWithOwner url pullRequest(number: $number) { number title body author { login } state isDraft headRefName \
             baseRefName headRefOid baseRefOid baseRef { %s } %s createdAt additions deletions changedFiles mergeable reviewDecision \
+            mergeStateStatus viewerCanEnableAutoMerge viewerCanDisableAutoMerge \
+            autoMergeRequest { mergeMethod enabledAt enabledBy { login } } \
             id viewerDidAuthor viewerLatestReview { state } \
             comments { totalCount } \
             labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
@@ -73,7 +80,8 @@ final class DetailsQuery {
             ... on HeadRefForcePushedEvent { createdAt } } } \
             commits(last: 1) { totalCount nodes { commit { committedDate \
             statusCheckRollup { contexts(first: 100) { nodes { %s } } } %s } } } \
-            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""";
+            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } \
+            autoMergeAllowed } }""";
 
     // The details, with how far behind its base the pull request is, compared at its head (ADR 58).
     static final String QUERY = query(", $pullHead: String!", "compare(headRef: $pullHead) { behindBy }");
@@ -199,14 +207,36 @@ final class DetailsQuery {
                                             checks.getOrElse(List.empty()).appendAll(waiting)))))
             .map(commits -> commits.headOption().getOrElse(List.empty()));
 
+    // Its auto-merge while it is on: how, by whom and since when.
+    static final Decoder<AutoMerge> AUTO_MERGE = map3(
+            field("mergeMethod", enumOf(MergeMethod.class)),
+            field("enabledBy", nullable(field("login", string()))).map(login -> login.getOrElse("")),
+            field("enabledAt", nullable(instant())),
+            AutoMerge::new);
+
+    /*
+     * Whether GitHub can merge it now, and its auto-merge (ADR 112). It is read leniently, as what was shown before
+     * reads fine without it: nothing known of it merges now, as before.
+     */
+    static final Decoder<Merging> MERGING = json -> Either.right(map4(
+                    field("mergeStateStatus", nullable(string())).map(state -> mergeState(state.getOrElse(""))),
+                    field("autoMergeRequest", nullable(AUTO_MERGE)),
+                    field("viewerCanEnableAutoMerge", bool()),
+                    field("viewerCanDisableAutoMerge", bool()),
+                    (state, autoMerge, canEnable, canDisable) ->
+                            new Merging(state, false, autoMerge, canEnable, canDisable))
+            .decode(json)
+            .getOrElse(Merging.UNKNOWN));
+
     // What it is and how it stands, its checks, its stack and its description.
     static final Decoder<
-                    Tuple4<
+                    Tuple5<
                             Tuple8<PrNumber, String, String, Status, Branches, Activity, Size, Conversation>,
                             List<Check>,
                             Option<PullRequestStack>,
-                            String>>
-            PULL_REQUEST = map4(
+                            String,
+                            Merging>>
+            PULL_REQUEST = map5(
                     map8(
                             field("number", integer().map(PrNumber::new)),
                             field("title", string()),
@@ -220,15 +250,17 @@ final class DetailsQuery {
                     CHECKS,
                     StackFragment.DECODER,
                     field("body", string()),
+                    MERGING,
                     Tuple::of);
 
     static final Decoder<PullRequestDetails> DECODER = at(
             "data.repository",
-            map3(
+            map4(
                     field("nameWithOwner", string()),
                     field("pullRequest", PULL_REQUEST),
                     field("url", string()),
-                    (repository, read, url) -> new PullRequestDetails(
+                    optionalField("autoMergeAllowed", bool()),
+                    (repository, read, url, allowed) -> new PullRequestDetails(
                             read._1()._1(),
                             read._1()._2(),
                             read._1()._3(),
@@ -248,7 +280,8 @@ final class DetailsQuery {
                             read._3(),
                             repository,
                             url,
-                            read._4())));
+                            read._4(),
+                            read._5().allowing(allowed.getOrElse(false)))));
 
     private DetailsQuery() {}
 
@@ -308,6 +341,19 @@ final class DetailsQuery {
             case "COMMENTED" -> Option.of(ReviewerState.COMMENTED);
             // Dismissed, or not submitted yet.
             default -> Option.none();
+        };
+    }
+
+    private static MergeState mergeState(String state) {
+        return switch (state) {
+            case "CLEAN" -> MergeState.CLEAN;
+            case "UNSTABLE" -> MergeState.UNSTABLE;
+            case "HAS_HOOKS" -> MergeState.HAS_HOOKS;
+            case "BLOCKED" -> MergeState.BLOCKED;
+            case "BEHIND" -> MergeState.BEHIND;
+            case "DIRTY" -> MergeState.DIRTY;
+            case "DRAFT" -> MergeState.DRAFT;
+            default -> MergeState.UNKNOWN;
         };
     }
 
