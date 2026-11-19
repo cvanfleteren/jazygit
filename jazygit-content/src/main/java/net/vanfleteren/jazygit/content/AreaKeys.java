@@ -17,12 +17,11 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
-import net.vanfleteren.jazygit.state.diff.ScrolledContent;
-import net.vanfleteren.jazygit.state.github.builds.BuildsAt;
 import net.vanfleteren.jazygit.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.state.view.FileStepMsg;
 import net.vanfleteren.jazygit.state.view.LineNumberMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
+import net.vanfleteren.jazygit.ui.content.KeyContext;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 
@@ -108,11 +107,9 @@ final class AreaKeys {
                 .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(state, view, to)))
                 .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(state.keys(), event, Option.of(at(state, view, on))))
                         .map(msg -> reviewed(state, view, msg)))
-                // The builds of a branch have keys of their own, to show another workflow (ADR 131).
-                .orElse(() -> Option.when(
-                                state.content() instanceof ScrolledContent.Builds,
-                                () -> KEYMAP.handle(Scopes.BUILDS, event, Option.of(new BuildsAt(state.searching()))))
-                        .flatMap(msg -> msg)
+                // A body can have keys of its own, as the builds of a branch do to show another workflow (ADR 131).
+                .orElse(() -> state.styled()
+                        .flatMap(shown -> shown.body().key(event, new KeyContext(KEYMAP, state.searching())))
                         .map(msg -> reviewed(state, view, msg)))
                 // Without a cursor, as in the plain style, only the keys that move to another file act (ADR 117).
                 .orElse(() -> Option.when(cursor.isEmpty(), () -> KEYMAP.handle(Scopes.DIFF, event, Option.none()))

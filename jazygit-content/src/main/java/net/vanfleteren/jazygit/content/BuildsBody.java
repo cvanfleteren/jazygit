@@ -1,12 +1,16 @@
 package net.vanfleteren.jazygit.content;
 
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.github.builds.BuildsAt;
 import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
 import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.ui.content.Body;
 import net.vanfleteren.jazygit.ui.content.DrawContext;
 import net.vanfleteren.jazygit.ui.content.Drawn;
+import net.vanfleteren.jazygit.ui.content.KeyContext;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
  * The builds of a branch, of the newest commit first (ADR 131), drawn as wide as the area, as its chart has a column
@@ -22,6 +26,14 @@ record BuildsBody(BuildsShown shown) implements Body {
     @Override
     public boolean drawnToWidth() {
         return true;
+    }
+
+    /**
+     * The builds have keys of their own, to show another workflow, without a cursor (ADR 131).
+     */
+    @Override
+    public Option<Msg> key(KeyEvent event, KeyContext context) {
+        return context.keymap().handle(Scopes.BUILDS, event, Option.of(new BuildsAt(context.searching())));
     }
 
     /**
