@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import net.vanfleteren.jazygit.content.diff.Drawn;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import io.vavr.collection.HashSet;
@@ -85,7 +86,7 @@ public class ReviewedDiffBenchmark {
      * Drawing the diff with its threads, on the render thread.
      */
     @Benchmark
-    public RichDiff.Drawn draw() {
+    public Drawn draw() {
         return RichDiff.drawn(
                 Expansion.Folded.of(parsed), Option.some(remarks), Option.none(), RichDiff.Drawing.of(STYLES));
     }

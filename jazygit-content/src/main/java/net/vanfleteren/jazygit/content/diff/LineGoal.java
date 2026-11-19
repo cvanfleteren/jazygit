@@ -22,7 +22,7 @@ public sealed interface LineGoal {
      * Where line {@code number} is, in what has the cursor {@code stops}, the cursor on the stop at {@code at}, and the
      * lines of a version rendered drawn at {@code places} (ADR 103), numbered in the file of {@code side}.
      */
-    static LineGoal of(Vector<RichDiff.Stop> stops, Vector<RichDiff.Place> places, int at, Side side, int number) {
+    static LineGoal of(Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, int at, Side side, int number) {
         return pathAt(stops, at)
                 .flatMap(path -> List.of(side, other(side))
                         .find(those -> hasLines(stops, places, path, those))
@@ -37,7 +37,7 @@ public sealed interface LineGoal {
      * to: lines of a file, on either side. Asked for each key the area hands on, so it looks no further than the
      * first line it finds.
      */
-    static boolean numbered(Vector<RichDiff.Stop> stops, Vector<RichDiff.Place> places, int at) {
+    static boolean numbered(Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, int at) {
         return pathAt(stops, at)
                 .exists(path -> hasLines(stops, places, path, Side.RIGHT) || hasLines(stops, places, path, Side.LEFT));
     }
@@ -46,7 +46,7 @@ public sealed interface LineGoal {
      * The line of a diff or a version shown as source: the stop of the line, else the lines around it shown when a
      * marker of the new file leaves it out, else the closest line.
      */
-    private static LineGoal onStops(Vector<RichDiff.Stop> stops, String path, Side side, int number) {
+    private static LineGoal onStops(Vector<Drawn.Stop> stops, String path, Side side, int number) {
         Vector<NumberedRow> lines = stops.zipWithIndex(
                         (stop, index) -> number(stop.mark(), path, side).map(its -> new NumberedRow(its, index)))
                 .flatMap(line -> line);
@@ -93,7 +93,7 @@ public sealed interface LineGoal {
      * The line of a version rendered: the first row of the block or node drawn from it, else from the last line
      * before it that is drawn, as one in a closed node, else from the first.
      */
-    private static LineGoal inRow(Vector<RichDiff.Place> places, String path, Side side, int number) {
+    private static LineGoal inRow(Vector<Drawn.Place> places, String path, Side side, int number) {
         Vector<NumberedRow> lines =
                 places.flatMap(place -> line(place.anchor(), path, side).map(its -> new NumberedRow(its, place.row())));
         return lines.find(line -> line.number() == number)
@@ -110,7 +110,7 @@ public sealed interface LineGoal {
      * The number of the line of a stop {@code mark} in the file with the path {@code path} on {@code side}: by its
      * anchor, or for a context line by its other anchor (ADR 139).
      */
-    private static Option<Integer> number(RichDiff.Mark mark, String path, Side side) {
+    private static Option<Integer> number(Drawn.Mark mark, String path, Side side) {
         return line(mark.anchor(), path, side).orElse(() -> mark.also().flatMap(also -> line(also, path, side)));
     }
 
@@ -126,8 +126,7 @@ public sealed interface LineGoal {
     /**
      * Whether the file with the path {@code path} has a line on {@code side} among {@code stops} or {@code places}.
      */
-    private static boolean hasLines(
-            Vector<RichDiff.Stop> stops, Vector<RichDiff.Place> places, String path, Side side) {
+    private static boolean hasLines(Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, String path, Side side) {
         return places.isEmpty()
                 ? stops.exists(stop -> number(stop.mark(), path, side).isDefined())
                 : places.exists(place -> line(place.anchor(), path, side).isDefined());
@@ -137,7 +136,7 @@ public sealed interface LineGoal {
      * The path of the file the cursor is in on the stop at {@code at}: that of the stop, or of the closest stop
      * before it with one; on the lead of a commit, that of its first file.
      */
-    private static Option<String> pathAt(Vector<RichDiff.Stop> stops, int at) {
+    private static Option<String> pathAt(Vector<Drawn.Stop> stops, int at) {
         int from = Math.clamp(at, 0, Math.max(0, stops.size() - 1));
         return Iterator.rangeBy(from, -1, -1)
                 .concat(Iterator.range(from + 1, stops.size()))

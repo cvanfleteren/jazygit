@@ -88,8 +88,7 @@ class RichDiffTest {
         Expansion.Folded reading = new Expansion.Folded(
                 diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.READING)));
 
-        RichDiff.Drawn drawn =
-                RichDiff.drawn(known, Option.none(), Option.none(), RichDiff.Drawing.of(Theme.SpanStyles.NONE));
+        Drawn drawn = RichDiff.drawn(known, Option.none(), Option.none(), RichDiff.Drawing.of(Theme.SpanStyles.NONE));
 
         assertEquals(
                 List.of(
@@ -157,8 +156,8 @@ class RichDiffTest {
                 """;
         ParsedDiff.ParsedFile whole = ParsedDiff.of(renamed).files().head();
 
-        RichDiff.Drawn added = drawn(whole, FileVersion.NEW, false);
-        RichDiff.Drawn original = drawn(whole, FileVersion.ORIGINAL, true);
+        Drawn added = drawn(whole, FileVersion.NEW, false);
+        Drawn original = drawn(whole, FileVersion.ORIGINAL, true);
 
         assertEquals(
                 List.of(" new version  new.txt", "  1 │   one", "  2 │ + TWO", "  3 │   three"),
@@ -197,8 +196,8 @@ class RichDiffTest {
         // Two columns of two digits and a space between them, then a space: as in the diff.
         int bar = "93 93 │".indexOf('│');
 
-        RichDiff.Drawn added = drawn(whole, FileVersion.NEW, false, 2, Theme.SpanStyles.NONE);
-        RichDiff.Drawn original = drawn(whole, FileVersion.ORIGINAL, false, 2, Theme.SpanStyles.NONE);
+        Drawn added = drawn(whole, FileVersion.NEW, false, 2, Theme.SpanStyles.NONE);
+        Drawn original = drawn(whole, FileVersion.ORIGINAL, false, 2, Theme.SpanStyles.NONE);
 
         assertTrue(
                 text(added.lines()).tail().forAll(line -> line.indexOf('│') == bar),
@@ -233,16 +232,15 @@ class RichDiffTest {
         assertEquals("  2 │ + - new item", untinted.last());
     }
 
-    private static RichDiff.Drawn drawn(ParsedDiff.ParsedFile whole, FileVersion version, boolean cut) {
+    private static Drawn drawn(ParsedDiff.ParsedFile whole, FileVersion version, boolean cut) {
         return drawn(whole, version, cut, Theme.SpanStyles.NONE);
     }
 
-    private static RichDiff.Drawn drawn(
-            ParsedDiff.ParsedFile whole, FileVersion version, boolean cut, Theme.SpanStyles styles) {
+    private static Drawn drawn(ParsedDiff.ParsedFile whole, FileVersion version, boolean cut, Theme.SpanStyles styles) {
         return drawn(whole, version, cut, 1, styles);
     }
 
-    private static RichDiff.Drawn drawn(
+    private static Drawn drawn(
             ParsedDiff.ParsedFile whole, FileVersion version, boolean cut, int digits, Theme.SpanStyles styles) {
         return RichDiff.drawn(
                 new Expansion.Folded(
@@ -278,7 +276,7 @@ class RichDiffTest {
 
     @Test
     void changedLinesAreShownInPairsAndTheCursorStopsOnThemInThatOrder() {
-        RichDiff.Drawn drawn = RichDiff.drawn(
+        Drawn drawn = RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of(VERSIONS)),
                 Option.none(),
                 Option.none(),
@@ -376,7 +374,7 @@ class RichDiffTest {
 
     @Test
     void aLineIsSearchedInItsCodeAfterItsGutterAndMarkerAndAConflictedOneWithoutItsPrefix() {
-        RichDiff.Drawn drawn = RichDiff.drawn(
+        Drawn drawn = RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of("""
                         diff --git a/a.txt b/a.txt
                         --- a/a.txt
@@ -615,11 +613,11 @@ class RichDiffTest {
         int count = 32_000;
         List<Token> tokens = List.range(0, count).map(i -> new Token(2 * i, 1, Token.Kind.NUMBER));
 
-        List<RichDiff.Piece> pieces = assertTimeoutPreemptively(
-                Duration.ofSeconds(2), () -> RichDiff.pieces(List.of(new Segment("1,".repeat(count), false)), tokens));
+        List<Pieces.Piece> pieces = assertTimeoutPreemptively(
+                Duration.ofSeconds(2), () -> Pieces.of(List.of(new Segment("1,".repeat(count), false)), tokens));
 
         assertEquals(2 * count, pieces.size());
-        assertEquals(new RichDiff.Piece(",", false, Option.none()), pieces.get(1));
+        assertEquals(new Pieces.Piece(",", false, Option.none()), pieces.get(1));
     }
 
     @Test
@@ -673,7 +671,7 @@ class RichDiffTest {
             }
             return SYNTAX_STYLES.of(cssClass);
         };
-        RichDiff.Drawn drawn = RichDiff.drawn(
+        Drawn drawn = RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of("""
                          a.txt | 2 +-
                          a summary longer than any line of the diff, which is measured as it is drawn
@@ -708,7 +706,7 @@ class RichDiffTest {
 
     @Test
     void theWidestLineOfADiffIsItsBarWhenNoOtherLineIsWider() {
-        RichDiff.Drawn drawn = RichDiff.drawn(
+        Drawn drawn = RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of("""
                         diff --git a/A.java b/A.java
                         --- a/A.java
@@ -768,7 +766,7 @@ class RichDiffTest {
 
     @Test
     void anAnnotationTakesTheColourOfAnnotations() {
-        assertEquals(Theme.Classes.SYNTAX_ANNOTATION, RichDiff.syntaxClass(Token.Kind.ANNOTATION));
+        assertEquals(Theme.Classes.SYNTAX_ANNOTATION, Pieces.syntaxClass(Token.Kind.ANNOTATION));
     }
 
     private static final String STRING_CHANGED = """
