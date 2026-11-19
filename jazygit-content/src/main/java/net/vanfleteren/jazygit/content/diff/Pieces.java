@@ -28,16 +28,14 @@ final class Pieces {
             return segments.map(segment -> new Piece(segment.text(), segment.changed(), Option.none()));
         }
         String text = segments.map(Segment::text).mkString();
-        Vector<Integer> ends = segments.scanLeft(
-                        0, (end, segment) -> end + segment.text().length())
-                .tail()
-                .toVector();
-        List<Integer> cuts = ends.toList()
-                .prepend(0)
-                .appendAll(tokens.flatMap(token -> List.of(token.start(), token.end())))
+        // 0, then where each segment ends.
+        List<Integer> bounds = segments.scanLeft(0, (end, segment) -> end + segment.text().length());
+        Vector<Integer> ends = bounds.tail().toVector();
+        // A token often ends where the next starts: the same cut once, before they are sorted.
+        List<Integer> cuts = bounds.appendAll(tokens.flatMap(token -> List.of(token.start(), token.end())))
                 .filter(cut -> cut <= text.length())
-                .sorted()
-                .distinct();
+                .distinct()
+                .sorted();
         Cutter cutter = new Cutter(text, segments.toVector(), ends, tokens.toVector());
         return cuts.zipWith(cuts.tail(), Cut::new)
                 .foldLeft(new Cursor(List.empty(), 0, 0), cutter::next)
