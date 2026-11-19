@@ -18,6 +18,7 @@
          rich diff, beside features, the groups of features; app, which wires them together. test-support holds what the architecture tests share. -->
     <modules>
         <module>jazygit-test-support</module>
+        <module>jazygit-base</module>
         <module>jazygit-json</module>
         <module>jazygit-yaml</module>
         <module>jazygit-xml</module>
@@ -133,6 +134,11 @@
                 <artifactId>jazygit-gh</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-base</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>

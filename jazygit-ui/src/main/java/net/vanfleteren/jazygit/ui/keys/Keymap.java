@@ -11,6 +11,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.base.Require;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
@@ -94,15 +95,13 @@ public final class Keymap {
     public final <S> Keymap add(Scope<S> scope, Binding<S>... bindings) {
         List<Binding<?>> all = bindings(scope.id()).appendAll(List.of(bindings));
         // A key bound twice would only do what it was bound to first, silently; the help key does nothing else.
-        all.map(Binding::key)
+        Option<String> twice = all.map(Binding::key)
                 .append(HELP_KEY)
                 .groupBy(key -> key)
                 .filterValues(keys -> keys.size() > 1)
                 .keySet()
-                .headOption()
-                .forEach(key -> {
-                    throw new IllegalArgumentException("The key \"" + key + "\" is bound twice in " + scope.id());
-                });
+                .headOption();
+        Require.that(twice.isEmpty(), () -> "The key \"" + twice.get() + "\" is bound twice in " + scope.id());
         return new Keymap(sections.put(scope.id(), new Section(scope, all)), globals, help);
     }
 

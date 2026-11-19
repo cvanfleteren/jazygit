@@ -7,6 +7,7 @@ import io.vavr.collection.Seq;
 import io.vavr.control.Option;
 import java.util.Arrays;
 import java.util.Objects;
+import net.vanfleteren.jazygit.base.Require;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
@@ -230,9 +231,9 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
         }
 
         private static int packed(Token token) {
-            if (token.start() > MOST || token.length() > MOST) {
-                throw new IllegalArgumentException("A token past column " + MOST + " cannot be packed: " + token);
-            }
+            Require.that(
+                    token.start() <= MOST && token.length() <= MOST,
+                    () -> "A token past column " + MOST + " cannot be packed: " + token);
             return (token.start() << (BITS + KIND_BITS))
                     | (token.length() << KIND_BITS)
                     | token.kind().ordinal();
