@@ -14,19 +14,25 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.git.model.Head;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tag;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.CommitSearch;
+import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
 import org.junit.jupiter.api.Test;
@@ -548,5 +554,65 @@ class CommitsPanelTest {
         assertEquals("mmmmmmm Ad ◎─╮ msg mmmmmmm", first);
         assertEquals("mmmmmmm Ad ◎ msg mmmmmmm", searched);
         assertEquals(first, panel.shownRows().head().text());
+    }
+
+    @Test
+    void escapeLetsGoOfTheFilesLockedToTheCommits() throws Exception {
+        // ADR 149: Escape in the list the files are locked to lets go of them.
+        assertEquals(List.of(new SelectionMsg.FilesUnlocked()), escaped(lockedTo(withCommits(), CommitsPanel.PANE)));
+    }
+
+    @Test
+    void escapeClearsTheSearchListedBeforeItLetsGoOfTheLock() throws Exception {
+        Model searched = List.<Msg>of(
+                        new CommitSearchMsg.Opened(),
+                        new CommitSearchMsg.Edited("s0"),
+                        new CommitSearchMsg.Submitted(),
+                        new LoadMsg.CommitSearchLoaded(CommitQuery.parse("s0"), List.of(commit("s0"))))
+                .foldLeft(
+                        lockedTo(withCommits(), CommitsPanel.PANE),
+                        (model, msg) -> Update.update(model, msg).model());
+
+        assertEquals(List.of(new CommitSearchMsg.Cleared()), escaped(searched));
+    }
+
+    @Test
+    void escapeLeavesTheFilesLockedToAnotherList() throws Exception {
+        assertEquals(List.empty(), escaped(lockedTo(withCommits(), Scopes.STASH.pane())));
+    }
+
+    @Test
+    void theTitleOfADetachedHeadSaysWhereItIs() {
+        Model detached = withCommits()
+                .mapRepo(repo -> repo.withStatus(
+                        new Loadable.Loaded<>(new RepoStatus(new Head.Detached(new Sha("abcdef0123")), List.empty()))));
+
+        assertEquals("Commits · detached at abcdef0", CommitsPanel.headTitle(detached));
+        assertEquals("Commits of main", CommitsPanel.headTitle(withCommits()));
+    }
+
+    private static Model withCommits() {
+        return TestModels.loaded(SampleData.git())
+                .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0")))));
+    }
+
+    private static Model lockedTo(Model model, PaneId pane) {
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.lockedTo(pane, FilesLock.In.LIST)));
+    }
+
+    /**
+     * What Escape in the commits of {@code model}, with the focus, sends.
+     */
+    private static List<Msg> escaped(Model model) throws Exception {
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        CommitsPanel panel = new CommitsPanel(sent::add);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
+        }
+        return List.ofAll(sent).filter(msg -> !(msg instanceof SelectionMsg.CommitSelected));
     }
 }

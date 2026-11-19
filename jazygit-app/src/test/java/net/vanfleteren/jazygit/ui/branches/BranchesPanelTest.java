@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -894,5 +895,32 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).quit();
             return panel.selectionChange(after);
         }
+    }
+
+    @Test
+    void escapeLetsGoOfTheFilesLockedToTheBranchesOnly() throws Exception {
+        assertEquals(
+                List.of(new SelectionMsg.FilesUnlocked()), escapedInBranches(lockedTo(before, BranchesPanel.PANE)));
+        assertEquals(List.empty(), escapedInBranches(lockedTo(before, Scopes.COMMITS.pane())));
+    }
+
+    private static Model lockedTo(Model model, PaneId pane) {
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.lockedTo(pane, FilesLock.In.LIST)));
+    }
+
+    /**
+     * What Escape in the branches of {@code model}, with the focus, sends.
+     */
+    private static List<Msg> escapedInBranches(Model model) throws Exception {
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(sent::add, tab -> {});
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, BranchesPanel.PANE))) {
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
+        }
+        return List.ofAll(sent).filter(msg -> !(msg instanceof SelectionMsg.BranchSelected));
     }
 }

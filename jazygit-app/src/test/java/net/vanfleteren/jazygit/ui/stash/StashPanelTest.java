@@ -175,4 +175,33 @@ class StashPanelTest {
             SettledPilot.of(testRunner).quit();
         }
     }
+
+    @Test
+    void escapeLetsGoOfTheFilesLockedToTheStashesOnly() throws Exception {
+        Model model =
+                withStashes(List.of(new Stash("stash@{0}", new Sha("s0"), "newest", Option.none(), Instant.EPOCH)));
+
+        assertEquals(List.of(new SelectionMsg.FilesUnlocked()), escaped(lockedTo(model, StashPanel.PANE)));
+        assertEquals(List.empty(), escaped(lockedTo(model, Scopes.COMMITS.pane())));
+    }
+
+    private static Model lockedTo(Model model, PaneId pane) {
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.lockedTo(pane, FilesLock.In.LIST)));
+    }
+
+    /**
+     * What Escape in the stashes of {@code model}, with the focus, sends.
+     */
+    private static List<Msg> escaped(Model model) throws Exception {
+        java.util.List<Msg> sent = new ArrayList<>();
+        StashPanel panel = new StashPanel(sent::add, Theme.Highlights.DEFAULT);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.PANE))) {
+            SettledPilot.focus(testRunner, StashPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
+        }
+        return List.ofAll(sent);
+    }
 }
