@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.state.Terminal;
+import net.vanfleteren.jazygit.kernel.state.Terminal;
 
 /**
  * The terminal the app is shown on, which it hands over to a program the user works with, like an editor, through a

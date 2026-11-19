@@ -1,0 +1,48 @@
+package net.vanfleteren.jazygit.features.changes.stash;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.util.function.Consumer;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
+import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.stash.StashPanel;
+import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
+import net.vanfleteren.jazygit.kernel.ui.widgets.TextInputDialog;
+
+/**
+ * The popups of the stash operations.
+ */
+public final class StashDialogs {
+
+    /**
+     * Asks for the name of a stash; a blank name stashes under a generated one.
+     */
+    public static final TextInputDialog.Spec<StashPopup> STASH = TextInputDialog.Spec.confirming(
+            "stash-name",
+            StashPopup.class,
+            popup -> Messages.get("changes.dialog.stash.title"),
+            Option.of(Messages.get("changes.dialog.stash.placeholder")));
+
+    /**
+     * Asks to drop a stash.
+     */
+    public static final ConfirmDialog.Spec<StashDropPopup> DROP = ConfirmDialog.Spec.confirming(
+            "stash-drop",
+            StashDropPopup.class,
+            popup -> Messages.get("changes.dialog.stashDrop.title"),
+            popup -> Messages.get(
+                    "changes.dialog.stashDrop.message", popup.stash().message()));
+
+    private StashDialogs() {}
+
+    /**
+     * The popups of this feature, which send what the user does to {@code dispatch}.
+     */
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(
+                PopupSlot.returningTo(StashPanel.PANE, new ConfirmDialog<>(DROP, dispatch)),
+                PopupSlot.returningTo(FilesPanel.PANE, new TextInputDialog<>(STASH, dispatch)));
+    }
+}

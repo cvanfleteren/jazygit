@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.app.keys;
 
-import net.vanfleteren.jazygit.chrome.help.HelpMsg;
-import net.vanfleteren.jazygit.ui.keys.Keymap;
+import net.vanfleteren.jazygit.features.chrome.help.HelpMsg;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 
 /**
  * The keys of the features, in the order of {@link Features#ALL}, which is the order in which the keys of a panel are

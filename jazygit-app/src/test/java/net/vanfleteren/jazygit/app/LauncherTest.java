@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import net.vanfleteren.jazygit.ui.content.ContentSources;
-import net.vanfleteren.jazygit.ui.keys.Keymap;
+import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import org.junit.jupiter.api.Test;
 
 class LauncherTest {

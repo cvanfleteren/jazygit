@@ -1,0 +1,462 @@
+package net.vanfleteren.jazygit.kernel.ui.widgets;
+
+import static dev.tamboui.toolkit.Toolkit.*;
+
+import dev.tamboui.layout.Constraint;
+import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Overflow;
+import dev.tamboui.text.Line;
+import dev.tamboui.toolkit.Toolkit;
+import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.StyledElement;
+import dev.tamboui.toolkit.elements.ListElement;
+import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.elements.TextElement;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
+import dev.tamboui.tui.event.PasteEvent;
+import dev.tamboui.widgets.common.ScrollBarPolicy;
+import io.vavr.Lazy;
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.Loadable;
+import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
+import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
+import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
+
+/**
+ * A focusable list showing a {@link Loadable} value. The list widget keeps its own selection, so
+ * its items are only rebuilt when the value changes. The selection is only highlighted while the list
+ * is the one in use, and comes back as it was when it is again.
+ */
+public final class LoadableList<T> {
+
+    private final String title;
+    private final ListElement<?> list;
+    private final Reselect<T> reselect;
+    private final Theme.Highlights highlights;
+    // TamboUI's default, which indents every row.
+    private String highlightSymbol = "> ";
+    // The value the last render showed, and its items.
+    private Option<Loadable<T>> shown = Option.none();
+    private List<Item> shownItems = List.of();
+    // What the list draws the rows as.
+    private List<StyledElement<?>> elements = List.of();
+    private Option<Integer> count = Option.none();
+    private Option<String> empty = Option.none();
+    private boolean focused;
+
+    public LoadableList(String title, String id, Theme.Highlights highlights) {
+        this(title, id, (previous, next, selected) -> selected, highlights);
+    }
+
+    public LoadableList(String title, String id, Reselect<T> reselect, Theme.Highlights highlights) {
+        this.title = title;
+        this.reselect = reselect;
+        this.highlights = highlights;
+        this.list = list().id(id)
+                .focusable()
+                .autoScroll()
+                .scrollbar(ScrollBarPolicy.AS_NEEDED)
+                .scrollbarThumbColor(BorderBar.FOUND)
+                .fill()
+                .onMouseEvent(this::click);
+    }
+
+    /**
+     * @param items   the rows of the loaded value; given on every render, so they can depend on more than the
+     *                value, like the model they are drawn from
+     * @param focused whether the list has the focus, which its keys need
+     * @param active  whether the list is the one in use, which shows its selection: also while what it
+     *                selects or a popup opened from it has the focus
+     */
+    public Panel render(Loadable<T> value, Function<T, List<Row>> items, boolean focused, boolean active) {
+        return render(value, items, focused, active, Pane.title(title));
+    }
+
+    /**
+     * @param title the title to show instead of the one the list was made with
+     */
+    public Panel render(Loadable<T> value, Function<T, List<Row>> items, boolean focused, boolean active, Line title) {
+        return render(value, items, focused, active, title, Option.none(), event -> {});
+    }
+
+    /**
+     * @param above a line typed in drawn above the rows, inside the border, if there is one
+     * @param paste what a paste does while the list has the focus and the line is drawn
+     */
+    public Panel render(
+            Loadable<T> value,
+            Function<T, List<Row>> items,
+            boolean focused,
+            boolean active,
+            Line title,
+            Option<StyledElement<?>> above,
+            Consumer<PasteEvent> paste) {
+        return renderItems(value, loaded -> items.apply(loaded).map(Item::of), focused, active, title, above, paste);
+    }
+
+    /**
+     * The list of {@code items}, which can build their rows only once they are drawn: a list of thousands of rows,
+     * as a long log, then only builds those it shows.
+     *
+     * @param items the items of the loaded value; given on every render, so they can depend on more than the value
+     */
+    public Panel renderItems(
+            Loadable<T> value,
+            Function<T, List<Item>> items,
+            boolean focused,
+            boolean active,
+            Line title,
+            Option<StyledElement<?>> above,
+            Consumer<PasteEvent> paste) {
+        this.focused = focused;
+        list.highlightStyle(highlights.of(active))
+                .highlightSymbol(active ? highlightSymbol : " ".repeat(highlightSymbol.length()));
+        List<Item> itemRows = value.toOption().map(items).getOrElse(List.empty());
+        List<Item> rows = switch (value) {
+            case Loadable.Loading<T>() -> List.of(Item.of(Row.of(Placeholders.loading())));
+            case Loadable.Failed<T>(Failure failure) -> List.of(Item.of(Row.of(Placeholders.error(failure))));
+            case Loadable.Loaded<T>(T loaded)
+            when itemRows.isEmpty() ->
+                empty.map(text -> List.of(Item.of(Row.of(Seg.styled(text, Theme.Classes.DIM)))))
+                        .getOrElse(itemRows);
+            case Loadable.Loaded<T>(T loaded) -> itemRows;
+        };
+        if (!shown.exists(previous -> previous == value)) {
+            Option<T> before = shown.flatMap(Loadable::toOption);
+            shown = Option.of(value);
+            show(rows);
+            before.forEach(previous ->
+                    value.toOption().forEach(after -> list.selected(reselect.apply(previous, after, selectedIndex()))));
+            if (list.selected() >= rows.size()) {
+                list.selected(Math.max(0, rows.size() - 1));
+            }
+            count = value.toOption().map(loaded -> itemRows.size());
+        } else if (!rows.equals(shownItems)) {
+            // The rows can depend on more than the value, e.g. on the time.
+            show(rows);
+        }
+        shownItems = rows;
+        // Only the list has its scrollbar on the right border: a line above it keeps the width inside it.
+        Element bordered = BorderBar.of(list);
+        Element content = above.<Element>map(line -> new PasteTarget(column(line, bordered), list.id(), paste))
+                .getOrElse(bordered);
+        return Pane.bordered(title, content, focused, selectedIndex(), count);
+    }
+
+    private void show(List<Item> rows) {
+        elements = rows.map(item -> new KnownHeight(Lazy.of(() -> item.row().element()), item.height()));
+        list.elements(elements.toJavaArray(StyledElement[]::new));
+    }
+
+    /**
+     * A left click highlights the row clicked on, as moving to it with the keys does; the app has already
+     * given the list the focus. The list keeps where it is scrolled to to itself, and the rows it no longer draws
+     * still have the area they were last drawn in, but the highlighted row is always drawn: the clicked row is found
+     * from where that one is.
+     */
+    private EventResult click(MouseEvent event) {
+        if (event.kind() != MouseEventKind.PRESS || !event.isLeftButton()) {
+            return EventResult.UNHANDLED;
+        }
+        int selected = selectedIndex();
+        List<Integer> tops = shownItems.map(Item::height).scanLeft(0, Integer::sum);
+        return elements.asPartialFunction()
+                .lift()
+                .apply(selected)
+                .flatMap(element -> Option.of(element.renderedArea()))
+                .map(Rect::top)
+                .map(top -> event.y() - top + tops.get(selected))
+                .map(line -> tops.lastIndexWhere(top -> top <= line))
+                .filter(index -> index >= 0 && index < shownItems.size())
+                .fold(() -> EventResult.UNHANDLED, index -> {
+                    list.selected(index);
+                    return EventResult.HANDLED;
+                });
+    }
+
+    /**
+     * The rows the last render showed, all of them built.
+     */
+    public List<Row> shownRows() {
+        return shownItems.map(Item::row);
+    }
+
+    /**
+     * The index of the currently highlighted row, never negative.
+     */
+    public int selectedIndex() {
+        return Math.max(0, list.selected());
+    }
+
+    /**
+     * Highlights the row at {@code index}.
+     */
+    public void select(int index) {
+        list.selected(index);
+    }
+
+    /**
+     * The item of the highlighted row, once the value is shown; {@code items} are the items of the value, one
+     * per row.
+     */
+    public <E> Option<E> selected(Function<T, List<E>> items) {
+        return shown.flatMap(Loadable::toOption)
+                .map(items)
+                .flatMap(all -> all.asPartialFunction().lift().apply(Math.min(selectedIndex(), all.size() - 1)));
+    }
+
+    /**
+     * Whether the list had the focus at the last render.
+     */
+    boolean focused() {
+        return focused;
+    }
+
+    /**
+     * Sets the dimmed line shown instead of the rows when the loaded value has none.
+     */
+    public void whenEmpty(String text) {
+        whenEmpty(Option.of(text));
+    }
+
+    /**
+     * Sets the dimmed line shown instead of the rows when the loaded value has none, if there is one; else no row
+     * is shown then.
+     */
+    public void whenEmpty(Option<String> text) {
+        empty = text;
+    }
+
+    /**
+     * Sets the text drawn before the highlighted row. The default one indents every row.
+     */
+    public void highlightSymbol(String symbol) {
+        highlightSymbol = symbol;
+    }
+
+    /**
+     * Does what {@code action} makes of the keys the list itself does not use, while it has the focus; it
+     * only uses the navigation keys.
+     */
+    public void onKey(Function<KeyEvent, Option<Runnable>> action) {
+        list.onKeyEvent(PaneKeys.whileFocused(this::focused, action));
+    }
+
+    /**
+     * Where the selection goes when the loaded value changes.
+     */
+    @FunctionalInterface
+    public interface Reselect<T> {
+
+        /**
+         * The selection follows its item, as {@code key} identifies it, when items are added or removed before
+         * it; when it is gone, the selection stays where it was.
+         */
+        static <E, K> Reselect<List<E>> following(Function<E, K> key) {
+            return (previous, next, selected) -> previous.asPartialFunction()
+                    .lift()
+                    .apply(selected)
+                    .map(key)
+                    .map(item ->
+                            next.indexWhere(candidate -> key.apply(candidate).equals(item)))
+                    .filter(index -> index >= 0)
+                    .getOrElse(selected);
+        }
+
+        /**
+         * @param selected the index selected in {@code previous}
+         * @return the index to select in {@code next}
+         */
+        int apply(T previous, T next, int selected);
+    }
+
+    /**
+     * An item of the list: a row, which an item made {@link #later} only builds once it is drawn, or asked for.
+     */
+    public sealed interface Item permits Ready, Later {
+
+        /**
+         * The item of {@code row}, built already.
+         */
+        static Item of(Row row) {
+            return new Ready(row);
+        }
+
+        /**
+         * The item whose row {@code row} builds the first time it is drawn or asked for, which then is kept.
+         *
+         * @param height the number of lines the row takes, known before it is built
+         */
+        static Item later(int height, Supplier<Row> row) {
+            return new Later(height, Lazy.of(row));
+        }
+
+        /**
+         * The number of lines the row takes.
+         */
+        int height();
+
+        /**
+         * The row, built now if it was not yet.
+         */
+        Row row();
+    }
+
+    /**
+     * An item whose row was built when it was made: equal to another of an equal row.
+     */
+    record Ready(Row row) implements Item {
+
+        @Override
+        public int height() {
+            return row.height();
+        }
+    }
+
+    /**
+     * An item that builds its row once it is drawn. It is only equal to itself: comparing rows would build them all.
+     */
+    static final class Later implements Item {
+
+        private final int height;
+        private final Lazy<Row> row;
+
+        Later(int height, Lazy<Row> row) {
+            this.height = height;
+            this.row = row;
+        }
+
+        @Override
+        public int height() {
+            return height;
+        }
+
+        @Override
+        public Row row() {
+            return row.get();
+        }
+    }
+
+    /**
+     * A piece of a row, in a colour of its own when it has one. One that {@code shrinks} is the first to be cut when
+     * its line does not fit, so that the pieces after it stay in view.
+     */
+    public record Seg(String text, Option<String> cssClass, boolean shrinks) {
+
+        Seg(String text, Option<String> cssClass) {
+            this(text, cssClass, false);
+        }
+
+        public static Seg of(String text) {
+            return new Seg(text, Option.none());
+        }
+
+        public static Seg styled(String text, String cssClass) {
+            return new Seg(text, Option.of(cssClass));
+        }
+
+        /**
+         * This piece, the first to be cut when its line does not fit.
+         */
+        public Seg shrinking() {
+            return new Seg(text, cssClass, true);
+        }
+
+        /**
+         * This piece with {@code text} before it.
+         */
+        public Seg prefixed(String text) {
+            return new Seg(text + this.text, cssClass, shrinks);
+        }
+    }
+
+    /**
+     * A row of the list: consecutive pieces, each with its own colour, and maybe a second line below them.
+     */
+    public record Row(List<Seg> segs, Option<List<Seg>> detail) {
+
+        public Row(List<Seg> segs) {
+            this(segs, Option.none());
+        }
+
+        public static Row of(String text) {
+            return new Row(List.of(Seg.of(text)));
+        }
+
+        public static Row of(Seg... segs) {
+            return new Row(List.of(segs));
+        }
+
+        /**
+         * This row with a dimmed line below it, still one item of the list.
+         */
+        public Row withDetail(String line) {
+            return withDetail(List.of(Seg.of(line)));
+        }
+
+        /**
+         * This row with a line of {@code pieces} below it, still one item of the list: the pieces without a colour
+         * of their own dimmed. The pieces of both lines are cut off with an ellipsis when they do not fit.
+         */
+        public Row withDetail(List<Seg> pieces) {
+            return new Row(segs, Option.of(pieces));
+        }
+
+        public String text() {
+            return segs.map(Seg::text).mkString();
+        }
+
+        /**
+         * The text of the line below the row, if it has one.
+         */
+        public Option<String> detailText() {
+            return detail.map(pieces -> pieces.map(Seg::text).mkString());
+        }
+
+        /**
+         * The number of lines the row takes.
+         */
+        public int height() {
+            return detail.isDefined() ? 2 : 1;
+        }
+
+        public StyledElement<?> element() {
+            StyledElement<?> first = line(segs, Option.none(), detail.isDefined());
+            return detail.<StyledElement<?>>map(
+                            pieces -> column(first, line(pieces, Option.of(Theme.Classes.DIM), true)))
+                    .getOrElse(first);
+        }
+
+        /**
+         * The pieces as one line, those without a colour of their own in {@code plain}, if there is one; each cut
+         * off with an ellipsis when it does not fit, if {@code ellipsis}.
+         */
+        private static StyledElement<?> line(List<Seg> pieces, Option<String> plain, boolean ellipsis) {
+            List<StyledElement<?>> texts = pieces.map(seg -> {
+                // Clipped as no style says otherwise, but said so here: TamboUI measures each text of a row it draws
+                // on every frame, and a text without an overflow of its own looks it up in the styles each time.
+                TextElement text = ellipsis
+                        ? Toolkit.text(seg.text()).ellipsis()
+                        : Toolkit.text(seg.text()).overflow(Overflow.CLIP);
+                if (seg.shrinks()) {
+                    // At most as wide as it is, where the others are as wide as they are: a line that does not fit
+                    // takes its columns from this one first.
+                    text.constraint(Constraint.max(TextWidth.of(seg.text())));
+                }
+                return seg.cssClass()
+                        .orElse(plain)
+                        .<StyledElement<?>>map(text::addClass)
+                        .getOrElse(text);
+            });
+            return texts.size() == 1 ? texts.head() : row(texts.toJavaArray(StyledElement[]::new));
+        }
+    }
+}

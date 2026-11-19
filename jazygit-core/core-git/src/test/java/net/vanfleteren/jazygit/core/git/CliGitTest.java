@@ -1,0 +1,2674 @@
+package net.vanfleteren.jazygit.core.git;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import io.vavr.Tuple;
+import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.control.Option;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.concurrent.TimeoutException;
+import net.vanfleteren.jazygit.core.git.branches.CliRemotes;
+import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.git.model.Diffs;
+import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.git.process.GitFailure;
+import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.zeroturnaround.exec.ProcessExecutor;
+import org.zeroturnaround.exec.ProcessResult;
+
+/**
+ * {@link Git} against a real repository changed through the git CLI: every call
+ * reflects the current state of the repository.
+ */
+class CliGitTest {
+
+    private static final RemoteBranch FEATURE_ON_ORIGIN = new RemoteBranch("origin", new BranchName("feature"));
+
+    @TempDir
+    Path repo;
+
+    private Git repository;
+
+    private static List<Branch> withoutTimes(List<Branch> branches) {
+        return branches.map(b -> Fixtures.branch(b.name(), b.current(), b.tip()))
+                .toList();
+    }
+
+    /**
+     * Runs git in {@code dir}, failing the test when it fails; what it printed.
+     */
+    private static String gitIn(Path dir, String... args) throws IOException, InterruptedException, TimeoutException {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
+                "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
+        command.addAll(java.util.List.of(args));
+        ProcessResult result = new ProcessExecutor()
+                .command(command)
+                .directory(dir.toFile())
+                .redirectErrorStream(true)
+                .readOutput(true)
+                .exitValueAny()
+                .execute();
+        assertEquals(
+                0, result.getExitValue(), () -> "git " + String.join(" ", args) + " failed: " + result.outputUTF8());
+        return result.outputUTF8();
+    }
+
+    private static boolean gitSucceedsIn(Path dir, String... args)
+            throws IOException, InterruptedException, TimeoutException {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        return new ProcessExecutor()
+                        .command(command)
+                        .directory(dir.toFile())
+                        .readOutput(true)
+                        .execute()
+                        .getExitValue()
+                == 0;
+    }
+
+    private static boolean gitAvailable() {
+        try {
+            return new ProcessExecutor("git", "--version").execute().getExitValue() == 0;
+        } catch (IOException | TimeoutException e) {
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git("init", "-q", "-b", "main");
+        git("config", "user.name", "Test");
+        git("config", "user.email", "test@example.com");
+        git("config", "commit.gpgsign", "false");
+        Files.writeString(repo.resolve("README.md"), "hello\n");
+        git("add", "README.md");
+        git("commit", "-q", "-m", "Initial commit");
+        repository = CliGit.open(repo).get();
+    }
+
+    /**
+     * Credentials replace the remotes of a {@code Git} with those of the git command line tool, also when its other
+     * roles are stubs, and leave the rest as it was (ADR 69).
+     */
+    @Test
+    void credentialsOnlyReplaceTheRemotes() {
+        Git stub = StubGit.of(repo);
+        Git withCredentials = CliGit.withCredentials(stub, io.vavr.collection.HashMap::empty);
+
+        assertInstanceOf(CliRemotes.class, withCredentials.remotes());
+        assertEquals(stub.withRemotes(withCredentials.remotes()), withCredentials);
+    }
+
+    @Test
+    void openingFailsOutsideARepositoryAndForABareOne(@TempDir Path elsewhere) throws Exception {
+        Path plain = Files.createDirectories(elsewhere.resolve("plain"));
+        Path bare = elsewhere.resolve("bare.git");
+        gitIn(elsewhere, "init", "-q", "--bare", bare.toString());
+
+        assertInstanceOf(GitError.NoWorktree.class, CliGit.open(bare).getLeft());
+        assumeTrue(!gitSucceedsIn(plain, "rev-parse"), "the temporary directory is inside a repository");
+        assertEquals(new GitError.NotARepository(plain), CliGit.open(plain).getLeft());
+    }
+
+    @Test
+    void initMakesARepositoryWithoutCommitsAndOpensIt(@TempDir Path elsewhere) throws Exception {
+        Path plain = Files.createDirectories(elsewhere.resolve("plain"));
+        assumeTrue(!gitSucceedsIn(plain, "rev-parse"), "the temporary directory is inside a repository");
+
+        Git initialised = CliGit.init(plain).get();
+
+        assertEquals(plain.toRealPath(), initialised.worktree().toRealPath());
+        assertEquals(Option.none(), initialised.status().read().get().headCommit());
+        assertTrue(gitSucceedsIn(plain, "rev-parse", "--git-dir"));
+    }
+
+    @Test
+    void initFailsWhereGitCannotMakeARepository(@TempDir Path elsewhere) {
+        Path missing = elsewhere.resolve("missing");
+
+        assertTrue(CliGit.init(missing).isLeft());
+    }
+
+    @Test
+    void statusFollowsTheWorkingTree() throws Exception {
+        assertEquals(List.of(), repository.status().read().get().files());
+
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+        assertEquals(
+                List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
+                repository.status().read().get().files());
+
+        git("add", "new.txt");
+        assertEquals(
+                List.of(Fixtures.fileEntry("new.txt", ChangeType.ADDED)),
+                repository.status().read().get().files());
+    }
+
+    @Test
+    void commitsAndStatusFollowNewCommits() throws Exception {
+        Sha headBefore = repository.status().read().get().headCommit().get();
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+        git("add", "new.txt");
+        git("commit", "-q", "-m", "Second commit");
+
+        RepoStatus status = repository.status().read().get();
+        assertNotEquals(headBefore, status.headCommit().get());
+        assertEquals(List.of(), status.files());
+        List<Commit> commits = commits().get();
+        assertEquals("Second commit", commits.get(0).message());
+        assertEquals(status.headCommit().get(), commits.get(0).sha());
+    }
+
+    @Test
+    void searchFindsTheCommitsOfHeadThatMatchEveryFilter() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "token\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Fix login", "-m", "with a token");
+        Files.writeString(repo.resolve("b.txt"), "other\n");
+        git("add", "b.txt");
+        git("-c", "user.name=Jane Doe", "commit", "-q", "-m", "fix logout");
+        Files.writeString(repo.resolve("a.txt"), "no more\n");
+        git("commit", "-q", "-am", "Remove it");
+
+        assertEquals(List.of("fix logout", "Fix login"), messages("fix"));
+        assertEquals(List.of("Fix login"), messages("Fix"));
+        assertEquals(List.of("Fix login"), messages("a token"));
+        assertEquals(List.of("fix logout"), messages("author:jane"));
+        assertEquals(List.of("fix logout"), messages("fix author:jane"));
+        assertEquals(List.of("fix logout", "Fix login"), messages("fix author:jane author:test"));
+        assertEquals(List.of("Remove it", "Fix login"), messages("path:a.txt"));
+        assertEquals(List.of("Remove it", "fix logout", "Fix login"), messages("path:a.txt path:b.txt"));
+        assertEquals(List.of("Remove it", "Fix login"), messages("-S:token"));
+        assertEquals(List.of("Fix login"), messages("fix -S:token"));
+        // Not as a regular expression.
+        assertEquals(List.of(), messages("f.x"));
+        assertEquals(List.of(), messages("nothing like it"));
+    }
+
+    @Test
+    void thePickaxeIgnoresCaseUnlessItHasAnUppercaseLetter() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "Token\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Add it");
+
+        assertEquals(List.of("Add it"), messages("-S:token"));
+        assertEquals(List.of("Add it"), messages("-S:Token"));
+        assertEquals(List.of(), messages("-S:TOKEN"));
+    }
+
+    @Test
+    void searchFindsNothingWithoutCommits(@TempDir Path empty) throws Exception {
+        gitIn(empty, "init", "-q");
+
+        assertEquals(
+                List.of(),
+                CliGit.open(empty)
+                        .get()
+                        .history()
+                        .search(CommitQuery.parse("x"))
+                        .get());
+    }
+
+    private List<String> messages(String query) {
+        return repository
+                .history()
+                .search(CommitQuery.parse(query))
+                .get()
+                .map(Commit::message)
+                .toList();
+    }
+
+    @Test
+    void branchesFollowExternalChanges() throws Exception {
+        Sha head = repository.status().read().get().headCommit().get();
+        assertEquals(
+                List.of(Fixtures.branch(new BranchName("main"), true, head)),
+                withoutTimes(repository.branches().all().map(AllBranches::local).get()));
+
+        git("branch", "foo");
+        assertEquals(
+                List.of(
+                        Fixtures.branch(new BranchName("main"), true, head),
+                        Fixtures.branch(new BranchName("foo"), false, head)),
+                withoutTimes(repository.branches().all().map(AllBranches::local).get()));
+
+        git("checkout", "-q", "foo");
+        assertEquals(
+                List.of(
+                        Fixtures.branch(new BranchName("foo"), true, head),
+                        Fixtures.branch(new BranchName("main"), false, head)),
+                withoutTimes(repository.branches().all().map(AllBranches::local).get()));
+
+        git("commit", "-q", "--allow-empty", "-m", "Move foo");
+        Sha moved = repository.status().read().get().headCommit().get();
+        assertEquals(
+                List.of(
+                        Fixtures.branch(new BranchName("foo"), true, moved),
+                        Fixtures.branch(new BranchName("main"), false, head)),
+                withoutTimes(repository.branches().all().map(AllBranches::local).get()));
+    }
+
+    @Test
+    void branchesListTheCurrentOneFirstThenTheMostRecentlyCommittedTo() throws Exception {
+        commitAt("main", "2020-01-02T00:00:00Z");
+        for (String branch : List.of("old", "newest", "middle")) {
+            gitAt("2020-01-02T12:00:00Z", "branch", branch, "main");
+        }
+        commitAt("old", "2020-01-03T00:00:00Z");
+        commitAt("middle", "2020-01-05T00:00:00Z");
+        commitAt("newest", "2020-01-09T00:00:00Z");
+
+        assertEquals(
+                List.of("main", "newest", "middle", "old"),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::local)
+                        .get()
+                        .map(b -> b.name().value())
+                        .toList());
+
+        git("checkout", "-q", "old");
+        assertEquals(
+                List.of("old", "newest", "middle", "main"),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::local)
+                        .get()
+                        .map(b -> b.name().value())
+                        .toList());
+    }
+
+    @Test
+    void aNewBranchIsAsOldAsWhenItWasMadeUntilItIsCommittedTo() throws Exception {
+        commitAt("main", "2020-01-02T00:00:00Z");
+        gitAt("2020-01-02T12:00:00Z", "branch", "old", "main");
+        commitAt("old", "2020-01-03T00:00:00Z");
+        gitAt("2020-01-04T00:00:00Z", "branch", "fresh", "main");
+
+        List<Branch> branches =
+                repository.branches().all().map(AllBranches::local).get();
+        assertEquals(
+                List.of(
+                        Tuple.of("main", Instant.parse("2020-01-02T00:00:00Z")),
+                        Tuple.of("fresh", Instant.parse("2020-01-04T00:00:00Z")),
+                        Tuple.of("old", Instant.parse("2020-01-03T00:00:00Z"))),
+                branches.map(b -> Tuple.of(b.name().value(), b.lastActivity())));
+
+        commitAt("fresh", "2020-01-05T00:00:00Z");
+        assertEquals(
+                Instant.parse("2020-01-05T00:00:00Z"),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::local)
+                        .get()
+                        .find(b -> b.name().value().equals("fresh"))
+                        .get()
+                        .lastActivity());
+    }
+
+    @Test
+    void aBranchCheckedOutFromARemoteIsAsOldAsItsTipButOneStartedFromAnotherIsNew() throws Exception {
+        commitAt("main", "2020-01-02T00:00:00Z");
+        gitAt("2020-01-02T12:00:00Z", "branch", "colleague", "main");
+        commitAt("colleague", "2020-01-03T00:00:00Z");
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "origin", "main", "colleague");
+        git("branch", "-D", "colleague");
+        git("fetch", "-q", "origin");
+
+        repository
+                .checkout()
+                .newTrackingBranch(new BranchName("colleague"), new RemoteBranch("origin", new BranchName("colleague")))
+                .get();
+        gitAt("2020-01-04T00:00:00Z", "checkout", "-q", "-b", "feature", "origin/main");
+
+        Map<String, Branch> branches = repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .toMap(b -> Tuple.of(b.name().value(), b));
+        assertEquals(
+                Instant.parse("2020-01-03T00:00:00Z"),
+                branches.get("colleague").get().lastActivity());
+        assertEquals(
+                Option.of(new RemoteBranch("origin", new BranchName("main"))),
+                branches.get("feature").get().remoteUpstream());
+        assertEquals(
+                Instant.parse("2020-01-04T00:00:00Z"),
+                branches.get("feature").get().lastActivity());
+    }
+
+    private void commitAt(String branch, String date) throws Exception {
+        git("checkout", "-q", branch);
+        gitAt(date, "commit", "-q", "--allow-empty", "-m", "at " + date);
+        git("checkout", "-q", "main");
+    }
+
+    /**
+     * Runs git with {@code date} as the time of the commits it makes and of the reflog entries it writes.
+     */
+    private void gitAt(String date, String... args) throws Exception {
+        gitWithEnvironment("GIT_COMMITTER_DATE", date, args);
+    }
+
+    @Test
+    void logShowsOnlyTheCommitsOfTheBranch() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side subject", "-m", "Side detail\nsecond line");
+        git("checkout", "-q", "main");
+
+        List<Commit> side = repository
+                .history()
+                .log(new BranchRef.Local(new BranchName("side")))
+                .get();
+        assertEquals(
+                List.of("Side subject", "Initial commit"),
+                side.map(Commit::message).toList());
+        assertEquals("Side detail\nsecond line", side.get(0).body());
+        assertEquals("", side.get(1).body());
+        assertEquals("Test", side.get(0).authorName());
+        assertEquals("test@example.com", side.get(0).authorEmail());
+
+        assertEquals(
+                List.of("Initial commit"),
+                repository
+                        .history()
+                        .log(new BranchRef.Local(new BranchName("main")))
+                        .get()
+                        .map(Commit::message)
+                        .toList());
+        assertEquals(
+                new GitError.UnknownBranch(new BranchRef.Local(new BranchName("gone"))),
+                repository
+                        .history()
+                        .log(new BranchRef.Local(new BranchName("gone")))
+                        .getLeft());
+    }
+
+    @Test
+    void divergenceListsTheCommitsOnlyOnEitherSide() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("commit", "-q", "--allow-empty", "-m", "Side two");
+        git("checkout", "-q", "main");
+        git("commit", "-q", "--allow-empty", "-m", "Main one");
+        BranchRef side = new BranchRef.Local(new BranchName("side"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        Divergence divergence = repository.history().divergence(side, main).get();
+
+        assertEquals(
+                List.of("Side two", "Side one"), divergence.ahead().commits().map(Commit::message));
+        assertEquals(2, divergence.ahead().count());
+        assertEquals(List.of("Main one"), divergence.behind().commits().map(Commit::message));
+        assertEquals(1, divergence.behind().count());
+        BranchRef gone = new BranchRef.Local(new BranchName("gone"));
+        assertEquals(
+                new GitError.UnknownBranch(gone),
+                repository.history().divergence(side, gone).getLeft());
+    }
+
+    @Test
+    void onlyTheBranchNamedExactlyIsCompared() throws Exception {
+        // for-each-ref refs/heads/side also lists refs/heads/side/x: that is no branch side.
+        git("branch", "side/x");
+        BranchRef side = new BranchRef.Local(new BranchName("side"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        assertEquals(
+                new GitError.UnknownBranch(side),
+                repository.history().divergence(side, main).getLeft());
+        assertEquals(
+                new GitError.UnknownBranch(side),
+                repository.history().firstSubject(main, side).getLeft());
+        assertEquals(
+                0,
+                repository
+                        .history()
+                        .divergence(new BranchRef.Local(new BranchName("side/x")), main)
+                        .get()
+                        .ahead()
+                        .count());
+    }
+
+    @Test
+    void aheadListsTheCommitsNotOnTheBase() throws Exception {
+        Sha fork = repository.status().read().get().headCommit().get();
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("checkout", "-q", "main");
+        git("commit", "-q", "--allow-empty", "-m", "Main one");
+        git("checkout", "-q", "side");
+        git("merge", "-q", "--no-edit", "main");
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+        Sha head = repository.status().read().get().headCommit().get();
+
+        Ahead ahead = repository.history().ahead(head, main, tip("main")).get();
+
+        assertEquals(main, ahead.base());
+        assertEquals(
+                List.of("Merge branch 'main' into side", "Side one"),
+                ahead.commits().map(Commit::message));
+        assertFalse(ahead.more());
+        assertTrue(ahead.forkPoint().exists(commit -> commit.message().equals("Main one")));
+        assertFalse(ahead.shared(ahead.commits().head().sha()));
+        assertTrue(ahead.shared(fork));
+        assertEquals(head, ahead.tip());
+    }
+
+    @Test
+    void theForkPointOfABranchMadeFromItsBaseIsTheCommitItWasMadeFrom() throws Exception {
+        Sha fork = tip("main");
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("checkout", "-q", "main");
+        git("commit", "-q", "--allow-empty", "-m", "Main one");
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        Ahead ahead = repository.history().ahead(tip("side"), main, tip("main")).get();
+
+        assertEquals(List.of("Side one"), ahead.commits().map(Commit::message));
+        assertEquals(Option.of(fork), ahead.forkPoint().map(Commit::sha));
+    }
+
+    @Test
+    void aBranchWithNothingAheadOfItsBaseForksAtItsOwnTip() throws Exception {
+        Sha fork = tip("main");
+        git("branch", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Main one");
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        Ahead ahead = repository.history().ahead(fork, main, tip("main")).get();
+
+        assertEquals(List.empty(), ahead.commits());
+        assertFalse(ahead.more());
+        assertEquals(Option.of(fork), ahead.forkPoint().map(Commit::sha));
+    }
+
+    @Test
+    void historiesThatNeverMetHaveNoForkPoint() throws Exception {
+        git("checkout", "-q", "--orphan", "other");
+        git("commit", "-q", "--allow-empty", "-m", "Other root");
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        Ahead ahead = repository
+                .history()
+                .ahead(repository.status().read().get().headCommit().get(), main, tip("main"))
+                .get();
+
+        assertEquals(List.of("Other root"), ahead.commits().map(Commit::message));
+        assertEquals(Option.none(), ahead.forkPoint());
+    }
+
+    @Test
+    void theFirstSubjectIsThatOfTheOldestCommitNotOnTheBase() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one", "-m", "Its body");
+        git("commit", "-q", "--allow-empty", "-m", "Side two");
+        BranchRef side = new BranchRef.Local(new BranchName("side"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        assertEquals(
+                Option.of("Side one"),
+                repository.history().firstSubject(side, main).get());
+        assertEquals(
+                Option.none(), repository.history().firstSubject(main, side).get());
+    }
+
+    @Test
+    void countsTheCommitsNotOnTheBaseUpToTheMaximum() throws Exception {
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("commit", "-q", "--allow-empty", "-m", "Side two");
+        git("commit", "-q", "--allow-empty", "-m", "Side three");
+        BranchRef side = new BranchRef.Local(new BranchName("side"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        assertEquals(3, repository.history().countNotOn(side, main, 1000).get());
+        assertEquals(2, repository.history().countNotOn(side, main, 2).get());
+        assertEquals(0, repository.history().countNotOn(main, side, 1000).get());
+    }
+
+    @Test
+    void reportsRepositoryNameAndCurrentBranch() throws Exception {
+        assertEquals(repo.getFileName().toString(), repository.repositoryName());
+        assertEquals(
+                Option.of(new BranchName("main")),
+                repository.status().read().get().head().branchName());
+
+        git("checkout", "-q", "-b", "feature");
+        assertEquals(
+                Option.of(new BranchName("feature")),
+                repository.status().read().get().head().branchName());
+
+        git("checkout", "-q", "--detach");
+        assertEquals(
+                new Head.Detached(commits().get().get(0).sha()),
+                repository.status().read().get().head());
+    }
+
+    @Test
+    void checkoutSwitchesBranchAndCarriesOverLocalChanges() throws Exception {
+        git("branch", "feature");
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+
+        repository.checkout().branch(new BranchName("feature")).get();
+
+        assertEquals(
+                Option.of(new BranchName("feature")),
+                repository.status().read().get().head().branchName());
+        assertEquals(
+                List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
+                repository.status().read().get().files());
+    }
+
+    @Test
+    void mutatingCommandsReturnTheCommandLinesTheyRan() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        Files.writeString(repo.resolve("new file.txt"), "new\n");
+
+        assertEquals(
+                List.of("git add -- README.md 'new file.txt'"),
+                repository
+                        .index()
+                        .stage(List.of("README.md", "new file.txt"))
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git rm --cached --force --quiet -- 'new file.txt'"),
+                repository.index().unstageNew(List.of("new file.txt")).get().map(ExecutedCommand::line));
+        assertEquals(List.of(), repository.index().unstage(List.of()).get());
+        assertEquals(
+                List.of("git commit --quiet -m 'a summary' -m details"),
+                repository
+                        .commits()
+                        .commit(new CommitMessage("a summary", "details"))
+                        .get()
+                        .map(ExecutedCommand::line));
+
+        git("branch", "feature");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        assertEquals(
+                List.of("git stash push --quiet", "git checkout --quiet feature --", "git stash pop --index --quiet"),
+                repository
+                        .checkout()
+                        .branchWithStash(new BranchName("feature"))
+                        .get()
+                        .map(ExecutedCommand::line));
+    }
+
+    @Test
+    void commitsKnowTheirParentsAndMergesAreFollowedByTheirBranch() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
+
+        List<Commit> commits = commits().get();
+
+        assertEquals(
+                List.of("Merge feature", "Feature work", "Main work"),
+                commits.map(Commit::message).take(3));
+        assertEquals(2, commits.head().parents().size());
+        assertTrue(commits.head().isMerge());
+    }
+
+    @Test
+    void rewordChangesTheMessageOfAnyCommitAndKeepsTheRest() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        List<Commit> before = commits().get();
+
+        List<String> executed = repository
+                .commits()
+                .reword(before.get(1).sha(), new CommitMessage("Second, better", "because"))
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertEquals(
+                List.of("git -c rebase.abbreviateCommands=false -c core.abbrev=no -c commit.cleanup=whitespace"
+                        + " rebase --interactive --autostash --keep-empty --rebase-merges "
+                        + before.get(1).sha().value() + "^"),
+                executed);
+        List<Commit> after = commits().get();
+        assertEquals(
+                List.of("Third", "Second, better", "Initial commit"),
+                after.map(Commit::message).toList());
+        assertEquals("because", after.get(1).body());
+        assertEquals("hello\n".replace("hello", "dirty"), Files.readString(repo.resolve("README.md")));
+        assertTrue(Files.exists(repo.resolve("a.txt")) && Files.exists(repo.resolve("b.txt")));
+    }
+
+    @Test
+    void rebaseReplaysTheCheckedOutBranchOntoAnotherOne() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("checkout", "-q", "feature");
+
+        List<String> executed =
+                repository.integrate().rebase(new BranchName("main")).get().map(ExecutedCommand::line);
+
+        assertEquals(
+                List.of("git rebase --autostash --keep-empty --rebase-merges --no-autosquash refs/heads/main"),
+                executed);
+        assertEquals(
+                List.of("Feature work", "Main work", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void rebaseOntoABranchIgnoresATagWithTheSameName() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        git("tag", "other", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("branch", "other", "main");
+        git("checkout", "-q", "feature");
+
+        repository.integrate().rebase(new BranchName("other")).get();
+
+        assertEquals(
+                List.of("Feature work", "Main work", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void rebaseKeepsMergesAndFixupCommitsInPlace() throws Exception {
+        git("config", "rebase.autoSquash", "true");
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "-b", "side");
+        Files.writeString(repo.resolve("s.txt"), "s\n");
+        git("add", "s.txt");
+        git("commit", "-q", "-m", "Side work");
+        git("checkout", "-q", "feature");
+        Files.writeString(repo.resolve("g.txt"), "g\n");
+        git("add", "g.txt");
+        git("commit", "-q", "-m", "More feature work");
+        git("merge", "-q", "--no-ff", "-m", "Merge side", "side");
+        Files.writeString(repo.resolve("f2.txt"), "f2\n");
+        git("add", "f2.txt");
+        git("commit", "-q", "-m", "fixup! Feature work");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("checkout", "-q", "feature");
+
+        repository.integrate().rebase(new BranchName("main")).get();
+
+        List<Commit> after = commits().get();
+        assertEquals(List.of("fixup! Feature work", "Merge side"), after.take(2).map(Commit::message));
+        assertTrue(after.get(1).isMerge());
+        assertTrue(after.exists(c -> c.message().equals("Main work")));
+    }
+
+    @Test
+    void aConflictingRebaseIsLeftForTheUserToResolve() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("README.md"), "feature\n");
+        git("commit", "-q", "-am", "Feature edit");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("README.md"), "main\n");
+        git("commit", "-q", "-am", "Main edit");
+        git("checkout", "-q", "feature");
+
+        GitFailure failure =
+                repository.integrate().rebase(new BranchName("main")).getLeft();
+
+        GitError.StoppedOnConflicts stopped = assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
+        assertInstanceOf(InProgress.Rebasing.class, stopped.inProgress().get());
+        assertEquals(1, stopped.conflicts());
+        assertTrue(failure.commands().forAll(command -> !command.line().contains("--abort")));
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+        assertTrue(Files.readString(repo.resolve("README.md")).contains("<<<<<<<"));
+    }
+
+    @Test
+    void aRebaseThatStopsHalfWayOtherThanOnConflictsIsAborted() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("x.txt"), "x\n");
+        git("add", "x.txt");
+        git("commit", "-q", "-m", "Add x");
+        git("rm", "-q", "x.txt");
+        git("commit", "-q", "-m", "Remove x");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("checkout", "-q", "feature");
+        // Picking "Add x" would overwrite it, so the rebase stops there, without conflicts.
+        Files.writeString(repo.resolve("x.txt"), "untracked\n");
+
+        GitFailure failure =
+                repository.integrate().rebase(new BranchName("main")).getLeft();
+
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
+        assertEquals(List.of("git rebase --abort"), failure.commands().tail().map(ExecutedCommand::line));
+        assertEquals(Option.none(), failure.cleanupFailed());
+        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+        assertEquals(
+                List.of("Remove x", "Add x", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void aRebaseThatDoesNotStartIsNotAborted() {
+        GitFailure failure =
+                repository.integrate().rebase(new BranchName("nope")).getLeft();
+
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
+        assertEquals(1, failure.commands().size(), failure.commands().toString());
+        assertEquals(Option.none(), failure.cleanupFailed());
+    }
+
+    @Test
+    void cherryPickCopiesACommitOntoTheCheckedOutBranch() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        Sha picked = commits().get().head().sha();
+        git("checkout", "-q", "main");
+
+        List<String> executed = repository.integrate().cherryPick(picked).get().map(ExecutedCommand::line);
+
+        assertEquals(List.of("git cherry-pick " + picked.value()), executed);
+        assertEquals(
+                List.of("Feature work", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertEquals("f\n", Files.readString(repo.resolve("f.txt")));
+    }
+
+    @Test
+    void aConflictingCherryPickIsLeftForTheUserToResolve() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("README.md"), "feature\n");
+        git("commit", "-q", "-am", "Feature edit");
+        Sha picked = commits().get().head().sha();
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("README.md"), "main\n");
+        git("commit", "-q", "-am", "Main edit");
+
+        GitFailure failure = repository.integrate().cherryPick(picked).getLeft();
+
+        assertEquals(
+                new GitError.StoppedOnConflicts(Option.of(new InProgress.CherryPicking(picked)), 1), failure.error());
+        assertEquals(
+                List.of("git cherry-pick " + picked.value()), failure.commands().map(ExecutedCommand::line));
+        assertTrue(gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "CHERRY_PICK_HEAD"));
+    }
+
+    @Test
+    void aCherryPickThatChangesNothingIsAborted() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        Sha picked = commits().get().head().sha();
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Same work");
+
+        assertInstanceOf(
+                GitError.CommandFailed.class,
+                repository.integrate().cherryPick(picked).getLeft().error());
+
+        assertEquals(
+                List.of("Same work", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "CHERRY_PICK_HEAD"));
+    }
+
+    @Test
+    void aCherryPickThatDoesNotStartIsNotAborted() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        Sha picked = commits().get().head().sha();
+        git("checkout", "-q", "main");
+        // Picking it would overwrite it, so git refuses before it starts.
+        Files.writeString(repo.resolve("f.txt"), "untracked\n");
+
+        GitFailure failure = repository.integrate().cherryPick(picked).getLeft();
+
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
+        assertEquals(
+                List.of("git cherry-pick " + picked.value()), failure.commands().map(ExecutedCommand::line));
+        assertEquals(Option.none(), failure.cleanupFailed());
+    }
+
+    @Test
+    void revertCommitsTheInverseOfACommitWithGitsMessage() throws Exception {
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Add f");
+        Commit reverted = commits().get().head();
+
+        List<String> executed = repository.integrate().revert(reverted).get().map(ExecutedCommand::line);
+
+        assertEquals(List.of("git revert --no-edit " + reverted.sha().value()), executed);
+        Commit revert = commits().get().head();
+        assertEquals("Revert \"Add f\"", revert.message());
+        assertEquals("This reverts commit " + reverted.sha().value() + ".", revert.body());
+        assertTrue(!Files.exists(repo.resolve("f.txt")));
+    }
+
+    @Test
+    void aMergeIsRevertedAgainstItsFirstParent() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
+        Commit merge = commits().get().head();
+
+        List<String> executed = repository.integrate().revert(merge).get().map(ExecutedCommand::line);
+
+        assertEquals(List.of("git revert --no-edit -m 1 " + merge.sha().value()), executed);
+        assertEquals("Revert \"Merge feature\"", commits().get().head().message());
+        assertTrue(!Files.exists(repo.resolve("f.txt")));
+    }
+
+    @Test
+    void aConflictingRevertIsLeftForTheUserToResolve() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "first\n");
+        git("commit", "-q", "-am", "First edit");
+        Commit reverted = commits().get().head();
+        Files.writeString(repo.resolve("README.md"), "second\n");
+        git("commit", "-q", "-am", "Second edit");
+
+        GitFailure failure = repository.integrate().revert(reverted).getLeft();
+
+        assertEquals(
+                new GitError.StoppedOnConflicts(Option.of(new InProgress.Reverting(reverted.sha())), 1),
+                failure.error());
+        assertTrue(failure.commands().forAll(command -> !command.line().contains("--abort")));
+        assertTrue(gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "REVERT_HEAD"));
+    }
+
+    @Test
+    void aRevertThatChangesNothingFailsAndLeavesTheBranchAlone() throws Exception {
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Add f");
+        Commit reverted = commits().get().head();
+        git("rm", "-q", "f.txt");
+        git("commit", "-q", "-m", "Remove f");
+
+        assertInstanceOf(
+                GitError.CommandFailed.class,
+                repository.integrate().revert(reverted).getLeft().error());
+
+        assertEquals(
+                List.of("Remove f", "Add f", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "REVERT_HEAD"));
+    }
+
+    @Test
+    void squashFoldsACommitIntoItsParentAndKeepsBothMessages() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third");
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+        git("commit", "-q", "-m", "Fourth");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        List<Commit> before = commits().get();
+
+        List<String> executed = repository
+                .commits()
+                .squash(before.get(1).sha(), SquashMode.SQUASH)
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertTrue(
+                executed.head()
+                        .startsWith("git -c rebase.abbreviateCommands=false -c core.abbrev=no"
+                                + " rebase --interactive --autostash --keep-empty --rebase-merges"),
+                executed.toString());
+        List<Commit> after = commits().get();
+        assertEquals(
+                List.of("Fourth", "Second", "Initial commit"),
+                after.map(Commit::message).toList());
+        assertTrue(after.get(1).body().contains("Third"), after.get(1).body());
+        assertTrue(Files.exists(repo.resolve("b.txt")));
+        assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void squashOfTheFirstCommitsChildRebasesFromTheRoot() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+
+        repository
+                .commits()
+                .squash(commits().get().head().sha(), SquashMode.SQUASH)
+                .get();
+
+        assertEquals(
+                List.of("Initial commit"), commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void fixupFoldsACommitIntoItsParentAndKeepsOnlyTheParentsMessage() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third", "-m", "Third body");
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+        git("commit", "-q", "-m", "Fourth");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        List<Commit> before = commits().get();
+
+        repository.commits().squash(before.get(1).sha(), SquashMode.FIXUP).get();
+
+        List<Commit> after = commits().get();
+        assertEquals(
+                List.of("Fourth", "Second", "Initial commit"),
+                after.map(Commit::message).toList());
+        assertEquals("", after.get(1).body().strip());
+        assertTrue(Files.exists(repo.resolve("b.txt")));
+        assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void fixupKeepingTheMessageTakesTheCommitsMessageAndTheParentsAuthor() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "--author", "Other <other@example.com>", "-m", "Third", "-m", "Third body");
+        List<Commit> before = commits().get();
+
+        repository
+                .commits()
+                .squash(before.head().sha(), SquashMode.FIXUP_KEEP_MESSAGE)
+                .get();
+
+        List<Commit> after = commits().get();
+        assertEquals(
+                List.of("Third", "Initial commit"), after.map(Commit::message).toList());
+        assertEquals("Third body", after.head().body().strip());
+        assertEquals("Test", after.head().authorName());
+        assertTrue(Files.exists(repo.resolve("a.txt")));
+        assertTrue(Files.exists(repo.resolve("b.txt")));
+    }
+
+    @Test
+    void eachResetMovesTheBranchAndKeepsOrDiscardsTheChangesAsItsModeSays() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Sha second = commits().get().head().sha();
+        Sha initial = commits().get().get(1).sha();
+
+        List<String> executed = repository
+                .commits()
+                .reset(new ResetTarget.ToCommit(initial), ResetMode.SOFT)
+                .get()
+                .map(ExecutedCommand::line);
+        assertEquals(List.of("git reset --quiet --soft " + initial.value()), executed);
+        assertEquals(
+                List.of("Initial commit"), commits().get().map(Commit::message).toList());
+        assertTrue(repository
+                .status()
+                .read()
+                .get()
+                .files()
+                .exists(file -> file.path().equals("a.txt") && file.staged()));
+
+        git("reset", "-q", "--hard", second.value());
+        repository
+                .commits()
+                .reset(new ResetTarget.ToCommit(initial), ResetMode.MIXED)
+                .get();
+        assertTrue(repository
+                .status()
+                .read()
+                .get()
+                .files()
+                .exists(file -> file.path().equals("a.txt") && !file.staged()));
+
+        git("reset", "-q", "--hard", second.value());
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        Files.writeString(repo.resolve("untracked.txt"), "kept\n");
+        repository
+                .commits()
+                .reset(new ResetTarget.ToCommit(initial), ResetMode.HARD)
+                .get();
+        assertEquals(
+                List.of("Initial commit"), commits().get().map(Commit::message).toList());
+        assertTrue(Files.notExists(repo.resolve("a.txt")));
+        assertEquals("hello\n", Files.readString(repo.resolve("README.md")));
+        assertEquals("kept\n", Files.readString(repo.resolve("untracked.txt")));
+    }
+
+    @Test
+    void aResetOntoTheUpstreamMovesTheBranchToWhatWasLastFetched() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "-u", "origin", "main");
+        Sha pushed = commits().get().head().sha();
+        git("commit", "-q", "--allow-empty", "-m", "local");
+        RemoteBranch upstream = new RemoteBranch("origin", new BranchName("main"));
+
+        List<String> executed = repository
+                .commits()
+                .reset(new ResetTarget.ToUpstream(new BranchRef.Remote(upstream)), ResetMode.HARD)
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertEquals(List.of("git reset --quiet --hard refs/remotes/origin/main"), executed);
+        assertEquals(pushed, commits().get().head().sha());
+    }
+
+    @Test
+    void rewordOfTheFirstCommitRebasesFromTheRoot() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+
+        repository
+                .commits()
+                .reword(commits().get().get(1).sha(), new CommitMessage("Start", ""))
+                .get();
+
+        assertEquals(
+                List.of("Second", "Start"), commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void rewordOfALastCommitAmendsIt() throws Exception {
+        List<String> executed = repository
+                .commits()
+                .reword(commits().get().head().sha(), new CommitMessage("Renamed", ""))
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertEquals(1, executed.size());
+        assertTrue(executed.head().startsWith("git commit"), executed.toString());
+        assertEquals("Renamed", commits().get().head().message());
+    }
+
+    @Test
+    void rewordOfAMergeKeepsItsParents() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
+        Files.writeString(repo.resolve("after.txt"), "x\n");
+        git("add", "after.txt");
+        git("commit", "-q", "-m", "After merge");
+        Commit merge = commits().get().get(1);
+
+        repository
+                .commits()
+                .reword(merge.sha(), new CommitMessage("Merged the feature", ""))
+                .get();
+
+        List<Commit> after = commits().get();
+        assertEquals("After merge", after.head().message());
+        assertEquals("Merged the feature", after.get(1).message());
+        assertTrue(after.get(1).isMerge());
+    }
+
+    @Test
+    void rewordFindsTheCommitWhateverTheTodoListLooksLike() throws Exception {
+        git("config", "rebase.abbreviateCommands", "true");
+        git("config", "core.abbrev", "5");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        Commit initial = commits().get().get(1);
+
+        repository
+                .commits()
+                .reword(initial.sha(), new CommitMessage("First", ""))
+                .get();
+
+        assertEquals(
+                List.of("Second", "First"), commits().get().map(Commit::message).toList());
+    }
+
+    @Test
+    void rewordKeepsLinesThatStartWithAHash() throws Exception {
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        Commit initial = commits().get().get(1);
+
+        repository
+                .commits()
+                .reword(initial.sha(), new CommitMessage("#12 First", "#13 too"))
+                .get();
+
+        Commit reworded = commits().get().get(1);
+        assertEquals("#12 First", reworded.message());
+        assertEquals("#13 too", reworded.body());
+    }
+
+    @Test
+    void dropRemovesACommitAndKeepsTheOnesAfterIt() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        List<Commit> before = commits().get();
+
+        List<String> executed =
+                repository.commits().drop(before.get(1).sha()).get().map(ExecutedCommand::line);
+
+        assertTrue(
+                executed.head()
+                        .startsWith("git -c rebase.abbreviateCommands=false -c core.abbrev=no"
+                                + " rebase --interactive --autostash --keep-empty --rebase-merges"),
+                executed.toString());
+        assertEquals(
+                List.of("Third", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertTrue(Files.notExists(repo.resolve("a.txt")));
+        assertTrue(Files.exists(repo.resolve("b.txt")));
+        assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void dropOfTheFirstCommitRebasesFromTheRoot() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Sha root = commits().get().last().sha();
+
+        repository.commits().drop(root).get();
+
+        assertEquals(List.of("Second"), commits().get().map(Commit::message).toList());
+        assertTrue(Files.notExists(repo.resolve("README.md")));
+    }
+
+    @Test
+    void aConflictingDropIsLeftForTheUserToResolve() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "second\n");
+        git("commit", "-q", "-am", "Second");
+        Files.writeString(repo.resolve("README.md"), "third\n");
+        git("commit", "-q", "-am", "Third");
+        Sha second = commits().get().get(1).sha();
+
+        assertInstanceOf(
+                GitError.StoppedOnConflicts.class,
+                repository.commits().drop(second).getLeft().error());
+
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+        assertTrue(Files.readString(repo.resolve("README.md")).contains("<<<<<<<"));
+    }
+
+    @Test
+    void amendCommitAddsTheStagedChangesToAnEarlierCommitAndLeavesTheUnstagedOnes() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Third");
+        Files.writeString(repo.resolve("a.txt"), "amended\n");
+        git("add", "a.txt");
+        Files.writeString(repo.resolve("README.md"), "dirty\n");
+        Sha second = commits().get().get(1).sha();
+
+        repository.commits().amend(second).get();
+
+        assertEquals(
+                List.of("Third", "Second", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertEquals("amended\n", git("show", "HEAD~1:a.txt"));
+        assertEquals("", git("diff", "--cached", "--name-only"));
+        assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void amendCommitOfTheLastCommitAmendsIt() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("a.txt"), "amended\n");
+        git("add", "a.txt");
+
+        List<String> executed =
+                repository.commits().amend(commits().get().head().sha()).get().map(ExecutedCommand::line);
+
+        assertEquals(List.of("git commit --quiet --amend --no-edit"), executed);
+        assertEquals(
+                List.of("Second", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertEquals("amended\n", git("show", "HEAD:a.txt"));
+    }
+
+    @Test
+    void amendCommitOfTheFirstCommitRebasesFromTheRoot() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Files.writeString(repo.resolve("root.txt"), "root\n");
+        git("add", "root.txt");
+        Sha root = commits().get().last().sha();
+
+        repository.commits().amend(root).get();
+
+        assertEquals(
+                List.of("Second", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertEquals("root\n", git("show", "HEAD~1:root.txt"));
+    }
+
+    @Test
+    void amendCommitLeavesOtherFixupCommitsAlone() throws Exception {
+        Files.writeString(repo.resolve("a.txt"), "a\n");
+        git("add", "a.txt");
+        git("commit", "-q", "-m", "Second");
+        Sha second = commits().get().head().sha();
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "--fixup=" + second.value());
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+
+        repository.commits().amend(second).get();
+
+        assertEquals(
+                List.of("fixup! Second", "Second", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertEquals("c\n", git("show", "HEAD~1:c.txt"));
+    }
+
+    @Test
+    void aConflictingAmendCommitIsLeftForTheUserToResolve() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "second\n");
+        git("commit", "-q", "-am", "Second");
+        Files.writeString(repo.resolve("README.md"), "third\n");
+        git("commit", "-q", "-am", "Third");
+        Sha initial = commits().get().last().sha();
+        Files.writeString(repo.resolve("README.md"), "staged\n");
+        git("add", "README.md");
+
+        assertInstanceOf(
+                GitError.StoppedOnConflicts.class,
+                repository.commits().amend(initial).getLeft().error());
+
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
+    void amendCommitOfACommitThatIsNotInTheLogFailsAndKeepsTheChangesStaged() throws Exception {
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        git("checkout", "-q", "-b", "elsewhere");
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+        git("commit", "-q", "-m", "Elsewhere");
+        Sha elsewhere = commits().get().head().sha();
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("b.txt"), "staged\n");
+        git("add", "b.txt");
+
+        assertTrue(repository.commits().amend(elsewhere).isLeft());
+
+        assertEquals(
+                List.of("Second", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertEquals("b.txt\n", git("diff", "--cached", "--name-only"));
+        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
+    void squashOfACommitThatIsNotInTheLogFailsInsteadOfDoingNothing() throws Exception {
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        git("checkout", "-q", "-b", "elsewhere");
+        Files.writeString(repo.resolve("c.txt"), "c\n");
+        git("add", "c.txt");
+        git("commit", "-q", "-m", "Elsewhere");
+        Sha elsewhere = commits().get().head().sha();
+        git("checkout", "-q", "main");
+
+        assertTrue(repository.commits().squash(elsewhere, SquashMode.SQUASH).isLeft());
+
+        assertEquals(
+                List.of("Second", "Initial commit"),
+                commits().get().map(Commit::message).toList());
+        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
+    void aRebaseTheUserStoppedIsLeftAlone() throws Exception {
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-q", "-m", "Second");
+        git("branch", "other");
+        gitWithEnvironment("GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick/edit/'", "rebase", "-i", "--root");
+
+        GitFailure failure =
+                repository.integrate().rebase(new BranchName("other")).getLeft();
+
+        assertTrue(
+                failure.commands().forAll(command -> !command.line().contains("--abort")),
+                failure.commands().toString());
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
+    void aFailingRebaseIsAbortedAndReported() throws Exception {
+        GitFailure failure = repository
+                .commits()
+                .reword(new Sha("0123456789012345678901234567890123456789"), new CommitMessage("x", ""))
+                .getLeft();
+
+        assertTrue(
+                failure.commands().head().line().startsWith("git rev-list"),
+                failure.commands().toString());
+        assertEquals("Initial commit", commits().get().head().message());
+        assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
+    void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
+        assertEquals(
+                List.of("git branch --delete -- missing"),
+                repository
+                        .remotes()
+                        .deleteBranch(
+                                new BranchName("missing"),
+                                new RemoteBranch("origin", new BranchName("missing")),
+                                DeleteScope.LOCAL)
+                        .getLeft()
+                        .commands()
+                        .map(ExecutedCommand::line));
+        assertEquals(
+                List.of("git add -- missing.txt"),
+                repository
+                        .index()
+                        .stage(List.of("missing.txt"))
+                        .getLeft()
+                        .commands()
+                        .map(ExecutedCommand::line));
+    }
+
+    @Test
+    void checkoutFailsWithGitsExplanationWhenLocalChangesWouldBeOverwritten() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("README.md"), "changed on feature\n");
+        git("commit", "-q", "-am", "Change README");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("README.md"), "local change\n");
+
+        GitError error = repository
+                .checkout()
+                .branch(new BranchName("feature"))
+                .getLeft()
+                .error();
+
+        assertTrue(
+                error instanceof GitError.LocalChanges(String explanation)
+                        && explanation.contains("would be overwritten"),
+                error.toString());
+        assertEquals(
+                Option.of(new BranchName("main")),
+                repository.status().read().get().head().branchName());
+    }
+
+    @Test
+    void branchesCarryTheTimeOfTheirLastCommit() {
+        assertEquals(
+                commits().get().get(0).authorTime().getEpochSecond(),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::local)
+                        .get()
+                        .get(0)
+                        .tipTime()
+                        .getEpochSecond());
+    }
+
+    @Test
+    void checkoutNewBranchStartsAtTheGivenBranchAndSwitchesToIt() throws Exception {
+        git("checkout", "-q", "-b", "other");
+        Files.writeString(repo.resolve("other.txt"), "other\n");
+        git("add", "other.txt");
+        git("commit", "-q", "-m", "On other");
+        git("checkout", "-q", "main");
+
+        repository
+                .checkout()
+                .newBranch(
+                        new BranchName("topic"),
+                        new BranchRef.Local(new BranchName("other")),
+                        Option.of(new BranchName("other")))
+                .get();
+
+        assertEquals(
+                Option.of(new BranchName("topic")),
+                repository.status().read().get().head().branchName());
+        assertTrue(Files.exists(repo.resolve("other.txt")));
+        assertEquals(
+                Option.of(new BranchName("other")),
+                repository.branches().parent(new BranchName("topic")).get());
+    }
+
+    @Test
+    void aBranchMadeFromARemoteBranchFollowsItAsGitIsConfiguredTo() throws Exception {
+        git("remote", "add", "origin", repo.toString());
+        git("update-ref", "refs/remotes/origin/develop", "HEAD");
+        Revision develop = new RemoteBranch("origin", new BranchName("develop")).tracking();
+
+        git("config", "branch.autoSetupMerge", "true");
+        repository
+                .checkout()
+                .newBranch(new BranchName("follows"), develop, Option.none())
+                .get();
+        git("config", "branch.autoSetupMerge", "false");
+        repository
+                .checkout()
+                .newBranch(new BranchName("alone"), develop, Option.none())
+                .get();
+
+        assertTrue(gitSucceedsIn(repo, "config", "--get", "branch.follows.merge"));
+        assertFalse(gitSucceedsIn(repo, "config", "--get", "branch.alone.merge"));
+    }
+
+    @Test
+    void whatTheUserTypedIsResolvedToTheCommitItNamesAndNeverReadAsAnOption() throws Exception {
+        git("tag", "v1");
+        Sha head = repository.checkout().resolve("HEAD").get().get();
+
+        assertEquals(Option.of(head), repository.checkout().resolve("v1").get());
+        assertEquals(Option.none(), repository.checkout().resolve("--all").get());
+        assertEquals(Option.none(), repository.checkout().resolve("nowhere").get());
+    }
+
+    @Test
+    void aBranchMadeWithoutAParentHasNoneRecorded() throws Exception {
+        repository
+                .checkout()
+                .newBranch(new BranchName("topic"), new BranchRef.Local(new BranchName("main")), Option.none())
+                .get();
+
+        assertEquals(
+                Option.none(),
+                repository.branches().parent(new BranchName("topic")).get());
+    }
+
+    @Test
+    void failingToRecordTheParentStillMakesTheBranch() throws Exception {
+        // git config cannot write the configuration while another writer holds its lock.
+        Files.writeString(repo.resolve(".git/config.lock"), "");
+
+        var made = repository
+                .checkout()
+                .newBranch(
+                        new BranchName("topic"),
+                        new BranchRef.Local(new BranchName("main")),
+                        Option.of(new BranchName("main")));
+
+        assertTrue(made.isRight());
+        assertEquals(2, made.get().size());
+        assertEquals(
+                Option.of(new BranchName("topic")),
+                repository.status().read().get().head().branchName());
+        assertEquals(
+                Option.none(),
+                repository.branches().parent(new BranchName("topic")).get());
+    }
+
+    @Test
+    void aBranchThatFollowsALocalOneIsReadSoAndFastForwardedToIt() throws Exception {
+        git("branch", "-q", "--track", "topic", "main");
+        git("commit", "-q", "--allow-empty", "-m", "Ahead");
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        Branch topic = repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new BranchName("topic")))
+                .get();
+        assertEquals(Option.of(new Upstream(main, 0, 1)), topic.upstream());
+        assertEquals(Option.none(), topic.remoteUpstream());
+
+        assertEquals(
+                List.of("git fetch . refs/heads/main:refs/heads/topic"),
+                repository
+                        .remotes()
+                        .fastForward(new BranchName("topic"), main)
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertEquals(
+                0,
+                repository
+                        .history()
+                        .countNotOn(main, new BranchRef.Local(new BranchName("topic")), 1000)
+                        .get());
+    }
+
+    @Test
+    void aBranchThatFollowsADeletedLocalOneIsPushedToOrigin() throws Exception {
+        git("branch", "-q", "--track", "topic", "main");
+        git("checkout", "-q", "-b", "other");
+        git("branch", "-q", "-D", "main");
+
+        Branch topic = repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new BranchName("topic")))
+                .get();
+        assertEquals(Option.of(new BranchRef.Local(new BranchName("main"))), topic.goneUpstream());
+        assertEquals(Option.of("main"), topic.goneUpstream().map(BranchRef::name));
+        assertEquals(new RemoteBranch("origin", new BranchName("topic")), topic.pushTarget());
+    }
+
+    @Test
+    void aBranchThatFollowsALocalOneIsOnOriginUnderItsOwnName() throws Exception {
+        git("branch", "-q", "--track", "topic", "main");
+        git("update-ref", "refs/remotes/origin/topic", "HEAD");
+
+        Branch topic = repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new BranchName("topic")))
+                .get();
+        assertEquals(new RemoteBranch("origin", new BranchName("topic")), topic.pushTarget());
+        assertTrue(topic.hasRemote());
+    }
+
+    @Test
+    void branchesKnowWhetherTheyExistOnTheirRemote() throws Exception {
+        git("branch", "pushed");
+        git("branch", "local-only");
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "origin", "pushed");
+
+        assertEquals(
+                List.of(true, false),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::local)
+                        .get()
+                        .filter(b -> !b.name().value().equals("main"))
+                        .sorted(java.util.Comparator.comparing(
+                                        (Branch b) -> b.name().value())
+                                .reversed())
+                        .map(Branch::hasRemote));
+    }
+
+    @Test
+    void remoteBranchesCanBeListedLoggedAndCheckedOutAsABranchThatFollowsThem() throws Exception {
+        git("branch", "feature");
+        git("checkout", "-q", "feature");
+        git("commit", "-q", "--allow-empty", "-m", "On feature");
+        git("checkout", "-q", "main");
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "origin", "main", "feature");
+        git("remote", "set-head", "origin", "main");
+        git("branch", "-D", "feature");
+        RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
+
+        assertEquals(
+                List.of("origin/feature", "origin/main"),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::remote)
+                        .get()
+                        .map(ref -> ref.branch().shortName())
+                        .sorted());
+        assertEquals(
+                List.of("On feature", "Initial commit"),
+                repository
+                        .history()
+                        .log(new BranchRef.Remote(feature))
+                        .get()
+                        .map(Commit::message)
+                        .toList());
+
+        repository
+                .checkout()
+                .newTrackingBranch(new BranchName("feature"), feature)
+                .get();
+
+        Branch local = repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new BranchName("feature")))
+                .get();
+        assertTrue(local.current());
+        assertEquals(Option.of(new BranchRef.Remote(feature)), local.upstream().map(upstream -> upstream.branch()));
+    }
+
+    @Test
+    void branchesCountTheCommitsNotYetPushedAndNotYetPulled() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "-u", "origin", "main");
+        assertEquals(List.of(0, 0), counts("main"));
+
+        git("commit", "-q", "--allow-empty", "-m", "local one");
+        git("commit", "-q", "--allow-empty", "-m", "local two");
+        assertEquals(List.of(2, 0), counts("main"));
+
+        // Someone else pushes a commit; fetching makes it incoming.
+        java.nio.file.Path other = Files.createTempDirectory("other");
+        gitIn(other, "clone", "-q", bare.toString(), "clone");
+        gitIn(other.resolve("clone"), "commit", "-q", "--allow-empty", "-m", "theirs");
+        gitIn(other.resolve("clone"), "push", "-q", "origin", "main");
+        git("fetch", "-q", "origin");
+        assertEquals(List.of(2, 1), counts("main"));
+    }
+
+    @Test
+    void pushPublishesABranchWithoutUpstreamAndThenSendsNewCommits() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+
+        repository
+                .remotes()
+                .pushSettingUpstream(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")))
+                .get();
+        assertEquals(List.of(0, 0), counts("main"));
+        assertTrue(repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .filter(b -> b.name().equals(new BranchName("main")))
+                .forAll(Branch::hasRemote));
+
+        git("commit", "-q", "--allow-empty", "-m", "local");
+        assertEquals(List.of(1, 0), counts("main"));
+        repository
+                .remotes()
+                .push(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")), PushMode.FAST_FORWARD)
+                .get();
+        assertEquals(List.of(0, 0), counts("main"));
+    }
+
+    @Test
+    void withPushDefaultUpstreamAnUpstreamUnderAnotherNameIsWherePushingAndDeletingGo() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "mirror", bare.toString());
+        git("config", "push.default", "upstream");
+
+        assertEquals(
+                List.of("git push --set-upstream mirror refs/heads/main:refs/heads/shared"),
+                repository
+                        .remotes()
+                        .pushSettingUpstream(
+                                new BranchName("main"), new RemoteBranch("mirror", new BranchName("shared")))
+                        .get()
+                        .map(ExecutedCommand::line));
+        Branch main = repository.branches().all().map(AllBranches::local).get().head();
+        assertEquals(
+                Option.of(
+                        new Upstream(new BranchRef.Remote(new RemoteBranch("mirror", new BranchName("shared"))), 0, 0)),
+                main.upstream());
+        assertTrue(main.hasRemote());
+
+        git("commit", "-q", "--allow-empty", "-m", "local");
+        assertEquals(
+                List.of("git push mirror refs/heads/main:refs/heads/shared"),
+                repository
+                        .remotes()
+                        .push(new BranchName("main"), main.pushTarget(), PushMode.FAST_FORWARD)
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertEquals(List.of(0, 0), counts("main"));
+
+        assertEquals(
+                List.of("git push mirror --delete refs/heads/shared"),
+                repository
+                        .remotes()
+                        .deleteBranch(new BranchName("main"), main.pushTarget(), DeleteScope.REMOTE)
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertTrue(gitSucceedsIn(repo, "fetch", "-q", "--prune", "mirror"));
+        assertEquals(
+                Option.none(),
+                repository.branches().all().map(AllBranches::local).get().head().upstream());
+    }
+
+    @Test
+    void deletingABranchOnItsRemoteLeavesATagOfTheSameNameThere() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "origin", "HEAD:refs/heads/feature", "HEAD:refs/tags/feature");
+
+        repository
+                .remotes()
+                .deleteRemoteBranch(new RemoteBranch("origin", new BranchName("feature")))
+                .get();
+
+        assertFalse(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/feature"));
+        assertTrue(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/tags/feature"));
+    }
+
+    @Test
+    void renamingTheUpstreamMovesItOnTheRemoteWithoutTheUnpushedCommits() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
+        git("branch", "feature");
+        repository
+                .remotes()
+                .pushSettingUpstream(new BranchName("feature"), feature)
+                .get();
+        Sha pushed = tip("feature");
+        git("checkout", "-q", "feature");
+        git("commit", "-q", "--allow-empty", "-m", "unpushed");
+        git("branch", "--move", "feature", "topic");
+
+        assertEquals(
+                List.of(
+                        "git fetch --prune --no-write-fetch-head origin",
+                        "git push --atomic --force-with-lease=refs/heads/topic: --force-with-lease=refs/heads/feature"
+                                + " origin refs/remotes/origin/feature:refs/heads/topic :refs/heads/feature",
+                        "git config --local branch.topic.merge refs/heads/topic"),
+                repository
+                        .remotes()
+                        .renameUpstream(new BranchName("topic"), feature)
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertFalse(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/feature"));
+        assertEquals(
+                pushed.value(), gitIn(bare, "rev-parse", "refs/heads/topic").strip());
+        assertEquals(
+                Option.of(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("topic")))),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::local)
+                        .get()
+                        .find(branch -> branch.name().value().equals("topic"))
+                        .flatMap(Branch::upstream)
+                        .map(Upstream::branch));
+        assertEquals(List.of(1, 0), counts("topic"));
+    }
+
+    @Test
+    void renamingTheUpstreamOntoABranchOnTheRemoteChangesNothing() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
+        git("branch", "feature");
+        repository
+                .remotes()
+                .pushSettingUpstream(new BranchName("feature"), feature)
+                .get();
+        git("commit", "-q", "--allow-empty", "-m", "other");
+        git("push", "-q", "origin", "HEAD:refs/heads/topic");
+        git("branch", "--move", "feature", "topic");
+
+        GitFailure failure = repository
+                .remotes()
+                .renameUpstream(new BranchName("topic"), feature)
+                .getLeft();
+
+        assertTrue(
+                failure.error() instanceof GitError.UpstreamNotRenamed(var upstream, var newName, var cause)
+                        && upstream.equals(feature)
+                        && newName.value().equals("topic"),
+                failure.error()::toString);
+        assertTrue(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/feature"));
+        assertEquals(
+                tip("main").value(),
+                gitIn(bare, "rev-parse", "refs/heads/topic").strip());
+        assertEquals(
+                "refs/heads/feature",
+                git("config", "--get", "branch.topic.merge").strip());
+    }
+
+    @Test
+    void renamingTheUpstreamOntoABranchOnTheRemoteAtTheSameCommitRenamesIt() throws Exception {
+        java.nio.file.Path bare = renamedFeature();
+        git("push", "-q", "origin", "refs/remotes/origin/feature:refs/heads/topic");
+
+        repository
+                .remotes()
+                .renameUpstream(new BranchName("topic"), FEATURE_ON_ORIGIN)
+                .get();
+
+        assertFalse(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/feature"));
+        assertEquals(
+                gitIn(bare, "rev-parse", "refs/heads/main").strip(),
+                gitIn(bare, "rev-parse", "refs/heads/topic").strip());
+        assertEquals(
+                "refs/heads/topic", git("config", "--get", "branch.topic.merge").strip());
+    }
+
+    @Test
+    void anUpstreamGoneFromTheRemoteIsSaidToBeGoneAndNothingIsPushed() throws Exception {
+        java.nio.file.Path bare = renamedFeature();
+        gitIn(bare, "branch", "--delete", "--force", "feature");
+
+        GitFailure failure = repository
+                .remotes()
+                .renameUpstream(new BranchName("topic"), FEATURE_ON_ORIGIN)
+                .getLeft();
+
+        assertEquals(new GitError.UpstreamNotOnRemote(FEATURE_ON_ORIGIN, new BranchName("topic")), failure.error());
+        assertEquals(
+                List.of("git fetch --prune --no-write-fetch-head origin"),
+                failure.commands().map(ExecutedCommand::line));
+        assertFalse(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/topic"));
+    }
+
+    @Test
+    void whenThePushMakesNoRemoteTrackingBranchTheBranchStillFollowsTheRenamedOne() throws Exception {
+        java.nio.file.Path bare = renamedFeature();
+        // A remote that only fetches feature, as a clone with --single-branch does for its branch.
+        git("config", "remote.origin.fetch", "+refs/heads/feature:refs/remotes/origin/feature");
+
+        repository
+                .remotes()
+                .renameUpstream(new BranchName("topic"), FEATURE_ON_ORIGIN)
+                .get();
+
+        assertFalse(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/feature"));
+        assertTrue(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/topic"));
+        assertEquals("origin", git("config", "--get", "branch.topic.remote").strip());
+        assertEquals(
+                "refs/heads/topic", git("config", "--get", "branch.topic.merge").strip());
+        assertEquals(
+                bare.toString(), git("config", "--get", "remote.origin.url").strip());
+    }
+
+    /**
+     * A bare remote {@code origin} with {@code feature}, which a local branch followed and was renamed from to
+     * {@code topic}, which still follows it.
+     */
+    private java.nio.file.Path renamedFeature() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "origin", "main");
+        git("branch", "feature");
+        repository
+                .remotes()
+                .pushSettingUpstream(new BranchName("feature"), FEATURE_ON_ORIGIN)
+                .get();
+        git("branch", "--move", "feature", "topic");
+        return bare;
+    }
+
+    @Test
+    void aTagOfTheSameNameDoesNotKeepABranchFromBeingPushed() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch main = new RemoteBranch("origin", new BranchName("main"));
+        repository.remotes().pushSettingUpstream(new BranchName("main"), main).get();
+        git("tag", "main", "HEAD");
+        git("commit", "-q", "--allow-empty", "-m", "local");
+
+        assertEquals(
+                List.of("git push origin refs/heads/main:refs/heads/main"),
+                repository
+                        .remotes()
+                        .push(new BranchName("main"), main, PushMode.FAST_FORWARD)
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertEquals(List.of(0, 0), counts("main"));
+    }
+
+    @Test
+    void withPushDefaultSimpleAnUpstreamUnderAnotherNameIsNotPushedTo() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "mirror", bare.toString());
+        git("config", "push.default", "simple");
+        RemoteBranch shared = new RemoteBranch("mirror", new BranchName("shared"));
+        repository.remotes().pushSettingUpstream(new BranchName("main"), shared).get();
+        git("commit", "-q", "--allow-empty", "-m", "local");
+
+        GitFailure refused = repository
+                .remotes()
+                .push(new BranchName("main"), shared, PushMode.FAST_FORWARD)
+                .getLeft();
+
+        assertEquals(new GitError.PushRefused("simple", shared), refused.error());
+        assertEquals(List.of(), refused.commands());
+        assertEquals(List.of(1, 0), counts("main"));
+    }
+
+    @Test
+    void withPushDefaultNothingNoBranchIsPushedWithoutBeingToldWhere() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch main = new RemoteBranch("origin", new BranchName("main"));
+        repository.remotes().pushSettingUpstream(new BranchName("main"), main).get();
+        git("config", "push.default", "nothing");
+        git("commit", "-q", "--allow-empty", "-m", "local");
+
+        assertEquals(
+                new GitError.PushRefused("nothing", main),
+                repository
+                        .remotes()
+                        .push(new BranchName("main"), main, PushMode.FAST_FORWARD)
+                        .getLeft()
+                        .error());
+        assertEquals(List.of(1, 0), counts("main"));
+    }
+
+    @Test
+    void aPushDefaultGitDoesNotKnowPushesNothing() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch main = new RemoteBranch("origin", new BranchName("main"));
+        repository.remotes().pushSettingUpstream(new BranchName("main"), main).get();
+        git("commit", "-q", "--allow-empty", "-m", "local");
+        // Git fails most commands on a value it does not know, so it is set last.
+        git("config", "push.default", "sideways");
+
+        assertEquals(
+                new GitError.PushRefused("sideways", main),
+                repository
+                        .remotes()
+                        .push(new BranchName("main"), main, PushMode.FAST_FORWARD)
+                        .getLeft()
+                        .error());
+    }
+
+    @Test
+    void aFailedPushSetsNoUpstream() throws Exception {
+        assertTrue(repository
+                .remotes()
+                .pushSettingUpstream(new BranchName("main"), new RemoteBranch("nowhere", new BranchName("main")))
+                .isLeft());
+
+        assertEquals(
+                Option.none(),
+                repository.branches().all().map(AllBranches::local).get().head().upstream());
+        assertFalse(gitSucceedsIn(repo, "config", "--get", "branch.main.merge"));
+    }
+
+    @Test
+    void aRewrittenBranchOnlyPushesWithForceWithLease() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "-u", "origin", "main");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+        git("push", "-q", "origin", "main");
+
+        // The commit pushed is amended here.
+        git("commit", "-q", "--amend", "--allow-empty", "-m", "ours, amended");
+        assertEquals(List.of(1, 1), counts("main"));
+
+        assertTrue(repository
+                .remotes()
+                .push(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")), PushMode.FAST_FORWARD)
+                .isLeft());
+
+        repository
+                .remotes()
+                .push(
+                        new BranchName("main"),
+                        new RemoteBranch("origin", new BranchName("main")),
+                        PushMode.FORCE_WITH_LEASE)
+                .get();
+        git("fetch", "-q", "origin");
+        assertEquals(List.of(0, 0), counts("main"));
+    }
+
+    @Test
+    void aForcePushDoesNotDropWhatSomeoneElsePushedOnceItWasFetched() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "-u", "origin", "main");
+
+        // The remote gets a commit that this repository fetches, while the local branch gets one of its own: the
+        // lease holds, as origin/main is where the remote is, but the branch never had that commit.
+        java.nio.file.Path other = Files.createTempDirectory("other");
+        gitIn(other, "clone", "-q", bare.toString(), "clone");
+        gitIn(other.resolve("clone"), "commit", "-q", "--allow-empty", "-m", "theirs");
+        gitIn(other.resolve("clone"), "push", "-q", "origin", "main");
+        git("fetch", "-q", "origin");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+        assertEquals(List.of(1, 1), counts("main"));
+
+        assertTrue(repository
+                .remotes()
+                .push(
+                        new BranchName("main"),
+                        new RemoteBranch("origin", new BranchName("main")),
+                        PushMode.FORCE_WITH_LEASE)
+                .isLeft());
+        git("fetch", "-q", "origin");
+        assertEquals(List.of(1, 1), counts("main"));
+    }
+
+    /**
+     * A remote that main is pushed to and tracks, and a clone of it in which "theirs" is pushed to
+     * {@code branch}; the repository has fetched that commit.
+     */
+    private Path remoteWithTheirCommitOn(String branch) throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "-u", "origin", "main");
+        java.nio.file.Path clone = Files.createTempDirectory("other").resolve("clone");
+        gitIn(clone.getParent(), "clone", "-q", bare.toString(), "clone");
+        gitIn(clone, "checkout", "-q", "-B", branch);
+        Files.writeString(clone.resolve("README.md"), "theirs\n");
+        gitIn(clone, "commit", "-q", "-am", "theirs");
+        gitIn(clone, "push", "-q", "origin", branch);
+        git("fetch", "-q", "origin");
+        return clone;
+    }
+
+    @Test
+    void pullMergesTheUpstreamWithoutAskingForAMessage() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("config", "pull.rebase", "false");
+        git("config", "pull.ff", "true");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+        assertEquals(List.of(1, 1), counts("main"));
+
+        assertEquals(
+                List.of("git pull --no-edit"), repository.remotes().pull().get().map(ExecutedCommand::line));
+
+        assertEquals(List.of(2, 0), counts("main"));
+        assertEquals("theirs\n", Files.readString(repo.resolve("README.md")));
+    }
+
+    @Test
+    void aPullThatConflictsIsLeftForTheUserToResolve() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("config", "pull.rebase", "false");
+        git("config", "pull.ff", "true");
+        Files.writeString(repo.resolve("README.md"), "ours\n");
+        git("commit", "-q", "-am", "ours");
+
+        GitFailure failure = repository.remotes().pull().getLeft();
+
+        assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
+        assertEquals(List.of("git pull --no-edit"), failure.commands().map(ExecutedCommand::line));
+        assertTrue(gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "MERGE_HEAD"));
+    }
+
+    @Test
+    void aRebasingPullThatConflictsIsLeftForTheUserToResolve() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("config", "pull.rebase", "true");
+        Files.writeString(repo.resolve("README.md"), "ours\n");
+        git("commit", "-q", "-am", "ours");
+
+        GitFailure failure = repository.remotes().pull().getLeft();
+
+        assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
+        assertEquals(List.of("git pull --no-edit"), failure.commands().map(ExecutedCommand::line));
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
+    void fastForwardMovesABranchThatIsNotCheckedOutToItsUpstream() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("checkout", "-q", "-b", "other");
+        assertEquals(List.of(0, 1), counts("main"));
+
+        assertEquals(
+                List.of("git fetch origin refs/heads/main:refs/heads/main"),
+                repository
+                        .remotes()
+                        .fastForward(
+                                new BranchName("main"),
+                                new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))))
+                        .get()
+                        .map(ExecutedCommand::line));
+
+        assertEquals(List.of(0, 0), counts("main"));
+    }
+
+    @Test
+    void fastForwardRefusesABranchThatHasDiverged() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+        git("checkout", "-q", "-b", "other");
+
+        assertTrue(repository
+                .remotes()
+                .fastForward(
+                        new BranchName("main"),
+                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))))
+                .isLeft());
+        assertEquals(List.of(1, 1), counts("main"));
+    }
+
+    @Test
+    void pushFailsWithGitsExplanationWithoutARemote() {
+        assertTrue(repository
+                .remotes()
+                .push(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")), PushMode.FAST_FORWARD)
+                .isLeft());
+    }
+
+    @Test
+    void branchesWithoutAnUpstreamAreNeitherAheadNorBehind() throws Exception {
+        git("branch", "local-only");
+        assertEquals(List.of(0, 0), counts("local-only"));
+    }
+
+    private List<Integer> counts(String branch) {
+        return repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .filter(b -> b.name().value().equals(branch))
+                .map(b -> List.of(b.ahead(), b.behind()))
+                .head();
+    }
+
+    @Test
+    void theDefaultBranchIsTheOneOriginHeadPointsToElseMainOrMaster() throws Exception {
+        git("branch", "trunk");
+        assertEquals(List.of("main"), defaultBranches());
+
+        git("update-ref", "refs/remotes/origin/trunk", "HEAD");
+        git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk");
+        assertEquals(List.of("trunk"), defaultBranches());
+    }
+
+    private List<String> defaultBranches() {
+        return repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .filter(Branch::isDefault)
+                .map(b -> b.name().value())
+                .toList();
+    }
+
+    @Test
+    void deleteBranchRemovesTheLocalBranch() throws Exception {
+        git("branch", "topic");
+
+        repository
+                .remotes()
+                .deleteBranch(
+                        new BranchName("topic"), new RemoteBranch("origin", new BranchName("topic")), DeleteScope.LOCAL)
+                .get();
+
+        assertEquals(
+                List.of("main"),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::local)
+                        .get()
+                        .map(b -> b.name().value())
+                        .toList());
+    }
+
+    @Test
+    void deleteLocalBranchRefusesAnUnmergedBranchAndKeepsIt() throws Exception {
+        commitOnTopic("topic.txt");
+
+        GitFailure failure =
+                repository.branches().deleteLocal(new BranchName("topic")).getLeft();
+
+        assertInstanceOf(GitError.NotFullyMerged.class, failure.error());
+        assertEquals(List.of("git branch --delete -- topic"), failure.commands().map(ExecutedCommand::line));
+        assertEquals(List.of("main", "topic"), localBranches());
+    }
+
+    @Test
+    void deleteBranchRefusesAnUnmergedBranchLocallyToo() throws Exception {
+        commitOnTopic("topic.txt");
+
+        assertInstanceOf(
+                GitError.NotFullyMerged.class,
+                repository
+                        .remotes()
+                        .deleteBranch(
+                                new BranchName("topic"),
+                                new RemoteBranch("origin", new BranchName("topic")),
+                                DeleteScope.LOCAL)
+                        .getLeft()
+                        .error());
+        assertEquals(List.of("main", "topic"), localBranches());
+    }
+
+    @Test
+    void deleteLocalBranchRemovesAMergedBranch() throws Exception {
+        commitOnTopic("topic.txt");
+        git("merge", "-q", "--ff-only", "topic");
+
+        assertEquals(
+                List.of("git branch --delete -- topic"),
+                repository.branches().deleteLocal(new BranchName("topic")).get().map(ExecutedCommand::line));
+        assertEquals(List.of("main"), localBranches());
+    }
+
+    @Test
+    void forceDeleteLocalBranchRemovesAnUnmergedBranchWithoutTouchingTheRemote() throws Exception {
+        commitOnTopic("topic.txt");
+
+        assertEquals(
+                List.of("git branch --delete --force -- topic"),
+                repository
+                        .branches()
+                        .forceDeleteLocal(new BranchName("topic"))
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertEquals(List.of("main"), localBranches());
+    }
+
+    @Test
+    void countOnlyOnCountsTheCommitsNoOtherRefHas() throws Exception {
+        commitOnTopic("one.txt");
+        Files.writeString(repo.resolve("two.txt"), "two\n");
+        git("checkout", "-q", "topic");
+        git("add", "two.txt");
+        git("commit", "-q", "-m", "Two");
+        git("checkout", "-q", "main");
+
+        assertEquals(
+                2, repository.branches().countOnlyOn(new BranchName("topic")).get());
+
+        git("tag", "kept", "topic~1");
+        assertEquals(
+                1, repository.branches().countOnlyOn(new BranchName("topic")).get());
+
+        git("branch", "other", "topic");
+        assertEquals(
+                0, repository.branches().countOnlyOn(new BranchName("topic")).get());
+    }
+
+    @Test
+    void countOnlyOnIsNoneForABranchWhoseCommitsAreOnARemoteBranch() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        commitOnTopic("topic.txt");
+        git("push", "-q", "origin", "topic");
+
+        assertEquals(
+                0, repository.branches().countOnlyOn(new BranchName("topic")).get());
+        assertInstanceOf(
+                GitError.NotFullyMerged.class,
+                repository
+                        .branches()
+                        .deleteLocal(new BranchName("topic"))
+                        .getLeft()
+                        .error());
+    }
+
+    @Test
+    void deletingTheBranchAndItsRemoteBranchLeavesCommitsOnlyItHadToBeCounted() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        commitOnTopic("topic.txt");
+        git("push", "-q", "origin", "topic");
+        assertEquals(
+                0, repository.branches().countOnlyOn(new BranchName("topic")).get());
+
+        GitFailure failure = repository
+                .remotes()
+                .deleteBranch(
+                        new BranchName("topic"), new RemoteBranch("origin", new BranchName("topic")), DeleteScope.BOTH)
+                .getLeft();
+
+        assertInstanceOf(GitError.NotFullyMerged.class, failure.error());
+        assertEquals(
+                1, repository.branches().countOnlyOn(new BranchName("topic")).get());
+        assertEquals(List.of("main", "topic"), localBranches());
+    }
+
+    /**
+     * Commits {@code file} on a new branch {@code topic}, which main does not have, and checks main out again.
+     */
+    private void commitOnTopic(String file) throws Exception {
+        git("checkout", "-q", "-b", "topic");
+        Files.writeString(repo.resolve(file), file + "\n");
+        git("add", file);
+        git("commit", "-q", "-m", file);
+        git("checkout", "-q", "main");
+    }
+
+    private List<String> localBranches() {
+        return repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .map(b -> b.name().value())
+                .sorted()
+                .toList();
+    }
+
+    @Test
+    void deleteBranchFailsForTheCheckedOutBranch() {
+        assertTrue(repository
+                .remotes()
+                .deleteBranch(
+                        new BranchName("main"), new RemoteBranch("origin", new BranchName("main")), DeleteScope.LOCAL)
+                .isLeft());
+    }
+
+    @Test
+    void renameBranchKeepsItsUpstream() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("branch", "feature");
+        git("push", "-q", "--set-upstream", "origin", "feature");
+
+        assertEquals(
+                List.of("git branch --move -- feature topic"),
+                repository
+                        .branches()
+                        .rename(new BranchName("feature"), new BranchName("topic"))
+                        .get()
+                        .map(command -> command.line()));
+
+        Branch topic = repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new BranchName("topic")))
+                .get();
+        assertEquals(
+                Option.of(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature")))),
+                topic.upstream().map(upstream -> upstream.branch()));
+        assertTrue(repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .find(b -> b.name().equals(new BranchName("feature")))
+                .isEmpty());
+    }
+
+    @Test
+    void renameBranchFailsWhenTheNameIsTaken() throws Exception {
+        git("branch", "feature");
+        git("branch", "topic");
+
+        assertTrue(repository
+                .branches()
+                .rename(new BranchName("feature"), new BranchName("topic"))
+                .isLeft());
+        assertTrue(repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .exists(b -> b.name().equals(new BranchName("feature"))));
+    }
+
+    @Test
+    void renameBranchToAnOptionLookalikeLeavesBothBranchesAsTheyWere() throws Exception {
+        git("branch", "feature");
+        git("checkout", "-q", "feature");
+        String main = git("rev-parse", "main");
+
+        assertTrue(repository
+                .branches()
+                .rename(new BranchName("main"), new BranchName("--force"))
+                .isLeft());
+
+        assertEquals(main, git("rev-parse", "main"));
+        assertTrue(repository
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .exists(b -> b.name().equals(new BranchName("feature"))));
+    }
+
+    @Test
+    void checkoutNewBranchFailsWhenTheNameIsTaken() throws Exception {
+        git("branch", "topic");
+
+        assertTrue(repository
+                .checkout()
+                .newBranch(new BranchName("topic"), new BranchRef.Local(new BranchName("main")), Option.none())
+                .isLeft());
+    }
+
+    @Test
+    void stageAndUnstageMoveFilesInAndOutOfTheIndex() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+
+        repository.index().stage(List.of("README.md", "new.txt")).get();
+        assertEquals(
+                List.of(
+                        new FileEntry("README.md", ChangeType.MODIFIED, true, false),
+                        new FileEntry("new.txt", ChangeType.ADDED, true, false)),
+                repository.status().read().get().files());
+
+        repository.index().unstageNew(List.of("new.txt")).get();
+        repository.index().unstage(List.of("README.md")).get();
+        assertEquals(
+                List.of(
+                        new FileEntry("README.md", ChangeType.MODIFIED, false, true),
+                        new FileEntry("new.txt", ChangeType.UNTRACKED, false, true)),
+                repository.status().read().get().files());
+    }
+
+    @Test
+    void aStagedRenameIsOneEntryThatUnstagesAndDiscardsAsAWhole() throws Exception {
+        Files.move(repo.resolve("README.md"), repo.resolve("READ.md"));
+        assertEquals(
+                List.of(
+                        Fixtures.fileEntry("READ.md", ChangeType.UNTRACKED),
+                        Fixtures.fileEntry("README.md", ChangeType.DELETED)),
+                repository.status().read().get().files());
+
+        repository.index().stage(List.of("READ.md", "README.md")).get();
+        List<FileEntry> files = repository.status().read().get().files();
+        assertEquals(List.of(FileEntry.renamed("READ.md", "README.md", true, false)), files);
+
+        Diffs diffs = repository.diffs().uncommitted(files, DiffOptions.DEFAULT).get();
+        assertTrue(diffs.staged().text().contains("rename from README.md"), diffs.toString());
+
+        repository.index().unstageNew(List.of("READ.md")).get();
+        repository.index().unstage(List.of("README.md")).get();
+        assertEquals(
+                List.of(
+                        Fixtures.fileEntry("READ.md", ChangeType.UNTRACKED),
+                        Fixtures.fileEntry("README.md", ChangeType.DELETED)),
+                repository.status().read().get().files());
+
+        repository.index().stage(List.of("READ.md", "README.md")).get();
+        repository
+                .index()
+                .discard(new DiscardPlan(List.of(), List.of(), List.of("README.md"), List.of("READ.md")))
+                .get();
+        assertEquals(List.of(), repository.status().read().get().files());
+    }
+
+    @Test
+    void diffCombinesStagedUnstagedAndUntrackedChanges() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "staged\n");
+        git("add", "README.md");
+        Files.writeString(repo.resolve("README.md"), "unstaged\n");
+        Files.writeString(repo.resolve("new.txt"), "brand new\n");
+
+        Diffs diffs = repository
+                .diffs()
+                .uncommitted(repository.status().read().get().files(), DiffOptions.DEFAULT)
+                .get();
+
+        assertTrue(diffs.staged().text().contains("-hello"), diffs.toString());
+        assertTrue(diffs.staged().text().contains("+staged"), diffs.toString());
+        assertFalse(diffs.staged().text().contains("unstaged"), diffs.toString());
+        assertTrue(diffs.unstaged().text().contains("-staged"), diffs.toString());
+        assertTrue(diffs.unstaged().text().contains("+unstaged"), diffs.toString());
+        assertTrue(diffs.unstaged().text().contains("+brand new"), diffs.toString());
+        assertEquals(
+                new Diffs("", ""),
+                repository.diffs().uncommitted(List.of(), DiffOptions.DEFAULT).get());
+    }
+
+    @Test
+    void diffOfOneFileLeavesOutTheOthers() throws Exception {
+        Files.writeString(repo.resolve("README.md"), "changed\n");
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+
+        Diffs diffs = repository
+                .diffs()
+                .uncommitted(List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
+                .get();
+
+        assertEquals("", diffs.staged().text());
+        assertTrue(diffs.unstaged().text().contains("+new"), diffs.unstaged().text());
+        assertFalse(
+                diffs.unstaged().text().contains("README.md"), diffs.unstaged().text());
+    }
+
+    @Test
+    void stageFailsWithGitsExplanationForAnUnknownPath() {
+        GitError error =
+                repository.index().stage(List.of("missing.txt")).getLeft().error();
+
+        assertTrue(error instanceof GitError.CommandFailed failed && failed.says("missing.txt"), error.toString());
+    }
+
+    @Test
+    void emptyRepositoryHasNoCommits() throws Exception {
+        Path empty = repo.resolve("empty");
+        Files.createDirectories(empty);
+        gitIn(empty, "init", "-q", "-b", "main");
+        Git emptyRepository = CliGit.open(empty).get();
+        // Without a commit in HEAD there is no log to read (ADR 49).
+        assertEquals(Option.none(), emptyRepository.status().read().get().headCommit());
+        assertEquals(
+                List.of(),
+                emptyRepository.branches().all().map(AllBranches::local).get());
+        // Without a commit there is neither a stash nor a HEAD to fall back to.
+        assertEquals(List.of(), emptyRepository.stashes().list().get());
+    }
+
+    private String git(String... args) throws IOException, InterruptedException, TimeoutException {
+        return gitIn(repo, args);
+    }
+
+    /**
+     * The log of HEAD, from where the status says it is, as the app reads it (ADR 49).
+     */
+    private io.vavr.control.Either<GitError, List<Commit>> commits() {
+        return repository
+                .status()
+                .read()
+                .flatMap(status -> status.headCommit()
+                        .fold(() -> io.vavr.control.Either.right(List.empty()), repository.history()::commits));
+    }
+
+    /**
+     * The commit the local branch {@code branch} is at.
+     */
+    private Sha tip(String branch) throws IOException, InterruptedException, TimeoutException {
+        return new Sha(git("rev-parse", "refs/heads/" + branch).strip());
+    }
+
+    private void gitWithEnvironment(String variable, String value, String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        ProcessResult result = new ProcessExecutor()
+                .command(command)
+                .directory(repo.toFile())
+                .environment(variable, value)
+                .redirectErrorStream(true)
+                .readOutput(true)
+                .exitValueAny()
+                .execute();
+        assertEquals(0, result.getExitValue(), result::outputUTF8);
+    }
+}

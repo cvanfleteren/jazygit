@@ -30,7 +30,8 @@ class ArchitectureTest {
             .resideInAPackage("..jazygit.app.cli..")
             .should()
             .onlyDependOnClassesThat()
-            .resideInAnyPackage("java..", "io.vavr..", "picocli..", "..jazygit.app.cli..", "..jazygit.settings..");
+            .resideInAnyPackage(
+                    "java..", "io.vavr..", "picocli..", "..jazygit.app.cli..", "..jazygit.kernel.settings..");
     /**
      * The parts of the app depend on each other one way only.
      */

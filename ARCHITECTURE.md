@@ -19,7 +19,9 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 ## Modules
 
 The modules are in four groups, a folder each whose pom is the parent of its modules, and a module's name starts with
-its group's (ADR 159). A group uses the groups above it in this table, never one below it.
+its group's (ADR 159). A group uses the groups above it in this table, never one below it. The packages below are
+named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.state`, `git.model` is
+`net.vanfleteren.jazygit.core.git.model`.
 
 | Module | Holds | Depends on |
 |---|---|---|
@@ -50,17 +52,18 @@ its group's (ADR 159). A group uses the groups above it in this table, never one
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, ui, JMH |
 
-Each module of the application has one root package, which its name ends in (`features-github`,
-`net.vanfleteren.jazygit.github`); the core's packages keep their names. The libraries and the core (`jazygit-lib`,
-`jazygit-core`) cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other;
+Each module has one root package, `net.vanfleteren.jazygit.<group>.<name>` after its name `<group>-<name>`
+(`features-github`, `net.vanfleteren.jazygit.features.github`); the app's is `net.vanfleteren.jazygit.app`. The
+libraries and the core (`jazygit-lib`, `jazygit-core`) cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other;
 nor can a module of the application see one above it, nor a group of features one beside it. The compiler stops any such
 dependency. The rules inside the modules (the models are pure, failures are values, updates are functions) are
 ArchUnit tests: `CoreRules` and `ModelRules` for the core, `AppRules` for the application, run by each module's
 `*ArchitectureTest` on its own classes.
 
-Each module of the application that has text has its own bundle, `net/vanfleteren/jazygit/<root>/messages.properties`,
-and its keys start with its root (`github.dialog.…`); `Messages` looks a key up in the bundle its first part names, and
-otherwise in the bundle of the views, whose keys have no prefix.
+Each module of the application that has text has its own bundle, in its root package
+(`net/vanfleteren/jazygit/features/github/messages.properties`), and its keys start with its name without the group
+(`github.dialog.…`); `Messages` looks a key up in the bundle its first part names, in the kernel, the features or the
+app, and otherwise in the bundle of the views, whose keys have no prefix.
 
 ## Packages
 

@@ -2,12 +2,12 @@ package net.vanfleteren.jazygit.bench;
 
 import io.vavr.collection.List;
 import java.util.concurrent.TimeUnit;
-import net.vanfleteren.jazygit.git.model.UnifiedDiff;
-import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
-import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
-import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
-import net.vanfleteren.jazygit.git.model.WordDiff;
-import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
+import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
+import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
+import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.FileDiff;
+import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.core.git.model.WordDiff;
+import net.vanfleteren.jazygit.core.git.model.WordDiff.Segment;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;

@@ -9,7 +9,7 @@ cd "$R"
 git init -q -b main
 git config user.email bench@example.com
 git config user.name Bench
-cp "$SRC/jazygit-kernel/kernel-content/src/main/java/net/vanfleteren/jazygit/content/diff/RichDiff.java" Code.java
+cp "$SRC/jazygit-kernel/kernel-content/src/main/java/net/vanfleteren/jazygit/kernel/content/diff/RichDiff.java" Code.java
 cat "$SRC"/documentation/adr/010[0-9]-*.md > README.md
 python3 -c '
 import json

@@ -4,12 +4,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.state.Freshness;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.TerminalMsg;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.kernel.state.Freshness;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.TerminalMsg;
+import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
 import org.junit.jupiter.api.Test;
 
 class ShownClocksTest {

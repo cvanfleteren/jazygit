@@ -1,0 +1,21 @@
+package net.vanfleteren.jazygit.core.git.model;
+
+/**
+ * The diff of some files as unified diff text, split by where the changes are.
+ *
+ * @param staged   the changes in the index, against HEAD
+ * @param unstaged the changes in the working tree, against the index; untracked files count as entirely added
+ */
+public record Diffs(DiffText staged, DiffText unstaged) {
+
+    /**
+     * Diffs that are shown whole.
+     */
+    public Diffs(String staged, String unstaged) {
+        this(DiffText.of(staged), DiffText.of(unstaged));
+    }
+
+    public boolean isEmpty() {
+        return staged.isBlank() && unstaged.isBlank();
+    }
+}

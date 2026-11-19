@@ -2,9 +2,9 @@ package net.vanfleteren.jazygit.app;
 
 import io.vavr.control.Option;
 import java.util.function.BooleanSupplier;
-import net.vanfleteren.jazygit.state.AreaId;
-import net.vanfleteren.jazygit.state.Focus;
-import net.vanfleteren.jazygit.state.PaneId;
+import net.vanfleteren.jazygit.kernel.state.AreaId;
+import net.vanfleteren.jazygit.kernel.state.Focus;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 
 /**
  * What an area that takes the focus for what is opened in it had open at the last frame, and whether it is still to

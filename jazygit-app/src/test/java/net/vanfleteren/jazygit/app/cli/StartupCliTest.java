@@ -9,7 +9,7 @@ import io.vavr.control.Option;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;

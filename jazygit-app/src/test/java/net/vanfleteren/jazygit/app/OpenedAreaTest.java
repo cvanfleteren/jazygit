@@ -3,9 +3,9 @@ package net.vanfleteren.jazygit.app;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.AreaId;
-import net.vanfleteren.jazygit.state.Focus;
-import net.vanfleteren.jazygit.state.PaneId;
+import net.vanfleteren.jazygit.kernel.state.AreaId;
+import net.vanfleteren.jazygit.kernel.state.Focus;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import org.junit.jupiter.api.Test;
 
 /**

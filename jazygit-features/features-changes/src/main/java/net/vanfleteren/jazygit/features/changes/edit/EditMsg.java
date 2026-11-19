@@ -1,0 +1,33 @@
+package net.vanfleteren.jazygit.features.changes.edit;
+
+import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+
+/**
+ * Opening a file in an editor: one the user set to open files, or else git's editor (ADR 145).
+ */
+public sealed interface EditMsg extends Msg {
+
+    @Override
+    default Update.Next apply(Model model) {
+        return EditUpdate.update(model, this);
+    }
+
+    /**
+     * The user asked to open the file at {@code path}, relative to the working tree, in an editor, at its first line.
+     */
+    record Requested(String path) implements EditMsg {}
+
+    /**
+     * The user asked to open the file the cursor {@code at} of a rich diff is in, at the line it is on, in an editor.
+     */
+    record AtCursor(DiffCursorAt at) implements EditMsg {}
+
+    /**
+     * The user chose {@code editor} in the menu of the editors that open files.
+     */
+    record Chosen(EditorProgram editor) implements EditMsg {}
+}

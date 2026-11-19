@@ -1,0 +1,25 @@
+package net.vanfleteren.jazygit.features.changes.commit.reset;
+
+import net.vanfleteren.jazygit.core.git.model.ResetMode;
+import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.Update;
+
+public sealed interface ResetMsg extends Msg {
+
+    @Override
+    default Update.Next apply(Model model) {
+        return ResetUpdate.update(model, this);
+    }
+
+    /**
+     * The user asked to reset the checked out branch to the commit {@code sha}; how is still to be chosen.
+     */
+    record Requested(Sha sha) implements ResetMsg {}
+
+    /**
+     * The user chose how to reset.
+     */
+    record Chosen(ResetMode mode) implements ResetMsg {}
+}

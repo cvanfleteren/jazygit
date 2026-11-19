@@ -1,0 +1,1078 @@
+package net.vanfleteren.jazygit.features.github.show;
+
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
+import static net.vanfleteren.jazygit.kernel.state.TestModels.refused;
+import static org.junit.jupiter.api.Assertions.*;
+
+import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.StyledElement;
+import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.core.gh.model.CheckRun;
+import net.vanfleteren.jazygit.core.gh.model.GhBranch;
+import net.vanfleteren.jazygit.core.gh.model.GhCommit;
+import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.core.gh.model.PrNumber;
+import net.vanfleteren.jazygit.core.gh.model.PullRequest;
+import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.*;
+import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
+import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
+import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.git.model.RemoteName;
+import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
+import net.vanfleteren.jazygit.features.github.comments.CommentsMsg;
+import net.vanfleteren.jazygit.features.github.edit.EditPullRequestMsg;
+import net.vanfleteren.jazygit.kernel.state.CursorFeedback;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.github.BranchChecksMsg;
+import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.kernel.state.github.Reading;
+import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.kernel.ui.RenderedText;
+import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.github.CheckRows;
+import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
+import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
+import org.junit.jupiter.api.Test;
+
+class PullRequestDialogTest {
+
+    private static final Instant NOW = Instant.parse("2026-10-13T12:00:00Z");
+    private static final PullRequest PR = new PullRequest(
+            new PrNumber(42), new GhBranch("support_rename"), true, Checks.FAILING, Review.CHANGES_REQUESTED);
+    private static final PullRequestDetails DETAILS = new PullRequestDetails(
+            new PrNumber(42),
+            "Add rename support to the files panel",
+            "cvf",
+            new Status(State.OPEN, true, Mergeable.MERGEABLE),
+            new Branches(new GhBranch("support_rename"), new GhBranch("main")),
+            new Activity(Instant.parse("2026-10-10T08:00:00Z"), Instant.parse("2026-10-12T09:00:00Z")),
+            new Size(120, 34, 7, 3),
+            new Conversation(
+                    Review.CHANGES_REQUESTED,
+                    List.of(
+                            new Reviewer("alice", ReviewerState.APPROVED),
+                            new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
+                            new Reviewer("dave", ReviewerState.REQUESTED),
+                            new Reviewer("carol", ReviewerState.COMMENTED)),
+                    5,
+                    new ReviewThreads(5, 5, 2, 12),
+                    List.of("enhancement", "ui")),
+            List.of(
+                    new Check("lint", Checks.PASSING),
+                    new Check("integration", Checks.PENDING),
+                    new Check("build", Checks.FAILING)));
+
+    private static final PullRequestDetails READY = new PullRequestDetails(
+            new PrNumber(42),
+            "Ready",
+            "cvf",
+            new Status(State.OPEN, false, Mergeable.MERGEABLE),
+            new Branches(new GhBranch("support_rename"), new GhBranch("main")),
+            new Activity(NOW, NOW),
+            new Size(1, 1, 1, 1),
+            new Conversation(Review.APPROVED, List.empty(), 0, ReviewThreads.NONE, List.empty()),
+            List.empty());
+
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
+    private final PullRequestDialog dialog = new PullRequestDialog(dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC));
+
+    // DETAILS at commit head, into base, not known to be behind it.
+    private static PullRequestDetails at(String head, String base) {
+        return DETAILS.withBranches(
+                new Branches(DETAILS.branches().head(), new GhBranch(base), GhCommit.parse(head), Option.none()));
+    }
+
+    /**
+     * READY with {@code checks}, of repository {@code owner/repo}.
+     */
+    private static PullRequestDetails withChecks(List<Check> checks) {
+        return new PullRequestDetails(
+                READY.number(),
+                READY.title(),
+                READY.author(),
+                READY.status(),
+                new Branches(
+                        READY.branches().head(),
+                        READY.branches().base(),
+                        Option.of(new GhCommit("abc123")),
+                        Option.none()),
+                READY.activity(),
+                READY.size(),
+                READY.conversation(),
+                checks,
+                Option.none(),
+                "owner/repo");
+    }
+
+    /**
+     * A check of workflow {@code Build} that is not done, of a run created {@code createdAgo} seconds before NOW: queued
+     * without {@code startedAgo}, else running since then.
+     */
+    private static Check timed(String name, int createdAgo, Option<Integer> startedAgo) {
+        return new Check(
+                name,
+                Checks.PENDING,
+                Option.of(new CheckRun(
+                        name.length(),
+                        "Build",
+                        "",
+                        startedAgo.map(NOW::minusSeconds),
+                        Option.none(),
+                        1,
+                        NOW.minusSeconds(createdAgo),
+                        1,
+                        "pull_request")));
+    }
+
+    /**
+     * What was learned of {@code owner/repo}: package runs 60s, done 60s into its run; acceptance waits for it, runs
+     * 190s and is done 254s in.
+     */
+    private static CheckTimes learned() {
+        List<CheckSample> samples = List.range(0, 3)
+                .flatMap(i -> List.of(
+                        new CheckSample(
+                                "Build/package",
+                                i,
+                                Duration.ofSeconds(60),
+                                Duration.ofSeconds(60),
+                                "pull_request",
+                                NOW.minusSeconds(3600 + i)),
+                        new CheckSample(
+                                "Build/acceptance",
+                                10 + i,
+                                Duration.ofSeconds(190),
+                                Duration.ofSeconds(254),
+                                "pull_request",
+                                NOW.minusSeconds(3600 + i))));
+        return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+    }
+
+    private String timedScreen(List<Check> checks, CheckTimes times) throws Exception {
+        return screen(
+                PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(withChecks(checks)), 0),
+                model -> model.mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times))));
+    }
+
+    private static int hintLine(String screen) {
+        return List.of(screen.split("\n")).indexWhere(line -> line.contains("(enter) select"));
+    }
+
+    @Test
+    void whileACheckIsNotDoneTheDetailsAreDueToBeReadAgainByThemselves() {
+        PullRequestPopup running = PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW, 0)
+                .with(Either.right(withChecks(List.of(timed("verify", 120, Option.of(30))))), 0);
+        PullRequestPopup done = PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW, 0)
+                .with(Either.right(withChecks(List.empty())), 0);
+
+        assertTrue(running.dueByItself(NOW.plusSeconds(10)));
+        assertFalse(done.dueByItself(NOW.plusSeconds(54)));
+        // The tick a minute on can come a few ms short of it.
+        assertTrue(done.dueByItself(NOW.plusSeconds(60).minusMillis(3)));
+    }
+
+    @Test
+    void theDialogIsWokenWhenHowLongAgoItWasOpenedChangesAndEverySecondWhileACheckRuns() {
+        // Opened and pushed to NOW: "just now" until a minute later.
+        Model done = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW, 0)
+                        .with(Either.right(withChecks(List.empty())), 0));
+        Model running = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW, 0)
+                        .with(Either.right(withChecks(List.of(timed("verify", 120, Option.of(30))))), 0));
+
+        assertEquals(Option.of(NOW.plusSeconds(60)), ShownTime.next(PullRequestDialog.shownTimes(done), NOW));
+        assertEquals(Option.of(NOW.plusSeconds(1)), ShownTime.next(PullRequestDialog.shownTimes(running), NOW));
+        assertEquals(List.empty(), PullRequestDialog.shownTimes(TestModels.loaded()));
+    }
+
+    @Test
+    void closedModelShowsNoPopup() {
+        assertTrue(dialog.render(TestModels.loaded()).isEmpty());
+    }
+
+    @Test
+    void showsTheBranchWhileTheDetailsAreRead() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0));
+
+        assertTrue(screen.contains("Pull request #42"), screen);
+        assertTrue(screen.contains("Branch  support_rename"), screen);
+        assertTrue(
+                screen.contains("Reading the pull request from GitHub… "
+                        + net.vanfleteren.jazygit.kernel.ui.text.TimeText.spinnerFrame(NOW)),
+                screen);
+        assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
+    }
+
+    @Test
+    void whileReadAgainAsAskedTheDetailsStayWithASpinnerInTheTitle() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0)
+                .readingAgain(Reading.ASKED, NOW, 1));
+
+        assertTrue(
+                screen.contains(
+                        "Pull request #42 " + net.vanfleteren.jazygit.kernel.ui.text.TimeText.spinnerFrame(NOW)),
+                screen);
+        assertTrue(screen.contains("Add rename support to the files panel"), screen);
+        assertTrue(screen.contains("(R) Refresh"), screen);
+    }
+
+    @Test
+    void whileReadAgainByItselfTheTitleShowsNoSpinner() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0)
+                .readingAgain(Reading.BY_ITSELF, NOW, 1));
+
+        assertFalse(
+                screen.contains(
+                        "Pull request #42 " + net.vanfleteren.jazygit.kernel.ui.text.TimeText.spinnerFrame(NOW)),
+                screen);
+        assertTrue(screen.contains("Pull request #42"), screen);
+        assertTrue(screen.contains("Add rename support to the files panel"), screen);
+    }
+
+    @Test
+    void detailsThatFailedToBeReadAgainAreMarkedStale() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0)
+                .readingAgain(Reading.BY_ITSELF, NOW, 1)
+                .with(Either.left(refused("gh: offline")), 1));
+
+        assertTrue(screen.contains("Pull request #42 · not up to date"), screen);
+        assertTrue(screen.contains("Add rename support to the files panel"), screen);
+    }
+
+    @Test
+    void theActionsAndEscapeWorkOnAScreenTheyAreCutOffFrom() throws Exception {
+        Model model = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(DETAILS), 0));
+        try (ToolkitTestRunner runner = start(model)) {
+            assertFalse(RenderedText.ofSize(runner, () -> view(model), 80, 24).contains("Refresh"));
+
+            SettledPilot.of(runner).press('R');
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new PullRequestMsg.RefreshChosen(), new PopupMsg.Dismissed(PullRequestPopup.class)),
+                dispatched);
+    }
+
+    @Test
+    void refreshIsChosenWithCapitalR() throws Exception {
+        Model model = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(DETAILS), 0));
+        try (ToolkitTestRunner runner = start(model)) {
+            SettledPilot.of(runner).press('R');
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new PullRequestMsg.RefreshChosen()), dispatched);
+    }
+
+    @Test
+    void aStackedPullRequestSaysWhatMergingItMergesToo() throws Exception {
+        PullRequestDetails stacked = stacked(new PullRequestStack(
+                96,
+                3,
+                3,
+                List.of(
+                        new PullRequestStack.Entry(1, new PrNumber(40), State.OPEN),
+                        new PullRequestStack.Entry(2, new PrNumber(41), State.OPEN),
+                        new PullRequestStack.Entry(3, new PrNumber(42), State.OPEN))));
+
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(stacked), 0));
+
+        assertTrue(screen.contains("    Stack  #96 · 3 of 3 · merging also merges the 2 below"), screen);
+        assertTrue(screen.contains("(m) Merge 3 PRs"), screen);
+        assertTrue(screen.contains("(s) Squash and merge 3 PRs"), screen);
+        assertTrue(screen.contains("(r) Rebase and merge 3 PRs"), screen);
+    }
+
+    @Test
+    void theOnesBelowInAStackThatAreMergedAlreadyAreNotMergedAgain() throws Exception {
+        PullRequestDetails stacked = stacked(new PullRequestStack(
+                96,
+                3,
+                3,
+                List.of(
+                        new PullRequestStack.Entry(1, new PrNumber(40), State.MERGED),
+                        new PullRequestStack.Entry(2, new PrNumber(41), State.OPEN),
+                        new PullRequestStack.Entry(3, new PrNumber(42), State.OPEN))));
+
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(stacked), 0));
+
+        assertTrue(screen.contains("    Stack  #96 · 3 of 3 · merging also merges the 1 below"), screen);
+        assertTrue(screen.contains("(s) Squash and merge 2 PRs"), screen);
+    }
+
+    @Test
+    void aStackWhoseOnesBelowAreAllMergedMergesOnlyItself() throws Exception {
+        PullRequestDetails stacked = stacked(new PullRequestStack(
+                9,
+                2,
+                2,
+                List.of(
+                        new PullRequestStack.Entry(1, new PrNumber(7), State.MERGED),
+                        new PullRequestStack.Entry(2, new PrNumber(8), State.OPEN))));
+
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(stacked), 0));
+
+        assertTrue(screen.contains("    Stack  #9 · 2 of 2"), screen);
+        assertFalse(screen.contains("merging also merges"), screen);
+        assertTrue(screen.contains("(s) Squash and merge "), screen);
+        assertFalse(screen.contains("PRs"), screen);
+    }
+
+    /**
+     * The ready pull request, read as sitting in {@code stack}.
+     */
+    private static PullRequestDetails stacked(PullRequestStack stack) {
+        return new PullRequestDetails(
+                READY.number(),
+                READY.title(),
+                READY.author(),
+                READY.status(),
+                new Branches(
+                        READY.branches().head(),
+                        READY.branches().base(),
+                        Option.of(new GhCommit("abc123")),
+                        Option.none()),
+                READY.activity(),
+                READY.size(),
+                READY.conversation(),
+                READY.checks(),
+                Option.of(stack),
+                "");
+    }
+
+    @Test
+    void theBottomOfAStackMergesOnlyItself() throws Exception {
+        PullRequest bottom = new PullRequest(
+                new PrNumber(42),
+                new GhBranch("support_rename"),
+                false,
+                Checks.PASSING,
+                Review.APPROVED,
+                Option.of(new PullRequestStack(
+                        96,
+                        1,
+                        2,
+                        List.of(
+                                new PullRequestStack.Entry(1, new PrNumber(42), State.OPEN),
+                                new PullRequestStack.Entry(2, new PrNumber(43), State.OPEN)))));
+
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), bottom, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0));
+
+        // The details read without a stack say it is not stacked anymore.
+        assertFalse(screen.contains("Stack"), screen);
+        assertTrue(screen.contains("(s) Squash and merge "), screen);
+        assertFalse(screen.contains("PRs"), screen);
+    }
+
+    @Test
+    void showsTheDetailsAsLabelledRows() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0));
+
+        assertTrue(screen.contains("Add rename support to the files panel"), screen);
+        assertTrue(screen.contains("    State  Open · Draft"), screen);
+        assertTrue(screen.contains("   Author  @cvf"), screen);
+        assertTrue(screen.contains("   Branch  support_rename → main"), screen);
+        assertTrue(screen.contains("  Created  2026-10-10 (3d ago)"), screen);
+        assertTrue(screen.contains("   Pushed  2026-10-12 (1d ago)"), screen);
+        assertTrue(screen.contains("  Changes  +120 −34 in 7 files, 3 commits"), screen);
+        assertTrue(screen.contains("Mergeable  yes"), screen);
+        assertTrue(screen.contains("   Review  − changes requested"), screen);
+        assertTrue(screen.contains("Reviewers  + @alice  − @bob  ? @dave  ~ @carol"), screen);
+        assertTrue(screen.contains(" Comments  5"), screen);
+        assertTrue(screen.contains("  Threads  5 with 12 comments, 2 unresolved"), screen);
+        assertTrue(screen.contains("   Labels  enhancement, ui"), screen);
+        assertTrue(screen.contains("   Checks  ✗ 1 failed · ● 1 running · ✓ 1 passed"), screen);
+        // The failed check first, then the running one; the passed one is only counted.
+        assertTrue(screen.indexOf("✗ build") < screen.indexOf("● integration"), screen);
+        assertFalse(screen.contains("✓ lint"), screen);
+        assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
+    }
+
+    @Test
+    void saysHowFarTheBaseMovedOnWhileStillMergeable() throws Exception {
+        String behind = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS.withBehindBase(3)), 0));
+        String upToDate = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS.withBehindBase(0)), 0));
+
+        assertTrue(behind.contains("   Branch  support_rename → main · 3 behind"), behind);
+        assertTrue(behind.contains("Mergeable  yes"), behind);
+        assertFalse(upToDate.contains("behind"), upToDate);
+    }
+
+    @Test
+    void aRefreshThatCouldNotTellHowFarBehindKeepsTheCountForTheSameCommitOnTheSameBase() throws Exception {
+        PullRequestPopup shown = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(at("abc123", "main").withBehindBase(3)), 0);
+
+        String same = screen(shown.with(Either.right(at("abc123", "main")), 0));
+        String pushed = screen(shown.with(Either.right(at("def456", "main")), 0));
+        String retargeted = screen(shown.with(Either.right(at("abc123", "develop")), 0));
+        String upToDate = screen(shown.with(Either.right(at("abc123", "main").withBehindBase(0)), 0));
+
+        assertTrue(same.contains("support_rename → main · 3 behind"), same);
+        assertFalse(pushed.contains("behind"), pushed);
+        assertFalse(retargeted.contains("behind"), retargeted);
+        assertFalse(upToDate.contains("behind"), upToDate);
+    }
+
+    @Test
+    void countsOneFileAndOneCommitInTheSingular() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0));
+
+        assertTrue(screen.contains("  Changes  +1 −1 in 1 file, 1 commit"), screen);
+    }
+
+    // As a change and its revert leave, or only empty commits.
+    @Test
+    void countsNoFilesAndNoCommitsInThePlural() throws Exception {
+        PullRequestDetails empty = new PullRequestDetails(
+                READY.number(),
+                READY.title(),
+                READY.author(),
+                READY.status(),
+                READY.branches(),
+                READY.activity(),
+                new Size(0, 0, 0, 0),
+                READY.conversation(),
+                READY.checks());
+
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(empty), 0));
+
+        assertTrue(screen.contains("  Changes  +0 −0 in 0 files, 0 commits"), screen);
+    }
+
+    @Test
+    void countsNoReviewThreads() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0));
+
+        assertTrue(screen.contains("  Threads  0 "), screen);
+    }
+
+    @Test
+    void saysWhenAllReviewThreadsAreResolved() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(readyWith(new ReviewThreads(1, 1, 0, 1))), 0));
+
+        assertTrue(screen.contains("  Threads  1 with 1 comment, all resolved"), screen);
+    }
+
+    @Test
+    void doesNotSayAllAreResolvedWhenNotAllThreadsWereRead() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(readyWith(new ReviewThreads(130, 100, 0, 180))), 0));
+
+        assertTrue(screen.contains("  Threads  130 with 180 comments "), screen);
+        assertFalse(screen.contains("resolved"), screen);
+    }
+
+    private static PullRequestDetails readyWith(ReviewThreads threads) {
+        return new PullRequestDetails(
+                READY.number(),
+                READY.title(),
+                READY.author(),
+                READY.status(),
+                READY.branches(),
+                READY.activity(),
+                READY.size(),
+                new Conversation(
+                        READY.conversation().review(),
+                        READY.conversation().reviewers(),
+                        READY.conversation().comments(),
+                        threads,
+                        READY.conversation().labels()),
+                READY.checks());
+    }
+
+    @Test
+    void aTitleOfWideCharactersGetsTheLinesItTakes() throws Exception {
+        // 81 characters of two columns each: three lines of the 76 columns inside the dialog.
+        String title = "変更".repeat(39) + "終わり";
+        PullRequestDetails wide = new PullRequestDetails(
+                DETAILS.number(),
+                title,
+                DETAILS.author(),
+                DETAILS.status(),
+                DETAILS.branches(),
+                new Activity(DETAILS.activity().createdAt(), DETAILS.activity().createdAt()),
+                DETAILS.size(),
+                DETAILS.conversation(),
+                DETAILS.checks());
+
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(wide), 0));
+
+        assertTrue(screen.contains("終わり"), screen);
+        assertTrue(screen.contains("    State  Open · Draft"), screen);
+    }
+
+    @Test
+    void manyChecksThatDidNotPassAreCut() throws Exception {
+        List<Check> checks = List.range(0, 11).map(i -> new Check("check" + i, Checks.FAILING));
+        PullRequestDetails details = new PullRequestDetails(
+                new PrNumber(42),
+                "t",
+                "",
+                new Status(State.OPEN, false, Mergeable.UNKNOWN),
+                new Branches(new GhBranch("a"), new GhBranch("b")),
+                new Activity(NOW, NOW),
+                new Size(0, 0, 0, 1),
+                new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
+                checks);
+
+        String screen = screen(PullRequestPopup.loading(new BranchName("a"), PR, Instant.EPOCH, 0)
+                .with(Either.right(details), 0));
+
+        assertTrue(screen.contains("check6"), screen);
+        assertFalse(screen.contains("check7"), screen);
+        assertTrue(screen.contains("… 4 more"), screen);
+        assertFalse(screen.contains("Author"), screen);
+        assertFalse(screen.contains("Reviewers"), screen);
+        assertFalse(screen.contains("Labels"), screen);
+    }
+
+    @Test
+    void saysHowLongTheChecksRunAndAreExpectedToTakeStill() throws Exception {
+        String screen = timedScreen(
+                List.of(
+                        timed("verify", 120, Option.of(30)),
+                        timed("acceptance", 120, Option.none()),
+                        timed("package", 120, Option.of(118)),
+                        new Check("ci/status", Checks.PENDING)),
+                learned());
+
+        // verify and the status are not known, so neither is when they are all done.
+        assertTrue(screen.contains("Checks  ● 4 running · done in ?"), screen);
+        // Under the counts, how far they are together, as in the checks popup; each after its name, with how long it
+        // runs of how long it is expected to take.
+        assertTrue(screen.contains(" ".repeat(13) + "─".repeat(60) + "   0%│"), screen);
+        assertTrue(
+                screen.contains("● package" + " ".repeat(27) + "━".repeat(11) + "─" + " ".repeat(7) + "1m 58s/~1m│"),
+                screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(28) + "╌".repeat(12) + " ".repeat(12) + "30s/?│"), screen);
+        assertTrue(
+                screen.contains("● ci/status" + " ".repeat(25) + "╌".repeat(12) + " ".repeat(10) + "running│"), screen);
+        assertTrue(
+                screen.contains("◌ acceptance" + " ".repeat(24) + "─".repeat(12) + " ".repeat(8) + "queued 2m│"),
+                screen);
+        // Running before queued, the soonest done first, those not known last.
+        assertTrue(screen.indexOf("package") < screen.indexOf("verify"), screen);
+        assertTrue(screen.indexOf("ci/status") < screen.indexOf("acceptance"), screen);
+    }
+
+    @Test
+    void aQueuedCheckIsDimmedAllAlongARunningOneOnlyInItsTime() {
+        List<Check> all = List.of(timed("acceptance", 120, Option.none()), timed("package", 120, Option.of(118)));
+
+        // After the symbol, the name and how it is doing.
+        List<StyledElement<?>> queued = CheckRows.filling(all.head(), all, Option.of(learned()), NOW, 65, 40, false)
+                .tail();
+        List<StyledElement<?>> running = CheckRows.filling(all.last(), all, Option.of(learned()), NOW, 65, 40, false)
+                .tail();
+
+        assertTrue(queued.forAll(piece -> piece.cssClasses().contains(Theme.Classes.DIM)));
+        assertFalse(running.head().cssClasses().contains(Theme.Classes.DIM));
+        assertTrue(running.last().cssClasses().contains(Theme.Classes.DIM));
+    }
+
+    @Test
+    void aLongFailedNameDoesNotPushTheTimesOfTheOthersOut() throws Exception {
+        String screen = timedScreen(
+                List.of(new Check("integration-tests-windows", Checks.FAILING), timed("verify", 120, Option.of(30))),
+                learned());
+
+        assertTrue(screen.contains("✗ integration-tests-windows" + " ".repeat(32) + "failed│"), screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(28) + "╌".repeat(12) + " ".repeat(12) + "30s/?│"), screen);
+    }
+
+    @Test
+    void saysWhenTheChecksAreExpectedToBeDoneTogether() throws Exception {
+        String screen = timedScreen(
+                List.of(timed("package", 120, Option.of(118)), timed("acceptance", 120, Option.none())), learned());
+
+        assertTrue(screen.contains("Checks  ● 2 running · done in ~2m"), screen);
+    }
+
+    @Test
+    void waitsForTheChecksThatDoNotShowYetWithoutListingThem() throws Exception {
+        // acceptance waits for package, so GitHub makes it once package is done; it is done 254s into its run.
+        String screen = timedScreen(List.of(timed("package", 120, Option.of(118))), learned());
+
+        assertTrue(screen.contains("Checks  ● 1 running · done in ~2m 15s"), screen);
+        assertFalse(screen.contains("acceptance"), screen);
+    }
+
+    @Test
+    void aCheckPastItsEstimateIsOverdue() throws Exception {
+        String screen = timedScreen(List.of(timed("acceptance", 500, Option.of(400))), learned());
+
+        assertTrue(screen.contains("Checks  ● 1 running · taking longer than usual"), screen);
+        assertTrue(screen.contains("━".repeat(58) + "──  97%│"), screen);
+        assertTrue(screen.contains("● acceptance" + " ".repeat(24) + "━".repeat(11) + "─   6m 40s/~3m 10s│"), screen);
+    }
+
+    @Test
+    void whileTheChecksThatRanLatelyAreReadEstimatesAreComing() throws Exception {
+        String screen = timedScreen(
+                List.of(timed("verify", 120, Option.of(30))), learned().withTopUp(NOW));
+
+        assertTrue(screen.contains("Checks  ● 1 running · done in …"), screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(28) + "╌".repeat(12) + " ".repeat(12) + "30s/…│"), screen);
+    }
+
+    @Test
+    void tellsWhyTheDetailsCouldNotBeRead() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.left(refused("not logged in")), 0));
+
+        assertTrue(screen.contains("Could not read the pull request: not logged in"), screen);
+        assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
+    }
+
+    @Test
+    void keepsItsSizeWhenTheDetailsArrive() throws Exception {
+        List<Check> checks = List.range(0, 12).map(i -> new Check("check" + i, Checks.FAILING));
+        PullRequestDetails fullest = new PullRequestDetails(
+                new PrNumber(42),
+                "A title long enough to need more than three lines at the width of the dialog, so that it must be "
+                        + "cut to keep the dialog from growing, which takes quite a few words when the dialog is "
+                        + "as wide as it is, so here are some more of them, and then a few more still, to be sure "
+                        + "that it really does not fit",
+                "cvf",
+                new Status(State.OPEN, false, Mergeable.UNKNOWN),
+                new Branches(new GhBranch("a"), new GhBranch("b")),
+                new Activity(NOW, NOW),
+                new Size(0, 0, 0, 1),
+                new Conversation(
+                        Review.APPROVED, DETAILS.conversation().reviewers(), 0, ReviewThreads.NONE, List.of("ui")),
+                checks);
+        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
+
+        int hintLine = hintLine(screen(loading));
+
+        assertEquals(hintLine, hintLine(screen(loading.with(Either.right(DETAILS), 0))));
+        String fullestScreen = screen(loading.with(Either.right(fullest), 0));
+        assertEquals(hintLine, hintLine(fullestScreen));
+        // The last action still fits under the tallest details.
+        assertTrue(fullestScreen.contains("(R) Refresh"), fullestScreen);
+        assertEquals(hintLine, hintLine(screen(loading.with(Either.left(refused("offline")), 0))));
+    }
+
+    @Test
+    void listsWhatCanBeDoneWithThePullRequest() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0));
+
+        assertTrue(screen.contains("(o) Open in browser"), screen);
+        assertTrue(screen.contains("(d) Convert to draft"), screen);
+        assertTrue(screen.contains("(m) Merge"), screen);
+        assertTrue(screen.contains("(s) Squash and merge"), screen);
+        assertTrue(screen.contains("(r) Rebase and merge"), screen);
+        assertTrue(screen.contains("(x) Close pull request"), screen);
+    }
+
+    @Test
+    void theActionsThatReadThePullRequestAreLeftOfThoseThatChangeIt() throws Exception {
+        List<String> lines =
+                List.of(screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                                .with(Either.right(READY), 0))
+                        .split("\n"));
+
+        for (String pair : List.of("(o)|(d)", "(c)|(m)", "(a)|(s)", "(e)|(r)", "(v)|(x)", "(C)|(R)")) {
+            String[] options = pair.split("\\|");
+            String line = lines.find(text -> text.contains(options[0])).getOrElse("");
+            assertTrue(line.indexOf(options[0]) < line.indexOf(options[1]), lines.mkString("\n"));
+        }
+    }
+
+    @Test
+    void capitalCShowsTheChecksOnceItsBranchHasThemOnGitHub() throws Exception {
+        PullRequestPopup ready = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0);
+        Model withChecks = Update.update(
+                        TestModels.loaded(),
+                        new BranchChecksMsg.Loaded(new GitHubChecks(
+                                HashSet.of(new RemoteName("origin")),
+                                HashMap.of(new BranchName("support_rename"), Checks.FAILING))))
+                .model();
+        for (Model model : List.of(TestModels.loaded(), withChecks)) {
+            try (ToolkitTestRunner runner = start(model.openPopup(ready))) {
+                SettledPilot.of(runner).press('C');
+                SettledPilot.of(runner).pause();
+            }
+        }
+
+        assertEquals(java.util.List.of(new ChecksMsg.PullRequestChecksRequested()), dispatched);
+    }
+
+    @Test
+    void lettersMergeOrCloseAPullRequestThatIsReady() throws Exception {
+        Model model = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(READY), 0));
+        try (ToolkitTestRunner runner = start(model)) {
+            for (char key : new char[] {'d', 'm', 's', 'r', 'x', 'o'}) {
+                SettledPilot.of(runner).press(key);
+                SettledPilot.of(runner).pause();
+            }
+        }
+
+        assertEquals(
+                java.util.List.of(
+                        new PullRequestMsg.DraftChosen(),
+                        new PullRequestMsg.MergeChosen(MergeMethod.MERGE),
+                        new PullRequestMsg.MergeChosen(MergeMethod.SQUASH),
+                        new PullRequestMsg.MergeChosen(MergeMethod.REBASE),
+                        new PullRequestMsg.CloseChosen(),
+                        new PullRequestMsg.OpenConfirmed()),
+                dispatched);
+    }
+
+    @Test
+    void aDraftCanBeMarkedReadyOrClosedButNotMergedAndNothingIsDoneBeforeTheDetailsAreRead() throws Exception {
+        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
+        for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(DETAILS), 0))) {
+            try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
+                for (char key : new char[] {'d', 'm', 'x'}) {
+                    SettledPilot.of(runner).press(key);
+                    SettledPilot.of(runner).pause();
+                }
+            }
+        }
+
+        // DETAILS is a draft.
+        assertEquals(java.util.List.of(new PullRequestMsg.DraftChosen(), new PullRequestMsg.CloseChosen()), dispatched);
+    }
+
+    @Test
+    void theCommentsAreWrittenAndViewedAndThePullRequestEditedOnceTheDetailsAreRead() throws Exception {
+        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
+        for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(READY), 0))) {
+            try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
+                for (char key : new char[] {'c', 'v', 'e'}) {
+                    SettledPilot.of(runner).press(key);
+                    SettledPilot.of(runner).pause();
+                }
+            }
+        }
+
+        assertEquals(
+                java.util.List.of(
+                        new CommentMsg.Requested(), new CommentsMsg.Requested(), new EditPullRequestMsg.Requested()),
+                dispatched);
+    }
+
+    @Test
+    void theFilesChangedAreListedForAnOpenPullRequestAtCommitsThatAreKnown() throws Exception {
+        PullRequestDetails known = READY.withBranches(new Branches(
+                new GhBranch("support_rename"),
+                new GhBranch("main"),
+                GhCommit.parse("a".repeat(40)),
+                Option.none(),
+                GhCommit.parse("b".repeat(40))));
+        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
+        for (PullRequestPopup popup :
+                List.of(loading, loading.with(Either.right(READY), 0), loading.with(Either.right(known), 0))) {
+            try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
+                SettledPilot.of(runner).press('F');
+                SettledPilot.of(runner).pause();
+            }
+        }
+
+        assertEquals(java.util.List.of(new PullRequestMsg.FilesChosen()), dispatched);
+        assertTrue(
+                screen(loading.with(Either.right(known), 0)).contains("(F) Files changed"),
+                screen(loading.with(Either.right(known), 0)));
+    }
+
+    @Test
+    void aMergedOrClosedPullRequestIsNeitherChangedMergedNorClosed() throws Exception {
+        for (State state : List.of(State.MERGED, State.CLOSED)) {
+            PullRequestPopup popup = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                    .with(Either.right(readyIn(state)), 0);
+            try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
+                for (char key : new char[] {'d', 'm', 's', 'r', 'x'}) {
+                    SettledPilot.of(runner).press(key);
+                    SettledPilot.of(runner).pause();
+                }
+            }
+        }
+
+        assertEquals(java.util.List.of(), dispatched);
+    }
+
+    private static PullRequestDetails readyIn(State state) {
+        return READY.withStatus(
+                new Status(state, READY.status().draft(), READY.status().mergeable()));
+    }
+
+    @Test
+    void aDraftOffersToMarkItReadyForReview() throws Exception {
+        String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(DETAILS), 0));
+
+        assertTrue(screen.contains("(d) Mark ready for review"), screen);
+    }
+
+    @Test
+    void enterOpensInTheBrowserAndEscapeCloses() throws Exception {
+        Model model = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0));
+        try (ToolkitTestRunner runner = start(model)) {
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new PullRequestMsg.OpenConfirmed(), new PopupMsg.Dismissed(PullRequestPopup.class)),
+                dispatched);
+    }
+
+    @Test
+    void whatTheHighlightedActionDoesShowsUnderTheDialogAcrossTheColumns() throws Exception {
+        java.util.List<String> screens = movingRight(READY, 120, 50);
+
+        // Commenting tells nothing more; merging, in the other column, does.
+        assertFalse(screens.get(0).contains("Merges it on GitHub with a merge commit."), screens.get(0));
+        assertTrue(screens.get(1).contains("Merges it on GitHub with a merge commit."), screens.get(1));
+        assertFalse(screens.get(1).contains("below it in its stack"), screens.get(1));
+        assertFalse(screens.get(2).contains("Merges it on GitHub with a merge commit."), screens.get(2));
+    }
+
+    private static PullRequestPopup merging(PullRequestDetails.Merging merging) {
+        return PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY.withMerging(merging)), 0);
+    }
+
+    @Test
+    void aBlockedPullRequestIsMergedWhenReady() throws Exception {
+        String screen = screen(merging(new PullRequestDetails.Merging(
+                PullRequestDetails.MergeState.BLOCKED, true, Option.none(), true, false)));
+
+        assertTrue(screen.contains("(m) Merge when ready"), screen);
+        assertTrue(screen.contains("(s) Squash and merge when ready"), screen);
+        assertTrue(screen.contains("(r) Rebase and merge when ready"), screen);
+        assertFalse(screen.contains("Auto-merge"), screen);
+    }
+
+    @Test
+    void autoMergeThatIsOnShowsHowByWhomAndSinceWhenAndItsKeyCancelsIt() throws Exception {
+        String screen = screen(merging(new PullRequestDetails.Merging(
+                PullRequestDetails.MergeState.BLOCKED,
+                true,
+                Option.of(new PullRequestDetails.AutoMerge(
+                        MergeMethod.SQUASH, "cvanfleteren", Option.of(NOW.minusSeconds(180)))),
+                false,
+                true)));
+
+        assertTrue(screen.contains("Auto-merge  squash · by cvanfleteren · 3m ago"), screen);
+        assertTrue(screen.contains("(s) Cancel auto-merge"), screen);
+        assertTrue(screen.contains("(m) Merge "), screen);
+    }
+
+    @Test
+    void aMergeKeyThatDoesNothingSaysWhy() throws Exception {
+        String merge = movingRight(
+                        READY.withMerging(new PullRequestDetails.Merging(
+                                PullRequestDetails.MergeState.BLOCKED, false, Option.none(), false, false)),
+                        120,
+                        50)
+                .get(1);
+
+        assertTrue(merge.contains("Auto-merge is off for this repository."), merge);
+    }
+
+    @Test
+    void aBlockedPullRequestGitHubDoesNotLetBeMergedWhenReadySaysSo() throws Exception {
+        String merge = movingRight(
+                        READY.withMerging(new PullRequestDetails.Merging(
+                                PullRequestDetails.MergeState.BLOCKED, true, Option.none(), false, false)),
+                        120,
+                        50)
+                .get(1);
+
+        assertTrue(merge.contains("GitHub does not allow merging it yet."), merge);
+    }
+
+    @Test
+    void aPullRequestBehindItsBaseSaysToUpdateTheBranchFirst() throws Exception {
+        String merge = movingRight(
+                        READY.withMerging(new PullRequestDetails.Merging(
+                                PullRequestDetails.MergeState.BEHIND, true, Option.none(), false, false)),
+                        120,
+                        50)
+                .get(1);
+
+        assertTrue(merge.contains("It is behind its base: update the branch first."), merge);
+    }
+
+    @Test
+    void aStackedPullRequestSaysGitHubHasNoAutoMergeForIt() throws Exception {
+        PullRequestDetails blocked = stacked(new PullRequestStack(
+                        96, 1, 1, List.of(new PullRequestStack.Entry(1, new PrNumber(42), State.OPEN))))
+                .withMerging(new PullRequestDetails.Merging(
+                        PullRequestDetails.MergeState.BLOCKED, true, Option.none(), true, false));
+
+        String merge = movingRight(blocked, 120, 50).get(1);
+
+        assertTrue(merge.contains("(m) Merge "), merge);
+        assertTrue(merge.contains("no auto-merge for stacked"), merge);
+    }
+
+    @Test
+    void theDialogIsWokenWhenHowLongAgoAutoMergeWasTurnedOnChanges() {
+        Model on = TestModels.loaded()
+                .openPopup(merging(new PullRequestDetails.Merging(
+                        PullRequestDetails.MergeState.BLOCKED,
+                        true,
+                        Option.of(new PullRequestDetails.AutoMerge(
+                                MergeMethod.SQUASH, "cvanfleteren", Option.of(NOW.minusSeconds(30)))),
+                        false,
+                        true)));
+
+        assertEquals(Option.of(NOW.plusSeconds(30)), ShownTime.next(PullRequestDialog.shownTimes(on), NOW));
+    }
+
+    @Test
+    void filesChangedTellsWhereTheFilesShow() throws Exception {
+        // Down from Open in browser to Files changed, at the bottom of the first column.
+        java.util.List<String> screens = pressing(
+                READY, 120, 50, KeyCode.DOWN, KeyCode.DOWN, KeyCode.DOWN, KeyCode.DOWN, KeyCode.DOWN, KeyCode.DOWN);
+
+        assertFalse(screens.get(4).contains("lists the files the pull request changes"), screens.get(4));
+        assertTrue(screens.get(5).contains("lists the files the pull request changes"), screens.get(5));
+    }
+
+    @Test
+    void mergingInAStackTellsTheOnesBelowAreMergedToo() throws Exception {
+        PullRequestDetails stacked = stacked(new PullRequestStack(
+                96,
+                3,
+                3,
+                List.of(
+                        new PullRequestStack.Entry(1, new PrNumber(40), State.OPEN),
+                        new PullRequestStack.Entry(2, new PrNumber(41), State.OPEN),
+                        new PullRequestStack.Entry(3, new PrNumber(42), State.OPEN))));
+
+        String merging = movingRight(stacked, 120, 50).get(1);
+
+        // The box wraps the sentence.
+        assertTrue(merging.contains("The open pull requests below it in"), merging);
+        assertTrue(merging.contains("its stack are merged too."), merging);
+    }
+
+    @Test
+    void onAFortyRowScreenTheWholeDialogShowsAndWhatAnActionDoesWaits() throws Exception {
+        java.util.List<String> screens = movingRight(READY, 120, 40);
+
+        for (String screen : screens) {
+            assertTrue(hintLine(screen) >= 0, screen);
+            assertTrue(screen.contains("(R) Refresh"), screen);
+        }
+        assertFalse(screens.get(1).contains("Merges it on GitHub"), screens.get(1));
+    }
+
+    /**
+     * The screens, {@code width} by {@code height}, of the dialog showing {@code details}: on Comment, after Right, on
+     * Merge, and after Left again.
+     */
+    private java.util.List<String> movingRight(PullRequestDetails details, int width, int height) throws Exception {
+        return pressing(details, width, height, KeyCode.DOWN, KeyCode.RIGHT, KeyCode.LEFT);
+    }
+
+    /**
+     * The screen after each of {@code keys}, pressed in turn in the dialog showing {@code details}.
+     */
+    private java.util.List<String> pressing(PullRequestDetails details, int width, int height, KeyCode... keys)
+            throws Exception {
+        CursorFeedback cursor = new CursorFeedback(dispatched::add);
+        PullRequestDialog moving = new PullRequestDialog(cursor, Clock.fixed(NOW, ZoneOffset.UTC));
+        Model model = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(details), 0));
+        Supplier<Element> view =
+                () -> stack(text("background"), moving.render(cursor.on(model)).get());
+        java.util.List<String> screens = new ArrayList<>();
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, PullRequestDialog.ID);
+            for (KeyCode key : keys) {
+                SettledPilot.of(runner).press(key);
+                SettledPilot.of(runner).pause();
+                screens.add(RenderedText.ofSize(runner, view, width, height));
+            }
+        }
+        return screens;
+    }
+
+    private String screen(PullRequestPopup popup) throws Exception {
+        return screen(popup, model -> model);
+    }
+
+    private String screen(PullRequestPopup popup, UnaryOperator<Model> change) throws Exception {
+        Model model = change.apply(TestModels.loaded().withNow(NOW)).openPopup(popup);
+        try (ToolkitTestRunner runner = start(model)) {
+            // About a terminal filling a 1920x1080 screen.
+            return RenderedText.ofSize(runner, () -> view(model), 120, 50);
+        }
+    }
+
+    /**
+     * The popup for {@code model} on the default 80x24 terminal, shorter than the popup: its actions are cut off.
+     */
+    private ToolkitTestRunner start(Model model) throws Exception {
+        ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model));
+        SettledPilot.focus(runner, PullRequestDialog.ID);
+        RenderedText.of(runner, () -> view(model));
+        return runner;
+    }
+
+    private Element view(Model model) {
+        return stack(text("background"), dialog.render(model).get());
+    }
+}

@@ -28,7 +28,7 @@ public final class CoreRules {
     @ArchTest
     static final ArchRule onlyExecStartsPrograms = noClasses()
             .that()
-            .resideOutsideOfPackage("..jazygit.process..")
+            .resideOutsideOfPackage("..jazygit.core.process..")
             .should()
             .dependOnClassesThat()
             .resideInAPackage("org.zeroturnaround.exec..")

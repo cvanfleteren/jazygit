@@ -5,15 +5,15 @@ import io.vavr.collection.List;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.branches.branch.stack.StackMsg;
-import net.vanfleteren.jazygit.changes.fetch.FetchMsg;
-import net.vanfleteren.jazygit.gh.timing.CheckTimings;
-import net.vanfleteren.jazygit.github.checks.ChecksMsg;
-import net.vanfleteren.jazygit.github.show.PullRequestMsg;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.TimerMsg;
-import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
-import net.vanfleteren.jazygit.ui.text.TimeText;
+import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
+import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg;
+import net.vanfleteren.jazygit.features.changes.fetch.FetchMsg;
+import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.TimerMsg;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 
 /**
  * What the app does every so often, without input: the messages it dispatches, and the spinners it turns.

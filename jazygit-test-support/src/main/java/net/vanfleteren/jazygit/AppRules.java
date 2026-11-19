@@ -29,17 +29,17 @@ import java.util.stream.Stream;
 public final class AppRules {
 
     static final String ROOT = "net.vanfleteren.jazygit";
-    static final String MSG = ROOT + ".state.Msg";
-    static final String CMD = ROOT + ".state.Cmd";
-    static final String POPUP = ROOT + ".state.popup.Popup";
-    static final String BODY = ROOT + ".ui.content.Body";
-    static final String APP_ERROR = ROOT + ".state.AppError";
-    static final String PROGRAM = ROOT + ".state.Program";
-    static final String BUG = ROOT + ".state.Failure$Bug";
+    static final String MSG = ROOT + ".kernel.state.Msg";
+    static final String CMD = ROOT + ".kernel.state.Cmd";
+    static final String POPUP = ROOT + ".kernel.state.popup.Popup";
+    static final String BODY = ROOT + ".kernel.ui.content.Body";
+    static final String APP_ERROR = ROOT + ".kernel.state.AppError";
+    static final String PROGRAM = ROOT + ".kernel.state.Program";
+    static final String BUG = ROOT + ".kernel.state.Failure$Bug";
     static final String START_APP = ROOT + ".app.StartApp";
-    static final String EXECUTED_COMMAND = ROOT + ".process.ExecutedCommand";
-    static final String GH_BRANCH = ROOT + ".gh.model.GhBranch";
-    static final String MARKDOWN_IMAGE = ROOT + ".ui.markdown.MarkdownImage";
+    static final String EXECUTED_COMMAND = ROOT + ".core.process.ExecutedCommand";
+    static final String GH_BRANCH = ROOT + ".core.gh.model.GhBranch";
+    static final String MARKDOWN_IMAGE = ROOT + ".kernel.ui.markdown.MarkdownImage";
     // The updates, the messages, the popups and the model, which are pure; nested classes included.
     static final String PURE =
             ".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|AppError|Phrase|Operation|LogEntry|CommandLog)(\\$.*)?";
@@ -53,47 +53,50 @@ public final class AppRules {
      * (ADR 158).
      */
     static final String[] FEATURE_CONTENT = {
-        "..jazygit.changes..content..",
-        "..jazygit.branches..content..",
-        "..jazygit.github..content..",
-        "..jazygit.chrome..content..",
-        "..jazygit.changes.panes..",
-        "..jazygit.branches.panes..",
-        "..jazygit.github.panes..",
-        "..jazygit.chrome.panes.."
+        "..jazygit.features.changes..content..",
+        "..jazygit.features.branches..content..",
+        "..jazygit.features.github..content..",
+        "..jazygit.features.chrome..content..",
+        "..jazygit.features.changes.panes..",
+        "..jazygit.features.branches.panes..",
+        "..jazygit.features.github.panes..",
+        "..jazygit.features.chrome.panes.."
     };
 
     /**
      * The packages of the features, in their groups.
      */
     static final String[] FEATURES = {
-        "..jazygit.changes..", "..jazygit.branches..", "..jazygit.github..", "..jazygit.chrome.."
+        "..jazygit.features.changes..",
+        "..jazygit.features.branches..",
+        "..jazygit.features.github..",
+        "..jazygit.features.chrome.."
     };
 
     /**
      * The packages whose classes are values: the state, the features, the settings, the command line and the lens.
      */
     static final String[] VALUES = {
-        "..jazygit.state..",
-        "..jazygit.changes..",
-        "..jazygit.branches..",
-        "..jazygit.github..",
-        "..jazygit.chrome..",
-        "..jazygit.settings..",
+        "..jazygit.kernel.state..",
+        "..jazygit.features.changes..",
+        "..jazygit.features.branches..",
+        "..jazygit.features.github..",
+        "..jazygit.features.chrome..",
+        "..jazygit.kernel.settings..",
         "..jazygit.app.cli..",
-        "..jazygit.lens.."
+        "..jazygit.lib.lens.."
     };
 
     /**
      * The packages whose code is pure: the state, the features and the lens.
      */
     static final String[] PURE_PACKAGES = {
-        "..jazygit.state..",
-        "..jazygit.changes..",
-        "..jazygit.branches..",
-        "..jazygit.github..",
-        "..jazygit.chrome..",
-        "..jazygit.lens.."
+        "..jazygit.kernel.state..",
+        "..jazygit.features.changes..",
+        "..jazygit.features.branches..",
+        "..jazygit.features.github..",
+        "..jazygit.features.chrome..",
+        "..jazygit.lib.lens.."
     };
 
     /**
@@ -102,7 +105,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule onlyTheSettingsReadToml = noClasses()
             .that()
-            .resideOutsideOfPackage("..jazygit.settings..")
+            .resideOutsideOfPackage("..jazygit.kernel.settings..")
             .should()
             .dependOnClassesThat()
             .resideInAPackage("com.electronwill.nightconfig..")
@@ -145,7 +148,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule gitIsReachedThroughItsRoles = noClasses()
             .should()
-            .dependOnClassesThat(resideInAPackage("..jazygit.git..")
+            .dependOnClassesThat(resideInAPackage("..jazygit.core.git..")
                     .and(simpleNameStartingWith("Cli"))
                     .and(not(simpleName("CliGit"))))
             .allowEmptyShould(true);
@@ -156,8 +159,9 @@ public final class AppRules {
     @ArchTest
     static final ArchRule gitKeepsHowItRunsToItself = noClasses()
             .should()
-            .dependOnClassesThat(resideInAPackage("..jazygit.git.process..")
-                    .and(not(named(Pattern.quote(ROOT + ".git.process.") + "(GitError|GitFailure|HeadFile)(\\$.*)?"))))
+            .dependOnClassesThat(resideInAPackage("..jazygit.core.git.process..")
+                    .and(not(named(
+                            Pattern.quote(ROOT + ".core.git.process.") + "(GitError|GitFailure|HeadFile)(\\$.*)?"))))
             .allowEmptyShould(true);
     /**
      * The application reaches GitHub through a {@code GitHub} and its roles, which {@code CliGitHub} gives for a real
@@ -166,7 +170,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule gitHubIsReachedThroughItsRoles = noClasses()
             .should()
-            .dependOnClassesThat(resideInAPackage("..jazygit.gh..")
+            .dependOnClassesThat(resideInAPackage("..jazygit.core.gh..")
                     .and(simpleNameStartingWith("Cli"))
                     .and(not(simpleName("CliGitHub"))))
             .allowEmptyShould(true);
@@ -177,10 +181,10 @@ public final class AppRules {
     @ArchTest
     static final ArchRule gitHubKeepsHowItAsksToItself = noClasses()
             .should()
-            .dependOnClassesThat(resideInAPackage("..jazygit.gh.graphql..")
-                    .or(resideInAPackage("..jazygit.gh.process..")
-                            .and(not(named(
-                                    Pattern.quote(ROOT + ".gh.process.") + "(GhError|GhFailure|GhToken)(\\$.*)?")))))
+            .dependOnClassesThat(resideInAPackage("..jazygit.core.gh.graphql..")
+                    .or(resideInAPackage("..jazygit.core.gh.process..")
+                            .and(not(named(Pattern.quote(ROOT + ".core.gh.process.")
+                                    + "(GhError|GhFailure|GhToken)(\\$.*)?")))))
             .allowEmptyShould(true);
     /**
      * {@code Exec} is the only place that starts a program.
@@ -188,7 +192,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule onlyExecStartsPrograms = noClasses()
             .that()
-            .resideOutsideOfPackage("..jazygit.process..")
+            .resideOutsideOfPackage("..jazygit.core.process..")
             .should()
             .dependOnClassesThat()
             .resideInAPackage("org.zeroturnaround.exec..")
@@ -362,7 +366,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule viewsOnlySendMessages = noClasses()
             .that()
-            .resideInAnyPackage("..jazygit.ui..", "..jazygit.content..", "..jazygit.app.keys..")
+            .resideInAnyPackage("..jazygit.kernel.ui..", "..jazygit.kernel.content..", "..jazygit.app.keys..")
             .or()
             .haveNameMatching(DIALOGS)
             .or()
@@ -414,7 +418,7 @@ public final class AppRules {
             .haveNameMatching(PURE)
             .should()
             .dependOnClassesThat()
-            .haveFullyQualifiedName("net.vanfleteren.jazygit.base.Require")
+            .haveFullyQualifiedName("net.vanfleteren.jazygit.lib.base.Require")
             .allowEmptyShould(true);
     /**
      * The commands report how they failed as messages: none declares an exception.
@@ -526,7 +530,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule onlyOnGitHubNamesBranchesForGh = noClasses()
             .that()
-            .doNotHaveFullyQualifiedName(ROOT + ".github.OnGitHub")
+            .doNotHaveFullyQualifiedName(ROOT + ".features.github.OnGitHub")
             .should()
             .accessTargetWhere(DescribedPredicate.describe(
                     "a constructor of GhBranch",
@@ -539,7 +543,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule viewsDoNotRunGitOrGh = noClasses()
             .that()
-            .resideInAnyPackage("..jazygit.ui..", "..jazygit.content..", "..jazygit.app.keys..")
+            .resideInAnyPackage("..jazygit.kernel.ui..", "..jazygit.kernel.content..", "..jazygit.app.keys..")
             .or()
             .haveNameMatching(DIALOGS)
             .or()
@@ -554,7 +558,7 @@ public final class AppRules {
     @ArchTest
     static final ArchRule onlyViewsUseI18nOrTamboUi = noClasses()
             .that()
-            .resideOutsideOfPackages("..jazygit.ui..", "..jazygit.content..", "..jazygit.app.keys..")
+            .resideOutsideOfPackages("..jazygit.kernel.ui..", "..jazygit.kernel.content..", "..jazygit.app.keys..")
             .and()
             .resideOutsideOfPackage(ROOT + ".app")
             .and()
@@ -563,7 +567,7 @@ public final class AppRules {
             .resideOutsideOfPackages(FEATURE_CONTENT)
             .should()
             .dependOnClassesThat()
-            .resideInAnyPackage("..jazygit.ui.i18n..", "dev.tamboui..")
+            .resideInAnyPackage("..jazygit.kernel.ui.i18n..", "dev.tamboui..")
             .allowEmptyShould(true);
     /**
      * State changes by making new values, never by changing fields. Only the program, which holds the current
@@ -631,14 +635,15 @@ public final class AppRules {
      * The classes of git and gh, but for their models and the timing of checks, which are values.
      */
     private static DescribedPredicate<JavaClass> gitOrGh() {
-        return resideInAnyPackage("..jazygit.git..", "..jazygit.gh..")
-                .and(not(resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..", "..jazygit.gh.timing..")));
+        return resideInAnyPackage("..jazygit.core.git..", "..jazygit.core.gh..")
+                .and(not(resideInAnyPackage(
+                        "..jazygit.core.git.model..", "..jazygit.core.gh.model..", "..jazygit.core.gh.timing..")));
     }
 
     private static DescribedPredicate<JavaClass> runsGitOrGh() {
         return gitOrGh()
                 .and(simpleNameStartingWith("Cli").or(simpleNameEndingWith("Process")))
-                .or(resideInAnyPackage("..jazygit.process").and(simpleName("Exec")))
+                .or(resideInAnyPackage("..jazygit.core.process").and(simpleName("Exec")))
                 .as("run git or gh");
     }
 
@@ -673,13 +678,13 @@ public final class AppRules {
     private static DescribedPredicate<JavaClass> effects() {
         return gitOrGh()
                 .or(resideInAnyPackage(
-                                "..jazygit.process..",
-                                "..jazygit.ui..",
-                                "..jazygit.content..",
+                                "..jazygit.core.process..",
+                                "..jazygit.kernel.ui..",
+                                "..jazygit.kernel.content..",
                                 "dev.tamboui..",
                                 "java.io..",
                                 "java.nio.file..")
-                        .and(not(resideInAPackage("..jazygit.ui.keys..")))
+                        .and(not(resideInAPackage("..jazygit.kernel.ui.keys..")))
                         .and(not(named(Pattern.quote(MARKDOWN_IMAGE) + "(\\$.*)?"))))
                 .or(JavaClass.Predicates.belongToAnyOf(Thread.class, ProcessBuilder.class, java.time.Clock.class))
                 .and(not(named(Pattern.quote(EXECUTED_COMMAND))))

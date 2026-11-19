@@ -8,14 +8,14 @@ import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.chrome.layout.LayoutMsg;
-import net.vanfleteren.jazygit.chrome.layout.LayoutUpdate;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.preferences.LeftPanes;
-import net.vanfleteren.jazygit.state.preferences.Screen;
-import net.vanfleteren.jazygit.ui.LeftBorder;
-import net.vanfleteren.jazygit.ui.PaneBorder;
+import net.vanfleteren.jazygit.features.chrome.layout.LayoutMsg;
+import net.vanfleteren.jazygit.features.chrome.layout.LayoutUpdate;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.preferences.LeftPanes;
+import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+import net.vanfleteren.jazygit.kernel.ui.LeftBorder;
+import net.vanfleteren.jazygit.kernel.ui.PaneBorder;
 
 /**
  * Drags the border between the left column and the content panel, or the bottom border of a pane of the left column,

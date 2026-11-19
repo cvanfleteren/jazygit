@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.app.cli;
 
 import io.vavr.collection.List;
 import java.util.Iterator;
-import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 
 /**
  * The names {@code --theme} takes, in the order the themes are offered.

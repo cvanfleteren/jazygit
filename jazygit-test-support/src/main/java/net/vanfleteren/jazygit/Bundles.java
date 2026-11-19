@@ -20,6 +20,8 @@ import java.util.stream.Stream;
 public final class Bundles {
 
     private static final String PACKAGE = "net.vanfleteren.jazygit.";
+    // The groups whose modules have text, then the app, whose package is in no group (ADR 159), as Messages has them.
+    private static final List<String> GROUPS = List.of("kernel.", "features.", "");
     // Possessive, so a long text does not overflow the stack with a step of backtracking for every character.
     // A text shaped as a key, or as the start of one that the code finishes at run time.
     private static final Pattern KEY = Pattern.compile("[a-z][A-Za-z0-9]*+(\\.[A-Za-z0-9]++)++\\.?+");
@@ -110,8 +112,8 @@ public final class Bundles {
         return Try.of(() -> {
                     try (Stream<Path> paths = Files.walk(project, 5)) {
                         return List.ofAll(paths.filter(path -> path.endsWith(main)
-                                        && roots.exists(root ->
-                                                Files.isDirectory(path.resolve(PACKAGE.replace('.', '/') + root))))
+                                        && roots.exists(root -> GROUPS.exists(group -> Files.isDirectory(
+                                                path.resolve((PACKAGE + group).replace('.', '/') + root)))))
                                 .toList());
                     }
                 })
@@ -119,7 +121,12 @@ public final class Bundles {
     }
 
     private static ResourceBundle bundle(String root) {
-        return ResourceBundle.getBundle(PACKAGE + root + ".messages", Locale.ROOT);
+        return GROUPS.iterator()
+                .flatMap(group -> Try.of(
+                                () -> ResourceBundle.getBundle(PACKAGE + group + root + ".messages", Locale.ROOT))
+                        .toOption())
+                .headOption()
+                .getOrElseThrow(() -> new IllegalArgumentException("no bundle for " + root));
     }
 
     private static List<String> literals(Path sources) {

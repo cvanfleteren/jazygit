@@ -11,22 +11,22 @@ import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.content.ContentPanel;
-import net.vanfleteren.jazygit.state.AreaId;
-import net.vanfleteren.jazygit.state.Focus;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.PaneId;
-import net.vanfleteren.jazygit.state.diff.Changes;
-import net.vanfleteren.jazygit.state.preferences.Screen;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
-import net.vanfleteren.jazygit.state.view.FilesLock;
-import net.vanfleteren.jazygit.state.view.ViewMsg;
-import net.vanfleteren.jazygit.ui.CommandLogPanel;
-import net.vanfleteren.jazygit.ui.PopupSlot;
-import net.vanfleteren.jazygit.ui.content.ContentArea;
-import net.vanfleteren.jazygit.ui.content.ContentSources;
-import net.vanfleteren.jazygit.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.content.ContentPanel;
+import net.vanfleteren.jazygit.kernel.state.AreaId;
+import net.vanfleteren.jazygit.kernel.state.Focus;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
+import net.vanfleteren.jazygit.kernel.state.diff.Changes;
+import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.kernel.state.view.FilesLock;
+import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
+import net.vanfleteren.jazygit.kernel.ui.CommandLogPanel;
+import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
+import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
+import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
  * Where the focus is, which TamboUI keeps, not the model: which pane, content area or popup has it, and where it goes

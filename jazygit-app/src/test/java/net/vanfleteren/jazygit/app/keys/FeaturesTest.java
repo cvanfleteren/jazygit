@@ -15,7 +15,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Try;
 import java.lang.reflect.Field;
-import net.vanfleteren.jazygit.ui.Feature;
+import net.vanfleteren.jazygit.kernel.ui.Feature;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
  */
 class FeaturesTest {
 
-    private static final String ROOT = "net.vanfleteren.jazygit.";
+    private static final String ROOT = "net.vanfleteren.jazygit.features.";
 
     /**
      * The groups whose packages are features each.

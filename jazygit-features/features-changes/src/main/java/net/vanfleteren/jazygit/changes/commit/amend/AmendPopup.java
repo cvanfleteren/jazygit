@@ -1,8 +1,0 @@
-package net.vanfleteren.jazygit.changes.commit.amend;
-
-import net.vanfleteren.jazygit.state.popup.Popup;
-
-/**
- * Asking to confirm amending {@code target} with the staged changes.
- */
-public record AmendPopup(AmendTarget target) implements Popup {}

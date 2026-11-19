@@ -1,0 +1,34 @@
+package net.vanfleteren.jazygit.features.branches.branch.rename;
+
+import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.Update;
+
+public sealed interface RenameBranchMsg extends Msg {
+
+    @Override
+    default Update.Next apply(Model model) {
+        return RenameBranchUpdate.update(model, this);
+    }
+
+    /**
+     * The user asked to rename {@code branch}; the new name is still to be entered.
+     */
+    record Requested(BranchName branch) implements RenameBranchMsg {}
+
+    /**
+     * The user confirmed the new name typed in the popup.
+     */
+    record Confirmed() implements RenameBranchMsg {}
+
+    /**
+     * The user chose to rename the branch only locally, so that it still follows its upstream.
+     */
+    record LocallyChosen() implements RenameBranchMsg {}
+
+    /**
+     * The user chose to rename the branch's upstream on its remote too.
+     */
+    record WithUpstreamChosen() implements RenameBranchMsg {}
+}

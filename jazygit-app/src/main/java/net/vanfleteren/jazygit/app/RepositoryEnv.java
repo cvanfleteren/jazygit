@@ -1,21 +1,21 @@
 package net.vanfleteren.jazygit.app;
 
 import io.vavr.collection.HashMap;
-import net.vanfleteren.jazygit.gh.CliGitHub;
-import net.vanfleteren.jazygit.gh.process.GhToken;
-import net.vanfleteren.jazygit.git.CliGit;
-import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.process.SshAsking;
-import net.vanfleteren.jazygit.settings.CheckTimingsStore;
-import net.vanfleteren.jazygit.settings.CollapsedStore;
-import net.vanfleteren.jazygit.settings.RecentRepositories;
-import net.vanfleteren.jazygit.settings.Settings;
-import net.vanfleteren.jazygit.settings.SettingsStore;
-import net.vanfleteren.jazygit.settings.UnseenPullRequestsStore;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.Repositories;
-import net.vanfleteren.jazygit.state.Terminal;
-import net.vanfleteren.jazygit.state.github.GitHubAccount;
+import net.vanfleteren.jazygit.core.gh.CliGitHub;
+import net.vanfleteren.jazygit.core.gh.process.GhToken;
+import net.vanfleteren.jazygit.core.git.CliGit;
+import net.vanfleteren.jazygit.core.git.Git;
+import net.vanfleteren.jazygit.core.process.SshAsking;
+import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore;
+import net.vanfleteren.jazygit.kernel.settings.CollapsedStore;
+import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
+import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequestsStore;
+import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Repositories;
+import net.vanfleteren.jazygit.kernel.state.Terminal;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubAccount;
 
 /**
  * What commands run against for a repository on disk: git and gh as the account configured for it.

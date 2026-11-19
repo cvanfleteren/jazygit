@@ -1,0 +1,196 @@
+package net.vanfleteren.jazygit.features.github.checkout;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.util.function.Supplier;
+import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.core.git.model.Branch;
+import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.git.model.ChangeType;
+import net.vanfleteren.jazygit.features.branches.branch.BranchError;
+import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutUpdate;
+import net.vanfleteren.jazygit.features.branches.branch.checkout.SwitchWorktreePopup;
+import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeUpdate;
+import net.vanfleteren.jazygit.features.branches.worktree.add.WorktreeSource;
+import net.vanfleteren.jazygit.features.github.GitHubError;
+import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestMsg.Requested;
+import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestMsg.WorktreeRequested;
+import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.FromGitHub;
+import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
+
+/**
+ * Checking out a pull request listed on the pull requests screen.
+ */
+public final class CheckoutPullRequestUpdate {
+
+    private CheckoutPullRequestUpdate() {}
+
+    public static Next update(Model model, CheckoutPullRequestMsg msg) {
+        return switch (msg) {
+            case Requested(PullRequestSummary pullRequest) -> checkout(model, pullRequest);
+            case WorktreeRequested(PullRequestSummary pullRequest) -> inWorktree(model, pullRequest, false);
+        };
+    }
+
+    /**
+     * Asks where the new worktree that checks out {@code pullRequest} goes, if it is of the repository; the changes
+     * here stay here. Once added, the app switches to it without asking when {@code switching} (ADR 68).
+     */
+    static Next inWorktree(Model model, PullRequestSummary pullRequest, boolean switching) {
+        WorktreeSource source = new WorktreeSource.PullRequest(pullRequest);
+        return proceed(
+                model,
+                forWorktree(model, pullRequest, source),
+                () -> switching
+                        ? AddWorktreeUpdate.askSwitching(model.clearError(), source)
+                        : AddWorktreeUpdate.ask(model.clearError(), source));
+    }
+
+    /**
+     * Checks out {@code pullRequest}, if it is of the repository, where the user says: in a linked worktree, they are
+     * asked whether here, in the main worktree or in a new one (ADR 68). When another worktree has its branch checked
+     * out, switching to that one is offered first, as checking out the branch offers it; when this one has, it is
+     * checked out here, which changes no branch, as nowhere else could have it.
+     */
+    private static Next checkout(Model model, PullRequestSummary pullRequest) {
+        return proceed(
+                model,
+                ofThisRepository(model, pullRequest)
+                        .orElse(() -> checkedOutElsewhere(model, pullRequest))
+                        .getOrElse(Readiness.Ready::new),
+                () -> checkedOutHere(model, pullRequest)
+                        ? here(model.clearError(), pullRequest)
+                        : CheckoutUpdate.place(model, new PullRequestCheckout(pullRequest)));
+    }
+
+    /**
+     * Checks out {@code pullRequest}, which is of the repository, in place, if the working tree has no changes to
+     * bring along. Which repository it is of is not asked again: in the main worktree, switched to to check it out,
+     * the pull requests may not be read yet.
+     */
+    static Next here(Model model, PullRequestSummary pullRequest) {
+        return proceed(
+                model,
+                forCheckout(model, pullRequest),
+                () -> OperationUpdate.start(model.clearError(), new CheckoutPullRequestCmd(pullRequest)));
+    }
+
+    /**
+     * Does what {@code readiness} calls for: tells why it is blocked, offers to switch to the worktree that has the
+     * branch checked out, does nothing while it is busy, or else does {@code ready}.
+     */
+    private static Next proceed(Model model, Readiness readiness, Supplier<Next> ready) {
+        return switch (readiness) {
+            case Readiness.Blocked(AppError error) -> Next.of(model.fail(error));
+            case Readiness.Elsewhere(BranchName branch, String worktree) ->
+                PopupUpdate.ask(model, new SwitchWorktreePopup(branch, worktree));
+            case Readiness.Busy() -> Next.of(model);
+            case Readiness.Ready() -> ready.get();
+        };
+    }
+
+    /**
+     * Whether a new worktree can check out {@code pullRequest}: not while it is unknown which repository this is, or
+     * when it is of another one; not when this worktree has its branch checked out, nor while its worktree is being
+     * added already. When another worktree has its branch checked out, switching to that is offered instead, as
+     * checking it out in place does.
+     */
+    private static Readiness forWorktree(Model model, PullRequestSummary pullRequest, WorktreeSource source) {
+        return ofThisRepository(model, pullRequest)
+                .orElse(() -> checkedOutElsewhere(model, pullRequest))
+                .orElse(() -> Option.when(
+                        checkedOutHere(model, pullRequest),
+                        () -> new Readiness.Blocked(new GitHubError.PullRequestCheckedOutHere(name(pullRequest)))))
+                .orElse(() -> Option.when(busy(model, source), Readiness.Busy::new))
+                .getOrElse(Readiness.Ready::new);
+    }
+
+    /**
+     * Whether {@code pullRequest}, of this repository, can be checked out in place: not when the working tree has
+     * changes to bring along. Untracked files do not count, as git only stops for those that are in the way. When
+     * another worktree has its branch checked out, which git would refuse, switching to that worktree is offered
+     * instead, as checking out the branch offers it.
+     */
+    private static Readiness forCheckout(Model model, PullRequestSummary pullRequest) {
+        boolean changed =
+                model.repo().files().getOrElse(List.empty()).exists(file -> file.type() != ChangeType.UNTRACKED);
+        return checkedOutElsewhere(model, pullRequest)
+                .orElse(() -> Option.when(
+                        changed, () -> new Readiness.Blocked(new GitHubError.ChangesBeforeCheckout(name(pullRequest)))))
+                .getOrElse(Readiness.Ready::new);
+    }
+
+    /**
+     * Blocked while it is not known yet which repository this is, or when {@code pullRequest} is of another one.
+     */
+    private static Option<Readiness> ofThisRepository(Model model, PullRequestSummary pullRequest) {
+        return model.prOverview()
+                .ofThisRepository(pullRequest)
+                .fold(
+                        unknown -> Option.of(new Readiness.Blocked(unknown)),
+                        ofThis -> Option.when(
+                                !ofThis,
+                                () -> new Readiness.Blocked(new BranchError.OtherRepository(name(pullRequest)))));
+    }
+
+    /**
+     * The worktree that has the branch of {@code pullRequest} checked out, if another one has. The branch of one
+     * from a fork gh names after its owner, so it is not looked for.
+     */
+    private static Option<Readiness> checkedOutElsewhere(Model model, PullRequestSummary pullRequest) {
+        BranchName branch = FromGitHub.branch(pullRequest.headBranch());
+        return Option.when(!pullRequest.fromFork(), branch)
+                .flatMap(model.repo()::branch)
+                .flatMap(Branch::worktreeLocation)
+                .map(worktree -> new Readiness.Elsewhere(branch, worktree));
+    }
+
+    /**
+     * Whether this worktree has the branch of {@code pullRequest} checked out.
+     */
+    private static boolean checkedOutHere(Model model, PullRequestSummary pullRequest) {
+        return !pullRequest.fromFork()
+                && model.repo()
+                        .currentBranch()
+                        .exists(current -> current.name().equals(FromGitHub.branch(pullRequest.headBranch())));
+    }
+
+    /**
+     * Whether an operation runs on the branch of {@code source}, as when its worktree is being added already. The
+     * branch need not be known here yet, so it is looked for among the busy ones rather than among the branches.
+     */
+    private static boolean busy(Model model, WorktreeSource source) {
+        return source.busyBranch().exists(model.jobs().busy()::containsKey);
+    }
+
+    static String name(PullRequestSummary pullRequest) {
+        return pullRequest.repository() + "#" + pullRequest.number().value();
+    }
+
+    /**
+     * What stands between a pull request and checking it out.
+     */
+    private sealed interface Readiness {
+
+        /**
+         * It cannot be checked out, for {@code error}.
+         */
+        record Blocked(AppError error) implements Readiness {}
+
+        /**
+         * Another worktree has its branch checked out, at {@code worktree}.
+         */
+        record Elsewhere(BranchName branch, String worktree) implements Readiness {}
+
+        /**
+         * Its worktree is being added already.
+         */
+        record Busy() implements Readiness {}
+
+        record Ready() implements Readiness {}
+    }
+}
