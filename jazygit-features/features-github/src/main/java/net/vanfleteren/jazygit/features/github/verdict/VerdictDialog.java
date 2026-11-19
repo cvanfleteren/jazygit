@@ -11,16 +11,16 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.gh.model.Verdict;
+import net.vanfleteren.jazygit.features.github.compose.ComposeDialog;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.ui.github.CommentComposer;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
 
 /**
- * Popup asking for a review of a pull request (ADR 100), as a {@link CommentComposer} under a choice of what it says,
+ * Popup asking for a review of a pull request (ADR 100), as a {@link ComposeDialog} under a choice of what it says,
  * in a box of its own: {@code (•) Approve  ( ) Request changes}. The text is in a box too, whose title says whether
  * the verdict chosen needs it. The choices are one stop of the focus, as a group of radio buttons is: their box takes
  * it, and shows it by its border, as the box of the text does, and the arrow keys choose. The focus starts there, on approve; Tab goes on to the text. Ctrl+S sends it, Ctrl+O opens the text in
@@ -32,8 +32,8 @@ public final class VerdictDialog implements PopupView {
     // The box of the choices, one stop of the focus.
     public static final String CHOICES_ID = "pull-request-verdict-choices";
 
-    private static final CommentComposer.Hints HINTS =
-            new CommentComposer.Hints("github.dialog.verdict.hint", "github.dialog.verdict.sending");
+    private static final ComposeDialog.Hints HINTS =
+            new ComposeDialog.Hints("github.dialog.verdict.hint", "github.dialog.verdict.sending");
 
     private static final int MARK_WIDTH = 3;
     // The box of the choices: their row and its borders.
@@ -41,14 +41,14 @@ public final class VerdictDialog implements PopupView {
     // Between the label of the first choice and the mark of the second.
     private static final int GAP = 3;
 
-    private final CommentComposer composer;
+    private final ComposeDialog composer;
     private final Consumer<Msg> dispatch;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public VerdictDialog(Consumer<Msg> dispatch) {
-        this.composer = new CommentComposer(ID, dispatch);
+        this.composer = new ComposeDialog(ID, dispatch);
         this.dispatch = dispatch;
     }
 
@@ -76,7 +76,7 @@ public final class VerdictDialog implements PopupView {
                                 popup.verdict().needsText()
                                         ? "github.dialog.verdict.textRequired"
                                         : "github.dialog.verdict.textOptional")),
-                        new CommentComposer.Comment(popup.text(), popup.sending()),
+                        new ComposeDialog.Comment(popup.text(), popup.sending()),
                         HINTS));
     }
 

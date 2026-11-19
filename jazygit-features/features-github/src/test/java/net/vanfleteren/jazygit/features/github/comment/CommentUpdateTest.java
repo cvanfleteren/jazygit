@@ -37,6 +37,8 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.features.github.comment.CommentCmd.AddComment;
 import net.vanfleteren.jazygit.features.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.features.github.comments.CommentsPopup;
+import net.vanfleteren.jazygit.features.github.compose.ComposeCmd.OpenInEditor;
+import net.vanfleteren.jazygit.features.github.compose.ComposeMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.SetDraft;
@@ -52,8 +54,6 @@ import net.vanfleteren.jazygit.kernel.state.Terminal;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.compose.ComposeCmd.OpenInEditor;
-import net.vanfleteren.jazygit.kernel.state.compose.ComposeMsg;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import org.junit.jupiter.api.Test;
 

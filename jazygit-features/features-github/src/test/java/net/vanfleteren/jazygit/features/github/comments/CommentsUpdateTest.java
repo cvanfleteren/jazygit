@@ -24,13 +24,13 @@ import net.vanfleteren.jazygit.features.github.browse.OpenLinkCmd;
 import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.features.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.features.github.comments.CommentsCmd.LoadComments;
+import net.vanfleteren.jazygit.features.github.compose.ComposeMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.OpenPullRequest;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.compose.ComposeMsg;
 import org.junit.jupiter.api.Test;
 
 /**

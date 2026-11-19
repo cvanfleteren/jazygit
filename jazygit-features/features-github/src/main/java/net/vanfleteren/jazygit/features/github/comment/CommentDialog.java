@@ -4,14 +4,14 @@ import dev.tamboui.toolkit.element.Element;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.features.github.compose.ComposeDialog;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.ui.github.CommentComposer;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
 
 /**
- * Popup asking for a comment on the pull request that is shown, as a {@link CommentComposer}: Enter adds a line,
+ * Popup asking for a comment on the pull request that is shown, as a {@link ComposeDialog}: Enter adds a line,
  * Ctrl+S sends it, Ctrl+O opens it in the editor and Escape goes back to the pull request. While it is being sent, it
  * says so; when sending failed, it says why, under the comment. The comment lives in the {@link Model}, as a
  * {@link CommentPopup}.
@@ -20,13 +20,13 @@ public final class CommentDialog implements PopupView {
 
     public static final String ID = "pull-request-comment";
 
-    private final CommentComposer composer;
+    private final ComposeDialog composer;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommentDialog(Consumer<Msg> dispatch) {
-        this.composer = new CommentComposer(ID, dispatch);
+        this.composer = new ComposeDialog(ID, dispatch);
     }
 
     @Override
@@ -43,6 +43,6 @@ public final class CommentDialog implements PopupView {
                                 "github.dialog.comment.title",
                                 String.valueOf(popup.number().value())),
                         List.empty(),
-                        new CommentComposer.Comment(popup.text(), popup.sending())));
+                        new ComposeDialog.Comment(popup.text(), popup.sending())));
     }
 }

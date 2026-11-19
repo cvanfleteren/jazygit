@@ -4,16 +4,16 @@ import dev.tamboui.toolkit.element.Element;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.features.github.compose.ComposeDialog;
 import net.vanfleteren.jazygit.features.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.ui.github.CommentComposer;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
 
 /**
  * Popup asking for a comment on the lines of the diff of a pull request's files, for a reply to one of its threads
- * (ADR 60), or for the edit of a comment of one (ADR 65), as a {@link CommentComposer}: titled with where it goes,
+ * (ADR 60), or for the edit of a comment of one (ADR 65), as a {@link ComposeDialog}: titled with where it goes,
  * under the lines it is about, the last comment of the thread, or the comment before the one edited. The comment
  * lives in the {@link Model}, as a {@link ReviewPopup}.
  */
@@ -21,13 +21,13 @@ public final class ReviewDialog implements PopupView {
 
     public static final String ID = "pull-request-review-comment";
 
-    private final CommentComposer composer;
+    private final ComposeDialog composer;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public ReviewDialog(Consumer<Msg> dispatch) {
-        this.composer = new CommentComposer(ID, dispatch);
+        this.composer = new ComposeDialog(ID, dispatch);
     }
 
     @Override
@@ -39,10 +39,7 @@ public final class ReviewDialog implements PopupView {
     public Option<Element> render(Model model) {
         return model.popup(ReviewPopup.class)
                 .map(popup -> composer.render(
-                        model,
-                        title(popup),
-                        popup.quoted(),
-                        new CommentComposer.Comment(popup.text(), popup.sending())));
+                        model, title(popup), popup.quoted(), new ComposeDialog.Comment(popup.text(), popup.sending())));
     }
 
     private static String title(ReviewPopup popup) {

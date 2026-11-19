@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.state.compose;
+package net.vanfleteren.jazygit.features.github.compose;
 
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;

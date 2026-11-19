@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.features.github.comment;
 
 import lombok.With;
+import net.vanfleteren.jazygit.features.github.compose.ComposePopup;
+import net.vanfleteren.jazygit.features.github.compose.EditorFile;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.compose.ComposePopup;
-import net.vanfleteren.jazygit.kernel.state.compose.EditorFile;
 
 /**
  * Asking for a comment on the pull request that {@code from} shows. Only one popup is open at a time, so this one keeps

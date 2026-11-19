@@ -5,12 +5,12 @@ import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.core.gh.model.Verdict;
+import net.vanfleteren.jazygit.features.github.compose.ComposePopup;
+import net.vanfleteren.jazygit.features.github.compose.EditorFile;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.compose.ComposePopup;
-import net.vanfleteren.jazygit.kernel.state.compose.EditorFile;
 
 /**
  * Asking for a review of a pull request, which approves it or asks for changes (ADR 100), from its dialog or from the
