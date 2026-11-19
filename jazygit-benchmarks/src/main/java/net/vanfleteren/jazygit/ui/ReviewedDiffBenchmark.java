@@ -9,6 +9,8 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.bench.WordDiffBenchmark.Shape;
+import net.vanfleteren.jazygit.content.diff.RichDiff;
+import net.vanfleteren.jazygit.content.diff.ShownRemarks;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
@@ -18,9 +20,8 @@ import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Collapsed;
 import net.vanfleteren.jazygit.state.diff.DiffLines;
+import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.PlacedRemarks;
-import net.vanfleteren.jazygit.content.ContentView;
-import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -58,7 +59,7 @@ public class ReviewedDiffBenchmark {
     public int threads;
 
     private ParsedDiff parsed;
-    private ContentView.ShownRemarks remarks;
+    private ShownRemarks remarks;
     private Anchor.OnLine first;
     private Anchor.OnLine last;
 
@@ -66,7 +67,7 @@ public class ReviewedDiffBenchmark {
     public void setUp() {
         parsed = DiffText.of(Shape.CODE.diff()).parsed();
         List<ReviewThread> all = List.range(0, threads).map(ReviewedDiffBenchmark::thread);
-        remarks = new ContentView.ShownRemarks(
+        remarks = new ShownRemarks(
                 all, Instant.EPOCH, Option.none(), true, Collapsed.NONE, HashSet.empty(), HashSet.empty());
         first = new Anchor.OnLine("src/F99.java", Side.RIGHT, 1 + 3 * 40 + 6);
         last = new Anchor.OnLine("src/F99.java", Side.RIGHT, 1 + 3 * 40 + 8);
@@ -85,7 +86,8 @@ public class ReviewedDiffBenchmark {
      */
     @Benchmark
     public RichDiff.Drawn draw() {
-        return RichDiff.drawn(parsed, true, true, Option.some(remarks), STYLES);
+        return RichDiff.drawn(
+                Expansion.Folded.of(parsed), Option.some(remarks), Option.none(), RichDiff.Drawing.of(STYLES));
     }
 
     /**

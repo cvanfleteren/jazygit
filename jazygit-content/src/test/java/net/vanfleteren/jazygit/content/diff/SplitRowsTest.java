@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.stream.Collectors;
@@ -83,13 +84,11 @@ class SplitRowsTest {
     void theUnifiedViewFindsAContextLineByItsAnchorOnTheLeftToo() {
         RichDiff.Drawn unified = RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of(DIFF)),
-                false,
-                true,
                 Option.none(),
                 Option.none(),
-                Theme.SpanStyles.NONE,
-                AREA,
-                false);
+                RichDiff.Drawing.of(Theme.SpanStyles.NONE)
+                        .withHighlights(HashSet.of(RichDiff.Highlight.WORDS))
+                        .withWidth(AREA));
 
         assertTrue(unified.stops()
                 .exists(stop -> stop.mark().is(new Anchor.OnLine("DiffStyle.java", Side.LEFT, 1))
@@ -135,13 +134,12 @@ class SplitRowsTest {
     private static RichDiff.Drawn drawn(String diff, int width) {
         return RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of(diff)),
-                false,
-                true,
                 Option.none(),
                 Option.none(),
-                Theme.SpanStyles.NONE,
-                width,
-                true);
+                RichDiff.Drawing.of(Theme.SpanStyles.NONE)
+                        .withHighlights(HashSet.of(RichDiff.Highlight.WORDS))
+                        .withWidth(width)
+                        .withSplit(RichDiff.Split.SIDE_BY_SIDE));
     }
 
     /**

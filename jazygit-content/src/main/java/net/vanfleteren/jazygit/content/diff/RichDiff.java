@@ -3,12 +3,13 @@ package net.vanfleteren.jazygit.content.diff;
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
-import io.vavr.Tuple;
 import io.vavr.collection.Array;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Seq;
+import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -85,83 +86,30 @@ public final class RichDiff {
     private RichDiff() {}
 
     /**
-     * The lines of {@code diff}, styled, its code coloured by its syntax if {@code syntax} (ADR 53), and the words
-     * that changed in a changed line highlighted if {@code words}, else the whole line in its line class. It was
-     * parsed, its words compared and its code lexed when it was read (ADR 50), so drawing it only styles it. The
-     * review threads of a pull request, {@code remarks}, are drawn with it if it has them (ADR 55): each after its
-     * line, which the gutter marks, one about a whole file under its bar, and the ones that cannot be placed at the
-     * end of their file. It comes with where each stop of the cursor starts in the lines (ADR 60): the bar of each
-     * file, each line that has a side and a number, each thread, and each comment of an open thread but its first.
-     * The lines of a hunk are shown in pairs where they can be (ADR 83, {@link LinePairs}).
-     */
-    static Drawn drawn(
-            ParsedDiff diff, boolean syntax, boolean words, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
-        return drawn(Expansion.Folded.of(diff), syntax, words, remarks, Option.none(), styles);
-    }
-
-    /**
-     * The lines of the diff of {@code folded}, as {@link #drawn(ParsedDiff, boolean, boolean, Option,
-     * Theme.SpanStyles)} draws them, with a marker for the lines each of its files leaves out, as far as
-     * {@code folded} knows them (ADR 77), and the lines of {@code asGiven}, the hunk a range is open in, as git gives
-     * them, not in pairs (ADR 83).
-     */
-    static Drawn drawn(
-            Expansion.Folded folded,
-            boolean syntax,
-            boolean words,
-            Option<ShownRemarks> remarks,
-            Option<DiffStops.HunkAt> asGiven,
-            Theme.SpanStyles styles) {
-        return drawn(folded, syntax, words, remarks, asGiven, styles, RENDERED_WIDTH);
-    }
-
-    /**
-     * The lines of the diff of {@code folded}, as {@link #drawn(Expansion.Folded, boolean, boolean, Option, Option,
-     * Theme.SpanStyles)} draws them, a version of a file rendered (ADR 103) {@code width} columns wide, its gutter
-     * included.
-     */
-    public static Drawn drawn(
-            Expansion.Folded folded,
-            boolean syntax,
-            boolean words,
-            Option<ShownRemarks> remarks,
-            Option<DiffStops.HunkAt> asGiven,
-            Theme.SpanStyles styles,
-            int width) {
-        return drawn(folded, syntax, words, remarks, asGiven, styles, width, false);
-    }
-
-    /**
-     * The lines of the diff of {@code folded}, as {@link #drawn(Expansion.Folded, boolean, boolean, Option, Option,
-     * Theme.SpanStyles, int)} draws them, with the old file and the new one side by side if {@code split} (ADR 139),
-     * the area {@code width} columns wide: unified, with a note that says why, when the area is narrower than
+     * The lines of the diff of {@code folded}, styled, drawn as {@code drawing} says. It was parsed, its words compared
+     * and its code lexed when it was read (ADR 50), so drawing it only styles it. The review threads of a pull request,
+     * {@code remarks}, are drawn with it if it has them (ADR 55): each after its line, which the gutter marks, one about
+     * a whole file under its bar, and the ones that cannot be placed at the end of their file. It comes with where each
+     * stop of the cursor starts in the lines (ADR 60): the bar of each file, each line that has a side and a number,
+     * each thread, and each comment of an open thread but its first. Each file has a marker for the lines it leaves
+     * out, as far as {@code folded} knows them (ADR 77). The lines of a hunk are shown in pairs where they can be (ADR
+     * 83, {@link LinePairs}), but those of {@code asGiven}, the hunk a range is open in, which are shown as git gives
+     * them. Side by side, it is unified, with a note that says why, when the area is narrower than
      * {@link #SPLIT_WIDTH}.
      */
     public static Drawn drawn(
-            Expansion.Folded folded,
-            boolean syntax,
-            boolean words,
-            Option<ShownRemarks> remarks,
-            Option<DiffStops.HunkAt> asGiven,
-            Theme.SpanStyles styles,
-            int width,
-            boolean split) {
-        Option<Integer> sideBySide = Option.when(split && width >= SPLIT_WIDTH, width);
-        Drawn drawn = drawn(folded, syntax, words, remarks, asGiven, styles, width, sideBySide);
-        return split && sideBySide.isEmpty()
-                ? drawn.withNote(Messages.get("content.split.narrow", SPLIT_WIDTH))
-                : drawn;
+            Expansion.Folded folded, Option<ShownRemarks> remarks, Option<DiffStops.HunkAt> asGiven, Drawing drawing) {
+        boolean narrow = drawing.split() == Split.SIDE_BY_SIDE && drawing.width() < SPLIT_WIDTH;
+        Drawn drawn = laidOut(folded, remarks, asGiven, narrow ? drawing.withSplit(Split.UNIFIED) : drawing);
+        return narrow ? drawn.withNote(Messages.get("content.split.narrow", SPLIT_WIDTH)) : drawn;
     }
 
-    private static Drawn drawn(
-            Expansion.Folded folded,
-            boolean syntax,
-            boolean words,
-            Option<ShownRemarks> remarks,
-            Option<DiffStops.HunkAt> asGiven,
-            Theme.SpanStyles styles,
-            int width,
-            Option<Integer> split) {
+    /**
+     * The lines of the diff of {@code folded}, as {@link #drawn} draws them, side by side if {@code drawing} says so
+     * whatever the width of its area.
+     */
+    private static Drawn laidOut(
+            Expansion.Folded folded, Option<ShownRemarks> remarks, Option<DiffStops.HunkAt> asGiven, Drawing drawing) {
         ParsedDiff diff = folded.diff();
         UnifiedDiff parsed = diff.diff();
         Vector<Option<FileRemarks>> placed = remarks.map(
@@ -173,29 +121,21 @@ public final class RichDiff {
         RemarkLines.RemarkStyle style = remarks.map(shown -> new RemarkLines.RemarkStyle(
                         shown.collapsed(), shown.sending(), shown.deleting(), shown.now(), shown.pictures()))
                 .getOrElse(() -> new RemarkLines.RemarkStyle(Instant.EPOCH));
-        // Each file is measured on a thread of its own, and then each of its lines is drawn on one, so that a diff of
-        // many files and one of a long file both hold up the render thread for less.
-        List<Pending> pending = inParallel(
-                        diff.files().zipWithIndex((file, index) -> new FileAt(file, placed.get(index), index)),
-                        file -> file(
-                                file.parsed(),
-                                file.remarks(),
-                                file.index(),
+        // Each file is drawn on a thread of its own, so that a diff of many files holds up the render thread for less;
+        // the lines of a long one are measured on threads of their own too (file).
+        List<List<Marked>> files = inParallel(
+                diff.files().zipWithIndex((file, index) -> new FileAt(file, placed.get(index), style, index)),
+                file -> file(
+                                file,
                                 folded.fold(file.parsed().file().path()),
                                 folded.hiding(file.parsed().file().path()),
                                 asGiven.filter(hunk -> hunk.file() == file.index())
                                         .map(DiffStops.HunkAt::hunk),
-                                syntax,
-                                words,
-                                style,
-                                styles,
-                                width,
-                                split))
-                .intersperse(List.of(BLANK))
-                .flatMap(file -> file);
+                                drawing)
+                        .flatMap(Pending::draw));
         Drawn drawn = Drawn.of(parsed.preamble()
                 .map(line -> new Marked(() -> Line.from(Span.raw(line)), Option.none()))
-                .appendAll(inParallel(pending, Pending::draw).flatMap(lines -> lines)));
+                .appendAll(files.intersperse(BLANK.draw()).flatMap(lines -> lines)));
         // How many hunks the diff filters hide, or that they are switched off where they would hide some, which the
         // title says: drawn with the diff, so it is worked out once for it, not for each frame (ADR 144).
         Drawn filtered = folded.filtered() == 0
@@ -209,13 +149,13 @@ public final class RichDiff {
                 .flatMap(file -> blameColumn(
                                 file.hunks().flatMap(ParsedHunk::lines).toVector(),
                                 folded.fold(file.file().path()),
-                                width,
-                                styles)
+                                drawing.width(),
+                                drawing.styles())
                         .flatMap(BlameColumn::note))
                 .headOption()
                 .map(filtered::withNote)
                 .getOrElse(filtered);
-        return split.map(area -> noted.withDivider((area - 1) / 2)).getOrElse(noted);
+        return drawing.split() == Split.SIDE_BY_SIDE ? noted.withDivider((drawing.width() - 1) / 2) : noted;
     }
 
     /**
@@ -232,60 +172,53 @@ public final class RichDiff {
      * {@code all} cut, in order, into parts of {@code sizes}.
      */
     private static <T> Vector<Vector<T>> cut(Vector<T> all, List<Integer> sizes) {
-        return sizes.foldLeft(
-                        Tuple.of(Vector.<Vector<T>>empty(), 0),
-                        (done, size) -> Tuple.of(done._1.append(all.slice(done._2, done._2 + size)), done._2 + size))
-                ._1;
+        Vector<Integer> starts = sizes.toVector().scanLeft(0, Integer::sum);
+        return starts.zip(starts.tail()).map(part -> all.slice(part._1(), part._2()));
     }
 
     /**
-     * The lines still to be drawn of {@code parsed}, with the review threads {@code remarks} on it, its code coloured
-     * by its syntax if {@code syntax}, its changed words highlighted if {@code words}, its threads drawn as {@code style} says: its bar, the threads on it, each of its
-     * lines with those after it, once the width of its gutter and its lines is known, and the threads that cannot be
-     * placed. The threads on a line are followed by a blank line, unless nothing follows them in the file. The lines of
-     * its hunk {@code asGiven}, and of a block a thread on several lines covers, are shown as git gives them, else in
-     * pairs where they can be (ADR 83). With the old file and the new one side by side in an area {@code split}
-     * columns wide, if it is (ADR 139), but a version of it or a conflicted file.
+     * The lines still to be drawn of the file {@code fileAt}, with the review threads on it, folded as {@code fold} says,
+     * its hunks hidden as {@code hiding} says (ADR 144), drawn as {@code drawing} says: its bar, the threads on it,
+     * each of its lines with those after it, once the width of its gutter and its lines is known, and the threads that
+     * cannot be placed. The threads on a line are followed by a blank line, unless nothing follows them in the file.
+     * The lines of its hunk {@code asGiven}, and of a block a thread on several lines covers, are shown as git gives
+     * them, else in pairs where they can be (ADR 83). With the old file and the new one side by side, if
+     * {@code drawing} says so (ADR 139), but a version of it or a conflicted file.
      */
     private static List<Pending> file(
-            ParsedFile parsed,
-            Option<FileRemarks> remarks,
-            int index,
-            Expansion.Fold fold,
-            Filtering.Hiding hiding,
-            Option<Integer> asGiven,
-            boolean syntax,
-            boolean words,
-            RemarkLines.RemarkStyle style,
-            Theme.SpanStyles styles,
-            int rendering,
-            Option<Integer> split) {
+            FileAt fileAt, Expansion.Fold fold, Filtering.Hiding hiding, Option<Integer> asGiven, Drawing drawing) {
+        ParsedFile parsed = fileAt.parsed();
+        Option<FileRemarks> remarks = fileAt.remarks();
+        Theme.SpanStyles styles = drawing.styles();
         FileDiff file = parsed.file();
         Option<FileVersion> version = fold.version();
         if (fold.rendered() && version.isDefined() && Rendered.of(file.path()).isDefined()) {
-            return List.of(() -> rendered(parsed, version.get(), fold, rendering, styles));
+            return List.of(() -> rendered(parsed, version.get(), fold, drawing.width(), styles));
         }
-        if (split.isDefined()
+        if (drawing.split() == Split.SIDE_BY_SIDE
                 && version.isEmpty()
                 && parsed.hunks().forAll(hunk -> hunk.hunk().numbered())) {
-            return SplitRows.file(parsed, remarks, index, fold, hiding, syntax, words, style, styles, split.get())
+            return SplitRows.file(fileAt, fold, hiding, drawing)
                     .map(pending -> () -> pending.draw().map(Marked::pin));
         }
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
         int digits = digits(lines, fold);
         // A version shown blamed has the column of its blame before its numbers (ADR 147).
-        Option<BlameColumn> blame = blameColumn(lines, fold, rendering, styles);
+        Option<BlameColumn> blame = blameColumn(lines, fold, drawing.width(), styles);
         int gutter = blame.map(BlameColumn::width).getOrElse(0) + numbersWidth(lines, fold);
         String bar = version.map(shown -> bar(parsed, shown)).getOrElse(() -> bar(file));
-        // Each line is measured once, here: its width also tells how far a changed line is padded.
+        // Each line is measured once, here: its width also tells how far a changed line is padded. On the threads of
+        // the
+        // common pool, as measuring is what drawing a long file spends most on: a diff of one long file draws in half
+        // the time this way (RichDiffBenchmark).
         Vector<Integer> measured =
                 inParallel(lines.toList(), line -> width(line.line().text())).toVector();
         int width = Math.max(
                 width(bar),
                 gutter + measured.max().map(text -> text + 1 + MARGIN.length()).getOrElse(0));
-        Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
-        Layout layout = new Layout(
-                file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles, version, blame);
+        Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), fileAt.style());
+        Layout layout =
+                new Layout(file.path(), fileAt.index(), digits, width - gutter, width, blocks, drawing, fold, blame);
         Vector<LineRemarks> onLines = remarks.map(
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
@@ -334,19 +267,14 @@ public final class RichDiff {
                         hunks.size(),
                         hiding,
                         (at, headed) -> hunk(
-                                hunks.get(at).hunk(),
-                                byHunk.get(at),
-                                groups.get(at),
-                                at,
+                                new HunkRows(hunks.get(at).hunk(), at, byHunk.get(at), groups.get(at)),
                                 afterLast || at < hunks.size() - 1,
                                 gapBefore.get(at),
                                 headed,
-                                fold,
                                 layout),
-                        at -> gapBefore.get(at).toList().map(gap -> marker(gap, fold, layout)),
-                        (run, opened) ->
-                                filteredMarker(run, opened, file.path(), rule(layout), layout.fileWidth(), styles)))
-                .appendAll(trailing.toList().map(gap -> marker(gap, fold, layout)))
+                        at -> gapBefore.get(at).toList().map(gap -> marker(gap, layout)),
+                        (run, opened) -> filteredMarker(run, opened, markerAt(layout))))
+                .appendAll(trailing.toList().map(gap -> marker(gap, layout)))
                 .appendAll(cut.toList()
                         .<Pending>map(text ->
                                 () -> List.of(Marked.plain(Line.from(styled(text, Theme.Classes.DIM, styles))))))
@@ -444,7 +372,7 @@ public final class RichDiff {
                 Option.of(new Mark(new Anchor.File(path), 1, tinted, Option.none())));
         Option<Rendered> tree = Rendered.of(path).filter(Rendered::tree);
         if (tree.isDefined()) {
-            return tree(tree.get(), path, lines, fold, width, tinted, changed, unchanged, styles)
+            return tree(tree.get(), new RenderedFile(path, lines, fold, width, tinted, styles), changed, unchanged)
                     .prepend(header);
         }
         Vector<RenderedMarkdown.Block> blocks = RenderedMarkdown.blocks(
@@ -493,16 +421,13 @@ public final class RichDiff {
      * that cannot be read is its source, after a line that says why, its lines placed on them, and no stops but the bar
      * of the file.
      */
-    private static List<Marked> tree(
-            Rendered kind,
-            String path,
-            Vector<DiffLine> lines,
-            Expansion.Fold fold,
-            int width,
-            int tinted,
-            Span changed,
-            Span unchanged,
-            Theme.SpanStyles styles) {
+    private static List<Marked> tree(Rendered kind, RenderedFile file, Span changed, Span unchanged) {
+        String path = file.path();
+        Vector<DiffLine> lines = file.lines();
+        Expansion.Fold fold = file.fold();
+        int width = file.width();
+        int tinted = file.tinted();
+        Theme.SpanStyles styles = file.styles();
         Function<Integer, Option<DiffLine>> line =
                 number -> Option.when(number >= 1 && number <= lines.size(), () -> lines.get(number - 1));
         Function<List<Integer>, Span> gutter = numbers -> numbers.exists(
@@ -614,15 +539,11 @@ public final class RichDiff {
      * a marker that says how many takes the place of the rule (ADR 77).
      */
     private static List<Pending> hunk(
-            Hunk hunk,
-            Vector<Row> rows,
-            Vector<Group> groups,
-            int index,
-            boolean followed,
-            Option<Folding.Gap> gap,
-            boolean headed,
-            Expansion.Fold fold,
-            Layout layout) {
+            HunkRows shown, boolean followed, Option<Folding.Gap> gap, boolean headed, Layout layout) {
+        Hunk hunk = shown.hunk();
+        Vector<Row> rows = shown.rows();
+        Vector<Group> groups = shown.groups();
+        int index = shown.index();
         boolean first = index == 0;
         Theme.SpanStyles styles = layout.styles();
         Span rule = rule(layout);
@@ -636,7 +557,7 @@ public final class RichDiff {
         List<Pending> header = !headed
                 ? List.<Pending>empty()
                 : gap.isDefined()
-                        ? gap.toList().map(before -> marker(before, fold, layout))
+                        ? gap.toList().map(before -> marker(before, layout))
                         : hunk.header().isEmpty() || (first && hunk.numbered())
                                 ? List.empty()
                                 : List.of(() -> List.of(Marked.plain(
@@ -749,22 +670,23 @@ public final class RichDiff {
     }
 
     /**
-     * The marker of {@code run}, hunks of the file with the path {@code path} that filters hide, a stop of the cursor
-     * (ADR 144): {@code rule}, how many lines they change, and the filters that hide them, or that they are shown, when
-     * the user {@code opened} them, which Enter on it hides again; tinted {@code width} wide when the cursor is on it.
+     * The marker of {@code run}, hunks of a file that filters hide, a stop of the cursor, where {@code at} says (ADR
+     * 144): its rule, how many lines they change, and the filters that hide them, or that they are shown, when the user
+     * {@code opened} them, which Enter on it hides again.
      */
-    static Pending filteredMarker(
-            List<HiddenHunks.Hidden> run, boolean opened, String path, Span rule, int width, Theme.SpanStyles styles) {
+    static Pending filteredMarker(List<HiddenHunks.Hidden> run, boolean opened, MarkerAt at) {
+        String path = at.path();
+        Theme.SpanStyles styles = at.styles();
         String says = Messages.get(
                 opened ? "content.filtered.opened" : "content.filtered.marker",
                 run.map(HiddenHunks.Hidden::changes).sum().intValue(),
                 String.join(", ", run.flatMap(HiddenHunks.Hidden::filters).distinct()));
         return () -> List.of(new Marked(
-                Rows.kept(Line.from(rule, styled("┄ " + says + " ┄", Theme.Classes.DIFF_HUNK, styles))),
+                Rows.kept(Line.from(at.rule(), styled("┄ " + says + " ┄", Theme.Classes.DIFF_HUNK, styles))),
                 Option.of(new Mark(
                         new Anchor.Filtered(path, run.map(HiddenHunks.Hidden::ranges), opened),
                         1,
-                        width,
+                        at.width(),
                         Option.none()))));
     }
 
@@ -785,20 +707,26 @@ public final class RichDiff {
     }
 
     /**
+     * Where a marker goes in a file drawn as {@code layout} says: after its rule, tinted as wide as the file.
+     */
+    private static MarkerAt markerAt(Layout layout) {
+        return new MarkerAt(layout.path(), rule(layout), layout.fileWidth(), layout.styles());
+    }
+
+    /**
      * The marker of {@code gap}, the lines a file leaves out, a stop of the cursor (ADR 77): the rule, and how many it
      * leaves out, or that more follow when that is not known, or that the file is being read whole, or could not be,
      * or is too long to be shown past where its read was cut, once the marker starts past it.
      */
-    private static Pending marker(Folding.Gap gap, Expansion.Fold fold, Layout layout) {
-        return marker(gap, fold, layout.path(), rule(layout), layout.fileWidth(), layout.styles());
+    private static Pending marker(Folding.Gap gap, Layout layout) {
+        return marker(gap, layout.fold(), markerAt(layout));
     }
 
     /**
-     * The marker of {@code gap} in the file with the path {@code path}, after {@code rule}, tinted {@code width} wide
-     * when the cursor is on it.
+     * The marker of {@code gap} in a file folded as {@code fold} says, where {@code at} says.
      */
-    static Pending marker(
-            Folding.Gap gap, Expansion.Fold fold, String path, Span rule, int width, Theme.SpanStyles styles) {
+    static Pending marker(Folding.Gap gap, Expansion.Fold fold, MarkerAt at) {
+        Theme.SpanStyles styles = at.styles();
         String says = switch (fold.read()) {
             case READING -> Messages.get("content.gap.reading");
             case FAILED -> Messages.get("content.gap.failed");
@@ -811,8 +739,8 @@ public final class RichDiff {
                                 Messages.get(fold.pastTheCut(gap.from()) ? "content.gap.tooLong" : "content.gap.more"));
         };
         return () -> List.of(new Marked(
-                Rows.kept(Line.from(rule, styled(says + " ┄", Theme.Classes.DIFF_HUNK, styles))),
-                Option.of(new Mark(new Anchor.Gap(path, gap.from(), gap.until()), 1, width, Option.none()))));
+                Rows.kept(Line.from(at.rule(), styled(says + " ┄", Theme.Classes.DIFF_HUNK, styles))),
+                Option.of(new Mark(new Anchor.Gap(at.path(), gap.from(), gap.until()), 1, at.width(), Option.none()))));
     }
 
     /**
@@ -1366,9 +1294,8 @@ public final class RichDiff {
     /**
      * What drawing each line of a file takes from the file: how many {@code digits} its numbers have, how many
      * columns after the gutter its changed lines are padded to, its {@code width}, how the threads on its lines are
-     * drawn, whether its code is coloured by its syntax, whether the changed words of a line are highlighted, the
-     * styles of the theme, the version of the file shown in place of its diff, if one is (ADR 102), and the column of
-     * its blame, if it is blamed (ADR 147).
+     * drawn, how the diff is drawn ({@link Drawing}), how the file is folded, which says the version of it shown in
+     * place of its diff, if one is (ADR 102), and the column of its blame, if it is blamed (ADR 147).
      */
     private record Layout(
             String path,
@@ -1377,11 +1304,26 @@ public final class RichDiff {
             int width,
             int fileWidth,
             Blocks blocks,
-            boolean syntax,
-            boolean words,
-            Theme.SpanStyles styles,
-            Option<FileVersion> version,
-            Option<BlameColumn> blame) {}
+            Drawing drawing,
+            Expansion.Fold fold,
+            Option<BlameColumn> blame) {
+
+        boolean syntax() {
+            return drawing.has(Highlight.SYNTAX);
+        }
+
+        boolean words() {
+            return drawing.has(Highlight.WORDS);
+        }
+
+        Theme.SpanStyles styles() {
+            return drawing.styles();
+        }
+
+        Option<FileVersion> version() {
+            return fold.version();
+        }
+    }
 
     /**
      * A line of a file with what drawing it takes besides the layout of its file: how many columns its text was
@@ -1489,13 +1431,83 @@ public final class RichDiff {
     private record Cut(int from, int to) {}
 
     /**
-     * A file of a diff to draw: {@code parsed}, the review threads placed on it, if they are shown, and its
-     * {@code index} in the diff.
+     * A file of a diff to draw: {@code parsed}, the review threads placed on it, if they are shown, how they are
+     * drawn, {@code style}, and its {@code index} in the diff.
      */
-    private record FileAt(ParsedFile parsed, Option<FileRemarks> remarks, int index) {}
+    record FileAt(ParsedFile parsed, Option<FileRemarks> remarks, RemarkLines.RemarkStyle style, int index) {}
+
+    /**
+     * A hunk of a file to draw: {@code hunk}, at {@code index} in its file, its {@code rows}, cut into
+     * {@code groups} ({@link LinePairs}).
+     */
+    private record HunkRows(Hunk hunk, int index, Vector<Row> rows, Vector<Group> groups) {}
+
+    /**
+     * Where a marker goes in a file: in the file with the path {@code path}, after {@code rule}, tinted {@code width}
+     * wide when the cursor is on it, in the {@code styles} of the theme.
+     */
+    record MarkerAt(String path, Span rule, int width, Theme.SpanStyles styles) {}
+
+    /**
+     * A version of a file rendered: its {@code path}, its source {@code lines}, read as {@code fold} says,
+     * {@code width} columns wide, its gutter included, its bar tinted {@code tinted} wide, in the {@code styles} of
+     * the theme (ADR 103).
+     */
+    private record RenderedFile(
+            String path, Vector<DiffLine> lines, Expansion.Fold fold, int width, int tinted, Theme.SpanStyles styles) {}
 
     /**
      * The indexes of the {@code lines} of a hunk drawn together, as {@link LinePairs} groups them.
      */
     private record Group(List<Integer> lines) {}
+
+    /**
+     * What a diff drawn highlights (ADR 53): its code coloured by its {@link #SYNTAX}, and the {@link #WORDS} that
+     * changed in a changed line, else the whole line in its line class.
+     */
+    public enum Highlight {
+        SYNTAX,
+        WORDS
+    }
+
+    /**
+     * How the lines of a diff are laid out: {@link #UNIFIED}, as git gives them, or with the old file and the new one
+     * {@link #SIDE_BY_SIDE} (ADR 139).
+     */
+    public enum Split {
+        UNIFIED,
+        SIDE_BY_SIDE
+    }
+
+    /**
+     * How a diff is drawn: what it {@code highlights}, in the {@code styles} of the theme, in an area {@code width}
+     * columns wide, which a version of a file is rendered as wide as, its gutter included (ADR 103), and laid out as
+     * {@code split} says.
+     */
+    public record Drawing(Set<Highlight> highlights, Theme.SpanStyles styles, int width, Split split) {
+
+        /**
+         * A diff drawn in {@code styles}, its syntax and its words highlighted, unified, {@link #RENDERED_WIDTH}
+         * columns wide.
+         */
+        public static Drawing of(Theme.SpanStyles styles) {
+            return new Drawing(HashSet.of(Highlight.values()), styles, RENDERED_WIDTH, Split.UNIFIED);
+        }
+
+        public Drawing withHighlights(Set<Highlight> highlights) {
+            return new Drawing(highlights, styles, width, split);
+        }
+
+        public Drawing withWidth(int width) {
+            return new Drawing(highlights, styles, width, split);
+        }
+
+        public Drawing withSplit(Split split) {
+            return new Drawing(highlights, styles, width, split);
+        }
+
+        boolean has(Highlight highlight) {
+            return highlights.contains(highlight);
+        }
+    }
 }

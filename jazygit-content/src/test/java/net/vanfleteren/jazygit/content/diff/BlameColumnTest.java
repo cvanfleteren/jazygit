@@ -127,13 +127,9 @@ class BlameColumnTest {
                         HashMap.of(
                                 WHOLE.file().path(),
                                 Expansion.Fold.of(FileVersion.NEW, false, 1).withBlame(Option.of(blamed)))),
-                false,
-                false,
                 Option.none(),
                 Option.none(),
-                styles,
-                width,
-                false);
+                RichDiff.Drawing.of(styles).withHighlights(HashSet.empty()).withWidth(width));
     }
 
     private static Blamed blamed(Blame blame) {
