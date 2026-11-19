@@ -15,7 +15,7 @@ import io.vavr.Lazy;
  * took. The list only uses the height; the width is left unknown. The element is only built the first time it is
  * drawn, so the rows of a long list that are never scrolled to are never built.
  */
-final class KnownHeight extends StyledElement<KnownHeight> {
+public final class KnownHeight extends StyledElement<KnownHeight> {
 
     private final Lazy<? extends Element> element;
     private final int height;
@@ -23,6 +23,11 @@ final class KnownHeight extends StyledElement<KnownHeight> {
     KnownHeight(Lazy<? extends Element> element, int height) {
         this.element = element;
         this.height = height;
+    }
+
+    /** {@code element}, one line high, built only once drawn. */
+    public static KnownHeight line(java.util.function.Supplier<? extends Element> element) {
+        return new KnownHeight(Lazy.of(element), 1);
     }
 
     @Override
