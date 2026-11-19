@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.app;
 
 import dev.tamboui.css.engine.StyleEngine;
+import io.vavr.Lazy;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -57,20 +58,26 @@ final class Launcher {
 
     private static void start(StartupOptions options) {
         // ssh asks the user through the app for what the user starts; without the socket, ssh asks nothing (ADR 150).
-        Option<AskpassServer> askpass = AskpassServer.start(Path.of(System.getProperty("java.io.tmpdir")))
-                .onFailure(failed -> LoggerFactory.getLogger(Launcher.class)
-                        .debug("ssh cannot ask through jazygit: the socket could not be opened", failed))
-                .toOption();
-        // Also when the app exits without returning here.
-        askpass.forEach(server -> Runtime.getRuntime().addShutdownHook(new Thread(server::close)));
+        // Only started once the app is, after the debug log: the first logger made fixes where the log goes.
+        Lazy<Option<AskpassServer>> askpass = Lazy.of(() -> {
+            Option<AskpassServer> started = AskpassServer.start(Path.of(System.getProperty("java.io.tmpdir")))
+                    .onFailure(failed -> LoggerFactory.getLogger(Launcher.class)
+                            .debug("ssh cannot ask through jazygit: the socket could not be opened", failed))
+                    .toOption();
+            // Also when the app exits without returning here.
+            started.forEach(server -> Runtime.getRuntime().addShutdownHook(new Thread(server::close)));
+            return started;
+        });
         try {
             start(options, askpass);
         } finally {
-            askpass.forEach(AskpassServer::close);
+            if (askpass.isEvaluated()) {
+                askpass.get().forEach(AskpassServer::close);
+            }
         }
     }
 
-    private static void start(StartupOptions options, Option<AskpassServer> askpass) {
+    private static void start(StartupOptions options, Lazy<Option<AskpassServer>> askpass) {
         Path start = options.path().getOrElse(Path.of("")).toAbsolutePath();
         Option<Path> debugLog = Option.when(options.debug(), SettingsPaths::debugLog);
         Either<String, Option<JazygitApp>> app = keymap(Keymap.standard())
@@ -103,8 +110,10 @@ final class Launcher {
                                         new CollapsedFile(SettingsPaths.repositories()),
                                         Repositories.NONE,
                                         Terminal.NONE,
-                                        askpass.<SshAsking>map(server -> server).getOrElse(BatchSsh.INSTANCE));
-                                return new JazygitApp(env, loaded, options.theme(), engine, askpass);
+                                        askpass.get()
+                                                .<SshAsking>map(server -> server)
+                                                .getOrElse(BatchSsh.INSTANCE));
+                                return new JazygitApp(env, loaded, options.theme(), engine, askpass.get());
                             }));
                 });
         // Quitting instead of choosing what to open starts no app.
