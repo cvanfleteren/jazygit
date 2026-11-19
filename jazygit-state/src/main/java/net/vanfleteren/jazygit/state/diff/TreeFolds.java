@@ -357,11 +357,12 @@ public final class TreeFolds {
         Map<String, Tree> own = LinkedHashMap.of(pointer, tree);
         boolean whole = tree instanceof Tree.Element element
                 && (text(element).isDefined() || columns(element).isDefined());
-        return table(tree).isDefined()
-                        || packed(tree)
-                        || tree instanceof Tree.Block
-                        || tree instanceof Tree.Comment
-                        || whole
+        boolean foldsWhole = table(tree).isDefined()
+                || packed(tree)
+                || tree instanceof Tree.Block
+                || tree instanceof Tree.Comment
+                || whole;
+        return foldsWhole
                 ? own
                 : children(tree, pointer).foldLeft(own, (done, child) -> done.merge(nodes(child._2, child._1)));
     }

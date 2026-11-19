@@ -328,12 +328,7 @@ public final class WordDiff {
      */
     private static List<Segment> joined(String[] tokens, boolean[] kept) {
         // A run of whitespace is one token, so whitespace between two changed tokens is a single token.
-        IntPredicate unchanged = i -> kept[i]
-                && !(i > 0
-                        && i < tokens.length - 1
-                        && !kept[i - 1]
-                        && !kept[i + 1]
-                        && kind(tokens[i].codePointAt(0)) == SPACE);
+        IntPredicate unchanged = i -> kept[i] && !spaceBetweenChanges(tokens, kept, i);
         // Where each run of alike tokens starts; each run is joined at once, as joining it a token at a time copies
         // it once for every token.
         int[] starts = IntStream.rangeClosed(0, tokens.length)
@@ -343,6 +338,14 @@ public final class WordDiff {
                 .map(run -> Tuple.of(starts[run], starts[run + 1]))
                 .map(run -> new Segment(
                         String.join("", Arrays.asList(tokens).subList(run._1, run._2)), !unchanged.test(run._1)));
+    }
+
+    /**
+     * Whether token {@code i} is whitespace with a changed token on either side of it.
+     */
+    private static boolean spaceBetweenChanges(String[] tokens, boolean[] kept, int i) {
+        boolean inside = i > 0 && i < tokens.length - 1;
+        return inside && !kept[i - 1] && !kept[i + 1] && kind(tokens[i].codePointAt(0)) == SPACE;
     }
 
     /**

@@ -553,11 +553,15 @@ public final class StackUpdate {
         Map<BranchName, BranchName> parents = model.repo().parents();
         Predicate<BranchName> root = root(model);
         return local(model)
-                .filter(b -> !b.name().equals(top.name())
-                        && !root.test(b.name())
-                        && !parents.containsKey(b.name())
-                        && !b.tip().equals(top.tip()))
+                .filter(b -> !atTop(b, top) && !root.test(b.name()) && !parents.containsKey(b.name()))
                 .toMap(Branch::name, Branch::tip);
+    }
+
+    /**
+     * Whether {@code branch} is {@code top}, or another branch at its tip.
+     */
+    private static boolean atTop(Branch branch, Branch top) {
+        return branch.name().equals(top.name()) || branch.tip().equals(top.tip());
     }
 
     /**

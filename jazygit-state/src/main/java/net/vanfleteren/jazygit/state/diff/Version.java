@@ -90,12 +90,17 @@ public record Version(
      * tree another of its diffs, of this file only.
      */
     public boolean holdsFor(ScrolledContent shown) {
-        return (content.sameChanges(shown)
-                        || (content instanceof ScrolledContent.Diff && shown instanceof ScrolledContent.Diff))
-                && shown.richDiff()
-                        .map(diff -> diff.parsed().files())
-                        .exists(files ->
-                                files.size() == 1 && files.head().file().path().equals(path));
+        boolean bothDiffs = content instanceof ScrolledContent.Diff && shown instanceof ScrolledContent.Diff;
+        return (content.sameChanges(shown) || bothDiffs) && onlyThisFile(shown);
+    }
+
+    /**
+     * Whether {@code shown} is a diff of this file and no other.
+     */
+    private boolean onlyThisFile(ScrolledContent shown) {
+        return shown.richDiff()
+                .map(diff -> diff.parsed().files())
+                .exists(files -> files.size() == 1 && files.head().file().path().equals(path));
     }
 
     /**

@@ -123,10 +123,15 @@ public final class Lexer {
     private static boolean annotationStarts(Scan scan) {
         String line = scan.line();
         int at = scan.at();
-        return nameStarts(line, at + 1)
-                && !scan.afterWord()
-                && !(at > 0 && line.charAt(at - 1) == '{' && Character.isLowerCase(line.charAt(at + 1)))
-                && !docLine(line);
+        return nameStarts(line, at + 1) && !scan.afterWord() && !inlineTag(line, at) && !docLine(line);
+    }
+
+    /**
+     * Whether the {@code @} at {@code at}, with a name after it, starts a lowercase tag in braces, like
+     * {@code {@link Foo}}.
+     */
+    private static boolean inlineTag(String line, int at) {
+        return at > 0 && line.charAt(at - 1) == '{' && Character.isLowerCase(line.charAt(at + 1));
     }
 
     /**
@@ -157,11 +162,14 @@ public final class Lexer {
      * {@code 1_000L}, and a point followed by a digit.
      */
     private static int numberEnd(String line, int from) {
-        return first(
-                line,
-                from,
-                i -> !wordPart(line.charAt(i))
-                        && !(line.charAt(i) == '.' && i + 1 < line.length() && Character.isDigit(line.charAt(i + 1))));
+        return first(line, from, i -> !wordPart(line.charAt(i)) && !decimalPoint(line, i));
+    }
+
+    /**
+     * Whether {@code line} has a point at {@code at} with a digit after it.
+     */
+    private static boolean decimalPoint(String line, int at) {
+        return line.charAt(at) == '.' && at + 1 < line.length() && Character.isDigit(line.charAt(at + 1));
     }
 
     /**
@@ -420,10 +428,11 @@ public final class Lexer {
                     .filter(i -> !Character.isDigit(line.charAt(i)))
                     .findFirst()
                     .orElse(line.length());
-            int end =
-                    digits > at && digits - at <= 9 && digits < line.length() && ".)".indexOf(line.charAt(digits)) >= 0
-                            ? digits + 1
-                            : at < line.length() && "-*+".indexOf(line.charAt(at)) >= 0 ? at + 1 : at;
+            // An ordered item is up to nine digits and a point or a parenthesis, like 1. or 1); a bullet is one of -*+.
+            boolean ordered =
+                    digits > at && digits - at <= 9 && digits < line.length() && ".)".indexOf(line.charAt(digits)) >= 0;
+            boolean bullet = at < line.length() && "-*+".indexOf(line.charAt(at)) >= 0;
+            int end = ordered ? digits + 1 : bullet ? at + 1 : at;
             return end > at && (end == line.length() || line.charAt(end) == ' ')
                     ? scan.token(at, end, Kind.KEYWORD).to(spaced(line, end))
                     : scan;

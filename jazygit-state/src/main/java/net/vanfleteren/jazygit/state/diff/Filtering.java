@@ -62,11 +62,10 @@ public record Filtering(
         }
         boolean several = files.size() > 1;
         boolean anyLeft = hidings.zip(files).exists(pair -> pair._1().forAll(hiding -> !hiding.all()));
+        boolean dropsEmpty = several && !keepEmptyFiles && anyLeft;
         List<Tuple3<ParsedFile, Option<Hiding>, Boolean>> kept = files.zip(hidings)
-                .map(pair -> Tuple.of(
-                        pair._1(),
-                        pair._2(),
-                        !(several && !keepEmptyFiles && anyLeft && pair._2().exists(Hiding::all))));
+                .map(pair ->
+                        Tuple.of(pair._1(), pair._2(), !(dropsEmpty && pair._2().exists(Hiding::all))));
         return new Expansion.Folded(
                 new ParsedDiff(
                         folded.diff().preamble(),
