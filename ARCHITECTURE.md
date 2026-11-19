@@ -54,11 +54,11 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 
 Each module has one root package, `net.vanfleteren.jazygit.<group>.<name>` after its name `<group>-<name>`
 (`features-github`, `net.vanfleteren.jazygit.features.github`); the app's is `net.vanfleteren.jazygit.app`. The
-libraries and the core (`jazygit-lib`, `jazygit-core`) cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other;
-nor can a module of the application see one above it, nor a group of features one beside it. The compiler stops any such
-dependency. The rules inside the modules (the models are pure, failures are values, updates are functions) are
-ArchUnit tests: `CoreRules` and `ModelRules` for the core, `AppRules` for the application, run by each module's
-`*ArchitectureTest` on its own classes.
+libraries and the core (`jazygit-lib`, `jazygit-core`) cannot see the application, TamboUI, picocli or night-config,
+and git and gh cannot see each other; nor can a module of the application see one above it, nor a group of features
+one beside it. The compiler stops any such dependency. The rules inside the modules (the models are pure, failures
+are values, updates are functions) are ArchUnit tests: `CoreRules` and `ModelRules` for the core, `AppRules` for the
+application, run by each module's `*ArchitectureTest` on its own classes.
 
 Each module of the application that has text has its own bundle, in its root package
 (`net/vanfleteren/jazygit/features/github/messages.properties`), and its keys start with its name without the group
