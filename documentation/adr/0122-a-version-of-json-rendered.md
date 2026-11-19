@@ -140,3 +140,6 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
 
 Amended by ADR 123: YAML is rendered as JSON is, by the same drawing, from one tree of the app that both are read
 into.
+
+Amended by ADR 151: XML is drawn by the same renderer, as elements, texts and comments of its own, and its tables
+allow a record to leave a column out.

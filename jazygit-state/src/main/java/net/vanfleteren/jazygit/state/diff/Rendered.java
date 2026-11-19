@@ -7,7 +7,7 @@ import io.vavr.control.Option;
 import java.util.Locale;
 
 /**
- * A kind of text file a version of can be shown rendered (ADR 103, 122, 123), told by the extension of its path: the one table
+ * A kind of text file a version of can be shown rendered (ADR 103, 122, 123, 151), told by the extension of its path: the one table
  * of which files have a renderer, and which.
  */
 public enum Rendered {
@@ -22,7 +22,15 @@ public enum Rendered {
     /**
      * YAML (ADR 123).
      */
-    YAML(HashSet.of("yaml", "yml"), true);
+    YAML(HashSet.of("yaml", "yml"), true),
+    /**
+     * XML (ADR 151). Not {@code .html}, mostly not well formed; not {@code .svg}, mostly the data of its paths.
+     */
+    XML(
+            HashSet.of(
+                    "xml", "xsd", "xsl", "xslt", "wsdl", "xhtml", "fxml", "plist", "csproj", "fsproj", "vbproj",
+                    "props", "targets"),
+            true);
 
     private final Set<String> extensions;
     private final boolean tree;
@@ -33,7 +41,7 @@ public enum Rendered {
     }
 
     /**
-     * Whether a version of this kind is rendered as a tree that folds, read into a {@link Tree} (ADR 122, 123).
+     * Whether a version of this kind is rendered as a tree that folds, read into a {@link Tree} (ADR 122, 123, 151).
      */
     public boolean tree() {
         return tree;

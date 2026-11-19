@@ -305,7 +305,7 @@ class RenderedYamlTest {
                 "diff --git a/a.yml b/a.yml\n--- a/a.yml\n+++ b/a.yml\n@@ -1,2 +1,2 @@\n-a: [1]\n+a: [1\n b: 2\n";
 
         assertEquals(
-                List.of("Not rendered: line 2, column 2, expected ',' or ']', but got :", "+ a: [1", "  b: 2"),
+                List.of("Not rendered: line 2, column 2, expected ',' or ']', but got :", "+ a: [1", "  b: 2", "   ^"),
                 drawnText(drawn(broken, FileVersion.NEW)).tail());
     }
 

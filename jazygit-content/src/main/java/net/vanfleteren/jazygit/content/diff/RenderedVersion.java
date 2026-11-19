@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.content.diff.Drawn.Mark;
 import net.vanfleteren.jazygit.content.diff.RichDiff.Change;
 import net.vanfleteren.jazygit.git.model.FileVersion;
@@ -19,11 +20,12 @@ import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.Rendered;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.Rows;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
- * A version of a file rendered in place of its diff (ADR 103): Markdown as prose, JSON and YAML as a tree (ADR 122,
- * 123), with a bar in the gutter beside what changed.
+ * A version of a file rendered in place of its diff (ADR 103): Markdown as prose, JSON, YAML and XML as a tree (ADR
+ * 122, 123, 151), with a bar in the gutter beside what changed.
  */
 final class RenderedVersion {
 
@@ -105,7 +107,7 @@ final class RenderedVersion {
     }
 
     /**
-     * The rows of a version of JSON or YAML rendered, a file of {@code kind}, its source {@code lines}, read as
+     * The rows of a version of JSON, YAML or XML rendered, a file of {@code kind}, its source {@code lines}, read as
      * {@code fold} says, {@code width} columns wide, its gutter included (ADR 122, 123): each a stop of the cursor, but
      * the keys of a table, with a bar in the gutter when a line it stands for changed, those lines placed on it. A file
      * that cannot be read is its source, after a line that says why, its lines placed on them, and no stops but the bar
@@ -126,7 +128,7 @@ final class RenderedVersion {
                 : unchanged;
         Function<List<Integer>, List<Anchor>> placed =
                 numbers -> numbers.flatMap(line::apply).flatMap(diffLine -> placedBy(path, diffLine));
-        return RenderedTree.rows(
+        return RenderedTree.read(
                         kind,
                         lines.map(DiffLine::text),
                         fold.read() == Expansion.Read.CUT,
@@ -134,21 +136,33 @@ final class RenderedVersion {
                         fold.nodes(),
                         styles)
                 .fold(
-                        why -> {
+                        not -> {
                             LexedHighlighter lexed = new LexedHighlighter(styles);
                             List<Marked> source = lines.zipWithIndex()
-                                    .<Marked>map(at -> Marked.of(
-                                            Rows.kept(Line.from(List.of(
-                                                            gutter.apply(List.of(at._2() + 1)), Span.raw(" "))
-                                                    .appendAll(List.ofAll(lexed.highlight(
-                                                                    at._1().text(), kind.language(), Style.EMPTY, null))
-                                                            .flatMap(drawn -> drawn.spans()))
-                                                    .toJavaList())),
-                                            Option.none(),
-                                            placed.apply(List.of(at._2() + 1))))
-                                    .toList();
+                                    .<List<Marked>>map(at -> {
+                                        Marked written = Marked.of(
+                                                Rows.kept(Line.from(List.of(
+                                                                gutter.apply(List.of(at._2() + 1)), Span.raw(" "))
+                                                        .appendAll(List.ofAll(lexed.highlight(
+                                                                        at._1().text(),
+                                                                        kind.language(),
+                                                                        Style.EMPTY,
+                                                                        null))
+                                                                .flatMap(drawn -> drawn.spans()))
+                                                        .toJavaList())),
+                                                Option.none(),
+                                                placed.apply(List.of(at._2() + 1)));
+                                        return not.at()
+                                                .filter(place -> place.line() == at._2() + 1)
+                                                .map(place -> List.of(
+                                                        written, caret(at._1().text(), place, styles)))
+                                                .getOrElse(() -> List.of(written));
+                                    })
+                                    .toList()
+                                    .flatMap(rows -> rows);
+                            // Not dim: a version that is not rendered says so, in the colour of an error.
                             return source.prepend(
-                                    Marked.plain(Line.from(RichDiff.styled(why, Theme.Classes.DIM, styles))));
+                                    Marked.plain(Line.from(RichDiff.styled(not.why(), Theme.Classes.ERROR, styles))));
                         },
                         rows -> rows.map(row -> Marked.of(
                                 Rows.kept(Line.from(List.of(gutter.apply(row.lines()), Span.raw(" "))
@@ -161,6 +175,20 @@ final class RenderedVersion {
                                                 .map(on -> new Mark(
                                                         new Anchor.Node(path, pointer, on), 1, tinted, Option.none()))),
                                 placed.apply(row.lines()))));
+    }
+
+    /**
+     * The row under the line {@code text} of a source that is not rendered that marks where reading it stopped, a
+     * {@code ^} under its column, in the colour of an error: a tab before it kept as a tab, any other character as blanks
+     * as wide as it is drawn.
+     */
+    private static Marked caret(String text, RenderedTree.Place place, Theme.SpanStyles styles) {
+        String before = text.substring(0, Math.max(0, Math.min(text.length(), place.column() - 1)));
+        String blanks = before.codePoints()
+                .mapToObj(c -> c == '\t' ? "\t" : " ".repeat(TextWidth.of(new String(Character.toChars(c)))))
+                .collect(Collectors.joining());
+        return Marked.plain(
+                Line.from(Span.raw(" ".repeat(GUTTER) + blanks), RichDiff.styled("^", Theme.Classes.ERROR, styles)));
     }
 
     /**

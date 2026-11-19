@@ -139,7 +139,7 @@ final class AreaLines {
                 hidden(state, view, on, wanted, lines, shown.stops().get(closest));
             case LineGoal.InRow(int row, boolean exact, int at) -> {
                 Option<String> says = Option.when(!exact, () -> Messages.get("content.line.notShown", line, at));
-                // A row of JSON or YAML rendered is a stop; a block of Markdown is scrolled to the top, as Ctrl+T
+                // A row of JSON, YAML or XML rendered is a stop; a block of Markdown is scrolled to the top, as Ctrl+T
                 // leaves it, which a key then acts on (ADR 103).
                 yield shown.stops().exists(stop -> stop.row() == row)
                         ? reached(state, view, on.toLine(row), says)

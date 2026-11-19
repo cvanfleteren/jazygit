@@ -366,7 +366,7 @@ class RenderedJsonTest {
         Drawn drawn = drawn(broken, FileVersion.NEW, false);
 
         assertEquals(
-                List.of("Not rendered: line 1, column 4, unexpected ','", "+ [1,,", "   2]"),
+                List.of("Not rendered: line 1, column 4, unexpected ','", "+ [1,,", "     ^", "   2]"),
                 drawnText(drawn).tail());
         assertEquals(
                 List.of(new Anchor.File("a.json")),

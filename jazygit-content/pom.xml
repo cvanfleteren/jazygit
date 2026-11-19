@@ -42,6 +42,10 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-xml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
             <artifactId>jazygit-git</artifactId>
         </dependency>
         <dependency>

@@ -20,6 +20,7 @@
         <module>jazygit-test-support</module>
         <module>jazygit-json</module>
         <module>jazygit-yaml</module>
+        <module>jazygit-xml</module>
         <module>jazygit-syntax</module>
         <module>jazygit-process</module>
         <module>jazygit-git</module>
@@ -89,6 +90,11 @@
             <dependency>
                 <groupId>net.vanfleteren</groupId>
                 <artifactId>jazygit-yaml</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-xml</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
