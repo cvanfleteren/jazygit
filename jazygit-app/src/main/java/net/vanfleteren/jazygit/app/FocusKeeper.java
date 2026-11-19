@@ -49,7 +49,7 @@ final class FocusKeeper {
     private Option<Integer> shownLock = Option.none();
     // Of each area that takes the focus for what is opened in it, what the last frame had open, and whether the area is
     // to take the focus once it shows it (ADR 155).
-    private Map<AreaId, Opened> opened = HashMap.empty();
+    private Map<AreaId, OpenedArea> opened = HashMap.empty();
 
     /**
      * @param runner        the runner of the app, once it is started
@@ -119,29 +119,22 @@ final class FocusKeeper {
      */
     private void followOpened(Model model, ContentArea area) {
         Option<?> now = area.opened(model);
-        Opened before = opened.get(area.id()).getOrElse(Opened.NOTHING);
-        if (now.isEmpty() && before.equals(Opened.NOTHING)) {
+        OpenedArea before = opened.get(area.id()).getOrElse(OpenedArea.NOTHING);
+        if (now.isEmpty() && before.equals(OpenedArea.NOTHING)) {
             return;
         }
         PaneId pane = area.pane(model);
-        boolean toFocus = before.toFocus();
-        if (!now.equals(before.what())) {
-            if (now.isEmpty() && focus().contains(area.id())) {
-                moveTo(pane);
-            }
-            toFocus = now.isDefined();
+        OpenedArea.Following following = OpenedArea.follow(
+                before, now, focus(), () -> contentPanel.areaOfPane(model, pane).contains(area.id()), area.id(), pane);
+        following.move().forEach(this::moveTo);
+        OpenedArea next = following.next();
+        // TamboUI moves the focus into the area only once a frame drew its element: until then, the next frame tries
+        // again.
+        if (following.move().contains(area.id()) && focus().contains(pane)) {
+            next = next.waiting();
+            requestRedraw.run();
         }
-        // The area takes the focus only once a frame drew it: until then, the next frame tries again.
-        if (toFocus && contentPanel.areaOfPane(model, pane).contains(area.id())) {
-            if (focus().contains(pane)) {
-                moveTo(area.id());
-            }
-            toFocus = focus().contains(pane);
-            if (toFocus) {
-                requestRedraw.run();
-            }
-        }
-        opened = opened.put(area.id(), new Opened(now, toFocus));
+        opened = opened.put(area.id(), next);
     }
 
     /**
@@ -329,12 +322,5 @@ final class FocusKeeper {
 
     private FocusManager manager() {
         return runner.get().focusManager();
-    }
-
-    /**
-     * What an area had open at the last frame, and whether it is to take the focus once it shows it.
-     */
-    private record Opened(Option<?> what, boolean toFocus) {
-        static final Opened NOTHING = new Opened(Option.none(), false);
     }
 }
