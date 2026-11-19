@@ -126,7 +126,8 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   The rules take its classes for views, as they take the dialogs.
 - **A feature keeps its part of the model**: what a feature keeps in the model beyond a popup is a value under a
   `state.Part` it declares in its own package, as the builds of a branch under `BuildsView.PART`; the `Model` holds
-  them in `parts` without naming them (ADR 157). What the panes and several features read stays a field of the `Model`.
+  them in `parts` by the part's name, without naming them (ADR 157), and `PartNamesTest` checks that no two parts
+  share a name. What the panes and several features read stays a field of the `Model`.
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys`, a dialog or a feature's content runs git or gh.

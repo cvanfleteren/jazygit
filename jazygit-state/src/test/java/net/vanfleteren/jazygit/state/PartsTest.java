@@ -38,12 +38,13 @@ class PartsTest {
     }
 
     @Test
-    void twoPartsOfTheSameNameAndValueAreKeptApart() {
-        Part<Option<String>> other = Part.of("test.shown", Option.none());
+    void aPartIsKeptUnderItsNameSoTwoPartsOfOneNameShareTheirValue() {
+        Part<Option<String>> same = Part.of("test.shown", Option.none());
 
         Model model = Model.initial("repo").withPart(SHOWN, Option.of("x"));
 
-        assertEquals(Option.none(), model.part(other));
+        assertEquals(SHOWN, same);
+        assertEquals(Option.of("x"), model.part(same));
     }
 
     @Test

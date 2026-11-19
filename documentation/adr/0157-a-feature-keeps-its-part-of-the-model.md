@@ -20,8 +20,12 @@ and content that is no diff is a `ScrolledContent.Other` of its source (ADR 155)
   package: `BuildsView.PART`, a `Part<Option<BuildsView>>`. A part has a name and an initial value.
 - The `Model` holds the parts in one field, `parts` (`Parts`), without naming them: `model.part(PART)` reads one,
   `withPart` and `mapPart` change it, and `PART.lens()` is where it sits. A part never set has its initial value.
-- A part is the key it is kept under, equal only to itself: two parts never share a value, whatever their names, so
-  no list of the parts is kept and nothing checks their names. The name tells a reader which part it is.
+- A part is kept under its name, and is a plain value: two parts of one name and initial value are equal. Its name
+  starts with the root package of the feature's module (`github.builds`). No list of the parts is kept: a test of the
+  app (`PartNamesTest`) finds every constant that holds a part in the app's classes, and fails when two share a name,
+  as the second would read the value of the first. A part kept by identity instead would need no such test, but it
+  would be a record that is not equal to its copy, and the order of the parts, and so what a model prints, would
+  change from one run to the next.
 - A part set back to its initial value is not kept, so two models with the same parts are equal, and `drawn()`
   (ADR 14) needs nothing for them.
 - The builds are the first: their model, their messages, their loads and their texts move to `github.builds`, and
@@ -39,4 +43,6 @@ and content that is no diff is a `ScrolledContent.Other` of its source (ADR 155)
   their own messages change them. A part that needs it, as a view that is read again on a tick, will need a hook
   declared with its part, which is for a later ADR.
 - The `Model`'s Javadoc no longer lists all it holds; what is in its parts is in the features that declare them.
-- A part's value is cast when read; only `withPart`, which takes a value of the part's type, puts one there.
+- A part's value is cast when read; only `withPart`, which takes a value of the part's type, puts one there, under a
+  name no other part has.
+- A part declared other than as a constant, as in a local variable, escapes `PartNamesTest`.
