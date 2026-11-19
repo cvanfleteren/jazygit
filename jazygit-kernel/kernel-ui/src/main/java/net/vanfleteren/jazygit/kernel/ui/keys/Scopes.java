@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.kernel.ui.keys;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
+import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Scope;
@@ -85,6 +86,11 @@ public final class Scopes {
      */
     public static final io.vavr.collection.List<Scope<PullRequestSummary>> PULL_REQUESTS =
             io.vavr.collection.List.of(PR_REPOSITORY, PR_REVIEW_REQUESTED, PR_AUTHORED);
+    /**
+     * The keys of a failed build, which features add to the views of a forge that show one, as they host this scope
+     * (ADR 161); a view gives it the failed build it shows.
+     */
+    public static final Scope<FailedBuild> FAILED_BUILD = new Scope<>("failedBuild", "panel.failedBuild.title");
 
     private Scopes() {}
 

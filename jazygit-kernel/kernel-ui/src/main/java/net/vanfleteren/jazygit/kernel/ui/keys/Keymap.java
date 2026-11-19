@@ -42,21 +42,24 @@ public final class Keymap {
     private final Map<String, Section> sections;
     private final List<Global> globals;
     private final Option<BiFunction<String, List<Option<Msg>>, Msg>> help;
+    private final Map<String, List<Scope<?>>> guests;
 
     private Keymap(
             Map<String, Section> sections,
             List<Global> globals,
-            Option<BiFunction<String, List<Option<Msg>>, Msg>> help) {
+            Option<BiFunction<String, List<Option<Msg>>, Msg>> help,
+            Map<String, List<Scope<?>>> guests) {
         this.sections = sections;
         this.globals = globals;
         this.help = help;
+        this.guests = guests;
     }
 
     /**
      * A keymap without keys, for the features to add theirs to, in which {@link #HELP_KEY} does nothing.
      */
     public static Keymap empty() {
-        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.none());
+        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.none(), LinkedHashMap.empty());
     }
 
     /**
@@ -64,7 +67,7 @@ public final class Keymap {
      * what each of its keys would send. The keymap names no feature, the help included (ADR 136).
      */
     public static Keymap withHelp(BiFunction<String, List<Option<Msg>>, Msg> help) {
-        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.of(help));
+        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.of(help), LinkedHashMap.empty());
     }
 
     /**
@@ -93,57 +96,145 @@ public final class Keymap {
      */
     @SafeVarargs
     public final <S> Keymap add(Scope<S> scope, Binding<S>... bindings) {
-        List<Binding<?>> all = bindings(scope.id()).appendAll(List.of(bindings));
-        // A key bound twice would only do what it was bound to first, silently; the help key does nothing else.
-        Option<String> twice = all.map(Binding::key)
+        List<Binding<?>> all = own(scope.id()).appendAll(List.of(bindings));
+        Keymap added = new Keymap(sections.put(scope.id(), new Section(scope, all)), globals, help, guests);
+        // The scope's own keys, and those of every scope that hosts it, as its keys are theirs as well (ADR 161).
+        added.requireOnce(scope.id());
+        guests.filterValues(hosted -> hosted.exists(guest -> guest.id().equals(scope.id())))
+                .keySet()
+                .forEach(added::requireOnce);
+        return added;
+    }
+
+    /**
+     * This keymap with the keys of {@code guest} among those of {@code host} as well, after its own: the keys of a
+     * subject, as a failed build, that features of another group add to a view that shows it, without seeing the
+     * view's own keys (ADR 161). A key of the guest that the host or another of its guests has is refused.
+     */
+    public Keymap host(Scope<?> host, Scope<?> guest) {
+        Keymap hosting = new Keymap(
+                sections,
+                globals,
+                help,
+                guests.put(
+                        host.id(), guests.get(host.id()).getOrElse(List.empty()).append(guest)));
+        hosting.requireOnce(host.id());
+        return hosting;
+    }
+
+    /**
+     * Fails when a key of {@code scopeId}, with its guests, is bound twice: it would only do what it was bound to
+     * first, silently; the help key does nothing else.
+     */
+    private void requireOnce(String scopeId) {
+        Option<String> twice = bindings(scopeId)
+                .map(Binding::key)
                 .append(HELP_KEY)
                 .groupBy(key -> key)
                 .filterValues(keys -> keys.size() > 1)
                 .keySet()
                 .headOption();
-        Require.that(twice.isEmpty(), () -> "The key \"" + twice.get() + "\" is bound twice in " + scope.id());
-        return new Keymap(sections.put(scope.id(), new Section(scope, all)), globals, help);
+        Require.that(twice.isEmpty(), () -> "The key \"" + twice.get() + "\" is bound twice in " + scopeId);
     }
 
     /**
      * This keymap with the key {@code global} added.
      */
     public Keymap global(Global global) {
-        return new Keymap(sections, globals.append(global), help);
+        return new Keymap(sections, globals.append(global), help, guests);
     }
 
     /**
      * What the keys of {@code scope} do in the event {@code event}: help for {@code ?}, if this keymap has help,
-     * otherwise the message of the key, if the scope has it. A key let go does nothing.
+     * otherwise the message of the key, if the scope has it. A key let go does nothing. The keys of the scopes it
+     * hosts do nothing here, as they act on what {@code hosted} gives them.
      *
      * @param selection what is selected in the panel, if anything
+     * @param hosted    what the scopes it hosts act on, each of the scope it is for (ADR 161)
      */
-    public <S> Option<Msg> handle(Scope<S> scope, KeyEvent event, Option<S> selection) {
+    public <S> Option<Msg> handle(Scope<S> scope, KeyEvent event, Option<S> selection, Hosted<?>... hosted) {
         if (event.isRelease()) {
             return Option.none();
         }
+        List<Hosted<?>> subjects = List.of(hosted);
         if (HELP_KEY.equals(name(event))) {
-            return help.map(requested -> requested.apply(scope.id(), actions(scope, selection)));
+            return help.map(requested -> requested.apply(scope.id(), actions(scope, selection, subjects)));
         }
         return sections.get(scope.id())
                 .flatMap(section -> section.bindings().find(binding -> binding.matches(event)))
-                .flatMap(binding -> {
+                .map(binding -> {
                     @SuppressWarnings("unchecked")
                     Binding<S> typed = (Binding<S>) binding;
                     return typed.action().apply(selection);
-                });
+                })
+                .getOrElse(() -> guestsOf(scope.id())
+                        .iterator()
+                        .flatMap(guest -> subject(guest, subjects).handled(this, event))
+                        .headOption());
     }
 
     /**
      * What each key of {@code scope} would send for {@code selection}, in the order of {@link #bindings}: none
-     * for a key that does nothing then.
+     * for a key that does nothing then, as a key of a scope it hosts, which acts on what a view gives it.
      */
     public <S> List<Option<Msg>> actions(Scope<S> scope, Option<S> selection) {
-        return bindings(scope.id()).map(binding -> {
-            @SuppressWarnings("unchecked")
-            Binding<S> typed = (Binding<S>) binding;
-            return typed.action().apply(selection);
-        });
+        return actions(scope, selection, List.empty());
+    }
+
+    private <S> List<Option<Msg>> actions(Scope<S> scope, Option<S> selection, List<Hosted<?>> hosted) {
+        return own(scope.id())
+                .map(binding -> {
+                    @SuppressWarnings("unchecked")
+                    Binding<S> typed = (Binding<S>) binding;
+                    return typed.action().apply(selection);
+                })
+                .appendAll(guestsOf(scope.id())
+                        .flatMap(guest -> subject(guest, hosted).actions(this)));
+    }
+
+    /**
+     * The scopes {@code scopeId} hosts, in the order they were hosted.
+     */
+    private List<Scope<?>> guestsOf(String scopeId) {
+        return guests.get(scopeId).getOrElse(List.empty());
+    }
+
+    /**
+     * What {@code hosted} gives the scope {@code guest} to act on; nothing when it gives it nothing.
+     */
+    private static Hosted<?> subject(Scope<?> guest, List<Hosted<?>> hosted) {
+        return hosted.find(subject -> subject.scope().id().equals(guest.id())).getOrElse(() -> Hosted.nothing(guest));
+    }
+
+    /**
+     * What a view gives the keys of a scope it hosts to act on (ADR 161).
+     *
+     * @param scope   the scope hosted
+     * @param subject what its keys act on, if anything
+     */
+    public record Hosted<T>(Scope<T> scope, Option<T> subject) {
+
+        private static <T> Hosted<T> nothing(Scope<T> scope) {
+            return new Hosted<>(scope, Option.none());
+        }
+
+        private Option<Msg> handled(Keymap keymap, KeyEvent event) {
+            return keymap.own(scope.id())
+                    .find(binding -> binding.matches(event))
+                    .flatMap(binding -> {
+                        @SuppressWarnings("unchecked")
+                        Binding<T> typed = (Binding<T>) binding;
+                        return typed.action().apply(subject);
+                    });
+        }
+
+        private List<Option<Msg>> actions(Keymap keymap) {
+            return keymap.own(scope.id()).map(binding -> {
+                @SuppressWarnings("unchecked")
+                Binding<T> typed = (Binding<T>) binding;
+                return typed.action().apply(subject);
+            });
+        }
     }
 
     /**
@@ -154,9 +245,17 @@ public final class Keymap {
     }
 
     /**
-     * The keys of the panel {@code scopeId}, in the order the features declared them.
+     * The keys of the panel {@code scopeId}, in the order the features declared them, then those of the scopes it
+     * hosts (ADR 161).
      */
     public List<Binding<?>> bindings(String scopeId) {
+        return own(scopeId).appendAll(guestsOf(scopeId).flatMap(guest -> own(guest.id())));
+    }
+
+    /**
+     * The keys of {@code scopeId} itself, without those of the scopes it hosts.
+     */
+    private List<Binding<?>> own(String scopeId) {
         return sections.get(scopeId).map(Section::bindings).getOrElse(List.of());
     }
 
