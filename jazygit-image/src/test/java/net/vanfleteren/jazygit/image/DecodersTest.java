@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.image;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.awt.image.BufferedImage;
@@ -27,21 +27,21 @@ class DecodersTest {
     void aPngWithAlphaIsReadToItsPixels() throws IOException {
         BufferedImage image = pattern(new BufferedImage(37, 21, BufferedImage.TYPE_INT_ARGB));
 
-        assertSame(image, Png.read(png(image, false), MAX));
+        assertSame(image, Png.read(png(image, false), MAX).get());
     }
 
     @Test
     void anInterlacedPngIsReadToTheSamePixels() throws IOException {
         BufferedImage image = pattern(new BufferedImage(19, 13, BufferedImage.TYPE_INT_ARGB));
 
-        assertSame(image, Png.read(png(image, true), MAX));
+        assertSame(image, Png.read(png(image, true), MAX).get());
     }
 
     @Test
     void aPngOfTruecolourIsReadToItsPixels() throws IOException {
         BufferedImage image = pattern(new BufferedImage(23, 9, BufferedImage.TYPE_INT_RGB));
 
-        assertSame(image, Png.read(png(image, false), MAX));
+        assertSame(image, Png.read(png(image, false), MAX).get());
     }
 
     @Test
@@ -50,7 +50,7 @@ class DecodersTest {
             BufferedImage image = pattern(new BufferedImage(23, 9, type));
             int shift = type == BufferedImage.TYPE_USHORT_GRAY ? 8 : 0;
 
-            Raster raster = Png.read(png(image, false), MAX);
+            Raster raster = Png.read(png(image, false), MAX).get();
 
             for (int y = 0; y < image.getHeight(); y++) {
                 for (int x = 0; x < image.getWidth(); x++) {
@@ -72,7 +72,7 @@ class DecodersTest {
                 0);
         BufferedImage image = pattern(new BufferedImage(17, 7, BufferedImage.TYPE_BYTE_BINARY, palette));
 
-        assertSame(image, Png.read(png(image, false), MAX));
+        assertSame(image, Png.read(png(image, false), MAX).get());
     }
 
     @Test
@@ -89,7 +89,7 @@ class DecodersTest {
         ImageIO.write(image, "gif", out);
 
         assertTrue(Gif.is(out.toByteArray()));
-        assertSame(image, Gif.read(out.toByteArray(), MAX));
+        assertSame(image, Gif.read(out.toByteArray(), MAX).get());
     }
 
     @Test
@@ -104,15 +104,22 @@ class DecodersTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ImageIO.write(image, "gif", out);
 
-        assertSame(image, Gif.read(out.toByteArray(), MAX));
+        assertSame(image, Gif.read(out.toByteArray(), MAX).get());
     }
 
     @Test
     void anImageWithTooManyPixelsOrCutOffIsNotRead() throws IOException {
         byte[] bytes = png(pattern(new BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB)), false);
 
-        assertThrows(IllegalArgumentException.class, () -> Png.read(bytes, 100));
-        assertThrows(RuntimeException.class, () -> Png.read(Arrays.copyOf(bytes, bytes.length / 2), MAX));
+        assertInstanceOf(IllegalArgumentException.class, Png.read(bytes, 100).getCause());
+        assertTrue(Png.read(Arrays.copyOf(bytes, bytes.length / 2), MAX).isFailure());
+    }
+
+    @Test
+    void aGifWithoutAnImageIsAFailure() {
+        byte[] header = {'G', 'I', 'F', '8', '9', 'a', 1, 0, 1, 0, 0, 0, 0, 0x3b};
+
+        assertInstanceOf(IllegalArgumentException.class, Gif.read(header, MAX).getCause());
     }
 
     private static BufferedImage pattern(BufferedImage image) {

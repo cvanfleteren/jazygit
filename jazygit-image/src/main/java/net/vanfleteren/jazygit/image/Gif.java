@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.image;
 
+import io.vavr.control.Try;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -21,10 +22,15 @@ final class Gif {
     }
 
     /**
-     * The pixels of the first frame of {@code bytes}, a GIF, as long as it has no more than {@code maxPixels}; it
-     * throws {@link IllegalArgumentException} for what it cannot read.
+     * The pixels of the first frame of {@code bytes}, a GIF, as long as it has no more than {@code maxPixels}; a
+     * failure for what it cannot read.
      */
-    static Raster read(byte[] bytes, long maxPixels) {
+    static Try<Raster> read(byte[] bytes, long maxPixels) {
+        return Try.of(() -> decode(bytes, maxPixels));
+    }
+
+    // Throws for what it cannot read, an IllegalArgumentException or what a cut off buffer throws; read catches it.
+    private static Raster decode(byte[] bytes, long maxPixels) {
         ByteBuffer in = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
         in.position(6);
         int width = in.getShort() & 0xffff;

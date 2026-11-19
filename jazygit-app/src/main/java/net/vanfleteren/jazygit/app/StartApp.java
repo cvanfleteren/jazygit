@@ -56,23 +56,22 @@ final class StartApp extends ToolkitApp {
 
     /**
      * Asks what to open instead of {@code directory}, which is in no repository, drawn as {@code settings} and
-     * {@code themeOverride} say: the working tree of the repository chosen, or none when the user quits.
+     * {@code themeOverride} say: the working tree of the repository chosen, or none when the user quits; a failure
+     * when the terminal could not be drawn on.
      *
      * @param recent the recent repositories that can be opened instead
      */
-    static Option<Path> choose(
+    static Try<Option<Path>> choose(
             Path directory,
             List<RecentRepo> recent,
             SettingsStore.Loaded settings,
             Option<ThemeName> themeOverride,
-            StyleEngine styleEngine)
-            throws Exception {
+            StyleEngine styleEngine) {
         StartApp app = new StartApp(
                 StartUpdate.init(
                         directory.toString(), Files.isDirectory(directory), recent, settings.settings(), themeOverride),
                 styleEngine);
-        app.run();
-        return app.chosen;
+        return Try.run(app::run).map(ran -> app.chosen);
     }
 
     @Override
