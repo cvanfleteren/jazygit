@@ -1,8 +1,7 @@
 package net.vanfleteren.jazygit.app;
 
 import io.vavr.control.Option;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import io.vavr.control.Try;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +27,8 @@ final class FrameStats {
     private long renderNanos;
     private boolean drawnThisFrame;
     private boolean flushed;
+    // Where and why a line could not be written, if one could not.
+    private Option<String> notWritten = Option.none();
 
     private FrameStats(Option<Path> file) {
         this.file = file;
@@ -101,6 +102,7 @@ final class FrameStats {
         roll();
         write(line());
         flushed = true;
+        notWritten.forEach(problem -> System.err.println("Frame stats not written to " + problem));
     }
 
     private String line() {
@@ -109,14 +111,18 @@ final class FrameStats {
                 second, frames, changing, frames - changing, cells, renderNanos / 1e6);
     }
 
+    // Once a line could not be written no more are, as the counts would have a hole; why is told at exit, as the
+    // screen is the app's until then.
     private void write(String text) {
-        file.forEach(path -> {
-            try {
-                Files.writeString(
-                        path, text, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        });
+        file.filter(path -> notWritten.isEmpty())
+                .forEach(path -> notWritten = Try.run(() -> Files.writeString(
+                                path,
+                                text,
+                                StandardCharsets.UTF_8,
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.APPEND))
+                        .failed()
+                        .map(failure -> path + ": " + failure)
+                        .toOption());
     }
 }

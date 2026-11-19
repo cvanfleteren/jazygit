@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.image;
 
 import io.vavr.collection.Vector;
 import io.vavr.control.Either;
-import io.vavr.control.Try;
 
 /**
  * An image as the terminal draws it, in half blocks (ADR 84): a pixel is half a cell, so a cell is a pixel wide and
@@ -52,7 +51,7 @@ public record Picture(int width, int height, Vector<Integer> argb) {
      * a few KB, and a pull request may have many.
      */
     private static synchronized Either<String, Picture> read(byte[] bytes) {
-        return Try.of(() -> Png.is(bytes) ? Png.read(bytes, MAX_PIXELS) : Gif.read(bytes, MAX_PIXELS))
+        return (Png.is(bytes) ? Png.read(bytes, MAX_PIXELS) : Gif.read(bytes, MAX_PIXELS))
                 .map(raster -> {
                     int width = Math.ceilDiv(raster.width(), SCALE);
                     int height = Math.ceilDiv(raster.height(), SCALE);
