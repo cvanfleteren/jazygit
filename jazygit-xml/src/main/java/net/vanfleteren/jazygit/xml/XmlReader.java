@@ -196,9 +196,17 @@ final class XmlReader {
         if (end >= 0) {
             throw broken(end, new Problem.CdataEnd());
         }
+        return textOf(from, at, false);
+    }
+
+    /**
+     * The text written from {@code from} up to {@code until}, its references undone; a reference to a line break stays
+     * in the line it is written on.
+     */
+    private String decoded(int from, int until) {
         StringBuilder decoded = new StringBuilder();
         int index = from;
-        while (index < at) {
+        while (index < until) {
             char c = text.charAt(index);
             if (c == '&') {
                 index = reference(index, decoded);
@@ -207,7 +215,7 @@ final class XmlReader {
                 index++;
             }
         }
-        return textOf(from, at, decoded.toString(), false);
+        return decoded.toString();
     }
 
     private List<XmlTree> cdata() {
@@ -217,26 +225,51 @@ final class XmlReader {
             throw broken(at, new Problem.Expected("]]>"));
         }
         at = until + 3;
-        return textOf(from, until, text.substring(from, until), true);
+        return textOf(from, until, true);
     }
 
     /**
-     * The text written from {@code from} up to {@code until}, read as {@code decoded}, trimmed, if it holds more than
-     * white space: its line is that of the first character that is no white space in the source.
+     * The text written from {@code from} up to {@code until}, trimmed, if it holds more than white space: its line is
+     * that of the first character that is no white space in the source. It is split into the lines of the source first,
+     * then the references of each are undone, unless it is a section of {@code cdata}: so its {@code n}th line is on line
+     * {@code line + n}, also where a reference stands for a line break.
      */
-    private List<XmlTree> textOf(int from, int until, String decoded, boolean cdata) {
-        if (decoded.isBlank()) {
-            return List.empty();
-        }
+    private List<XmlTree> textOf(int from, int until, boolean cdata) {
         int first = from;
-        while (first < until && Character.isWhitespace(text.charAt(first))) {
+        while (first < until && space(text.charAt(first))) {
             first++;
         }
+        if (first == until) {
+            return List.empty();
+        }
         int last = until - 1;
-        while (last > first && Character.isWhitespace(text.charAt(last))) {
+        while (last > first && space(text.charAt(last))) {
             last--;
         }
-        return List.of(new Text(lineOf(first), lineOf(last), cdata, lines(decoded.strip())));
+        List<Integer> heads = List.ofAll(IntStream.rangeClosed(first + 1, last)
+                        .filter(index -> text.charAt(index - 1) == '\n')
+                        .boxed())
+                .prepend(first);
+        List<Integer> ends = heads.tail().map(head -> head - 1).append(last + 1);
+        int shared = indentation(heads.tail().zip(ends.tail()).map(range -> text.substring(range._1, range._2)));
+        List<String> lines = heads.zip(ends).zipWithIndex((range, at) -> {
+            int start = at == 0 ? range._1 : Math.min(range._1 + shared, end(range._1, range._2));
+            int end = end(start, range._2);
+            return cdata ? text.substring(start, end) : decoded(start, end);
+        });
+        return List.of(new Text(lineOf(first), lineOf(last), cdata, lines));
+    }
+
+    /**
+     * Where the line from {@code start} up to {@code end} ends without the white space at its end, and a carriage
+     * return.
+     */
+    private int end(int start, int end) {
+        int until = end;
+        while (until > start && space(text.charAt(until - 1))) {
+            until--;
+        }
+        return until;
     }
 
     private Comment comment() {
@@ -252,14 +285,14 @@ final class XmlReader {
         }
         at = until + 3;
         int first = inside;
-        while (first < until && Character.isWhitespace(text.charAt(first))) {
+        while (first < until && space(text.charAt(first))) {
             first++;
         }
         return new Comment(
                 lineOf(from),
                 lineOf(until),
                 lineOf(Math.min(first, until)),
-                lines(text.substring(inside, until).strip()));
+                lines(strip(text.substring(inside, until))));
     }
 
     /**
@@ -356,7 +389,8 @@ final class XmlReader {
         if (inside.startsWith("#")) {
             boolean hex = inside.startsWith("#x");
             String digits = inside.substring(hex ? 2 : 1);
-            if (!digits.isEmpty() && digits.chars().allMatch(c -> Character.digit(c, hex ? 16 : 10) >= 0)) {
+            // Digits of ASCII only: Character.digit takes those of every script, as fullwidth ones.
+            if (!digits.isEmpty() && digits.chars().allMatch(c -> c < 0x80 && Character.digit(c, hex ? 16 : 10) >= 0)) {
                 int c;
                 try {
                     c = Integer.parseInt(digits, hex ? 16 : 10);
@@ -419,9 +453,52 @@ final class XmlReader {
     }
 
     private void skipSpace() {
-        while (at < text.length() && Character.isWhitespace(text.charAt(at))) {
+        while (at < text.length() && space(text.charAt(at))) {
             at++;
         }
+    }
+
+    /**
+     * Whether {@code c} is white space as XML has it: a space, a tab or a line break, not every space of Unicode.
+     */
+    private static boolean space(char c) {
+        return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+    }
+
+    /**
+     * {@code text} without the white space of XML at its start and its end.
+     */
+    private static String strip(String text) {
+        int from = 0;
+        int until = text.length();
+        while (from < until && space(text.charAt(from))) {
+            from++;
+        }
+        while (until > from && space(text.charAt(until - 1))) {
+            until--;
+        }
+        return text.substring(from, until);
+    }
+
+    /**
+     * How much indentation {@code lines} share: the least white space any that holds anything starts with.
+     */
+    private static int indentation(List<String> lines) {
+        return lines.filter(line -> !strip(line).isEmpty())
+                .map(XmlReader::leading)
+                .min()
+                .getOrElse(0);
+    }
+
+    /**
+     * How much white space {@code line} starts with.
+     */
+    private static int leading(String line) {
+        int at = 0;
+        while (at < line.length() && space(line.charAt(at))) {
+            at++;
+        }
+        return at;
     }
 
     /**
@@ -442,15 +519,19 @@ final class XmlReader {
      * indentation they share.
      */
     private static List<String> lines(String text) {
-        List<String> lines = List.of(text.split("\n", -1)).map(String::stripTrailing);
-        int shared = lines.tail()
-                .filter(line -> !line.isBlank())
-                .map(line -> line.length() - line.stripLeading().length())
-                .min()
-                .getOrElse(0);
+        List<String> lines = List.of(text.split("\n", -1)).map(XmlReader::stripEnd);
+        int shared = indentation(lines.tail());
         return lines.tail()
                 .map(line -> line.length() < shared ? "" : line.substring(shared))
                 .prepend(lines.head());
+    }
+
+    private static String stripEnd(String line) {
+        int until = line.length();
+        while (until > 0 && space(line.charAt(until - 1))) {
+            until--;
+        }
+        return line.substring(0, until);
     }
 
     /**

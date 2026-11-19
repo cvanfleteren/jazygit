@@ -325,7 +325,7 @@ final class RenderedTree {
      * is not all of them.
      */
     private static String firstLine(List<String> lines) {
-        String first = lines.find(line -> !line.isBlank()).getOrElse("");
+        String first = flat(lines.find(line -> !line.isBlank()).getOrElse(""));
         boolean more = TextWidth.of(first) > PREVIEW || lines.size() > 1;
         return TextWidth.start(first, PREVIEW) + (more ? " …" : "");
     }
@@ -801,7 +801,7 @@ final class RenderedTree {
                 Tree.Text only = text.get();
                 return only.lines()
                         .zipWithIndex((written, at) -> new TreeRow(
-                                line(List.of(dim(inner + BLOCK_INDENT), Span.raw(written))),
+                                line(List.of(dim(inner + BLOCK_INDENT), Span.raw(flat(written)))),
                                 Option.of(TreeFolds.child(pointer, String.valueOf(at))),
                                 List.of(only.line() + at)))
                         .prepend(row);
@@ -827,10 +827,11 @@ final class RenderedTree {
         }
 
         /**
-         * The spans of the line {@code at} of {@code text}: the first after a dim mark when it is a section of CDATA.
+         * The spans of the line {@code at} of {@code text}, a line break referred to in it as {@value #NEWLINE}: the first
+         * after a dim mark when it is a section of CDATA.
          */
         private List<Span> textSpans(Tree.Text text, int at) {
-            Span written = Span.raw(text.lines().get(at));
+            Span written = Span.raw(flat(text.lines().get(at)));
             return text.cdata() && at == 0 ? List.of(dim(CDATA + " "), written) : List.of(written);
         }
 

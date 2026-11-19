@@ -48,7 +48,12 @@ simple to read: tags, attributes, text, references, comments, sections of CDATA,
 - Names are kept as written, prefixes too, `xs:element`. A declaration of a namespace, `xmlns:xs="…"`, is an attribute.
   Not: names resolved to the URI of their namespace.
 - Text that is only white space is dropped; other text is trimmed, and its lines lose the indentation they share. A
-  section of CDATA is text, kept as such.
+  section of CDATA is text, kept as such. White space is that of XML: a space, a tab and a line break, not every space
+  of Unicode.
+- Text is split into the lines of its source before its references are undone, so each of its lines stands for its own
+  line: a line break referred to, `&#10;` or `&#xD;&#xA;` as Visual Studio writes them, stays in the line it is
+  written on, drawn as `↵`. Not: a row for it, which no line of the source stands for. A reference to a character has
+  the digits of ASCII only.
 - Text that is not well formed is shown as source, under one line saying where reading stopped and why, in jazygit's
   words: `Not rendered: line 12, column 3, </dependency> closes <version>`, `expected '>'`,
   `the text ends inside <project>`, `attribute 'id' written twice`, `more after the root element`.

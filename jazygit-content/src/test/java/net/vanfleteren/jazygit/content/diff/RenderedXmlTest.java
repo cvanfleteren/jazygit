@@ -204,6 +204,16 @@ class RenderedXmlTest {
     }
 
     @Test
+    void aLineBreakReferredToInTextIsAnArrowOnTheRowOfTheLineItIsWrittenOn() {
+        assertEquals(List.of("a  x↵y"), text("<a>x&#xD;&#xA;y</a>"));
+        String xml = "<a>\n  x&#10;\n  y\n</a>\n<!-- end -->";
+        assertEquals(List.of("a ≡2", "    x↵", "    y", "<!-- end -->"), text(xml));
+        assertEquals(
+                List.of(List.of(1), List.of(2), List.of(3), List.of(5)),
+                rows(xml, HashMap.empty()).map(RenderedTree.TreeRow::lines));
+    }
+
+    @Test
     void anElementWithAttributesAndTextHasBothOnItsRow() {
         assertEquals(List.of("a [1]", "└── b x=\"1 & 2\"  text"), text("<a><b x='1 &amp; 2'>text</b></a>"));
     }

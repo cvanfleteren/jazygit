@@ -153,6 +153,35 @@ class XmlTreeTest {
     }
 
     @Test
+    void aLineBreakReferredToIsInTheLineItIsWrittenOnAndAddsNoLine() {
+        assertEquals(
+                List.of(new Text(1, 1, false, List.of("x\ny"))),
+                root("<a>x&#10;y</a>").children());
+        assertEquals(
+                List.of(new Text(1, 1, false, List.of("x\r\ny"))),
+                root("<a>x&#xD;&#xA;y</a>").children());
+        assertEquals(
+                List.of(new Text(2, 3, false, List.of("x\n", "y"))),
+                root("<a>\n  x&#10;\n  y\n</a>").children());
+    }
+
+    @Test
+    void aReferenceToACharacterHasDigitsOfAsciiOnly() {
+        assertEquals(broken(1, 4, new Problem.Ampersand()), XmlTree.read("<a>&#１２;</a>"));
+        assertEquals(broken(1, 4, new Problem.Ampersand()), XmlTree.read("<a>&#x１２;</a>"));
+    }
+
+    @Test
+    void whiteSpaceIsThatOfXmlOnlyNotEverySpaceOfUnicode() {
+        assertEquals(broken(1, 3, new Problem.NoSpace()), XmlTree.read("<a　b=\"1\"/>"));
+        assertEquals(broken(1, 5, new Problem.MoreAfter()), XmlTree.read("<a/> "));
+        assertEquals(broken(1, 7, new Problem.Expected(">")), XmlTree.read("<a></a　>"));
+        assertEquals(
+                List.of(new Text(1, 1, false, List.of("　x　"))),
+                root("<a> 　x　 </a>").children());
+    }
+
+    @Test
     void aDoctypeIsReadPastWhateverItsCommentsAndInstructionsHold() {
         assertEquals(
                 new Element(2, 2, 2, "a", List.empty(), List.empty()),
