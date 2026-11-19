@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.kernel.settings;
 
-import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
@@ -24,17 +23,6 @@ public record Editors(List<EditorProgram> all) {
      */
     static final String KEY = "editors";
 
-    /**
-     * The letters an editor without a shortcut gets, in this order, but those a shortcut takes.
-     */
-    static final List<Character> LETTERS = List.ofAll("123456789abcdefghijklmnopqrstuvwxyz".toCharArray());
-
-    /**
-     * What opens the filter of a menu, which no shortcut can be.
-     */
-    private static final char FILTER = '/';
-
-    private static final String NAME = "name";
     private static final String DIR_COMMAND = "dir-command";
     private static final String FILE_COMMAND = "file-command";
 
@@ -42,9 +30,6 @@ public record Editors(List<EditorProgram> all) {
      * What ADR 110 called the command that opens a worktree, read when there is no {@link #DIR_COMMAND}.
      */
     private static final String FORMER_DIR_COMMAND = "command";
-
-    private static final String TERMINAL = "terminal";
-    private static final String SHORTCUT = "shortcut";
 
     /**
      * Whether no editor is set.
@@ -68,26 +53,11 @@ public record Editors(List<EditorProgram> all) {
     }
 
     /**
-     * Each editor with the letter that chooses it in the menu: its shortcut, or else the first of {@link #LETTERS} that
-     * no shortcut takes, in the order of the file. Past those, an editor is left out; no user lists that many.
+     * Each editor with the letter that chooses it in the menu: its shortcut, or else the first free one, in the order
+     * of the file (see {@link Programs#lettered}).
      */
     public List<Tuple2<Character, EditorProgram>> lettered() {
-        Set<Character> taken = all.flatMap(EditorProgram::shortcut).toSet();
-        return lettered(all, LETTERS.filter(letter -> !taken.contains(letter)));
-    }
-
-    /**
-     * Each of {@code editors} with its shortcut, or else the next of {@code free}.
-     */
-    private static List<Tuple2<Character, EditorProgram>> lettered(List<EditorProgram> editors, List<Character> free) {
-        if (editors.isEmpty()) {
-            return List.empty();
-        }
-        EditorProgram editor = editors.head();
-        Option<Character> own = editor.shortcut();
-        Option<Character> letter = own.orElse(free::headOption);
-        List<Character> left = own.isDefined() || free.isEmpty() ? free : free.tail();
-        return letter.map(chosen -> Tuple.of(chosen, editor)).toList().appendAll(lettered(editors.tail(), left));
+        return Programs.lettered(all);
     }
 
     /**
@@ -99,11 +69,7 @@ public record Editors(List<EditorProgram> all) {
      * and {@code editors} itself is wrong.
      */
     static Read read(Object value) {
-        return Option.of(value)
-                .filter(java.util.List.class::isInstance)
-                .map(array -> List.ofAll((java.util.List<?>) array))
-                .map(Editors::entries)
-                .getOrElse(() -> new Read(NONE, List.of(KEY)));
+        return Programs.tables(value).map(Editors::entries).getOrElse(() -> new Read(NONE, List.of(KEY)));
     }
 
     private static Read entries(List<?> tables) {
@@ -120,62 +86,33 @@ public record Editors(List<EditorProgram> all) {
         if (!(value instanceof java.util.Map<?, ?> table)) {
             return new Read(NONE, List.of(KEY + "[" + number + "]"));
         }
-        Option<String> name = text(table.get(NAME));
+        Option<String> name = Programs.text(table.get(Programs.NAME));
         String dirKey = table.containsKey(DIR_COMMAND) ? DIR_COMMAND : FORMER_DIR_COMMAND;
         Object dirValue = table.get(dirKey);
         Object fileValue = table.get(FILE_COMMAND);
-        Option<List<String>> dirCommand = command(dirValue);
-        Option<List<String>> fileCommand = command(fileValue);
-        Object terminal = table.get(TERMINAL);
-        boolean validTerminal = terminal == null || terminal instanceof Boolean;
+        Option<List<String>> dirCommand = Programs.command(dirValue);
+        Option<List<String>> fileCommand = Programs.command(fileValue);
+        Object terminal = table.get(Programs.TERMINAL);
         boolean neither = dirValue == null && fileValue == null;
-        List<String> wrong = Option.when(name.isEmpty(), at + NAME)
+        List<String> wrong = Option.when(name.isEmpty(), at + Programs.NAME)
                 .toList()
                 .appendAll(Option.when(neither, at + DIR_COMMAND))
                 .appendAll(Option.when(dirValue != null && dirCommand.isEmpty(), at + dirKey))
                 .appendAll(Option.when(fileValue != null && fileCommand.isEmpty(), at + FILE_COMMAND))
-                .appendAll(Option.when(!validTerminal, at + TERMINAL));
+                .appendAll(Option.when(!Programs.validTerminal(terminal), at + Programs.TERMINAL));
         if (wrong.nonEmpty()) {
             return new Read(NONE, wrong);
         }
-        Object shortcut = table.get(SHORTCUT);
+        Object shortcut = table.get(Programs.SHORTCUT);
         Set<Character> taken =
                 before.editors().all().flatMap(EditorProgram::shortcut).toSet();
-        Option<Character> validShortcut = Option.of(shortcut)
-                .filter(String.class::isInstance)
-                .map(String.class::cast)
-                .filter(letter -> letter.length() == 1)
-                .map(letter -> letter.charAt(0))
-                .filter(letter -> letter != FILTER && !Character.isWhitespace(letter) && !taken.contains(letter));
+        Option<Character> validShortcut = Programs.shortcut(shortcut, taken);
         EditorProgram editor =
                 new EditorProgram(name.get(), dirCommand, fileCommand, Boolean.TRUE.equals(terminal), validShortcut);
         return new Read(
                 new Editors(List.of(editor)),
-                Option.when(shortcut != null && validShortcut.isEmpty(), at + SHORTCUT)
+                Option.when(shortcut != null && validShortcut.isEmpty(), at + Programs.SHORTCUT)
                         .toList());
-    }
-
-    /**
-     * {@code value}, if it is text that is not blank.
-     */
-    private static Option<String> text(Object value) {
-        return Option.of(value)
-                .filter(String.class::isInstance)
-                .map(String.class::cast)
-                .map(String::strip)
-                .filter(text -> !text.isEmpty());
-    }
-
-    /**
-     * The command {@code value} is, if it is an array of text whose first word, the program, is not blank.
-     */
-    private static Option<List<String>> command(Object value) {
-        return Option.of(value)
-                .filter(java.util.List.class::isInstance)
-                .map(array -> List.ofAll((java.util.List<?>) array))
-                .filter(words -> words.forAll(String.class::isInstance))
-                .map(words -> words.map(String.class::cast))
-                .filter(words -> words.headOption().exists(program -> !program.isBlank()));
     }
 
     /**

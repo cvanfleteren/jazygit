@@ -1,9 +1,8 @@
 package net.vanfleteren.jazygit.kernel.settings;
 
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * An editor the user set in the settings file: one that opens a worktree (ADR 110), a file at a line (ADR 145), or
@@ -22,7 +21,8 @@ public record EditorProgram(
         Option<List<String>> dirCommand,
         Option<List<String>> fileCommand,
         boolean terminal,
-        Option<Character> shortcut) {
+        Option<Character> shortcut)
+        implements Program {
 
     /**
      * What stands for the worktree in a command.
@@ -38,12 +38,6 @@ public record EditorProgram(
      * What stands for the line, counted from 1, in the command that opens a file.
      */
     public static final String LINE = "{line}";
-
-    /**
-     * Any of the placeholders of the command that opens a file.
-     */
-    private static final Pattern PLACEHOLDER =
-            Pattern.compile(Pattern.quote(DIR) + "|" + Pattern.quote(FILE) + "|" + Pattern.quote(LINE));
 
     /**
      * An editor that opens a worktree only, by {@code dirCommand}.
@@ -102,13 +96,6 @@ public record EditorProgram(
      * is.
      */
     private static String fill(String argument, String worktree, String file, int line) {
-        return PLACEHOLDER
-                .matcher(argument)
-                .replaceAll(found -> Matcher.quoteReplacement(
-                        switch (found.group()) {
-                            case DIR -> worktree;
-                            case FILE -> file;
-                            default -> String.valueOf(line);
-                        }));
+        return Programs.fill(argument, LinkedHashMap.of(DIR, worktree, FILE, file, LINE, String.valueOf(line)));
     }
 }

@@ -121,6 +121,16 @@ record Setting<T>(
                         return new Decoded<>(Option.some(read.filters()), read.invalid());
                     },
                     (key, filters) -> LinkedHashMap.empty(),
+                    false),
+            // As the editors (ADR 161).
+            new Setting<>(
+                    Agents.KEY,
+                    Lens.of(Settings::agents, Settings::withAgents),
+                    value -> {
+                        Agents.Read read = Agents.read(value);
+                        return new Decoded<>(Option.some(read.agents()), read.invalid());
+                    },
+                    (key, agents) -> LinkedHashMap.empty(),
                     false));
 
     /**
