@@ -19,6 +19,7 @@ import java.util.function.IntUnaryOperator;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.ShownChanges;
 import net.vanfleteren.jazygit.content.ContentView.ShownDiff;
+import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.content.diff.Halves;
 import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.content.diff.ShownRemarks;
@@ -87,7 +88,7 @@ public final class ContentText {
      * The lines of {@link #diffText(ShownDiff, DiffLook, Option, Theme.SpanStyles)}, with the stops of the cursor in
      * the rich view (ADR 60).
      */
-    public static RichDiff.Drawn diffDrawn(
+    public static Drawn diffDrawn(
             ShownDiff diff, DiffLook look, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
         return diffDrawn(diff, look, remarks, Option.none(), styles);
     }
@@ -97,7 +98,7 @@ public final class ContentText {
      * the rich view (ADR 60), and the lines of {@code asGiven}, the hunk a range is open in, as git gives them (ADR
      * 83).
      */
-    public static RichDiff.Drawn diffDrawn(
+    public static Drawn diffDrawn(
             ShownDiff diff,
             DiffLook look,
             Option<ShownRemarks> remarks,
@@ -110,7 +111,7 @@ public final class ContentText {
      * The lines of {@link #diffDrawn(ShownDiff, DiffLook, Option, Option, Theme.SpanStyles)}, a version of its file
      * rendered {@code width} columns wide (ADR 103).
      */
-    public static RichDiff.Drawn diffDrawn(
+    public static Drawn diffDrawn(
             ShownDiff diff,
             DiffLook look,
             Option<ShownRemarks> remarks,
@@ -123,12 +124,11 @@ public final class ContentText {
                         Theme.Classes.ERROR,
                         styles)))
                 .toList();
-        RichDiff.Drawn drawn = switch (look.style()) {
+        Drawn drawn = switch (look.style()) {
             case PLAIN ->
                 remarks.filter(shown -> !shown.threads().isEmpty())
                         .map(shown -> counted(diff, shown.threads(), styles))
-                        .map(lines ->
-                                RichDiff.Drawn.plain(Rows.of(lines, Rows.Source.ofDiff(lines.map(Line::rawContent)))))
+                        .map(lines -> Drawn.plain(Rows.of(lines, Rows.Source.ofDiff(lines.map(Line::rawContent)))))
                         .getOrElse(() -> changeDrawn(diff, look, styles, width));
             case RICH, SPLIT -> RichDiff.drawn(diff.folded(), remarks, asGiven, drawing(look, styles, width));
         };
@@ -255,7 +255,7 @@ public final class ContentText {
                     return cut.get().shown(drawn, column);
                 }
                 int keep = kept.applyAsInt(index);
-                if (keep == RichDiff.Drawn.PINNED) {
+                if (keep == Drawn.PINNED) {
                     return filling.test(index) ? filled(drawn, width) : drawn;
                 }
                 Line line = filling.test(index) ? filled(drawn, column + width) : drawn;
@@ -394,14 +394,14 @@ public final class ContentText {
     /**
      * The lines of {@link #commitText}, with the stops of the cursor in the rich view (ADR 60).
      */
-    public static RichDiff.Drawn commitDrawn(Commit commit, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
+    public static Drawn commitDrawn(Commit commit, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         return commitDrawn(commit, changes, look, styles, RichDiff.RENDERED_WIDTH);
     }
 
     /**
      * The lines of {@link #commitText}, a version of its file rendered {@code width} columns wide (ADR 103).
      */
-    public static RichDiff.Drawn commitDrawn(
+    public static Drawn commitDrawn(
             Commit commit, ShownDiff changes, DiffLook look, Theme.SpanStyles styles, int width) {
         List<String> message = messageLines(commit);
         return changeDrawn(changes, look, styles, width)
@@ -434,15 +434,14 @@ public final class ContentText {
     /**
      * The lines of {@link #stashText}, with the stops of the cursor in the rich view (ADR 60).
      */
-    public static RichDiff.Drawn stashDrawn(Stash stash, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
+    public static Drawn stashDrawn(Stash stash, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         return stashDrawn(stash, changes, look, styles, RichDiff.RENDERED_WIDTH);
     }
 
     /**
      * The lines of {@link #stashText}, a version of its file rendered {@code width} columns wide (ADR 103).
      */
-    public static RichDiff.Drawn stashDrawn(
-            Stash stash, ShownDiff changes, DiffLook look, Theme.SpanStyles styles, int width) {
+    public static Drawn stashDrawn(Stash stash, ShownDiff changes, DiffLook look, Theme.SpanStyles styles, int width) {
         return changeDrawn(changes, look, styles, width)
                 .after(List.of(styled(
                                 Messages.get("content.stashHeader", stash.ref(), stash.message()),
@@ -466,12 +465,12 @@ public final class ContentText {
     /**
      * A unified diff, drawn as {@code look} says, with the stops of the cursor in the rich view (ADR 60).
      */
-    private static RichDiff.Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles, int width) {
+    private static Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles, int width) {
         return switch (look.style()) {
             case PLAIN -> {
                 List<String> lines = lines(changes.text());
                 // Searched as git printed it, each line of a hunk without its prefix (ADR 126).
-                yield RichDiff.Drawn.plain(Rows.drawn(
+                yield Drawn.plain(Rows.drawn(
                         lines.map(line -> () -> diffLine(line, styles)),
                         Rows.Source.ofDiff(lines).map(source -> () -> source)));
             }

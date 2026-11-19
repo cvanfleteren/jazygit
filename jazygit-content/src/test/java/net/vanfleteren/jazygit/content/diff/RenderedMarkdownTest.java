@@ -119,7 +119,7 @@ class RenderedMarkdownTest {
 
     @Test
     void theNewVersionShowsItsBarThenItsBlocksWithAMarkerBesideTheOneThatChanged() {
-        RichDiff.Drawn drawn = drawn(FileVersion.NEW, false);
+        Drawn drawn = drawn(FileVersion.NEW, false);
 
         List<String> lines = text(drawn.lines());
         assertTrue(lines.head().startsWith(" new version  README.md "), lines.head());
@@ -161,7 +161,7 @@ class RenderedMarkdownTest {
 
     @Test
     void theBarIsTheOnlyStopAndEveryLineIsPlacedOnTheFirstRowOfABlock() {
-        RichDiff.Drawn drawn = drawn(FileVersion.NEW, false);
+        Drawn drawn = drawn(FileVersion.NEW, false);
 
         assertEquals(
                 List.of(new Anchor.File("README.md")),
@@ -169,18 +169,18 @@ class RenderedMarkdownTest {
         assertEquals(
                 List.of(
                         // A context line is placed by its number in the old file too, after its own (ADR 140).
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 1), 1),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 1), 1),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 3), 3),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 1), 1),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 1), 1),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 3), 3),
                         // A blank line goes with the block after it, after that block's own lines.
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 2), 3),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 2), 3),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 5), 5),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 5), 5),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 4), 5),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 4), 5),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 6), 6),
-                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.LEFT, 6), 6)),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 2), 3),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 2), 3),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 5), 5),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 5), 5),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 4), 5),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 4), 5),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 6), 6),
+                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 6), 6)),
                 drawn.places());
     }
 
@@ -320,11 +320,11 @@ class RenderedMarkdownTest {
         assertEquals(Option.none(), LexedHighlighter.named(""));
     }
 
-    private static RichDiff.Drawn drawn(FileVersion version, boolean cut) {
+    private static Drawn drawn(FileVersion version, boolean cut) {
         return drawn(version, cut, Theme.SpanStyles.NONE);
     }
 
-    private static RichDiff.Drawn drawn(FileVersion version, boolean cut, Theme.SpanStyles styles) {
+    private static Drawn drawn(FileVersion version, boolean cut, Theme.SpanStyles styles) {
         ParsedDiff.ParsedFile whole = ParsedDiff.of(README).files().head();
         return RichDiff.drawn(
                 new Expansion.Folded(

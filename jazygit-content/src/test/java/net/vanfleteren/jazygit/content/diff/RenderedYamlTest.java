@@ -283,7 +283,7 @@ class RenderedYamlTest {
 
     @Test
     void theNewVersionMarksTheLineOfABlockThatChanged() {
-        RichDiff.Drawn drawn = drawn(WORKFLOW, FileVersion.NEW);
+        Drawn drawn = drawn(WORKFLOW, FileVersion.NEW);
 
         assertEquals(
                 List.of("  run |3", "      a", "+     b", "      c", "  next  x"),
@@ -318,7 +318,7 @@ class RenderedYamlTest {
             + "   c\n"
             + " next: x\n";
 
-    private static RichDiff.Drawn drawn(String diff, FileVersion version) {
+    private static Drawn drawn(String diff, FileVersion version) {
         ParsedDiff.ParsedFile whole = ParsedDiff.of(diff).files().head();
         return RichDiff.drawn(
                 new Expansion.Folded(
@@ -329,7 +329,7 @@ class RenderedYamlTest {
                 RichDiff.Drawing.of(Theme.SpanStyles.NONE).withWidth(40));
     }
 
-    private static List<String> drawnText(RichDiff.Drawn drawn) {
+    private static List<String> drawnText(Drawn drawn) {
         return drawn.lines()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
                 .map(String::stripTrailing);

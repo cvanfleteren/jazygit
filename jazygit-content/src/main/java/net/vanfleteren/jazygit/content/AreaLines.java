@@ -10,8 +10,8 @@ import io.vavr.control.Option;
 import java.util.function.BiFunction;
 import net.vanfleteren.jazygit.content.AreaState.Wanted;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
+import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.content.diff.LineGoal;
-import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
@@ -128,7 +128,7 @@ final class AreaLines {
         AreaState state = before.withMatch(Option.none());
         return switch (LineGoal.of(shown.stops(), shown.places(), on.stop(), side, line)) {
             case LineGoal.OnStop(int index, boolean exact, int at) -> {
-                RichDiff.Stop stop = shown.stops().get(index);
+                Drawn.Stop stop = shown.stops().get(index);
                 yield reached(
                         state,
                         view,
@@ -164,7 +164,7 @@ final class AreaLines {
      * until then the cursor is on {@code closest}. Refused while a range is open: the line is in no hunk.
      */
     private static Reaction hidden(
-            AreaState state, Viewport view, DiffCursor on, Anchor.OnLine wanted, Anchor lines, RichDiff.Stop closest) {
+            AreaState state, Viewport view, DiffCursor on, Anchor.OnLine wanted, Anchor lines, Drawn.Stop closest) {
         if (on.mark().isDefined()) {
             return handled(state.withNotice(Option.of(Messages.get("content.line.outsideRange"))), view);
         }

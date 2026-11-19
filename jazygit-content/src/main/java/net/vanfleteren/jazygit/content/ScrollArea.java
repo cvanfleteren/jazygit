@@ -31,7 +31,7 @@ import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.content.diff.BlameFooter;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
-import net.vanfleteren.jazygit.content.diff.RichDiff;
+import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -288,6 +288,6 @@ public final class ScrollArea {
     @FunctionalInterface
     public interface Styler {
 
-        RichDiff.Drawn drawn(Body body, Option<DiffStops.HunkAt> asGiven, int width);
+        Drawn drawn(Body body, Option<DiffStops.HunkAt> asGiven, int width);
     }
 }
