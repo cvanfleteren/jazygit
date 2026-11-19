@@ -42,3 +42,6 @@ ADR 152 opened `Body`, so each kind of content draws itself. What gives each are
   in `ContentView`.
 - The expansion of the areas now applies to the pull request of the pull requests screen as well; it has no diff, so
   nothing changes for it.
+
+Amended by ADR 155: a body can have keys of its own, content that is no diff is a `ScrolledContent.Other` of its
+source, an area says what it takes the focus for, and the content panel is given its sources.
