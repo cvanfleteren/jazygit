@@ -4,6 +4,7 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.text.Text;
 import io.vavr.Tuple;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -129,16 +130,7 @@ public final class ContentText {
                         .map(lines ->
                                 RichDiff.Drawn.plain(Rows.of(lines, Rows.Source.ofDiff(lines.map(Line::rawContent)))))
                         .getOrElse(() -> changeDrawn(diff, look, styles, width));
-            case RICH, SPLIT ->
-                RichDiff.drawn(
-                        diff.folded(),
-                        look.syntax(),
-                        look.words(),
-                        remarks,
-                        asGiven,
-                        styles,
-                        width,
-                        look.style() == DiffStyle.SPLIT);
+            case RICH, SPLIT -> RichDiff.drawn(diff.folded(), remarks, asGiven, drawing(look, styles, width));
         };
         return drawn.after(failed).withLead();
     }
@@ -484,16 +476,21 @@ public final class ContentText {
                         Rows.Source.ofDiff(lines).map(source -> () -> source)));
             }
             case RICH, SPLIT ->
-                RichDiff.drawn(
-                        changes.folded(),
-                        look.syntax(),
-                        look.words(),
-                        Option.none(),
-                        Option.none(),
-                        styles,
-                        width,
-                        look.style() == DiffStyle.SPLIT);
+                RichDiff.drawn(changes.folded(), Option.none(), Option.none(), drawing(look, styles, width));
         };
+    }
+
+    /**
+     * How the rich view draws a diff as {@code look} says, in {@code styles}, in an area {@code width} columns wide.
+     */
+    private static RichDiff.Drawing drawing(DiffLook look, Theme.SpanStyles styles, int width) {
+        return RichDiff.Drawing.of(styles)
+                .withHighlights(HashSet.of(RichDiff.Highlight.values()).filter(highlight -> switch (highlight) {
+                    case SYNTAX -> look.syntax();
+                    case WORDS -> look.words();
+                }))
+                .withWidth(width)
+                .withSplit(look.style() == DiffStyle.SPLIT ? RichDiff.Split.SIDE_BY_SIDE : RichDiff.Split.UNIFIED);
     }
 
     private static List<String> lines(String text) {

@@ -324,12 +324,9 @@ class RenderedYamlTest {
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
                         HashMap.of("a.yml", Expansion.Fold.of(version, false, 1, true, HashMap.empty()))),
-                true,
-                true,
                 Option.none(),
                 Option.none(),
-                Theme.SpanStyles.NONE,
-                40);
+                RichDiff.Drawing.of(Theme.SpanStyles.NONE).withWidth(40));
     }
 
     private static List<String> drawnText(RichDiff.Drawn drawn) {

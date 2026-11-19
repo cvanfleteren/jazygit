@@ -209,13 +209,12 @@ class FilteredDiffTest {
     private static RichDiff.Drawn drawn(Filtering filtering, ParsedDiff diff, boolean split) {
         return RichDiff.drawn(
                 filtering.hide(Expansion.Folded.of(diff), diff),
-                false,
-                false,
                 Option.none(),
                 Option.none(),
-                Theme.SpanStyles.NONE,
-                200,
-                split);
+                RichDiff.Drawing.of(Theme.SpanStyles.NONE)
+                        .withHighlights(HashSet.empty())
+                        .withWidth(200)
+                        .withSplit(split ? RichDiff.Split.SIDE_BY_SIDE : RichDiff.Split.UNIFIED));
     }
 
     private static List<String> text(RichDiff.Drawn drawn) {

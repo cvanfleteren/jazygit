@@ -150,13 +150,12 @@ class RemarkLinesTest {
     void inTheSplitViewAThreadGoesUnderItsRowInTheHalfOfItsSide() {
         RichDiff.Drawn drawn = RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of(PAIRS)),
-                false,
-                true,
                 Option.of(shown(Collapsed.NONE, onLines(Side.RIGHT, 1, Side.RIGHT, 1))),
                 Option.none(),
-                Theme.SpanStyles.NONE,
-                101,
-                true);
+                RichDiff.Drawing.of(Theme.SpanStyles.NONE)
+                        .withHighlights(HashSet.of(RichDiff.Highlight.WORDS))
+                        .withWidth(101)
+                        .withSplit(RichDiff.Split.SIDE_BY_SIDE));
         List<String> lines = text(drawn.lines()).map(String::stripTrailing);
 
         // The right half starts after the rule at column 50: the thread is as far into it as the code.
@@ -242,7 +241,12 @@ class RemarkLinesTest {
                 ParsedDiff.of(PAIRS), HashMap.of("a.txt", new Expansion.Fold(Option.of(2), Expansion.Read.WHOLE)));
         assertEquals(
                 pair,
-                text(RichDiff.drawn(whole, false, true, Option.of(remarks), Option.none(), Theme.SpanStyles.NONE)
+                text(RichDiff.drawn(
+                                        whole,
+                                        Option.of(remarks),
+                                        Option.none(),
+                                        RichDiff.Drawing.of(Theme.SpanStyles.NONE)
+                                                .withHighlights(HashSet.of(RichDiff.Highlight.WORDS)))
                                 .lines())
                         .map(String::stripTrailing));
     }
@@ -1075,7 +1079,15 @@ class RemarkLinesTest {
      */
     private static RichDiff.Drawn drawn(
             ParsedDiff diff, boolean syntax, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
-        return RichDiff.drawn(diff, syntax, true, remarks, styles);
+        return RichDiff.drawn(
+                Expansion.Folded.of(diff),
+                remarks,
+                Option.none(),
+                RichDiff.Drawing.of(styles)
+                        .withHighlights(
+                                syntax
+                                        ? HashSet.of(RichDiff.Highlight.SYNTAX, RichDiff.Highlight.WORDS)
+                                        : HashSet.of(RichDiff.Highlight.WORDS)));
     }
 
     private static List<String> text(List<Line> lines) {
