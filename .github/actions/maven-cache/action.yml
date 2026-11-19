@@ -5,6 +5,10 @@ description: The local Maven repository and the Maven of the wrapper, restored f
 # changed had every job download every dependency again, all at once, and Maven Central answers that with 429. Here a
 # changed pom restores the latest cache, and a job only downloads what's new; it saves the result under the new key.
 # Old versions stay in the repository it saves, a few megabytes for each upgrade.
+#
+# Each job keeps a cache of its own, as a key is only saved once: shared, it held what the first job to finish needed,
+# the jar's, and the tests, ErrorProne, checkstyle and the native image downloaded theirs again on every run. A job
+# without a cache of its own yet starts from any job's.
 runs:
   using: composite
   steps:
@@ -13,5 +17,7 @@ runs:
         path: |
           ~/.m2/repository
           ~/.m2/wrapper
-        key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml', '.mvn/extensions.xml', '.mvn/wrapper/maven-wrapper.properties') }}
-        restore-keys: maven-${{ runner.os }}-
+        key: maven-${{ runner.os }}-${{ github.job }}-${{ hashFiles('**/pom.xml', '.mvn/extensions.xml', '.mvn/wrapper/maven-wrapper.properties') }}
+        restore-keys: |
+          maven-${{ runner.os }}-${{ github.job }}-
+          maven-${{ runner.os }}-
