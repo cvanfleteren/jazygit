@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.content.AreaState.Wanted;
 import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
+import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.settings.ThemeName;
@@ -191,7 +192,7 @@ final class AreaFit {
         AreaState after = shown.withStyled(Option.of(current.withLines(kept)))
                 .withColumns(columns)
                 .withMatch(match);
-        RichDiff.Drawn drawn = current.split();
+        Drawn drawn = current.split();
         Text text = windowed(
                 lines,
                 columns.column(),

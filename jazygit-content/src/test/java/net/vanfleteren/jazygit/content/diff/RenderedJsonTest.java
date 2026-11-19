@@ -333,7 +333,7 @@ class RenderedJsonTest {
 
     @Test
     void eachRowIsAStopButTheBarIsOneToo() {
-        RichDiff.Drawn drawn = drawn(CONFIG, FileVersion.NEW, false);
+        Drawn drawn = drawn(CONFIG, FileVersion.NEW, false);
 
         assertEquals(
                 List.of(
@@ -347,7 +347,7 @@ class RenderedJsonTest {
 
     @Test
     void aClosedNodeIsMarkedWhenALineInItChanged() {
-        RichDiff.Drawn drawn = drawn(CONFIG, FileVersion.NEW, false, HashMap.of("/few", false));
+        Drawn drawn = drawn(CONFIG, FileVersion.NEW, false, HashMap.of("/few", false));
 
         assertEquals(List.of("+ few {2}  a, b", "  n  1"), drawnText(drawn).tail());
     }
@@ -363,7 +363,7 @@ class RenderedJsonTest {
     void jsonThatCannotBeReadIsItsSourceAfterALineThatSaysWhy() {
         String broken =
                 "diff --git a/a.json b/a.json\n--- a/a.json\n+++ b/a.json\n@@ -1,2 +1,2 @@\n-[1,\n+[1,,\n  2]\n";
-        RichDiff.Drawn drawn = drawn(broken, FileVersion.NEW, false);
+        Drawn drawn = drawn(broken, FileVersion.NEW, false);
 
         assertEquals(
                 List.of("Not rendered: line 1, column 4, unexpected ','", "+ [1,,", "   2]"),
@@ -391,11 +391,11 @@ class RenderedJsonTest {
             + "   \"n\": 1\n"
             + " }\n";
 
-    private static RichDiff.Drawn drawn(String diff, FileVersion version, boolean cut) {
+    private static Drawn drawn(String diff, FileVersion version, boolean cut) {
         return drawn(diff, version, cut, HashMap.empty());
     }
 
-    private static RichDiff.Drawn drawn(String diff, FileVersion version, boolean cut, Map<String, Boolean> nodes) {
+    private static Drawn drawn(String diff, FileVersion version, boolean cut, Map<String, Boolean> nodes) {
         ParsedDiff.ParsedFile whole = ParsedDiff.of(diff).files().head();
         return RichDiff.drawn(
                 new Expansion.Folded(
@@ -406,7 +406,7 @@ class RenderedJsonTest {
                 RichDiff.Drawing.of(Theme.SpanStyles.NONE).withWidth(40));
     }
 
-    private static List<String> drawnText(RichDiff.Drawn drawn) {
+    private static List<String> drawnText(Drawn drawn) {
         return drawn.lines()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
                 .map(String::stripTrailing);

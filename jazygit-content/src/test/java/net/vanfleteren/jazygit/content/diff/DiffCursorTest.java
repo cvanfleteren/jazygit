@@ -32,7 +32,7 @@ class DiffCursorTest {
 
     // 20 lines shown 5 at a time: a lead of 3 lines, a bar, line 1, a thread of 10 lines, line 2, and line 3 with the
     // 3 lines after it that are no stop.
-    private static final Vector<RichDiff.Stop> STOPS = Vector.of(
+    private static final Vector<Drawn.Stop> STOPS = Vector.of(
             stop(LEAD, 3, 0), stop(FILE, 1, 3), line(ONE, 4), stop(THREAD, 10, 5), line(TWO, 15), line(THREE, 16));
 
     private static final Anchor FIRST =
@@ -41,22 +41,22 @@ class DiffCursorTest {
             new Anchor.Thread(new ReviewThread.Id("T2"), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)));
 
     // A bar, line 1 and its thread, line 2 and its thread, and line 3: 6 lines, all on one screen.
-    private static final Vector<RichDiff.Stop> TWO_THREADS = Vector.of(
+    private static final Vector<Drawn.Stop> TWO_THREADS = Vector.of(
             stop(FILE, 1, 0), line(ONE, 1), stop(FIRST, 1, 2), line(TWO, 3), stop(LAST, 1, 4), line(THREE, 5));
 
-    private static RichDiff.Stop stop(Anchor anchor, int lines, int row) {
-        return new RichDiff.Stop(new RichDiff.Mark(anchor, lines, 8, Option.none()), row);
+    private static Drawn.Stop stop(Anchor anchor, int lines, int row) {
+        return new Drawn.Stop(new Drawn.Mark(anchor, lines, 8, Option.none()), row);
     }
 
-    private static RichDiff.Stop line(Anchor anchor, int row) {
-        return new RichDiff.Stop(new RichDiff.Mark(anchor, 1, 8, Option.of(new DiffStops.HunkAt(0, 0))), row);
+    private static Drawn.Stop line(Anchor anchor, int row) {
+        return new Drawn.Stop(new Drawn.Mark(anchor, 1, 8, Option.of(new DiffStops.HunkAt(0, 0))), row);
     }
 
     /**
      * The cursor of a diff of {@code lines} lines with {@code stops}, looked for from the first stop.
      */
     private static Option<DiffCursor> cursor(
-            Vector<RichDiff.Stop> stops, int lines, int height, int row, Option<Anchor> at, Option<Anchor> mark) {
+            Vector<Drawn.Stop> stops, int lines, int height, int row, Option<Anchor> at, Option<Anchor> mark) {
         return DiffCursor.of(stops, 0, lines, height, row, at, mark);
     }
 
@@ -205,7 +205,7 @@ class DiffCursorTest {
     @Test
     void aCommentIsAStopThatTheNextAndThePreviousThreadGoFrom() {
         Anchor reply = new Anchor.Comment(new ReviewThread.Comment.Id("R"), (Anchor.Thread) FIRST);
-        Vector<RichDiff.Stop> stops = Vector.of(
+        Vector<Drawn.Stop> stops = Vector.of(
                 stop(FILE, 1, 0),
                 line(ONE, 1),
                 stop(FIRST, 1, 2),
@@ -254,7 +254,7 @@ class DiffCursorTest {
 
     @Test
     void theCursorOnAnAnchorThatIsTwiceIsOnTheOneNearestWhereItWas() {
-        Vector<RichDiff.Stop> stops = Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(FILE, 2));
+        Vector<Drawn.Stop> stops = Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(FILE, 2));
 
         assertEquals(
                 2,
@@ -271,10 +271,9 @@ class DiffCursorTest {
     @Test
     void aMarkThatIsInTwoHunksIsTheOneInTheHunkOfTheCursor() {
         // Line 1 of the first hunk, and line 1 again in a second hunk far from it, as the cursor is.
-        RichDiff.Stop other = new RichDiff.Stop(new RichDiff.Mark(ONE, 1, 8, Option.of(new DiffStops.HunkAt(0, 1))), 2);
-        RichDiff.Stop cursorOn =
-                new RichDiff.Stop(new RichDiff.Mark(TWO, 1, 8, Option.of(new DiffStops.HunkAt(0, 1))), 3);
-        Vector<RichDiff.Stop> stops = Vector.of(line(ONE, 0), stop(FILE, 1, 1), other, cursorOn);
+        Drawn.Stop other = new Drawn.Stop(new Drawn.Mark(ONE, 1, 8, Option.of(new DiffStops.HunkAt(0, 1))), 2);
+        Drawn.Stop cursorOn = new Drawn.Stop(new Drawn.Mark(TWO, 1, 8, Option.of(new DiffStops.HunkAt(0, 1))), 3);
+        Vector<Drawn.Stop> stops = Vector.of(line(ONE, 0), stop(FILE, 1, 1), other, cursorOn);
 
         DiffCursor cursor =
                 DiffCursor.of(stops, 0, 4, 5, 0, Option.of(TWO), Option.of(ONE)).get();
@@ -294,7 +293,7 @@ class DiffCursorTest {
 
     @Test
     void theStopOfAnAnchorIsTheOneWithItClosestToWhereItIsLookedForFrom() {
-        Vector<RichDiff.Stop> stops = Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(TWO, 2), line(FILE, 3));
+        Vector<Drawn.Stop> stops = Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(TWO, 2), line(FILE, 3));
 
         assertEquals(Option.of(0), DiffCursor.index(stops, FILE, 0));
         assertEquals(Option.of(3), DiffCursor.index(stops, FILE, 2));
@@ -377,7 +376,7 @@ class DiffCursorTest {
     private static final Anchor ALSO_ADDED = new Anchor.OnLine("a.txt", Side.RIGHT, 3);
     private static final Anchor LEFT_LAST = new Anchor.OnLine("a.txt", Side.LEFT, 3);
     private static final Anchor RIGHT_LAST = new Anchor.OnLine("a.txt", Side.RIGHT, 4);
-    private static final Vector<RichDiff.Stop> SPLIT = Vector.of(
+    private static final Vector<Drawn.Stop> SPLIT = Vector.of(
             stop(FILE, 1, 0),
             half(LEFT_ONE, Side.LEFT, 1, 0),
             half(RIGHT_ONE, Side.RIGHT, 1, 0),
@@ -387,10 +386,10 @@ class DiffCursorTest {
             half(LEFT_LAST, Side.LEFT, 4, 4),
             half(RIGHT_LAST, Side.RIGHT, 4, 4));
 
-    private static RichDiff.Stop half(Anchor anchor, Side side, int row, int order) {
+    private static Drawn.Stop half(Anchor anchor, Side side, int row, int order) {
         int column = side == Side.LEFT ? 0 : 6;
-        return new RichDiff.Stop(
-                new RichDiff.Mark(
+        return new Drawn.Stop(
+                new Drawn.Mark(
                         anchor,
                         1,
                         side == Side.LEFT ? 5 : 100,
@@ -474,7 +473,7 @@ class DiffCursorTest {
     private static final Anchor OTHER_FILE = new Anchor.File("b.txt");
     private static final Anchor OTHER_LEFT = new Anchor.OnLine("b.txt", Side.LEFT, 1);
     private static final Anchor OTHER_RIGHT = new Anchor.OnLine("b.txt", Side.RIGHT, 1);
-    private static final Vector<RichDiff.Stop> TWO_FILES = Vector.of(
+    private static final Vector<Drawn.Stop> TWO_FILES = Vector.of(
             stop(FILE, 1, 0),
             half(LEFT_ONE, Side.LEFT, 1, 0),
             half(RIGHT_ONE, Side.RIGHT, 1, 0),
@@ -527,12 +526,12 @@ class DiffCursorTest {
     @Test
     void theBracketsLeaveTheCursorWhereItIsInAHunkWithoutALineOnThatSide() {
         // An added file, then a file with a removed line in a hunk of its own.
-        Vector<RichDiff.Stop> stops = Vector.of(
+        Vector<Drawn.Stop> stops = Vector.of(
                 stop(FILE, 1, 0),
                 half(RIGHT_ONE, Side.RIGHT, 1, 0),
                 stop(OTHER_FILE, 1, 2),
-                new RichDiff.Stop(
-                        new RichDiff.Mark(
+                new Drawn.Stop(
+                        new Drawn.Mark(
                                 OTHER_LEFT,
                                 1,
                                 5,

@@ -30,7 +30,7 @@ import net.vanfleteren.jazygit.ui.text.Rows;
  *               to the other side
  */
 public record DiffCursor(
-        Vector<RichDiff.Stop> stops,
+        Vector<Drawn.Stop> stops,
         int lines,
         int height,
         int stop,
@@ -48,7 +48,7 @@ public record DiffCursor(
      *             of a long diff then finds the stop the cursor is on without going through all of them
      */
     public static Option<DiffCursor> of(
-            Vector<RichDiff.Stop> stops,
+            Vector<Drawn.Stop> stops,
             int near,
             int lines,
             int height,
@@ -63,7 +63,7 @@ public record DiffCursor(
      * is on no half (ADR 139): the side it was on when it was last drawn, the new file's for a diff shown anew.
      */
     public static Option<DiffCursor> of(
-            Vector<RichDiff.Stop> stops,
+            Vector<Drawn.Stop> stops,
             int near,
             int lines,
             int height,
@@ -91,7 +91,7 @@ public record DiffCursor(
      * one before it first; the closest, should two have the same. The cursor and a range stay near the stop they were
      * on, so a long diff keeps no table of where each of its stops is (a stop a line).
      */
-    public static Option<Integer> index(Vector<RichDiff.Stop> stops, Anchor anchor, int near) {
+    public static Option<Integer> index(Vector<Drawn.Stop> stops, Anchor anchor, int near) {
         int from = Math.clamp(near, 0, Math.max(0, stops.size() - 1));
         // A loop, not a recursion over how far away, which a stop missing from a long diff would take as deep as it
         // has stops; and four times as fast as an iterator of the indexes, for a jump across the diff.
@@ -178,7 +178,7 @@ public record DiffCursor(
      * which keeps to its side. None off a line, and in the unified view.
      */
     public Option<DiffCursor> toSide(ReviewThread.Side side) {
-        RichDiff.Mark on = stops.get(stop).mark();
+        Drawn.Mark on = stops.get(stop).mark();
         if (on.side().isEmpty() || !(on.anchor() instanceof Anchor.OnLine)) {
             return Option.none();
         }
@@ -394,8 +394,8 @@ public record DiffCursor(
      * hunk on its side from its first to its last, as the cursor keeps to the side the range was started on.
      */
     private Vector<Integer> splitRange(int from) {
-        RichDiff.Mark start = stops.get(from).mark();
-        RichDiff.Mark end = stops.get(stop).mark();
+        Drawn.Mark start = stops.get(from).mark();
+        Drawn.Mark end = stops.get(stop).mark();
         int low = Math.min(start.order(), end.order());
         int high = Math.max(start.order(), end.order());
         // The lines of a hunk lie between the bars and the markers around it.
@@ -406,7 +406,7 @@ public record DiffCursor(
                 .find(this::bounds)
                 .getOrElse(stops.size() - 1);
         return Vector.rangeClosed(first, last).filter(index -> {
-            RichDiff.Mark its = stops.get(index).mark();
+            Drawn.Mark its = stops.get(index).mark();
             return lineOfHunk(index)
                     && its.order() >= low
                     && its.order() <= high
@@ -497,12 +497,12 @@ public record DiffCursor(
      * in the gutter as the lines a thread covers are. Only those lines are drawn again, once they show.
      */
     public Rows tinted(Rows lines, Style tint) {
-        RichDiff.Stop on = stops.get(stop);
+        Drawn.Stop on = stops.get(stop);
         int first = on.row();
         int width = on.mark().width();
         return mark.isDefined()
                 ? range().foldLeft(lines, (done, index) -> {
-                    RichDiff.Mark its = stops.get(index).mark();
+                    Drawn.Mark its = stops.get(index).mark();
                     return its.side().isDefined()
                             ? done.update(
                                     start(index),

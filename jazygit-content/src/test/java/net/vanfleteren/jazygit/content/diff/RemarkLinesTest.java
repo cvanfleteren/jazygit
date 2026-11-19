@@ -148,7 +148,7 @@ class RemarkLinesTest {
 
     @Test
     void inTheSplitViewAThreadGoesUnderItsRowInTheHalfOfItsSide() {
-        RichDiff.Drawn drawn = RichDiff.drawn(
+        Drawn drawn = RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of(PAIRS)),
                 Option.of(shown(Collapsed.NONE, onLines(Side.RIGHT, 1, Side.RIGHT, 1))),
                 Option.none(),
@@ -915,7 +915,7 @@ class RemarkLinesTest {
         ReviewThread outdated = thread("a.txt", 40, false, "old");
         ShownRemarks remarks = shown(Collapsed.NONE, first, second, outdated);
 
-        RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
+        Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
 
         // Nothing comes before the file, so there is no lead.
         Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
@@ -934,10 +934,10 @@ class RemarkLinesTest {
                         new Anchor.Thread(outdated.id(), Option.none())),
                 drawn.stops().map(stop -> stop.mark().anchor()));
         List<String> lines = text(drawn.lines());
-        List<Integer> rows = drawn.stops().map(RichDiff.Stop::row);
+        List<Integer> rows = drawn.stops().map(Drawn.Stop::row);
         assertEquals(rows.sorted().distinct(), rows);
         // Each thread starts on its own first line, and has as many lines as it is drawn with.
-        List<RichDiff.Stop> threads = drawn.stops().filter(stop -> stop.mark().anchor() instanceof Anchor.Thread);
+        List<Drawn.Stop> threads = drawn.stops().filter(stop -> stop.mark().anchor() instanceof Anchor.Thread);
         assertEquals(3, threads.size());
         assertTrue(threads.forAll(stop -> lines.get(stop.row()).contains("┏━")), lines.mkString("\n"));
         assertTrue(lines.get(threads.head().row() + threads.head().mark().lines() - 1)
@@ -945,7 +945,7 @@ class RemarkLinesTest {
         assertTrue(
                 lines.get(threads.head().row() + threads.head().mark().lines()).isBlank());
         // A comment but the first starts its own stop, which ends its thread after the last (ADR 62).
-        RichDiff.Stop comment = drawn.stops()
+        Drawn.Stop comment = drawn.stops()
                 .find(stop -> stop.mark().anchor() instanceof Anchor.Comment)
                 .get();
         assertEquals(
@@ -1005,7 +1005,7 @@ class RemarkLinesTest {
                 true));
         ShownRemarks remarks = shown(flipped, replied, collapsed, hidden, resolved);
 
-        RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
+        Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
 
         Anchor.OnLine one = new Anchor.OnLine("a.txt", Side.RIGHT, 1);
         Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
@@ -1052,11 +1052,11 @@ class RemarkLinesTest {
 
     @Test
     void theLeadIsWhatComesBeforeTheFirstStop() {
-        RichDiff.Drawn drawn = RichDiff.Drawn.plain(List.of(Line.from("commit"), Line.from("---")))
-                .withLead();
+        Drawn drawn =
+                Drawn.plain(List.of(Line.from("commit"), Line.from("---"))).withLead();
         assertEquals(List.empty(), drawn.stops());
 
-        RichDiff.Drawn lead = drawn(ParsedDiff.of(DIFF), true, Option.none(), Theme.SpanStyles.NONE)
+        Drawn lead = drawn(ParsedDiff.of(DIFF), true, Option.none(), Theme.SpanStyles.NONE)
                 .after(List.of(Line.from("commit"), Line.from("---")))
                 .withLead();
         assertEquals(new Anchor.Lead(), lead.stops().head().mark().anchor());
@@ -1077,8 +1077,7 @@ class RemarkLinesTest {
     /**
      * {@code diff} drawn with the review threads {@code remarks}, the changed words highlighted.
      */
-    private static RichDiff.Drawn drawn(
-            ParsedDiff diff, boolean syntax, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
+    private static Drawn drawn(ParsedDiff diff, boolean syntax, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
         return RichDiff.drawn(
                 Expansion.Folded.of(diff),
                 remarks,

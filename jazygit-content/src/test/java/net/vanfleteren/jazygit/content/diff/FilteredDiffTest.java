@@ -100,7 +100,7 @@ class FilteredDiffTest {
 
     @Test
     void aMarkerIsAStopByItsHunks() {
-        RichDiff.Drawn drawn = drawn(filtering(), DIFF, false);
+        Drawn drawn = drawn(filtering(), DIFF, false);
 
         assertEquals(
                 List.of(List.of(new HunkStart(1, 1)), List.of(new HunkStart(40, 40))),
@@ -115,7 +115,7 @@ class FilteredDiffTest {
         Opened opened =
                 new Opened(new ScrolledContent.Note("x"), HashSet.of(new Opened.Hunk("A.java", new HunkStart(1, 1))));
 
-        RichDiff.Drawn drawn = drawn(filtering().withOpened(Option.of(opened)), DIFF, false);
+        Drawn drawn = drawn(filtering().withOpened(Option.of(opened)), DIFF, false);
         List<String> lines = text(drawn);
 
         assertEquals(
@@ -206,7 +206,7 @@ class FilteredDiffTest {
         return new Filtering(List.of(IMPORTS), Option.none(), List.empty(), false, false);
     }
 
-    private static RichDiff.Drawn drawn(Filtering filtering, ParsedDiff diff, boolean split) {
+    private static Drawn drawn(Filtering filtering, ParsedDiff diff, boolean split) {
         return RichDiff.drawn(
                 filtering.hide(Expansion.Folded.of(diff), diff),
                 Option.none(),
@@ -217,7 +217,7 @@ class FilteredDiffTest {
                         .withSplit(split ? RichDiff.Split.SIDE_BY_SIDE : RichDiff.Split.UNIFIED));
     }
 
-    private static List<String> text(RichDiff.Drawn drawn) {
+    private static List<String> text(Drawn drawn) {
         return drawn.lines()
                 .map((Line line) -> line.spans().stream().map(Span::content).collect(Collectors.joining()));
     }

@@ -55,9 +55,9 @@ final class LexedHighlighter implements SyntaxHighlighter {
     }
 
     private Line coloured(String line, List<Token> tokens, Style base) {
-        return Line.from(RichDiff.pieces(List.of(new Segment(line, false)), tokens)
+        return Line.from(Pieces.of(List.of(new Segment(line, false)), tokens)
                 .map(piece -> piece.kind()
-                        .map(kind -> Span.styled(piece.text(), base.patch(styles.of(RichDiff.syntaxClass(kind)))))
+                        .map(kind -> Span.styled(piece.text(), base.patch(styles.of(Pieces.syntaxClass(kind)))))
                         .getOrElse(() -> Span.styled(piece.text(), base)))
                 .toJavaList());
     }
