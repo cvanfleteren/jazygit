@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.xml;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -131,6 +132,44 @@ class XmlTreeTest {
         assertEquals(broken(1, 4, new Problem.Expected("-->")), XmlTree.read("<a><!-- no end</a>"));
         assertEquals(Either.left(new NotXml.Nothing()), XmlTree.read("<!-- only -->\n"));
         assertEquals(Either.left(new NotXml.Nothing()), XmlTree.read(""));
+    }
+
+    @Test
+    void whatXmlForbidsThatReadsAsATreeAnywayIsNotWellFormed() {
+        assertEquals(broken(1, 11, new Problem.DashesInComment()), XmlTree.read("<a><!-- a -- b --></a>"));
+        assertEquals(broken(1, 11, new Problem.DashesInComment()), XmlTree.read("<a><!-- a ---></a>"));
+        assertEquals(broken(1, 9, new Problem.NoSpace()), XmlTree.read("<a b=\"1\"c=\"2\"/>"));
+        assertEquals(broken(1, 6, new Problem.CdataEnd()), XmlTree.read("<a>x ]]> y</a>"));
+        assertEquals(broken(1, 4, new Problem.Forbidden(1)), XmlTree.read("<a>\u0001</a>"));
+        assertEquals(broken(1, 7, new Problem.Forbidden(0xFFFF)), XmlTree.read("<a b='￿'/>"));
+        assertEquals(broken(1, 4, new Problem.Forbidden(0)), XmlTree.read("<a>&#0;</a>"));
+        assertEquals(broken(1, 4, new Problem.Forbidden(0xD800)), XmlTree.read("<a>&#xD800;</a>"));
+        assertEquals(broken(1, 4, new Problem.Declaration()), XmlTree.read("<a><?xml version=\"1.0\"?></a>"));
+        assertEquals(broken(1, 2, new Problem.Declaration()), XmlTree.read(" <?xml version=\"1.0\"?><a/>"));
+        assertEquals(
+                true,
+                XmlTree.read("﻿<?xml version=\"1.0\"?><a><?xml-stylesheet x?></a>")
+                        .isRight());
+    }
+
+    @Test
+    void aDoctypeIsReadPastWhateverItsCommentsAndInstructionsHold() {
+        assertEquals(
+                new Element(2, 2, 2, "a", List.empty(), List.empty()),
+                root("<!DOCTYPE a [<!-- don't ] > --><?pi \" ] > ?><!ENTITY e \"x\">]>\n<a/>"));
+    }
+
+    @Test
+    void manySiblingsAreReadInTimeLinearInThem() {
+        String many = "<a>" + "<b c='1' d='2'>x</b><!-- y -->".repeat(100_000) + "</a>";
+
+        long started = System.nanoTime();
+        Element root = root(many);
+        long millis = (System.nanoTime() - started) / 1_000_000;
+
+        assertEquals(200_000, root.children().size());
+        // Appending to a list, 40,000 took three seconds.
+        assertTrue(millis < 2_000, millis + " ms");
     }
 
     @Test

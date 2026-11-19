@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.xml;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -27,6 +28,8 @@ final class XmlReader {
 
     private final String text;
     private final int[] starts;
+    // Where the text starts, after a byte order mark: the only place the declaration may be.
+    private final int begin;
     private int at;
 
     private XmlReader(String text) {
@@ -37,24 +40,52 @@ final class XmlReader {
                                 .filter(index -> text.charAt(index) == '\n')
                                 .map(index -> index + 1))
                 .toArray();
-        this.at = text.startsWith("﻿") ? 1 : 0;
+        this.begin = text.startsWith("﻿") ? 1 : 0;
+        this.at = begin;
     }
 
     static Either<NotXml, List<XmlTree>> read(String text) {
         try {
-            return new XmlReader(text).document();
+            XmlReader reader = new XmlReader(text);
+            reader.allowed();
+            return reader.document();
         } catch (NotRead e) {
             return Either.left(e.why);
         }
     }
 
+    /**
+     * Stops at the first character XML does not allow anywhere: a control character other than a tab or a line break, a
+     * half of a surrogate pair, U+FFFE or U+FFFF.
+     */
+    private void allowed() {
+        int index = 0;
+        while (index < text.length()) {
+            int c = text.codePointAt(index);
+            if (!allowed(c)) {
+                throw broken(index, new Problem.Forbidden(c));
+            }
+            index += Character.charCount(c);
+        }
+    }
+
+    private static boolean allowed(int c) {
+        return c == 0x9
+                || c == 0xA
+                || c == 0xD
+                || (c >= 0x20 && c <= 0xD7FF)
+                || (c >= 0xE000 && c <= 0xFFFD)
+                || (c >= 0x10000 && c <= 0x10FFFF);
+    }
+
     private Either<NotXml, List<XmlTree>> document() {
-        List<XmlTree> top = List.empty();
+        // A vector, not a list: appending to a list copies it, which made thousands of siblings take seconds.
+        Vector<XmlTree> top = Vector.empty();
         boolean rooted = false;
         while (true) {
             skipSpace();
             if (at >= text.length()) {
-                return rooted ? Either.right(top) : Either.left(new NotXml.Nothing());
+                return rooted ? Either.right(top.toList()) : Either.left(new NotXml.Nothing());
             }
             if (opens("<!--")) {
                 top = top.append(comment());
@@ -87,21 +118,26 @@ final class XmlReader {
         int from = at;
         at++;
         String name = name();
-        List<Attribute> attributes = List.empty();
+        Vector<Attribute> attributes = Vector.empty();
         while (true) {
+            int before = at;
             skipSpace();
+            boolean spaced = at > before;
             if (at >= text.length()) {
                 throw broken(at, new Problem.EndsInside(name));
             }
             if (opens("/>")) {
                 at += 2;
                 int line = lineOf(at - 1);
-                return new Element(lineOf(from), line, line, name, attributes, List.empty());
+                return new Element(lineOf(from), line, line, name, attributes.toList(), List.empty());
             }
             if (opens(">")) {
                 at++;
                 int tagEnd = lineOf(at - 1);
-                return children(lineOf(from), tagEnd, name, attributes, depth);
+                return children(lineOf(from), tagEnd, name, attributes.toList(), depth);
+            }
+            if (!spaced) {
+                throw broken(at, new Problem.NoSpace());
             }
             int attribute = at;
             String key = name(">");
@@ -119,7 +155,7 @@ final class XmlReader {
      * The rest of the element {@code name}: what it holds, from {@code at}, after its start tag, up to its end tag.
      */
     private Element children(int line, int tagEnd, String name, List<Attribute> attributes, int depth) {
-        List<XmlTree> children = List.empty();
+        Vector<XmlTree> children = Vector.empty();
         while (true) {
             if (at >= text.length()) {
                 throw broken(at, new Problem.EndsInside(name));
@@ -133,7 +169,7 @@ final class XmlReader {
                     throw broken(from, new Problem.Closes(name, close));
                 }
                 expect(">");
-                return new Element(line, tagEnd, lineOf(at - 1), name, attributes, children);
+                return new Element(line, tagEnd, lineOf(at - 1), name, attributes, children.toList());
             }
             if (opens("<!--")) {
                 children = children.append(comment());
@@ -156,6 +192,10 @@ final class XmlReader {
         int from = at;
         int until = text.indexOf('<', at);
         at = until < 0 ? text.length() : until;
+        int end = text.indexOf("]]>", from, at);
+        if (end >= 0) {
+            throw broken(end, new Problem.CdataEnd());
+        }
         StringBuilder decoded = new StringBuilder();
         int index = from;
         while (index < at) {
@@ -206,6 +246,10 @@ final class XmlReader {
         if (until < 0) {
             throw broken(from, new Problem.Expected("-->"));
         }
+        int dashes = text.indexOf("--", inside);
+        if (dashes < until) {
+            throw broken(dashes, new Problem.DashesInComment());
+        }
         at = until + 3;
         int first = inside;
         while (first < until && Character.isWhitespace(text.charAt(first))) {
@@ -218,16 +262,27 @@ final class XmlReader {
                 lines(text.substring(inside, until).strip()));
     }
 
+    /**
+     * Reads past an instruction, or the declaration at the start of the text: {@code <?xml} anywhere else is not well
+     * formed.
+     */
     private void instruction() {
+        int from = at;
         int until = text.indexOf("?>", at + 2);
         if (until < 0) {
             throw broken(at, new Problem.Expected("?>"));
+        }
+        at += 2;
+        String target = name();
+        if (target.equalsIgnoreCase("xml") && from != begin) {
+            throw broken(from, new Problem.Declaration());
         }
         at = until + 2;
     }
 
     /**
-     * Reads past a DOCTYPE, its internal subset and the strings in it too, without reading what it declares.
+     * Reads past a DOCTYPE, its internal subset and the strings, comments and instructions in it too, without reading
+     * what it declares.
      */
     private void doctype() {
         int from = at;
@@ -235,7 +290,15 @@ final class XmlReader {
         char quote = 0;
         for (int index = at + "<!DOCTYPE".length(); index < text.length(); index++) {
             char c = text.charAt(index);
-            if (quote != 0) {
+            if (quote == 0 && (text.startsWith("<!--", index) || text.startsWith("<?", index))) {
+                String closer = text.startsWith("<!--", index) ? "-->" : "?>";
+                int end = text.indexOf(closer, index + 2);
+                if (end < 0) {
+                    throw broken(index, new Problem.Expected(closer));
+                }
+                // Onto the last character of what closes it: the loop goes on after it.
+                index = end + closer.length() - 1;
+            } else if (quote != 0) {
                 quote = c == quote ? 0 : quote;
             } else if (c == '"' || c == '\'') {
                 quote = c;
@@ -294,12 +357,17 @@ final class XmlReader {
             boolean hex = inside.startsWith("#x");
             String digits = inside.substring(hex ? 2 : 1);
             if (!digits.isEmpty() && digits.chars().allMatch(c -> Character.digit(c, hex ? 16 : 10) >= 0)) {
+                int c;
                 try {
-                    to.appendCodePoint(Integer.parseInt(digits, hex ? 16 : 10));
-                    return semicolon + 1;
-                } catch (IllegalArgumentException e) {
+                    c = Integer.parseInt(digits, hex ? 16 : 10);
+                } catch (NumberFormatException e) {
                     throw broken(index, new Problem.Ampersand());
                 }
+                if (!allowed(c)) {
+                    throw broken(index, new Problem.Forbidden(c));
+                }
+                to.appendCodePoint(c);
+                return semicolon + 1;
             }
         } else if (!inside.isEmpty()
                 && nameStart(inside.charAt(0))

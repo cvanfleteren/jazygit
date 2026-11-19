@@ -168,6 +168,12 @@ final class RenderedTree {
             case NotXml.Problem.TextOutside outside -> Messages.get("content.xml.textOutside");
             case NotXml.Problem.LessThan less -> Messages.get("content.xml.lessThan");
             case NotXml.Problem.Ampersand ampersand -> Messages.get("content.xml.ampersand");
+            case NotXml.Problem.DashesInComment dashes -> Messages.get("content.xml.dashesInComment");
+            case NotXml.Problem.NoSpace none -> Messages.get("content.xml.noSpace");
+            case NotXml.Problem.CdataEnd end -> Messages.get("content.xml.cdataEnd");
+            case NotXml.Problem.Forbidden(int codePoint) ->
+                Messages.get("content.xml.forbidden", String.format("U+%04X", codePoint));
+            case NotXml.Problem.Declaration declaration -> Messages.get("content.xml.declaration");
         };
     }
 

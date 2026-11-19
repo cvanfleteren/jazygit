@@ -86,5 +86,30 @@ public sealed interface NotXml {
          * An {@code &} that starts no reference.
          */
         record Ampersand() implements Problem {}
+
+        /**
+         * A {@code --} in a comment, other than the one of its {@code -->}.
+         */
+        record DashesInComment() implements Problem {}
+
+        /**
+         * An attribute with no white space before it.
+         */
+        record NoSpace() implements Problem {}
+
+        /**
+         * A {@code ]]>} in text, outside a section of CDATA.
+         */
+        record CdataEnd() implements Problem {}
+
+        /**
+         * A character XML does not allow, written or referred to, as a control character.
+         */
+        record Forbidden(int codePoint) implements Problem {}
+
+        /**
+         * The declaration, {@code <?xml ...?>}, anywhere but at the start of the text.
+         */
+        record Declaration() implements Problem {}
     }
 }

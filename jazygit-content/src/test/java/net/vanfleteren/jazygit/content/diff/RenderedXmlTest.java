@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.content.diff;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
@@ -226,6 +227,38 @@ class RenderedXmlTest {
         assertEquals(
                 Either.left("Not rendered: nested deeper than 500 levels"),
                 why("<a>".repeat(501) + "</a>".repeat(501)));
+        assertEquals(
+                Either.left("Not rendered: line 1, column 11, '--' inside a comment"), why("<a><!-- a -- b --></a>"));
+        assertEquals(
+                Either.left("Not rendered: line 1, column 9, no white space before an attribute"),
+                why("<a b=\"1\"c=\"2\"/>"));
+        assertEquals(
+                Either.left("Not rendered: line 1, column 6, ']]>' outside a section of CDATA"), why("<a>x ]]> y</a>"));
+        assertEquals(
+                Either.left("Not rendered: line 1, column 4, character U+0001 is not allowed in XML"),
+                why("<a>\u0001</a>"));
+        assertEquals(
+                Either.left("Not rendered: line 1, column 4, the XML declaration is not at the start of the file"),
+                why("<a><?xml version=\"1.0\"?></a>"));
+    }
+
+    @Test
+    void manySiblingsAreDrawnInTimeLinearInThem() {
+        String records = List.range(0, 20_000)
+                .map(at -> "<dependency><id>" + at + "</id><scope>test</scope></dependency>")
+                .mkString("<project><dependencies>\n", "\n", "\n</dependencies></project>");
+        String mixed = List.range(0, 20_000)
+                .map(at -> "<b>" + at + "</b> text <!-- c -->")
+                .mkString("<p>\n", "\n", "\n</p>");
+
+        long started = System.nanoTime();
+        List<String> table = text(records, HashMap.of("/project/dependencies", true));
+        List<String> rows = text(mixed, HashMap.of("/p", true));
+        long millis = (System.nanoTime() - started) / 1_000_000;
+
+        assertEquals(20_003, table.size());
+        assertEquals(60_001, rows.size());
+        assertTrue(millis < 3_000, millis + " ms");
     }
 
     @Test

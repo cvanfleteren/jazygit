@@ -52,6 +52,23 @@ simple to read: tags, attributes, text, references, comments, sections of CDATA,
 - Text that is not well formed is shown as source, under one line saying where reading stopped and why, in jazygit's
   words: `Not rendered: line 12, column 3, </dependency> closes <version>`, `expected '>'`,
   `the text ends inside <project>`, `attribute 'id' written twice`, `more after the root element`.
+- What it finds not well formed: an end tag that closes another element, or none; an element not closed; a second root,
+  or text outside the root; an attribute written twice, without `=`, without quotes, or with no white space before it;
+  a `<` in the value of an attribute; an `&` that starts no reference; a reference to a character XML does not allow,
+  `&#0;`; a character XML does not allow anywhere, a control character, U+FFFE, U+FFFF or half of a surrogate pair;
+  `--` in a comment; `]]>` in text; the declaration anywhere but at the start; a comment, a section of CDATA, an
+  instruction or a DOCTYPE not closed; a name that does not start as one; elements nested deeper than 500.
+- What it does not find, and draws as a tree: a reference to an entity no DTD declares, `&nbsp;`, on purpose, as
+  XHTML has them; a name with a character XML does not allow in one, other than at its start, as its rules of the
+  characters of names are approximated by those of letters and digits; a prefix no `xmlns` declares, or any other rule
+  of namespaces; what the declaration says, its version, encoding and `standalone`; a DOCTYPE that is not as XML has
+  it, or written twice, as it is only read past, its strings, comments and instructions with it.
+- What it does not do, as it reads no DTD: an entity the DTD declares is drawn as it is written, `&e;`, not as what it
+  stands for; an attribute the DTD gives a default is not drawn. The value of an attribute is not normalized: a line
+  break in it is drawn as `↵`, not as a space. The text is read as git gives it: the encoding the declaration names is
+  not read. XML 1.1 is read as XML 1.0.
+- It reads in time linear in the text: its elements, attributes and children are gathered in vectors, as appending to a
+  list copies it, which made 40,000 siblings take three seconds.
 
 ### How it is drawn
 
@@ -97,7 +114,10 @@ simple to read: tags, attributes, text, references, comments, sections of CDATA,
 ## Consequences
 
 - The tree of the app holds elements, texts and comments beside mappings and sequences; its renderer draws both.
-- `jazygit-xml` is a reader of XML written by hand, which reads well formed XML and says where other XML is not; it
-  brings no dependency, and nothing of it needs reflection in the native image.
+- `jazygit-xml` is a reader of XML written by hand, which reads well formed XML and says where most other XML is not;
+  it brings no dependency, and nothing of it needs reflection in the native image. Some XML that is not well formed is
+  drawn as a tree, as listed above: a version rendered is no validator, and its source is a Ctrl+T away.
+- Each rule of well-formedness it checks is code jazygit keeps; a rule of XML it misses is found by a file drawn
+  wrongly, not by a library's tests.
 - An entity declared in a DTD is drawn as it is written, not as what it stands for.
 - A `pom.xml` reads as its dependencies in a table, as long as no dependency holds its exclusions.
