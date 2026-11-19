@@ -29,9 +29,13 @@ checks on the tip of a branch, which can come from several workflow runs, and on
 
 - A `FailedBuild`, in `kernel-state`, is what failed on one commit of a branch: the repository, the branch, the
   commit, the number of its pull request if it has one, and its failed jobs, each with its name, the run it is part of
-  and its URL. It also carries how to read their logs, a text the forge side writes, as
+  if it has one, and its URL. It also carries how to read their logs, a text the forge side writes, as
   `gh run view <run> --log-failed --repo <owner/name>` for each run on GitHub, so that what reads it knows no forge's
   program.
+- A failed commit status, as of an outside CI or a bot, is a failed job without a run: its name is the context of the
+  status, its URL the target URL it links to, which the checks are read with from now on. The text on the logs says
+  that its logs are not on the forge, but at that URL. Not: leaving statuses out, so the agent never hears of a CI
+  outside the forge that failed.
 - It names no forge: another forge (#588) gives the same value.
 - **Actions on a subject** are an extension point: a typed key, as a `Part` is (ADR 157), for actions on a value of
   one type, here a `FailedBuild`. A `Feature` lists the actions it contributes for each key, and the app gathers them
