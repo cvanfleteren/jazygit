@@ -27,9 +27,11 @@ checks on the tip of a branch, which can come from several workflow runs, and on
 
 ### A failed build, and actions on it
 
-- A `FailedBuild`, in `kernel-state`, is what failed on one commit of a branch: the repository, the branch, the
-  commit, the number of its pull request if it has one, and its failed jobs, each with its name, the run it is part of
-  if it has one, and its URL. It also carries how to read their logs, a text the forge side writes, as
+- A `FailedBuild`, in `kernel-state`, is what failed on one commit of a branch: the repository and the commit, when
+  the view knows them, the branch, the number of its pull request if it has one, whether some of its jobs still run,
+  and its failed jobs, each with its name, the run it is part of if it has one, and its URL when it is known. The
+  checks popup does not know the commit of the tip, nor the builds the repository. It also carries how to read their
+  logs, a text the forge side writes, as
   `gh run view <run> --log-failed --repo <owner/name>` for each run on GitHub, so that what reads it knows no forge's
   program.
 - A failed commit status, as of an outside CI or a bot, is a failed job without a run: its name is the context of the
@@ -37,16 +39,19 @@ checks on the tip of a branch, which can come from several workflow runs, and on
   that its logs are not on the forge, but at that URL. Not: leaving statuses out, so the agent never hears of a CI
   outside the forge that failed.
 - It names no forge: another forge (#588) gives the same value.
-- **Actions on a subject** are an extension point: a typed key, as a `Part` is (ADR 157), for actions on a value of
-  one type, here a `FailedBuild`. A `Feature` lists the actions it contributes for each key, and the app gathers them
-  and hands them to the views that show that subject, as ADR 158 foresaw for the badges. An action has a label, a key
-  and its help text, whether it is enabled or why not, and what it does with the subject: a `Cmd`.
-- The views show a contributed action as one of their own, in their keys, their hints and the help. A view that shows
-  a subject has a key `Scope` for it, so its keys and the contributed ones are bindings alike: the checks popup, which
-  matches its keys itself in `ChecksDialog.keys`, gets one (`ChecksAction.SCOPE`), as the builds have
-  `BuildsAction.SCOPE`.
-- A keymap test fails when a contributed key is one the view already has, as a contributor cannot see the view's
-  keys, and when two features contribute the same key for one subject.
+- **Actions on a subject** are an extension point: a key `Scope` of the subject's type, `Scopes.FAILED_BUILD`, in
+  `kernel-ui`, which a view *hosts* (`Keymap.host`): its keys come after the view's own, in its keys, its hint and its
+  help, and act on the subject the view hands over with the key (`Keymap.Hosted`), as ADR 158 foresaw for the badges.
+  A feature adds its actions to that scope as to any other, through its `Feature`, and the app gathers them in the
+  keymap. An action is a binding: its key and help text, and the message it sends for the subject. Not: a registry of
+  actions beside the keymap, which the help, the hints and the check of keys bound twice would each have to learn.
+- An action that cannot act says why when its key is pressed, as `e` does (ADR 110): its key stays listed.
+- A view that shows a subject has a key `Scope` for it, so its keys and the contributed ones are bindings alike: the
+  checks popup, which matched its keys itself in `ChecksDialog.keys`, gets one for `r` and `R` (`ChecksAction.SCOPE`),
+  as the builds have `BuildsAction.SCOPE`. Scrolling and closing stay the popup's own.
+- The keymap refuses a key bound twice across a host and its guests, whichever is added first, and a key that two
+  features add to one guest, as it refuses one bound twice in a scope; the keymap of the app is made in its tests, so
+  they fail on it. A contributor cannot see the view's keys.
 - `features-github` gives the subject: the builds give the failed jobs of the build shown; the checks popup the
   failed checks of the tip of the branch, across runs. The agent works out which of them matter. Not: a subject of
   one job, nor of the check picked once ADR 160 picks one, as more than one may have failed; nor of a whole branch
