@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.load.LoadAhead;
 import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.load.LoadCommitTree;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.markdown.MarkdownImage;
 
@@ -45,9 +46,11 @@ public final class CommitFilesUpdate {
 
     public static Next update(Model model, CommitFilesMsg msg) {
         return switch (msg) {
-            case CommitFilesMsg.Opened(var of, var pane) -> opened(model, of, pane);
-            // Escape moves the focus back to the list the files are of, which the app does: they stay (ADR 141).
-            case CommitFilesMsg.Closed() -> Next.of(model);
+            case CommitFilesMsg.Opened(var of, var pane) -> opened(locked(model, pane), of, pane);
+            // Escape moves the focus back to the list the files are of, which the app does: they stay (ADR 141), and
+            // follow the list with the focus again (ADR 149).
+            case CommitFilesMsg.Closed() ->
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withLocked(Option.none()))));
             case CommitFilesMsg.RemarksLoaded(PrNumber number, var remarks, var settled, int version) ->
                 remarksRead(model, number, remarks, settled, version);
             // The review threads read before stay shown; what was sent is done with all the same. A failed read
@@ -89,14 +92,23 @@ public final class CommitFilesUpdate {
     }
 
     /**
-     * {@code F} on {@code of}, in the pane {@code pane}: the files that follow its highlight already list them, and
-     * then stay as they are, read or being read; the focus goes into them as they no longer follow (ADR 141).
+     * {@code model} with the files pane locked anew to the list the pane {@code pane} shows: what it lists follows the
+     * highlight of that list only, whichever pane has the focus (ADR 149).
+     */
+    private static Model locked(Model model, PaneId pane) {
+        return model.mapRepoView(repoView -> repoView.mapFiles(files ->
+                files.lockedTo(pane, FilesLock.In.of(repoView, pane.equals(Scopes.BRANCHES.pane())))));
+    }
+
+    /**
+     * Enter on {@code of}, in the pane {@code pane}, or {@code F} on a branch: the files listed already, as they follow
+     * its highlight or were opened before, stay as they are, read or being read, and are listed whole (ADR 141, 149).
      */
     private static Next opened(Model model, Changes of, PaneId pane) {
         return model.repoView()
                 .files()
                 .commitFiles()
-                .filter(view -> view.followed() && view.of().equals(of))
+                .filter(view -> view.of().equals(of))
                 .map(view -> Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files ->
                         files.withCommitFiles(Option.of(view.withFollowed(false).withPane(pane)))))))
                 .getOrElse(() -> open(model, CommitFilesView.of(of, pane, Scopes.FILES.pane())));
@@ -147,7 +159,7 @@ public final class CommitFilesUpdate {
         return AheadUpdate.main(model).contains(branch)
                 ? load.tip()
                         .map(tip -> open(
-                                model,
+                                locked(model, Scopes.BRANCHES.pane()),
                                 CommitFilesView.of(
                                                 new Changes.OfTip(branch, tip),
                                                 Scopes.BRANCHES.pane(),

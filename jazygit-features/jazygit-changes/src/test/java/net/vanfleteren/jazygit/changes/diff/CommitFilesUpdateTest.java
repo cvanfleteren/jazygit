@@ -15,6 +15,8 @@ import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
@@ -40,7 +42,9 @@ import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.FileFilter;
+import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
@@ -97,10 +101,45 @@ class CommitFilesUpdateTest {
     }
 
     @Test
-    void escapeLeavesThemListedAsTheAppMovesTheFocusBack() {
+    void escapeLeavesThemListedAsTheAppMovesTheFocusBackAndLetsGoOfTheLock() {
         Model open = withFiles(opened());
 
-        assertSame(open, Update.update(open, new CommitFilesMsg.Closed()).model());
+        Model closed = Update.update(open, new CommitFilesMsg.Closed()).model();
+
+        assertEquals(
+                open.repoView().files().commitFiles(), closed.repoView().files().commitFiles());
+        assertEquals(Option.none(), closed.repoView().files().locked());
+    }
+
+    @Test
+    void openingLocksTheFilesToTheListItWasOpenedInEachTimeAnew() {
+        Model once = opened();
+        Model twice = Update.update(once, new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.pane()))
+                .model();
+
+        assertEquals(
+                Option.of(new FilesLock(Scopes.COMMITS.pane(), FilesLock.In.LIST, Option.none(), 1)),
+                once.repoView().files().locked());
+        // Enter again moves the focus into them again: a new lock, of the files already listed.
+        assertEquals(Option.of(2), twice.repoView().files().locked().map(FilesLock::serial));
+        assertEquals(
+                once.repoView().files().commitFiles(), twice.repoView().files().commitFiles());
+    }
+
+    @Test
+    void enterInADivergenceLocksTheFilesToIt() {
+        Model diverged = loaded().mapRepoView(repoView ->
+                repoView.mapBranches(branches -> branches.withDivergence(Option.of(DivergenceView.loading(
+                        new BranchName("feature"),
+                        new BranchRef.Local(new BranchName("main")),
+                        DivergenceView.Against.BASE)))));
+
+        Model open = Update.update(diverged, new CommitFilesMsg.Opened(COMMIT, Scopes.BRANCHES.pane()))
+                .model();
+
+        assertEquals(
+                Option.of(FilesLock.In.DIVERGENCE),
+                open.repoView().files().locked().map(FilesLock::list));
     }
 
     @Test

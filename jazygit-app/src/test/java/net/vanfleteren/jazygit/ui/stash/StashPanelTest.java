@@ -8,11 +8,13 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.changes.stash.StashMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpMsg;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -78,12 +80,12 @@ class StashPanelTest {
     }
 
     @Test
-    void theHighlightedStashIsReportedUntilItsChangesAreShownAndEnterOpensThem() throws Exception {
+    void theHighlightedStashIsReportedUntilItsChangesAreShownAndEnterOpensItsFiles() throws Exception {
         Stash older = new Stash("stash@{1}", new Sha("s1"), "older", Option.none(), Instant.EPOCH);
         Model model = withStashes(
                 List.of(new Stash("stash@{0}", new Sha("s0"), "newest", Option.none(), Instant.EPOCH), older));
-        int[] opened = {0};
-        StashPanel panel = new StashPanel(msg -> {}, () -> opened[0]++, Theme.Highlights.DEFAULT);
+        java.util.List<Msg> dispatched = new ArrayList<>();
+        StashPanel panel = new StashPanel(dispatched::add, Theme.Highlights.DEFAULT);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.PANE))) {
             SettledPilot.focus(testRunner, StashPanel.ID);
@@ -99,7 +101,9 @@ class StashPanelTest {
 
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).pause();
-            assertEquals(1, opened[0]);
+            assertEquals(
+                    List.of(new CommitFilesMsg.Opened(new Changes.OfStash(older.sha()), StashPanel.PANE)),
+                    List.ofAll(dispatched));
             SettledPilot.of(testRunner).quit();
         }
     }
@@ -170,5 +174,34 @@ class StashPanelTest {
             assertEquals("older", panel.selectedStash().get().message());
             SettledPilot.of(testRunner).quit();
         }
+    }
+
+    @Test
+    void escapeLetsGoOfTheFilesLockedToTheStashesOnly() throws Exception {
+        Model model =
+                withStashes(List.of(new Stash("stash@{0}", new Sha("s0"), "newest", Option.none(), Instant.EPOCH)));
+
+        assertEquals(List.of(new SelectionMsg.FilesUnlocked()), escaped(lockedTo(model, StashPanel.PANE)));
+        assertEquals(List.empty(), escaped(lockedTo(model, Scopes.COMMITS.pane())));
+    }
+
+    private static Model lockedTo(Model model, PaneId pane) {
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.lockedTo(pane, FilesLock.In.LIST)));
+    }
+
+    /**
+     * What Escape in the stashes of {@code model}, with the focus, sends.
+     */
+    private static List<Msg> escaped(Model model) throws Exception {
+        java.util.List<Msg> sent = new ArrayList<>();
+        StashPanel panel = new StashPanel(sent::add, Theme.Highlights.DEFAULT);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, StashPanel.PANE))) {
+            SettledPilot.focus(testRunner, StashPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
+        }
+        return List.ofAll(sent);
     }
 }

@@ -14,8 +14,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.git.history.History;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
+import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -60,6 +62,8 @@ public class CommitsPanel {
     // What the last render showed: the text of the open search line, and whether a search was listed.
     private Option<String> typing = Option.none();
     private boolean searching;
+    // Whether the files pane was locked to the commits at the last render (ADR 149).
+    private boolean locked;
     // What a paste does: while the search line is open, it goes in it.
     private final Consumer<PasteEvent> paste;
     // The rows of the commits listed, worked out again only when what they are drawn from changes: the graph is not
@@ -68,25 +72,25 @@ public class CommitsPanel {
             new Memo<>();
 
     /**
-     * @param dispatch   receives the messages for the user's actions, on the render thread
-     * @param openCommit called when Enter is pressed on a commit, to move focus to its content
+     * @param dispatch receives the messages for the user's actions, on the render thread
      */
-    public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit) {
-        this(dispatch, openCommit, Theme.Highlights.DEFAULT);
+    public CommitsPanel(Consumer<Msg> dispatch) {
+        this(dispatch, Theme.Highlights.DEFAULT);
     }
 
     /**
      * @param highlights how the highlighted commit is shown, also when the pane is not in use
      */
-    public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
+    public CommitsPanel(Consumer<Msg> dispatch, Theme.Highlights highlights) {
         list = new LoadableList<>(Messages.get("panel.commits.title"), ID, CommitsPanel::reselect, highlights);
         paste = event ->
                 typing.forEach(text -> dispatch.accept(new CommitSearchMsg.Edited(searchLine.paste(text, event))));
         list.onKey(event -> typing.map(text -> typed(text, event, dispatch))
-                .orElse(() -> event.isConfirm() && selectedCommit().isDefined()
-                        ? Option.of(openCommit)
-                        : searching && event.isCancel()
-                                ? PaneKeys.sending(Option.of(new CommitSearchMsg.Cleared()), dispatch)
+                .orElse(() -> searching && event.isCancel()
+                        ? PaneKeys.sending(Option.of(new CommitSearchMsg.Cleared()), dispatch)
+                        // Escape lets go of the files locked to the commits, before it does anything else (ADR 149).
+                        : locked && event.isCancel()
+                                ? PaneKeys.sending(Option.of(new SelectionMsg.FilesUnlocked()), dispatch)
                                 : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, selectedCommit()), dispatch)));
     }
 
@@ -251,6 +255,7 @@ public class CommitsPanel {
         AheadView ahead = new AheadView(AheadUpdate.head(model), AheadUpdate.headDistance(model));
         typing = model.repoView().commits().searchLine();
         searching = search.isDefined();
+        locked = PaneKeys.lockedTo(model, PANE);
         list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));
         Loadable<List<Commit>> source =
                 search.map(CommitSearch::results).getOrElse(() -> model.repo().commits());
@@ -261,10 +266,25 @@ public class CommitsPanel {
                         key -> searching ? foundItems(commits, copied, ahead) : graphed(commits, copied, ahead)),
                 focus.contains(PANE),
                 inUse.contains(PANE),
-                Pane.title(ahead.title(
-                        search.map(CommitsPanel::title).getOrElse(() -> Messages.get("panel.commits.title")))),
+                Pane.title(ahead.title(search.map(CommitsPanel::title).getOrElse(() -> headTitle(model)))),
                 typing.map(searchLine::field),
                 paste);
+    }
+
+    /**
+     * The title of the commits listed, naming what is checked out, whose log they are: a branch, or a detached HEAD;
+     * plain until that is read.
+     */
+    static String headTitle(Model model) {
+        return model.repo()
+                .status()
+                .toOption()
+                .map(status -> switch (status.head()) {
+                    case Head.OnBranch(BranchName branch, var tip) ->
+                        Messages.get("panel.commits.titleOf", branch.value());
+                    case Head.Detached(Sha at) -> Messages.get("panel.commits.titleDetached", at.shortSha());
+                })
+                .getOrElse(() -> Messages.get("panel.commits.title"));
     }
 
     /**

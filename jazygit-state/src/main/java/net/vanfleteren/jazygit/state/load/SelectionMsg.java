@@ -87,4 +87,15 @@ public sealed interface SelectionMsg extends Msg {
      * there are many (ADR 141).
      */
     record WholeListed() implements SelectionMsg {}
+
+    /**
+     * The list the files pane is locked to follows {@code at}, which the files listed since the lock are for, whatever
+     * they are (ADR 149).
+     */
+    record FilesLockedAt(Followed at) implements SelectionMsg {}
+
+    /**
+     * The files pane is no longer locked to a list: {@code Esc} let go of it, or the list was closed (ADR 149).
+     */
+    record FilesUnlocked() implements SelectionMsg {}
 }

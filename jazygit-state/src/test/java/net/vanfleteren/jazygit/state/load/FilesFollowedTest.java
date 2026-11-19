@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.FileFilter;
+import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Unlisted;
 import org.junit.jupiter.api.Test;
@@ -198,6 +199,34 @@ class FilesFollowedTest {
                         .commitFiles()
                         .map(view -> view.withFiles(new Loaded<>(many)))
                         .flatMap(CommitFilesView::held));
+    }
+
+    @Test
+    void theListTheFilesAreLockedToRemembersWhatItFollowsAsTheyAreListedForIt() {
+        // Locked to the commits (ADR 149): the next move of their highlight lists anew from what this one lists.
+        Model locked = loaded().mapRepoView(
+                        repoView -> repoView.mapFiles(files -> files.lockedTo(COMMITS, FilesLock.In.LIST)));
+
+        Model listed = followed(locked, FIRST).model();
+
+        assertEquals(
+                Option.of(new FilesLock(COMMITS, FilesLock.In.LIST, Option.of(new Followed.Files(FIRST)), 1)),
+                listed.repoView().files().locked());
+    }
+
+    @Test
+    void theFrameAfterTheLockTellsWhatTheListFollowsAndEscapeLetsGo() {
+        Model locked = loaded().mapRepoView(
+                        repoView -> repoView.mapFiles(files -> files.lockedTo(COMMITS, FilesLock.In.LIST)));
+
+        Model at = Update.update(locked, new SelectionMsg.FilesLockedAt(new Followed.Files(FIRST)))
+                .model();
+        Model unlocked = Update.update(at, new SelectionMsg.FilesUnlocked()).model();
+
+        assertEquals(
+                Option.of(new Followed.Files(FIRST)),
+                at.repoView().files().locked().flatMap(FilesLock::at));
+        assertEquals(Option.none(), unlocked.repoView().files().locked());
     }
 
     private static Next followed(Model model, Changes of) {

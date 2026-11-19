@@ -11,12 +11,12 @@ def test_the_files_of_a_commit_show_in_the_files_pane_each_with_its_own_diff(rep
     ui.commits.select("Change both")
     short = repo.short("HEAD")
 
-    ui.app.press("F")
+    ui.app.press("enter")
 
     ui.app.wait_in("Files", "two.txt")
     assert f"Files of {short}" in ui.app.text()
     assert "work.txt" not in ui.app.pane_text("Files")
-    # The files may be listed already, following the highlight (ADR 141): F moves the focus a frame later.
+    # The files may be listed already, following the highlight (ADR 141): Enter moves the focus a frame later.
     ui.app.eventually(lambda: ui.app.focused_pane() == "Files", "the focus in the files")
     ui.app.move_cursor("Files", "two.txt")
     ui.app.wait_for(f"{short} · src/two.txt")
@@ -92,7 +92,7 @@ def test_the_files_of_a_stash_include_its_untracked_files(repo, jazygit):
     ui = jazygit()
     ui.stash.select("work")
 
-    ui.app.press("F")
+    ui.app.press("enter")
 
     ui.app.wait_in("Files", "new.txt")
     ui.app.move_cursor("Files", "new.txt")

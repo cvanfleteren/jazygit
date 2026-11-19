@@ -107,7 +107,7 @@ class PanePositionTest {
 
     @Test
     void commitsShowSelectedPositionAndFollowSelection() throws Exception {
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {});
         assertPositions(() -> panel.render(MODEL, CommitsPanel.PANE), CommitsPanel.ID, KeyCode.DOWN, "1/3", "2/3");
     }
 

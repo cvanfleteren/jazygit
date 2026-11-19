@@ -130,3 +130,6 @@ Amended by ADR 83: a removed line is followed by the line it became, where the w
 
 Amended by ADR 141: the files pane lists the files of the highlighted commit or stash while a list of them has the
 focus, without `F`: going through history file by file was `F`, `Esc`, `j`, `F` for every commit.
+
+Amended by ADR 149: Enter on a commit or a stash opens its files, and locks the files pane to its list until `Esc`;
+`F` is no longer bound there.

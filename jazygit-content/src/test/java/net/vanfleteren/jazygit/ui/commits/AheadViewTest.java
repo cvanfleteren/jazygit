@@ -139,12 +139,13 @@ class AheadViewTest {
         Model model = TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(LOG))
                         .withAhead(new Loadable.Loaded<>(Option.of(AHEAD))));
-        CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             String shown = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE));
 
-            assertTrue(shown.contains("Commits · 2 ahead of origin/main"), shown);
+            // The title names the branch whose log it lists.
+            assertTrue(shown.contains("Commits of main · 2 ahead of origin/ma"), shown);
             assertTrue(shown.contains("1/4"), shown);
             assertFalse(shown.contains("⑂"), shown);
             SettledPilot.of(testRunner).quit();

@@ -43,18 +43,15 @@ class BranchCommitsList {
     /**
      * @param id         the id of the pane the commits are listed in
      * @param dispatch   receives the messages for the user's actions, on the render thread
-     * @param openCommit called when Enter is pressed on a commit, to move focus to its content
      * @param highlights how the highlighted commit is shown, also when the pane is not in use
      */
-    BranchCommitsList(String id, Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
+    BranchCommitsList(String id, Consumer<Msg> dispatch, Theme.Highlights highlights) {
         list = new LoadableList<>(
                 Messages.get("panel.branchCommits.title"),
                 id,
                 LoadableList.Reselect.following(Commit::sha),
                 highlights);
-        list.onKey(event -> event.isConfirm()
-                ? selectedCommit().map(commit -> openCommit)
-                : PaneKeys.sending(keymap.handle(Scopes.BRANCH_COMMITS, event, selectedCommit()), dispatch));
+        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.BRANCH_COMMITS, event, selectedCommit()), dispatch));
     }
 
     /**

@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.state.view.FilesView;
 import net.vanfleteren.jazygit.state.view.Followed;
 import net.vanfleteren.jazygit.state.view.Preview;
@@ -18,7 +19,7 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  * The files the files pane lists for the pane that has the focus (ADR 141): those of the commit or the stash its list
  * highlights, which follow the highlight, or those of the working tree. The highlight is the one whose diff the
  * content panel shows, which the model knows. While the files pane, or an area of the content panel, has the focus,
- * what it lists stays.
+ * what it lists stays. Locked to a list, by Enter in it, it follows that list only (ADR 149).
  */
 final class FollowedFiles {
 
@@ -34,6 +35,31 @@ final class FollowedFiles {
         if (model.screen() != Screen.REPOSITORY) {
             return Option.none();
         }
+        return model.repoView()
+                .files()
+                .locked()
+                .map(lock -> locked(model, lock, branches))
+                .getOrElse(() -> following(model, inUse, branches));
+    }
+
+    /**
+     * The message that makes the files pane list what the list it is locked to by {@code lock} follows, once its
+     * highlight moved since the pane last listed for it: whichever pane has the focus, and whatever the pane lists
+     * until then, as the files of a pull request {@code F} opened (ADR 149). The frame after the lock tells what the
+     * list follows then; a list no longer shown lets go of the lock.
+     */
+    private static Option<Msg> locked(Model model, FilesLock lock, Option<Followed> branches) {
+        if (!lock.holds(model.repoView(), lock.pane().equals(Scopes.BRANCHES.pane()))) {
+            return Option.of(new SelectionMsg.FilesUnlocked());
+        }
+        return followed(model, lock.pane(), branches)
+                .filter(wanted -> !lock.at().contains(wanted))
+                .map(wanted -> lock.at().isEmpty()
+                        ? new SelectionMsg.FilesLockedAt(wanted)
+                        : new SelectionMsg.FilesFollowed(wanted, lock.pane(), FilesPanel.PANE));
+    }
+
+    private static Option<Msg> following(Model model, Option<PaneId> inUse, Option<Followed> branches) {
         return inUse.filter(pane -> !pane.equals(FilesPanel.PANE))
                 .flatMap(pane -> followed(model, pane, branches)
                         .filter(wanted -> !lists(model.repoView().files(), wanted, pane))
