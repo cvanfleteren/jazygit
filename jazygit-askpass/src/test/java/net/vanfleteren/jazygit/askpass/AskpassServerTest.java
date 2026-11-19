@@ -146,8 +146,9 @@ class AskpassServerTest {
 
         assertEquals(Option.of("/the/helper"), environment.get("SSH_ASKPASS"));
         assertEquals(Option.of("force"), environment.get("SSH_ASKPASS_REQUIRE"));
-        assertTrue(
-                environment.get(AskpassProtocol.VARIABLE).exists(address -> address.endsWith(" " + server.socket())));
+        assertTrue(environment
+                .get(AskpassProtocol.VARIABLE)
+                .exists(address -> address.endsWith(" " + server.socket().get())));
         assertFalse(environment.containsKey("GIT_SSH_COMMAND"));
     }
 
@@ -166,11 +167,81 @@ class AskpassServerTest {
     @Test
     void theDirectoryIsTheOwnersAndGoesWithTheServer() throws Exception {
         start(true);
-        Path directory = server.socket().getParent();
+        server.asking(temporary, variables -> variables);
+        Path directory = server.socket().get().getParent();
 
         assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(directory)));
         server.close();
         assertFalse(Files.exists(directory));
+    }
+
+    /**
+     * The socket only opens for the first operation that lets ssh ask (ADR 153): a session that never talks to a
+     * remote, or only with an ssh that cannot ask, leaves nothing in the temporary directory.
+     */
+    @Test
+    void nothingListensUntilSshMayAsk() throws Exception {
+        start(false);
+        server.asking(temporary, variables -> variables);
+        assertEquals(java.util.List.of(), sockets());
+        assertEquals(Option.none(), server.socket());
+        server.close();
+
+        start(true);
+        assertEquals(java.util.List.of(), sockets());
+        server.asking(temporary, variables -> variables);
+        server.asking(temporary, variables -> variables);
+        assertEquals(1, sockets().size());
+    }
+
+    /**
+     * A socket that cannot be opened leaves the operation in batch mode, and nothing behind; it is tried once.
+     */
+    @Test
+    void aSocketThatCannotOpenKeepsBatchModeAndIsNotTriedAgain() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger tries = new java.util.concurrent.atomic.AtomicInteger();
+        server = AskpassServer.in(
+                temporary,
+                directory -> {
+                    tries.incrementAndGet();
+                    return Try.failure(new java.io.IOException("no launcher"));
+                },
+                (d, ssh) -> true,
+                name -> Option.none());
+
+        server.asking(temporary, variables -> variables);
+        Map<String, String> environment =
+                server.asking(temporary, variables -> variables).result();
+
+        assertTrue(environment.get("GIT_SSH_COMMAND").exists(ssh -> ssh.endsWith(" -o BatchMode=yes")));
+        assertFalse(environment.containsKey("SSH_ASKPASS"));
+        assertEquals(1, tries.get());
+        assertEquals(java.util.List.of(), sockets());
+    }
+
+    /**
+     * Once the app stopped, nothing listens again: an operation still running then keeps batch mode.
+     */
+    @Test
+    void afterTheServerStoppedNothingListensAgain() throws Exception {
+        start(true);
+        server.close();
+
+        Map<String, String> environment =
+                server.asking(temporary, variables -> variables).result();
+
+        assertFalse(environment.containsKey("SSH_ASKPASS"));
+        assertEquals(java.util.List.of(), sockets());
+    }
+
+    /**
+     * The directories of a socket in the temporary directory.
+     */
+    private java.util.List<Path> sockets() throws Exception {
+        try (var entries = Files.list(temporary)) {
+            return entries.filter(entry -> entry.getFileName().toString().startsWith("jg"))
+                    .toList();
+        }
     }
 
     /**
@@ -235,8 +306,7 @@ class AskpassServerTest {
     }
 
     private void start(BiPredicate<Path, List<String>> asks, Function<String, Option<String>> environment) {
-        server = AskpassServer.start(temporary, directory -> Try.success(Path.of("/the/helper")), asks, environment)
-                .get();
+        server = AskpassServer.in(temporary, directory -> Try.success(Path.of("/the/helper")), asks, environment);
         server.answeredBy(user);
     }
 
