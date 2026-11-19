@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.changes.commit.search.SearchedModels;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -65,7 +66,7 @@ class DropUpdateTest {
     @Test
     void aFirstCommitOlderThanTheLogThatTheSearchFoundCanBeDropped() {
         Commit old = commit("o1", List.of());
-        Model model = TestModels.searched(withCommits(TIP), "old", List.of(old));
+        Model model = SearchedModels.searched(withCommits(TIP), "old", List.of(old));
 
         assertEquals(
                 Option.of(new DropPopup(old)),

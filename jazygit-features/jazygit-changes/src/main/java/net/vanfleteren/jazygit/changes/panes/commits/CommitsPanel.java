@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.ui.commits;
+package net.vanfleteren.jazygit.changes.panes.commits;
 
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyEvent;
@@ -6,17 +6,14 @@ import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.Tuple;
 import io.vavr.Tuple4;
 import io.vavr.collection.List;
-import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import net.vanfleteren.jazygit.changes.commit.search.CommitSearch;
+import net.vanfleteren.jazygit.changes.commit.search.CommitSearchMsg;
+import net.vanfleteren.jazygit.changes.commit.search.CommitSearchView;
 import net.vanfleteren.jazygit.git.history.History;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Focus;
@@ -25,13 +22,13 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
-import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
-import net.vanfleteren.jazygit.state.view.CommitSearch;
+import net.vanfleteren.jazygit.ui.LeftPane;
+import net.vanfleteren.jazygit.ui.commits.AheadView;
+import net.vanfleteren.jazygit.ui.commits.CommitRows;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
-import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
@@ -44,17 +41,14 @@ import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
  * search in above the list, which then takes the keys that edit it; Enter runs it and Escape closes it. While the
  * panel lists the commits found, Escape clears the search.
  */
-public class CommitsPanel {
-
-    public static final String ID = Scopes.COMMITS.id();
+public class CommitsPanel implements LeftPane {
 
     /**
      * The pane, as the focus is on it.
      */
-    public static final PaneId PANE = Scopes.COMMITS.pane();
+    public static final PaneId PANE = PaneId.COMMITS;
 
-    private static final int INITIALS_WIDTH = 2;
-    private static final Pattern LETTER = Pattern.compile("\\X");
+    public static final String ID = PANE.id();
 
     private final LoadableList<List<Commit>> list;
     private final Keymap keymap = Keymap.standard();
@@ -116,126 +110,16 @@ public class CommitsPanel {
     }
 
     /**
-     * The items of {@code commits}, a log, on the rails of its graph, with the commits on the base dimmed and the
-     * fork point marked. Each row, and the graph down to it, is only worked out once the list draws it: a log of
-     * thousands of commits then lays out only what is scrolled to. A row is one line.
-     *
-     * @param copied the commit copied to cherry-pick, whose sha stands out
-     */
-    public static List<LoadableList.Item> graphed(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
-        Stream<CommitGraph.Node> nodes = CommitGraph.laidOut(commits);
-        return commits.zipWithIndex((commit, at) -> LoadableList.Item.later(
-                1, () -> marked(row(nodes.get(at), copied.contains(commit.sha())), commit.sha(), ahead)));
-    }
-
-    /**
      * The items of the commits a search found, without the rails of merges: with commits left out, they no longer
      * join up. A merge is still a {@code ◎}. Each row is worked out once it is drawn.
      */
     static List<LoadableList.Item> foundItems(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
         return commits.map(commit ->
-                LoadableList.Item.later(1, () -> marked(foundRow(commit, copied), commit.sha(), ahead)));
+                LoadableList.Item.later(1, () -> CommitRows.marked(foundRow(commit, copied), commit.sha(), ahead)));
     }
 
     private static LoadableList.Row foundRow(Commit commit, Option<Sha> copied) {
-        return row(commit, commit.isMerge() ? "◎ " : "○ ", copied.contains(commit.sha()));
-    }
-
-    /**
-     * The row of a commit, a {@code ○}, or a {@code ◎} for a merge, on its rail. A merge opens a rail for the
-     * branch it brought in with {@code ◎─╮}; the rail goes on as {@code │} until the commit the branch forked from,
-     * where it joins with {@code ○─╯}, and further rails joining there with {@code ─┴} on the way. A merge that
-     * opens a rail on one that joins it, or that goes on, draws {@code ┤}, and one it crosses {@code ┼}.
-     */
-    public static LoadableList.Row row(CommitGraph.Node node) {
-        return row(node, false);
-    }
-
-    /**
-     * @param copied whether the commit is copied to cherry-pick, which shows in its sha
-     */
-    public static LoadableList.Row row(CommitGraph.Node node, boolean copied) {
-        return row(node.commit(), graph(node), copied);
-    }
-
-    /**
-     * @param graph where the commit is in the graph, before its message
-     */
-    private static LoadableList.Row row(Commit commit, String graph, boolean copied) {
-        String author = " " + initials(commit.authorName()) + " " + graph;
-        List<LoadableList.Seg> prefix = copied
-                ? List.of(LoadableList.Seg.styled(commit.shortSha(), Theme.Classes.COPIED), LoadableList.Seg.of(author))
-                : List.of(LoadableList.Seg.of(commit.shortSha() + author));
-        List<LoadableList.Seg> tags =
-                commit.tags().map(tag -> LoadableList.Seg.styled("[" + tag.name() + "] ", Theme.Classes.TAG));
-        return new LoadableList.Row(prefix.appendAll(tags).append(LoadableList.Seg.of(commit.message())));
-    }
-
-    /**
-     * The rails of the row of {@code node}, each followed by a {@code ─} where the line from the commit to the
-     * rails it joins and opens goes on, else a space.
-     */
-    private static String graph(CommitGraph.Node node) {
-        List<Integer> line = node.joins().appendAll(node.opens()).append(node.column());
-        int reach = line.max().get();
-        int width = line.appendAll(node.passing()).max().get() + 1;
-        // Which columns have a rail going up and which one going down, looked up once for the row rather than in
-        // the rails for each column: a graph can be hundreds of rails wide.
-        boolean[] up = columns(width, node.passing().appendAll(node.joins()));
-        boolean[] down = columns(width, node.passing().appendAll(node.opens()));
-        return IntStream.range(0, width)
-                .mapToObj(
-                        at -> rail(node, reach, at, up[at], down[at]) + (at >= node.column() && at < reach ? "─" : " "))
-                .collect(Collectors.joining());
-    }
-
-    /**
-     * For each of the {@code width} columns, whether it is one of {@code rails}.
-     */
-    private static boolean[] columns(int width, List<Integer> rails) {
-        boolean[] on = new boolean[width];
-        for (int at : rails) {
-            on[at] = true;
-        }
-        return on;
-    }
-
-    /**
-     * The rail in column {@code at} of the row of {@code node}, whose line reaches to the column {@code reach}.
-     *
-     * @param up   whether a rail comes in from above in the column
-     * @param down whether a rail goes on below in the column
-     */
-    private static String rail(CommitGraph.Node node, int reach, int at, boolean up, boolean down) {
-        if (at == node.column()) {
-            return node.commit().isMerge() ? "◎" : "○";
-        }
-        if (at < node.column() || at > reach) {
-            return up ? "│" : " ";
-        }
-        boolean on = at < reach;
-        return up && down ? (on ? "┼" : "┤") : up ? (on ? "┴" : "╯") : down ? (on ? "┬" : "╮") : "─";
-    }
-
-    /**
-     * The capitalized first letters of the first two words of {@code name}; a name of a single word gives
-     * its first two letters as they are. No more than two columns: a CJK or emoji letter takes both.
-     */
-    public static String initials(String name) {
-        List<String> words = List.of(name.strip().split("\\s+")).filter(word -> !word.isEmpty());
-        if (words.size() < 2) {
-            return TextWidth.start(name.strip(), INITIALS_WIDTH);
-        }
-        return TextWidth.start(
-                words.take(2).map(word -> firstLetter(word).toUpperCase()).mkString(), INITIALS_WIDTH);
-    }
-
-    /**
-     * The first letter of {@code word} as it is seen: a whole emoji or flag, with the marks on it.
-     */
-    private static String firstLetter(String word) {
-        Matcher letter = LETTER.matcher(word);
-        return letter.lookingAt() ? letter.group() : "";
+        return CommitRows.row(commit, commit.isMerge() ? "◎ " : "○ ", copied.contains(commit.sha()));
     }
 
     /**
@@ -249,21 +133,25 @@ public class CommitsPanel {
      * @param focus what has the focus, if anything
      * @param inUse the left pane in use, whose highlighted row shows
      */
+    @Override
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
-        Option<CommitSearch> search = model.repoView().commits().commitSearch();
+        CommitSearchView view = model.part(CommitSearchView.PART);
+        Option<CommitSearch> search = view.search();
         AheadView ahead = new AheadView(AheadUpdate.head(model), AheadUpdate.headDistance(model));
-        typing = model.repoView().commits().searchLine();
+        typing = view.line();
         searching = search.isDefined();
         locked = PaneKeys.lockedTo(model, PANE);
-        list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));
+        list.whenEmpty(search.map(found -> Messages.get("changes.panes.commits.noMatches")));
         Loadable<List<Commit>> source =
                 search.map(CommitSearch::results).getOrElse(() -> model.repo().commits());
         return list.renderItems(
                 source,
                 commits -> drawn.get(
                         Tuple.of(commits, searching, copied, ahead),
-                        key -> searching ? foundItems(commits, copied, ahead) : graphed(commits, copied, ahead)),
+                        key -> searching
+                                ? foundItems(commits, copied, ahead)
+                                : CommitRows.graphed(commits, copied, ahead)),
                 focus.contains(PANE),
                 inUse.contains(PANE),
                 Pane.title(ahead.title(search.map(CommitsPanel::title).getOrElse(() -> headTitle(model)))),
@@ -281,8 +169,8 @@ public class CommitsPanel {
                 .toOption()
                 .map(status -> switch (status.head()) {
                     case Head.OnBranch(BranchName branch, var tip) ->
-                        Messages.get("panel.commits.titleOf", branch.value());
-                    case Head.Detached(Sha at) -> Messages.get("panel.commits.titleDetached", at.shortSha());
+                        Messages.get("changes.panes.commits.titleOf", branch.value());
+                    case Head.Detached(Sha at) -> Messages.get("changes.panes.commits.titleDetached", at.shortSha());
                 })
                 .getOrElse(() -> Messages.get("panel.commits.title"));
     }
@@ -295,23 +183,14 @@ public class CommitsPanel {
     }
 
     /**
-     * {@code row}, that of the commit {@code sha}, dimmed when the commit is on the base.
-     */
-    private static LoadableList.Row marked(LoadableList.Row row, Sha sha, AheadView ahead) {
-        return ahead.dimmed(sha)
-                ? new LoadableList.Row(
-                        row.segs().map(seg -> LoadableList.Seg.styled(seg.text(), Theme.Classes.DIM)), row.detail())
-                : row;
-    }
-
-    /**
      * The title of the panel while it lists what {@code search} found, which says when it found more than it
      * lists.
      */
     static String title(CommitSearch search) {
         return search.results().toOption().exists(found -> found.size() >= History.MAX_COMMITS)
-                ? Messages.get("panel.commits.titleSearchCapped", search.text(), String.valueOf(History.MAX_COMMITS))
-                : Messages.get("panel.commits.titleSearch", search.text());
+                ? Messages.get(
+                        "changes.panes.commits.titleSearchCapped", search.text(), String.valueOf(History.MAX_COMMITS))
+                : Messages.get("changes.panes.commits.titleSearch", search.text());
     }
 
     /**
@@ -331,6 +210,7 @@ public class CommitsPanel {
     /**
      * The message to send when the highlighted commit is not the one whose changes {@code model} holds.
      */
+    @Override
     public Option<Msg> selectionChange(Model model) {
         return PaneKeys.selectionChange(
                 selectedCommit().map(Commit::sha),

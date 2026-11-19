@@ -36,7 +36,7 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
 | `jazygit-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | ui |
-| ↳ `jazygit-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress. | ui |
+| ↳ `jazygit-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits`, the commits pane (ADR 158). | ui |
 | ↳ `jazygit-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
 | ↳ `jazygit-github` | `github.*`: pull requests, reviews, checks, builds. | branches, changes |
 | ↳ `jazygit-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
@@ -105,10 +105,10 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   subpackages of `state` (`diff`, `view`, `load`, `github`, `operation`, `popup`, `compose`, `index`, `preferences`;
   `state` itself uses them all, and they all use it, as the `Model` holds them), and those of `ui`.
 - **The subpackages of `ui` follow the panes**: the shell (`ui` itself: `LeftColumn`, the status and command log
-  panels, `Feature`) → the panes (`branches`, `commits`, `files`, `stash`, `github`) → `markdown`, `widgets`,
-  `edit` → `content`, `keys`, `text`, `theme`, `i18n`. The content panel, which uses the panes, and the rich diff are
-  `jazygit-content`, beside the features: no feature draws them. Nothing in them uses the shell
-  (`UiArchitectureTest`).
+  panels, `Feature`, `LeftPane`) → the panes (`branches`, `commits`: the rows of commits, `files`, `stash`,
+  `github`) → `markdown`, `widgets`, `edit` → `content`, `keys`, `text`, `theme`, `i18n`. The content panel, which
+  uses the panes, and the rich diff are `jazygit-content`, beside the features: no feature draws them. Nothing in
+  them uses the shell (`UiArchitectureTest`).
 - **Each kind of content draws itself**: what an area of the content panel shows is a `ui.content.Body`, an open
   interface: it draws itself and says what sets it apart (drawn to the width of its area, its keys, its clicks). It is
   in `ui`, below the panes, so a group of features can add a kind of its own; nothing in `jazygit-content` but a body
@@ -128,6 +128,13 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   `state.Part` it declares in its own package, as the builds of a branch under `BuildsView.PART`; the `Model` holds
   them in `parts` by the part's name, without naming them (ADR 157), and `PartNamesTest` checks that no two parts
   share a name. What the panes and several features read stays a field of the `Model`.
+- **A feature's code lives in its feature's module** (ADR 158): where the kernel names a feature, that place becomes
+  an extension point the feature fills, once it moves. A `Part` declares what the kernel asks of it: queries
+  (`rereading`, `knowingCommits`) and one `reacting` to a `KernelEvent`, asked only of the parts that are kept, in
+  the order of their names. `Targeted` and `LoadMsg.Read` are open, and `Target.inPart` keeps what a feature's load
+  reads in its part. A pane lives in the group that owns most of what it shows, in its `panes` package, as
+  `changes.panes.commits`; the app gives it to `LeftColumn` as a `LeftPane`, and its id is a `PaneId` constant. The
+  search of the commits is the first that moved.
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys`, a dialog or a feature's content runs git or gh.

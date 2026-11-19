@@ -1,30 +1,89 @@
 package net.vanfleteren.jazygit.state;
 
-import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.TreeMap;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.load.Targeted;
 
 /**
- * The parts of the {@link Model} the features keep for themselves, by the name of their {@link Part} (ADR 157). Only a
- * part that differs from its initial value is kept.
+ * The parts of the {@link Model} the features keep for themselves, by the name of their {@link Part} (ADR 157), each
+ * with its part, so the kernel can ask them what it asks of a part (ADR 158). Only a part that differs from its
+ * initial value is kept, and the kept ones are asked in the order of their names.
  *
- * @param values the value of each part that is kept, by its name
+ * @param kept each part that is kept, with its value, by its name
  */
-public record Parts(Map<String, Object> values) {
+public record Parts(Map<String, Kept<?>> kept) {
 
-    public static final Parts NONE = new Parts(HashMap.empty());
+    public static final Parts NONE = new Parts(TreeMap.empty());
 
     /**
      * The value of {@code part}: its initial value while it is not kept.
      */
-    @SuppressWarnings("unchecked") // Only with() puts a value under a part's name, one of that part's type.
+    @SuppressWarnings("unchecked") // Only with() keeps a value under a part's name, one of that part's type.
     public <S> S get(Part<S> part) {
-        return values.get(part.name()).map(value -> (S) value).getOrElse(part.initial());
+        return kept.get(part.name()).map(value -> (S) value.value()).getOrElse(part.initial());
     }
 
     /**
      * These parts with {@code value} for {@code part}; not kept when that is its initial value.
      */
     public <S> Parts with(Part<S> part, S value) {
-        return new Parts(value.equals(part.initial()) ? values.remove(part.name()) : values.put(part.name(), value));
+        return new Parts(
+                value.equals(part.initial())
+                        ? kept.remove(part.name())
+                        : kept.put(part.name(), new Kept<>(part, value)));
+    }
+
+    /**
+     * What the parts kept in {@code model} show, to read again.
+     */
+    public List<Targeted<?>> rereads(Model model) {
+        return kept.values().toList().flatMap(part -> part.rereads(model));
+    }
+
+    /**
+     * The commit {@code sha}, if a part kept lists it: the first that does, in the order of their names.
+     */
+    public Option<Commit> commit(Sha sha) {
+        return kept.values().toStream().flatMap(part -> part.commit(sha)).headOption();
+    }
+
+    /**
+     * What {@code model} becomes once each part it keeps answered {@code event}, in the order of their names. Each
+     * one answers with its value as the parts before it left it, and not at all once they stopped keeping it.
+     */
+    public static Update.Next reacting(Model model, KernelEvent event) {
+        return model.parts()
+                .kept
+                .keySet()
+                .toList()
+                .foldLeft(
+                        Update.Next.of(model),
+                        (next, name) -> next.then(now -> now.parts()
+                                .kept
+                                .get(name)
+                                .map(part -> part.reacting(now, event))
+                                .getOrElse(() -> Update.Next.of(now))));
+    }
+
+    /**
+     * A part that is kept, with its value.
+     */
+    public record Kept<S>(Part<S> part, S value) {
+
+        List<Targeted<?>> rereads(Model model) {
+            return part.hooks().rereads().of(model, value);
+        }
+
+        Option<Commit> commit(Sha sha) {
+            return part.hooks().knowsCommit().commit(value, sha);
+        }
+
+        Update.Next reacting(Model model, KernelEvent event) {
+            return part.hooks().reacting().to(model, value, event);
+        }
     }
 }

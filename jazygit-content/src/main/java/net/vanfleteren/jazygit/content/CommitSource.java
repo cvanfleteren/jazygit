@@ -10,9 +10,9 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.view.Preview;
-import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.content.ContentArea;
 import net.vanfleteren.jazygit.ui.content.ContentSource;
 import net.vanfleteren.jazygit.ui.content.Mirrored;
@@ -28,7 +28,7 @@ record CommitSource() implements ContentSource {
     /**
      * The commit highlighted in the commits pane.
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.COMMIT, CommitsPanel.PANE);
+    static final ContentArea AREA = ContentArea.of(AreaId.COMMIT, PaneId.COMMITS);
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {

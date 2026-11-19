@@ -5,8 +5,8 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.ui.PopupSlot;
-import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
@@ -120,9 +120,9 @@ public final class MoveDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(CommitsPanel.PANE, new PickDialog<>(TARGET, dispatch)),
-                PopupSlot.returningTo(CommitsPanel.PANE, new TextInputDialog<>(NAME, dispatch)),
-                PopupSlot.returningTo(CommitsPanel.PANE, new PickDialog<>(BASE, dispatch)),
-                PopupSlot.returningTo(CommitsPanel.PANE, new ChoiceDialog<>(PUSHED, dispatch)));
+                PopupSlot.returningTo(PaneId.COMMITS, new PickDialog<>(TARGET, dispatch)),
+                PopupSlot.returningTo(PaneId.COMMITS, new TextInputDialog<>(NAME, dispatch)),
+                PopupSlot.returningTo(PaneId.COMMITS, new PickDialog<>(BASE, dispatch)),
+                PopupSlot.returningTo(PaneId.COMMITS, new ChoiceDialog<>(PUSHED, dispatch)));
     }
 }

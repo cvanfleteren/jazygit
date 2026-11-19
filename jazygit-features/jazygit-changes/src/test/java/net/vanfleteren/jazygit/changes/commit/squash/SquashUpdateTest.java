@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.changes.commit.search.SearchedModels;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -57,7 +58,7 @@ class SquashUpdateTest {
     @Test
     void aCommitTheSearchFoundOlderThanTheLogGoesIntoItsParent() {
         Commit old = commit("o2", List.of("o1"));
-        Model model = TestModels.searched(withCommits(TIP, MIDDLE, ROOT), "old", List.of(old));
+        Model model = SearchedModels.searched(withCommits(TIP, MIDDLE, ROOT), "old", List.of(old));
 
         assertEquals(
                 Option.of(new SquashPopup(old, new Sha("o1"))),

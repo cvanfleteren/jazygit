@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.load.LoadDivergence;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.*;
-import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.commits.CommitRows;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
@@ -85,7 +85,7 @@ class DivergenceList {
                                 ahead
                                         ? LoadableList.Seg.styled("↑ ", Theme.Classes.AHEAD)
                                         : LoadableList.Seg.styled("↓ ", Theme.Classes.BEHIND))
-                        .appendAll(CommitsPanel.row(node).segs()));
+                        .appendAll(CommitRows.row(node).segs()));
             case Entry.None() ->
                 LoadableList.Row.of(LoadableList.Seg.styled("  " + Messages.get("divergence.none"), Theme.Classes.DIM));
             case Entry.More(int more) ->

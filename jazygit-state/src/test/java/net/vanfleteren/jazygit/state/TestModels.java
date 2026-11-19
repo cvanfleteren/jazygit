@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
-import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.load.LoadBranchLog;
 import net.vanfleteren.jazygit.state.load.LoadBranches;
 import net.vanfleteren.jazygit.state.load.LoadCommits;
@@ -205,17 +204,6 @@ public final class TestModels {
     public static Update.Next remoteBranchesRead(Model model, List<RemoteRef> remote) {
         return Update.update(
                 model, branchesLoaded(new AllBranches(model.repo().branches().getOrElse(List.empty()), remote)));
-    }
-
-    /**
-     * {@code model} listing what the search {@code text} found: {@code found}.
-     */
-    public static Model searched(Model model, String text, List<Commit> found) {
-        model = Update.update(model, new CommitSearchMsg.Opened()).model();
-        model = Update.update(model, new CommitSearchMsg.Edited(text)).model();
-        model = Update.update(model, new CommitSearchMsg.Submitted()).model();
-        return Update.update(model, new LoadMsg.CommitSearchLoaded(CommitQuery.parse(text), found))
-                .model();
     }
 
     /**

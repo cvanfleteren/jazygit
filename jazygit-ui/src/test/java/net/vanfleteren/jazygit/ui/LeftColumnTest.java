@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import static dev.tamboui.toolkit.Toolkit.panel;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.buffer.Buffer;
@@ -8,11 +9,15 @@ import dev.tamboui.layout.Rect;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.DefaultRenderContext;
 import dev.tamboui.toolkit.element.ElementRegistry;
+import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventRouter;
 import dev.tamboui.toolkit.focus.FocusManager;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
+import net.vanfleteren.jazygit.state.Focus;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.preferences.Screen;
@@ -24,8 +29,21 @@ class LeftColumnTest {
 
     private static final Rect AREA = new Rect(0, 0, 40, 60);
 
-    private final LeftColumn leftColumn =
-            new LeftColumn(msg -> {}, StyleEngine.create(), Clock.systemUTC(), id -> {}, tab -> {});
+    // The commits pane lives in a group of features (ADR 158): a pane of its id stands in for it.
+    private static final LeftPane COMMITS = new LeftPane() {
+        @Override
+        public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
+            return panel().id(PaneId.COMMITS.id());
+        }
+
+        @Override
+        public Option<Msg> selectionChange(Model model) {
+            return Option.none();
+        }
+    };
+
+    private final LeftColumn leftColumn = new LeftColumn(
+            msg -> {}, StyleEngine.create(), Clock.systemUTC(), id -> {}, tab -> {}, highlights -> COMMITS);
 
     // The keys that resize and maximize a pane find the focused one by its place in Scopes.leftPanes (ADR 92).
     @ParameterizedTest

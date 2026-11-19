@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.changes.commit.search;
 
-import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.ui.FeatureAction;
 import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;

@@ -20,6 +20,7 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
+import net.vanfleteren.jazygit.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.chrome.help.HelpDialog;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
@@ -45,7 +46,6 @@ import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
-import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
 

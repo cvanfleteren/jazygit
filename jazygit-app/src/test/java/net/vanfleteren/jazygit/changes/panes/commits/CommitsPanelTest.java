@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.ui.commits;
+package net.vanfleteren.jazygit.changes.panes.commits;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -9,12 +9,20 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
+import net.vanfleteren.jazygit.changes.commit.search.CommitSearch;
+import net.vanfleteren.jazygit.changes.commit.search.CommitSearchMsg;
+import net.vanfleteren.jazygit.changes.commit.search.CommitSearchView;
+import net.vanfleteren.jazygit.changes.commit.search.SearchCommits;
 import net.vanfleteren.jazygit.git.history.History;
+import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Head;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tag;
@@ -25,13 +33,12 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
-import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
-import net.vanfleteren.jazygit.state.view.CommitSearch;
 import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.commits.AheadView;
+import net.vanfleteren.jazygit.ui.commits.CommitRows;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
@@ -46,7 +53,7 @@ class CommitsPanelTest {
      * The rows of {@code log} as the pane draws them.
      */
     private static List<LoadableList.Row> drawn(List<Commit> log) {
-        return CommitsPanel.graphed(log, Option.none(), NO_BASE).map(LoadableList.Item::row);
+        return CommitRows.graphed(log, Option.none(), NO_BASE).map(LoadableList.Item::row);
     }
 
     private static Commit commit(String sha, String... parents) {
@@ -286,8 +293,8 @@ class CommitsPanelTest {
                 List.empty(),
                 List.of(new Tag("v1"), new Tag("v1.1")));
 
-        LoadableList.Row row = CommitsPanel.row(
-                new CommitGraph.Node(tagged, 0, List.empty(), List.empty(), List.empty(), List.empty()));
+        LoadableList.Row row =
+                CommitRows.row(new CommitGraph.Node(tagged, 0, List.empty(), List.empty(), List.empty(), List.empty()));
 
         assertEquals("abcdef0 Ad ○ [v1] [v1.1] Release", row.text());
         assertEquals(
@@ -297,23 +304,69 @@ class CommitsPanelTest {
 
     @Test
     void initialsAreTheCapitalizedFirstLettersOfTheName() {
-        assertEquals("CV", CommitsPanel.initials("christophe vanfleteren"));
-        assertEquals("AL", CommitsPanel.initials("  Ada   Lovelace "));
-        assertEquals("re", CommitsPanel.initials("renovate"));
-        assertEquals("cl", CommitsPanel.initials("claude[bot]"));
-        assertEquals("JF", CommitsPanel.initials("John F Kennedy"));
-        assertEquals("x", CommitsPanel.initials("x"));
-        assertEquals("", CommitsPanel.initials(""));
+        assertEquals("CV", CommitRows.initials("christophe vanfleteren"));
+        assertEquals("AL", CommitRows.initials("  Ada   Lovelace "));
+        assertEquals("re", CommitRows.initials("renovate"));
+        assertEquals("cl", CommitRows.initials("claude[bot]"));
+        assertEquals("JF", CommitRows.initials("John F Kennedy"));
+        assertEquals("x", CommitRows.initials("x"));
+        assertEquals("", CommitRows.initials(""));
     }
 
     @Test
     void initialsTakeNoMoreThanTwoColumnsAndKeepLettersWhole() {
-        assertEquals("张", CommitsPanel.initials("张 伟"));
-        assertEquals("张", CommitsPanel.initials("张伟"));
-        assertEquals("🇧🇪", CommitsPanel.initials("🇧🇪 fan"));
-        assertEquals("👨‍👩‍👧", CommitsPanel.initials("👨‍👩‍👧family"));
+        assertEquals("张", CommitRows.initials("张 伟"));
+        assertEquals("张", CommitRows.initials("张伟"));
+        assertEquals("🇧🇪", CommitRows.initials("🇧🇪 fan"));
+        assertEquals("👨‍👩‍👧", CommitRows.initials("👨‍👩‍👧family"));
         // A letter with a combining accent keeps its accent.
-        assertEquals("E\u0301L", CommitsPanel.initials("e\u0301mile lambert"));
+        assertEquals("E\u0301L", CommitRows.initials("e\u0301mile lambert"));
+    }
+
+    @Test
+    void itSaysHowManyCommitsAreNotOnTheBaseAndListsTheWholeLog() throws Exception {
+        List<Commit> log = List.of("c", "b", "a", "0")
+                .map(sha -> Fixtures.commit(
+                        new Sha(sha.repeat(7)), "Ada", "ada@example.com", Instant.EPOCH, "msg " + sha, ""));
+        BranchRef main = new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName("main")));
+        Ahead ahead = new Ahead(log.get(0).sha(), main, log.take(2), false, Option.of(log.get(2)));
+        Model model = TestModels.loaded(SampleData.git())
+                .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))
+                        .withAhead(new Loadable.Loaded<>(Option.of(ahead))));
+        CommitsPanel panel = new CommitsPanel(msg -> {});
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
+            String shown = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE));
+
+            // The title names the branch whose log it lists.
+            assertTrue(shown.contains("Commits of main · 2 ahead of origin/ma"), shown);
+            assertTrue(shown.contains("1/4"), shown);
+            assertFalse(shown.contains("⑂"), shown);
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void itsBottomBorderShowsWhereTheSelectionIsAndFollowsIt() throws Exception {
+        List<Commit> log = List.of(commit("s2"), commit("s1"), commit("s0"));
+        Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
+        CommitsPanel panel = new CommitsPanel(msg -> {});
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            String initial = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE));
+            assertTrue(
+                    initial.lines().reduce((first, second) -> second).orElse("").contains("1/3"), initial);
+
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+            String moved = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE));
+            assertTrue(
+                    moved.lines().reduce((first, second) -> second).orElse("").contains("2/3"), moved);
+
+            SettledPilot.of(testRunner).quit();
+        }
     }
 
     @Test
@@ -452,9 +505,8 @@ class CommitsPanelTest {
                     List.ofAll(sent));
             assertEquals(
                     Option.of("d"),
-                    model.get().repoView().commits().commitSearch().map(CommitSearch::text));
-            model.set(Update.update(
-                            model.get(), new LoadMsg.CommitSearchLoaded(CommitQuery.parse("d"), List.of(commit("s0"))))
+                    model.get().part(CommitSearchView.PART).search().map(CommitSearch::text));
+            model.set(Update.update(model.get(), new SearchCommits.Found(CommitQuery.parse("d"), List.of(commit("s0"))))
                     .model());
             String shown = RenderedText.of(testRunner, () -> panel.render(model.get(), CommitsPanel.PANE));
             assertTrue(shown.contains("Commits: /d"), shown);
@@ -464,7 +516,7 @@ class CommitsPanelTest {
             SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
             SettledPilot.of(testRunner).pause();
 
-            assertEquals(Option.none(), model.get().repoView().commits().commitSearch());
+            assertEquals(Option.none(), model.get().part(CommitSearchView.PART).search());
             SettledPilot.of(testRunner).quit();
         }
     }
@@ -497,8 +549,10 @@ class CommitsPanelTest {
     @Test
     void aSearchThatFindsNothingSaysSo() throws Exception {
         Model model = TestModels.loaded(SampleData.git())
-                .mapRepoView(repoView -> repoView.mapCommits(commits -> commits.withCommitSearch(
-                        Option.of(CommitSearch.loading("nothing").withResults(new Loadable.Loaded<>(List.empty()))))));
+                .mapPart(
+                        CommitSearchView.PART,
+                        view -> view.withSearch(Option.of(
+                                CommitSearch.loading("nothing").withResults(new Loadable.Loaded<>(List.empty())))));
         CommitsPanel panel = new CommitsPanel(msg -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
@@ -541,8 +595,9 @@ class CommitsPanelTest {
         Loadable<List<Commit>> log = new Loadable.Loaded<>(
                 List.of(commit("mmmmmmm", "bbbbbbb", "aaaaaaa"), commit("bbbbbbb", "aaaaaaa"), commit("aaaaaaa")));
         Model listed = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(log));
-        Model found = listed.mapRepoView(repoView -> repoView.mapCommits(commits ->
-                commits.withCommitSearch(Option.of(CommitSearch.loading("a").withResults(log)))));
+        Model found = listed.mapPart(
+                CommitSearchView.PART,
+                view -> view.withSearch(Option.of(CommitSearch.loading("a").withResults(log))));
         CommitsPanel panel = new CommitsPanel(msg -> {});
 
         panel.render(listed, CommitsPanel.PANE);
@@ -568,7 +623,7 @@ class CommitsPanelTest {
                         new CommitSearchMsg.Opened(),
                         new CommitSearchMsg.Edited("s0"),
                         new CommitSearchMsg.Submitted(),
-                        new LoadMsg.CommitSearchLoaded(CommitQuery.parse("s0"), List.of(commit("s0"))))
+                        new SearchCommits.Found(CommitQuery.parse("s0"), List.of(commit("s0"))))
                 .foldLeft(
                         lockedTo(withCommits(), CommitsPanel.PANE),
                         (model, msg) -> Update.update(model, msg).model());
