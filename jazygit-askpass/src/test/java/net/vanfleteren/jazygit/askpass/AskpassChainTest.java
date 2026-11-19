@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.app.askpass;
+package net.vanfleteren.jazygit.askpass;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

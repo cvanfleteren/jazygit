@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.app.askpass;
+package net.vanfleteren.jazygit.askpass;
 
 import io.vavr.control.Option;
 import java.util.concurrent.CompletableFuture;

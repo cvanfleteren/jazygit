@@ -1,11 +1,10 @@
-package net.vanfleteren.jazygit.app.askpass;
+package net.vanfleteren.jazygit.askpass;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.net.StandardProtocolFamily;
 import java.net.UnixDomainSocketAddress;
@@ -82,7 +81,7 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
      */
     static Try<AskpassServer> start(Path temporary, Function<Path, Try<Path>> helper, BiPredicate<Path, String> asks) {
         return Try.of(() -> Files.createTempDirectory(temporary, PREFIX, ownerOnly()))
-                .flatMap(directory -> Try.of(() -> listen(directory.resolve(SOCKET)))
+                .flatMap(directory -> listen(directory.resolve(SOCKET))
                         .flatMap(server -> helper.apply(directory)
                                 .map(launcher ->
                                         new AskpassServer(directory, directory.resolve(SOCKET), launcher, server, asks))
@@ -102,15 +101,13 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
                 : new FileAttribute<?>[0];
     }
 
-    private static ServerSocketChannel listen(Path socket) throws IOException {
-        ServerSocketChannel server = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
-        try {
-            server.bind(UnixDomainSocketAddress.of(socket));
-            return server;
-        } catch (IOException e) {
-            server.close();
-            throw e;
-        }
+    /**
+     * A server listening on {@code socket}; one that cannot bind it is closed again.
+     */
+    private static Try<ServerSocketChannel> listen(Path socket) {
+        return Try.of(() -> ServerSocketChannel.open(StandardProtocolFamily.UNIX))
+                .flatMap(server -> Try.of(() -> server.bind(UnixDomainSocketAddress.of(socket)))
+                        .onFailure(failed -> Try.run(server::close)));
     }
 
     /**
@@ -181,12 +178,12 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
      * Answers what a helper asks on {@code connection}, as the user does.
      */
     private void handle(SocketChannel connection) {
-        try (connection) {
-            AskpassProtocol.Request request = AskpassProtocol.request(Channels.newInputStream(connection));
-            answer(Option.of(operations.get(request.token())), request, Channels.newOutputStream(connection));
-        } catch (IOException e) {
-            LOG.debug("A helper went away", e);
-        }
+        Try.withResources(() -> connection)
+                .of(open -> AskpassProtocol.request(Channels.newInputStream(open))
+                        .flatMap(request -> answer(
+                                Option.of(operations.get(request.token())), request, Channels.newOutputStream(open))))
+                .flatMap(answered -> answered)
+                .onFailure(failed -> LOG.debug("A helper went away", failed));
     }
 
     /**
@@ -194,42 +191,34 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
      * as the user does, but for an operation the user cancelled something of already; anything else, or for no
      * operation that runs, not at all.
      */
-    private void answer(Option<Operation> operation, AskpassProtocol.Request request, OutputStream out)
-            throws IOException {
+    private Try<Void> answer(Option<Operation> operation, AskpassProtocol.Request request, OutputStream out) {
         if (operation.isEmpty()) {
-            AskpassProtocol.refuse(out);
-        } else if (request.kind().equals(SHOWN_ONLY)) {
-            AskpassProtocol.answer(out, new byte[0]);
-        } else if (!request.kind().isEmpty() || operation.get().cancelled().isDefined()) {
-            AskpassProtocol.refuse(out);
-        } else {
-            asked(operation.get(), request.prompt(), out);
+            return AskpassProtocol.refuse(out);
         }
+        if (request.kind().equals(SHOWN_ONLY)) {
+            return AskpassProtocol.answer(out, new byte[0]);
+        }
+        return !request.kind().isEmpty() || operation.get().cancelled().isDefined()
+                ? AskpassProtocol.refuse(out)
+                : asked(operation.get(), request.prompt(), out);
     }
 
     /**
      * Asks the user {@code prompt}, for {@code operation}, and answers with what they typed, wiped once it is written;
      * refuses once they cancelled, and the rest of the operation with it.
      */
-    private void asked(Operation operation, String prompt, OutputStream out) throws IOException {
+    private Try<Void> asked(Operation operation, String prompt, OutputStream out) {
         long request = requests.incrementAndGet();
         if (!operation.asking(request)) {
-            AskpassProtocol.refuse(out);
-            return;
+            return AskpassProtocol.refuse(out);
         }
         Option<SecretBuffer> typed = user.ask(request, prompt).join();
         operation.answered(request, typed.isEmpty() ? Option.of(new Cancelled(prompt)) : Option.none());
-        if (typed.isEmpty()) {
-            AskpassProtocol.refuse(out);
-            return;
-        }
-        byte[] answer = typed.get().utf8();
-        typed.get().clear();
-        try {
-            AskpassProtocol.answer(out, answer);
-        } finally {
-            Arrays.fill(answer, (byte) 0);
-        }
+        return typed.fold(() -> AskpassProtocol.refuse(out), buffer -> {
+            byte[] answer = buffer.utf8();
+            buffer.clear();
+            return AskpassProtocol.answer(out, answer).andFinally(() -> Arrays.fill(answer, (byte) 0));
+        });
     }
 
     /**

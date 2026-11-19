@@ -1,6 +1,7 @@
-package net.vanfleteren.jazygit.app.askpass;
+package net.vanfleteren.jazygit.askpass;
 
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,7 +11,8 @@ import java.nio.file.Path;
 
 /**
  * What the helper and the running jazygit say to each other over the socket (ADR 150). The helper sends a
- * {@link Request}; jazygit answers with what the user typed, or refuses.
+ * {@link Request}; jazygit answers with what the user typed, or refuses. Each step is a {@link Try}, failed when the
+ * other end went away.
  */
 final class AskpassProtocol {
 
@@ -29,57 +31,69 @@ final class AskpassProtocol {
     /**
      * Sends {@code request}.
      */
-    static void send(OutputStream out, Request request) throws IOException {
-        DataOutputStream data = new DataOutputStream(out);
-        data.writeUTF(request.token());
-        data.writeUTF(request.kind());
-        data.writeUTF(request.prompt());
-        data.flush();
+    static Try<Void> send(OutputStream out, Request request) {
+        return Try.run(() -> {
+            DataOutputStream data = new DataOutputStream(out);
+            data.writeUTF(request.token());
+            data.writeUTF(request.kind());
+            data.writeUTF(request.prompt());
+            data.flush();
+        });
     }
 
     /**
      * Reads a request.
      */
-    static Request request(InputStream in) throws IOException {
+    static Try<Request> request(InputStream in) {
         DataInputStream data = new DataInputStream(in);
-        return new Request(data.readUTF(), data.readUTF(), data.readUTF());
+        return Try.of(() -> new Request(data.readUTF(), data.readUTF(), data.readUTF()));
     }
 
     /**
      * Answers with {@code answer}.
      */
-    static void answer(OutputStream out, byte[] answer) throws IOException {
-        DataOutputStream data = new DataOutputStream(out);
-        data.writeByte(ANSWERED);
-        data.writeInt(answer.length);
-        data.write(answer);
-        data.flush();
+    static Try<Void> answer(OutputStream out, byte[] answer) {
+        return Try.run(() -> {
+            DataOutputStream data = new DataOutputStream(out);
+            data.writeByte(ANSWERED);
+            data.writeInt(answer.length);
+            data.write(answer);
+            data.flush();
+        });
     }
 
     /**
      * Refuses to answer.
      */
-    static void refuse(OutputStream out) throws IOException {
-        DataOutputStream data = new DataOutputStream(out);
-        data.writeByte(REFUSED);
-        data.flush();
+    static Try<Void> refuse(OutputStream out) {
+        return Try.run(() -> {
+            DataOutputStream data = new DataOutputStream(out);
+            data.writeByte(REFUSED);
+            data.flush();
+        });
     }
 
     /**
-     * The answer, which the caller wipes once it is written; none when it was refused.
+     * The answer, which the caller wipes once it is written; none when it was refused. An answer longer than
+     * {@link #MAX_ANSWER} fails.
      */
-    static Option<byte[]> received(InputStream in) throws IOException {
+    static Try<Option<byte[]>> received(InputStream in) {
         DataInputStream data = new DataInputStream(in);
-        if (data.readByte() != ANSWERED) {
-            return Option.none();
-        }
-        int length = data.readInt();
+        return Try.of(data::readByte)
+                .flatMap(status -> status != ANSWERED
+                        ? Try.success(Option.none())
+                        : Try.of(data::readInt).flatMap(length -> read(data, length)));
+    }
+
+    /**
+     * The {@code length} bytes of an answer.
+     */
+    private static Try<Option<byte[]>> read(DataInputStream data, int length) {
         if (length < 0 || length > MAX_ANSWER) {
-            throw new IOException("An answer of " + length + " bytes");
+            return Try.failure(new IOException("An answer of " + length + " bytes"));
         }
         byte[] answer = new byte[length];
-        data.readFully(answer);
-        return Option.of(answer);
+        return Try.run(() -> data.readFully(answer)).map(read -> Option.of(answer));
     }
 
     /**

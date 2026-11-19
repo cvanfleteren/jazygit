@@ -26,6 +26,7 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | `jazygit-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
 | `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | process, syntax |
 | `jazygit-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
+| `jazygit-askpass` | `askpass`: lets ssh ask the user through jazygit: the socket, the helper ssh runs, its launcher (ADR 150). | process, git |
 | `jazygit-lens` | `lens`: `Lens`, where a value sits in another; a tool any part may use. | vavr |
 | `jazygit-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
 | `jazygit-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
@@ -37,14 +38,14 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | ↳ `jazygit-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
 | ↳ `jazygit-github` | `github.*`: pull requests, reviews, checks, builds. | branches, changes |
 | ↳ `jazygit-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
-| `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `Features`). Builds the fat jar and the native image. | the four groups, content, TamboUI's backend, picocli |
+| `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `Features`). Builds the fat jar and the native image. | the four groups, content, askpass, TamboUI's backend, picocli |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, ui, JMH |
 
 Each module of the application has one root package, which its name ends in (`jazygit-github`,
-`net.vanfleteren.jazygit.github`); the core's packages keep their names. The core (`process`, `git`, `gh`, `json`,
-`syntax`) cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other; nor can
-a module of the application see one above it, nor a group of features one beside it. The compiler stops any such
+`net.vanfleteren.jazygit.github`); the core's packages keep their names. The core (`process`, `git`, `gh`, `askpass`,
+`json`, `syntax`) cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other;
+nor can a module of the application see one above it, nor a group of features one beside it. The compiler stops any such
 dependency. The rules inside the modules (the models are pure, failures are values, updates are functions) are
 ArchUnit tests: `CoreRules` and `ModelRules` for the core, `AppRules` for the application, run by each module's
 `*ArchitectureTest` on its own classes.
@@ -71,6 +72,7 @@ graph TD
     Gh["gh.*<br/><i>GitHub, CliGitHub; a package per role;<br/>shared GraphQL; GhProcess, GhError in process</i>"]
     GhModel["gh.model"]
     Process["process<br/><i>Exec</i>"]
+    Askpass["askpass<br/><i>AskpassServer, AskpassHelper</i>"]
 
     App --> Chrome
     App --> Github
@@ -79,6 +81,9 @@ graph TD
     Chrome --> Changes
     Changes --> UI
     App --> Content
+    App --> Askpass
+    Askpass --> Git
+    Askpass --> Process
     Content --> UI
     UI --> State
     State --> Settings
@@ -243,7 +248,7 @@ operation a subpackage holding all of the above; adding an operation is adding i
 - **One place starts a process:** `GitProcess` and `GhProcess`, both through `process.Exec`. A command is data
   (arguments, environment, timeout) and never prompts: no terminal credentials, no editor, ssh in batch mode. Only
   for what the user starts, ssh asks through the app: it runs jazygit as its `SSH_ASKPASS`, which passes the question
-  to the running app over a socket (`app.askpass`, ADR 150).
+  to the running app over a socket (`jazygit-askpass`); the popup that asks is the app's (`app.askpass`, ADR 150).
 - **gh's JSON** is decoded with the `Decoder`s of `jazygit-json` (ADR 42), one query class per read.
 - **Errors as values.** Nothing throws on purpose. A read returns `Either<GitError, T>`; a write returns
   `Either<GitFailure, List<ExecutedCommand>>`, the failure carrying the commands that ran (ADR 75). Parsers return

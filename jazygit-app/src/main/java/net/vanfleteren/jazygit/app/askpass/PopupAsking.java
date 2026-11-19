@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.app.askpass;
 import io.vavr.control.Option;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.askpass.Asking;
+import net.vanfleteren.jazygit.askpass.SecretBuffer;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.SshPromptMsg;
 

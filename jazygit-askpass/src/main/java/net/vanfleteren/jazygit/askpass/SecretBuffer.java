@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.app.askpass;
+package net.vanfleteren.jazygit.askpass;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;

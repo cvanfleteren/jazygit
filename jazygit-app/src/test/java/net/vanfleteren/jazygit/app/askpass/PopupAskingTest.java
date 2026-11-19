@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import net.vanfleteren.jazygit.askpass.SecretBuffer;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.SshPromptMsg;
 import org.junit.jupiter.api.Test;

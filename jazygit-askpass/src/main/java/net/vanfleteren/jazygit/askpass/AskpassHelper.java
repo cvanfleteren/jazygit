@@ -1,9 +1,9 @@
-package net.vanfleteren.jazygit.app.askpass;
+package net.vanfleteren.jazygit.askpass;
 
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.net.StandardProtocolFamily;
 import java.net.UnixDomainSocketAddress;
@@ -47,35 +47,37 @@ public final class AskpassHelper {
      */
     static int run(Option<String> variable, String kind, String prompt, OutputStream out) {
         return variable.flatMap(AskpassProtocol.Address::parse)
-                .map(address -> {
-                    try (SocketChannel channel = SocketChannel.open(StandardProtocolFamily.UNIX)) {
-                        channel.connect(UnixDomainSocketAddress.of(address.socket()));
-                        AskpassProtocol.send(
-                                Channels.newOutputStream(channel),
-                                new AskpassProtocol.Request(address.token(), kind, prompt));
-                        return print(AskpassProtocol.received(Channels.newInputStream(channel)), out);
-                    } catch (IOException e) {
-                        return 1;
-                    }
-                })
+                .toTry()
+                .flatMap(address -> Try.withResources(() -> SocketChannel.open(StandardProtocolFamily.UNIX))
+                        .of(channel -> askOver(channel, address, kind, prompt, out))
+                        .flatMap(asked -> asked))
                 .getOrElse(1);
     }
 
     /**
-     * Prints {@code answer}, if any, and wipes it.
+     * Asks over {@code channel}, and prints the answer.
      */
-    private static int print(Option<byte[]> answer, OutputStream out) throws IOException {
-        if (answer.isEmpty()) {
-            return 1;
-        }
-        byte[] bytes = answer.get();
-        try {
-            out.write(bytes);
-            out.write('\n');
-            out.flush();
-            return 0;
-        } finally {
-            Arrays.fill(bytes, (byte) 0);
-        }
+    private static Try<Integer> askOver(
+            SocketChannel channel, AskpassProtocol.Address address, String kind, String prompt, OutputStream out) {
+        return Try.run(() -> channel.connect(UnixDomainSocketAddress.of(address.socket())))
+                .flatMap(connected -> AskpassProtocol.send(
+                        Channels.newOutputStream(channel), new AskpassProtocol.Request(address.token(), kind, prompt)))
+                .flatMap(sent -> AskpassProtocol.received(Channels.newInputStream(channel)))
+                .flatMap(answer -> print(answer, out));
+    }
+
+    /**
+     * Prints {@code answer}, if any, and wipes it: 0 once it is printed, 1 for none.
+     */
+    private static Try<Integer> print(Option<byte[]> answer, OutputStream out) {
+        return answer.fold(
+                () -> Try.success(1),
+                bytes -> Try.run(() -> {
+                            out.write(bytes);
+                            out.write('\n');
+                            out.flush();
+                        })
+                        .andFinally(() -> Arrays.fill(bytes, (byte) 0))
+                        .map(printed -> 0));
     }
 }

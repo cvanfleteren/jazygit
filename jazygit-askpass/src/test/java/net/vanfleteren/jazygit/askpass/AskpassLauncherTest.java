@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.app.askpass;
+package net.vanfleteren.jazygit.askpass;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -21,7 +21,7 @@ class AskpassLauncherTest {
         assertEquals(dir.resolve("askpass.sh"), launcher);
         assertEquals(
                 "#!/bin/sh\nexec '/opt/my java/bin/java' -cp '/it'\\''s/jazygit.jar'"
-                        + " net.vanfleteren.jazygit.app.askpass.AskpassHelper \"$@\"\n",
+                        + " net.vanfleteren.jazygit.askpass.AskpassHelper \"$@\"\n",
                 Files.readString(launcher));
         assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(launcher)));
     }
@@ -33,7 +33,7 @@ class AskpassLauncherTest {
 
         assertEquals(dir.resolve("askpass.cmd"), launcher);
         assertEquals(
-                "@\"java.exe\" -cp \"jazygit.jar\" net.vanfleteren.jazygit.app.askpass.AskpassHelper %*\r\n",
+                "@\"java.exe\" -cp \"jazygit.jar\" net.vanfleteren.jazygit.askpass.AskpassHelper %*\r\n",
                 Files.readString(launcher));
     }
 }

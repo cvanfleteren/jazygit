@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.app.askpass;
+package net.vanfleteren.jazygit.askpass;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;

@@ -15,7 +15,7 @@ import io.vavr.control.Option;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import net.vanfleteren.jazygit.app.askpass.SecretBuffer;
+import net.vanfleteren.jazygit.askpass.SecretBuffer;
 import net.vanfleteren.jazygit.state.popup.SshPromptPopup;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
