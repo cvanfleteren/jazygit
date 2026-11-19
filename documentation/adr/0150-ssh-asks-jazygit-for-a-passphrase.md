@@ -49,9 +49,18 @@ What jazygit has to build on:
   popup on the render thread and blocks the command's thread until it is confirmed or cancelled. The popup replaces one
   that is open: the user just started the operation that asks. The two minutes a remote command may take include the
   time spent typing.
-- **The passphrase is shown as dots, and kept nowhere.** The popup shows ssh's prompt and one `•` per character typed.
-  The text is in the model only while the popup is open; it is written to the FIFO and dropped. It is never logged (the
-  debug log names messages, not their contents), stored, or added to the agent. ssh asks again for the next operation.
+- **The passphrase is never a `String`, and never in the model.** A `String` cannot be wiped, and the collector copies
+  it; a text popup would leave one in the model for each key typed.
+  - The model has the popup as ssh's prompt and how many characters were typed, for the dots: one `•` each. No message
+    carries a character, so the debug log has none either.
+  - The characters are in a `char[]` the `Asking` service holds, outside the model, as a cursor is view state. The
+    popup's input is an element of jazygit's own, which edits that buffer: TamboUI's text input keeps its text itself.
+    A buffer that grows clears the array it leaves.
+  - The buffer is a class, no record, whose `toString()` is `****`. It is cleared once it is written to the socket, on
+    a cancel, and when jazygit quits. Encoding it, and the helper run that prints it for ssh, use byte arrays that are
+    cleared after, no `String`.
+  - It is never stored, nor added to the agent: ssh asks again for the next operation.
+  - Not off-heap memory, which the collector never copies: without `mlock`, it can still be swapped out.
 - **Cancelling fails the operation** as a refused key does: `GitError.SshKeyRefused`, with its hint to `ssh-add`.
 - **Windows works as the others do.** Git for Windows runs its own OpenSSH, which has `SSH_ASKPASS_REQUIRE`. Taken to
   hold, and still to be tried on Windows: that the ssh Windows itself ships, which `core.sshCommand` may name for the
@@ -86,7 +95,8 @@ Not:
   open as long as it runs.
 - With `java -jar`, a JVM starts for each prompt, a fraction of a second before the popup opens; the native binary
   starts at once.
-- The passphrase is a Java `String` in the model while it is typed, which cannot be wiped; it lives no longer than the
-  popup.
+- Clearing only shortens how long the passphrase is in memory: each key still comes in as an event of the terminal
+  backend, with its own buffers, and ssh holds it as it does on a terminal. The protection is that jazygit only sees it
+  when the agent lacks the key, and drops it once ssh has it.
 - A command blocked on the user holds the `io` thread and the remote refs guard: other operations, and fetches, wait
   for the answer.
