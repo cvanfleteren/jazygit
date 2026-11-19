@@ -2,19 +2,19 @@ package net.vanfleteren.jazygit.app.keys;
 
 import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyEvent;
-import net.vanfleteren.jazygit.branches.repos.RecentReposMsg;
-import net.vanfleteren.jazygit.changes.cherrypick.CherryPickMsg;
-import net.vanfleteren.jazygit.changes.diff.DiffOptionsMsg;
-import net.vanfleteren.jazygit.changes.inprogress.InProgressMsg;
-import net.vanfleteren.jazygit.chrome.help.HelpPopup;
-import net.vanfleteren.jazygit.chrome.layout.LayoutMsg;
-import net.vanfleteren.jazygit.chrome.layout.LayoutUpdate;
-import net.vanfleteren.jazygit.chrome.settings.SettingsPanelMsg;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
-import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.state.view.CommandLogFocused;
-import net.vanfleteren.jazygit.ui.keys.Keymap;
+import net.vanfleteren.jazygit.features.branches.repos.RecentReposMsg;
+import net.vanfleteren.jazygit.features.changes.cherrypick.CherryPickMsg;
+import net.vanfleteren.jazygit.features.changes.diff.DiffOptionsMsg;
+import net.vanfleteren.jazygit.features.changes.inprogress.InProgressMsg;
+import net.vanfleteren.jazygit.features.chrome.help.HelpPopup;
+import net.vanfleteren.jazygit.features.chrome.layout.LayoutMsg;
+import net.vanfleteren.jazygit.features.chrome.layout.LayoutUpdate;
+import net.vanfleteren.jazygit.features.chrome.settings.SettingsPanelMsg;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.kernel.state.view.CommandLogFocused;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 
 /**
  * The keys that work wherever the focus is.

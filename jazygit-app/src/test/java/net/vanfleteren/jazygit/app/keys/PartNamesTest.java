@@ -9,7 +9,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import io.vavr.collection.List;
 import io.vavr.control.Try;
 import java.lang.reflect.Field;
-import net.vanfleteren.jazygit.state.Part;
+import net.vanfleteren.jazygit.kernel.state.Part;
 import org.junit.jupiter.api.Test;
 
 /**

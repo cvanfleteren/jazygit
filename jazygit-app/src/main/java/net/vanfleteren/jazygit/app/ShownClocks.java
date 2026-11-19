@@ -3,16 +3,16 @@ package net.vanfleteren.jazygit.app;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.content.ContentView;
-import net.vanfleteren.jazygit.github.checks.ChecksDialog;
-import net.vanfleteren.jazygit.github.comments.CommentsDialog;
-import net.vanfleteren.jazygit.github.show.PullRequestDialog;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.ui.FetchLine;
-import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
-import net.vanfleteren.jazygit.ui.files.FilesPanel;
-import net.vanfleteren.jazygit.ui.github.PullRequestsPanel;
-import net.vanfleteren.jazygit.ui.text.ShownTime;
+import net.vanfleteren.jazygit.features.github.checks.ChecksDialog;
+import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
+import net.vanfleteren.jazygit.features.github.show.PullRequestDialog;
+import net.vanfleteren.jazygit.kernel.content.ContentView;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.ui.FetchLine;
+import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
+import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 
 /**
  * What the app is woken for, as Elm's subscriptions are (ADR 124): the moment a time the screen shows changes next.

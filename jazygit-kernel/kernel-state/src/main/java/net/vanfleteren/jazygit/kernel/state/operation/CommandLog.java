@@ -1,0 +1,27 @@
+package net.vanfleteren.jazygit.kernel.state.operation;
+
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.kernel.state.Model;
+
+/**
+ * Appends executed commands to the command log of the model.
+ */
+public final class CommandLog {
+
+    static final int MAX_ENTRIES = 100;
+
+    private CommandLog() {}
+
+    /**
+     * The model with an entry for {@code commands} of {@code operation} added, done at the time the model is told;
+     * nothing is added when no command was executed.
+     */
+    public static Model append(Model model, Operation operation, List<ExecutedCommand> commands) {
+        return commands.isEmpty()
+                ? model
+                : model.mapOutcome(outcome -> outcome.withCommandLog(outcome.commandLog()
+                        .append(new LogEntry(operation, commands, model.now()))
+                        .takeRight(MAX_ENTRIES)));
+    }
+}

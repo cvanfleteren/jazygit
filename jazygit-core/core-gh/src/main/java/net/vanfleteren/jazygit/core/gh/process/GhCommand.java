@@ -1,0 +1,62 @@
+package net.vanfleteren.jazygit.core.gh.process;
+
+import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import java.time.Duration;
+import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+
+/**
+ * A {@code gh} invocation, as data; {@link GhProcess} runs it.
+ *
+ * @param args        the arguments after {@code gh}
+ * @param environment set on top of the inherited environment
+ */
+public record GhCommand(List<String> args, Map<String, String> environment, Duration timeout) {
+
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(60);
+    private static final Map<String, String> DEFAULT_ENVIRONMENT = HashMap.of(
+            // Fail instead of asking anything on a terminal that cannot be typed in.
+            "GH_PROMPT_DISABLED", "1",
+            "NO_COLOR", "1",
+            "GH_NO_UPDATE_NOTIFIER", "1");
+
+    public static GhCommand gh(String... args) {
+        return new GhCommand(List.of(args), DEFAULT_ENVIRONMENT, DEFAULT_TIMEOUT);
+    }
+
+    /**
+     * The same command, with {@code name} set to {@code value} in its environment too.
+     */
+    public GhCommand withEnvironment(String name, String value) {
+        return new GhCommand(args, environment.put(name, value), timeout);
+    }
+
+    /**
+     * The same command, with {@code variables} set in its environment too, over what it set already.
+     */
+    public GhCommand withEnvironment(Map<String, String> variables) {
+        return new GhCommand(args, environment.merge(variables, (current, given) -> given), timeout);
+    }
+
+    /**
+     * The command line that runs this command with the gh at {@code executable}.
+     */
+    public List<String> commandLine(String executable) {
+        return args.prepend(executable);
+    }
+
+    /**
+     * The command, as it is logged once it ran: as {@code gh}, wherever the executable is.
+     */
+    public ExecutedCommand executed() {
+        return new ExecutedCommand(commandLine("gh"));
+    }
+
+    /**
+     * The gh command, e.g. {@code pr create}.
+     */
+    public String operation() {
+        return args.takeWhile(arg -> !arg.startsWith("-")).take(2).mkString(" ");
+    }
+}

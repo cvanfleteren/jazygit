@@ -11,17 +11,17 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.changes.fetch.FetchMsg;
-import net.vanfleteren.jazygit.chrome.settings.SettingsPanelUpdate;
-import net.vanfleteren.jazygit.git.CliGit;
-import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.process.GitError;
-import net.vanfleteren.jazygit.process.SshAsking;
-import net.vanfleteren.jazygit.settings.SettingsStore;
-import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.github.*;
-import net.vanfleteren.jazygit.state.preferences.*;
+import net.vanfleteren.jazygit.core.git.CliGit;
+import net.vanfleteren.jazygit.core.git.Git;
+import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.process.SshAsking;
+import net.vanfleteren.jazygit.features.changes.fetch.FetchMsg;
+import net.vanfleteren.jazygit.features.chrome.settings.SettingsPanelUpdate;
+import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
+import net.vanfleteren.jazygit.kernel.settings.ThemeName;
+import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.github.*;
+import net.vanfleteren.jazygit.kernel.state.preferences.*;
 
 /**
  * What runs for the repository shown: the {@link Program} and the threads it runs git on, from the start of the app

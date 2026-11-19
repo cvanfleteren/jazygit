@@ -249,7 +249,7 @@ Keep the oracle only as a default.
   gh version is installed, and a future gh that behaves differently without auth (prompting, networking) would change
   every test. Make an always-failing fake gh the default (autouse), and let the `gh` fixture configure it.
 - **The fake gh matches answers by substring, first match wins** (`"pullRequests(states: OPEN"`). Rewording a query in
-  `jazygit-gh` breaks tests with a timeout instead of a clear "no answer for this call". Two queries that share a
+  `core-gh` breaks tests with a timeout instead of a clear "no answer for this call". Two queries that share a
   substring can also get each other's answer. Log unmatched calls to the test failure output, so that the timeout shows
   which call went unanswered.
 

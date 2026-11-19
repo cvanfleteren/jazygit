@@ -1,0 +1,157 @@
+package net.vanfleteren.jazygit.features.branches.branch.newbranch;
+
+import static dev.tamboui.toolkit.Toolkit.stack;
+import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyModifiers;
+import io.vavr.control.Option;
+import java.util.ArrayList;
+import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.kernel.ui.RenderedText;
+import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import org.junit.jupiter.api.Test;
+
+/**
+ * The popup asking for the name of a new branch: Enter confirms what was typed, Escape cancels.
+ */
+class NewBranchDialogTest {
+
+    private final java.util.List<Msg> dispatched = new ArrayList<>();
+    private Model open =
+            NameAsked.asked(TestModels.loaded(SampleData.git()), new NewBranchMsg.Requested(new BranchName("main")));
+    // As in the app, an edit changes the model the popup shows; the other messages are only kept.
+    private final net.vanfleteren.jazygit.kernel.ui.widgets.TextInputDialog<NewBranchPopup> dialog =
+            new net.vanfleteren.jazygit.kernel.ui.widgets.TextInputDialog<>(NewBranchDialogs.NEW_BRANCH, msg -> {
+                dispatched.add(msg);
+                if (msg instanceof PopupMsg.TextEdited) {
+                    open = Update.update(open, msg).model();
+                }
+            });
+
+    private static void type(ToolkitTestRunner runner, String text) throws Exception {
+        for (char c : text.toCharArray()) {
+            SettledPilot.of(runner).press(c);
+        }
+        SettledPilot.of(runner).pause();
+    }
+
+    @Test
+    void enterConfirmsTheTypedName() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "topic");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(Option.of("topic"), open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
+        assertEquals(new NewBranchMsg.Confirmed(), dispatched.getLast());
+    }
+
+    @Test
+    void whatIsTypedGoesAfterTheTemplate() throws Exception {
+        open = NameAsked.asked(
+                TestModels.loaded(SampleData.git()),
+                new NewBranchMsg.Requested(new BranchName("main")),
+                Option.of("ART03DEV01-"));
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "42-topic");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                Option.of("ART03DEV01-42-topic"),
+                open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
+    }
+
+    @Test
+    void theWordKeysEditTheNameAPartOfThePathAtATime() throws Exception {
+        java.util.List<KeyEvent> global = new ArrayList<>();
+        try (ToolkitTestRunner runner = start()) {
+            // The app's global keys get what the field leaves; Ctrl+W must not reach them.
+            runner.runner().eventRouter().addGlobalHandler(event -> {
+                if (event instanceof KeyEvent key) {
+                    global.add(key);
+                }
+                return EventResult.UNHANDLED;
+            });
+            type(runner, "feature/foo-bar");
+            SettledPilot.of(runner).press('w', KeyModifiers.CTRL);
+            type(runner, "topic");
+            SettledPilot.of(runner).press(KeyCode.LEFT, KeyModifiers.CTRL);
+            SettledPilot.of(runner).press(KeyCode.DELETE, KeyModifiers.CTRL);
+            type(runner, "my-topic");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                Option.of("feature/my-topic"), open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
+        assertEquals(new NewBranchMsg.Confirmed(), dispatched.getLast());
+        assertEquals(java.util.List.of(), global);
+    }
+
+    @Test
+    void aPasteGoesInTheNameAtOnceOnOneLine() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "feature/");
+            dispatched.clear();
+            SettledPilot.paste(runner, "pasted\nname\n");
+        }
+
+        assertEquals(
+                Option.of("feature/pasted name"),
+                open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
+        assertEquals(1, dispatched.size(), dispatched::toString);
+    }
+
+    @Test
+    void escapeCancels() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "topic");
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(new PopupMsg.Dismissed(NewBranchPopup.class), dispatched.getLast());
+    }
+
+    @Test
+    void aLongBranchNameFitsInTheTitle() throws Exception {
+        String base = "feature/some-rather-long-branch-name-here";
+        open = TestModels.loaded(SampleData.git()).openPopup(new NewBranchPopup(new BranchName(base)));
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view)) {
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("New branch from " + base), screen);
+        }
+    }
+
+    @Test
+    void closedModelShowsNoPopup() {
+        assertTrue(dialog.render(TestModels.loaded(SampleData.git())).isEmpty());
+    }
+
+    private ToolkitTestRunner start() throws Exception {
+        ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
+        SettledPilot.focus(runner, NewBranchDialogs.NEW_BRANCH.id());
+        RenderedText.of(runner, this::view);
+        return runner;
+    }
+
+    private Element view() {
+        return stack(text("background"), dialog.render(open).get());
+    }
+}

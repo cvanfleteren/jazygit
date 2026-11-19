@@ -18,12 +18,12 @@
     <dependencies>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-git</artifactId>
+            <artifactId>core-git</artifactId>
         </dependency>
         <!-- For what drawing a diff costs where the views style it (RichDiffBenchmark): the content, not the whole app. -->
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-content</artifactId>
+            <artifactId>kernel-content</artifactId>
         </dependency>
         <dependency>
             <groupId>io.vavr</groupId>

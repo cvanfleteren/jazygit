@@ -1,12 +1,12 @@
 package net.vanfleteren.jazygit.app;
 
 import java.time.Instant;
-import net.vanfleteren.jazygit.github.checks.ChecksDialog;
-import net.vanfleteren.jazygit.github.comments.CommentsDialog;
-import net.vanfleteren.jazygit.github.show.PullRequestDialog;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.ui.FetchLine;
-import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.features.github.checks.ChecksDialog;
+import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
+import net.vanfleteren.jazygit.features.github.show.PullRequestDialog;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.ui.FetchLine;
+import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 
 /**
  * The spinners on the screen, which only turn while frames are drawn: their frame is told by the clock.

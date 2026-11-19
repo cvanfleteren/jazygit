@@ -18,14 +18,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.gh.StubGitHub;
-import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.settings.SettingsStore;
-import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.ui.SettledPilot;
-import net.vanfleteren.jazygit.ui.theme.Theme;
+import net.vanfleteren.jazygit.core.gh.StubGitHub;
+import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
+import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 
 /**
  * The app on the test's runner instead of one of its own, which only {@link #run()} makes.

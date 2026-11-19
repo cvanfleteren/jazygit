@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.app.cli;
 
 import java.nio.file.Path;
 import java.util.Optional;
-import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;

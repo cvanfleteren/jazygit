@@ -18,36 +18,36 @@
 
     <!-- Each group of features is a module; a group uses the groups below it, never one beside or above it. -->
     <modules>
-        <module>jazygit-changes</module>
-        <module>jazygit-branches</module>
-        <module>jazygit-github</module>
-        <module>jazygit-chrome</module>
+        <module>features-changes</module>
+        <module>features-branches</module>
+        <module>features-github</module>
+        <module>features-chrome</module>
     </modules>
 
     <dependencies>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-ui</artifactId>
+            <artifactId>kernel-ui</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-state</artifactId>
+            <artifactId>kernel-state</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-settings</artifactId>
+            <artifactId>kernel-settings</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-process</artifactId>
+            <artifactId>core-process</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-git</artifactId>
+            <artifactId>core-git</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-gh</artifactId>
+            <artifactId>core-gh</artifactId>
         </dependency>
         <dependency>
             <groupId>io.vavr</groupId>
@@ -59,13 +59,13 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-ui</artifactId>
+            <artifactId>kernel-ui</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-state</artifactId>
+            <artifactId>kernel-state</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
@@ -76,13 +76,13 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-git</artifactId>
+            <artifactId>core-git</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-gh</artifactId>
+            <artifactId>core-gh</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

@@ -1,0 +1,16 @@
+package net.vanfleteren.jazygit.features.changes.cherrypick;
+
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.git.model.Commit;
+import net.vanfleteren.jazygit.kernel.state.popup.ConfirmablePopup;
+
+/**
+ * Asking to cherry-pick {@code commit} onto the checked out branch {@code onto}; none when HEAD is detached.
+ */
+public record CherryPickPopup(Commit commit, Option<BranchName> onto) implements ConfirmablePopup {
+    @Override
+    public Option<CherryPickCmd> confirm() {
+        return Option.of(new CherryPickCmd(commit.sha()));
+    }
+}

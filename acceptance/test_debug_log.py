@@ -23,9 +23,9 @@ def test_debug_log_tells_what_ran_and_where_it_is(repo, env, jazygit):
     assert str(log).encode() in ui.app.output, "the path of the debug log is printed on exit"
     lines = log.read_text().splitlines()
     assert any(" INFO net.vanfleteren.jazygit.DebugLog - jazygit " in line for line in lines), lines[:5]
-    assert any(" DEBUG net.vanfleteren.jazygit.process.Exec - git " in line and line.endswith(": ok")
+    assert any(" DEBUG net.vanfleteren.jazygit.core.process.Exec - git " in line and line.endswith(": ok")
                for line in lines), lines
-    assert any(" DEBUG net.vanfleteren.jazygit.state.Program - " in line for line in lines), lines
+    assert any(" DEBUG net.vanfleteren.jazygit.kernel.state.Program - " in line for line in lines), lines
     assert not any("with environment" in line for line in lines)
 
 

@@ -1,0 +1,32 @@
+package net.vanfleteren.jazygit.features.branches.branch.newbranch;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.util.function.Consumer;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
+import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.widgets.TextInputDialog;
+
+/**
+ * The popup of creating a branch.
+ */
+public final class NewBranchDialogs {
+
+    /**
+     * Asks for the name of a new branch. A blank name keeps it open.
+     */
+    public static final TextInputDialog.Spec<NewBranchPopup> NEW_BRANCH = new TextInputDialog.Spec<>(
+                    "new-branch-name",
+                    NewBranchPopup.class,
+                    popup -> Messages.get("branches.dialog.newBranch.title", popup.label()),
+                    Option.of(Messages.get("branches.dialog.newBranch.placeholder")),
+                    NewBranchMsg.Confirmed::new)
+            .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
+
+    private NewBranchDialogs() {}
+
+    public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
+        return List.of(PopupSlot.returningToFocus(new TextInputDialog<>(NEW_BRANCH, dispatch)));
+    }
+}

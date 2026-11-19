@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.app.cli;
 
 import java.text.MessageFormat;
 import java.util.ResourceBundle;
-import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.TypeConversionException;
 

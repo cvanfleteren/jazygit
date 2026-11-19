@@ -16,13 +16,13 @@ backend (now removed). The sizes in the table below are those from before that.
 
 ```
 jazygit-app
-+- jazygit-process
++- core-process
 |  +- org.zeroturnaround:zt-exec:1.13.0
 |  \- org.slf4j:slf4j-api:2.0.20
-+- jazygit-git
-|  \- jazygit-syntax
-+- jazygit-gh
-|  \- jazygit-json
++- core-git
+|  \- lib-syntax
++- core-gh
+|  \- lib-json
 |     \- org.eclipse.parsson:parsson:1.1.9
 |        \- jakarta.json:jakarta.json-api:2.1.3
 +- io.vavr:vavr:1.1.0 (+ vavr-match, jspecify; jspecify excluded from the shade)
@@ -79,7 +79,7 @@ Without zt-exec, nothing else needs slf4j: `DebugLog`, `BugLog` and the other ca
 
 ### 3. parsson: ~120 KB
 
-`jazygit-json` already keeps parsson behind its own values; only `JsonReader` touches the streaming parser. A
+`lib-json` already keeps parsson behind its own values; only `JsonReader` touches the streaming parser. A
 recursive-descent JSON reader is some 150–200 lines. A small win, but a contained one.
 
 ### 4. picocli: ~365 KB

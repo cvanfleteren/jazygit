@@ -26,13 +26,13 @@ public final class Values {
      * in an {@code int[]} each, as a diff of tens of thousands of lines kept an object for each token otherwise. It
      * never changes the arrays nor hands them out, so it is taken for a value, and its fields are not looked at.
      */
-    public static final String PACKED = "net.vanfleteren.jazygit.git.model.ParsedDiff$ParsedLine";
+    public static final String PACKED = "net.vanfleteren.jazygit.core.git.model.ParsedDiff$ParsedLine";
 
     /**
      * A regex of a diff filter, compiled: no record, as two are equal when they were written alike, which a record of
      * its source and its {@link java.util.regex.Pattern} would not be (ADR 144). Its fields are values.
      */
-    public static final String REGEX = "net.vanfleteren.jazygit.git.model.Regex";
+    public static final String REGEX = "net.vanfleteren.jazygit.core.git.model.Regex";
 
     /**
      * The classes of the models that are no records but are taken for values, by name: each says why where it is

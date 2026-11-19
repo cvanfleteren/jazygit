@@ -5,10 +5,10 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.askpass.Asking;
-import net.vanfleteren.jazygit.askpass.SecretBuffer;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.popup.SshPromptMsg;
+import net.vanfleteren.jazygit.core.askpass.Asking;
+import net.vanfleteren.jazygit.core.askpass.SecretBuffer;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.popup.SshPromptMsg;
 
 /**
  * Asks the user what ssh asks in the popup of an {@link SshPromptDialog} (ADR 150). It holds what is typed, outside

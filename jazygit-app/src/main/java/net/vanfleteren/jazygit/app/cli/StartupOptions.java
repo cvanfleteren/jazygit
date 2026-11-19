@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.app.cli;
 
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 
 /**
  * How jazygit was asked to start.

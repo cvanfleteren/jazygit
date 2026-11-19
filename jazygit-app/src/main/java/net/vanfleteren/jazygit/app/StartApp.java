@@ -16,20 +16,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import net.vanfleteren.jazygit.branches.repos.RecentRepo;
-import net.vanfleteren.jazygit.branches.start.StartCmd;
-import net.vanfleteren.jazygit.branches.start.StartDialogs;
-import net.vanfleteren.jazygit.branches.start.StartMsg;
-import net.vanfleteren.jazygit.branches.start.StartUpdate;
-import net.vanfleteren.jazygit.settings.SettingsStore;
-import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.ui.theme.Theme;
-import net.vanfleteren.jazygit.ui.widgets.PopupView;
-import net.vanfleteren.jazygit.ui.widgets.SelectedTextColoured;
+import net.vanfleteren.jazygit.features.branches.repos.RecentRepo;
+import net.vanfleteren.jazygit.features.branches.start.StartCmd;
+import net.vanfleteren.jazygit.features.branches.start.StartDialogs;
+import net.vanfleteren.jazygit.features.branches.start.StartMsg;
+import net.vanfleteren.jazygit.features.branches.start.StartUpdate;
+import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
+import net.vanfleteren.jazygit.kernel.settings.ThemeName;
+import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
+import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
+import net.vanfleteren.jazygit.kernel.ui.widgets.SelectedTextColoured;
 
 /**
  * What jazygit shows when it starts outside a repository, before {@link JazygitApp}: a dialog asking what to open

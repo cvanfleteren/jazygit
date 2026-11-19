@@ -1,0 +1,49 @@
+package net.vanfleteren.jazygit.features.branches.branch;
+
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.git.model.Branch;
+import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
+import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.operation.Operation;
+
+/**
+ * Questions about the branches that several branch operations ask.
+ */
+public final class Branches {
+
+    private Branches() {}
+
+    /**
+     * The checked out branch and {@code other}, if {@code other} is a known branch other than the checked out
+     * one: what merging and rebasing work with.
+     */
+    public static Option<Tuple2<BranchName, BranchName>> checkedOutAnd(Model model, BranchName other) {
+        return model.repo()
+                .currentBranch()
+                .filter(current -> !current.name().equals(other))
+                .flatMap(current -> model.idleBranch(current.name()))
+                .flatMap(current -> model.idleBranch(other).map(found -> Tuple.of(current.name(), found.name())));
+    }
+
+    /**
+     * Why {@code operation} cannot be done to {@code name} here, when it is a branch checked out in another
+     * worktree.
+     */
+    public static Option<AppError> checkedOutElsewhere(Model model, Operation operation, BranchName name) {
+        return model.repo()
+                .branch(name)
+                .flatMap(Branch::worktreeLocation)
+                .map(worktree -> new WorktreeError.CheckedOutElsewhere(operation, name, worktree));
+    }
+
+    /**
+     * Whether {@code name} is a known branch that is not checked out, and that no operation runs on.
+     */
+    public static boolean isOtherIdleBranch(Model model, BranchName name) {
+        return model.idleBranch(name).exists(branch -> !branch.current());
+    }
+}

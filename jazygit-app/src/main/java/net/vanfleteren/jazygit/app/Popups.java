@@ -5,10 +5,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.app.keys.Features;
-import net.vanfleteren.jazygit.state.Focus;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.kernel.state.Focus;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 
 /**
  * Every popup of the app, those of {@link Features#ALL} and those of the app itself, with where the focus goes when it

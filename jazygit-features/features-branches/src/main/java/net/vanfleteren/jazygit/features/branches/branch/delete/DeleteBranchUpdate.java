@@ -1,0 +1,165 @@
+package net.vanfleteren.jazygit.features.branches.branch.delete;
+
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.git.model.Branch;
+import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.git.model.BranchRef;
+import net.vanfleteren.jazygit.core.git.model.DeleteScope;
+import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.git.model.Worktree;
+import net.vanfleteren.jazygit.features.branches.branch.BranchError;
+import net.vanfleteren.jazygit.features.branches.branch.Branches;
+import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd.DeleteBranch;
+import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
+import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchMsg.Chosen;
+import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchMsg.Requested;
+import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
+import net.vanfleteren.jazygit.features.branches.worktree.remove.RemoveWorktreeCmd;
+import net.vanfleteren.jazygit.features.branches.worktree.remove.RemoveWorktreeUpdate;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
+
+/**
+ * Deleting a branch.
+ */
+public final class DeleteBranchUpdate {
+
+    private DeleteBranchUpdate() {}
+
+    public static Next update(Model model, DeleteBranchMsg msg) {
+        return switch (msg) {
+            case Requested(BranchName branch) -> requested(model, branch);
+            case Chosen(DeleteScope scope) -> chosen(model, scope);
+            case DeleteBranchMsg.WithWorktreeChosen() -> withWorktreeChosen(model);
+            case DeleteBranchMsg.UnlockConfirmed() ->
+                PopupUpdate.confirm(
+                        model,
+                        UnlockWorktreePopup.class,
+                        popup -> removableWorktree(model, popup.branch())
+                                .filter(worktree -> worktree.location().equals(popup.location()))
+                                .map(worktree -> new RemoveWorktreeCmd(
+                                        worktree.location(), false, Option.of(popup.branch()), worktree.locked())));
+            case DeleteBranchMsg.RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
+            case DeleteBranchMsg.RemoteConfirmed() ->
+                PopupUpdate.confirm(
+                        model,
+                        DeleteRemoteBranchPopup.class,
+                        popup -> Option.when(
+                                remoteDeletable(model, popup.branch()), () -> new DeleteRemoteBranch(popup.branch())));
+        };
+    }
+
+    /**
+     * Only a known branch that is not checked out can be deleted, and not while it is being pushed or deleted. One
+     * that is checked out in another worktree can be deleted on its remote, or locally once that worktree is
+     * removed, when it can be; when neither is possible, that is said.
+     */
+    private static Next requested(Model model, BranchName branch) {
+        Option<Worktree> worktree = removableWorktree(model, branch);
+        return model.repo()
+                .branch(branch)
+                .filter(known -> !known.remoteDeletable() && worktree.isEmpty())
+                .flatMap(known -> Branches.checkedOutElsewhere(model, DeleteBranchCmd.DELETE_BRANCH, branch))
+                .map(error -> Next.of(model.fail(error)))
+                .getOrElse(() -> PopupUpdate.ask(
+                        model,
+                        model.repo()
+                                .branch(branch)
+                                .filter(known -> Branches.isOtherIdleBranch(model, branch))
+                                .map(known -> new DeleteBranchPopup(
+                                        branch, known.pushTarget(), worktree.map(Worktree::name)))));
+    }
+
+    /**
+     * The other worktree that has {@code branch} checked out, if one does and it can be removed, once unlocked when
+     * it is locked, so that the branch can be deleted once it is gone.
+     */
+    public static Option<Worktree> removableWorktree(Model model, BranchName branch) {
+        return otherWorktree(model, branch)
+                .filter(worktree -> RemoveWorktreeUpdate.notRemovable(worktree)
+                        .forAll(WorktreeError.WorktreeLocked.class::isInstance));
+    }
+
+    /**
+     * The other worktree that has {@code branch} checked out, if one does.
+     */
+    private static Option<Worktree> otherWorktree(Model model, BranchName branch) {
+        return model.repo()
+                .branch(branch)
+                .flatMap(Branch::worktreeLocation)
+                .flatMap(location -> model.repo().worktree(location));
+    }
+
+    /**
+     * Removes the worktree that has the branch checked out and deletes the branch locally once it is gone. When that
+     * worktree is locked, whether to unlock it is asked first.
+     */
+    private static Next withWorktreeChosen(Model model) {
+        return model.popup(DeleteBranchPopup.class)
+                .flatMap(popup -> removableWorktree(model, popup.branch())
+                        .flatMap(worktree -> worktree.locked()
+                                .map(reason -> PopupUpdate.ask(
+                                        model.withoutPopup(DeleteBranchPopup.class),
+                                        new UnlockWorktreePopup(
+                                                popup.branch(), worktree.location(), worktree.name(), reason)))))
+                .getOrElse(() -> PopupUpdate.confirm(
+                        model,
+                        DeleteBranchPopup.class,
+                        popup -> removableWorktree(model, popup.branch())
+                                .map(worktree ->
+                                        new RemoveWorktreeCmd(worktree.location(), false, Option.of(popup.branch())))));
+    }
+
+    private static Next chosen(Model model, DeleteScope scope) {
+        // Deleting on the remote is not possible for a local-only branch, nor for the default one, nor when the remote
+        // branch is no longer the one the dialog named; deleting it locally is not possible while another worktree
+        // has it checked out.
+        return PopupUpdate.confirm(
+                model,
+                DeleteBranchPopup.class,
+                popup -> model.repo()
+                        .branch(popup.branch())
+                        .filter(branch -> scope == DeleteScope.LOCAL
+                                || (branch.remoteDeletable()
+                                        && branch.pushTarget().equals(popup.remote())))
+                        .filter(branch -> scope == DeleteScope.REMOTE || !branch.checkedOutElsewhere())
+                        .map(branch -> new DeleteBranch(branch.name(), popup.remote(), scope)));
+    }
+
+    /**
+     * Only a known remote branch can be deleted, and not while something runs on it. The default branch is
+     * refused, as deleting it would break every clone.
+     */
+    private static Next remoteRequested(Model model, RemoteBranch branch) {
+        return isDefault(model, branch)
+                ? Next.of(model.fail(new BranchError.DefaultBranch(new BranchRef.Remote(branch))))
+                : PopupUpdate.ask(
+                        model, Option.when(remoteDeletable(model, branch), () -> new DeleteRemoteBranchPopup(branch)));
+    }
+
+    private static boolean remoteDeletable(Model model, RemoteBranch branch) {
+        return model.repo().remoteBranch(branch).isDefined()
+                && !model.jobs().busy().containsKey(new BranchRef.Remote(branch))
+                && !isDefault(model, branch);
+    }
+
+    public static boolean remoteDeletable(Model model, BranchName branch) {
+        return model.repo().branch(branch).exists(Branch::remoteDeletable);
+    }
+
+    /**
+     * Whether {@code branch} can be deleted here: not while another worktree has it checked out.
+     */
+    public static boolean localDeletable(Model model, BranchName branch) {
+        return model.repo().branch(branch).exists(known -> !known.checkedOutElsewhere());
+    }
+
+    /**
+     * Whether {@code branch} is the default branch of {@code origin}, as far as the local default branch tells.
+     */
+    private static boolean isDefault(Model model, RemoteBranch branch) {
+        return branch.remote().equals(RemoteBranch.DEFAULT_REMOTE)
+                && model.repo().branch(branch.branch()).exists(Branch::isDefault);
+    }
+}

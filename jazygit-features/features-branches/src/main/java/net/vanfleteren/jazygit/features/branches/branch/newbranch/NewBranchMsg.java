@@ -1,0 +1,43 @@
+package net.vanfleteren.jazygit.features.branches.branch.newbranch;
+
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.Update;
+
+public sealed interface NewBranchMsg extends Msg {
+
+    @Override
+    default Update.Next apply(Model model) {
+        return NewBranchUpdate.update(model, this);
+    }
+
+    /**
+     * The user asked for a new branch starting at {@code base}; the name is still to be entered.
+     */
+    record Requested(BranchName base) implements NewBranchMsg {}
+
+    /**
+     * The user asked for a new branch starting at the commit {@code sha}.
+     */
+    record RequestedAtCommit(Sha sha) implements NewBranchMsg {}
+
+    /**
+     * The user asked for a new branch starting at the remote branch {@code branch}.
+     */
+    record RequestedAtRemote(RemoteBranch branch) implements NewBranchMsg {}
+
+    /**
+     * What the name of the new branch {@code popup} asks for starts out as was read: {@code template}, or empty for
+     * none (ADR 121).
+     */
+    record NameTemplateRead(NewBranchPopup popup, Option<String> template) implements NewBranchMsg {}
+
+    /**
+     * The user confirmed the name typed for the new branch.
+     */
+    record Confirmed() implements NewBranchMsg {}
+}

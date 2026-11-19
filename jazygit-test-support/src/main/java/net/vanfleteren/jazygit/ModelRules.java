@@ -7,37 +7,37 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 /**
- * The rules of the models of jazygit-git and jazygit-gh, the data read from git and GitHub. Each takes them in with
+ * The rules of the models of core-git and core-gh, the data read from git and GitHub. Each takes them in with
  * {@code ArchTests.in(ModelRules.class)}.
  */
 public final class ModelRules {
 
     /**
-     * The data read from git and GitHub is plain values, with nothing that runs anything. jazygit-syntax, which lexes
-     * the code of a diff, is pure too, as is jazygit-base, which guards against a call that breaks what a method
+     * The data read from git and GitHub is plain values, with nothing that runs anything. lib-syntax, which lexes
+     * the code of a diff, is pure too, as is lib-base, which guards against a call that breaks what a method
      * needs.
      */
     @ArchTest
     static final ArchRule modelsArePure = classes()
             .that()
-            .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
+            .resideInAnyPackage("..jazygit.core.git.model..", "..jazygit.core.gh.model..")
             .should()
             .onlyDependOnClassesThat()
             .resideInAnyPackage(
                     "java..",
                     "io.vavr..",
                     "lombok..",
-                    "..jazygit.git.model..",
-                    "..jazygit.gh.model..",
-                    "net.vanfleteren.jazygit.syntax..",
-                    "net.vanfleteren.jazygit.base..");
+                    "..jazygit.core.git.model..",
+                    "..jazygit.core.gh.model..",
+                    "net.vanfleteren.jazygit.lib.syntax..",
+                    "net.vanfleteren.jazygit.lib.base..");
     /**
      * What git and GitHub report are values that never change.
      */
     @ArchTest
     static final ArchRule fieldsAreFinal = fields().that()
             .areDeclaredInClassesThat()
-            .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
+            .resideInAnyPackage("..jazygit.core.git.model..", "..jazygit.core.gh.model..")
             .should()
             .beFinal();
 
@@ -47,7 +47,7 @@ public final class ModelRules {
     @ArchTest
     static final ArchRule modelsAreValuesAllTheWayDown = fields().that()
             .areDeclaredInClassesThat()
-            .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
+            .resideInAnyPackage("..jazygit.core.git.model..", "..jazygit.core.gh.model..")
             .and()
             .doNotHaveModifier(JavaModifier.SYNTHETIC)
             // Its arrays are its own, and it is taken for a value itself (Values.PACKED).
@@ -60,7 +60,7 @@ public final class ModelRules {
     @ArchTest
     static final ArchRule modelsExtendNothing = classes()
             .that()
-            .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
+            .resideInAnyPackage("..jazygit.core.git.model..", "..jazygit.core.gh.model..")
             .should(Values.extendNothing());
     /**
      * A method of a model works something out and returns it: one that returns nothing could only have done
@@ -70,7 +70,7 @@ public final class ModelRules {
     static final ArchRule modelsReturnValues = noMethods()
             .that()
             .areDeclaredInClassesThat()
-            .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
+            .resideInAnyPackage("..jazygit.core.git.model..", "..jazygit.core.gh.model..")
             .and()
             .doNotHaveModifier(JavaModifier.SYNTHETIC)
             .should()

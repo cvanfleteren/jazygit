@@ -18,21 +18,9 @@
          rich diff, beside features, the groups of features; app, which wires them together. test-support holds what the architecture tests share. -->
     <modules>
         <module>jazygit-test-support</module>
-        <module>jazygit-base</module>
-        <module>jazygit-json</module>
-        <module>jazygit-yaml</module>
-        <module>jazygit-xml</module>
-        <module>jazygit-syntax</module>
-        <module>jazygit-process</module>
-        <module>jazygit-git</module>
-        <module>jazygit-gh</module>
-        <module>jazygit-askpass</module>
-        <module>jazygit-lens</module>
-        <module>jazygit-image</module>
-        <module>jazygit-settings</module>
-        <module>jazygit-state</module>
-        <module>jazygit-ui</module>
-        <module>jazygit-content</module>
+        <module>jazygit-lib</module>
+        <module>jazygit-core</module>
+        <module>jazygit-kernel</module>
         <module>jazygit-features</module>
         <module>jazygit-app</module>
     </modules>
@@ -85,133 +73,133 @@
         <dependencies>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-json</artifactId>
+                <artifactId>lib-json</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-yaml</artifactId>
+                <artifactId>lib-yaml</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-xml</artifactId>
+                <artifactId>lib-xml</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-syntax</artifactId>
+                <artifactId>lib-syntax</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-process</artifactId>
+                <artifactId>core-process</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-git</artifactId>
+                <artifactId>core-git</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-git</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-gh</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-askpass</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-gh</artifactId>
+                <artifactId>core-git</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-base</artifactId>
+                <artifactId>core-gh</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-lens</artifactId>
+                <artifactId>core-askpass</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-image</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-settings</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-state</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-state</artifactId>
+                <artifactId>core-gh</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-ui</artifactId>
+                <artifactId>lib-base</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-ui</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-content</artifactId>
+                <artifactId>lib-lens</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-changes</artifactId>
+                <artifactId>lib-image</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-branches</artifactId>
+                <artifactId>kernel-settings</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-branches</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-github</artifactId>
+                <artifactId>kernel-state</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-github</artifactId>
+                <artifactId>kernel-state</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-chrome</artifactId>
+                <artifactId>kernel-ui</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>kernel-ui</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>kernel-content</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>features-changes</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>features-branches</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>features-branches</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>features-github</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>features-github</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>features-chrome</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

@@ -14,12 +14,12 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.popup.SshPromptPopup;
-import net.vanfleteren.jazygit.ui.PopupSlot;
-import net.vanfleteren.jazygit.ui.i18n.Messages;
-import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
-import net.vanfleteren.jazygit.ui.widgets.PopupView;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.popup.SshPromptPopup;
+import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
+import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.widgets.DialogFrame;
+import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
 
 /**
  * The popup in which ssh asks the user for a secret, such as the passphrase of a key (ADR 150): what ssh asks, as it

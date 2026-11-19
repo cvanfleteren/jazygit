@@ -18,43 +18,53 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 
 ## Modules
 
+The modules are in four groups, a folder each whose pom is the parent of its modules, and a module's name starts with
+its group's (ADR 159). A group uses the groups above it in this table, never one below it, as `GroupsTest` in the app
+checks: the build only stops cycles. The packages below are
+named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.state`, `git.model` is
+`net.vanfleteren.jazygit.core.git.model`.
+
 | Module | Holds | Depends on |
 |---|---|---|
-| `jazygit-base` | `base`: `Require`, the guard against a call that breaks what a method needs; a tool any part may use. | |
-| `jazygit-json` | `json`: JSON as plain values, and decoders into records (ADR 42). | vavr, Parsson |
-| `jazygit-yaml` | `yaml`: YAML as it is written, to be drawn (ADR 123). | vavr, SnakeYAML Engine |
-| `jazygit-xml` | `xml`: XML as it is written, to be drawn (ADR 151). | vavr |
-| `jazygit-syntax` | `syntax`: the lexer that finds the tokens of a line of code (ADR 53, 113). | vavr |
-| `jazygit-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
-| `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | base, process, syntax |
-| `jazygit-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
-| `jazygit-askpass` | `askpass`: lets ssh ask the user through jazygit: the socket, the helper ssh runs, its launcher (ADR 150). | process, git |
-| `jazygit-lens` | `lens`: `Lens`, where a value sits in another; a tool any part may use. | vavr |
-| `jazygit-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
-| `jazygit-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
-| `jazygit-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, a subpackage per part of the model, and `Part`, a part a feature keeps itself. | lens, image, settings, git, gh, json, yaml, xml |
-| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
-| `jazygit-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
-| `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | ui |
-| ↳ `jazygit-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits`, the commits pane (ADR 158). | ui |
-| ↳ `jazygit-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
-| ↳ `jazygit-github` | `github.*`: pull requests, reviews, checks, builds. | branches, changes |
-| ↳ `jazygit-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
+| `jazygit-lib` | The libraries: values and formats that know nothing of git, GitHub or the application. | |
+| ↳ `lib-base` | `base`: `Require`, the guard against a call that breaks what a method needs; a tool any part may use. | |
+| ↳ `lib-lens` | `lens`: `Lens`, where a value sits in another; a tool any part may use. | vavr |
+| ↳ `lib-json` | `json`: JSON as plain values, and decoders into records (ADR 42). | vavr, Parsson |
+| ↳ `lib-yaml` | `yaml`: YAML as it is written, to be drawn (ADR 123). | vavr, SnakeYAML Engine |
+| ↳ `lib-xml` | `xml`: XML as it is written, to be drawn (ADR 151). | vavr |
+| ↳ `lib-syntax` | `syntax`: the lexer that finds the tokens of a line of code (ADR 53, 113). | vavr |
+| ↳ `lib-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
+| `jazygit-core` | The core: running git, gh and ssh, and what they report as values. | lib |
+| ↳ `core-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
+| ↳ `core-git` | `git`, `git.model`: running git, and what it reports as values. | base, process, syntax |
+| ↳ `core-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
+| ↳ `core-askpass` | `askpass`: lets ssh ask the user through jazygit: the socket, the helper ssh runs, its launcher (ADR 150). | process, git |
+| `jazygit-kernel` | The kernel: what every feature builds on. | lib, core |
+| ↳ `kernel-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
+| ↳ `kernel-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, a subpackage per part of the model, and `Part`, a part a feature keeps itself. | lens, image, settings, git, gh, json, yaml, xml |
+| ↳ `kernel-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
+| ↳ `kernel-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
+| `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | kernel |
+| ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits`, the commits pane (ADR 158). | ui |
+| ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
+| ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds. | branches, changes |
+| ↳ `features-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
 | `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `StandardContent`, `Features`). Builds the fat jar and the native image. | the four groups, content, askpass, TamboUI's backend, picocli |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, ui, JMH |
 
-Each module of the application has one root package, which its name ends in (`jazygit-github`,
-`net.vanfleteren.jazygit.github`); the core's packages keep their names. The core (`process`, `git`, `gh`, `askpass`,
-`json`, `syntax`) cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other;
-nor can a module of the application see one above it, nor a group of features one beside it. The compiler stops any such
-dependency. The rules inside the modules (the models are pure, failures are values, updates are functions) are
-ArchUnit tests: `CoreRules` and `ModelRules` for the core, `AppRules` for the application, run by each module's
-`*ArchitectureTest` on its own classes.
+Each module has one root package, `net.vanfleteren.jazygit.<group>.<name>` after its name `<group>-<name>`
+(`features-github`, `net.vanfleteren.jazygit.features.github`); the app's is `net.vanfleteren.jazygit.app`. The
+libraries and the core (`jazygit-lib`, `jazygit-core`) cannot see the application, TamboUI, picocli or night-config,
+and git and gh cannot see each other; nor can a module of the application see one above it, nor a group of features
+one beside it. The compiler stops any such dependency. The rules inside the modules (the models are pure, failures
+are values, updates are functions) are ArchUnit tests: `CoreRules` and `ModelRules` for the core, `AppRules` for the
+application, run by each module's `*ArchitectureTest` on its own classes.
 
-Each module of the application that has text has its own bundle, `net/vanfleteren/jazygit/<root>/messages.properties`,
-and its keys start with its root (`github.dialog.…`); `Messages` looks a key up in the bundle its first part names, and
-otherwise in the bundle of the views, whose keys have no prefix.
+Each module of the application that has text has its own bundle, in its root package
+(`net/vanfleteren/jazygit/features/github/messages.properties`), and its keys start with its name without the group
+(`github.dialog.…`); `Messages` looks a key up in the bundle its first part names, in the kernel, the features or the
+app, and otherwise in the bundle of the views, whose keys have no prefix.
 
 ## Packages
 
@@ -107,11 +117,11 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
 - **The subpackages of `ui` follow the panes**: the shell (`ui` itself: `LeftColumn`, the status and command log
   panels, `Feature`, `LeftPane`) → the panes (`branches`, `commits`: the rows of commits, `files`, `stash`,
   `github`) → `markdown`, `widgets`, `edit` → `content`, `keys`, `text`, `theme`, `i18n`. The content panel, which
-  uses the panes, and the rich diff are `jazygit-content`, beside the features: no feature draws them. Nothing in
+  uses the panes, and the rich diff are `kernel-content`, beside the features: no feature draws them. Nothing in
   them uses the shell (`UiArchitectureTest`).
 - **Each kind of content draws itself**: what an area of the content panel shows is a `ui.content.Body`, an open
   interface: it draws itself and says what sets it apart (drawn to the width of its area, its keys, its clicks). It is
-  in `ui`, below the panes, so a group of features can add a kind of its own; nothing in `jazygit-content` but a body
+  in `ui`, below the panes, so a group of features can add a kind of its own; nothing in `kernel-content` but a body
   asks which kind of body a value is (`ContentArchitectureTest`).
 - **What the content panel shows comes from sources**: a `ui.content.ContentSource` says what it shows next to a pane,
   if it is its to show, and declares the areas it shows it in. `ContentView` asks the sources of the features, in the
@@ -120,7 +130,7 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   to the `ContentPanel` it builds; a test hands it its own.
 - **A kind of content keeps its own keys, scroll value and focus**: a body can handle keys of its own, content that is
   no diff is a `ScrolledContent.Other` of its source, and an area says what is opened in it, which takes the focus from
-  its pane (ADR 155). Nothing in `jazygit-content` asks which kind of `Other` a value is (`ContentArchitectureTest`).
+  its pane (ADR 155). Nothing in `kernel-content` asks which kind of `Other` a value is (`ContentArchitectureTest`).
 - **A feature keeps its content in a `content` package**: what a feature shows in the content panel, its source, body
   and text, is in a `content` package of the feature, as the builds of a branch in `github.builds.content` (ADR 156).
   The rules take its classes for views, as they take the dialogs.
@@ -278,8 +288,8 @@ operation a subpackage holding all of the above; adding an operation is adding i
 - **One place starts a process:** `GitProcess` and `GhProcess`, both through `process.Exec`. A command is data
   (arguments, environment, timeout) and never prompts: no terminal credentials, no editor, ssh in batch mode. Only
   for what the user starts, ssh asks through the app: it runs jazygit as its `SSH_ASKPASS`, which passes the question
-  to the running app over a socket (`jazygit-askpass`); the popup that asks is the app's (`app.askpass`, ADR 150).
-- **gh's JSON** is decoded with the `Decoder`s of `jazygit-json` (ADR 42), one query class per read.
+  to the running app over a socket (`core-askpass`); the popup that asks is the app's (`app.askpass`, ADR 150).
+- **gh's JSON** is decoded with the `Decoder`s of `lib-json` (ADR 42), one query class per read.
 - **Errors as values.** Nothing throws on purpose. A read returns `Either<GitError, T>`; a write returns
   `Either<GitFailure, List<ExecutedCommand>>`, the failure carrying the commands that ran (ADR 75). Parsers return
   `Either` too. `Unfinished.runOrUndo` leaves a merge or rebase stopped on conflicts for the user, and undoes one that
@@ -317,8 +327,8 @@ sequenceDiagram
 ## Testing
 
 - **The tests go with their module**, but for those that need what it cannot see (a feature's messages or text, the
-  app's keymap): those are in `jazygit-app`, in the package of what they test. `jazygit-state`, `jazygit-ui`,
-  `jazygit-branches` and `jazygit-github` share their test helpers as test-jars.
+  app's keymap): those are in `jazygit-app`, in the package of what they test. `kernel-state`, `kernel-ui`,
+  `features-branches` and `features-github` share their test helpers as test-jars.
 - **Update functions** are pure: build a `Model` (`TestModels`), apply a `Msg`, assert on the next model and its
   commands. No git involved.
 - **`ProgramTest`** runs the real loop with queue executors and `StubGit`.

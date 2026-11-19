@@ -23,52 +23,52 @@
         <!-- The groups of features (ADR 136), and through them everything below. -->
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-changes</artifactId>
+            <artifactId>features-changes</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-branches</artifactId>
+            <artifactId>features-branches</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-github</artifactId>
+            <artifactId>features-github</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-chrome</artifactId>
+            <artifactId>features-chrome</artifactId>
         </dependency>
         <!-- The content panel and the rich diff, which no feature draws. -->
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-content</artifactId>
+            <artifactId>kernel-content</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-ui</artifactId>
+            <artifactId>kernel-ui</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-state</artifactId>
+            <artifactId>kernel-state</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-settings</artifactId>
+            <artifactId>kernel-settings</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-process</artifactId>
+            <artifactId>core-process</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-git</artifactId>
+            <artifactId>core-git</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-gh</artifactId>
+            <artifactId>core-gh</artifactId>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-askpass</artifactId>
+            <artifactId>core-askpass</artifactId>
         </dependency>
         <dependency>
             <groupId>io.vavr</groupId>
@@ -93,37 +93,37 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-state</artifactId>
+            <artifactId>kernel-state</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-ui</artifactId>
+            <artifactId>kernel-ui</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-branches</artifactId>
+            <artifactId>features-branches</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-github</artifactId>
+            <artifactId>features-github</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-git</artifactId>
+            <artifactId>core-git</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-gh</artifactId>
+            <artifactId>core-gh</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
