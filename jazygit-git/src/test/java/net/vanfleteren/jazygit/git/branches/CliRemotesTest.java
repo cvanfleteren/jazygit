@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +15,8 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.process.GitCommand;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -86,6 +89,58 @@ class CliRemotesTest {
 
         assertEquals(2, asked.get());
         assertEquals(java.util.List.of("receive-pack call 1", "upload-pack call 2"), Files.readAllLines(log));
+    }
+
+    /**
+     * ssh in batch mode skips a key that has a passphrase but is not in the agent, and the server then refuses it; git
+     * only adds that it could not read from the remote. The failure says what ssh refused.
+     */
+    @Test
+    void aKeyTheServerRefusesIsToldApartFromOtherFailures(@TempDir Path dir) throws Exception {
+        Path repo = behindFakeSsh(dir, "git@example.invalid: Permission denied (publickey).");
+        Option<GitError> refused =
+                Option.of(new GitError.SshKeyRefused("git@example.invalid: Permission denied (publickey)."));
+
+        assertEquals(
+                refused, failedWith(CliRemotes.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())));
+        assertEquals(
+                refused, failedWith(CliRemotes.run(repo, GitCommand.git("push", "origin", "main"), HashMap.empty())));
+        assertEquals(refused, failedWith(new CliRemotes(repo, HashMap::empty).pull()));
+    }
+
+    /**
+     * Only a refused key is told the user to add it to the agent; ssh failing otherwise is git's failure as it is.
+     */
+    @Test
+    void anotherSshFailureIsNoRefusedKey(@TempDir Path dir) throws Exception {
+        Path repo = behindFakeSsh(dir, "ssh: Could not resolve hostname example.invalid: Name or service not known");
+
+        assertTrue(failedWith(CliRemotes.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty()))
+                .exists(error -> error instanceof GitError.CommandFailed));
+        assertTrue(failedWith(new CliRemotes(repo, HashMap::empty).pull())
+                .exists(error -> error instanceof GitError.CommandFailed));
+    }
+
+    /**
+     * A repository whose {@code main} follows {@code origin/main}, on a remote reached through a fake ssh that prints
+     * {@code said} and fails.
+     */
+    private static Path behindFakeSsh(Path dir, String said) throws Exception {
+        Path repo = dir.resolve("repo");
+        Path ssh = dir.resolve("ssh.sh");
+        Files.writeString(ssh, "#!/bin/sh\necho '" + said + "' >&2\nexit 255\n");
+        Files.setPosixFilePermissions(ssh, PosixFilePermissions.fromString("rwxr-xr-x"));
+        run(dir, "git", "init", "-q", "-b", "main", repo.toString());
+        run(repo, "git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "first");
+        run(repo, "git", "remote", "add", "origin", "git@example.invalid:owner/repo.git");
+        run(repo, "git", "config", "core.sshCommand", ssh.toString());
+        run(repo, "git", "config", "branch.main.remote", "origin");
+        run(repo, "git", "config", "branch.main.merge", "refs/heads/main");
+        return repo;
+    }
+
+    private static Option<GitError> failedWith(Either<GitFailure, ?> result) {
+        return result.swap().map(GitFailure::error).toOption();
     }
 
     /**

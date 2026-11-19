@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.process.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.process.GitError.EditorExitedAtStart;
+import net.vanfleteren.jazygit.git.process.GitError.SshKeyRefused;
 import net.vanfleteren.jazygit.git.process.GitError.StashNotRestored;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
@@ -33,6 +34,14 @@ class ErrorTextTest {
                 "The editor \"claude\" exited with code 1 as it started. If it runs in the terminal, set"
                         + " terminal = true for it in the settings file.",
                 ErrorText.of(new EditorExitedAtStart("claude", 1)));
+    }
+
+    @Test
+    void aRefusedSshKeyQuotesSshAndPointsToTheAgent() {
+        String text = ErrorText.of(new SshKeyRefused("git@github.com: Permission denied (publickey)."));
+
+        assertTrue(text.startsWith("git@github.com: Permission denied (publickey). "));
+        assertTrue(text.contains("ssh-add"));
     }
 
     @Test
