@@ -452,8 +452,10 @@
                     <forkCount>${test.forks}</forkCount>
                     <reuseForks>true</reuseForks>
                     <!-- Tests run gh and git as fakes, which inherit the environment: a token exported in the shell
-                         would leak into what they report, and into which account gh uses. -->
-                    <excludedEnvironmentVariables>GH_TOKEN,GITHUB_TOKEN,GH_ENTERPRISE_TOKEN,GITHUB_ENTERPRISE_TOKEN</excludedEnvironmentVariables>
+                         would leak into what they report, and into which account gh uses. GIT_SSH_COMMAND goes
+                         before a repository's core.sshCommand, so one exported in the shell would skip the fake ssh
+                         a test configures. -->
+                    <excludedEnvironmentVariables>GH_TOKEN,GITHUB_TOKEN,GH_ENTERPRISE_TOKEN,GITHUB_ENTERPRISE_TOKEN,GIT_SSH_COMMAND</excludedEnvironmentVariables>
                 </configuration>
             </plugin>
             <!-- Mutation testing on demand only, it's no part of verify: mvn test-compile pitest:mutationCoverage -->
