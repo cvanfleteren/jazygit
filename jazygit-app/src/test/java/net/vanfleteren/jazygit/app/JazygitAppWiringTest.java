@@ -15,6 +15,7 @@ import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.vanfleteren.jazygit.branches.branch.stack.StackMsg;
@@ -106,7 +107,7 @@ class JazygitAppWiringTest {
     }
 
     @Test
-    void theFilesFollowTheHighlightedCommitAndFAndEscapeGoInAndBack() throws Exception {
+    void theFilesFollowTheHighlightedCommitAndEnterAndEscapeGoInAndBack() throws Exception {
         TestApp app = new TestApp();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
@@ -126,7 +127,7 @@ class JazygitAppWiringTest {
                             .exists(view -> view.followed() && view.of() instanceof Changes.OfCommit));
             assertEquals(CommitsPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
 
-            SettledPilot.of(testRunner, app.drawnAt::size).press('F');
+            SettledPilot.of(testRunner, app.drawnAt::size).press(KeyCode.ENTER);
             await(
                     () -> FilesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
                     "the files focused");
@@ -145,6 +146,90 @@ class JazygitAppWiringTest {
     }
 
     @Test
+    void theFilesEnterOpenedStayThroughOtherListsUntilEscapeInTheirList() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().preview().commitDetail().isDefined());
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            SettledPilot.of(testRunner, app.drawnAt::size).press(KeyCode.ENTER);
+            await(
+                    () -> FilesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
+                    "the files focused");
+            Changes opened = onRenderThread(
+                    testRunner,
+                    () -> app.model().repoView().files().commitFiles().get().of());
+
+            // The branches, whose checked-out branch follows the working tree, do not take their place (ADR 149).
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            SettledPilot.of(testRunner, app.drawnAt::size).pause();
+            SettledPilot.of(testRunner, app.drawnAt::size).pause();
+            assertEquals(
+                    Option.of(opened),
+                    onRenderThread(
+                            testRunner,
+                            () -> app.model().repoView().files().commitFiles().map(CommitFilesView::of)));
+
+            // Escape in the commits lets go: the branches take the files pane once they have the focus again.
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            SettledPilot.of(testRunner, app.drawnAt::size).press(KeyCode.ESCAPE);
+            awaitModel(
+                    testRunner, app, model -> model.repoView().files().locked().isEmpty());
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> !model.repoView()
+                            .files()
+                            .commitFiles()
+                            .map(CommitFilesView::of)
+                            .contains(opened));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void escapeInTheWorkingTreeTheLockedBranchesFollowGoesBackAndLetsGo() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+            awaitModel(testRunner, app, model -> AheadUpdate.main(model).isDefined());
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            // F on the main branch, the first listed, locks the files to the branches.
+            SettledPilot.of(testRunner, app.drawnAt::size).press('F');
+            awaitModel(
+                    testRunner, app, model -> model.repoView().files().locked().isDefined());
+
+            // Back on the main branch, checked out here, the branches follow the working tree, still locked.
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press(KeyCode.DOWN);
+            pilot.pause();
+            pilot.press(KeyCode.UP);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().files().commitFiles().isEmpty()
+                            && model.repoView().files().locked().isDefined());
+
+            SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
+            SettledPilot.of(testRunner, app.drawnAt::size).press(KeyCode.ESCAPE);
+
+            awaitModel(
+                    testRunner, app, model -> model.repoView().files().locked().isEmpty());
+            await(
+                    () -> BranchesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
+                    "the branches focused again");
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
     void backToTheListChosenFromTheHelpGoesBackAsEscapeDoes() throws Exception {
         TestApp app = new TestApp();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
@@ -154,7 +239,7 @@ class JazygitAppWiringTest {
                     app,
                     model -> model.repoView().preview().commitDetail().isDefined());
             SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
-            SettledPilot.of(testRunner, app.drawnAt::size).press('F');
+            SettledPilot.of(testRunner, app.drawnAt::size).press(KeyCode.ENTER);
             await(
                     () -> FilesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
                     "the files focused");

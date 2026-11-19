@@ -11,7 +11,8 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  */
 public final class CommitFilesAction {
 
-    private static final String KEY = "F";
+    // Enter opens the files, and locks the files pane to the list it was pressed in, until Escape (ADR 149).
+    private static final String KEY = Keymap.ENTER;
 
     public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> keys.add(
                     Scopes.COMMITS,

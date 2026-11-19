@@ -7,7 +7,10 @@ import io.vavr.control.Option;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
+import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
@@ -45,5 +48,17 @@ public final class PaneKeys {
             Option<K> selected, Option<? extends Preview<K, ?>> shown, Function<K, Msg> msg) {
         return selected.filter(key -> !shown.exists(preview -> preview.key().equals(key)))
                 .map(msg);
+    }
+
+    /**
+     * Whether the files pane of {@code model} is locked to the own list of the pane {@code pane}, which {@code Esc} in
+     * it lets go of (ADR 149): not to a divergence or the commits of a branch shown in its place, where {@code Esc}
+     * closes those.
+     */
+    public static boolean lockedTo(Model model, PaneId pane) {
+        return model.repoView()
+                .files()
+                .locked()
+                .exists(lock -> lock.pane().equals(pane) && lock.list() == FilesLock.In.LIST);
     }
 }

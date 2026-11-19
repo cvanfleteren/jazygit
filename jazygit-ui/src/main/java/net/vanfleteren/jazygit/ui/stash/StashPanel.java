@@ -32,23 +32,25 @@ public final class StashPanel {
 
     private final LoadableList<List<Stash>> list;
     private final Keymap keymap = Keymap.standard();
+    // Whether the files pane was locked to the stashes at the last render (ADR 149).
+    private boolean locked;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public StashPanel(Consumer<Msg> dispatch) {
-        this(dispatch, () -> {}, Theme.Highlights.DEFAULT);
+        this(dispatch, Theme.Highlights.DEFAULT);
     }
 
     /**
-     * @param openStash  called when Enter is pressed on a stash, to move focus to its changes
      * @param highlights how the highlighted stash is shown, also when the pane is not in use
      */
-    public StashPanel(Consumer<Msg> dispatch, Runnable openStash, Theme.Highlights highlights) {
+    public StashPanel(Consumer<Msg> dispatch, Theme.Highlights highlights) {
         list = new LoadableList<>(
                 Messages.get("panel.stash.title"), ID, LoadableList.Reselect.following(Stash::sha), highlights);
-        list.onKey(event -> event.isConfirm() && selectedStash().isDefined()
-                ? Option.of(openStash)
+        // Escape lets go of the files locked to the stashes, before it does anything else (ADR 149).
+        list.onKey(event -> locked && event.isCancel()
+                ? PaneKeys.sending(Option.of(new SelectionMsg.FilesUnlocked()), dispatch)
                 : PaneKeys.sending(keymap.handle(Scopes.STASH, event, selectedStash()), dispatch));
     }
 
@@ -71,6 +73,7 @@ public final class StashPanel {
      * @param inUse the left pane in use, whose highlighted row shows
      */
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
+        locked = PaneKeys.lockedTo(model, PANE);
         return list.render(
                 model.repo().stashes(),
                 stashes -> stashes.zipWithIndex((stash, index) -> LoadableList.Row.of(row(index, stash))),

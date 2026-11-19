@@ -51,6 +51,9 @@ class LocalBranchesList implements BranchesTabList {
     private final LoadableList<List<BranchNode>> list;
     private final Keymap keymap = Keymap.standard();
     private final Clock clock;
+    private final PaneId pane;
+    // Whether the files pane was locked to the branches at the last render (ADR 149).
+    private boolean locked;
     // The nodes the last render listed: built again on every render, and kept while they are the same, so the list
     // reselects only when they change.
     private Loadable<List<BranchNode>> nodes = Loadable.loading();
@@ -63,10 +66,13 @@ class LocalBranchesList implements BranchesTabList {
      */
     LocalBranchesList(String id, Consumer<Msg> dispatch, Clock clock, Theme.Highlights highlights) {
         this.clock = clock;
+        this.pane = new PaneId(id);
         list = new LoadableList<>(Messages.get("panel.branches.title"), id, LocalBranchesList::reselect, highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
-        list.onKey(event -> PaneKeys.sending(keys(event), dispatch));
+        // Escape lets go of the files locked to the branches, before it does anything else (ADR 149).
+        list.onKey(event -> PaneKeys.sending(
+                locked && event.isCancel() ? Option.of(new SelectionMsg.FilesUnlocked()) : keys(event), dispatch));
     }
 
     /**
@@ -298,6 +304,7 @@ class LocalBranchesList implements BranchesTabList {
 
     @Override
     public Panel render(Model model, boolean focused, boolean active, Line title) {
+        locked = PaneKeys.lockedTo(model, pane);
         Function<BranchRef, Option<String>> spinnerOf = BranchSegs.spinners(model, clock.instant());
         Loadable<List<BranchNode>> read = model.repo()
                 .branches()

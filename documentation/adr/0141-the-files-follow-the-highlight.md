@@ -108,3 +108,6 @@ directories collapsed, about 90 ms more by ADR 108's measure.
 - The changes of the working tree are not in sight while history is looked through.
 - The files of a pull request and all files of the main branch stay behind `F`: they cost the network, or a tree of
   the whole repository.
+
+Amended by ADR 149: Enter, or `F` on a branch, locks the files pane to its list until `Esc`, whichever pane has the
+focus; `Esc` in the files lets go of it.

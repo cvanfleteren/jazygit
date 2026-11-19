@@ -36,10 +36,9 @@ class DivergenceList {
     /**
      * @param id         the id of the pane the divergence is listed in
      * @param dispatch   receives the messages for the user's actions, on the render thread
-     * @param openCommit called when Enter is pressed on a commit, to move focus to its content
      * @param highlights how the highlighted commit is shown, also when the pane is not in use
      */
-    DivergenceList(String id, Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
+    DivergenceList(String id, Consumer<Msg> dispatch, Theme.Highlights highlights) {
         list = new LoadableList<>(
                 Messages.get("panel.divergence.title"),
                 id,
@@ -48,9 +47,7 @@ class DivergenceList {
                 highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
-        list.onKey(event -> event.isConfirm()
-                ? selectedCommit().map(commit -> openCommit)
-                : PaneKeys.sending(keymap.handle(Scopes.DIVERGENCE, event, selectedCommit()), dispatch));
+        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.DIVERGENCE, event, selectedCommit()), dispatch));
     }
 
     /**

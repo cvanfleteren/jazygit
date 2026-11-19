@@ -236,7 +236,7 @@ class JazygitAppFileStepTest {
                     app,
                     model -> model.repoView().preview().commitDetail().isDefined());
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
-            pilot.press('F');
+            pilot.press(KeyCode.ENTER);
             awaitModel(
                     testRunner,
                     app,
@@ -284,7 +284,7 @@ class JazygitAppFileStepTest {
                     app,
                     model -> model.repoView().preview().commitDetail().isDefined());
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
-            pilot.press('F');
+            pilot.press(KeyCode.ENTER);
             awaitModel(
                     testRunner,
                     app,

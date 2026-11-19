@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -43,6 +44,7 @@ import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.*;
 
@@ -164,15 +166,25 @@ public class JazygitApp extends ToolkitApp {
             // The focus is the app's, not the model's: it moves it into the command log itself (ADR 129).
             case CommandLogFocused() -> focus.moveToCommandLog();
             // Escape in the files of a commit is back to the list they were listed from, where they follow the
-            // highlight; the list says which files the pane lists then (ADR 141).
-            case CommitFilesMsg.Closed() -> {
+            // highlight; the list says which files the pane lists then (ADR 141). The model lets go of the lock that
+            // kept them to that list (ADR 149).
+            case CommitFilesMsg.Closed closed -> {
                 model().repoView().files().backTo().forEach(focus::moveTo);
-                requestRedraw();
+                session.dispatch(closed);
+            }
+            // Escape in the working tree the locked list follows lets go there too, back to that list (ADR 149);
+            // Escape in the list itself keeps the focus where it is.
+            case SelectionMsg.FilesUnlocked unlocked -> {
+                if (focus.focus().contains(Scopes.FILES.pane())) {
+                    model().repoView().files().backTo().forEach(focus::moveTo);
+                }
+                session.dispatch(unlocked);
             }
             // The help gives the focus back to the files as it closes, so the list takes it in the frame after.
-            case HelpMsg.Chosen(CommitFilesMsg.Closed()) -> {
+            case HelpMsg.Chosen(CommitFilesMsg.Closed closed) -> {
                 listAfterPopup = model().repoView().files().backTo();
                 session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
+                session.dispatch(closed);
             }
             // The help gives the focus back as it closes, so the log takes it in the frame after.
             case HelpMsg.Chosen(CommandLogFocused()) -> {

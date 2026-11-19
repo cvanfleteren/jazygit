@@ -18,15 +18,18 @@ import net.vanfleteren.jazygit.branches.branch.upstream.UpstreamMsg;
 import net.vanfleteren.jazygit.branches.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.branches.worktree.remove.RemoveWorktreeMsg;
 import net.vanfleteren.jazygit.branches.worktree.switchto.SwitchWorktreeMsg;
+import net.vanfleteren.jazygit.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -662,13 +665,8 @@ class BranchesPanelTest {
                                 new Divergence.Side(List.of(behind), 1))),
                         Option.none())))));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        java.util.List<String> opened = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(
-                dispatched::add,
-                tab -> {},
-                () -> opened.add("commit"),
-                java.time.Clock.systemUTC(),
-                Theme.Highlights.DEFAULT);
+        BranchesPanel panel =
+                new BranchesPanel(dispatched::add, tab -> {}, java.time.Clock.systemUTC(), Theme.Highlights.DEFAULT);
         java.util.List<Option<Msg>> highlighted = new java.util.ArrayList<>();
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(diverged, BranchesPanel.PANE))) {
@@ -701,8 +699,13 @@ class BranchesPanelTest {
                         Option.of(new SelectionMsg.DivergenceCommitSelected(new Sha("a2"))),
                         Option.of(new SelectionMsg.DivergenceCommitSelected(new Sha("b1")))),
                 highlighted);
-        assertEquals(java.util.List.of("commit"), opened);
-        assertEquals(java.util.List.of(new UpstreamMsg.DivergenceClosed(), new BranchesTabMsg.Switched(1)), dispatched);
+        // Enter opens the files of the highlighted commit (ADR 149).
+        assertEquals(
+                java.util.List.of(
+                        new CommitFilesMsg.Opened(new Changes.OfCommit(new Sha("b1")), BranchesPanel.PANE),
+                        new UpstreamMsg.DivergenceClosed(),
+                        new BranchesTabMsg.Switched(1)),
+                dispatched);
     }
 
     @Test
@@ -744,13 +747,8 @@ class BranchesPanelTest {
                         new Loadable.Loaded<>(Option.of(
                                 new Ahead(new Sha("a2"), base, List.of(newer), false, Option.of(older)))))))));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        java.util.List<String> opened = new java.util.ArrayList<>();
-        BranchesPanel sending = new BranchesPanel(
-                dispatched::add,
-                tab -> {},
-                () -> opened.add("commit"),
-                java.time.Clock.systemUTC(),
-                Theme.Highlights.DEFAULT);
+        BranchesPanel sending =
+                new BranchesPanel(dispatched::add, tab -> {}, java.time.Clock.systemUTC(), Theme.Highlights.DEFAULT);
         java.util.List<Option<Msg>> highlighted = new java.util.ArrayList<>();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> sending.render(open, BranchesPanel.PANE))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
@@ -776,9 +774,13 @@ class BranchesPanelTest {
                         Option.of(new SelectionMsg.BranchCommitSelected(new Sha("a2"))),
                         Option.of(new SelectionMsg.BranchCommitSelected(new Sha("a1")))),
                 highlighted);
-        // Enter moves the focus to the highlighted commit, and sends nothing.
-        assertEquals(java.util.List.of("commit"), opened);
-        assertEquals(java.util.List.of(new BranchCommitsMsg.Closed(), new BranchesTabMsg.Switched(1)), dispatched);
+        // Enter opens the files of the highlighted commit (ADR 149).
+        assertEquals(
+                java.util.List.of(
+                        new CommitFilesMsg.Opened(new Changes.OfCommit(new Sha("a1")), BranchesPanel.PANE),
+                        new BranchCommitsMsg.Closed(),
+                        new BranchesTabMsg.Switched(1)),
+                dispatched);
         assertFalse(BranchesPanel.showsSpinner(TestModels.busy(open, feature, PushCmd.PUSH)));
     }
 
@@ -797,7 +799,7 @@ class BranchesPanelTest {
         BranchRef feature = new BranchRef.Local(new BranchName("feature"));
         Commit copied = commit("a1", "Older");
         Model open = listing(feature, feature, List.of(commit("a2", "Ours"), copied));
-        BranchCommitsList list = new BranchCommitsList(BranchesPanel.ID, msg -> {}, () -> {}, Theme.Highlights.DEFAULT);
+        BranchCommitsList list = new BranchCommitsList(BranchesPanel.ID, msg -> {}, Theme.Highlights.DEFAULT);
 
         list.render(open, true, true);
         List<Option<String>> before =
@@ -893,5 +895,32 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).quit();
             return panel.selectionChange(after);
         }
+    }
+
+    @Test
+    void escapeLetsGoOfTheFilesLockedToTheBranchesOnly() throws Exception {
+        assertEquals(
+                List.of(new SelectionMsg.FilesUnlocked()), escapedInBranches(lockedTo(before, BranchesPanel.PANE)));
+        assertEquals(List.empty(), escapedInBranches(lockedTo(before, Scopes.COMMITS.pane())));
+    }
+
+    private static Model lockedTo(Model model, PaneId pane) {
+        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.lockedTo(pane, FilesLock.In.LIST)));
+    }
+
+    /**
+     * What Escape in the branches of {@code model}, with the focus, sends.
+     */
+    private static List<Msg> escapedInBranches(Model model) throws Exception {
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(sent::add, tab -> {});
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, BranchesPanel.PANE))) {
+            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).quit();
+        }
+        return List.ofAll(sent).filter(msg -> !(msg instanceof SelectionMsg.BranchSelected));
     }
 }

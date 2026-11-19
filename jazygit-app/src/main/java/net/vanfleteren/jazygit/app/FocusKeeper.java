@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
@@ -43,6 +44,8 @@ final class FocusKeeper {
     private Option<Focus> lastFocus = Option.none();
     // The files of a commit the last frame listed; when the model opens or closes them, the focus follows.
     private Option<CommitFilesView> shownFiles = Option.none();
+    // The lock of the files pane at the last frame, by its serial: a new one moves the focus into the files (ADR 149).
+    private Option<Integer> shownLock = Option.none();
     // The branch whose builds the last frame had open, and whether they are to take the focus once they show.
     private Option<BranchName> shownBuilds = Option.none();
     private boolean buildsToFocus = false;
@@ -149,18 +152,22 @@ final class FocusKeeper {
     }
 
     /**
-     * Moves the focus into the pane that lists the files of a commit or a stash once {@code F} opened them, but not
-     * when they follow the highlight (ADR 141), and back to the pane they were opened from once they are closed while
-     * that pane, or the diff it shows, has it (ADR 44).
+     * Moves the focus into the files pane each time Enter, or {@code F} on a branch, locks it to a list (ADR 149), but
+     * not as the files follow the highlight (ADR 141), and back to the pane the files of a commit were listed for once
+     * they are gone while the files pane, or the diff it shows, has it (ADR 44).
      */
     private void followCommitFiles(Model model) {
+        Option<Integer> lock = model.repoView().files().locked().map(FilesLock::serial);
+        if (!lock.equals(shownLock)) {
+            shownLock = lock;
+            lock.forEach(serial -> moveTo(Scopes.FILES.pane()));
+        }
         Option<CommitFilesView> files = model.repoView().files().commitFiles();
         if (files.map(FocusKeeper::opened).equals(shownFiles.map(FocusKeeper::opened))) {
             return;
         }
         Option<CommitFilesView> closed = shownFiles;
         shownFiles = files;
-        files.filter(opened -> !opened.followed()).forEach(opened -> moveTo(opened.listedIn()));
         if (files.isEmpty()) {
             closed.filter(view -> focus().exists(focus -> focus.equals(view.listedIn())
                             || contentPanel.paneOfArea(model, focus).contains(view.listedIn())))

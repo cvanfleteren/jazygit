@@ -71,6 +71,8 @@ public class FilesPanel {
     private boolean focused;
     // Whether the files of a commit the pane lists are counted in place of their tree, as there are many (ADR 141).
     private boolean held;
+    // Whether the pane was locked to a list at the last render, which Escape in the working tree lets go of (ADR 149).
+    private boolean locked;
     // All files of the working tree, as last merged, with the status and the paths they were merged from: merging
     // them again on every frame would cost tens of milliseconds in a repository of 100 000 files (ADR 108).
     private Option<Merged> merged = Option.none();
@@ -126,6 +128,11 @@ public class FilesPanel {
                 .forEach(tree -> tree.onKey(PaneKeys.whileFocused(
                         () -> focused,
                         event -> filtered(event, dispatch)
+                                // Locked, the working tree is what the list follows: Escape lets go there as in the
+                                // files of a commit, once the filter is cleared (ADR 149).
+                                .orElse(() -> locked && event.isCancel()
+                                        ? PaneKeys.sending(Option.of(new SelectionMsg.FilesUnlocked()), dispatch)
+                                        : Option.none())
                                 .orElse(() -> opensDiff(event, tree)
                                         ? Option.of(openDiff)
                                         : PaneKeys.sending(
@@ -534,6 +541,7 @@ public class FilesPanel {
                 .map(CommitFilesView::threads)
                 .getOrElse(List.empty()));
         filter = FileFilterUpdate.shown(model);
+        locked = model.repoView().files().locked().isDefined();
         Option<String> shown = FileFilter.shown(filter);
         return model.repoView()
                 .files()
@@ -555,7 +563,8 @@ public class FilesPanel {
                                                 "panel.commitFiles.titleFor", changesName(model, view.of())))
                                 + listedTitle(view.listed()).map(Messages::get).getOrElse("")
                                 + (view.allFiles() ? Messages.get("panel.files.all") : "")
-                                + filteredTitle(),
+                                + filteredTitle()
+                                + lockedTitle(model),
                         withLine(view.held()
                                 .map(count -> commitTree.render(
                                         new Held(view.of()),
@@ -572,7 +581,7 @@ public class FilesPanel {
                         view.held().isDefined()
                                 ? Option.none()
                                 : commitTreeOf(view).count(view.listedFiles())))
-                .orElse(() -> model.repoView().files().unlisted().map(none -> unlisted(none.why())))
+                .orElse(() -> model.repoView().files().unlisted().map(none -> unlisted(none.why(), lockedTitle(model))))
                 .getOrElse(() -> {
                     boolean all = model.repoView().files().shown().all();
                     Loadable<List<FileEntry>> files = workingFiles(model.repo(), all);
@@ -580,7 +589,8 @@ public class FilesPanel {
                     return Pane.bordered(
                             Messages.get("panel.files.title")
                                     + (all ? Messages.get("panel.files.all") : "")
-                                    + filteredTitle(),
+                                    + filteredTitle()
+                                    + lockedTitle(model),
                             withLine(tree.render(ID, files, active, FileTreeList.Placeholder.DEFAULT, shown)),
                             focused,
                             tree.selectedRow(),
@@ -589,16 +599,47 @@ public class FilesPanel {
     }
 
     /**
-     * The pane while the row highlighted in the pane with the focus has no files to list, saying why (ADR 141).
+     * What the title of the pane ends in while it is locked to a list: which list (ADR 149).
      */
-    private Panel unlisted(Unlisted why) {
+    private static String lockedTitle(Model model) {
+        return model.repoView()
+                .files()
+                .locked()
+                .map(lock -> Messages.get("panel.files.lockedTo", Messages.get(listTitle(lock))))
+                .getOrElse("");
+    }
+
+    /**
+     * The message key of the title of the list {@code lock} is to.
+     */
+    private static String listTitle(FilesLock lock) {
+        if (lock.pane().equals(Scopes.COMMITS.pane())) {
+            return "panel.commits.title";
+        }
+        if (lock.pane().equals(Scopes.STASH.pane())) {
+            return "panel.stash.title";
+        }
+        return switch (lock.list()) {
+            case LIST, OTHER_TAB -> "panel.branches.title";
+            case DIVERGENCE -> "panel.divergence.title";
+            case BRANCH_COMMITS -> "panel.branchCommits.title";
+        };
+    }
+
+    /**
+     * The pane while the row highlighted in the pane with the focus has no files to list, saying why (ADR 141), its
+     * title ending in {@code locked}, which says the list the pane is locked to.
+     */
+    private Panel unlisted(Unlisted why, String locked) {
         Loadable<List<CommitFile>> none = new Loadable.Loaded<>(List.empty());
         return Pane.bordered(
                 switch (why) {
-                    case Unlisted.NoBase(var branch) -> Messages.get("panel.commitFiles.titleFor", branch.value());
-                    case Unlisted.Stack() -> Messages.get("panel.files.title");
-                    case Unlisted.NotHere() -> Messages.get("panel.files.title");
-                },
+                            case Unlisted.NoBase(var branch) ->
+                                Messages.get("panel.commitFiles.titleFor", branch.value());
+                            case Unlisted.Stack() -> Messages.get("panel.files.title");
+                            case Unlisted.NotHere() -> Messages.get("panel.files.title");
+                        }
+                        + locked,
                 withLine(commitTree.render(
                         why,
                         none,

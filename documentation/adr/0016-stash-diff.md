@@ -35,3 +35,5 @@ for any pane without a preview of its own. To know what a stash holds, the user 
 - Each stash highlighted takes a git process, as each commit does. Nothing is kept: going back to a stash reads it
   again.
 - A stash cannot be applied file by file, nor its files looked at one at a time. That would be a view of its own.
+
+Amended by ADR 149: Enter on a stash locks the files pane to the stash and moves the focus into its files.
