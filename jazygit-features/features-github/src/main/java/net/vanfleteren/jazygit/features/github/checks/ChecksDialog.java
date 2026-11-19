@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.core.git.model.Branch;
 import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.BranchRef;
+import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.failed.FailedBuilds;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -405,16 +406,7 @@ public final class ChecksDialog implements PopupView {
     static Option<FailedBuild> failedBuild(ChecksPopup popup, Model model) {
         BranchName branch = switch (popup.branch()) {
             case BranchRef.Local(BranchName name) -> name;
-            // The local branch that follows it; else its name on the remote, which no worktree has checked out, rather
-            // than a local branch of the same name that may follow another remote, or none.
-            case BranchRef.Remote(var remote) ->
-                model.repo()
-                        .branches()
-                        .toOption()
-                        .flatMap(local -> local.find(
-                                candidate -> candidate.remoteUpstream().contains(remote)))
-                        .map(Branch::name)
-                        .getOrElse(() -> new BranchName(remote.shortName()));
+            case BranchRef.Remote(var remote) -> follower(model, remote);
         };
         return popup.checks()
                 .flatMap(read -> read.toOption())
@@ -423,6 +415,21 @@ public final class ChecksDialog implements PopupView {
                         read.repository(),
                         popup.checksRead(),
                         model.gitHub().pullRequest(popup.onGitHub())));
+    }
+
+    /**
+     * The local branch whose build the checks of {@code remote} are: of the local branches that follow it, the one named
+     * as it is, else the only one. Else its name on the remote, which no worktree has checked out, so the agent is not
+     * started on a guess: several follow it once branches are made from it, as {@code git switch -c feature
+     * origin/main}, until they are pushed; and a local branch of the same name may follow another remote.
+     */
+    private static BranchName follower(Model model, RemoteBranch remote) {
+        List<Branch> followers = model.repo().followers(remote);
+        return followers
+                .find(branch -> branch.name().equals(remote.branch()))
+                .orElse(() -> Option.when(followers.size() == 1, followers::head))
+                .map(Branch::name)
+                .getOrElse(() -> new BranchName(remote.shortName()));
     }
 
     /**

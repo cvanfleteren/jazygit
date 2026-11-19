@@ -704,6 +704,40 @@ class ChecksDialogTest {
     }
 
     @Test
+    void ofSeveralLocalBranchesThatFollowARemoteBranchTheOneNamedAsItIsTakenElseNone() {
+        RemoteBranch originMain = new RemoteBranch("origin", new BranchName("main"));
+        ChecksPopup popup = ChecksPopup.loading(new BranchRef.Remote(originMain), originMain, Instant.EPOCH)
+                .with(readOf(List.of(check("verify", Checks.FAILING, 300, Option.of(60)))));
+        // git switch -c feature origin/main makes feature follow origin/main too, until its first push -u.
+        Model named = TestModels.localBranchesRead(
+                        TestModels.loaded(), List.of(follower("aaa-feature", originMain), follower("main", originMain)))
+                .model();
+        Model unnamed = TestModels.localBranchesRead(
+                        TestModels.loaded(), List.of(follower("feature", originMain), follower("fix", originMain)))
+                .model();
+
+        assertEquals(
+                Option.of(new BranchName("main")),
+                ChecksDialog.failedBuild(popup, named).map(FailedBuild::branch));
+        assertEquals(
+                Option.of(new BranchName("origin/main")),
+                ChecksDialog.failedBuild(popup, unnamed).map(FailedBuild::branch));
+    }
+
+    private static Branch follower(String name, RemoteBranch upstream) {
+        return new Branch(
+                new BranchName(name),
+                false,
+                new Sha("1111"),
+                Instant.EPOCH,
+                Option.none(),
+                false,
+                false,
+                new Tracking.Tracks(new Upstream(new BranchRef.Remote(upstream), 0, 0)),
+                Option.none());
+    }
+
+    @Test
     void aKeyAnotherFeatureAddsToAFailedBuildActsOnTheFailedChecksAndIsInTheHint() throws Exception {
         java.util.List<FailedBuild> handed = new java.util.ArrayList<>();
         Keymap keymap = ChecksAction.KEYS
