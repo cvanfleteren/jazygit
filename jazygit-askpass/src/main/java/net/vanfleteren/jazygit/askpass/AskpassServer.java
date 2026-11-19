@@ -32,9 +32,10 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Lets ssh ask the user through jazygit (ADR 150). It listens on a Unix domain socket, in a directory of its own that
- * only the user can enter, from the start of the app until it stops; ssh runs jazygit as its {@code SSH_ASKPASS}, which
- * passes what ssh asks here. Each operation that talks to a remote gets a token of its own, which ties what ssh asks to
- * it, and which is retired once it ends.
+ * only the user can enter; ssh runs jazygit as its {@code SSH_ASKPASS}, which passes what ssh asks here. It starts
+ * listening only for the first operation that lets ssh ask, and stops when the app does, so a session that never talks
+ * to a remote leaves nothing behind (ADR 153). Each operation that talks to a remote gets a token of its own, which
+ * ties what ssh asks to it, and which is retired once it ends.
  */
 public final class AskpassServer implements SshAsking, AutoCloseable {
 
@@ -46,10 +47,9 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
     // What SSH_ASKPASS_PROMPT says when ssh only shows something while it waits, as for touching a security key.
     private static final String SHOWN_ONLY = "none";
 
-    private final Path directory;
-    private final Path socket;
-    private final Path helper;
-    private final ServerSocketChannel server;
+    // Where the directory of the socket is made, and what writes the helper ssh runs into it.
+    private final Path temporary;
+    private final Function<Path, Try<Path>> helper;
     // Whether an ssh command, as git runs it in its words, asks through jazygit; asked once per command.
     private final BiPredicate<Path, List<String>> asks;
     // The environment variables jazygit was started with.
@@ -60,48 +60,59 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
     private final SecureRandom random = new SecureRandom();
     // Who asks the user; nobody until the app is there.
     private volatile Asking user = Asking.NOBODY;
+    // What listens, once the first operation that lets ssh ask started it, or why it could not; guarded by this.
+    private Option<Try<Listening>> listening = Option.none();
+    // Whether the server stopped; guarded by this.
+    private boolean closed;
 
     private AskpassServer(
-            Path directory,
-            Path socket,
-            Path helper,
-            ServerSocketChannel server,
+            Path temporary,
+            Function<Path, Try<Path>> helper,
             BiPredicate<Path, List<String>> asks,
             Function<String, Option<String>> environment) {
-        this.directory = directory;
-        this.socket = socket;
+        this.temporary = temporary;
         this.helper = helper;
-        this.server = server;
         this.asks = asks;
         this.environment = environment;
     }
 
     /**
-     * Starts listening, in a new directory in {@code temporary}, with jazygit itself as the helper ssh runs: the native
-     * binary, or a launcher written into the directory that runs this {@code java} on this class path.
+     * A server that listens, once ssh may ask, in a new directory in {@code temporary}, with jazygit itself as the
+     * helper ssh runs: the native binary, or a launcher written into the directory that runs this {@code java} on
+     * this class path.
      */
-    public static Try<AskpassServer> start(Path temporary) {
-        return start(temporary, AskpassLauncher::of, OpenSsh::asks, name -> Option.of(System.getenv(name)));
+    public static AskpassServer in(Path temporary) {
+        return in(temporary, AskpassLauncher::of, OpenSsh::asks, name -> Option.of(System.getenv(name)));
     }
 
     /**
-     * Starts listening, in a new directory in {@code temporary}, with the helper {@code helper} gives for the
-     * directory, letting the ssh commands ask that {@code asks} says do, with jazygit started with the variables
-     * {@code environment} gives.
+     * A server that listens, once ssh may ask, in a new directory in {@code temporary}, with the helper {@code helper}
+     * gives for the directory, letting the ssh commands ask that {@code asks} says do, with jazygit started with the
+     * variables {@code environment} gives.
      */
-    static Try<AskpassServer> start(
+    static AskpassServer in(
             Path temporary,
             Function<Path, Try<Path>> helper,
             BiPredicate<Path, List<String>> asks,
             Function<String, Option<String>> environment) {
-        return Try.of(() -> Files.createTempDirectory(temporary, PREFIX, ownerOnly()))
-                .flatMap(directory -> listen(directory.resolve(SOCKET))
-                        .flatMap(server -> helper.apply(directory)
-                                .map(launcher -> new AskpassServer(
-                                        directory, directory.resolve(SOCKET), launcher, server, asks, environment))
-                                .onFailure(failed -> Try.run(server::close)))
-                        .onFailure(failed -> delete(directory)))
-                .peek(started -> Thread.ofVirtual().name("askpass").start(started::accept));
+        return new AskpassServer(temporary, helper, asks, environment);
+    }
+
+    /**
+     * What listens: started the first time it is asked for, and then the same until the server stops; a failure is
+     * kept, so that it is tried once. Once the server stopped, nothing listens again.
+     */
+    private synchronized Try<Listening> listening() {
+        if (closed) {
+            return Try.failure(new IllegalStateException("The askpass server stopped"));
+        }
+        if (listening.isEmpty()) {
+            listening = Option.of(Listening.start(temporary, helper)
+                    .peek(started -> Thread.ofVirtual().name("askpass").start(() -> accept(started.server())))
+                    .onFailure(failed ->
+                            LOG.debug("ssh cannot ask through jazygit: the socket could not be opened", failed)));
+        }
+        return listening.get();
     }
 
     /**
@@ -143,14 +154,17 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
                         .filter(program -> !program.isBlank())
                         .map(List::of))
                 .getOrElse(List.of("ssh"));
-        if (!asking.computeIfAbsent(ssh, command -> asks.test(directory, command))) {
+        Option<Listening> listens = Option.when(
+                        asking.computeIfAbsent(ssh, command -> asks.test(directory, command)), this::listening)
+                .flatMap(Try::toOption);
+        if (listens.isEmpty()) {
             return Asked.of(talk.apply(BatchSsh.environment(configured)));
         }
         String token = HexFormat.of().formatHex(bytes());
         Operation operation = new Operation();
         operations.put(token, operation);
         try {
-            return new Asked<>(talk.apply(environment(token, directory)), operation.cancelled());
+            return new Asked<>(talk.apply(environment(token, directory, listens.get())), operation.cancelled());
         } finally {
             operations.remove(token);
             operation.end().forEach(request -> user.withdraw(request));
@@ -164,19 +178,19 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
     }
 
     /**
-     * The variables that have ssh ask through jazygit, for the operation of {@code token} in {@code directory}. Git
-     * asks for what it asks itself, as a user name over https, through {@code GIT_ASKPASS}, else {@code core.askPass},
-     * else {@code SSH_ASKPASS}, which is now jazygit's helper: {@code GIT_ASKPASS} is set to what the user had in that
-     * order, and to nothing when they had none, which keeps git from asking.
+     * The variables that have ssh ask through jazygit, for the operation of {@code token} in {@code directory}, over
+     * what {@code listens}. Git asks for what it asks itself, as a user name over https, through {@code GIT_ASKPASS},
+     * else {@code core.askPass}, else {@code SSH_ASKPASS}, which is now jazygit's helper: {@code GIT_ASKPASS} is set to
+     * what the user had in that order, and to nothing when they had none, which keeps git from asking.
      */
-    Map<String, String> environment(String token, Path directory) {
+    private Map<String, String> environment(String token, Path directory, Listening listens) {
         return HashMap.of(
                 "SSH_ASKPASS",
-                helper.toString(),
+                listens.helper().toString(),
                 "SSH_ASKPASS_REQUIRE",
                 "force",
                 AskpassProtocol.VARIABLE,
-                new AskpassProtocol.Address(token, socket).variable(),
+                new AskpassProtocol.Address(token, listens.socket()).variable(),
                 "GIT_ASKPASS",
                 environment
                         .apply("GIT_ASKPASS")
@@ -186,9 +200,9 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
     }
 
     /**
-     * Takes the connections of the helpers, each on a thread of its own, until the server is closed.
+     * Takes the connections of the helpers to {@code server}, each on a thread of its own, until it is closed.
      */
-    private void accept() {
+    private void accept(ServerSocketChannel server) {
         while (server.isOpen()) {
             Try.of(server::accept)
                     .onSuccess(connection ->
@@ -249,15 +263,21 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
     }
 
     /**
-     * Stops listening: what is asked is withdrawn, and the socket and its directory are removed.
+     * Stops listening, if it did: what is asked is withdrawn, and the socket and its directory are removed. Nothing
+     * listens after.
      */
     @Override
     public void close() {
-        Try.run(server::close);
+        Option<Listening> stopped;
+        synchronized (this) {
+            closed = true;
+            stopped = listening.flatMap(Try::toOption);
+        }
+        stopped.forEach(started -> Try.run(started.server()::close));
         // The app may be gone already, and its render thread with it.
         List.ofAll(operations.values())
                 .forEach(operation -> operation.end().forEach(request -> Try.run(() -> user.withdraw(request))));
-        delete(directory);
+        stopped.forEach(started -> delete(started.directory()));
     }
 
     /**
@@ -272,10 +292,31 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
     }
 
     /**
-     * The socket's path, for the tests.
+     * The socket's path, once it listens, for the tests.
      */
-    Path socket() {
-        return socket;
+    synchronized Option<Path> socket() {
+        return listening.flatMap(Try::toOption).map(Listening::socket);
+    }
+
+    /**
+     * What listens: the socket, in a directory of its own, and the helper ssh runs, written into it if it is a
+     * launcher.
+     */
+    private record Listening(Path directory, Path socket, Path helper, ServerSocketChannel server) {
+
+        /**
+         * Listens in a new directory in {@code temporary}, with the helper {@code helper} gives for it; what was made
+         * is removed again when something fails.
+         */
+        static Try<Listening> start(Path temporary, Function<Path, Try<Path>> helper) {
+            return Try.of(() -> Files.createTempDirectory(temporary, PREFIX, ownerOnly()))
+                    .flatMap(directory -> listen(directory.resolve(SOCKET))
+                            .flatMap(server -> helper.apply(directory)
+                                    .map(launcher ->
+                                            new Listening(directory, directory.resolve(SOCKET), launcher, server))
+                                    .onFailure(failed -> Try.run(server::close)))
+                            .onFailure(failed -> delete(directory)));
+        }
     }
 
     /**

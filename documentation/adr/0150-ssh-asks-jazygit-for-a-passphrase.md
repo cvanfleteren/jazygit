@@ -131,3 +131,5 @@ Not:
 - A pasted newline is an Enter, which confirms the popup; what was pasted after it reaches the panels as keys.
 - A command blocked on the user holds the `io` thread and the remote refs guard: other operations, and fetches, wait
   for the answer.
+
+Amended by ADR 153: the socket opens for the first operation that lets ssh ask, not when jazygit starts.
