@@ -146,6 +146,11 @@ class BuildsQueryTest {
     }
 
     @Test
+    void theCallAsksForTheLinkOfEachCheckRun() {
+        assertTrue(BuildsQuery.QUERY.contains("detailsUrl"), BuildsQuery.QUERY);
+    }
+
+    @Test
     void theCallAsksForTheWorkflowFileAndIdOfTheSuites() {
         assertTrue(BuildsQuery.QUERY.contains(
                 "workflowRun { databaseId createdAt runAttempt event workflow { name id } file { path } }"));

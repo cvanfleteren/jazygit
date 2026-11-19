@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.gh.checks;
 import static net.vanfleteren.jazygit.core.gh.graphql.GitHubAnswers.VERIFY;
 import static net.vanfleteren.jazygit.core.gh.graphql.GitHubAnswers.VERIFY_PASSED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -42,6 +43,11 @@ class RecentChecksQueryTest {
 
         assertEquals("cvanfleteren/jazygit", recent.repository());
         assertEquals(List.of(VERIFY, VERIFY), recent.checks());
+    }
+
+    @Test
+    void theCallAsksForTheLinkOfEachCheckRun() {
+        assertTrue(RecentChecksQuery.QUERY.contains("detailsUrl"), RecentChecksQuery.QUERY);
     }
 
     @Test
