@@ -58,7 +58,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-          cache: maven
+
+      - name: Restore the Maven repository
+        uses: ./.github/actions/maven-cache
 
       # Each run keeps its build cache under a key of its own, and starts from the latest one with the same JDK and the
       # same git for the tests (flake.lock); see .mvn/maven-build-cache-config.xml.
@@ -102,7 +104,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-          cache: maven
+
+      - name: Restore the Maven repository
+        uses: ./.github/actions/maven-cache
 
       # A cache of its own, apart from the checks job's: a module this build restores was never checked, so the
       # checks job must not restore it in turn. Neither the git nor the ErrorProne exceptions matter to it.
@@ -164,7 +168,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-          cache: maven
+
+      - name: Restore the Maven repository
+        uses: ./.github/actions/maven-cache
 
       # As verify's, but a cache of its own: this build has ErrorProne and no tests, so it's the ErrorProne exceptions
       # rather than the git that start a new one.
