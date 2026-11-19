@@ -136,7 +136,7 @@ public class JazygitApp extends ToolkitApp {
 
     /**
      * The app as {@link #JazygitApp(Env, SettingsStore.Loaded, Option, StyleEngine)}, where ssh asks the user through
-     * {@code askpass}, if it listens, for what the user starts (ADR 150); {@code env} runs ssh through it already.
+     * {@code askpass}, if any, for what the user starts (ADR 150); {@code env} runs ssh through it already.
      */
     public JazygitApp(
             Env env,

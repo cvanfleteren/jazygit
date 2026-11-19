@@ -25,7 +25,7 @@ class AskpassChainTest {
     @Test
     void sshGetsWhatTheUserTyped(@TempDir Path dir) throws Exception {
         Path repo = behindFakeSsh(dir);
-        try (AskpassServer server = AskpassServer.start(dir).get()) {
+        try (AskpassServer server = AskpassServer.in(dir)) {
             server.answeredBy(new Answering("s3cret"));
 
             GitFailure failure =
