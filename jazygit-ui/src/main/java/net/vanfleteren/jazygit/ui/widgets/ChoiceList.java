@@ -86,9 +86,7 @@ public final class ChoiceList<P extends Popup> {
                 .sorted();
         Require.that(shared.isEmpty(), () -> "The options of " + id + " share the letters " + shared.mkString(", "));
         Require.that(
-                columnsWidth.isEmpty()
-                        || !(filterable
-                                || choices.exists(choice -> choice.heading().isDefined())),
+                !(columnsWidth.isDefined() && headedOrFiltered(filterable, choices)),
                 () -> "The options of " + id + " are in two columns, which have no headings nor a filter");
         this.id = id;
         this.choices = choices;
@@ -97,6 +95,11 @@ public final class ChoiceList<P extends Popup> {
         this.filterable = filterable;
         this.columnsWidth = columnsWidth;
         this.list = list().id(id).focusable().highlightSymbol("");
+    }
+
+    // What two columns cannot show: a filter, or an option with a heading.
+    private static boolean headedOrFiltered(boolean filterable, List<? extends Choice<?>> choices) {
+        return filterable || choices.exists(choice -> choice.heading().isDefined());
     }
 
     /**
