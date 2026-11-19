@@ -14,7 +14,8 @@ public final class ModelRules {
 
     /**
      * The data read from git and GitHub is plain values, with nothing that runs anything. jazygit-syntax, which lexes
-     * the code of a diff, is pure too.
+     * the code of a diff, is pure too, as is jazygit-base, which guards against a call that breaks what a method
+     * needs.
      */
     @ArchTest
     static final ArchRule modelsArePure = classes()
@@ -28,7 +29,8 @@ public final class ModelRules {
                     "lombok..",
                     "..jazygit.git.model..",
                     "..jazygit.gh.model..",
-                    "net.vanfleteren.jazygit.syntax..");
+                    "net.vanfleteren.jazygit.syntax..",
+                    "net.vanfleteren.jazygit.base..");
     /**
      * What git and GitHub report are values that never change.
      */

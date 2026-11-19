@@ -16,6 +16,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.base.Require;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
@@ -83,14 +84,12 @@ public final class ChoiceList<P extends Popup> {
                 .keySet()
                 .toList()
                 .sorted();
-        if (!shared.isEmpty()) {
-            throw new IllegalArgumentException("The options of " + id + " share the letters " + shared.mkString(", "));
-        }
-        if (columnsWidth.isDefined()
-                && (filterable || choices.exists(choice -> choice.heading().isDefined()))) {
-            throw new IllegalArgumentException(
-                    "The options of " + id + " are in two columns, which have no headings nor a filter");
-        }
+        Require.that(shared.isEmpty(), () -> "The options of " + id + " share the letters " + shared.mkString(", "));
+        Require.that(
+                columnsWidth.isEmpty()
+                        || !(filterable
+                                || choices.exists(choice -> choice.heading().isDefined())),
+                () -> "The options of " + id + " are in two columns, which have no headings nor a filter");
         this.id = id;
         this.choices = choices;
         this.onCancel = onCancel;
