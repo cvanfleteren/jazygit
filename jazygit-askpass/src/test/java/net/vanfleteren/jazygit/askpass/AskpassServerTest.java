@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -17,11 +18,13 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.process.SshAsking;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
  * ssh asking the user through jazygit (ADR 150): the helper, run in this process, passes what ssh asks over the socket
@@ -170,10 +173,54 @@ class AskpassServerTest {
         assertFalse(Files.exists(directory));
     }
 
+    /**
+     * With only {@code GIT_SSH} set, git runs that program as ssh: a plink, which knows nothing of
+     * {@code SSH_ASKPASS} and would ask on the terminal, keeps batch mode, and an OpenSSH asks.
+     */
+    @Test
+    void theSshOfGitSshIsTheOneAskedItsVersion() throws Exception {
+        Path plink = program("plink.sh", "echo 'plink: Release 0.81'");
+        Path openSsh = program("openssh.sh", "echo 'OpenSSH_9.6p1, OpenSSL 3.0.13' >&2");
+        Path repository = repository();
+
+        start(OpenSsh::asks, name -> name.equals("GIT_SSH") ? Option.of(plink.toString()) : Option.none());
+        assertFalse(server.asking(repository, variables -> variables).result().containsKey("SSH_ASKPASS"));
+        server.close();
+
+        start(OpenSsh::asks, name -> name.equals("GIT_SSH") ? Option.of(openSsh.toString()) : Option.none());
+        assertTrue(server.asking(repository, variables -> variables).result().containsKey("SSH_ASKPASS"));
+    }
+
     private void start(boolean asks) {
-        server = AskpassServer.start(temporary, directory -> Try.success(Path.of("/the/helper")), (d, ssh) -> asks)
+        start((d, ssh) -> asks, name -> Option.none());
+    }
+
+    private void start(BiPredicate<Path, List<String>> asks, Function<String, Option<String>> environment) {
+        server = AskpassServer.start(temporary, directory -> Try.success(Path.of("/the/helper")), asks, environment)
                 .get();
         server.answeredBy(user);
+    }
+
+    /**
+     * A program in the temporary directory that runs {@code script}.
+     */
+    private Path program(String name, String script) throws Exception {
+        Path program = temporary.resolve(name);
+        Files.writeString(program, "#!/bin/sh\n" + script + "\n");
+        Files.setPosixFilePermissions(program, PosixFilePermissions.fromString("rwx------"));
+        return program;
+    }
+
+    /**
+     * A repository with no ssh command configured, so that git runs the {@code GIT_SSH} the environment gives.
+     */
+    private Path repository() throws Exception {
+        Path repository = temporary.resolve("repo");
+        new ProcessExecutor()
+                .command("git", "init", "-q", repository.toString())
+                .exitValueNormal()
+                .execute();
+        return repository;
     }
 
     /**

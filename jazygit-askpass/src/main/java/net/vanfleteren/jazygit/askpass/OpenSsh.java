@@ -25,11 +25,11 @@ final class OpenSsh {
     private OpenSsh() {}
 
     /**
-     * Whether {@code ssh}, a command as git runs it, asks through jazygit: it is asked its version, in
+     * Whether {@code ssh}, the words of a command as git runs it, asks through jazygit: it is asked its version, in
      * {@code directory}.
      */
-    static boolean asks(Path directory, String ssh) {
-        return Exec.printed(directory, words(ssh).append("-V"), HashMap.empty(), TIMEOUT)
+    static boolean asks(Path directory, List<String> ssh) {
+        return Exec.printed(directory, ssh.append("-V"), HashMap.empty(), TIMEOUT)
                 .map(OpenSsh::asks)
                 .getOrElse(false);
     }

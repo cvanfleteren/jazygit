@@ -24,8 +24,15 @@ public enum BatchSsh implements SshAsking {
      * runs plain {@code ssh}, or the configuration cannot be read.
      */
     public static Option<String> configured(Path worktree) {
-        return CliRemotes.configuredSsh(worktree, Option.of(System.getenv("GIT_SSH_COMMAND")))
-                .getOrElse(Option.none());
+        return configured(worktree, Option.of(System.getenv("GIT_SSH_COMMAND")));
+    }
+
+    /**
+     * The ssh command git runs in {@code worktree}, as {@link #configured(Path)} says, with {@code GIT_SSH_COMMAND} set
+     * to {@code environment}, if at all.
+     */
+    public static Option<String> configured(Path worktree, Option<String> environment) {
+        return CliRemotes.configuredSsh(worktree, environment).getOrElse(Option.none());
     }
 
     /**

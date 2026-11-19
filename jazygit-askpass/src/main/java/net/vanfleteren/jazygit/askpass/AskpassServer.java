@@ -49,9 +49,11 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
     private final Path socket;
     private final Path helper;
     private final ServerSocketChannel server;
-    // Whether an ssh command, as git runs it, asks through jazygit; asked once per command.
-    private final BiPredicate<Path, String> asks;
-    private final ConcurrentMap<String, Boolean> asking = new ConcurrentHashMap<>();
+    // Whether an ssh command, as git runs it in its words, asks through jazygit; asked once per command.
+    private final BiPredicate<Path, List<String>> asks;
+    // The environment variables jazygit was started with.
+    private final Function<String, Option<String>> environment;
+    private final ConcurrentMap<List<String>, Boolean> asking = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Operation> operations = new ConcurrentHashMap<>();
     private final AtomicLong requests = new AtomicLong();
     private final SecureRandom random = new SecureRandom();
@@ -59,12 +61,18 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
     private volatile Asking user = Asking.NOBODY;
 
     private AskpassServer(
-            Path directory, Path socket, Path helper, ServerSocketChannel server, BiPredicate<Path, String> asks) {
+            Path directory,
+            Path socket,
+            Path helper,
+            ServerSocketChannel server,
+            BiPredicate<Path, List<String>> asks,
+            Function<String, Option<String>> environment) {
         this.directory = directory;
         this.socket = socket;
         this.helper = helper;
         this.server = server;
         this.asks = asks;
+        this.environment = environment;
     }
 
     /**
@@ -72,19 +80,24 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
      * binary, or a launcher written into the directory that runs this {@code java} on this class path.
      */
     public static Try<AskpassServer> start(Path temporary) {
-        return start(temporary, AskpassLauncher::of, OpenSsh::asks);
+        return start(temporary, AskpassLauncher::of, OpenSsh::asks, name -> Option.of(System.getenv(name)));
     }
 
     /**
      * Starts listening, in a new directory in {@code temporary}, with the helper {@code helper} gives for the
-     * directory, letting the ssh commands ask that {@code asks} says do.
+     * directory, letting the ssh commands ask that {@code asks} says do, with jazygit started with the variables
+     * {@code environment} gives.
      */
-    static Try<AskpassServer> start(Path temporary, Function<Path, Try<Path>> helper, BiPredicate<Path, String> asks) {
+    static Try<AskpassServer> start(
+            Path temporary,
+            Function<Path, Try<Path>> helper,
+            BiPredicate<Path, List<String>> asks,
+            Function<String, Option<String>> environment) {
         return Try.of(() -> Files.createTempDirectory(temporary, PREFIX, ownerOnly()))
                 .flatMap(directory -> listen(directory.resolve(SOCKET))
                         .flatMap(server -> helper.apply(directory)
-                                .map(launcher ->
-                                        new AskpassServer(directory, directory.resolve(SOCKET), launcher, server, asks))
+                                .map(launcher -> new AskpassServer(
+                                        directory, directory.resolve(SOCKET), launcher, server, asks, environment))
                                 .onFailure(failed -> Try.run(server::close)))
                         .onFailure(failed -> delete(directory)))
                 .peek(started -> Thread.ofVirtual().name("askpass").start(started::accept));
@@ -119,8 +132,16 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
 
     @Override
     public <T> Asked<T> asking(Path directory, Function<Map<String, String>, T> talk) {
-        Option<String> configured = BatchSsh.configured(directory);
-        String ssh = configured.getOrElse("ssh");
+        Option<String> configured = BatchSsh.configured(directory, environment.apply("GIT_SSH_COMMAND"));
+        // As git picks it: GIT_SSH_COMMAND or core.sshCommand, as words a shell splits; else GIT_SSH, one program;
+        // else ssh.
+        List<String> ssh = configured
+                .map(OpenSsh::words)
+                .orElse(() -> environment
+                        .apply("GIT_SSH")
+                        .filter(program -> !program.isBlank())
+                        .map(List::of))
+                .getOrElse(List.of("ssh"));
         if (!asking.computeIfAbsent(ssh, command -> asks.test(directory, command))) {
             return Asked.of(talk.apply(BatchSsh.environment(configured)));
         }
@@ -155,7 +176,7 @@ public final class AskpassServer implements SshAsking, AutoCloseable {
                 AskpassProtocol.VARIABLE,
                 new AskpassProtocol.Address(token, socket).variable(),
                 "GIT_ASKPASS",
-                Option.of(System.getenv("GIT_ASKPASS")).getOrElse(""));
+                environment.apply("GIT_ASKPASS").getOrElse(""));
     }
 
     /**

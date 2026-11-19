@@ -52,8 +52,8 @@ class OpenSshTest {
                 ssh, "#!/bin/sh\n[ \"$1 $2 $3\" = \"-F my-config -V\" ] && echo 'OpenSSH_9.6p1, OpenSSL 3.0' >&2\n");
         Files.setPosixFilePermissions(ssh, PosixFilePermissions.fromString("rwx------"));
 
-        assertTrue(OpenSsh.asks(dir, ssh + " -F my-config"));
-        assertFalse(OpenSsh.asks(dir, ssh.toString()));
-        assertFalse(OpenSsh.asks(dir, dir.resolve("missing").toString()));
+        assertTrue(OpenSsh.asks(dir, OpenSsh.words(ssh + " -F my-config")));
+        assertFalse(OpenSsh.asks(dir, List.of(ssh.toString())));
+        assertFalse(OpenSsh.asks(dir, List.of(dir.resolve("missing").toString())));
     }
 }
