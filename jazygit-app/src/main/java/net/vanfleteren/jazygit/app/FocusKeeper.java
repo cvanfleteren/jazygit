@@ -6,11 +6,12 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.content.ContentPanel;
-import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
@@ -18,13 +19,13 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.preferences.Screen;
-import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.FilesLock;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
-import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.content.ContentArea;
+import net.vanfleteren.jazygit.ui.content.ContentSources;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
@@ -46,9 +47,9 @@ final class FocusKeeper {
     private Option<CommitFilesView> shownFiles = Option.none();
     // The lock of the files pane at the last frame, by its serial: a new one moves the focus into the files (ADR 149).
     private Option<Integer> shownLock = Option.none();
-    // The branch whose builds the last frame had open, and whether they are to take the focus once they show.
-    private Option<BranchName> shownBuilds = Option.none();
-    private boolean buildsToFocus = false;
+    // Of each area that takes the focus for what is opened in it, what the last frame had open, and whether the area is
+    // to take the focus once it shows it (ADR 155).
+    private Map<AreaId, OpenedArea> opened = HashMap.empty();
 
     /**
      * @param runner        the runner of the app, once it is started
@@ -72,7 +73,7 @@ final class FocusKeeper {
      * What has the focus; none before the first frame.
      */
     Option<Focus> focus() {
-        return Option.of(manager().focusedId()).map(id -> focusOf(id, popups::owns));
+        return Option.of(manager().focusedId()).map(id -> focusOf(id, popups::owns, contentPanel.sources()));
     }
 
     /**
@@ -103,7 +104,7 @@ final class FocusKeeper {
             moveToPaneOf(model);
         }
         followCommitFiles(model);
-        followBuilds(model);
+        contentPanel.sources().areas().forEach(area -> followOpened(model, area));
         leaveCollapsedColumn(model);
         // An area that no longer shows gives the focus to the one that took its place, not to the first pane.
         focus().flatMap(focus -> contentPanel.replacing(model, focus)).forEach(this::moveTo);
@@ -113,28 +114,27 @@ final class FocusKeeper {
     }
 
     /**
-     * Moves the focus from the branches into the builds of a branch once they show, after {@code B} opened them, and
-     * back to the branches once they are closed while they have it (ADR 131).
+     * Moves the focus from the pane of {@code area} into it once it shows what was opened in it, as the builds of a
+     * branch after {@code B} (ADR 131), and back to the pane once that is closed while the area has it (ADR 155).
      */
-    private void followBuilds(Model model) {
-        Option<BranchName> builds = model.repoView().branches().builds().map(BuildsView::branch);
-        if (!builds.equals(shownBuilds)) {
-            if (builds.isEmpty() && focus().contains(AreaId.BUILDS)) {
-                moveTo(BranchesPanel.PANE);
-            }
-            buildsToFocus = builds.isDefined();
-            shownBuilds = builds;
+    private void followOpened(Model model, ContentArea area) {
+        Option<?> now = area.opened(model);
+        OpenedArea before = opened.get(area.id()).getOrElse(OpenedArea.NOTHING);
+        if (now.isEmpty() && before.equals(OpenedArea.NOTHING)) {
+            return;
         }
-        // The area takes the focus only once a frame drew it: until then, the next frame tries again.
-        if (buildsToFocus && contentPanel.areaOfPane(model, BranchesPanel.PANE).contains(AreaId.BUILDS)) {
-            if (focus().contains(BranchesPanel.PANE)) {
-                moveTo(AreaId.BUILDS);
-            }
-            buildsToFocus = focus().contains(BranchesPanel.PANE);
-            if (buildsToFocus) {
-                requestRedraw.run();
-            }
+        PaneId pane = area.pane(model);
+        OpenedArea.Following following = OpenedArea.follow(
+                before, now, focus(), () -> contentPanel.areaOfPane(model, pane).contains(area.id()), area.id(), pane);
+        following.move().forEach(this::moveTo);
+        OpenedArea next = following.next();
+        // TamboUI moves the focus into the area only once a frame drew its element: until then, the next frame tries
+        // again.
+        if (following.move().contains(area.id()) && focus().contains(pane)) {
+            next = next.waiting();
+            requestRedraw.run();
         }
+        opened = opened.put(area.id(), next);
     }
 
     /**
@@ -285,13 +285,14 @@ final class FocusKeeper {
     /**
      * What the element {@code id}, which TamboUI says has the focus, is: an element of a popup, which
      * {@code ownedByPopup} tells, or the command log (ADR 129), aside from the panes and the content panel; an area of
-     * the content panel; or else a pane. This is the one place a TamboUI id is read as a focus.
+     * the content panel, which one of {@code sources} declares; or else a pane. This is the one place a TamboUI id is
+     * read as a focus.
      */
-    static Focus focusOf(String id, Predicate<String> ownedByPopup) {
+    static Focus focusOf(String id, Predicate<String> ownedByPopup, ContentSources sources) {
         if (ownedByPopup.test(id) || CommandLogPanel.ID.equals(id)) {
             return new Focus.Aside(id);
         }
-        return ContentPanel.areaWithId(id).<Focus>map(area -> area).getOrElse(() -> new PaneId(id));
+        return sources.focusable(id).<Focus>map(ContentArea::id).getOrElse(() -> new PaneId(id));
     }
 
     /**

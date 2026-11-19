@@ -116,7 +116,11 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
 - **What the content panel shows comes from sources**: a `ui.content.ContentSource` says what it shows next to a pane,
   if it is its to show, and declares the areas it shows it in. `ContentView` asks the sources of the features, in the
   order of `Features.ALL`, then the content panel's own (`PanelSources`), and shows what the first that answers gives
-  (ADR 154). The app gives them as a service, `ContentSources.standard()`, as it gives the keymap.
+  (ADR 154). The app gives them as a service, `ContentSources.standard()`, as it gives the keymap, and hands them
+  to the `ContentPanel` it builds; a test hands it its own.
+- **A kind of content keeps its own keys, scroll value and focus**: a body can handle keys of its own, content that is
+  no diff is a `ScrolledContent.Other` of its source, and an area says what is opened in it, which takes the focus from
+  its pane (ADR 155). Nothing in `jazygit-content` asks which kind of `Other` a value is (`ContentArchitectureTest`).
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys` or a dialog runs git or gh. `ui.text.ErrorText` is the

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui.content;
 
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.state.Msg;
@@ -50,6 +51,14 @@ public interface Body {
      */
     default Keymap.Scope<DiffCursorAt> cursorKeys() {
         return Scopes.DIFF;
+    }
+
+    /**
+     * What {@code event} does to the area that shows this, past the keys of its cursor, if it has keys of its own, as
+     * the builds of a branch show another workflow (ADR 131). None for most bodies, whose keys are their cursor's.
+     */
+    default Option<Msg> key(KeyEvent event, KeyContext context) {
+        return Option.none();
     }
 
     /**

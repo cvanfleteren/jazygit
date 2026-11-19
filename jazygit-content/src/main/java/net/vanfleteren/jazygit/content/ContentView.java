@@ -57,13 +57,13 @@ public final class ContentView {
     }
 
     /**
-     * What the content panel shows next to the pane that has the focus, {@code focus}, as far as a step of {@code J}
-     * or {@code K} past a file the diff filters hide all of needs it (ADR 144): what each area shows, and how much of
-     * the changes they show the filters hide: all of them, not all, or {@link Hidden#NO_DIFF} when no area or not
-     * every area shows a diff.
+     * What the content panel shows next to the pane that has the focus, {@code focus}, from {@code sources}, as far
+     * as a step of {@code J} or {@code K} past a file the diff filters hide all of needs it (ADR 144): what each area
+     * shows, and how much of the changes they show the filters hide: all of them, not all, or {@link Hidden#NO_DIFF}
+     * when no area or not every area shows a diff.
      */
-    public static Filtered filtered(Model model, Option<Focus> focus) {
-        List<Shown.Area> areas = of(model, focus).areas();
+    static Filtered filtered(Model model, Option<Focus> focus, ContentSources sources) {
+        List<Shown.Area> areas = of(model, focus, sources).areas();
         List<Option<ShownDiff>> diffs =
                 areas.map(area -> area.body().changesShown().map(ShownChanges::diff));
         return new Filtered(areas.map(Shown.Area::content), hidden(diffs));

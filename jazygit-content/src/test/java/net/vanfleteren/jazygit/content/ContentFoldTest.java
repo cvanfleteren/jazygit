@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.ui.content.Mirrored;
 import net.vanfleteren.jazygit.ui.content.Shown;
 import net.vanfleteren.jazygit.ui.content.Tone;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -65,6 +66,20 @@ class ContentFoldTest {
                 ContentView.of(MODEL, Option.of(BranchesPanel.PANE), new ContentSources(List.empty())));
     }
 
+    /**
+     * A content panel given its sources has the areas they declare, and none of the app's, so a feature's tests can
+     * draw it with its own source only.
+     */
+    @Test
+    void aContentPanelHasTheAreasOfTheSourcesItIsGiven() {
+        ContentPanel panel = new ContentPanel(
+                new ContentSources(List.of(new InArea())), Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
+
+        assertEquals(Option.of(MINE.id()), panel.areaOfPane(MODEL, BranchesPanel.PANE));
+        assertEquals(Option.of(BranchesPanel.PANE), panel.paneOfArea(MODEL, MINE.id()));
+        assertEquals(Option.none(), panel.paneOfArea(MODEL, AreaId.LOG));
+    }
+
     private static Shown said(Mirrored pane) {
         return new Shown.Message("mine", pane.name(), Tone.DIM);
     }
@@ -77,6 +92,24 @@ class ContentFoldTest {
         @Override
         public Option<Shown> shown(Model model, Mirrored mirrored) {
             return Option.when(mirrored == pane, () -> said(mirrored));
+        }
+
+        @Override
+        public List<ContentArea> areas() {
+            return List.of(MINE);
+        }
+    }
+
+    /**
+     * A source that shows a note in its area next to the branches.
+     */
+    private record InArea() implements ContentSource {
+
+        @Override
+        public Option<Shown> shown(Model model, Mirrored mirrored) {
+            return Option.when(
+                    mirrored == Mirrored.BRANCHES,
+                    () -> new Shown.Area(MINE, "mine", new FileNote.Note("mine"), new NoteBody("mine", Tone.DIM)));
         }
 
         @Override

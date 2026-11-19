@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.content;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AreaId;
@@ -24,9 +25,11 @@ import net.vanfleteren.jazygit.ui.i18n.Messages;
 record BuildsSource() implements ContentSource {
 
     /**
-     * The builds of the branch highlighted in the branches pane, in place of its log (ADR 131).
+     * The builds of the branch highlighted in the branches pane, in place of its log (ADR 131), which take the focus
+     * from the branches once they show after {@code B} opened them.
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.BUILDS, BranchesPanel.PANE);
+    static final ContentArea AREA = ContentArea.of(AreaId.BUILDS, BranchesPanel.PANE)
+            .opening(model -> model.repoView().branches().builds().map(BuildsView::branch));
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
@@ -60,8 +63,8 @@ record BuildsSource() implements ContentSource {
                 view.builds(),
                 _ -> view.onGitHub()
                         .map(remote -> view.shownOf()
-                                .<Shown>map(drawn -> new Shown.Area(
-                                        AREA, title, new ScrolledContent.Builds(view.branch()), new BuildsBody(drawn)))
+                                .<Shown>map(drawn ->
+                                        new Shown.Area(AREA, title, new Builds(view.branch()), new BuildsBody(drawn)))
                                 .getOrElse(() -> noBuilds(view, title, remote)))
                         .getOrElse(() -> Shows.dim(
                                 title,
@@ -123,6 +126,12 @@ record BuildsSource() implements ContentSource {
                         title, Messages.get("content.builds.none", remote.shortName(), String.valueOf(view.commits())));
         };
     }
+
+    /**
+     * The builds of the local branch {@code branch}, as an area keeps where it is scrolled to for them: while more are
+     * read, it stays (ADR 131).
+     */
+    record Builds(BranchName branch) implements ScrolledContent.Other {}
 
     /**
      * Why the content panel shows no builds of a branch that follows one on GitHub (ADR 131). Once any is read, a tab

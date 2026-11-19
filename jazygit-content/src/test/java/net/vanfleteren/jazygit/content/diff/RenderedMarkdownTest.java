@@ -87,18 +87,18 @@ class RenderedMarkdownTest {
     void frontMatterIsACodeBlockOfAsManyLines() {
         assertEquals(
                 Vector.of("```yaml", "title: x", "```", "text"),
-                RenderedMarkdown.withFrontMatter(Vector.of("---", "title: x", "---", "text")));
-        assertEquals(Vector.of("text", "---"), RenderedMarkdown.withFrontMatter(Vector.of("text", "---")));
+                MarkdownSource.withFrontMatter(Vector.of("---", "title: x", "---", "text")));
+        assertEquals(Vector.of("text", "---"), MarkdownSource.withFrontMatter(Vector.of("text", "---")));
     }
 
     @Test
     void aCommentOfHtmlIsLeftOutButItsLinesStay() {
         assertEquals(
                 Vector.of("a ", "", " b", "c"),
-                RenderedMarkdown.withoutComments(Vector.of("a <!-- one", "two", "three --> b", "c")));
+                MarkdownSource.withoutComments(Vector.of("a <!-- one", "two", "three --> b", "c")));
         assertEquals(
                 Vector.of("", "", "text"),
-                RenderedMarkdown.withoutComments(Vector.of("<!-- a block", "of comment -->", "text")));
+                MarkdownSource.withoutComments(Vector.of("<!-- a block", "of comment -->", "text")));
     }
 
     @Test
@@ -106,14 +106,14 @@ class RenderedMarkdownTest {
         Vector<String> code =
                 Vector.of("HTML comments (`<!-- -->`), taken out.", "", "```html", "<!-- kept -->", "```");
 
-        assertEquals(code, RenderedMarkdown.withoutComments(code));
+        assertEquals(code, MarkdownSource.withoutComments(code));
     }
 
     @Test
     void aRelativeLinkIsItsTextAndAnAbsoluteOneStays() {
         assertEquals(
                 "see the *guide* and [the site](https://example.com) or [mail](mailto:a@b.c), top",
-                RenderedMarkdown.withoutRelativeLinks(
+                MarkdownSource.withoutRelativeLinks(
                         "see [the *guide*](docs/guide.md) and [the site](https://example.com) or [mail](mailto:a@b.c),"
                                 + " [top](#top)"));
     }
