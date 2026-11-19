@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.kernel.state;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore;
@@ -7,6 +8,8 @@ import net.vanfleteren.jazygit.kernel.settings.CollapsedStore;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequestsStore;
+import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubAccount;
 
 /**
  * What a {@link Cmd} runs against: the repository through git, its GitHub repository through gh, where the
@@ -93,5 +96,14 @@ public record Env(
      */
     public Env withApp(Repositories repositories, Terminal terminal) {
         return new Env(git, gitHub, settings, recent, unseen, checkTimings, collapsed, repositories, terminal);
+    }
+
+    /**
+     * The account the repository is configured to use on its forge, for a program jazygit starts that may use the
+     * forge's own program, as an agent (ADR 162); none when none is configured, and that program runs as its active
+     * one, as jazygit does. It names no forge, so a feature that knows none can pass it on.
+     */
+    public Option<ForgeAccount> forgeAccount() {
+        return gitHub.account().configured().map(GitHubAccount::forge);
     }
 }

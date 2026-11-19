@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.agent.investigate;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.kernel.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.Tuple;
@@ -16,6 +17,7 @@ import net.vanfleteren.jazygit.kernel.settings.Agents;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
+import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import org.junit.jupiter.api.Test;
 
@@ -97,9 +99,7 @@ class InvestigateUpdateTest {
     void withOneAgentItStartsAtOnceInTheWorktreeThatHasTheBranch() {
         Next next = Update.update(model(List.of(CLAUDE)), new InvestigateMsg.Requested(failed(TAKEN)));
 
-        assertEquals(
-                List.of(new InvestigateCmd(CLAUDE, LINKED_PATH.toString(), Prompt.of(failed(TAKEN), Option.none()))),
-                next.cmds());
+        assertEquals(List.of(new InvestigateCmd(CLAUDE, LINKED_PATH.toString(), failed(TAKEN))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
 
@@ -117,10 +117,37 @@ class InvestigateUpdateTest {
 
         Next chosen = Update.update(offered.model(), new InvestigateMsg.Chosen(CODEX));
 
+        assertEquals(List.of(new InvestigateCmd(CODEX, MAIN_PATH.toString(), failed(MAIN_BRANCH))), chosen.cmds());
         assertEquals(
-                List.of(new InvestigateCmd(CODEX, MAIN_PATH.toString(), "Fix main: - verify (https://ci/401)")),
-                chosen.cmds());
+                "Fix main: - verify (https://ci/401)",
+                new InvestigateCmd(CODEX, MAIN_PATH.toString(), failed(MAIN_BRANCH)).prompt(Option.none()));
         assertEquals(Option.none(), chosen.model().popup());
+    }
+
+    private static final ForgeAccount ALICE = new ForgeAccount("alice", "github.com", "put X=1 before each gh command");
+
+    @Test
+    void jazygitsPromptTellsTheAgentWhichAccountToRunTheForgesProgramAsOutsideTheForgesData() {
+        String prompt = Prompt.of(failed(MAIN_BRANCH), Option.none(), Option.of(ALICE));
+
+        String told = "This repository uses the account alice on github.com, which may not be the active one of the"
+                + " forge's program: put X=1 before each gh command.";
+        assertTrue(prompt.contains(told), prompt);
+        assertTrue(prompt.indexOf(told) < prompt.indexOf("<forge-data>"), prompt);
+    }
+
+    @Test
+    void withoutAnAccountConfiguredThePromptSaysNothingOfOne() {
+        assertFalse(Prompt.of(failed(MAIN_BRANCH), Option.none(), Option.none()).contains("account"));
+    }
+
+    @Test
+    void aPromptOfTheUserHasTheAccountAsAPlaceholderEmptyWithoutOne() {
+        assertEquals(
+                "Fix. This repository uses the account alice on github.com, which may not be the active one of the"
+                        + " forge's program: put X=1 before each gh command.",
+                Prompt.of(failed(MAIN_BRANCH), Option.of("Fix. {account}"), Option.of(ALICE)));
+        assertEquals("Fix. ", Prompt.of(failed(MAIN_BRANCH), Option.of("Fix. {account}"), Option.none()));
     }
 
     @Test
@@ -185,7 +212,7 @@ class InvestigateUpdateTest {
         FailedBuild tip =
                 new FailedBuild(Option.of("o/r"), FEATURE, Option.none(), Option.none(), List.of(VERIFY), false, "");
 
-        String prompt = Prompt.of(tip, Option.none());
+        String prompt = Prompt.of(tip, Option.none(), Option.none());
 
         assertTrue(prompt.contains("may differ from what is checked out here"), prompt);
         assertTrue(prompt.contains("git log"), prompt);
@@ -201,7 +228,7 @@ class InvestigateUpdateTest {
 
     @Test
     void jazygitsPromptFencesWhatTheForgeGaveAndSaysTheCommitMayNotBeCheckedOut() {
-        String prompt = Prompt.of(failed(MAIN_BRANCH), Option.none());
+        String prompt = Prompt.of(failed(MAIN_BRANCH), Option.none(), Option.none());
 
         assertTrue(prompt.contains("branch main of o/r (pull request #12)"), prompt);
         assertTrue(prompt.contains("may differ from what is checked out here"), prompt);
@@ -218,6 +245,7 @@ class InvestigateUpdateTest {
 
         assertEquals(
                 "Fix feature in  at  (PR ) {\"x\": 1}",
-                Prompt.of(unknown, Option.of("Fix {branch} in {repo} at {commit} (PR {pr}) {\"x\": 1}")));
+                Prompt.of(
+                        unknown, Option.of("Fix {branch} in {repo} at {commit} (PR {pr}) {\"x\": 1}"), Option.none()));
     }
 }

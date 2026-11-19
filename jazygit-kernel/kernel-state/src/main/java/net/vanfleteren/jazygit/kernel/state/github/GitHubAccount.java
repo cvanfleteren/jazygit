@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.model.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
 
 /**
  * The gh account a repository is configured to use, kept in its own git configuration, so it stays with the
@@ -28,6 +29,23 @@ public final class GitHubAccount {
                 .getOrElse(Option.none())
                 .filter(user -> !user.isBlank())
                 .map(user -> new GhAccount(host(git), user));
+    }
+
+    /**
+     * {@code account} as a forge account, for a program jazygit starts, as an agent (ADR 162): how to run gh as it,
+     * each command with its token in the variables gh reads, as jazygit runs gh itself (see {@code GhToken}), so that
+     * no token is handed over and gh's active account stays as it is.
+     */
+    public static ForgeAccount forge(GhAccount account) {
+        String token = "\"$(gh auth token --user " + account.user() + " --hostname " + account.host() + ")\"";
+        String variables = GhAccount.isGitHubCom(account.host())
+                ? "GH_TOKEN=" + token
+                : "GH_ENTERPRISE_TOKEN=" + token + " GH_HOST=" + account.host();
+        return new ForgeAccount(
+                account.user(),
+                account.host(),
+                "put " + variables + " before each gh command, as in " + variables + " gh run view 401; never run gh"
+                        + " auth switch, which changes the account of every program");
     }
 
     /**

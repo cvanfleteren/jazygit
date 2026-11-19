@@ -4,10 +4,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
+import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.gh.process.GhToken;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -32,6 +37,30 @@ class CliAccountTest {
         assertEquals(
                 Either.left(new GhError.UnexpectedOutput("Usage: something else")),
                 CliAccount.parseVersion("Usage: something else"));
+    }
+
+    @Test
+    void theAccountConfiguredIsOnlyTheOneOfTheRepositoryNotGhsActiveOne() {
+        Path here = Path.of(".");
+        GhAccount alice = new GhAccount("github.com", "alice");
+        CliAccount configured = account(here, new GhToken(here, "gh", () -> Option.of(alice)));
+        CliAccount none = account(here, GhToken.NONE);
+
+        assertEquals(Option.of(alice), configured.configured());
+        assertEquals(Option.none(), none.configured());
+    }
+
+    private static CliAccount account(Path worktree, GhToken token) {
+        GhProcess process = new GhProcess(worktree, "gh", token);
+        return new CliAccount(
+                worktree,
+                process,
+                new GhProcess(worktree, "gh", GhToken.NONE),
+                token,
+                () -> "github.com",
+                account -> Option.none(),
+                variable -> Option.none(),
+                "Linux");
     }
 
     @Test
