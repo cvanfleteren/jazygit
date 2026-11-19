@@ -136,7 +136,8 @@ public final class ChecksUpdate {
         return model.popup(ChecksPopup.class)
                 .flatMap(popup -> popup.pickedCheck(model)
                         .flatMap(check -> NoLog.of(check)
-                                .map(why -> Next.of(model.openPopup(popup.withNoLog(why))))
+                                .map(why -> Next.of(
+                                        model.openPopup(popup.withPicked(check).withNoLogAsked())))
                                 .orElse(() -> check.run()
                                         .flatMap(run -> popup.repository()
                                                 .map(repository -> OperationUpdate.start(
@@ -148,7 +149,7 @@ public final class ChecksUpdate {
     /**
      * Once the log of a check was read: the commands are logged, and it opens as a file does (ADR 145): in git's editor
      * without an editor set to open files, at its start; else in the one set, or the one chosen in a menu of them, over
-     * the checks popup.
+     * the checks popup; in the first of them when another popup is over the checks, which the menu would take away.
      */
     private static Next logRead(Model model, CheckLogCmd cmd, String file, int line, List<ExecutedCommand> commands) {
         Model done = OperationUpdate.done(model, cmd, commands).clearError();
@@ -160,9 +161,12 @@ public final class ChecksUpdate {
             return OperationUpdate.start(done, new OpenFileCmd(editors.all().head(), file, line));
         }
         Option<ChecksPopup> checks = done.popup(ChecksPopup.class);
-        LogEditorPopup asking =
-                new LogEditorPopup(checks, done.listCursor(), cmd.name(), file, line, editors.lettered());
-        return Next.of(checks.isDefined() ? done.openPopup(asking) : done.openPopupIfFree(asking));
+        if (checks.isEmpty() && done.popup().isDefined()) {
+            // Another popup is over the checks, which the menu would take away: the first editor opens it.
+            return OperationUpdate.start(done, new OpenFileCmd(editors.all().head(), file, line));
+        }
+        return Next.of(done.openPopup(
+                new LogEditorPopup(checks, done.listCursor(), cmd.name(), file, line, editors.lettered())));
     }
 
     /**
@@ -238,6 +242,13 @@ public final class ChecksUpdate {
                                 .asked()
                                 .map(asked -> Next.of(told.openPopup(
                                         asking.over(asking.checks().withRerun(asked.answered(outcomes))))))))
+                // Under the menu of the editors to open a log in (ADR 160), likewise.
+                .orElse(() -> told.popup(LogEditorPopup.class)
+                        .flatMap(asking -> asking.checks()
+                                .filter(checks -> checks.onGitHub().equals(cmd.branch()))
+                                .flatMap(checks -> checks.asked()
+                                        .map(asked -> Next.of(told.openPopup(
+                                                asking.over(checks.withRerun(asked.answered(outcomes)))))))))
                 .getOrElse(() -> Next.of(told));
         return refused.size() < outcomes.size() ? BranchChecksUpdate.loadAnyway(answered) : answered;
     }

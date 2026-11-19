@@ -182,7 +182,7 @@ class CheckLogUpdateTest {
                 .forEach(expected -> {
                     Model model = update(shown(List.of(expected._1)), new ChecksMsg.LogRequested());
                     Next next = Update.update(shown(List.of(expected._1)), new ChecksMsg.LogRequested());
-                    assertEquals(Option.of(expected._2), checks(model).noLog(), expected._1.name());
+                    assertEquals(Option.of(expected._2), checks(model).noLog(model), expected._1.name());
                     assertEquals(List.empty(), next.cmds(), expected._1.name());
                 });
     }
@@ -194,7 +194,7 @@ class CheckLogUpdateTest {
                 new ChecksMsg.LogRequested(),
                 new ChecksMsg.Stepped(1));
 
-        assertEquals(Option.none(), checks(model).noLog());
+        assertEquals(Option.none(), checks(model).noLog(model));
     }
 
     @Test
@@ -270,5 +270,49 @@ class CheckLogUpdateTest {
         assertEquals(Option.of(checks(model)), chosen.model().popup(ChecksPopup.class));
         assertEquals(Option.of(checks(model)), cancelled.popup(ChecksPopup.class));
         assertEquals(Option.of("verify"), picked(cancelled));
+    }
+
+    @Test
+    void whyThereIsNoLogStaysWithTheCheckItIsAboutAndGoesOnceItHasOne() {
+        Check e2e = check("e2e", 2, "E2E", Checks.PENDING, "");
+        Check e2eDone = check("e2e", 2, "E2E", Checks.PASSING, "SUCCESS");
+        Model asked = update(shown(List.of(e2e, VERIFY)), new ChecksMsg.LogRequested());
+
+        // lint fails meanwhile, and is listed first.
+        Model failed = update(asked, new ChecksMsg.Loaded(FEATURE, read(List.of(e2e, VERIFY, LINT))));
+        Model done = update(failed, new ChecksMsg.Loaded(FEATURE, read(List.of(e2eDone, VERIFY, LINT))));
+
+        assertEquals(Option.of("e2e"), picked(failed));
+        assertEquals(Option.of(NoLog.NOT_DONE), checks(failed).noLog(failed));
+        assertEquals(Option.of("e2e"), picked(done));
+        assertEquals(Option.none(), checks(done).noLog(done));
+    }
+
+    @Test
+    void aRerunAnsweredWhileTheEditorsAreAskedForIsShownOnceBackToTheChecks() {
+        Model shown = shown(List.of(LINT, VERIFY), NVIM, CODE);
+        Next confirmed = Update.update(update(shown, new ChecksMsg.RerunRequested()), new ChecksMsg.RerunConfirmed());
+        RerunCmd rerun = (RerunCmd) confirmed.cmds().head();
+        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+
+        Model back = update(
+                confirmed.model(),
+                new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()),
+                new ChecksMsg.Rerun(
+                        rerun, rerun.runs().map(run -> new RerunCmd.Outcome(run, Option.none())), List.empty()),
+                new ChecksMsg.LogEditorCancelled());
+
+        assertTrue(checks(back).asked().get().outcomes().isDefined());
+    }
+
+    @Test
+    void ofMoreEditorsTheFirstOpensTheLogWhenAnotherPopupIsOverTheChecks() {
+        Model asking = update(shown(List.of(LINT, VERIFY), NVIM, CODE), new ChecksMsg.RerunRequested());
+        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+
+        Next next = Update.update(asking, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
+
+        assertEquals(List.of(new OpenFileCmd(NVIM, FILE.toString(), 3)), next.cmds());
+        assertTrue(next.model().popup(RerunPopup.class).isDefined());
     }
 }

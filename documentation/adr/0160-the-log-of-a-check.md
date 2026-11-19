@@ -47,8 +47,10 @@ of those.
   `~/Library/Caches/jazygit`; on Windows `%LOCALAPPDATA%\jazygit\cache`; `$JAZYGIT_CACHE_DIR` on all of them.
 - A log already kept is opened again without asking GitHub. Not yet: deleting old logs.
 - It opens as a file does (ADR 145): in git's editor while no editor is set to open files; else in the one set, or in
-  the one chosen from the menu, `Open <job>.log in`, over the checks popup, to which Escape goes back. It opens at the
-  first line with `##[error]`, else at the last line.
+  the one chosen from the menu, `Open the log of <check> in`, over the checks popup, to which Escape goes back. When
+  another popup is over the checks by the time the log is read, as the one asking to run failed checks again, the
+  first editor of the settings file opens it: the menu would take that popup away. It opens at the first line with
+  `##[error]`, else at the last line.
 - The popup stays open: a terminal editor hands the terminal back to it, another is left running.
 - Reading the log is an operation, *Download log* with the name of the check, in the background: the command log has
   the gh command, and opening it the editor's, with the file. One GitHub refuses, as of a log it no longer keeps, is
@@ -57,8 +59,9 @@ of those.
 ### When there is no log
 
 `e` stays in the hint. On a check without a log it says why in the popup, in the line above the checks, as `r` does
-with nothing to run again (ADR 135): it is queued or runs, as GitHub has its log once it is done; it was skipped; it is
-not of GitHub Actions.
+with nothing to run again (ADR 135), and picks that check, so that the line stays about it; it goes once another is
+picked, or once the check has a log. It says that the check is queued or runs, as GitHub has its log once it is done;
+that it was skipped; or that it is not of GitHub Actions.
 
 ## Not yet
 

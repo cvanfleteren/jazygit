@@ -750,7 +750,7 @@ class ChecksDialogTest {
     @Test
     void whyTheCheckPickedHasNoLogTakesTheLineAboveTheChecks() throws Exception {
         String screen = screen(read(List.of(check("verify", Checks.PENDING, 150, Option.none())))
-                .withNoLog(NoLog.NOT_DONE));
+                .withNoLogAsked());
 
         assertTrue(screen.contains("No log yet: GitHub has the log of a check once it is done"), screen);
     }

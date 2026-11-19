@@ -112,7 +112,7 @@ public final class ChecksDialog implements PopupView {
                                     first,
                                     times,
                                     popup.progress(model),
-                                    popup.noLog()
+                                    popup.noLog(model)
                                             .map(ChecksDialog::noLog)
                                             .orElse(() -> popup.rerun().map(ChecksDialog::rerun)),
                                     popup.pickedCheck(model),

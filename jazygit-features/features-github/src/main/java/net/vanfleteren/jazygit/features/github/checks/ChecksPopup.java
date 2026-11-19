@@ -36,8 +36,8 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
  *                      its details are read meanwhile
  * @param rerun         what it says of running failed checks again; nothing before {@code r} was pressed
  * @param picked        the check picked, as the user picked it; nothing to pick the first one listed
- * @param noLog         why the check picked has no log, once {@code e} was pressed on it; nothing since another was
- *                      picked
+ * @param noLogAsked    whether {@code e} was pressed on the check picked, so that it says why that has no log, while it
+ *                      has none; not since another was picked
  */
 public record ChecksPopup(
         BranchRef branch,
@@ -50,7 +50,7 @@ public record ChecksPopup(
         Option<PullRequestPopup> from,
         Option<RerunNote> rerun,
         Option<CheckPick> picked,
-        Option<NoLog> noLog)
+        boolean noLogAsked)
         implements Popup {
 
     /**
@@ -73,7 +73,7 @@ public record ChecksPopup(
                 Option.none(),
                 Option.none(),
                 Option.none(),
-                Option.none());
+                false);
     }
 
     /**
@@ -92,7 +92,7 @@ public record ChecksPopup(
                 Option.of(from),
                 Option.none(),
                 Option.none(),
-                Option.none());
+                false);
     }
 
     /**
@@ -110,7 +110,7 @@ public record ChecksPopup(
                 Option.of(dialog),
                 rerun,
                 picked,
-                noLog);
+                noLogAsked);
     }
 
     /**
@@ -128,7 +128,7 @@ public record ChecksPopup(
                 from,
                 Option.of(note),
                 picked,
-                Option.none());
+                false);
     }
 
     /**
@@ -146,15 +146,22 @@ public record ChecksPopup(
                 from,
                 rerun,
                 Option.of(CheckPick.of(check)),
-                Option.none());
+                false);
     }
 
     /**
-     * The popup saying why the check picked has no log, {@code why}.
+     * The popup saying why the check picked has no log, while it has none.
      */
-    public ChecksPopup withNoLog(NoLog why) {
+    public ChecksPopup withNoLogAsked() {
         return new ChecksPopup(
-                branch, onGitHub, checks, reading, refreshFailed, readAt, reached, from, rerun, picked, Option.of(why));
+                branch, onGitHub, checks, reading, refreshFailed, readAt, reached, from, rerun, picked, true);
+    }
+
+    /**
+     * Why the check picked in {@code model} has no log, once {@code e} was pressed on it; none while it has one.
+     */
+    public Option<NoLog> noLog(Model model) {
+        return noLogAsked ? pickedCheck(model).flatMap(NoLog::of) : Option.none();
     }
 
     /**
@@ -200,7 +207,7 @@ public record ChecksPopup(
                     from,
                     rerun,
                     picked,
-                    noLog);
+                    noLogAsked);
         }
         List<Check> checksRead =
                 read.map(pending -> pending.of(onGitHub.branch())).getOrElse(List.empty());
@@ -216,7 +223,7 @@ public record ChecksPopup(
                 // Why nothing was run again was of the checks before; what was asked to run again stays.
                 asked().<RerunNote>map(asked -> asked.reading(checksRead)),
                 picked,
-                noLog);
+                noLogAsked);
     }
 
     /**
@@ -258,7 +265,7 @@ public record ChecksPopup(
                 from,
                 rerun,
                 picked,
-                noLog);
+                noLogAsked);
     }
 
     /**
@@ -266,7 +273,7 @@ public record ChecksPopup(
      */
     public ChecksPopup readingAgain(Reading reading, Instant now) {
         return new ChecksPopup(
-                branch, onGitHub, checks, reading, refreshFailed, now, reached, from, rerun, picked, noLog);
+                branch, onGitHub, checks, reading, refreshFailed, now, reached, from, rerun, picked, noLogAsked);
     }
 
     /**
