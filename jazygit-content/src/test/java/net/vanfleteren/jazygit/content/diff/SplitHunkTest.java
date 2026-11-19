@@ -105,6 +105,16 @@ class SplitHunkTest {
     }
 
     @Test
+    void aRowAsWideAsTheAreaIsPinnedARowOfHalvesScrollsEachHalf() {
+        Drawn drawn = drawn(DIFF, AREA);
+
+        // The bar of the file has no halves, so it does not scroll sideways; a row of halves keeps no columns.
+        assertEquals(Drawn.PINNED, drawn.keptAt(0));
+        assertTrue(drawn.halvesOf(1).isDefined());
+        assertEquals(0, drawn.keptAt(1));
+    }
+
+    @Test
     void scrolledSidewaysEachHalfKeepsItsGutterAndMarksTheCodeCutOff() {
         String longer =
                 DIFF.replace("+    SPLIT", "+    SPLIT" + " is drawn with the old file beside the new one".repeat(2));
