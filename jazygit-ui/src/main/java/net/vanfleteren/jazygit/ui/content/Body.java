@@ -13,6 +13,9 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
  * What an area of the content panel shows, as it is styled: each kind of content draws itself, and says what sets it
  * apart from the others, so the content panel names none of them. An interface, not a sealed one, so a group of
  * features can add a kind of content of its own.
+ *
+ * <p>A body is a value, a record of values: two bodies that show the same are {@code equals}, as the content panel
+ * draws a body anew, and searches it again, only when it changes ({@code AppRules}).
  */
 public interface Body {
 
