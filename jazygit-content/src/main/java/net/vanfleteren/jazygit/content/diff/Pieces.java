@@ -29,7 +29,8 @@ final class Pieces {
         }
         String text = segments.map(Segment::text).mkString();
         // 0, then where each segment ends.
-        List<Integer> bounds = segments.scanLeft(0, (end, segment) -> end + segment.text().length());
+        List<Integer> bounds =
+                segments.scanLeft(0, (end, segment) -> end + segment.text().length());
         Vector<Integer> ends = bounds.tail().toVector();
         // A token often ends where the next starts: the same cut once, before they are sorted.
         List<Integer> cuts = bounds.appendAll(tokens.flatMap(token -> List.of(token.start(), token.end())))
