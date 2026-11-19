@@ -307,16 +307,17 @@ public final class PullRequestUpdate {
 
     /**
      * Whether the merge key of {@code method} does something to the pull request {@code popup} shows (ADR 112): it
-     * can be merged, and the key is not disabled by what GitHub says of it. Turning its auto-merge on or off waits
-     * while its branch is busy, as with doing that already.
+     * is not disabled by what GitHub says of it, and merging it now or when ready needs it to be mergeable. Turning
+     * its auto-merge off only needs it open, as GitHub leaves auto-merge on when a conflict appears. Turning auto-merge
+     * on or off waits while its branch is busy, as with doing that already.
      */
     static boolean mergeChoosable(Model model, PullRequestPopup popup, MergeMethod method) {
-        return mergeable(model, popup)
-                && popup.mergeKey(method).exists(key -> switch (key) {
-                    case MergeKey.Now() -> true;
-                    case MergeKey.WhenReady(), MergeKey.Cancel() -> !busy(model, popup);
-                    case MergeKey.Disabled(var _) -> false;
-                });
+        return popup.mergeKey(method).exists(key -> switch (key) {
+            case MergeKey.Now() -> mergeable(model, popup);
+            case MergeKey.WhenReady() -> mergeable(model, popup) && !busy(model, popup);
+            case MergeKey.Cancel() -> popup.open() && !busy(model, popup);
+            case MergeKey.Disabled(var _) -> false;
+        });
     }
 
     /**

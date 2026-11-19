@@ -127,6 +127,17 @@ class AutoMergeUpdateTest {
     }
 
     @Test
+    void autoMergeOnAPullRequestThatConflictsCanStillBeCancelled() {
+        PullRequestDetails on = details(new Merging(MergeState.DIRTY, true, Option.of(SQUASHING), false, true));
+        Model shown = showing(on.withStatus(on.status().withMergeable(PullRequestDetails.Mergeable.CONFLICTING)));
+
+        assertEquals(
+                List.of(new DisableAutoMerge(FEATURE, new PrNumber(42), "PR_42")),
+                TestModels.stepped(shown, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH))
+                        .cmds());
+    }
+
+    @Test
     void aBlockedPullRequestGitHubDoesNotLetBeMergedWhenReadyIsNotMerged() {
         Model shown = showing(details(new Merging(MergeState.BLOCKED, false, Option.none(), false, false)));
 
