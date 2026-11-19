@@ -56,6 +56,10 @@ What jazygit has to build on:
   - The characters are in a `char[]` the `Asking` service holds, outside the model, as a cursor is view state. The
     popup's input is an element of jazygit's own, which edits that buffer: TamboUI's text input keeps its text itself.
     A buffer that grows clears the array it leaves.
+  - A paste is taken, as a passphrase often comes from a password manager, but not as a `PasteEvent`, whose text is
+    a `String`. Bracketed paste is off while the popup is open, as it is when the terminal is handed over: the
+    terminal then sends a paste as keys, which the input takes as it takes typed ones. It goes on again when the
+    popup closes.
   - The buffer is a class, no record, whose `toString()` is `****`. It is cleared once it is written to the socket, on
     a cancel, and when jazygit quits. Encoding it, and the helper run that prints it for ssh, use byte arrays that are
     cleared after, no `String`.
@@ -98,5 +102,6 @@ Not:
 - Clearing only shortens how long the passphrase is in memory: each key still comes in as an event of the terminal
   backend, with its own buffers, and ssh holds it as it does on a terminal. The protection is that jazygit only sees it
   when the agent lacks the key, and drops it once ssh has it.
+- A pasted newline is an Enter, which confirms the popup; what was pasted after it reaches the panels as keys.
 - A command blocked on the user holds the `io` thread and the remote refs guard: other operations, and fetches, wait
   for the answer.
