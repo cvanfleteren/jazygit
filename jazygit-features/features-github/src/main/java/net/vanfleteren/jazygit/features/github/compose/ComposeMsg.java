@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.state.compose;
+package net.vanfleteren.jazygit.features.github.compose;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;

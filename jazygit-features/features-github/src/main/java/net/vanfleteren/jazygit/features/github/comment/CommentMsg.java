@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 
 /**
  * Commenting on the pull request that is shown: asking for it, and sending it. Writing the comment is a
- * {@link net.vanfleteren.jazygit.kernel.state.compose.ComposeMsg} (ADR 115).
+ * {@link net.vanfleteren.jazygit.features.github.compose.ComposeMsg} (ADR 115).
  */
 public sealed interface CommentMsg extends Msg {
 

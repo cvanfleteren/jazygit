@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.state.compose;
+package net.vanfleteren.jazygit.features.github.compose;
 
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.files.StubEditor;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.features.github.compose.ComposeCmd.OpenInEditor;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.AppError;
@@ -28,7 +29,6 @@ import net.vanfleteren.jazygit.kernel.state.Repositories;
 import net.vanfleteren.jazygit.kernel.state.Terminal;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.compose.ComposeCmd.OpenInEditor;
 import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.popup.ErrorPopup;

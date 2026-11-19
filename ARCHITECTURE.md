@@ -112,7 +112,7 @@ Each box is a module (the core's modules hold a few); the arrows are its depende
 it reaches through them. `lens` and `image` are below `settings` and `state`, and left out.
 
 - **Inside a module the parts have no cycles either**: the features of a group (`ChangesArchitectureTest`, ...), the
-  subpackages of `state` (`diff`, `view`, `load`, `github`, `operation`, `popup`, `compose`, `index`, `preferences`;
+  subpackages of `state` (`diff`, `view`, `load`, `github`, `operation`, `popup`, `index`, `preferences`;
   `state` itself uses them all, and they all use it, as the `Model` holds them), and those of `ui`.
 - **The subpackages of `ui` follow the panes**: the shell (`ui` itself: `LeftColumn`, the status and command log
   panels, `Feature`, `LeftPane`) → the panes (`branches`, `commits`: the rows of commits, `files`, `stash`,

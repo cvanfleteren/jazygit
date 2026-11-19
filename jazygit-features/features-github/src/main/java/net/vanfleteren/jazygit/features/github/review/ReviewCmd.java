@@ -8,12 +8,12 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.features.github.compose.EditorFile;
 import net.vanfleteren.jazygit.features.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.state.compose.EditorFile;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
 

@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 
 /**
  * Approving a pull request, or asking for changes (ADR 100): asking for it, choosing which, and sending it. Writing its
- * text is a {@link net.vanfleteren.jazygit.kernel.state.compose.ComposeMsg} (ADR 115).
+ * text is a {@link net.vanfleteren.jazygit.features.github.compose.ComposeMsg} (ADR 115).
  */
 public sealed interface VerdictMsg extends Msg {
 

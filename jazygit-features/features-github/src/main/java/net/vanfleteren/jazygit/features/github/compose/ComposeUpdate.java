@@ -1,10 +1,10 @@
-package net.vanfleteren.jazygit.kernel.state.compose;
+package net.vanfleteren.jazygit.features.github.compose;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.features.github.compose.ComposeCmd.OpenInEditor;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.compose.ComposeCmd.OpenInEditor;
 import net.vanfleteren.jazygit.kernel.state.operation.CommandLog;
 
 /**

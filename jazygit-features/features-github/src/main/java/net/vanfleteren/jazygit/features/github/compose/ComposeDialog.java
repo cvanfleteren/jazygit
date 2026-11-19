@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.github;
+package net.vanfleteren.jazygit.features.github.compose;
 
 import static dev.tamboui.toolkit.Toolkit.text;
 import static dev.tamboui.toolkit.Toolkit.textArea;
@@ -13,7 +13,6 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.state.compose.ComposeMsg;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -25,10 +24,10 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.SubmittableTextArea;
  * What the popups that write a comment on a pull request have alike (ADR 5, ADR 60): the lines the comment is about,
  * dimmed, a text area where Enter adds a line, Ctrl+S sends it, Ctrl+O opens it in the editor and Escape goes back,
  * and why sending it failed, under it. The comment lives in the {@link Model}, as a
- * {@link net.vanfleteren.jazygit.kernel.state.compose.ComposePopup}, which every change is sent to as a {@link ComposeMsg}
+ * {@link ComposePopup}, which every change is sent to as a {@link ComposeMsg}
  * (ADR 115); the text area only keeps where its cursor is.
  */
-public final class CommentComposer {
+public final class ComposeDialog {
 
     // With Ctrl held, sends the comment; Enter adds a line.
     private static final char CONFIRM_KEY = 's';
@@ -48,7 +47,7 @@ public final class CommentComposer {
      * @param id       the id of the text area
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
-    public CommentComposer(String id, Consumer<Msg> dispatch) {
+    public ComposeDialog(String id, Consumer<Msg> dispatch) {
         this.id = id;
         this.dispatch = dispatch;
     }
@@ -81,7 +80,7 @@ public final class CommentComposer {
             text.moveCursorToEnd();
         }
         // Without a title, the text area has no border of its own: the dialog's is enough.
-        TextAreaElement plain = textArea(text).placeholder(Messages.get("dialog.comment.placeholder"));
+        TextAreaElement plain = textArea(text).placeholder(Messages.get("github.dialog.comment.placeholder"));
         Element area = new SubmittableTextArea(
                         textTitle.map(plain::title).getOrElse(plain),
                         text,
@@ -92,7 +91,7 @@ public final class CommentComposer {
                 .onKeyEvent(this::keys);
         List<Element> about = quoted.size() > QUOTED
                 ? quoted.take(QUOTED).append("…").map(line -> about(line))
-                : quoted.map(CommentComposer::about);
+                : quoted.map(ComposeDialog::about);
         // The error of sending it, or of the editor; a new try clears it.
         List<Element> content = fields.appendAll(about)
                 .appendAll(notice.map(
@@ -153,6 +152,6 @@ public final class CommentComposer {
         /**
          * The hints of a comment.
          */
-        public static final Hints COMMENT = new Hints("dialog.comment.hint", "dialog.comment.sending");
+        public static final Hints COMMENT = new Hints("github.dialog.comment.hint", "github.dialog.comment.sending");
     }
 }
