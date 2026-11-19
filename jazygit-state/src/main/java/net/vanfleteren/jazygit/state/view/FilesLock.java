@@ -55,11 +55,17 @@ public record FilesLock(PaneId pane, In list, Option<Followed> at, int serial) {
         /**
          * The commits of a branch, in the branches pane (ADR 23).
          */
-        BRANCH_COMMITS;
+        BRANCH_COMMITS,
+        /**
+         * Another tab of the branches pane than the local branches: the remote branches or the worktrees, which a lock
+         * to the local branches does not hold in.
+         */
+        OTHER_TAB;
 
         /**
          * The list shown in {@code view} by the pane, {@code branches} when it is the branches pane, which shows a
-         * divergence or the commits of a branch in place of its branches; the others show their own list.
+         * divergence or the commits of a branch in place of its branches, or another tab; the others show their own
+         * list.
          */
         public static In of(RepoView view, boolean branches) {
             BranchesView shown = view.branches();
@@ -69,7 +75,10 @@ public record FilesLock(PaneId pane, In list, Option<Followed> at, int serial) {
             if (shown.divergence().isDefined() && shown.tab() == BranchesTab.LOCAL) {
                 return DIVERGENCE;
             }
-            return shown.branchCommits().isDefined() ? BRANCH_COMMITS : LIST;
+            if (shown.branchCommits().isDefined()) {
+                return BRANCH_COMMITS;
+            }
+            return shown.tab() == BranchesTab.LOCAL ? LIST : OTHER_TAB;
         }
     }
 }

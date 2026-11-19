@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.FilesLock;
@@ -210,6 +211,21 @@ class FollowedFilesTest {
         assertEquals(
                 Option.of(new SelectionMsg.FilesUnlocked()),
                 change(locked, Scopes.BRANCHES.pane(), new Followed.Files(BRANCH)));
+    }
+
+    @Test
+    void anotherTabOfTheBranchesLetsGoOfTheLockToTheBranches() {
+        // The remote branches do not list what F on a local branch locked the files to (ADR 149).
+        Model locked = lockedTo(
+                        listing(MODEL),
+                        Scopes.BRANCHES.pane(),
+                        FilesLock.In.LIST,
+                        Option.of(new Followed.Files(BRANCH)))
+                .mapRepoView(view -> view.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
+
+        assertEquals(
+                Option.of(new SelectionMsg.FilesUnlocked()),
+                change(locked, Scopes.BRANCHES.pane(), new Followed.WorkingTree()));
     }
 
     private static Model lockedTo(Model model, PaneId pane, FilesLock.In list, Option<Followed> at) {

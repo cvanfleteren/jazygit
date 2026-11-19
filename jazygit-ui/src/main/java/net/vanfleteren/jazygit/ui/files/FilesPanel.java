@@ -612,7 +612,7 @@ public class FilesPanel {
             return "panel.stash.title";
         }
         return switch (lock.list()) {
-            case LIST -> "panel.branches.title";
+            case LIST, OTHER_TAB -> "panel.branches.title";
             case DIVERGENCE -> "panel.divergence.title";
             case BRANCH_COMMITS -> "panel.branchCommits.title";
         };
