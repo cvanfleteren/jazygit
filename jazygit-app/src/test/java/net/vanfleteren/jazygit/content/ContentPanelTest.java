@@ -1015,7 +1015,7 @@ class ContentPanelTest {
         }));
 
         java.util.List<Line> windowed =
-                ContentText.windowed(lines, 1, 40, 10, 0, row -> false).lines();
+                TextWindow.windowed(lines, 1, 40, 10, 0, row -> false).lines();
 
         assertEquals(100, windowed.size());
         assertEquals(20, drawn.get());
@@ -1026,13 +1026,13 @@ class ContentPanelTest {
         assertEquals("", windowed.get(60).rawContent());
         // At the end, the lines an area twice as high would show from its last line at its bottom.
         java.util.List<Line> atEnd =
-                ContentText.windowed(lines, 0, 95, 10, 0, row -> false).lines();
+                TextWindow.windowed(lines, 0, 95, 10, 0, row -> false).lines();
         assertEquals("080", atEnd.get(80).rawContent());
         assertEquals("", atEnd.get(79).rawContent());
         // Before the area was ever drawn, none of them, though it still gets as many.
         int before = drawn.get();
         java.util.List<Line> undrawn =
-                ContentText.windowed(lines, 0, 50, 0, 0, row -> false).lines();
+                TextWindow.windowed(lines, 0, 50, 0, 0, row -> false).lines();
         assertEquals(100, undrawn.size());
         assertEquals("", undrawn.get(50).rawContent());
         assertEquals(before, drawn.get());
@@ -1045,11 +1045,11 @@ class ContentPanelTest {
 
         assertEquals(
                 Line.from(Span.raw(" 1 │ "), Span.styled("+ab", green), Span.styled("      ", green)),
-                ContentText.filled(changed, 14));
+                TextWindow.filled(changed, 14));
         // A line as wide already, and one that does not end in padding, are left as they are.
-        assertEquals(changed, ContentText.filled(changed, 9));
+        assertEquals(changed, TextWindow.filled(changed, 9));
         Line context = Line.from(Span.raw(" 1 │ "), Span.raw(" ab"));
-        assertEquals(context, ContentText.filled(context, 14));
+        assertEquals(context, TextWindow.filled(context, 14));
     }
 
     @Test
@@ -1060,7 +1060,7 @@ class ContentPanelTest {
                 Line.from(Span.raw("ab"), Span.styled(" ", green))));
 
         java.util.List<Line> windowed =
-                ContentText.windowed(lines, 1, 0, 10, 6, row -> row == 0).lines();
+                TextWindow.windowed(lines, 1, 0, 10, 6, row -> row == 0).lines();
 
         // Filled to the edge of the area where it is scrolled to, then cut sideways.
         assertEquals(Line.from(Span.raw("b"), Span.styled("     ", green)), windowed.get(0));
@@ -1424,16 +1424,16 @@ class ContentPanelTest {
         Style green = Style.EMPTY.fg(Color.GREEN);
         Line line = Line.from(Span.styled("ab", red), Span.styled("cd", blue), Span.styled("漢e", green));
 
-        assertEquals(line, ContentText.sideways(line, 0));
+        assertEquals(line, TextWindow.sideways(line, 0));
         assertEquals(
                 Line.from(Span.styled("b", red), Span.styled("cd", blue), Span.styled("漢e", green)),
-                ContentText.sideways(line, 1));
-        assertEquals(Line.from(Span.styled("cd", blue), Span.styled("漢e", green)), ContentText.sideways(line, 2));
-        assertEquals(Line.from(Span.styled("d", blue), Span.styled("漢e", green)), ContentText.sideways(line, 3));
+                TextWindow.sideways(line, 1));
+        assertEquals(Line.from(Span.styled("cd", blue), Span.styled("漢e", green)), TextWindow.sideways(line, 2));
+        assertEquals(Line.from(Span.styled("d", blue), Span.styled("漢e", green)), TextWindow.sideways(line, 3));
         // Through the wide character: a space for its column past the cut, in the style of its span.
-        assertEquals(Line.from(Span.styled(" e", green)), ContentText.sideways(line, 5));
-        assertEquals(Line.from(Span.styled("e", green)), ContentText.sideways(line, 6));
-        assertEquals(Line.from(java.util.List.of()), ContentText.sideways(line, 9));
+        assertEquals(Line.from(Span.styled(" e", green)), TextWindow.sideways(line, 5));
+        assertEquals(Line.from(Span.styled("e", green)), TextWindow.sideways(line, 6));
+        assertEquals(Line.from(java.util.List.of()), TextWindow.sideways(line, 9));
     }
 
     @Test
@@ -2435,7 +2435,7 @@ class ContentPanelTest {
                         "|     First detail",
                         "|     Second detail",
                         "| "),
-                ContentText.logLines(List.of(commit), ZoneId.of("Europe/Brussels")));
+                LogText.logLines(List.of(commit), ZoneId.of("Europe/Brussels")));
     }
 
     @Test
@@ -2443,7 +2443,7 @@ class ContentPanelTest {
         List<Commit> log = net.vanfleteren.jazygit.git.model.CommitGraph.arrange(
                 List.of(merge("m", "b", "f"), plain("f", "a"), plain("b", "a"), plain("a")));
 
-        List<String> lines = ContentText.logLines(log, ZoneOffset.UTC);
+        List<String> lines = LogText.logLines(log, ZoneOffset.UTC);
 
         assertTrue(lines.contains("*   commit m"));
         assertTrue(lines.contains("|\\  Merge: b f"));
@@ -2455,8 +2455,7 @@ class ContentPanelTest {
 
     @Test
     void logLinesShowTheParentsOfAMergeWhoseOtherParentIsNotListed() {
-        List<String> lines =
-                ContentText.logLines(List.of(merge("f2", "f1", "mm"), plain("f1", "base")), ZoneOffset.UTC);
+        List<String> lines = LogText.logLines(List.of(merge("f2", "f1", "mm"), plain("f1", "base")), ZoneOffset.UTC);
 
         assertEquals("| Merge: f1 mm", lines.get(lines.indexOf("* commit f2") + 1));
     }
@@ -2493,7 +2492,7 @@ class ContentPanelTest {
                         "| ",
                         "|     First",
                         "| "),
-                ContentText.logLines(commits, ZoneOffset.UTC));
+                LogText.logLines(commits, ZoneOffset.UTC));
     }
 
     @Test

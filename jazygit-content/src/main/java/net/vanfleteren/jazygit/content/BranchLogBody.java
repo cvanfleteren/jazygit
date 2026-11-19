@@ -14,7 +14,7 @@ record BranchLogBody(List<Commit> commits, AheadView ahead) implements Body {
 
     @Override
     public Drawn draw(DrawContext context) {
-        return Drawn.plain(List.ofAll(ContentText.logText(commits, context.zone(), ahead, context.styles())
+        return Drawn.plain(List.ofAll(LogText.logText(commits, context.zone(), ahead, context.styles())
                 .lines()));
     }
 }

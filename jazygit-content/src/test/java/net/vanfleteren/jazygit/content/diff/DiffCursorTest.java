@@ -9,7 +9,7 @@ import dev.tamboui.text.Span;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.content.ContentText;
+import net.vanfleteren.jazygit.content.TextWindow;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.state.diff.Anchor;
@@ -327,7 +327,7 @@ class DiffCursorTest {
         Line tinted = on(ONE, 4).tinted(text, tint).get(4);
 
         assertEquals("", List.ofAll(tinted.spans()).last().content());
-        Line filled = ContentText.filled(tinted, 12);
+        Line filled = TextWindow.filled(tinted, 12);
         assertEquals(12, filled.width());
         assertEquals(new Span("    ", tint), List.ofAll(filled.spans()).last());
     }

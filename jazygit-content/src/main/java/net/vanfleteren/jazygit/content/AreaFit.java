@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.content;
 
-import static net.vanfleteren.jazygit.content.ContentText.window;
-import static net.vanfleteren.jazygit.content.ContentText.windowed;
+import static net.vanfleteren.jazygit.content.TextWindow.window;
+import static net.vanfleteren.jazygit.content.TextWindow.windowed;
 
 import dev.tamboui.text.Text;
 import io.vavr.control.Option;
@@ -173,7 +173,7 @@ final class AreaFit {
         int furthest = Math.max(0, current.widest() - view.width());
         Columns columns = new Columns(Math.clamp(at.column(), 0, furthest), furthest);
         int row = shown.cursor().map(DiffCursor::row).getOrElse(at.row());
-        ContentText.Window window = window(current.lines().size(), row, view.height());
+        TextWindow.Window window = window(current.lines().size(), row, view.height());
         Rows kept = current.lines().keeping(window.top(), window.bottom());
         Rows tinted = shown.cursor()
                 .filter(ignored -> showing.focused())

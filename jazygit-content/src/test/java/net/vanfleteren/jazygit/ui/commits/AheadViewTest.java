@@ -11,7 +11,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.content.ContentText;
+import net.vanfleteren.jazygit.content.LogText;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -119,7 +119,7 @@ class AheadViewTest {
         AheadView ahead = new AheadView(Option.of(AHEAD), Option.none());
 
         java.util.List<Line> lines =
-                ContentText.logText(LOG, ZoneOffset.UTC, ahead, styles).lines();
+                LogText.logText(LOG, ZoneOffset.UTC, ahead, styles).lines();
 
         List<String> firstLines = List.ofAll(lines)
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
