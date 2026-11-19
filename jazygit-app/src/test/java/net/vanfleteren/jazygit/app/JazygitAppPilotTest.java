@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.content.ContentSources;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.stash.StashPanel;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -570,7 +571,8 @@ class JazygitAppPilotTest {
                 FocusManager focusManager = focusManagerRef.get();
                 Option<Focus> focus = focusManager == null
                         ? Option.none()
-                        : Option.of(focusManager.focusedId()).map(id -> FocusKeeper.focusOf(id, ignored -> false));
+                        : Option.of(focusManager.focusedId())
+                                .map(id -> FocusKeeper.focusOf(id, ignored -> false, ContentSources.standard()));
                 Option<PaneId> inUse = panes(focus);
                 Panel branchesPane = branches.render(model, focus, inUse);
                 branches.selectionChange(model).forEach(selections::add);

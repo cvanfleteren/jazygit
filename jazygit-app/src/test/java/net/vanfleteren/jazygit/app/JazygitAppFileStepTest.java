@@ -14,7 +14,6 @@ import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.content.ContentPanel;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.StubGit;
@@ -46,6 +45,7 @@ import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.state.view.UnchangedNode;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.content.ContentSources;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import org.junit.jupiter.api.Test;
 
@@ -136,7 +136,7 @@ class JazygitAppFileStepTest {
             pilot.press(KeyCode.RIGHT);
             pilot.pause();
             String area = onRenderThread(testRunner, () -> focusedId(testRunner));
-            assertTrue(ContentPanel.areaWithId(area).isDefined(), area);
+            assertTrue(ContentSources.standard().focusable(area).isDefined(), area);
             Option<List<String>> files = onRenderThread(testRunner, () -> shownFiles(app.model()));
 
             pilot.press('J');
@@ -497,7 +497,7 @@ class JazygitAppFileStepTest {
 
     private static void assertInContent(ToolkitTestRunner testRunner) throws Exception {
         String focused = onRenderThread(testRunner, () -> focusedId(testRunner));
-        assertTrue(ContentPanel.areaWithId(focused).isDefined(), focused);
+        assertTrue(ContentSources.standard().focusable(focused).isDefined(), focused);
     }
 
     private static Option<List<String>> shownFiles(Model model) {

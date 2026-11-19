@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.ui.theme.Theme;
  */
 public final class ContentPanel {
 
+    private final ContentSources sources;
     private final Theme.SpanStyles styles;
     // The scrollable areas the sources declare, by their ids. Where they are scrolled to lives in the model; the
     // elements are kept between renders as they also lay out the text for the scrollbar. Only used from the render
@@ -58,19 +59,40 @@ public final class ContentPanel {
      */
     public ContentPanel(
             Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
+        this(ContentSources.standard(), styles, leaveScrollArea, focus, dispatch);
+    }
+
+    /**
+     * @param sources what the content panel shows, and the areas it shows it in: the app gives
+     *                {@link ContentSources#standard()}, a test the sources it tests
+     */
+    public ContentPanel(
+            ContentSources sources,
+            Theme.SpanStyles styles,
+            BooleanSupplier leaveScrollArea,
+            Consumer<Focus> focus,
+            Consumer<Msg> dispatch) {
+        this.sources = sources;
         this.styles = styles;
-        areas = ContentSources.standard()
-                .areas()
+        areas = sources.areas()
                 .toLinkedMap(
                         ContentArea::id,
                         area -> new ScrollArea(area, AreaTool.standard(), leaveScrollArea, focus, dispatch));
     }
 
     /**
-     * The area of the content panel with id {@code id}, which can have the focus, if it is one rather than a pane.
+     * The sources of what this shows, which declare its areas.
      */
-    public static Option<AreaId> areaWithId(String id) {
-        return ContentSources.standard().focusable(id).map(ContentArea::id);
+    public ContentSources sources() {
+        return sources;
+    }
+
+    /**
+     * What this shows next to the pane that has the focus, {@code focus}, as far as a step of {@code J} or {@code K}
+     * past a file the diff filters hide all of needs it (ADR 144), as {@link ContentView#filtered} says.
+     */
+    public ContentView.Filtered filtered(Model model, Option<Focus> focus) {
+        return ContentView.filtered(model, focus, sources);
     }
 
     /**
@@ -78,9 +100,7 @@ public final class ContentPanel {
      * if that is an area: the pane whose highlighted row it shows.
      */
     public Option<PaneId> paneOfArea(Model model, Focus focus) {
-        return focus instanceof AreaId area
-                ? ContentSources.standard().area(area).map(shown -> shown.pane(model))
-                : Option.none();
+        return focus instanceof AreaId area ? sources.area(area).map(shown -> shown.pane(model)) : Option.none();
     }
 
     /**
@@ -108,8 +128,8 @@ public final class ContentPanel {
     /**
      * The areas that show what the pane {@code pane} has highlighted, top to bottom.
      */
-    private static List<ContentArea> shownOf(Model model, PaneId pane) {
-        return ContentView.of(model, pane)
+    private List<ContentArea> shownOf(Model model, PaneId pane) {
+        return ContentView.of(model, Option.of(pane), sources)
                 .areas()
                 .map(Shown.Area::area)
                 .filter(area -> area.pane(model).equals(pane));
@@ -129,7 +149,7 @@ public final class ContentPanel {
      */
     public StyledElement<?> render(Model model, Option<Focus> focus) {
         tabbableWhileIn(focus, model);
-        return column(element(ContentView.of(model, focus), model, focus));
+        return column(element(ContentView.of(model, focus, sources), model, focus));
     }
 
     /**

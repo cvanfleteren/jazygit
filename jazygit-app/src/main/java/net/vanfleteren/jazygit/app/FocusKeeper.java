@@ -25,6 +25,8 @@ import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.content.ContentArea;
+import net.vanfleteren.jazygit.ui.content.ContentSources;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
@@ -72,7 +74,7 @@ final class FocusKeeper {
      * What has the focus; none before the first frame.
      */
     Option<Focus> focus() {
-        return Option.of(manager().focusedId()).map(id -> focusOf(id, popups::owns));
+        return Option.of(manager().focusedId()).map(id -> focusOf(id, popups::owns, contentPanel.sources()));
     }
 
     /**
@@ -285,13 +287,14 @@ final class FocusKeeper {
     /**
      * What the element {@code id}, which TamboUI says has the focus, is: an element of a popup, which
      * {@code ownedByPopup} tells, or the command log (ADR 129), aside from the panes and the content panel; an area of
-     * the content panel; or else a pane. This is the one place a TamboUI id is read as a focus.
+     * the content panel, which one of {@code sources} declares; or else a pane. This is the one place a TamboUI id is
+     * read as a focus.
      */
-    static Focus focusOf(String id, Predicate<String> ownedByPopup) {
+    static Focus focusOf(String id, Predicate<String> ownedByPopup, ContentSources sources) {
         if (ownedByPopup.test(id) || CommandLogPanel.ID.equals(id)) {
             return new Focus.Aside(id);
         }
-        return ContentPanel.areaWithId(id).<Focus>map(area -> area).getOrElse(() -> new PaneId(id));
+        return sources.focusable(id).<Focus>map(ContentArea::id).getOrElse(() -> new PaneId(id));
     }
 
     /**

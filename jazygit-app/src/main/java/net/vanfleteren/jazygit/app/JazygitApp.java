@@ -46,6 +46,7 @@ import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.content.ContentSources;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
@@ -149,6 +150,7 @@ public class JazygitApp extends ToolkitApp {
         this.themeOverride = themeOverride;
         this.styleEngine = styleEngine;
         this.contentPanel = new ContentPanel(
+                ContentSources.standard(),
                 Theme.spanStyles(styleEngine),
                 this::leaveScrollArea,
                 area -> runner().focusManager().setFocus(area.id()),
@@ -235,7 +237,7 @@ public class JazygitApp extends ToolkitApp {
             return;
         }
         List<ScrolledContent> before =
-                ContentView.filtered(model, focus.focus()).contents();
+                contentPanel.filtered(model, focus.focus()).contents();
         if (leftColumn.stepFile(model, step)) {
             stepping = Option.when(
                     !model.preferences().diffFilters().active().isEmpty(), () -> new Stepping(step, before));
@@ -252,7 +254,7 @@ public class JazygitApp extends ToolkitApp {
      */
     private void stepPastFiltered(Model model, Option<Focus> focused) {
         stepping.forEach(step -> {
-            ContentView.Filtered shown = ContentView.filtered(model, focused);
+            ContentView.Filtered shown = contentPanel.filtered(model, focused);
             if (shown.contents().equals(step.from())) {
                 return;
             }
