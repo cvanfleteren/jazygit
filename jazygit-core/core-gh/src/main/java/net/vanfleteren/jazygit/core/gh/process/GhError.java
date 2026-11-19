@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.gh.process;
 
 import io.vavr.control.Option;
 import java.io.IOException;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 
 /**
@@ -85,4 +86,9 @@ public sealed interface GhError {
      * system whose desktop jazygit does not know (ADR 96).
      */
     record NoBrowser() implements GhError {}
+
+    /**
+     * What gh read could not be kept in, or read back from, the file {@code file}, as the log of a check (ADR 160).
+     */
+    record FileFailed(Path file, IOException cause) implements GhError {}
 }

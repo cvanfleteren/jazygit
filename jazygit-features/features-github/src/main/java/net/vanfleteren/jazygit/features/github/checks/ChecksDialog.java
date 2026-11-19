@@ -8,6 +8,8 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
@@ -38,6 +40,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
+import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.DialogFrame;
@@ -62,7 +65,10 @@ public final class ChecksDialog implements PopupView {
     // How wide the bar of each check is, after its name, while one is not done.
     private static final int CHECK_BAR = 24;
     // The checks listed at once; the others are scrolled to.
-    private static final int VISIBLE_CHECKS = 16;
+    private static final int VISIBLE_CHECKS = ChecksPopup.VISIBLE_CHECKS;
+    // What marks the check picked (ADR 160), and what stands in its place before the others.
+    private static final String PICKED = "▸ ";
+    private static final String UNPICKED = "  ";
     // The counts, when they started and ended, how far they are, a blank line and the checks. The dialog is always this
     // high, so it keeps its size when they arrive.
     private static final int CONTENT_HEIGHT = 1 + 1 + 1 + 1 + VISIBLE_CHECKS;
@@ -122,25 +128,29 @@ public final class ChecksDialog implements PopupView {
                                     first,
                                     times,
                                     popup.progress(model),
-                                    popup.rerun().map(ChecksDialog::rerun),
+                                    popup.noLog(model)
+                                            .map(ChecksDialog::noLog)
+                                            .orElse(() -> popup.rerun().map(ChecksDialog::rerun)),
+                                    popup.pickedCheck(model),
                                     model.now(),
                                     clock.getZone())))
                     .getOrElse(this::loading);
             int blanks = CONTENT_HEIGHT - lines.size();
             Option<FailedBuild> failed = failedBuild(popup, model);
+            List<Element> hint = hint();
             return DialogFrame.of(
                             title(popup, model.now()),
                             WIDTH,
                             lines.<Element>map(line -> line)
                                     .appendAll(List.fill(Math.max(0, blanks), () -> text("")))
                                     .append(text(""))
-                                    .append(hint())
+                                    .appendAll(hint)
                                     .toJavaArray(Element[]::new))
                     .id(ID)
                     .focusable()
                     .onKeyEvent(event -> keys(event, cursor, first, last, popup, failed))
                     // The lines, the blank line and the hint, plus the border.
-                    .length(CONTENT_HEIGHT + 2 + 2);
+                    .length(CONTENT_HEIGHT + 1 + hint.size() + 2);
         });
     }
 
@@ -202,21 +212,23 @@ public final class ChecksDialog implements PopupView {
     }
 
     /**
-     * The counts, when they started and ended, how far they are, {@code progress}, and the checks that fit from the
-     * {@code first} one shown.
+     * The counts, when they started and ended, how far they are, {@code progress}, what it says of the check picked or
+     * of running failed checks again, {@code note}, and the checks that fit from the {@code first} one shown, the one
+     * {@code picked} marked; a click on one picks it.
      */
-    private static List<StyledElement<?>> checks(
+    private List<StyledElement<?>> checks(
             List<Check> all,
             int first,
             Option<CheckTimes> times,
             double progress,
-            Option<StyledElement<?>> rerun,
+            Option<StyledElement<?>> note,
+            Option<Check> picked,
             Instant now,
             ZoneId zone) {
         if (all.isEmpty()) {
             return List.<StyledElement<?>>of(
                             text(Messages.get("github.dialog.checks.none")).addClass(Theme.Classes.DIM))
-                    .appendAll(rerun);
+                    .appendAll(note);
         }
         List<Check> ordered = CheckRows.order(all, all, times);
         // The bars of the checks only while one is not done; once they all are, their names get the room.
@@ -225,17 +237,47 @@ public final class ChecksDialog implements PopupView {
         int doingWidth = running
                 ? CheckRows.barredDoingWidth(ordered, all, times, now)
                 : CheckRows.doingWidth(ordered, all, times, now, true);
+        // The mark of the check picked takes its columns from each row.
+        int width = CONTENT_WIDTH - TextWidth.of(PICKED);
         return List.<StyledElement<?>>of(row(CheckRows.counts(all, times, now).toJavaArray(StyledElement[]::new)))
                 .appendAll(CheckSpan.of(all).map(span -> span(span, now, zone)))
                 .append(row(gauge(all, times, progress, now).toJavaArray(StyledElement[]::new)))
-                // What running failed checks again says takes the blank line above the checks.
-                .append(rerun.getOrElse(() -> text("")))
-                .appendAll(ordered.drop(first)
-                        .take(VISIBLE_CHECKS)
-                        .map(check -> row((running
-                                        ? CheckRows.barred(check, all, times, now, CONTENT_WIDTH, CHECK_BAR, doingWidth)
-                                        : CheckRows.filling(check, all, times, now, CONTENT_WIDTH, doingWidth, true))
-                                .toJavaArray(StyledElement[]::new))));
+                // What the check picked or running failed checks again says takes the blank line above the checks.
+                .append(note.getOrElse(() -> text("")))
+                .appendAll(ordered.drop(first).take(VISIBLE_CHECKS).map(check -> {
+                    List<StyledElement<?>> drawn = running
+                            ? CheckRows.barred(check, all, times, now, width, CHECK_BAR, doingWidth)
+                            : CheckRows.filling(check, all, times, now, width, doingWidth, true);
+                    boolean isPicked = picked.contains(check);
+                    List<StyledElement<?>> shown = isPicked ? CheckRows.picked(check, drawn) : drawn;
+                    StyledElement<?> mark = isPicked ? text(PICKED).addClass(Theme.Classes.BOLD) : text(UNPICKED);
+                    return row(shown.prepend(mark).toJavaArray(StyledElement[]::new))
+                            .onMouseEvent(event -> clicked(event, check));
+                }));
+    }
+
+    /**
+     * A left click on {@code check} picks it (ADR 160).
+     */
+    private EventResult clicked(MouseEvent event, Check check) {
+        if (event.kind() != MouseEventKind.PRESS || !event.isLeftButton()) {
+            return EventResult.UNHANDLED;
+        }
+        dispatch.accept(new ChecksMsg.Clicked(CheckPick.of(check)));
+        return EventResult.HANDLED;
+    }
+
+    /**
+     * Why the check picked has no log (ADR 160).
+     */
+    static StyledElement<?> noLog(NoLog why) {
+        return text(Messages.get(
+                        switch (why) {
+                            case NOT_DONE -> "github.dialog.checks.noLogNotDone";
+                            case SKIPPED -> "github.dialog.checks.noLogSkipped";
+                            case NOT_ACTIONS -> "github.dialog.checks.noLogNotActions";
+                        }))
+                .addClass(Theme.Classes.DIM);
     }
 
     /**
@@ -374,14 +416,16 @@ public final class ChecksDialog implements PopupView {
     }
 
     /**
-     * The hint, with the keys other features add to the failed build it shows.
+     * The hint, and on a line of its own, as the first is full, the keys other features add to the failed build it
+     * shows, if any (ADR 161).
      */
-    private Element hint() {
-        String added = keymap.get()
+    private List<Element> hint() {
+        List<String> added = keymap.get()
                 .bindings(Scopes.FAILED_BUILD.id())
-                .map(binding -> "   (" + binding.label() + ") " + Messages.get(binding.descriptionKey()))
-                .mkString();
-        return text(Messages.get("github.dialog.checks.hint") + added).addClass(Theme.Classes.DIM);
+                .map(binding -> "(" + binding.label() + ") " + Messages.get(binding.descriptionKey()));
+        return List.of(Messages.get("github.dialog.checks.hint"))
+                .appendAll(Option.when(added.nonEmpty(), () -> added.mkString("   ")))
+                .map(line -> text(line).addClass(Theme.Classes.DIM));
     }
 
     private void scroll(ListCursor cursor, int first, int last) {

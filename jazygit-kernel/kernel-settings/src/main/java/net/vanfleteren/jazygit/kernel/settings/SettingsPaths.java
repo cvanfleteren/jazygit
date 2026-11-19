@@ -21,6 +21,10 @@ public final class SettingsPaths {
      * Names the directory of the state file, on every OS.
      */
     static final String STATE_OVERRIDE = "JAZYGIT_STATE_DIR";
+    /**
+     * Names the cache directory, on every OS.
+     */
+    static final String CACHE_OVERRIDE = "JAZYGIT_CACHE_DIR";
 
     private static final String APP = "jazygit";
     private static final String FILE = "config.toml";
@@ -87,6 +91,46 @@ public final class SettingsPaths {
                 .getOrElse(() -> standardStateDir(osName.toLowerCase(Locale.ROOT), env, home)
                         .resolve(APP))
                 .resolve(STATE_FILE);
+    }
+
+    /**
+     * The cache directory of the user running this.
+     */
+    public static Path cacheDir() {
+        return cacheDir(
+                System.getProperty("os.name"),
+                name -> Option.of(System.getenv(name)),
+                Path.of(System.getProperty("user.home")));
+    }
+
+    /**
+     * The cache directory on the OS {@code osName}, given the environment variables {@code env} and the home
+     * directory {@code home}: what jazygit keeps of what it read, which it can read again, like the logs of checks
+     * (ADR 160).
+     * <ul>
+     *     <li>Linux and others: {@code $XDG_CACHE_HOME/jazygit}, else {@code ~/.cache/jazygit}</li>
+     *     <li>macOS: {@code $XDG_CACHE_HOME/jazygit}, else {@code ~/Library/Caches/jazygit}</li>
+     *     <li>Windows: {@code %LOCALAPPDATA%\jazygit\cache}</li>
+     * </ul>
+     * {@code $JAZYGIT_CACHE_DIR} overrides it on all of them.
+     */
+    public static Path cacheDir(String osName, Function<String, Option<String>> env, Path home) {
+        String os = osName.toLowerCase(Locale.ROOT);
+        return set(env, CACHE_OVERRIDE).map(Path::of).getOrElse(() -> {
+            if (os.startsWith("windows")) {
+                return set(env, "LOCALAPPDATA")
+                        .map(Path::of)
+                        .getOrElse(() -> home.resolve("AppData").resolve("Local"))
+                        .resolve(APP)
+                        .resolve("cache");
+            }
+            // The XDG spec says a relative path is invalid and to be ignored.
+            Option<Path> xdg = set(env, "XDG_CACHE_HOME").map(Path::of).filter(Path::isAbsolute);
+            return xdg.getOrElse(() -> os.startsWith("mac") || os.startsWith("darwin")
+                            ? home.resolve("Library").resolve("Caches")
+                            : home.resolve(".cache"))
+                    .resolve(APP);
+        });
     }
 
     /**

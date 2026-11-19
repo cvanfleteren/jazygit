@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
+import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog;
 
 /**
  * Showing the checks on the tip of the selected branch, local or remote, one by one (ADR 32).
@@ -30,7 +31,8 @@ public final class ShowChecksAction {
                                     remote -> new ChecksMsg.Requested(new BranchRef.Remote(remote)))),
             dispatch -> List.of(
                     PopupSlot.returningToFocus(new ChecksDialog(dispatch)),
-                    PopupSlot.returningToFocus(new ConfirmDialog<>(RerunDialog.SPEC, dispatch))));
+                    PopupSlot.returningToFocus(new ConfirmDialog<>(RerunDialog.SPEC, dispatch)),
+                    PopupSlot.returningToFocus(new PickDialog<>(LogEditorDialog.MENU, dispatch))));
 
     private ShowChecksAction() {}
 }

@@ -20,6 +20,9 @@ import net.vanfleteren.jazygit.core.process.SshAsking;
  */
 public final class CliGitHub {
 
+    // Where the logs of checks are kept by a GitHub not given a cache directory: one for tests (ADR 160).
+    private static final Path TEMPORARY = Path.of(System.getProperty("java.io.tmpdir"), "jazygit-cache");
+
     private CliGitHub() {}
 
     /**
@@ -71,12 +74,13 @@ public final class CliGitHub {
             Function<GhAccount, Option<String>> browsers,
             Function<String, Option<String>> environment,
             String os) {
-        return of(worktree, executable, token, host, browsers, environment, os, SshAsking.Unchanged.INSTANCE);
+        return of(
+                worktree, executable, token, host, browsers, environment, os, SshAsking.Unchanged.INSTANCE, TEMPORARY);
     }
 
     /**
      * GitHub as {@link #of(Path, String, GhToken, Supplier, Function)}, where ssh may ask the user as {@code ssh} lets
-     * it while gh checks a pull request out (ADR 150).
+     * it while gh checks a pull request out (ADR 150), keeping the logs of checks in {@code cache} (ADR 160).
      */
     public static GitHub of(
             Path worktree,
@@ -84,7 +88,8 @@ public final class CliGitHub {
             GhToken token,
             Supplier<String> host,
             Function<GhAccount, Option<String>> browsers,
-            SshAsking ssh) {
+            SshAsking ssh,
+            Path cache) {
         return of(
                 worktree,
                 executable,
@@ -93,11 +98,12 @@ public final class CliGitHub {
                 browsers,
                 name -> Option.of(System.getenv(name)),
                 System.getProperty("os.name", ""),
-                ssh);
+                ssh,
+                cache);
     }
 
     /**
-     * GitHub as {@link #of(Path, String, GhToken, Supplier, Function, SshAsking)}, choosing the browser by the
+     * GitHub as {@link #of(Path, String, GhToken, Supplier, Function, SshAsking, Path)}, choosing the browser by the
      * variables {@code environment} gives and the system {@code os}.
      */
     public static GitHub of(
@@ -108,12 +114,13 @@ public final class CliGitHub {
             Function<GhAccount, Option<String>> browsers,
             Function<String, Option<String>> environment,
             String os,
-            SshAsking ssh) {
+            SshAsking ssh,
+            Path cache) {
         GhProcess process = new GhProcess(worktree, executable, token);
         return new GitHub(
                 new CliPullRequests(process, ssh),
                 new CliReviews(process),
-                new CliChecks(process),
+                new CliChecks(process, cache),
                 new CliStacks(process),
                 new CliAccount(
                         worktree,

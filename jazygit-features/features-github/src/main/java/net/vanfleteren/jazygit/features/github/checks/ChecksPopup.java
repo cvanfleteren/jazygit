@@ -19,7 +19,8 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**
  * Showing the checks on the tip of a branch one by one, with how long they took or run (ADR 32), read again every so
- * often (ADR 34), with how far they are together (ADR 89), and running the failed ones again (ADR 135).
+ * often (ADR 34), with how far they are together (ADR 89), running the failed ones again (ADR 135), and opening the log
+ * of the one picked (ADR 160).
  *
  * @param branch        the branch the user asked for the checks of, local or remote
  * @param onGitHub      the branch on GitHub whose checks those are: the one a local branch follows
@@ -34,6 +35,9 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
  * @param from          the pull request dialog they were opened from, which Escape goes back to; kept up to date as
  *                      its details are read meanwhile
  * @param rerun         what it says of running failed checks again; nothing before {@code r} was pressed
+ * @param picked        the check picked, as the user picked it; nothing to pick the first one listed
+ * @param noLogAsked    whether {@code e} was pressed on the check picked, so that it says why that has no log, while it
+ *                      has none; not since another was picked
  */
 public record ChecksPopup(
         BranchRef branch,
@@ -44,8 +48,15 @@ public record ChecksPopup(
         Instant readAt,
         Option<ChecksReached> reached,
         Option<PullRequestPopup> from,
-        Option<RerunNote> rerun)
+        Option<RerunNote> rerun,
+        Option<CheckPick> picked,
+        boolean noLogAsked)
         implements Popup {
+
+    /**
+     * The checks listed at once; the others are scrolled to.
+     */
+    public static final int VISIBLE_CHECKS = 16;
 
     /**
      * The popup while the checks are first read, from {@code now}.
@@ -60,7 +71,9 @@ public record ChecksPopup(
                 now,
                 Option.none(),
                 Option.none(),
-                Option.none());
+                Option.none(),
+                Option.none(),
+                false);
     }
 
     /**
@@ -77,7 +90,9 @@ public record ChecksPopup(
                 now,
                 Option.none(),
                 Option.of(from),
-                Option.none());
+                Option.none(),
+                Option.none(),
+                false);
     }
 
     /**
@@ -85,7 +100,17 @@ public record ChecksPopup(
      */
     public ChecksPopup withFrom(PullRequestPopup dialog) {
         return new ChecksPopup(
-                branch, onGitHub, checks, reading, refreshFailed, readAt, reached, Option.of(dialog), rerun);
+                branch,
+                onGitHub,
+                checks,
+                reading,
+                refreshFailed,
+                readAt,
+                reached,
+                Option.of(dialog),
+                rerun,
+                picked,
+                noLogAsked);
     }
 
     /**
@@ -93,7 +118,75 @@ public record ChecksPopup(
      */
     public ChecksPopup withRerun(RerunNote note) {
         return new ChecksPopup(
-                branch, onGitHub, checks, reading, refreshFailed, readAt, reached, from, Option.of(note));
+                branch,
+                onGitHub,
+                checks,
+                reading,
+                refreshFailed,
+                readAt,
+                reached,
+                from,
+                Option.of(note),
+                picked,
+                false);
+    }
+
+    /**
+     * The popup with {@code check} picked (ADR 160): it no longer says why the one picked before has no log.
+     */
+    public ChecksPopup withPicked(Check check) {
+        return new ChecksPopup(
+                branch,
+                onGitHub,
+                checks,
+                reading,
+                refreshFailed,
+                readAt,
+                reached,
+                from,
+                rerun,
+                Option.of(CheckPick.of(check)),
+                false);
+    }
+
+    /**
+     * The popup saying why the check picked has no log, while it has none.
+     */
+    public ChecksPopup withNoLogAsked() {
+        return new ChecksPopup(
+                branch, onGitHub, checks, reading, refreshFailed, readAt, reached, from, rerun, picked, true);
+    }
+
+    /**
+     * Why the check picked in {@code model} has no log, once {@code e} was pressed on it; none while it has one.
+     */
+    public Option<NoLog> noLog(Model model) {
+        return noLogAsked ? pickedCheck(model).flatMap(NoLog::of) : Option.none();
+    }
+
+    /**
+     * The checks read in the order they are listed, as far as {@code model} tells how long they take: the failed ones
+     * first.
+     */
+    public List<Check> ordered(Model model) {
+        List<Check> all = checksRead();
+        return CheckTimes.order(all, all, times(model));
+    }
+
+    /**
+     * The check picked among those listed in {@code model}: the one the user picked, while it is listed; else the
+     * first one listed. None while none are.
+     */
+    public Option<Check> pickedCheck(Model model) {
+        List<Check> ordered = ordered(model);
+        return picked.flatMap(pick -> ordered.find(pick::matches)).orElse(ordered::headOption);
+    }
+
+    /**
+     * The repository the checks read are of, as {@code owner/name}; none while none are read.
+     */
+    public Option<String> repository() {
+        return checks.flatMap(Either::toOption).map(PendingChecks::repository);
     }
 
     /**
@@ -104,7 +197,17 @@ public record ChecksPopup(
     public ChecksPopup with(Either<Failure, PendingChecks> read) {
         if (read.isLeft() && wasRead()) {
             return new ChecksPopup(
-                    branch, onGitHub, checks, Reading.NOT, Option.of(read.getLeft()), readAt, reached, from, rerun);
+                    branch,
+                    onGitHub,
+                    checks,
+                    Reading.NOT,
+                    Option.of(read.getLeft()),
+                    readAt,
+                    reached,
+                    from,
+                    rerun,
+                    picked,
+                    noLogAsked);
         }
         List<Check> checksRead =
                 read.map(pending -> pending.of(onGitHub.branch())).getOrElse(List.empty());
@@ -118,7 +221,9 @@ public record ChecksPopup(
                 reached,
                 from,
                 // Why nothing was run again was of the checks before; what was asked to run again stays.
-                asked().<RerunNote>map(asked -> asked.reading(checksRead)));
+                asked().<RerunNote>map(asked -> asked.reading(checksRead)),
+                picked,
+                noLogAsked);
     }
 
     /**
@@ -158,14 +263,17 @@ public record ChecksPopup(
                 readAt,
                 ChecksReached.keeping(all, progress(model)),
                 from,
-                rerun);
+                rerun,
+                picked,
+                noLogAsked);
     }
 
     /**
      * The popup while its checks are read again from {@code now}, as {@code reading} tells.
      */
     public ChecksPopup readingAgain(Reading reading, Instant now) {
-        return new ChecksPopup(branch, onGitHub, checks, reading, refreshFailed, now, reached, from, rerun);
+        return new ChecksPopup(
+                branch, onGitHub, checks, reading, refreshFailed, now, reached, from, rerun, picked, noLogAsked);
     }
 
     /**

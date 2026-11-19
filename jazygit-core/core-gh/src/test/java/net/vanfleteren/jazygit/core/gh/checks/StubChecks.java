@@ -86,4 +86,13 @@ public interface StubChecks extends Checks {
     default Either<GhFailure, List<ExecutedCommand>> rerunFailedJobs(long runId) {
         return Either.right(List.empty());
     }
+
+    /**
+     * A job without a log: GitHub answers 404.
+     */
+    @Override
+    default Either<GhFailure, JobLog> jobLog(String repository, long runId, int attempt, long jobId) {
+        return Either.left(
+                new GhFailure(new GhError.CommandFailed(Option.of("gh: Not Found (HTTP 404)"), 1), List.empty()));
+    }
 }

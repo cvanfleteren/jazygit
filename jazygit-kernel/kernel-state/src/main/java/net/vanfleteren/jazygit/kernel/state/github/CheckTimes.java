@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.github;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
@@ -105,5 +106,22 @@ public record CheckTimes(String repository, CheckHistory history, boolean toppin
      */
     public static Eta eta(Option<CheckTimes> times, List<Check> all) {
         return times.map(known -> known.eta(all)).getOrElse(() -> Eta.of(all, CheckHistory.EMPTY));
+    }
+
+    /**
+     * {@code checks}, some of the checks {@code all} of a commit, in the order they are listed: the failed ones
+     * first, then the running ones, the queued ones and the passed ones; those not done the soonest done first, as far
+     * as {@code times} tell, and those not known last.
+     */
+    public static List<Check> order(List<Check> checks, List<Check> all, Option<CheckTimes> times) {
+        return checks.sortBy(check -> eta(times, check, all) instanceof Eta.Expected(Instant at) ? at : Instant.MAX)
+                .sortBy(CheckTimes::rank);
+    }
+
+    /**
+     * Where {@code check} goes by how it is doing: failed, running, queued, passed.
+     */
+    private static int rank(Check check) {
+        return check.state() == Checks.FAILING ? 0 : check.state() == Checks.PASSING ? 3 : check.queued() ? 2 : 1;
     }
 }

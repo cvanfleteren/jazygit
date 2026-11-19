@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore;
 import net.vanfleteren.jazygit.kernel.settings.CollapsedStore;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.settings.SettingsPaths;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequestsStore;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -51,7 +52,8 @@ final class RepositoryEnv {
                         token,
                         () -> GitHubAccount.host(git),
                         account -> store.load().settings().browsers().of(account.host(), account.user()),
-                        ssh),
+                        ssh,
+                        SettingsPaths.cacheDir()),
                 store,
                 recent,
                 unseen,

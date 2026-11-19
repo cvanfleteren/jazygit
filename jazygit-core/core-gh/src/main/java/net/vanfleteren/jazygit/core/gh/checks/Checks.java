@@ -65,4 +65,11 @@ public interface Checks {
      * (ADR 135); the commands it ran.
      */
     Either<GhFailure, List<ExecutedCommand>> rerunFailedJobs(long runId);
+
+    /**
+     * The log of the job {@code jobId}, of the attempt {@code attempt} of the workflow run {@code runId} of
+     * {@code repository}, as {@code owner/name}, kept in a file (ADR 160): read from GitHub once, and kept, as it does
+     * not change once the job is done.
+     */
+    Either<GhFailure, JobLog> jobLog(String repository, long runId, int attempt, long jobId);
 }

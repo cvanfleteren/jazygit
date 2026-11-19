@@ -3,6 +3,12 @@ package net.vanfleteren.jazygit.core.gh.checks;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import net.vanfleteren.jazygit.core.gh.model.*;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
@@ -15,9 +21,14 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 public final class CliChecks implements Checks {
 
     private final GhProcess process;
+    private final Path cache;
 
-    public CliChecks(GhProcess process) {
+    /**
+     * @param cache the directory the logs of checks are kept in (ADR 160)
+     */
+    public CliChecks(GhProcess process, Path cache) {
         this.process = process;
+        this.cache = cache;
     }
 
     @Override
@@ -64,5 +75,51 @@ public final class CliChecks implements Checks {
     @Override
     public Either<GhFailure, List<ExecutedCommand>> rerunFailedJobs(long runId) {
         return process.log(RerunFailedJobs.command(runId));
+    }
+
+    @Override
+    public Either<GhFailure, JobLog> jobLog(String repository, long runId, int attempt, long jobId) {
+        return JobLogQuery.file(cache, repository, runId, attempt, jobId)
+                .mapLeft(error -> new GhFailure(error, List.empty()))
+                .flatMap(file -> Files.isRegularFile(file) ? kept(file) : download(repository, jobId, file));
+    }
+
+    /**
+     * The log kept in {@code file} already.
+     */
+    private static Either<GhFailure, JobLog> kept(Path file) {
+        return Try.of(() -> new String(Files.readAllBytes(file), StandardCharsets.UTF_8))
+                .toEither()
+                .mapLeft(cause -> fileFailed(file, cause, List.empty()))
+                .map(text -> new JobLog(file, JobLogQuery.line(text), List.empty()));
+    }
+
+    /**
+     * The log read from GitHub, and kept in {@code file}: written next to it first, then moved there, so that a log
+     * cut off halfway is never taken for one kept.
+     */
+    private Either<GhFailure, JobLog> download(String repository, long jobId, Path file) {
+        return process.run(JobLogQuery.command(repository, jobId))
+                .fold(
+                        failure -> JobLogQuery.tooOld(failure.error())
+                                ? process.run(JobLogQuery.older(repository, jobId))
+                                : Either.<GhFailure, GhProcess.Output>left(failure),
+                        Either::<GhFailure, GhProcess.Output>right)
+                .flatMap(output -> Try.of(() -> {
+                            Path directory = Files.createDirectories(file.getParent());
+                            Path part = Files.createTempFile(
+                                    directory, file.getFileName().toString(), ".part");
+                            Files.writeString(part, output.stdout(), StandardCharsets.UTF_8);
+                            return Files.move(
+                                    part, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                        })
+                        .toEither()
+                        .mapLeft(cause -> fileFailed(file, cause, output.log()))
+                        .map(kept -> new JobLog(kept, JobLogQuery.line(output.stdout()), output.log())));
+    }
+
+    private static GhFailure fileFailed(Path file, Throwable cause, List<ExecutedCommand> commands) {
+        return new GhFailure(
+                new GhError.FileFailed(file, cause instanceof IOException io ? io : new IOException(cause)), commands);
     }
 }

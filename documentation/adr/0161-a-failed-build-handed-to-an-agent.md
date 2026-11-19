@@ -47,8 +47,9 @@ checks on the tip of a branch, which can come from several workflow runs, and on
   actions beside the keymap, which the help, the hints and the check of keys bound twice would each have to learn.
 - An action that cannot act says why when its key is pressed, as `e` does (ADR 110): its key stays listed.
 - A view that shows a subject has a key `Scope` for it, so its keys and the contributed ones are bindings alike: the
-  checks popup, which matched its keys itself in `ChecksDialog.keys`, gets one for `r` and `R` (`ChecksAction.SCOPE`),
-  as the builds have `BuildsAction.SCOPE`. Scrolling and closing stay the popup's own.
+  checks popup, which matched its keys itself in `ChecksDialog.keys`, gets one for `r`, `R`, `n`, `N` and `e`
+  (`ChecksAction.SCOPE`), as the builds have `BuildsAction.SCOPE`. Scrolling and closing stay the popup's own. Its hint
+  line is full, so the contributed keys get a line of their own under it.
 - The keymap refuses a key bound twice across a host and its guests, whichever is added first, and a key that two
   features add to one guest, as it refuses one bound twice in a scope; the keymap of the app is made in its tests, so
   they fail on it. A contributor cannot see the view's keys.
@@ -120,6 +121,6 @@ checks on the tip of a branch, which can come from several workflow runs, and on
   own prompt fences what the forge gave as data, and what the agent may do is up to the user, through the agent's
   own flags in `command`. A change that starts an agent without the user asking needs to weigh this again.
 - Moving the editors onto the shared type of program changes no setting of theirs.
-- ADR 160 (#587), still open, picks a check in the checks popup and keeps the logs of checks in a cache directory.
+- ADR 160 picks a check in the checks popup and keeps the logs of checks in a cache directory.
   The check picked changes nothing for `I`: it hands over every failed check. Naming the logs already kept in the
   prompt is for a later change.
