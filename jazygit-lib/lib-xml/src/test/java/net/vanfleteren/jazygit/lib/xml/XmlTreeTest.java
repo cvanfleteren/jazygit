@@ -197,8 +197,9 @@ class XmlTreeTest {
         long millis = (System.nanoTime() - started) / 1_000_000;
 
         assertEquals(200_000, root.children().size());
-        // Appending to a list, 40,000 took three seconds.
-        assertTrue(millis < 2_000, millis + " ms");
+        // Appending to a list, 40,000 took three seconds, so these would take over a minute. A cold CI build runs the
+        // tests of every library at once, which made a linear read take 2.3 seconds there: the bound leaves room.
+        assertTrue(millis < 10_000, millis + " ms");
     }
 
     @Test
