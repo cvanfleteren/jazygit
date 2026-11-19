@@ -83,7 +83,7 @@ class ContentViewTest {
      * What the files pane says in place of a diff: a note, an area that holds the focus (ADR 117).
      */
     private static Shown note(String title, String text, Tone tone) {
-        return new Shown.Area(FileNote.AREA, title, new ScrolledContent.Note(text), new NoteBody(text, tone));
+        return new Shown.Area(FileNote.AREA, title, new FileNote.Note(text), new NoteBody(text, tone));
     }
 
     private static Shown note(String title, String text) {
@@ -689,7 +689,7 @@ class ContentViewTest {
                 new Shown.Area(
                         PullRequestSource.AREA,
                         "Pull request: owner/repo#42",
-                        new ScrolledContent.PullRequest(PULL_REQUEST, READ),
+                        new PullRequestSource.Read(PULL_REQUEST, READ),
                         new PullRequestBody(PULL_REQUEST, READ)),
                 ContentView.of(read, PullRequestsPanel.FIRST_PANE));
     }

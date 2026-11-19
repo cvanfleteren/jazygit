@@ -8,7 +8,6 @@ import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
-import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.content.ContentArea;
@@ -110,8 +109,7 @@ class ContentFoldTest {
         public Option<Shown> shown(Model model, Mirrored mirrored) {
             return Option.when(
                     mirrored == Mirrored.BRANCHES,
-                    () -> new Shown.Area(
-                            MINE, "mine", new ScrolledContent.Note("mine"), new NoteBody("mine", Tone.DIM)));
+                    () -> new Shown.Area(MINE, "mine", new FileNote.Note("mine"), new NoteBody("mine", Tone.DIM)));
         }
 
         @Override

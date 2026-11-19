@@ -26,8 +26,14 @@ final class FileNote {
     static Shown noted(Shown shown) {
         return switch (shown) {
             case Shown.Message(String title, String text, Tone tone) ->
-                new Shown.Area(AREA, title, new ScrolledContent.Note(text), new NoteBody(text, tone));
+                new Shown.Area(AREA, title, new Note(text), new NoteBody(text, tone));
             case Shown other -> other;
         };
     }
+
+    /**
+     * What the files pane says in place of a diff or a file's content, {@code text}, as an area keeps where it is
+     * scrolled to for it (ADR 117).
+     */
+    record Note(String text) implements ScrolledContent.Other {}
 }

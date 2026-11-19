@@ -62,11 +62,8 @@ record BranchLogSource() implements ContentSource {
         return Shows.whenLoaded(
                 ahead.title(title),
                 log.value(),
-                commits -> new Shown.Area(
-                        AREA,
-                        ahead.title(title),
-                        new ScrolledContent.BranchLog(commits),
-                        new BranchLogBody(commits, ahead)));
+                commits ->
+                        new Shown.Area(AREA, ahead.title(title), new Log(commits), new BranchLogBody(commits, ahead)));
     }
 
     /**
@@ -79,4 +76,9 @@ record BranchLogSource() implements ContentSource {
             case NoLog.Detached(var at) -> Messages.get("content.detached", at.shortSha());
         };
     }
+
+    /**
+     * The log of a branch, {@code commits}, as an area keeps where it is scrolled to for it.
+     */
+    record Log(List<Commit> commits) implements ScrolledContent.Other {}
 }

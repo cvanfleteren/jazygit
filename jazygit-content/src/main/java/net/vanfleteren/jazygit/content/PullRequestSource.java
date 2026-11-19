@@ -57,7 +57,13 @@ record PullRequestSource() implements ContentSource {
                                 "content.panel.pullRequest.titleFor",
                                 pullRequest.repository(),
                                 String.valueOf(pullRequest.number().value())),
-                        new ScrolledContent.PullRequest(pullRequest, read),
+                        new Read(pullRequest, read),
                         new PullRequestBody(pullRequest, read)));
     }
+
+    /**
+     * A pull request, {@code pullRequest}, and what it says and changes, {@code preview}, as an area keeps where it is
+     * scrolled to for it.
+     */
+    record Read(PullRequestSummary pullRequest, PullRequestPreview preview) implements ScrolledContent.Other {}
 }

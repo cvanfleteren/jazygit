@@ -113,8 +113,7 @@ class FilteredDiffTest {
 
     @Test
     void aHunkOpenedShowsUnderAMarkerThatHidesItAgain() {
-        Opened opened =
-                new Opened(new ScrolledContent.Note("x"), HashSet.of(new Opened.Hunk("A.java", new HunkStart(1, 1))));
+        Opened opened = new Opened(new NoDiff(), HashSet.of(new Opened.Hunk("A.java", new HunkStart(1, 1))));
 
         Drawn drawn = drawn(filtering().withOpened(Option.of(opened)), DIFF, false);
         List<String> lines = text(drawn);
@@ -133,8 +132,7 @@ class FilteredDiffTest {
 
     @Test
     void anOpenedMarkerStaysUnderTheMarkerOfTheLinesLeftOutBeforeIt() {
-        Opened opened =
-                new Opened(new ScrolledContent.Note("x"), HashSet.of(new Opened.Hunk("A.java", new HunkStart(40, 40))));
+        Opened opened = new Opened(new NoDiff(), HashSet.of(new Opened.Hunk("A.java", new HunkStart(40, 40))));
 
         List<String> lines = text(drawn(filtering().withOpened(Option.of(opened)), DIFF, false))
                 .map(String::stripTrailing);
@@ -222,4 +220,9 @@ class FilteredDiffTest {
         return drawn.lines()
                 .map((Line line) -> line.spans().stream().map(Span::content).collect(Collectors.joining()));
     }
+
+    /**
+     * Content that is no diff.
+     */
+    private record NoDiff() implements ScrolledContent.Other {}
 }

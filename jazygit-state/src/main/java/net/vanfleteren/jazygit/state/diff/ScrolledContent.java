@@ -2,16 +2,15 @@ package net.vanfleteren.jazygit.state.diff;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
-import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
-import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
- * What an area of the content panel shows, which where it is {@link Scrolled scrolled} to holds for.
+ * What an area of the content panel shows, which where it is {@link Scrolled scrolled} to holds for: one of the diffs,
+ * which the content panel opens, versions and expands, and so tells apart, or {@link Other other} content, which only
+ * its source knows (ADR 155).
  */
 public sealed interface ScrolledContent {
 
@@ -44,7 +43,7 @@ public sealed interface ScrolledContent {
             case StashChanges(var sha, DiffText changes) -> Option.of(changes);
             case FileChanges(var of, var files, DiffText diff) -> Option.of(diff);
             case Unchanged(var path, DiffText asDiff, var commit) -> Option.of(asDiff);
-            case BranchLog _, Builds _, PullRequest _, Note _ -> Option.none();
+            case Other _ -> Option.none();
         };
     }
 
@@ -76,16 +75,6 @@ public sealed interface ScrolledContent {
     }
 
     /**
-     * The log of a branch.
-     */
-    record BranchLog(List<Commit> commits) implements ScrolledContent {}
-
-    /**
-     * The builds of the local branch {@code branch} (ADR 131): it keeps where it is scrolled to while more are read.
-     */
-    record Builds(BranchName branch) implements ScrolledContent {}
-
-    /**
      * A commit and what it changed, in the commits pane or in a divergence.
      */
     record CommitChanges(Commit commit, DiffText changes) implements ScrolledContent {}
@@ -102,12 +91,9 @@ public sealed interface ScrolledContent {
     record FileChanges(Changes of, List<CommitFile> files, DiffText diff) implements ScrolledContent {}
 
     /**
-     * A pull request, and what it says and changes.
+     * Content that is no diff, as the log or the builds of a branch, a pull request or a note: a value of the source
+     * that shows it, in its own package, which the area keeps where it is scrolled to for while it is {@code equals}
+     * (ADR 155). Only its body tells it apart.
      */
-    record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) implements ScrolledContent {}
-
-    /**
-     * What the files pane says in place of a diff or a file's content, {@code text} (ADR 117).
-     */
-    record Note(String text) implements ScrolledContent {}
+    non-sealed interface Other extends ScrolledContent {}
 }

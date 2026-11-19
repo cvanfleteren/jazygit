@@ -15,7 +15,6 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
-import java.util.Set;
 import net.vanfleteren.jazygit.AppRules;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.ui.content.Body;
@@ -88,16 +87,6 @@ class ContentArchitectureTest {
             });
 
     /**
-     * The diffs an area shows, which the content panel opens, versions and expands, and so tells apart.
-     */
-    private static final Set<Class<?>> DIFFS = Set.of(
-            ScrolledContent.Diff.class,
-            ScrolledContent.Unchanged.class,
-            ScrolledContent.CommitChanges.class,
-            ScrolledContent.StashChanges.class,
-            ScrolledContent.FileChanges.class);
-
-    /**
      * What sets apart content that is no diff, its body says, keys included (ADR 155): nothing in the content asks
      * whether an area shows one kind of it, as the keys of the area asked whether it showed builds.
      */
@@ -107,9 +96,8 @@ class ContentArchitectureTest {
                 @Override
                 public void check(JavaClass item, ConditionEvents events) {
                     item.getInstanceofChecks().stream()
-                            .filter(check -> check.getRawType().isAssignableTo(ScrolledContent.class)
-                                    && !check.getRawType().isEquivalentTo(ScrolledContent.class)
-                                    && DIFFS.stream().noneMatch(check.getRawType()::isEquivalentTo))
+                            .filter(check -> check.getRawType().isAssignableTo(ScrolledContent.Other.class)
+                                    && !check.getRawType().isEquivalentTo(ScrolledContent.Other.class))
                             .forEach(check -> events.add(SimpleConditionEvent.satisfied(
                                     check,
                                     item.getName() + " checks for "
