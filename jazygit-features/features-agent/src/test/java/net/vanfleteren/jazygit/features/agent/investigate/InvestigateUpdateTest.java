@@ -161,7 +161,9 @@ class InvestigateUpdateTest {
 
         assertEquals(List.empty(), next.cmds());
         assertEquals(
-                Option.of("Nothing to investigate yet: the build is still being read, or none is done"),
+                Option.of(
+                        "No failed build of this branch to investigate here: none is read or done yet, or the one shown is"
+                                + " of another branch"),
                 errorText(next.model()));
     }
 

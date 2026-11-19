@@ -48,7 +48,8 @@ public sealed interface InvestigateError extends AppError {
     }
 
     /**
-     * The view had no build to hand over: it is still being read, or none is done.
+     * The view had no build of the branch to hand over: none is read or done yet, or the one shown is of another
+     * branch.
      */
     record NothingYet() implements InvestigateError {
 
