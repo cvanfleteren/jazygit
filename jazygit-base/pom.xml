@@ -17,10 +17,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.vavr</groupId>
-            <artifactId>vavr</artifactId>
-        </dependency>
-        <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>jazygit-test-support</artifactId>
             <scope>test</scope>
