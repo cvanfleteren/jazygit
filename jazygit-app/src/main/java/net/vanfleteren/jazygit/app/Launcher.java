@@ -154,12 +154,8 @@ final class Launcher {
         return CliGit.open(start)
                 .fold(
                         error -> error instanceof GitError.NotARepository
-                                ? Try.of(() -> StartApp.choose(
-                                                start,
-                                                RecentReposCmd.existing(recent),
-                                                settings,
-                                                themeOverride,
-                                                engine))
+                                ? StartApp.choose(
+                                                start, RecentReposCmd.existing(recent), settings, themeOverride, engine)
                                         .toEither()
                                         .mapLeft(ErrorText::reason)
                                         .flatMap(chosen -> chosen.fold(
