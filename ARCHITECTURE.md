@@ -33,14 +33,14 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | `jazygit-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
 | `jazygit-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
 | `jazygit-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, and a subpackage per part of the model. | lens, image, settings, git, gh, json, yaml, xml |
-| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
+| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
 | `jazygit-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | ui |
 | ↳ `jazygit-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress. | ui |
 | ↳ `jazygit-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
 | ↳ `jazygit-github` | `github.*`: pull requests, reviews, checks, builds. | branches, changes |
 | ↳ `jazygit-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
-| `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `Features`). Builds the fat jar and the native image. | the four groups, content, askpass, TamboUI's backend, picocli |
+| `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `StandardContent`, `Features`). Builds the fat jar and the native image. | the four groups, content, askpass, TamboUI's backend, picocli |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, ui, JMH |
 
@@ -113,6 +113,10 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   interface: it draws itself and says what sets it apart (drawn to the width of its area, its keys, its clicks). It is
   in `ui`, below the panes, so a group of features can add a kind of its own; nothing in `jazygit-content` but a body
   asks which kind of body a value is (`ContentArchitectureTest`).
+- **What the content panel shows comes from sources**: a `ui.content.ContentSource` says what it shows next to a pane,
+  if it is its to show, and declares the areas it shows it in. `ContentView` asks the sources of the features, in the
+  order of `Features.ALL`, then the content panel's own (`PanelSources`), and shows what the first that answers gives
+  (ADR 154). The app gives them as a service, `ContentSources.standard()`, as it gives the keymap.
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys` or a dialog runs git or gh. `ui.text.ErrorText` is the
@@ -232,7 +236,7 @@ Each feature package follows the same shape:
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
 | `XxxDialogs` | `CommitDialog.reword` | The dialogs, mostly as data (`ConfirmDialog.Spec`, ...), as `PopupSlot`s. |
 | `XxxKeys` / `XxxAction` | `DropAction` | The keys, added to the immutable `Keymap`; an action bundles one operation's keys and popups. |
-| `XxxFeature` | `CommitFeature` | Its `FEATURE`, a `Feature` of the feature's actions: what `Keymap` and `Popups` know of it. |
+| `XxxFeature` | `CommitFeature` | Its `FEATURE`, a `Feature` of the feature's actions, and of what it shows in the content panel, if anything (`ContentSource`): what `Keymap`, `Popups` and the content panel know of it. |
 
 A feature lives in the group of features it belongs to, and is wired in by one line in `Features.ALL`, whose order is
 the order of the keys in a panel; nothing else outside its package names it (ADR 127). Its text is in its group's

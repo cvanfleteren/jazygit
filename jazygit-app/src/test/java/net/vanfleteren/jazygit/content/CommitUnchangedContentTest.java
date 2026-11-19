@@ -87,7 +87,7 @@ class CommitUnchangedContentTest {
         assertTrue(rendered.model()
                 .repoView()
                 .versions()
-                .get(ContentArea.COMMIT_FILE.id())
+                .get(CommitFilesSource.AREA.id())
                 .exists(version -> version.rendered()));
     }
 

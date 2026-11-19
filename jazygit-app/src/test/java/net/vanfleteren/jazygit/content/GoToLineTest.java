@@ -361,7 +361,7 @@ class GoToLineTest {
                                 "README.md", new Loadable.Loaded<>(new FileContent.Text(DiffText.of(readme)))))))));
         Model rendered =
                 Update.update(shown, new VersionMsg.FilesRenderToggled()).model();
-        Driven driven = new Driven(rendered, FilesPanel.PANE, Option.of(ContentArea.FILE_CONTENT.id()), 100);
+        Driven driven = new Driven(rendered, FilesPanel.PANE, Option.of(UnchangedSource.AREA.id()), 100);
         try (ToolkitTestRunner testRunner = driven.run()) {
             // Paragraph 41 is drawn from line 81.
             driven.type(testRunner, ":81");
@@ -385,7 +385,7 @@ class GoToLineTest {
                                 "data.json", new Loadable.Loaded<>(new FileContent.Text(DiffText.of(json)))))))));
         Model rendered =
                 Update.update(shown, new VersionMsg.FilesRenderToggled()).model();
-        Driven driven = new Driven(rendered, FilesPanel.PANE, Option.of(ContentArea.FILE_CONTENT.id()), 100);
+        Driven driven = new Driven(rendered, FilesPanel.PANE, Option.of(UnchangedSource.AREA.id()), 100);
         try (ToolkitTestRunner testRunner = driven.run()) {
             // key30 is on line 31.
             driven.type(testRunner, ":31");

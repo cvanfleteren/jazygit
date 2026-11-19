@@ -10,8 +10,6 @@ import io.vavr.control.Option;
 import java.time.ZoneId;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.content.ContentView.Shown;
-import net.vanfleteren.jazygit.content.ContentView.Tone;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
@@ -19,22 +17,25 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.ui.content.Body;
+import net.vanfleteren.jazygit.ui.content.ContentArea;
+import net.vanfleteren.jazygit.ui.content.ContentSources;
 import net.vanfleteren.jazygit.ui.content.DrawContext;
 import net.vanfleteren.jazygit.ui.content.Drawn;
+import net.vanfleteren.jazygit.ui.content.Shown;
+import net.vanfleteren.jazygit.ui.content.Tone;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
- * The right-hand content panel: it draws what {@link ContentView} says it shows, styling the diffs, the log, the
- * commits, the stashes and the pull requests ({@link ContentText}), and keeps the areas that scroll through them
- * ({@link ScrollArea}).
+ * The right-hand content panel: it draws what {@link ContentView} says it shows, each body drawing itself, and keeps
+ * an area that scrolls through it ({@link ScrollArea}) for each area the sources declare (ADR 154).
  */
 public final class ContentPanel {
 
     private final Theme.SpanStyles styles;
-    // The scrollable areas for the diffs, the branch log and the commit. Where they are scrolled to lives in the
-    // model; the elements are kept between renders as they also lay out the text for the scrollbar. Only used from
-    // the render thread.
-    private final Map<ContentArea, ScrollArea> areas;
+    // The scrollable areas the sources declare, by their ids. Where they are scrolled to lives in the model; the
+    // elements are kept between renders as they also lay out the text for the scrollbar. Only used from the render
+    // thread.
+    private final Map<AreaId, ScrollArea> areas;
 
     /**
      * @param styles          how the diffs and the log are colored
@@ -58,9 +59,10 @@ public final class ContentPanel {
     public ContentPanel(
             Theme.SpanStyles styles, BooleanSupplier leaveScrollArea, Consumer<Focus> focus, Consumer<Msg> dispatch) {
         this.styles = styles;
-        areas = List.of(ContentArea.values())
+        areas = ContentSources.standard()
+                .areas()
                 .toLinkedMap(
-                        area -> area,
+                        ContentArea::id,
                         area -> new ScrollArea(area, AreaTool.standard(), leaveScrollArea, focus, dispatch));
     }
 
@@ -68,7 +70,7 @@ public final class ContentPanel {
      * The area of the content panel with id {@code id}, which can have the focus, if it is one rather than a pane.
      */
     public static Option<AreaId> areaWithId(String id) {
-        return ContentArea.focusable(id).map(ContentArea::id);
+        return ContentSources.standard().focusable(id).map(ContentArea::id);
     }
 
     /**
@@ -76,7 +78,9 @@ public final class ContentPanel {
      * if that is an area: the pane whose highlighted row it shows.
      */
     public Option<PaneId> paneOfArea(Model model, Focus focus) {
-        return focus instanceof AreaId area ? ContentArea.of(area).map(shown -> shown.pane(model)) : Option.none();
+        return focus instanceof AreaId area
+                ? ContentSources.standard().area(area).map(shown -> shown.pane(model))
+                : Option.none();
     }
 
     /**
@@ -85,7 +89,7 @@ public final class ContentPanel {
      * the focus is not moved into (ADR 117).
      */
     public Option<AreaId> areaOfPane(Model model, PaneId pane) {
-        return shownOf(model, pane).find(area -> area != ContentArea.FILE_NOTE).map(ContentArea::id);
+        return shownOf(model, pane).find(area -> !area.equals(FileNote.AREA)).map(ContentArea::id);
     }
 
     /**
@@ -168,7 +172,10 @@ public final class ContentPanel {
         areas.values().forEach(area -> area.tabbable(inContent));
     }
 
+    /**
+     * The element that draws {@code area}, which the source that shows it declares.
+     */
     private ScrollArea area(ContentArea area) {
-        return areas.apply(area);
+        return areas.apply(area.id());
     }
 }

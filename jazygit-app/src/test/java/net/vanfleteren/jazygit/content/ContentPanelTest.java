@@ -1555,7 +1555,7 @@ class ContentPanelTest {
                                 of, List.of(file), DiffOptions.DEFAULT, DiffText.of("+" + "x".repeat(300))))
                 .model();
         AreaId area = scrolling.areaOfPane(selected, FilesPanel.PANE).get();
-        assertEquals(ContentArea.COMMIT_FILE.id(), area);
+        assertEquals(CommitFilesSource.AREA.id(), area);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
             SettledPilot.focus(testRunner, area.id());
@@ -2314,7 +2314,7 @@ class ContentPanelTest {
 
         List<String> lines = ContentText.commitText(
                         commit,
-                        ContentView.shown(DiffText.of(" a.txt | 1 +\n 1 file changed\n\n+added\n")),
+                        Shows.shown(DiffText.of(" a.txt | 1 +\n 1 file changed\n\n+added\n")),
                         PLAIN_LOOK,
                         Theme.SpanStyles.NONE)
                 .lines()
@@ -2379,7 +2379,7 @@ class ContentPanelTest {
 
         List<String> lines = ContentText.stashText(
                         stash,
-                        ContentView.shown(DiffText.of(" a.txt | 1 +\n\n+added line\n")),
+                        Shows.shown(DiffText.of(" a.txt | 1 +\n\n+added line\n")),
                         PLAIN_LOOK,
                         Theme.SpanStyles.NONE)
                 .lines()
@@ -2398,22 +2398,20 @@ class ContentPanelTest {
         Commit commit =
                 Fixtures.commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
 
-        List<String> lines = ContentText.commitText(
-                        commit, ContentView.shown(DiffText.of("x")), PLAIN_LOOK, Theme.SpanStyles.NONE)
-                .lines()
-                .stream()
-                .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
-                .collect(List.collector());
+        List<String> lines =
+                ContentText.commitText(commit, Shows.shown(DiffText.of("x")), PLAIN_LOOK, Theme.SpanStyles.NONE)
+                        .lines()
+                        .stream()
+                        .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
+                        .collect(List.collector());
 
         assertEquals(List.of("", "    Subject", "---", "x"), lines.drop(3));
     }
 
     @Test
     void aTruncatedDiffEndsWithALineSayingSo() {
-        assertEquals("+a\n", ContentView.shown(DiffText.of("+a\n")).text());
-        assertEquals(
-                "+a\n… truncated\n",
-                ContentView.shown(DiffText.of("+a\n", true)).text());
+        assertEquals("+a\n", Shows.shown(DiffText.of("+a\n")).text());
+        assertEquals("+a\n… truncated\n", Shows.shown(DiffText.of("+a\n", true)).text());
     }
 
     @Test

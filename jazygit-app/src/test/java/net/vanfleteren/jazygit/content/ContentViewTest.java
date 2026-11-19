@@ -12,8 +12,6 @@ import net.vanfleteren.jazygit.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.changes.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.changes.diff.VersionMsg;
 import net.vanfleteren.jazygit.chrome.help.HelpPopup;
-import net.vanfleteren.jazygit.content.ContentView.Shown;
-import net.vanfleteren.jazygit.content.ContentView.Tone;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -36,8 +34,10 @@ import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.content.Shown;
 import net.vanfleteren.jazygit.ui.content.ShownChanges;
 import net.vanfleteren.jazygit.ui.content.ShownDiff;
+import net.vanfleteren.jazygit.ui.content.Tone;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.github.PullRequestsPanel;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
@@ -83,7 +83,7 @@ class ContentViewTest {
      * What the files pane says in place of a diff: a note, an area that holds the focus (ADR 117).
      */
     private static Shown note(String title, String text, Tone tone) {
-        return new Shown.Area(ContentArea.FILE_NOTE, title, new ScrolledContent.Note(text), new NoteBody(text, tone));
+        return new Shown.Area(FileNote.AREA, title, new ScrolledContent.Note(text), new NoteBody(text, tone));
     }
 
     private static Shown note(String title, String text) {
@@ -193,26 +193,25 @@ class ContentViewTest {
         DiffText changes = STASHED;
         Version asked = stashVersion();
 
-        assertEquals("Stash · new version (reading)", ContentView.versioned("Stash", asked));
+        assertEquals("Stash · new version (reading)", Expanded.versioned("Stash", asked));
         assertEquals(
                 "Stash · original",
-                ContentView.versioned(
+                Expanded.versioned(
                         "Stash",
                         asked.withShown(Option.of(FileVersion.ORIGINAL)).withWhole(new Loadable.Loaded<>(changes))));
         assertEquals(
                 "Stash · new version (could not be read)",
-                ContentView.versioned("Stash", asked.withWhole(new Loadable.Failed<>(TestModels.refused("boom")))));
+                Expanded.versioned("Stash", asked.withWhole(new Loadable.Failed<>(TestModels.refused("boom")))));
         // Read, but without the file: the diff shows, and the title says the version could not be read.
         assertEquals(
                 "Stash · new version (could not be read)",
-                ContentView.versioned("Stash", asked.withWhole(new Loadable.Loaded<>(DiffText.of("")))));
-        assertEquals("Stash", ContentView.versioned("Stash", asked.withShown(Option.none())));
+                Expanded.versioned("Stash", asked.withWhole(new Loadable.Loaded<>(DiffText.of("")))));
+        assertEquals("Stash", Expanded.versioned("Stash", asked.withShown(Option.none())));
         // Rendered, it says so too (ADR 103).
-        assertEquals(
-                "Stash · new version, rendered (reading)", ContentView.versioned("Stash", asked.withRendered(true)));
+        assertEquals("Stash · new version, rendered (reading)", Expanded.versioned("Stash", asked.withRendered(true)));
         assertEquals(
                 "Stash · original, rendered",
-                ContentView.versioned(
+                Expanded.versioned(
                         "Stash",
                         asked.withShown(Option.of(FileVersion.ORIGINAL))
                                 .withRendered(true)
@@ -225,17 +224,17 @@ class ContentViewTest {
         Version read = blamed.withWhole(new Loadable.Loaded<>(STASHED));
 
         // While the file is read, that is what the title says (ADR 147).
-        assertEquals("Stash · new version, blamed (reading)", ContentView.versioned("Stash", blamed));
-        assertEquals("Stash · new version, blamed (reading blame)", ContentView.versioned("Stash", read));
+        assertEquals("Stash · new version, blamed (reading)", Expanded.versioned("Stash", blamed));
+        assertEquals("Stash · new version, blamed (reading blame)", Expanded.versioned("Stash", read));
         assertEquals(
                 "Stash · new version, blamed",
-                ContentView.versioned(
+                Expanded.versioned(
                         "Stash",
                         read.withBlames(Blames.none(false)
                                 .with(FileVersion.NEW, new Loadable.Loaded<>(new Blame(Vector.empty()))))));
         assertEquals(
                 "Stash · original, blamed (blame could not be read)",
-                ContentView.versioned(
+                Expanded.versioned(
                         "Stash",
                         read.withShown(Option.of(FileVersion.ORIGINAL))
                                 .withBlames(Blames.none(false)
@@ -243,7 +242,7 @@ class ContentViewTest {
                                                 FileVersion.ORIGINAL,
                                                 new Loadable.Failed<>(TestModels.refused("boom"))))));
         // Rendered, it is not blamed, so the title says only that it is rendered.
-        assertEquals("Stash · new version, rendered", ContentView.versioned("Stash", read.withRendered(true)));
+        assertEquals("Stash · new version, rendered", Expanded.versioned("Stash", read.withRendered(true)));
     }
 
     @Test
@@ -300,7 +299,7 @@ class ContentViewTest {
     void theBranchesShowTheLogOfTheSelectedBranch() {
         Shown.Area log = area(ContentView.of(model, BranchesPanel.PANE));
 
-        assertEquals(ContentArea.LOG, log.area());
+        assertEquals(BranchLogSource.AREA, log.area());
         assertEquals("Log: feature/initial-layout", log.title());
         assertTrue(shortShas(log).contains("0a1b2c3"), log.toString());
         assertFalse(shortShas(log).contains("a1b2c3d"), log.toString());
@@ -355,8 +354,8 @@ class ContentViewTest {
     void aPopupOpenedFromTheCommitChangesKeepsShowingTheCommit() {
         // The area had the focus when the popup opened, so that is what the focus goes back to.
         Model withPopup = showingCommit(DiffOptions.DEFAULT, "")
-                .mapRepoView(repoView -> repoView.withFocusedPane(Option.of(ContentArea.COMMIT.id())))
-                .openPopup(new HelpPopup(ContentArea.COMMIT.id().value(), List.empty()));
+                .mapRepoView(repoView -> repoView.withFocusedPane(Option.of(CommitSource.AREA.id())))
+                .openPopup(new HelpPopup(CommitSource.AREA.id().value(), List.empty()));
 
         assertEquals(
                 "Commit: aaaa",
@@ -370,7 +369,7 @@ class ContentViewTest {
 
         assertEquals(
                 new Shown.Area(
-                        ContentArea.COMMIT,
+                        CommitSource.AREA,
                         "Commit: aaaa",
                         new ScrolledContent.CommitChanges(commit, DiffText.of("+added line\n")),
                         new CommitBody(commit, new ShownChanges(whole("+added line\n"), PLAIN_LOOK))),
@@ -398,7 +397,7 @@ class ContentViewTest {
 
         assertEquals(
                 new Shown.Area(
-                        ContentArea.COMMIT_FILE,
+                        CommitFilesSource.AREA,
                         "aaaa · src/a.txt",
                         new ScrolledContent.FileChanges(of, List.of(file), DiffText.of("+a\n")),
                         new DiffBody(new ShownChanges(whole("+a\n"), RICH_LOOK))),
@@ -481,18 +480,16 @@ class ContentViewTest {
     void theTitleSaysHowMuchContextIsShownWhenItIsNotThreeLines() {
         DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
 
-        assertEquals("Diff", ContentView.titled("Diff", DiffOptions.DEFAULT));
+        assertEquals("Diff", Shows.titled("Diff", DiffOptions.DEFAULT));
         assertEquals(
                 "Diff · 10 lines of context",
-                ContentView.titled("Diff", DiffOptions.DEFAULT.withContext(new DiffContext(10))));
+                Shows.titled("Diff", DiffOptions.DEFAULT.withContext(new DiffContext(10))));
         assertEquals(
-                "Diff · 1 line of context",
-                ContentView.titled("Diff", DiffOptions.DEFAULT.withContext(new DiffContext(1))));
-        assertEquals(
-                "Diff · no context", ContentView.titled("Diff", DiffOptions.DEFAULT.withContext(new DiffContext(0))));
+                "Diff · 1 line of context", Shows.titled("Diff", DiffOptions.DEFAULT.withContext(new DiffContext(1))));
+        assertEquals("Diff · no context", Shows.titled("Diff", DiffOptions.DEFAULT.withContext(new DiffContext(0))));
         assertEquals(
                 "Diff · the whole file · ignoring whitespace",
-                ContentView.titled("Diff", ignoring.withContext(DiffContext.WHOLE_FILE)));
+                Shows.titled("Diff", ignoring.withContext(DiffContext.WHOLE_FILE)));
     }
 
     @Test
@@ -505,7 +502,8 @@ class ContentViewTest {
 
         Shown.Stacked diffs = assertInstanceOf(Shown.Stacked.class, ContentView.of(selected, FilesPanel.PANE));
         assertEquals(
-                List.of(ContentArea.STAGED, ContentArea.UNSTAGED), diffs.areas().map(Shown.Area::area));
+                List.of(FileDiffsSource.STAGED, FileDiffsSource.UNSTAGED),
+                diffs.areas().map(Shown.Area::area));
         assertEquals(
                 List.of("Staged changes", "Unstaged changes"), diffs.areas().map(Shown.Area::title));
     }
@@ -560,7 +558,7 @@ class ContentViewTest {
 
         assertEquals(
                 new Shown.Area(
-                        ContentArea.DIVERGENCE,
+                        DivergenceSource.AREA,
                         "Commit: cccc",
                         new ScrolledContent.CommitChanges(plain("cccc"), DiffText.of("+added line")),
                         new CommitBody(plain("cccc"), new ShownChanges(whole("+added line"), PLAIN_LOOK))),
@@ -607,7 +605,7 @@ class ContentViewTest {
 
         assertEquals(loading("Commit"), ContentView.of(loading, BranchesPanel.PANE));
         Shown.Area commit = area(ContentView.of(selected, BranchesPanel.PANE));
-        assertEquals(ContentArea.BRANCH_COMMIT, commit.area());
+        assertEquals(BranchCommitsSource.AREA, commit.area());
         assertEquals("Commit: ffff", commit.title());
         assertEquals(
                 "+added line",
@@ -643,7 +641,7 @@ class ContentViewTest {
 
         assertEquals(
                 new Shown.Area(
-                        ContentArea.STASH,
+                        StashSource.AREA,
                         "Stash: stash@{0}",
                         new ScrolledContent.StashChanges(stash.sha(), DiffText.of("+added line\n")),
                         new StashBody(stash, new ShownChanges(whole("+added line\n"), PLAIN_LOOK))),
@@ -689,7 +687,7 @@ class ContentViewTest {
 
         assertEquals(
                 new Shown.Area(
-                        ContentArea.PULL_REQUEST,
+                        PullRequestSource.AREA,
                         "Pull request: owner/repo#42",
                         new ScrolledContent.PullRequest(PULL_REQUEST, READ),
                         new PullRequestBody(PULL_REQUEST, READ)),
