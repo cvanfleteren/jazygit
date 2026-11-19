@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.github.builds.content.BuildsPickTest;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
@@ -264,7 +265,7 @@ class ContentSearchTest {
 
     @Test
     void aMatchGoneToStaysCurrentWhenTheRowsAboveItMoveAsTheThreadsAreReadAgain() throws Exception {
-        Driven driven = new Driven(ContentPanelTest.pullRequestDiff("Why?", """
+        Driven driven = new Driven(PullRequestContentTest.pullRequestDiff("Why?", """
                         diff --git a/a.txt b/a.txt
                         --- a/a.txt
                         +++ b/a.txt
@@ -281,9 +282,9 @@ class ContentSearchTest {
             assertTrue(before.contains("/zed 1/1"), before);
 
             // A reply makes the thread above the match longer.
-            driven.model.set(
-                    Update.update(driven.model.get(), ContentPanelTest.remarksLoaded("Why?\n\nOne.\n\nTwo.\n\nThree."))
-                            .model());
+            driven.model.set(Update.update(
+                            driven.model.get(), PullRequestContentTest.remarksLoaded("Why?\n\nOne.\n\nTwo.\n\nThree."))
+                    .model());
             String after = driven.screen(testRunner);
             assertTrue(after.contains("Three."), after);
             assertTrue(after.contains("/zed 1/1"), after);
@@ -395,7 +396,7 @@ class ContentSearchTest {
                 .bindings(net.vanfleteren.jazygit.ui.keys.Scopes.BUILDS.id())
                 .map(net.vanfleteren.jazygit.ui.keys.Keymap.Binding::key);
         Driven driven = new Driven(
-                BuildsContentTest.steppable(), net.vanfleteren.jazygit.ui.branches.BranchesPanel.PANE, AreaId.BUILDS);
+                BuildsPickTest.steppable(), net.vanfleteren.jazygit.ui.branches.BranchesPanel.PANE, AreaId.BUILDS);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
             SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);
@@ -433,7 +434,7 @@ class ContentSearchTest {
      * The diff of a pull request's files, of one added line {@code a} with a thread on it that asks "Why?".
      */
     private static Model pullRequest() {
-        return ContentPanelTest.pullRequestDiff("Why?", """
+        return PullRequestContentTest.pullRequestDiff("Why?", """
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
                 +++ b/a.txt

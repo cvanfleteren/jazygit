@@ -35,7 +35,8 @@ public record Build(
         Option<String> file,
         Origin origin) {
 
-    private static final Set<String> FAILED = HashSet.of("FAILURE", "TIMED_OUT", "STARTUP_FAILURE", "ACTION_REQUIRED");
+    private static final Set<String> FAILED_CONCLUSIONS =
+            HashSet.of("FAILURE", "TIMED_OUT", "STARTUP_FAILURE", "ACTION_REQUIRED");
 
     /**
      * A build without the file of its workflow.
@@ -73,13 +74,7 @@ public record Build(
      * jobs runs; else failed when one failed, timed out or could not start; else cancelled when one was; else passed.
      */
     public Outcome outcome() {
-        if (jobs.isEmpty() || jobs.exists(Job::running)) {
-            return Outcome.RUNNING;
-        }
-        if (jobs.exists(job -> FAILED.contains(job.conclusion()))) {
-            return Outcome.FAILED;
-        }
-        return jobs.exists(job -> job.conclusion().equals("CANCELLED")) ? Outcome.CANCELLED : Outcome.PASSED;
+        return Outcome.of(jobs);
     }
 
     /**
@@ -142,7 +137,21 @@ public record Build(
         PASSED,
         FAILED,
         CANCELLED,
-        RUNNING
+        RUNNING;
+
+        /**
+         * How a build of {@code jobs} ended: running while it has none yet, or while one runs; else failed when one
+         * failed, timed out or could not start; else cancelled when one was; else passed.
+         */
+        public static Outcome of(List<Job> jobs) {
+            if (jobs.isEmpty() || jobs.exists(Job::running)) {
+                return RUNNING;
+            }
+            if (jobs.exists(job -> FAILED_CONCLUSIONS.contains(job.conclusion()))) {
+                return FAILED;
+            }
+            return jobs.exists(job -> job.conclusion().equals("CANCELLED")) ? CANCELLED : PASSED;
+        }
     }
 
     /**

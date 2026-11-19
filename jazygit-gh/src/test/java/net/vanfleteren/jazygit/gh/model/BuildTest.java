@@ -54,6 +54,13 @@ class BuildTest {
     }
 
     @Test
+    void someJobsEndAsABuildOfThemWould() {
+        // As how one job did across its shards, without a build to hold them.
+        assertEquals(Build.Outcome.FAILED, Build.Outcome.of(List.of(job("SUCCESS", 2, 60), job("FAILURE", 2, 30))));
+        assertEquals(Build.Outcome.RUNNING, Build.Outcome.of(List.empty()));
+    }
+
+    @Test
     void aBuildWithoutAJobYetWaitsToStart() {
         Build held = build(1);
 

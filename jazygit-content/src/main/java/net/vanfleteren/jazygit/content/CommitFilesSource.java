@@ -68,26 +68,26 @@ record CommitFilesSource() implements ContentSource {
         // When only the files with review threads are listed and none is, nothing is highlighted (ADR 57).
         Option<Shown> nothingListed = FilesPanel.nothingListed(view.listed())
                 .filter(nothing -> !view.listedFiles().toOption().exists(List::nonEmpty))
-                .map(nothing -> Shows.whenLoaded(title, view.listedFiles(), listed -> Shows.dim(title, nothing)))
+                .map(nothing -> Shown.whenLoaded(title, view.listedFiles(), listed -> Shown.dim(title, nothing)))
                 // Nor when the filter hides all files listed (ADR 105).
                 .orElse(() -> view.listedFiles()
                         .toOption()
                         .filter(listed -> FilesPanel.noneMatch(model, listed))
-                        .map(listed -> Shows.dim(title, Messages.get("panel.files.noMatches"))));
+                        .map(listed -> Shown.dim(title, Messages.get("panel.files.noMatches"))));
         return nothingListed.getOrElse(() -> view.diff()
                 .map(Preview::shown)
-                .map(diff -> Shows.whenLoaded(
+                .map(diff -> Shown.whenLoaded(
                         title,
                         diff.value(),
                         changes -> diff.key().isEmpty()
-                                ? Shows.dim(title, Messages.get("content.noDirectFiles"))
+                                ? Shown.dim(title, Messages.get("content.noDirectFiles"))
                                 : fileChanges(model, view, name, diff.key(), changes)))
-                .getOrElse(() -> Shows.whenLoaded(
+                .getOrElse(() -> Shown.whenLoaded(
                         title,
                         view.files(),
                         files -> files.isEmpty()
-                                ? Shows.dim(title, Messages.get("content.noChanges"))
-                                : Shows.loading(title))));
+                                ? Shown.dim(title, Messages.get("content.noChanges"))
+                                : Shown.loading(title))));
     }
 
     /**

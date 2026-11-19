@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content;
+package net.vanfleteren.jazygit.github.builds.content;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -20,9 +20,9 @@ import net.vanfleteren.jazygit.ui.i18n.Messages;
 
 /**
  * The builds of the local branch highlighted in the branches pane, in place of its log, while they are shown for it
- * (ADR 131).
+ * (ADR 131). The GitHub feature contributes it, so it is asked before the content panel's own sources (ADR 154).
  */
-record BuildsSource() implements ContentSource {
+public record BuildsSource() implements ContentSource {
 
     /**
      * The builds of the branch highlighted in the branches pane, in place of its log (ADR 131), which take the focus
@@ -40,6 +40,10 @@ record BuildsSource() implements ContentSource {
                 .branches()
                 .builds()
                 .filter(view -> model.repoView().branches().tab() == BranchesTab.LOCAL
+                        // A divergence or the commits of a branch opened over the builds show in their place, as the
+                        // content panel's own sources asked for them before the builds.
+                        && model.repoView().branches().divergence().isEmpty()
+                        && model.repoView().branches().branchCommits().isEmpty()
                         && model.repoView()
                                 .preview()
                                 .branchLog()
@@ -58,7 +62,7 @@ record BuildsSource() implements ContentSource {
      */
     private static Shown builds(BuildsView view) {
         String title = title(view);
-        return Shows.whenLoaded(
+        return Shown.whenLoaded(
                 title,
                 view.builds(),
                 _ -> view.onGitHub()
@@ -66,11 +70,10 @@ record BuildsSource() implements ContentSource {
                                 .<Shown>map(drawn ->
                                         new Shown.Area(AREA, title, new Builds(view.branch()), new BuildsBody(drawn)))
                                 .getOrElse(() -> noBuilds(view, title, remote)))
-                        .getOrElse(() -> Shows.dim(
+                        .getOrElse(() -> Shown.dim(
                                 title,
                                 Messages.get(
-                                        "content.builds.offGitHub",
-                                        view.branch().value()))));
+                                        "github.builds.offGitHub", view.branch().value()))));
     }
 
     /**
@@ -84,8 +87,8 @@ record BuildsSource() implements ContentSource {
         String every = view.allBranches()
                 ? runs.filter(ofTab -> ofTab.reading() && ofTab.count() > 0)
                         .map(ofTab -> Messages.get(
-                                "content.panel.builds.everyBranchReading", ofBranch, String.valueOf(ofTab.count())))
-                        .getOrElse(() -> Messages.get("content.panel.builds.everyBranch", ofBranch))
+                                "github.builds.panel.everyBranchReading", ofBranch, String.valueOf(ofTab.count())))
+                        .getOrElse(() -> Messages.get("github.builds.panel.everyBranch", ofBranch))
                 : ofBranch;
         // Older builds can be read with m, or read again after failing: of the branch, or on every branch, of the tab
         // (ADR 132).
@@ -94,7 +97,7 @@ record BuildsSource() implements ContentSource {
             return every;
         }
         boolean failed = view.allBranches() ? runs.exists(WorkflowRuns::hasFailed) : view.hasFailed();
-        return Messages.get(failed ? "content.panel.builds.retry" : "content.panel.builds.more", every);
+        return Messages.get(failed ? "github.builds.panel.retry" : "github.builds.panel.more", every);
     }
 
     /**
@@ -105,12 +108,12 @@ record BuildsSource() implements ContentSource {
         String branch = view.branch().value();
         String commits = String.valueOf(view.commits());
         if (view.reading()) {
-            return Messages.get("content.panel.builds.reading", branch, commits);
+            return Messages.get("github.builds.panel.reading", branch, commits);
         }
         if (view.stopped().isDefined()) {
-            return Messages.get("content.panel.builds.stopped", branch, commits);
+            return Messages.get("github.builds.panel.stopped", branch, commits);
         }
-        return Messages.get("content.panel.builds.title", branch, commits);
+        return Messages.get("github.builds.panel.title", branch, commits);
     }
 
     /**
@@ -119,11 +122,11 @@ record BuildsSource() implements ContentSource {
      */
     private static Shown noBuilds(BuildsView view, String title, RemoteBranch remote) {
         return switch (NoBuilds.of(view)) {
-            case READING -> Shows.loading(title);
-            case NOT_ON_GITHUB -> Shows.dim(title, Messages.get("content.builds.notOnGitHub", remote.shortName()));
+            case READING -> Shown.loading(title);
+            case NOT_ON_GITHUB -> Shown.dim(title, Messages.get("github.builds.notOnGitHub", remote.shortName()));
             case NONE ->
-                Shows.dim(
-                        title, Messages.get("content.builds.none", remote.shortName(), String.valueOf(view.commits())));
+                Shown.dim(
+                        title, Messages.get("github.builds.none", remote.shortName(), String.valueOf(view.commits())));
         };
     }
 

@@ -48,8 +48,8 @@ record BranchLogSource() implements ContentSource {
                 .getOrElse(() -> model.repoView()
                         .branches()
                         .noLog()
-                        .map(noLog -> Shows.dim(Messages.get("content.panel.log.title"), noLogText(noLog)))
-                        .getOrElse(() -> Shows.loading(Messages.get("content.panel.log.title"))));
+                        .map(noLog -> Shown.dim(Messages.get("content.panel.log.title"), noLogText(noLog)))
+                        .getOrElse(() -> Shown.loading(Messages.get("content.panel.log.title"))));
     }
 
     /**
@@ -59,7 +59,7 @@ record BranchLogSource() implements ContentSource {
     private static Shown branchLog(Model model, Preview<BranchRef, List<Commit>> log) {
         String title = Messages.get("content.panel.log.titleFor", log.key().name());
         AheadView ahead = new AheadView(AheadUpdate.branch(model, log.key()), AheadUpdate.distance(model, log.key()));
-        return Shows.whenLoaded(
+        return Shown.whenLoaded(
                 ahead.title(title),
                 log.value(),
                 commits ->

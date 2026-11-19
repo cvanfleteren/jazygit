@@ -20,7 +20,6 @@ public final class PanelSources {
             new FileDiffsSource(),
             new DivergenceSource(),
             new BranchCommitsSource(),
-            new BuildsSource(),
             new BranchLogSource(),
             new CommitSource(),
             new StashSource());

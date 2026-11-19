@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content;
+package net.vanfleteren.jazygit.github.builds.content;
 
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;

@@ -51,20 +51,20 @@ record FileDiffsSource() implements ContentSource {
         Option<RepoStatus> status = model.repo().status().toOption();
         // With no files there is nothing to highlight, so no diff is ever requested.
         if (status.exists(read -> read.files().isEmpty())) {
-            return Shows.dim(title, Messages.get("content.noChangedFiles"));
+            return Shown.dim(title, Messages.get("content.noChangedFiles"));
         }
         if (status.exists(read -> FilesPanel.noneMatch(model, read.files()))) {
-            return Shows.dim(title, Messages.get("panel.files.noMatches"));
+            return Shown.dim(title, Messages.get("panel.files.noMatches"));
         }
         return model.repoView()
                 .preview()
                 .fileDiff()
                 .map(Preview::shown)
-                .map(diff -> Shows.whenLoaded(
+                .map(diff -> Shown.whenLoaded(
                         title,
                         diff.value(),
                         diffs -> diffAreas(options, model.preferences().diffLook(), title, diffs)))
-                .getOrElse(() -> Shows.loading(title));
+                .getOrElse(() -> Shown.loading(title));
     }
 
     /**
@@ -72,7 +72,7 @@ record FileDiffsSource() implements ContentSource {
      */
     private static Shown diffAreas(DiffOptions options, DiffLook look, String title, Diffs diffs) {
         if (diffs.isEmpty()) {
-            return Shows.dim(
+            return Shown.dim(
                     title, Messages.get(options.ignoreWhitespace() ? "content.onlyWhitespace" : "content.noChanges"));
         }
         return new Shown.Stacked(List.of(

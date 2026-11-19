@@ -53,7 +53,7 @@ public final class ContentView {
                 .flatMap(source -> source.shown(model, mirrored))
                 .headOption()
                 .map(shown -> Expanded.of(model, shown))
-                .getOrElse(() -> Shows.loading(""));
+                .getOrElse(() -> Shown.loading(""));
     }
 
     /**

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content;
+package net.vanfleteren.jazygit.github.builds.content;
 
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
@@ -82,7 +82,7 @@ final class BuildsText {
                 shown.of(),
                 shown.picked(),
                 shown.onTimeLine(),
-                DateTimeFormatter.ofPattern(Messages.get("content.builds.dayPattern"))
+                DateTimeFormatter.ofPattern(Messages.get("github.builds.dayPattern"))
                         .withZone(zone),
                 DateTimeFormatter.ofPattern(Messages.get("builds.whenPattern")).withZone(zone),
                 width,
@@ -90,12 +90,12 @@ final class BuildsText {
         String workflow = shown.shown().workflow();
         List<Line> builds = switch (shown.builds()) {
             case Loadable.Loading<List<Build>>() ->
-                List.of(Line.from(drawing.dim(Messages.get("content.builds.readingRuns", workflow))));
+                List.of(Line.from(drawing.dim(Messages.get("github.builds.readingRuns", workflow))));
             case Loadable.Failed<List<Build>>(var failure) ->
                 List.of(Line.from(Span.styled(Placeholders.error(failure), styles.of(Theme.Classes.ERROR))));
             case Loadable.Loaded<List<Build>>(var read) ->
                 read.isEmpty()
-                        ? List.of(Line.from(drawing.dim(Messages.get("content.builds.noRuns", workflow))))
+                        ? List.of(Line.from(drawing.dim(Messages.get("github.builds.noRuns", workflow))))
                         : drawing.workflow(read);
         };
         return List.of(TabStrip.line(tabs(shown), shown.index(), width, styles), Line.from(""))
@@ -300,6 +300,11 @@ final class BuildsText {
     private record JobRun(Outcome outcome, Duration took) {}
 
     /**
+     * A build under the chart: the day it was on, whether that day starts at it, and the column it starts at.
+     */
+    private record DayMark(String day, boolean starts, int column) {}
+
+    /**
      * How the builds are drawn.
      *
      * @param styles the styles of the theme
@@ -385,7 +390,7 @@ final class BuildsText {
 
         private Line title(List<Build> builds) {
             Build newest = builds.head();
-            String event = allBranches ? Messages.get("content.builds.allEvents") : newest.event();
+            String event = allBranches ? Messages.get("github.builds.allEvents") : newest.event();
             String from = day.format(builds.last().createdAt());
             String to = day.format(newest.createdAt());
             return Line.from(
@@ -393,18 +398,14 @@ final class BuildsText {
                     dim(
                             of > builds.size()
                                     ? Messages.get(
-                                            "content.builds.workflowOf",
+                                            "github.builds.workflowOf",
                                             event,
                                             String.valueOf(builds.size()),
                                             String.valueOf(of),
                                             from,
                                             to)
                                     : Messages.get(
-                                            "content.builds.workflow",
-                                            event,
-                                            String.valueOf(builds.size()),
-                                            from,
-                                            to)));
+                                            "github.builds.workflow", event, String.valueOf(builds.size()), from, to)));
         }
 
         private Line summary(List<Build> builds, Option<Duration> median) {
@@ -416,21 +417,21 @@ final class BuildsText {
                             List.of(span(symbol(counted._1()) + " " + counted._2(), style(counted._1())), dim("  ")));
             Option<Build> last = builds.find(build -> build.duration().isDefined());
             List<Span> times = median.map(middle -> List.of(dim(Messages.get(
-                            "content.builds.times",
+                            "github.builds.times",
                             String.valueOf(Math.round(100.0 * passed.size() / builds.size())),
                             duration(middle),
                             percentile(passed, 0.9).map(BuildsText::duration).getOrElse("")))))
                     .getOrElse(List.empty())
                     .appendAll(last.flatMap(build -> build.duration()
                                     .map(took -> List.of(
-                                            dim("   " + Messages.get("content.builds.last", duration(took))),
+                                            dim("   " + Messages.get("github.builds.last", duration(took))),
                                             median.map(middle -> took.minus(middle))
                                                     .map(difference ->
                                                             span(" " + signed(difference), trend(difference, STEADY)))
                                                     .getOrElse(() -> dim("")))))
                             .getOrElse(List.empty()));
             List<Span> everyBranch = baseline.map(known -> List.of(dim(Messages.get(
-                            "content.builds.baseline", duration(known.median()), String.valueOf(known.runs())))))
+                            "github.builds.baseline", duration(known.median()), String.valueOf(known.runs())))))
                     .getOrElse(List.empty());
             return Line.from(counts.appendAll(times).appendAll(everyBranch).toJavaList());
         }
@@ -445,7 +446,7 @@ final class BuildsText {
                     .filter(took -> build.outcome() == Outcome.PASSED || build.outcome() == Outcome.FAILED));
             List<Duration> drawn = bars.flatMap(bar -> bar);
             if (drawn.isEmpty()) {
-                return List.of(Line.from(dim(Messages.get("content.builds.noneDone"))));
+                return List.of(Line.from(dim(Messages.get("github.builds.noneDone"))));
             }
             long top = top(drawn);
             int medianRow = median.map(middle -> (int) (middle.toSeconds() * CHART_ROWS / top))
@@ -503,15 +504,16 @@ final class BuildsText {
          */
         private List<Line> axis(List<Build> shown, int each) {
             List<String> days = shown.map(build -> day.format(build.createdAt()));
-            List<Boolean> starts = days.zipWithIndex()
-                    .map(dated -> dated._2() == 0 || !dated._1().equals(days.get(dated._2() - 1)));
+            // A day starts at a build on another day than the one before it.
+            List<Boolean> starts = days.zip(days.map(Option::some).prepend(Option.none()))
+                    .map(pair -> !pair._2().contains(pair._1()));
             String labels = days.zip(starts)
                     .zipWithIndex()
+                    .map(dated -> new DayMark(dated._1()._1(), dated._1()._2(), dated._2() * each))
                     .foldLeft(
                             "",
-                            (done, dated) -> dated._1()._2() && done.length() <= dated._2() * each
-                                    ? done + " ".repeat(dated._2() * each - done.length())
-                                            + dated._1()._1() + " "
+                            (done, mark) -> mark.starts() && done.length() <= mark.column()
+                                    ? done + " ".repeat(mark.column() - done.length()) + mark.day() + " "
                                     : done);
             return List.of(
                             Line.from(dim(" ".repeat(SCALE - 1) + "└"
@@ -531,7 +533,7 @@ final class BuildsText {
                                     .appendAll(shown.flatMap(build -> List.of(
                                             isMine(build) ? span(MINE, Theme.Classes.CURRENT_BRANCH) : Span.raw(" "),
                                             Span.raw(" ".repeat(each - 1)))))
-                                    .append(dim(Messages.get("content.builds.mine")))
+                                    .append(dim(Messages.get("github.builds.mine")))
                                     .toJavaList())));
         }
 
@@ -576,8 +578,8 @@ final class BuildsText {
             }
             int nameColumns = names(names.map(TextWidth::of).max().getOrElse(0), width);
             int count = builds.size();
-            String passedLabel = Messages.get("content.builds.lastBuilds", String.valueOf(count));
-            String timeLabel = Messages.get("content.builds.time");
+            String passedLabel = Messages.get("github.builds.lastBuilds", String.valueOf(count));
+            String timeLabel = Messages.get("github.builds.time");
             // The results and the times share what the names and the numbers leave of the panel: each build gets a
             // column at least, and no more than WIDEST.
             int series =
@@ -588,10 +590,10 @@ final class BuildsText {
                     Math.max(series, TextWidth.of(passedLabel)) + 2,
                     Math.max(series, TextWidth.of(timeLabel)) + 2,
                     cells(count, series));
-            Line header = Line.from(dim(pad(Messages.get("content.builds.job"), nameColumns)
+            Line header = Line.from(dim(pad(Messages.get("github.builds.job"), nameColumns)
                     + pad(passedLabel, columns.passed())
                     + pad(timeLabel, columns.time())
-                    + Messages.get("content.builds.jobTimes")));
+                    + Messages.get("github.builds.jobTimes")));
             return names.map(name -> job(name, builds.map(build -> ofJob(build, name)), columns))
                     .prepend(header)
                     .append(Line.from(""));
@@ -607,16 +609,7 @@ final class BuildsText {
             return Option.when(
                     !shards.isEmpty(),
                     () -> new JobRun(
-                            new Build(
-                                            build.workflow(),
-                                            build.event(),
-                                            build.runId(),
-                                            build.attempt(),
-                                            build.sha(),
-                                            build.title(),
-                                            build.createdAt(),
-                                            shards)
-                                    .outcome(),
+                            Outcome.of(shards),
                             shards.flatMap(Build.Job::duration).max().getOrElse(Duration.ZERO)));
         }
 
@@ -652,11 +645,9 @@ final class BuildsText {
                                             : Span.raw(" ".repeat(run._2())))
                             .getOrElse(() -> Span.raw(" ".repeat(run._2()))));
             int half = passed.size() / 2;
-            Option<Duration> trend = Option.when(
-                    half > 0,
-                    () -> median(passed.drop(half))
-                            .get()
-                            .minus(median(passed.take(half)).get()));
+            Option<Duration> trend = Option.when(half > 0, half)
+                    .flatMap(older -> median(passed.drop(older))
+                            .flatMap(newer -> median(passed.take(older)).map(newer::minus)));
             Option<Duration> last =
                     runs.reverse().flatMap(run -> run).headOption().map(JobRun::took);
             return Line.from(List.of(Span.raw(pad(name, columns.name())))
@@ -699,13 +690,13 @@ final class BuildsText {
                                                 Theme.Classes.SHA),
                                         Span.raw(" " + build.title()),
                                         dim(Messages.get(
-                                                chosen ? "content.builds.pickedBuild" : "content.builds.lastBuild",
+                                                chosen ? "github.builds.pickedBuild" : "github.builds.lastBuild",
                                                 build.duration()
                                                         .map(BuildsText::duration)
                                                         .getOrElse("–"),
                                                 when.format(build.createdAt()))))
                                 .appendAll(build.queued()
-                                        .map(queued -> dim(Messages.get("content.builds.queued", duration(queued))))
+                                        .map(queued -> dim(Messages.get("github.builds.queued", duration(queued))))
                                         .toList())
                                 .toJavaList());
                         Map<String, Set<String>> ofBuild =
@@ -749,29 +740,29 @@ final class BuildsText {
                     Math.min(
                             FOR,
                             builds.map(build -> TextWidth.of(ranFor(build)))
-                                            .append(TextWidth.of(Messages.get("content.builds.for")))
+                                            .append(TextWidth.of(Messages.get("github.builds.for")))
                                             .max()
                                             .getOrElse(0)
                                     + 1),
-                    widest(builds.map(build -> shortSha(build.sha())), "content.builds.commit"),
+                    widest(builds.map(build -> shortSha(build.sha())), "github.builds.commit"),
                     // A day of two digits is reserved for, so that the column stays put as older builds are read.
                     widest(
                             builds.map(build -> when.format(build.createdAt())).append(when.format(WIDEST_DAY)),
-                            "content.builds.when"),
+                            "github.builds.when"),
                     // A time below an hour is reserved for, so that the column stays put across workflows too.
                     widest(
                             builds.map(build -> build.duration()
                                             .map(BuildsText::duration)
                                             .getOrElse("–"))
                                     .append(duration(Duration.ofMinutes(59))),
-                            "content.builds.time"),
+                            "github.builds.time"),
                     // As wide as its header, which is wider than a wait below an hour.
                     widest(
                             builds.flatMap(build -> build.queued().map(BuildsText::duration)),
-                            "content.builds.queuedHeader"),
+                            "github.builds.queuedHeader"),
                     widest(
                             builds.flatMap(build -> difference(build, median)).map(BuildsText::signed),
-                            "content.builds.vsMedian"));
+                            "github.builds.vsMedian"));
         }
 
         /**
@@ -779,18 +770,18 @@ final class BuildsText {
          */
         private Line header(ListColumns columns) {
             return Line.from(dim("  "
-                    + (allBranches ? "  " + pad(Messages.get("content.builds.for"), columns.ranFor()) : "")
-                    + padRight(Messages.get("content.builds.commit"), columns.commit())
+                    + (allBranches ? "  " + pad(Messages.get("github.builds.for"), columns.ranFor()) : "")
+                    + padRight(Messages.get("github.builds.commit"), columns.commit())
                     + GAP
-                    + padRight(Messages.get("content.builds.when"), columns.when())
+                    + padRight(Messages.get("github.builds.when"), columns.when())
                     + GAP
-                    + padLeft(Messages.get("content.builds.time"), columns.time())
+                    + padLeft(Messages.get("github.builds.time"), columns.time())
                     + GAP
-                    + padLeft(Messages.get("content.builds.queuedHeader"), columns.queued())
+                    + padLeft(Messages.get("github.builds.queuedHeader"), columns.queued())
                     + GAP
-                    + padLeft(Messages.get("content.builds.vsMedian"), columns.vsMedian())
+                    + padLeft(Messages.get("github.builds.vsMedian"), columns.vsMedian())
                     + GAP
-                    + Messages.get("content.builds.title")));
+                    + Messages.get("github.builds.title")));
         }
 
         /**

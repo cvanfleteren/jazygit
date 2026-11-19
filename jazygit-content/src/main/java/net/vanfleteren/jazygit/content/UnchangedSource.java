@@ -55,10 +55,10 @@ record UnchangedSource() implements ContentSource {
     static Shown unchanged(Model model, UnchangedNode node, String title, Option<Sha> commit) {
         return switch (node) {
             case UnchangedNode.Directory(String path, int files) ->
-                Shows.dim(title, Messages.get("content.directoryFiles", path.isEmpty() ? "/" : path, files));
+                Shown.dim(title, Messages.get("content.directoryFiles", path.isEmpty() ? "/" : path, files));
             case UnchangedNode.File(var content) -> {
                 Preview<String, FileContent> shown = content.shown();
-                yield Shows.whenLoaded(
+                yield Shown.whenLoaded(
                         title, shown.value(), read -> fileContent(model, shown.key(), read, title, commit));
             }
         };
@@ -79,10 +79,10 @@ record UnchangedSource() implements ContentSource {
                         new DiffBody(new ShownChanges(
                                 Shows.shown(asDiff), new DiffLook(DiffStyle.RICH, look.syntax(), look.words()))));
             }
-            case FileContent.Binary(long size) -> Shows.dim(title, Messages.get("content.file.binarySize", size(size)));
-            case FileContent.Link(String target) -> Shows.dim(title, Messages.get("content.file.link", target));
+            case FileContent.Binary(long size) -> Shown.dim(title, Messages.get("content.file.binarySize", size(size)));
+            case FileContent.Link(String target) -> Shown.dim(title, Messages.get("content.file.link", target));
             case FileContent.Submodule(var at) ->
-                Shows.dim(
+                Shown.dim(
                         title,
                         at.map(sha -> Messages.get("content.file.submodule", sha.shortSha()))
                                 .getOrElse(() -> Messages.get("content.file.submoduleUnknown")));
