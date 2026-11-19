@@ -2,12 +2,16 @@ package net.vanfleteren.jazygit.features.github.builds.content;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
 import net.vanfleteren.jazygit.features.github.builds.WorkflowRuns;
+import net.vanfleteren.jazygit.features.github.failed.FailedBuilds;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
@@ -45,7 +49,7 @@ public record BuildsSource() implements ContentSource {
                                 .preview()
                                 .branchLog()
                                 .exists(log -> log.key().equals(new BranchRef.Local(view.branch()))))
-                .map(BuildsSource::builds);
+                .map(view -> builds(view, model));
     }
 
     @Override
@@ -57,20 +61,39 @@ public record BuildsSource() implements ContentSource {
      * The builds {@code view} shows of its branch: the chart and list of them once some are read, or else why there
      * are none.
      */
-    private static Shown builds(BuildsView view) {
+    private static Shown builds(BuildsView view, Model model) {
         String title = title(view);
         return Shown.whenLoaded(
                 title,
                 view.builds(),
                 _ -> view.onGitHub()
                         .map(remote -> view.shownOf()
-                                .<Shown>map(drawn ->
-                                        new Shown.Area(AREA, title, new Builds(view.branch()), new BuildsBody(drawn)))
+                                .<Shown>map(drawn -> new Shown.Area(
+                                        AREA,
+                                        title,
+                                        new Builds(view.branch()),
+                                        new BuildsBody(
+                                                drawn,
+                                                failedBuild(
+                                                        view.branch(),
+                                                        drawn,
+                                                        model.gitHub().pullRequest(remote)))))
                                 .getOrElse(() -> noBuilds(view, title, remote)))
                         .getOrElse(() -> Shown.dim(
                                 title,
                                 Messages.get(
                                         "github.builds.offGitHub", view.branch().value()))));
+    }
+
+    /**
+     * What failed in the build whose jobs {@code drawn} shows on one time line, for the keys other features add to a
+     * failed build (ADR 161): only one of {@code branch}, as with every branch shown it can be another's run, and
+     * {@code branch}'s pull request is not that run's.
+     */
+    static Option<FailedBuild> failedBuild(BranchName branch, BuildsShown drawn, Option<PullRequest> pullRequest) {
+        return drawn.onTimeLine()
+                .filter(build -> !drawn.allBranches() || drawn.mine().contains(build.sha()))
+                .map(build -> FailedBuilds.of(branch, build, pullRequest));
     }
 
     /**

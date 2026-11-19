@@ -31,9 +31,14 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
+import net.vanfleteren.jazygit.core.git.model.Branch;
 import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.BranchRef;
+import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.git.model.Tracking;
+import net.vanfleteren.jazygit.core.git.model.Upstream;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -41,6 +46,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimesMsg;
 import net.vanfleteren.jazygit.kernel.state.github.PendingChecks;
@@ -51,6 +57,8 @@ import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import net.vanfleteren.jazygit.kernel.ui.github.CheckRows;
 import net.vanfleteren.jazygit.kernel.ui.github.CheckTimesText;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
@@ -663,6 +671,104 @@ class ChecksDialogTest {
         }
 
         assertEquals(java.util.List.of(new ChecksMsg.RerunRequested()), dispatched);
+    }
+
+    @Test
+    void theChecksOfARemoteBranchAreHandedOverAsOfTheLocalBranchThatFollowsItElseByTheRemoteName() {
+        RemoteBranch upstreamMain = new RemoteBranch("upstream", new BranchName("main"));
+        ChecksPopup popup = ChecksPopup.loading(new BranchRef.Remote(upstreamMain), upstreamMain, Instant.EPOCH)
+                .with(readOf(List.of(check("verify", Checks.FAILING, 300, Option.of(60)))));
+        Branch work = new Branch(
+                new BranchName("work"),
+                false,
+                new Sha("1111"),
+                Instant.EPOCH,
+                Option.none(),
+                false,
+                false,
+                new Tracking.Tracks(new Upstream(new BranchRef.Remote(upstreamMain), 0, 0)),
+                Option.none());
+        Model following =
+                TestModels.localBranchesRead(TestModels.loaded(), List.of(work)).model();
+        Model none = TestModels.localBranchesRead(
+                        TestModels.loaded(), List.of(Fixtures.branch(new BranchName("main"), true, new Sha("aaaa"))))
+                .model();
+
+        assertEquals(
+                Option.of(new BranchName("work")),
+                ChecksDialog.failedBuild(popup, following).map(FailedBuild::branch));
+        // A local main that follows origin/main is not the branch upstream/main is built of.
+        assertEquals(
+                Option.of(new BranchName("upstream/main")),
+                ChecksDialog.failedBuild(popup, none).map(FailedBuild::branch));
+    }
+
+    @Test
+    void ofSeveralLocalBranchesThatFollowARemoteBranchTheOneNamedAsItIsTakenElseNone() {
+        RemoteBranch originMain = new RemoteBranch("origin", new BranchName("main"));
+        ChecksPopup popup = ChecksPopup.loading(new BranchRef.Remote(originMain), originMain, Instant.EPOCH)
+                .with(readOf(List.of(check("verify", Checks.FAILING, 300, Option.of(60)))));
+        // git switch -c feature origin/main makes feature follow origin/main too, until its first push -u.
+        Model named = TestModels.localBranchesRead(
+                        TestModels.loaded(), List.of(follower("aaa-feature", originMain), follower("main", originMain)))
+                .model();
+        Model unnamed = TestModels.localBranchesRead(
+                        TestModels.loaded(), List.of(follower("feature", originMain), follower("fix", originMain)))
+                .model();
+
+        assertEquals(
+                Option.of(new BranchName("main")),
+                ChecksDialog.failedBuild(popup, named).map(FailedBuild::branch));
+        assertEquals(
+                Option.of(new BranchName("origin/main")),
+                ChecksDialog.failedBuild(popup, unnamed).map(FailedBuild::branch));
+    }
+
+    private static Branch follower(String name, RemoteBranch upstream) {
+        return new Branch(
+                new BranchName(name),
+                false,
+                new Sha("1111"),
+                Instant.EPOCH,
+                Option.none(),
+                false,
+                false,
+                new Tracking.Tracks(new Upstream(new BranchRef.Remote(upstream), 0, 0)),
+                Option.none());
+    }
+
+    @Test
+    void aKeyAnotherFeatureAddsToAFailedBuildActsOnTheFailedChecksAndIsInTheHint() throws Exception {
+        java.util.List<FailedBuild> handed = new java.util.ArrayList<>();
+        Keymap keymap = ChecksAction.KEYS
+                .apply(Keymap.empty())
+                .add(Scopes.FAILED_BUILD, Keymap.Binding.onSelected("I", "github.help.checks.rerun", failed -> {
+                    handed.add(failed);
+                    return new ChecksMsg.Closed();
+                }));
+        ChecksDialog hosting = new ChecksDialog(dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC), () -> keymap);
+        Model model = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(read(List.of(
+                        check("verify", Checks.FAILING, 300, Option.of(60)),
+                        check("lint", Checks.PASSING, 300, Option.of(60)))));
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(
+                () -> stack(text("background"), hosting.render(model).get()))) {
+            SettledPilot.focus(runner, ChecksDialog.ID);
+            String screen = RenderedText.ofSize(
+                    runner,
+                    () -> stack(text("background"), hosting.render(model).get()),
+                    120,
+                    50);
+            SettledPilot.of(runner).press('I');
+            SettledPilot.of(runner).pause();
+
+            assertTrue(screen.contains("(I) Rerun failed"), screen);
+        }
+        assertEquals(1, handed.size());
+        assertEquals(List.of("verify"), handed.getFirst().jobs().map(FailedBuild.Job::name));
+        assertEquals(Option.of("owner/repo"), handed.getFirst().repository());
     }
 
     @Test

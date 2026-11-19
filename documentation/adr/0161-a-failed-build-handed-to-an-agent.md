@@ -1,0 +1,133 @@
+# 161. A failed build handed to an agent
+
+Date: 2026-11-19
+
+## Context
+
+When a build fails, the user reads its logs, finds the cause and fixes it. A coding agent, such as Claude Code, can do
+much of that on its own once told which build failed and how to read its logs. The user wants an action on a failed
+build that starts one with a prompt to investigate, set up by the user, and off until then.
+
+Two things jazygit lacks for it:
+
+- **An action on the content of another group.** The builds of a branch (ADR 131) and the checks popup (ADR 32) are
+  `features-github`'s, and so are their keys (`BuildsAction.SCOPE`). A group uses only the groups before it
+  (ADR 159), so an action of another group of features cannot reach them. ADR 158 foresaw an extension point that a
+  pane declares for another group to draw in, as GitHub's badges on the branches; none exists yet.
+- **A way to run an agent.** The editors (ADR 110, 145) are programs the user lists in `config.toml`, run without a
+  shell, either handed the terminal or started and left running. An agent is run the same way.
+
+jazygit should come to work with other forges than GitHub (#588): what the agent is told of a build must not tie it to
+GitHub.
+
+Neither view picks a job: the builds show one build, picked with `n` and `N` (ADR 133); the checks popup lists the
+checks on the tip of a branch, which can come from several workflow runs, and only scrolls.
+
+## Decision
+
+### A failed build, and actions on it
+
+- A `FailedBuild`, in `kernel-state`, is what failed on one commit of a branch: the repository and the commit, when
+  the view knows them, the branch, the number of its pull request if it has one, whether some of its jobs still run,
+  and its failed jobs, each with its name, the run it is part of if it has one, and its URL when it is known. The
+  checks popup does not know the commit of the tip, nor the builds the repository. It also carries how to read their
+  logs, a text the forge side writes, as
+  `gh run view <run> --log-failed --repo <owner/name>` for each run on GitHub, so that what reads it knows no forge's
+  program.
+- A failed commit status, as of an outside CI or a bot, is a failed job without a run: its name is the context of the
+  status, its URL the target URL it links to, which the checks are read with from now on. The text on the logs says
+  that its logs are not on the forge, but at that URL. Not: leaving statuses out, so the agent never hears of a CI
+  outside the forge that failed.
+- It names no forge: another forge (#588) gives the same value.
+- **Actions on a subject** are an extension point: a key `Scope` of the subject's type, `Scopes.FAILED_BUILD`, in
+  `kernel-ui`, which a view *hosts* (`Keymap.host`): its keys come after the view's own, in its keys, its hint and its
+  help, and act on the subject the view hands over with the key (`Keymap.Hosted`), as ADR 158 foresaw for the badges.
+  A feature adds its actions to that scope as to any other, through its `Feature`, and the app gathers them in the
+  keymap. An action is a binding: its key and help text, and the message it sends for the subject. Not: a registry of
+  actions beside the keymap, which the help, the hints and the check of keys bound twice would each have to learn.
+- An action that cannot act says why when its key is pressed, as `e` does (ADR 110): its key stays listed.
+- A view that shows a subject has a key `Scope` for it, so its keys and the contributed ones are bindings alike: the
+  checks popup, which matched its keys itself in `ChecksDialog.keys`, gets one for `r`, `R`, `n`, `N` and `e`
+  (`ChecksAction.SCOPE`), as the builds have `BuildsAction.SCOPE`. Scrolling and closing stay the popup's own. Its hint
+  line is full, so the contributed keys get a line of their own under it.
+- The keymap refuses a key bound twice across a host and its guests, whichever is added first, and a key that two
+  features add to one guest, as it refuses one bound twice in a scope; the keymap of the app is made in its tests, so
+  they fail on it. A contributor cannot see the view's keys.
+- `features-github` gives the subject: the builds give the failed jobs of the build shown; the checks popup the
+  failed checks of the tip of the branch, across runs. The agent works out which of them matter. Not: a subject of
+  one job, nor of the check picked once ADR 160 picks one, as more than one may have failed; nor of a whole branch
+  with several failed builds.
+
+### The agents
+
+- A new group of features, `features-agent`, investigates a `FailedBuild` with an agent. It uses neither
+  `features-github` nor `core-gh`, which a rule of `GroupsTest` checks.
+- The user lists the agents in `config.toml`, as the editors:
+
+  ```toml
+  [[agents]]
+  name = "Claude"
+  command = ["claude", "{prompt}"]
+  terminal = true
+  ```
+
+  - `name`, `terminal` and `shortcut` are as for an editor (ADR 110). An agent has one `command`, a list run without
+    a shell, as an editor's `dir-command` and `file-command` are (ADR 145); `terminal = true` hands the terminal over
+    to the agent, else it is started and left running, as an agent in a tmux window of its own is.
+  - The command takes `{prompt}` and `{dir}`; without `{prompt}`, the prompt is added as the last argument.
+  - `prompt`: what the agent is asked, if not jazygit's own text. It takes `{repo}`, `{branch}`, `{commit}`, `{pr}`
+    (empty without a pull request), `{failures}` (the failed jobs with their URLs, one per line) and `{logs}` (how to
+    read their logs).
+  - A `{…}` that is no placeholder of its list stays as it is, in a command or a prompt, as in an editor's command:
+    a prompt can hold braces, as of JSON, without escaping them. Not: reporting it as a problem, which would drop
+    editors that work today once they share the type.
+  - An entry that is wrong otherwise, as one without a `name` or with an empty `command`, is left out and reported as
+    `SettingsProblem.Invalid` under its keys, as an editor is.
+- Not: an agent jazygit knows of, as Claude with its flags. jazygit names no agent; Claude is the example in the
+  documentation.
+- The editors and the agents share one type of program in `kernel-settings`: its name, `terminal`, its shortcut, how
+  a command list is read and its placeholders filled in, and how a wrong entry is reported. An editor keeps its two
+  commands and an agent has one; each list adds only its own placeholders.
+- Only in `config.toml` for now: a section of the settings panel that a feature contributes is for a later ADR.
+
+### Investigating
+
+- `I` investigates the failed build in the builds of a branch and in the checks popup. With one agent it starts it,
+  with more it opens a menu of them.
+- The prompt names the build; the agent reads the logs itself. Not: jazygit reading the logs and handing them over.
+- The agent starts in the worktree that has the branch checked out (ADR 110). Without one, `I` is disabled: the
+  branch is not checked out in a worktree, as `e` says (ADR 110). Not: starting in the worktree jazygit shows, where
+  another branch is checked out and the agent's fix would land on it.
+- The branch of the checks of a remote branch is, of the local branches that follow it, the one named as it is, else
+  the only one; else its name on the remote, which no worktree has, so `I` says it is not checked out. Not: the first
+  that follows it, as `git switch -c feature origin/main` makes `feature` follow it too, until it is pushed; nor a
+  local branch of the same name, which may follow another remote. With every branch shown in the builds (`a`), only
+  a run of the branch itself is handed over.
+- The failed commit need not be what is checked out: the builds can show an older build than the tip (ADR 133), and
+  both views read the branch on the forge, which local commits not pushed yet, or not pulled yet, differ from.
+  jazygit's prompt says so for either view, with the `git log` that shows how.
+- It starts at once, without asking; the command log has its command, and a failed one is shown as a failed editor is
+  (ADR 146). Not: a popup to edit the prompt first, until one is wanted.
+- Once an agent handed the terminal exits, the repository is read again, as after the editor (`EditCmd`), as the
+  agent may have changed it. One left running is seen by the reads every so often (ADR 125).
+- `I` stays in the hint, disabled when it cannot start: without an agent in `config.toml` it says to add one; with
+  nothing failed it says so, or that the build still runs; with no build handed over yet, or the worktrees not read
+  yet, it says that. One failed job is enough, while others still run.
+
+## Consequences
+
+- `features-agent` is the first group of features that only reaches what it acts on through an extension point:
+  adding an action on a failed build changes nothing in `features-github`.
+- The views that show a `FailedBuild` take actions they do not know; another subject, as a pull request, needs its
+  own key and its own views to show it.
+- An agent gets no logs from jazygit: one that cannot run `gh`, or the program the hint names, cannot read them.
+- What the agent does is its own: jazygit does not show its output, and does not know when one left running is done.
+- The prompt holds text that others choose: the names of jobs and of the branch, and, through the logs the agent is
+  told to read, what a build printed; a pull request from a fork can set any of it. An agent that runs commands in
+  the worktree can be steered by it. The risk is accepted, as the agent only starts when the user asks: jazygit's
+  own prompt fences what the forge gave as data, and what the agent may do is up to the user, through the agent's
+  own flags in `command`. A change that starts an agent without the user asking needs to weigh this again.
+- Moving the editors onto the shared type of program changes no setting of theirs.
+- ADR 160 picks a check in the checks popup and keeps the logs of checks in a cache directory.
+  The check picked changes nothing for `I`: it hands over every failed check. Naming the logs already kept in the
+  prompt is for a later change.

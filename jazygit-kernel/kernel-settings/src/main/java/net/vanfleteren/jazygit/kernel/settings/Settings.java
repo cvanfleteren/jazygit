@@ -33,6 +33,8 @@ import lombok.With;
  * @param diffFilters         the ids of the diff filters enabled, in the order they were enabled (ADR 144)
  * @param filterDefinitions   the diff filters the user set (ADR 144); only read, never written, as only the user
  *                            sets them
+ * @param agents              the agents a failed build can be handed to (ADR 161); only read, never written, as only
+ *                            the user sets them
  */
 @With
 public record Settings(
@@ -51,7 +53,8 @@ public record Settings(
         AccountBrowsers browsers,
         Editors editors,
         List<String> diffFilters,
-        FilterDefinitions filterDefinitions) {
+        FilterDefinitions filterDefinitions,
+        Agents agents) {
 
     /**
      * The narrowest the left column may get, in percent of the width.
@@ -100,7 +103,8 @@ public record Settings(
             AccountBrowsers.NONE,
             Editors.NONE,
             List.empty(),
-            FilterDefinitions.NONE);
+            FilterDefinitions.NONE,
+            Agents.NONE);
 
     /**
      * The key of the theme in the settings file.

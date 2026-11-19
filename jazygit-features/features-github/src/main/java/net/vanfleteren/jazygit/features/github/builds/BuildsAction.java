@@ -29,7 +29,9 @@ public final class BuildsAction {
                     .add(SCOPE, stepping("n", "github.help.builds.nextBuild", 1))
                     .add(SCOPE, stepping("N", "github.help.builds.previousBuild", -1))
                     .add(SCOPE, Binding.always("c", "github.help.builds.window", BuildsMsg.WindowRequested::new))
-                    .add(SCOPE, Binding.always("B", "github.help.builds.close", BuildsMsg.Closed::new)),
+                    .add(SCOPE, Binding.always("B", "github.help.builds.close", BuildsMsg.Closed::new))
+                    // The keys other features add to a failed build, on the one whose jobs show (ADR 161).
+                    .host(SCOPE, Scopes.FAILED_BUILD),
             BuildsDialog::popups);
 
     private BuildsAction() {}

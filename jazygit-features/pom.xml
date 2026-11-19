@@ -22,6 +22,7 @@
         <module>features-branches</module>
         <module>features-github</module>
         <module>features-chrome</module>
+        <module>features-agent</module>
     </modules>
 
     <dependencies>

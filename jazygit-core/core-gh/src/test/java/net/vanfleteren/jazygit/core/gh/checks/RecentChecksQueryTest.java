@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 class RecentChecksQueryTest {
 
     private static final String OTHER_APP = """
-            { "__typename": "CheckRun", "databaseId": 7, "name": "CodeQL", "status": "COMPLETED",
+            { "__typename": "CheckRun", "detailsUrl": null, "databaseId": 7, "name": "CodeQL", "status": "COMPLETED",
               "conclusion": "SUCCESS", "startedAt": null, "completedAt": null, "checkSuite": { "workflowRun": null } }""";
 
     private static Either<GhError.UnexpectedOutput, RecentChecks> recent(String merged, String defaultBranch) {

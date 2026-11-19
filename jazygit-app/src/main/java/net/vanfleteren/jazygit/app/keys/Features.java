@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.app.keys;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.features.agent.AgentFeature;
 import net.vanfleteren.jazygit.features.branches.branch.BranchFeature;
 import net.vanfleteren.jazygit.features.branches.forcedelete.ForceDeleteFeature;
 import net.vanfleteren.jazygit.features.branches.repos.RecentReposFeature;
@@ -43,6 +44,7 @@ public final class Features {
             BranchFeature.FEATURE,
             ForceDeleteFeature.FEATURE,
             GitHubFeature.FEATURE,
+            AgentFeature.FEATURE,
             WorktreeFeature.FEATURE,
             FilesFeature.FEATURE,
             FetchFeature.FEATURE,

@@ -62,7 +62,7 @@ class CheckFragmentTest {
     @Test
     void aCheckRunOfAnotherAppIsNotTimed() {
         assertEquals(Either.right(new Check("CodeQL", Checks.PENDING)), check("""
-                        { "__typename": "CheckRun", "databaseId": 7, "name": "CodeQL", "status": "QUEUED",
+                        { "__typename": "CheckRun", "detailsUrl": null, "databaseId": 7, "name": "CodeQL", "status": "QUEUED",
                           "conclusion": null, "startedAt": null, "completedAt": null,
                           "checkSuite": { "workflowRun": null } }"""));
     }
@@ -70,7 +70,7 @@ class CheckFragmentTest {
     @Test
     void aCheckRunWhoseTimingCannotBeReadIsNotTimedButStillCounts() {
         assertEquals(Either.right(new Check("verify", Checks.PENDING)), check("""
-                        { "__typename": "CheckRun", "databaseId": 122, "name": "verify", "status": "IN_PROGRESS",
+                        { "__typename": "CheckRun", "detailsUrl": null, "databaseId": 122, "name": "verify", "status": "IN_PROGRESS",
                           "conclusion": null, "startedAt": "2026-10-26T22:00:02Z", "completedAt": null,
                           "checkSuite": { "workflowRun": { "databaseId": 401, "createdAt": "nope",
                             "runAttempt": 1, "event": "push", "workflow": { "name": "Build" } } } }"""));
@@ -79,7 +79,7 @@ class CheckFragmentTest {
     @Test
     void aCheckRunWhoseIdIsNullIsNotTimedButStillCounts() {
         assertEquals(Either.right(new Check("verify", Checks.PENDING)), check("""
-                        { "__typename": "CheckRun", "databaseId": null, "name": "verify", "status": "IN_PROGRESS",
+                        { "__typename": "CheckRun", "detailsUrl": null, "databaseId": null, "name": "verify", "status": "IN_PROGRESS",
                           "conclusion": null, "startedAt": "2026-10-26T22:00:02Z", "completedAt": null,
                           "checkSuite": { "workflowRun": { "databaseId": 401, "createdAt": "2026-10-26T22:00:00Z",
                             "runAttempt": 1, "event": "push", "workflow": { "name": "Build" } } } }"""));
@@ -88,11 +88,11 @@ class CheckFragmentTest {
     @Test
     void aCheckRunWithoutWhenItRanIsUnexpected() {
         assertEquals(Either.left(new GhError.UnexpectedOutput("startedAt: missing")), check("""
-                        { "__typename": "CheckRun", "databaseId": 122, "name": "verify", "status": "IN_PROGRESS",
+                        { "__typename": "CheckRun", "detailsUrl": null, "databaseId": 122, "name": "verify", "status": "IN_PROGRESS",
                           "conclusion": null, "completedAt": null, "checkSuite": { "workflowRun": null } }"""));
         assertEquals(
                 Either.left(new GhError.UnexpectedOutput("checkSuite.workflowRun.createdAt: missing")), check("""
-                        { "__typename": "CheckRun", "databaseId": 122, "name": "verify", "status": "IN_PROGRESS",
+                        { "__typename": "CheckRun", "detailsUrl": null, "databaseId": 122, "name": "verify", "status": "IN_PROGRESS",
                           "conclusion": null, "startedAt": null, "completedAt": null,
                           "checkSuite": { "workflowRun": { "databaseId": 401,
                             "runAttempt": 1, "event": "push", "workflow": { "name": "Build" } } } }"""));
@@ -100,9 +100,29 @@ class CheckFragmentTest {
 
     @Test
     void aCommitStatusIsACheckByItsContext() {
+        assertEquals(Either.right(new Check("ci/travis", Checks.FAILING)), check("""
+                        { "__typename": "StatusContext", "context": "ci/travis", "state": "FAILURE",
+                          "targetUrl": null }"""));
+    }
+
+    @Test
+    void aCommitStatusLinksToItsTarget() {
         assertEquals(
-                Either.right(new Check("ci/travis", Checks.FAILING)),
-                check("{\"__typename\": \"StatusContext\", \"context\": \"ci/travis\", \"state\": \"FAILURE\"}"));
+                Either.right(new Check(
+                        "ci/jenkins", Checks.FAILING, Option.none(), Option.of("https://jenkins.example/job/7"))),
+                check("""
+                        { "__typename": "StatusContext", "context": "ci/jenkins", "state": "FAILURE",
+                          "targetUrl": "https://jenkins.example/job/7" }"""));
+    }
+
+    @Test
+    void aCheckRunLinksToItsDetails() {
+        assertEquals(
+                Option.of("https://github.com/o/r/actions/runs/401/job/7"),
+                check("""
+                        { "__typename": "CheckRun", "databaseId": 7, "name": "CodeQL", "status": "QUEUED",
+                          "conclusion": null, "startedAt": null, "completedAt": null, "checkSuite": { "workflowRun": null },
+                          "detailsUrl": "https://github.com/o/r/actions/runs/401/job/7" }""").get().url());
     }
 
     @Test

@@ -31,7 +31,7 @@ public final class GitHubAnswers {
                 "workflow": { "name": "Build" } } } ] }""";
     // A check run of the Build workflow that passed.
     public static final String VERIFY_PASSED = """
-            { "__typename": "CheckRun", "databaseId": 122, "name": "verify", "status": "COMPLETED",
+            { "__typename": "CheckRun", "detailsUrl": null, "databaseId": 122, "name": "verify", "status": "COMPLETED",
               "conclusion": "SUCCESS", "startedAt": "2026-10-26T22:00:02Z", "completedAt": "2026-10-26T22:02:00Z",
               "checkSuite": { "workflowRun": { "databaseId": 401, "createdAt": "2026-10-26T22:00:00Z",
                 "runAttempt": 1, "event": "push", "workflow": { "name": "Build" } } } }""";

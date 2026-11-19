@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.kernel.ui.keys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.tui.event.KeyEvent;
@@ -58,6 +59,61 @@ class KeymapTest {
                     Option.of(new Probe("selected one")), keymap.handle(SCOPE, KeyEvent.ofChar('x'), Option.of("one")));
             assertEquals(Option.none(), keymap.handle(SCOPE, KeyEvent.ofChar('x'), Option.none()));
         }
+    }
+
+    private static final Scope<Integer> GUEST = new Scope<>("guest", "panel.guest.title");
+
+    private static final Binding<Integer> ON_SUBJECT =
+            Binding.onSelected("I", "guest.i", subject -> new Probe("subject " + subject));
+
+    @Test
+    void aHostedScopesKeysActOnWhatTheViewGivesThem() {
+        Keymap keymap =
+                Keymap.empty().add(SCOPE, ON_SELECTED).host(SCOPE, GUEST).add(GUEST, ON_SUBJECT);
+
+        assertEquals(
+                Option.of(new Probe("subject 7")),
+                keymap.handle(SCOPE, KeyEvent.ofChar('I'), Option.of("one"), new Keymap.Hosted<>(GUEST, Option.of(7))));
+        // Without a subject from the view, the key does nothing.
+        assertEquals(Option.none(), keymap.handle(SCOPE, KeyEvent.ofChar('I'), Option.of("one")));
+        // The host's own keys stay its own.
+        assertEquals(
+                Option.of(new Probe("selected one")),
+                keymap.handle(SCOPE, KeyEvent.ofChar('x'), Option.of("one"), new Keymap.Hosted<>(GUEST, Option.of(7))));
+    }
+
+    @Test
+    void theHelpOfAHostListsTheKeysOfItsGuestsAfterItsOwn() {
+        Keymap keymap = Keymap.withHelp((id, actions) -> new Help(id, actions))
+                .host(SCOPE, GUEST)
+                .add(GUEST, ON_SUBJECT)
+                .add(SCOPE, ON_SELECTED);
+
+        assertEquals(List.of("x", "I"), keymap.bindings("probe").map(Binding::key));
+        assertEquals(
+                Option.of(new Help(
+                        "probe", List.of(Option.of(new Probe("selected one")), Option.of(new Probe("subject 7"))))),
+                keymap.handle(SCOPE, KeyEvent.ofChar('?'), Option.of("one"), new Keymap.Hosted<>(GUEST, Option.of(7))));
+    }
+
+    @Test
+    void aGuestKeyTheHostHasIsRefusedWhicheverComesFirst() {
+        Keymap hostFirst = Keymap.empty().add(SCOPE, ON_SELECTED).host(SCOPE, GUEST);
+        Keymap guestFirst = Keymap.empty().add(GUEST, Binding.always("x", "guest.x", () -> ALWAYS));
+        Binding<Integer> x = Binding.always("x", "guest.x", () -> ALWAYS);
+
+        assertThrows(IllegalArgumentException.class, () -> hostFirst.add(GUEST, x));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> guestFirst.add(SCOPE, ON_SELECTED).host(SCOPE, GUEST));
+    }
+
+    @Test
+    void twoFeaturesAddingOneKeyToAGuestAreRefused() {
+        Keymap one = Keymap.empty().host(SCOPE, GUEST).add(GUEST, ON_SUBJECT);
+
+        assertThrows(
+                IllegalArgumentException.class, () -> one.add(GUEST, Binding.always("I", "other.i", () -> ALWAYS)));
     }
 
     @Test
