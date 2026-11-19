@@ -108,6 +108,29 @@ class SettingsPathsTest {
     }
 
     @Test
+    void theCacheIsInTheStandardCacheDirectoryOfEachOs() {
+        assertEquals(
+                Path.of("/xdg-cache/jazygit"),
+                SettingsPaths.cacheDir("Linux", HashMap.of("XDG_CACHE_HOME", "/xdg-cache")::get, HOME));
+        assertEquals(
+                Path.of("/home/ada/.cache/jazygit"),
+                SettingsPaths.cacheDir("Linux", HashMap.<String, String>empty()::get, HOME));
+        assertEquals(
+                Path.of("/home/ada/.cache/jazygit"),
+                SettingsPaths.cacheDir("Linux", HashMap.of("XDG_CACHE_HOME", "relative")::get, HOME));
+        assertEquals(
+                Path.of("/home/ada/Library/Caches/jazygit"),
+                SettingsPaths.cacheDir("Mac OS X", HashMap.<String, String>empty()::get, HOME));
+        assertEquals(
+                Path.of("C:\\Local", "jazygit", "cache"),
+                SettingsPaths.cacheDir("Windows 11", HashMap.of("LOCALAPPDATA", "C:\\Local")::get, HOME));
+        assertEquals(
+                Path.of("/mine"),
+                SettingsPaths.cacheDir(
+                        "Linux", HashMap.of("JAZYGIT_CACHE_DIR", "/mine", "XDG_CACHE_HOME", "/xdg")::get, HOME));
+    }
+
+    @Test
     void theDebugLogIsNextToTheState() {
         assertEquals(
                 Path.of("/xdg-state/jazygit/debug.log"),

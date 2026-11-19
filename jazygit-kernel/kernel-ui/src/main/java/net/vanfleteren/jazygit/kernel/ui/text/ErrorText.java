@@ -73,6 +73,7 @@ public final class ErrorText {
                 exitCode.map(code -> Messages.get("gh.browserFailed", browser, String.valueOf(code)))
                         .getOrElse(() -> Messages.get("gh.browserNotStarted", browser));
             case GhError.NoBrowser() -> Messages.get("gh.noBrowser");
+            case GhError.FileFailed(var file, var cause) -> Messages.get("gh.fileFailed", file, reason(cause));
             case GhError.TokenUnavailable(var account, GhError cause) ->
                 Messages.get("gh.tokenUnavailable", account.user(), account.host(), of(cause));
         };

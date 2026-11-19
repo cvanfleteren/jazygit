@@ -5,10 +5,12 @@ import static dev.tamboui.toolkit.Toolkit.text;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.layout.Size;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -208,10 +210,11 @@ class ChecksDialogTest {
         assertTrue(screen.contains("✗ 1 failed · ● 1 running · ✓ 2 passed · done in ?"), screen);
         // While one is not done: the names on the left, then a bar of 24 columns, dashed when how far it is is not
         // known, then how long each runs of how long it is expected to take, or how long it took, on the right.
-        assertTrue(screen.contains("✗ lint" + " ".repeat(73) + "failed after 1m 30s│"), screen);
+        assertTrue(screen.contains("│▸ ✗ lint" + " ".repeat(71) + "failed after 1m 30s│"), screen);
         assertTrue(
-                screen.contains("● verify" + " ".repeat(45) + "╌".repeat(24) + " ".repeat(13) + "2m 30s/?│"), screen);
-        assertTrue(screen.contains("✓ package" + " ".repeat(87) + "1m│"), screen);
+                screen.contains("│  ● verify" + " ".repeat(43) + "╌".repeat(24) + " ".repeat(13) + "2m 30s/?│"),
+                screen);
+        assertTrue(screen.contains("│  ✓ package" + " ".repeat(85) + "1m│"), screen);
         assertTrue(screen.contains("✓ ci/status"), screen);
         // Failed, running, then passed.
         assertTrue(screen.indexOf("lint") < screen.indexOf("verify"), screen);
@@ -268,9 +271,11 @@ class ChecksDialogTest {
         String longName = "x".repeat(100);
         String screen = screen(read(List.of(check(longName, Checks.PASSING, 300, Option.of(60)))));
 
-        // 98 columns: the symbol takes 1, a space 1, the name 92 of which the last is the ellipsis, then 2 and "1m".
-        assertFalse(screen.contains("x".repeat(92)), screen);
-        assertTrue(screen.contains("✓ " + "x".repeat(91) + "…  1m│"), screen);
+        // 98 columns: the mark of the check picked takes 2, the symbol 1, a space 1, the name 90 of which the last is
+        // the
+        // ellipsis, then 2 and "1m".
+        assertFalse(screen.contains("x".repeat(90)), screen);
+        assertTrue(screen.contains("│▸ ✓ " + "x".repeat(89) + "…  1m│"), screen);
     }
 
     @Test
@@ -279,8 +284,9 @@ class ChecksDialogTest {
         String screen = screen(read(List.of(new Check(longName, Checks.PASSING))));
 
         assertFalse(screen.contains(longName), screen);
-        // 98 columns: the symbol takes 1, a space 1, so the name keeps 96 of which the last is the ellipsis.
-        assertTrue(screen.contains("✓ " + "y".repeat(95) + "…│"), screen);
+        // 98 columns: the mark of the check picked takes 2, the symbol 1, a space 1, so the name keeps 94 of which the
+        // last is the ellipsis.
+        assertTrue(screen.contains("│▸ ✓ " + "y".repeat(93) + "…│"), screen);
     }
 
     @Test
@@ -295,10 +301,10 @@ class ChecksDialogTest {
         String top = screen(model);
         String scrolled = screen(model.withListCursor(ListCursor.START.at(1)));
 
-        // 98 columns: the symbol takes 1, a space 1, then the name 78 of which the last is the ellipsis, 2, and the
-        // timings 16, as wide as "failed after 10m" also when it is not shown.
-        String checkb = "checkb" + "z".repeat(71) + "…" + " ".repeat(2 + 14) + "1m│";
-        assertTrue(top.contains("checka" + " ".repeat(74) + "failed after 10m│"), top);
+        // 98 columns: the mark of the check picked takes 2, the symbol 1, a space 1, then the name 76 of which the last
+        // is the ellipsis, 2, and the timings 16, as wide as "failed after 10m" also when it is not shown.
+        String checkb = "checkb" + "z".repeat(69) + "…" + " ".repeat(2 + 14) + "1m│";
+        assertTrue(top.contains("checka" + " ".repeat(72) + "failed after 10m│"), top);
         assertTrue(top.contains(checkb), top);
         assertFalse(scrolled.contains("checka"), scrolled);
         assertTrue(scrolled.contains(checkb), scrolled);
@@ -342,7 +348,7 @@ class ChecksDialogTest {
         // After the name, 24 columns: 95% of half of them; then how long it runs of the 300s it usually takes.
         assertTrue(
                 screen.contains(
-                        "● verify" + " ".repeat(49) + "━".repeat(11) + "─".repeat(13) + " ".repeat(7) + "2m 30s/~5m│"),
+                        "● verify" + " ".repeat(47) + "━".repeat(11) + "─".repeat(13) + " ".repeat(7) + "2m 30s/~5m│"),
                 screen);
     }
 
@@ -704,6 +710,68 @@ class ChecksDialogTest {
                         List.of(
                                 new RerunPlan.Skipped("Markdown", RerunPlan.Why.RUNNING),
                                 new RerunPlan.Skipped("codecov/patch", RerunPlan.Why.NOT_ACTIONS)))));
+    }
+
+    @Test
+    void nAndCapitalNPickTheNextAndThePreviousCheckAndEOpensItsLog() throws Exception {
+        Model model = TestModels.loaded().withNow(NOW).openPopup(many());
+        try (ToolkitTestRunner runner = start(model)) {
+            SettledPilot.of(runner).press('n');
+            SettledPilot.of(runner).press('N');
+            SettledPilot.of(runner).press('e');
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new ChecksMsg.Stepped(1), new ChecksMsg.Stepped(-1), new ChecksMsg.LogRequested()),
+                dispatched);
+    }
+
+    @Test
+    void theCheckPickedIsMarkedWithItsNameInBold() throws Exception {
+        ChecksPopup popup = read(List.of(
+                        check("lint", Checks.FAILING, 300, Option.of(90)),
+                        check("package", Checks.PASSING, 300, Option.of(60))))
+                .withPicked(check("package", Checks.PASSING, 300, Option.of(60)));
+
+        String screen = screen(popup);
+
+        assertTrue(screen.contains("│  ✗ lint"), screen);
+        assertTrue(screen.contains("│▸ ✓ package"), screen);
+        assertTrue(screen.contains("(n/N) pick   (e) log"), screen);
+        List<StyledElement<?>> drawn = CheckRows.filling(
+                check("package", Checks.PASSING, 300, Option.of(60)), List.empty(), Option.none(), NOW, 78, 2, true);
+        assertTrue(CheckRows.picked(check("package", Checks.PASSING, 300, Option.of(60)), drawn)
+                .get(1)
+                .cssClasses()
+                .contains(Theme.Classes.BOLD));
+    }
+
+    @Test
+    void whyTheCheckPickedHasNoLogTakesTheLineAboveTheChecks() throws Exception {
+        String screen = screen(read(List.of(check("verify", Checks.PENDING, 150, Option.none())))
+                .withNoLogAsked());
+
+        assertTrue(screen.contains("No log yet: GitHub has the log of a check once it is done"), screen);
+    }
+
+    @Test
+    void clickingACheckPicksIt() throws Exception {
+        Check lint = check("lint", Checks.FAILING, 300, Option.of(90));
+        Check pkg = check("package", Checks.PASSING, 300, Option.of(60));
+        Model model = TestModels.loaded().withNow(NOW).openPopup(read(List.of(lint, pkg)));
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model), new Size(120, 50))) {
+            SettledPilot.focus(runner, ChecksDialog.ID);
+            SettledPilot.settle(runner);
+            String screen = RenderedText.ofSize(runner, () -> view(model), 120, 50);
+            List<String> lines = List.of(screen.split("\n"));
+            int y = lines.indexWhere(line -> line.contains("✓ package"));
+
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, lines.get(y).indexOf("package"), y);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new ChecksMsg.Clicked(CheckPick.of(pkg))), dispatched);
     }
 
     /**
