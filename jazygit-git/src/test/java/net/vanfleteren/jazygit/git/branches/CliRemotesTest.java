@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.process.GitCommand;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -86,6 +88,36 @@ class CliRemotesTest {
 
         assertEquals(2, asked.get());
         assertEquals(java.util.List.of("receive-pack call 1", "upload-pack call 2"), Files.readAllLines(log));
+    }
+
+    /**
+     * ssh in batch mode skips a key that has a passphrase but is not in the agent, and the server then refuses it; git
+     * only adds that it could not read from the remote. The failure says what ssh refused.
+     */
+    @Test
+    void aKeyTheServerRefusesIsToldApartFromOtherFailures(@TempDir Path dir) throws Exception {
+        Path repo = dir.resolve("repo");
+        Path ssh = dir.resolve("ssh.sh");
+        Files.writeString(ssh, "#!/bin/sh\necho 'git@example.invalid: Permission denied (publickey).' >&2\nexit 255\n");
+        Files.setPosixFilePermissions(ssh, PosixFilePermissions.fromString("rwxr-xr-x"));
+        run(dir, "git", "init", "-q", "-b", "main", repo.toString());
+        run(repo, "git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "first");
+        run(repo, "git", "remote", "add", "origin", "git@example.invalid:owner/repo.git");
+        run(repo, "git", "config", "core.sshCommand", ssh.toString());
+        GitError refused = new GitError.SshKeyRefused("git@example.invalid: Permission denied (publickey).");
+
+        assertEquals(
+                Option.of(refused),
+                CliRemotes.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+                        .swap()
+                        .map(GitFailure::error)
+                        .toOption());
+        assertEquals(
+                Option.of(refused),
+                CliRemotes.run(repo, GitCommand.git("push", "origin", "main"), HashMap.empty())
+                        .swap()
+                        .map(GitFailure::error)
+                        .toOption());
     }
 
     /**

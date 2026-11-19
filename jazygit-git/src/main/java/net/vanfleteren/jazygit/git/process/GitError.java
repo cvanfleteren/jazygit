@@ -176,6 +176,15 @@ public sealed interface GitError {
     record PushRefused(String pushDefault, RemoteBranch upstream) implements GitError {}
 
     /**
+     * The remote's ssh server refused every key ssh offered. As nothing may ask the user anything, ssh skips a key
+     * whose passphrase it would have to ask for, so this is also how a key that has a passphrase, but is not in the
+     * ssh agent, fails.
+     *
+     * @param explanation the line ssh printed about it
+     */
+    record SshKeyRefused(String explanation) implements GitError {}
+
+    /**
      * The branch was renamed to {@code newName}, but its upstream could not be renamed with it on its remote, so it
      * still follows {@code upstream}.
      */

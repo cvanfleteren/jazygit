@@ -234,7 +234,8 @@ public final class CliRemotes implements Remotes {
                         git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":")),
                         credentials.get())
                 .flatMap(pull ->
-                        Unfinished.runOrUndo(worktree, pull, left -> Option.when(left.rebasing(), CliRebase.ABORT)));
+                        Unfinished.runOrUndo(worktree, pull, left -> Option.when(left.rebasing(), CliRebase.ABORT)))
+                .mapLeft(CliRemotes::refusedKey);
     }
 
     @Override
@@ -263,6 +264,7 @@ public final class CliRemotes implements Remotes {
                         environment,
                         credentials)
                 .flatMap(fetch -> GitProcess.run(worktree, fetch))
+                .mapLeft(CliRemotes::refusedKey)
                 .map(fetched -> !fetched.stdout().isBlank());
     }
 
@@ -406,7 +408,23 @@ public final class CliRemotes implements Remotes {
      */
     static Either<GitFailure, List<ExecutedCommand>> run(
             Path worktree, GitCommand command, Map<String, String> credentials) {
-        return toRemote(worktree, command, credentials).flatMap(remote -> GitProcess.log(worktree, remote));
+        return toRemote(worktree, command, credentials)
+                .flatMap(remote -> GitProcess.log(worktree, remote))
+                .mapLeft(CliRemotes::refusedKey);
+    }
+
+    /**
+     * {@code failure}, as {@link GitError.SshKeyRefused} when the server refused ssh's keys: git itself only says it
+     * could not read from the remote, which leaves the user to guess why.
+     */
+    private static GitFailure refusedKey(GitFailure failure) {
+        return failure.map(error -> error instanceof GitError.CommandFailed failed
+                ? GitOutput.nonBlankLines(failed.output())
+                        .map(String::strip)
+                        .find(line -> line.contains("Permission denied (publickey"))
+                        .<GitError>map(GitError.SshKeyRefused::new)
+                        .getOrElse(error)
+                : error);
     }
 
     /**

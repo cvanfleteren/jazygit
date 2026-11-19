@@ -109,6 +109,7 @@ public final class ErrorText {
                         of(cause),
                         upstream.remote().value(),
                         upstream.branch().value());
+            case GitError.SshKeyRefused(String explanation) -> Messages.get("git.sshKeyRefused", explanation);
             case GitError.UpstreamNotOnRemote(RemoteBranch upstream, BranchName newName) ->
                 Messages.get("git.upstreamNotOnRemote", upstream.shortName(), newName.value());
             case GitError.StoppedOnConflicts(var inProgress, int conflicts) ->
