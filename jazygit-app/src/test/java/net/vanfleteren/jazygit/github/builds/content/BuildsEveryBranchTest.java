@@ -25,6 +25,12 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.github.builds.BuildsShown;
+import net.vanfleteren.jazygit.github.builds.BuildsView;
+import net.vanfleteren.jazygit.github.builds.BuildsView.Pipeline;
+import net.vanfleteren.jazygit.github.builds.LoadRepoWorkflows;
+import net.vanfleteren.jazygit.github.builds.LoadWorkflowRuns;
+import net.vanfleteren.jazygit.github.builds.WorkflowRuns;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -32,14 +38,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
-import net.vanfleteren.jazygit.state.github.builds.LoadRepoWorkflows;
-import net.vanfleteren.jazygit.state.github.builds.LoadWorkflowRuns;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
-import net.vanfleteren.jazygit.state.view.BuildsShown;
-import net.vanfleteren.jazygit.state.view.BuildsView;
-import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
-import net.vanfleteren.jazygit.state.view.WorkflowRuns;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.content.Shown;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -102,7 +101,7 @@ class BuildsEveryBranchTest {
     }
 
     private static BuildsView view(Model model) {
-        return model.repoView().branches().builds().get();
+        return model.part(BuildsView.PART).get();
     }
 
     private static BuildsShown shown(Model model) {
@@ -120,7 +119,7 @@ class BuildsEveryBranchTest {
 
         Model runs = Update.update(
                         read.model(),
-                        new BuildsViewMsg.RunsRead(
+                        new BuildsMsg.RunsRead(
                                 BUILD_ID,
                                 Option.none(),
                                 Option.of(new WorkflowRunsPage(
@@ -155,7 +154,7 @@ class BuildsEveryBranchTest {
 
         Model listed = Update.update(
                         every.model(),
-                        new BuildsViewMsg.RepoWorkflowsRead(List.of(
+                        new BuildsMsg.RepoWorkflowsRead(List.of(
                                 new RepoWorkflow(BUILD_ID, "Build", ".github/workflows/build.yml", true),
                                 new RepoWorkflow("W_lint", "Lint", ".github/workflows/lint.yml", true),
                                 new RepoWorkflow("W_old", "Old", ".github/workflows/old.yml", false))))
@@ -164,7 +163,7 @@ class BuildsEveryBranchTest {
                 List.of(Pipeline.any("Build"), Pipeline.any("Lint")),
                 shown(listed).tabs());
 
-        Next lint = Update.update(listed, new BuildsViewMsg.TabClicked(Pipeline.any("Lint")));
+        Next lint = Update.update(listed, new BuildsMsg.TabClicked(Pipeline.any("Lint")));
         assertEquals(List.of(new LoadWorkflowRuns("W_lint", Option.none())), lint.cmds());
         assertEquals(Pipeline.any("Lint"), shown(lint.model()).shown());
     }
@@ -179,11 +178,11 @@ class BuildsEveryBranchTest {
 
         Next first = Update.update(
                 read,
-                new BuildsViewMsg.RunsRead(
+                new BuildsMsg.RunsRead(
                         BUILD_ID, Option.none(), Option.of(new WorkflowRunsPage(List.of(MINE), 25, Option.of("c25")))));
         Next stale = Update.update(
                 first.model(),
-                new BuildsViewMsg.RunsRead(
+                new BuildsMsg.RunsRead(
                         BUILD_ID, Option.of("c75"), Option.of(new WorkflowRunsPage(List.of(MINE), 25, Option.none()))));
 
         assertTrue(first.cmds().contains(new LoadWorkflowRuns(BUILD_ID, Option.of("c25"))));
@@ -203,7 +202,7 @@ class BuildsEveryBranchTest {
         Model every = Update.update(read, new BuildsMsg.AllToggled()).model();
         Model hundred = Update.update(
                         every,
-                        new BuildsViewMsg.RunsRead(
+                        new BuildsMsg.RunsRead(
                                 BUILD_ID,
                                 Option.none(),
                                 Option.of(new WorkflowRunsPage(List.of(MINE), 100, Option.of("c100")))))
@@ -243,13 +242,13 @@ class BuildsEveryBranchTest {
     void mOnEveryBranchReadsAgainFromWhereReadingTheRunsFailed() {
         Model first = Update.update(
                         everyBranch(),
-                        new BuildsViewMsg.RunsRead(
+                        new BuildsMsg.RunsRead(
                                 BUILD_ID,
                                 Option.none(),
                                 Option.of(new WorkflowRunsPage(List.of(MINE), 25, Option.of("c25")))))
                 .model();
         assertEquals("Builds: main · last 3 commits · every branch · reading, 25 runs so far", title(first));
-        Model stopped = Update.update(first, new BuildsViewMsg.RunsFailed(BUILD_ID, Option.of("c25"), TIMEOUT))
+        Model stopped = Update.update(first, new BuildsMsg.RunsFailed(BUILD_ID, Option.of("c25"), TIMEOUT))
                 .model();
         assertEquals("Builds: main · last 3 commits · every branch · m to try again", title(stopped));
 
@@ -265,7 +264,7 @@ class BuildsEveryBranchTest {
 
     @Test
     void mOnEveryBranchReadsAgainFromTheNewestWhenTheFirstRunsFailed() {
-        Model failed = Update.update(everyBranch(), new BuildsViewMsg.RunsFailed(BUILD_ID, Option.none(), TIMEOUT))
+        Model failed = Update.update(everyBranch(), new BuildsMsg.RunsFailed(BUILD_ID, Option.none(), TIMEOUT))
                 .model();
         assertEquals("Builds: main · last 3 commits · every branch · m to try again", title(failed));
 
@@ -287,7 +286,7 @@ class BuildsEveryBranchTest {
 
         Model oldest = Update.update(
                         reading,
-                        new BuildsViewMsg.RunsRead(
+                        new BuildsMsg.RunsRead(
                                 BUILD_ID,
                                 Option.none(),
                                 Option.of(new WorkflowRunsPage(List.of(MINE), 40, Option.none()))))
@@ -335,9 +334,9 @@ class BuildsEveryBranchTest {
         }));
 
         assertEquals(
-                new BuildsViewMsg.RunsRead(
+                new BuildsMsg.RunsRead(
                         BUILD_ID, Option.none(), Option.of(new WorkflowRunsPage(List.of(MINE), 1, Option.none()))),
                 new LoadWorkflowRuns(BUILD_ID, Option.none()).run(env));
-        assertInstanceOf(BuildsViewMsg.RepoWorkflowsFailed.class, new LoadRepoWorkflows().run(env));
+        assertInstanceOf(BuildsMsg.RepoWorkflowsFailed.class, new LoadRepoWorkflows().run(env));
     }
 }

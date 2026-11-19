@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.github.builds;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -7,8 +7,8 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.Build;
+import net.vanfleteren.jazygit.github.builds.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 
 /**
  * What the builds of a branch show, as the content panel draws it (ADR 131, 133).

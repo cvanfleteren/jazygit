@@ -51,7 +51,8 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * @param contentSearch  the search of the content panel, if there is one (ADR 126)
  * @param lineNumber     what is typed in the line to type a line number in to go to, while it is open (ADR 140)
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
- * @param now            the time the last message was handled at, which tells how long ago things happened
+ * @param parts          what the features keep for themselves, each in a {@link Part} declared in its own package
+ * @param now           the time the last message was handled at, which tells how long ago things happened
  */
 @With
 public record Model(
@@ -69,6 +70,7 @@ public record Model(
         Option<ContentSearch> contentSearch,
         Option<String> lineNumber,
         Preferences preferences,
+        Parts parts,
         Instant now) {
 
     /**
@@ -93,7 +95,29 @@ public record Model(
                 Option.none(),
                 Option.none(),
                 Preferences.DEFAULT,
+                Parts.NONE,
                 Instant.EPOCH);
+    }
+
+    /**
+     * What the feature that declared {@code part} keeps in it.
+     */
+    public <S> S part(Part<S> part) {
+        return parts.get(part);
+    }
+
+    /**
+     * This model with {@code value} kept in {@code part}.
+     */
+    public <S> Model withPart(Part<S> part, S value) {
+        return withParts(parts.with(part, value));
+    }
+
+    /**
+     * This model with {@code f} applied to what is kept in {@code part}.
+     */
+    public <S> Model mapPart(Part<S> part, UnaryOperator<S> f) {
+        return withPart(part, f.apply(part(part)));
     }
 
     /**

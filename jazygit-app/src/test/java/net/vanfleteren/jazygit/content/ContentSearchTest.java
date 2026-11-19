@@ -10,7 +10,9 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.github.builds.BuildsAction;
 import net.vanfleteren.jazygit.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.github.builds.BuildsView;
 import net.vanfleteren.jazygit.github.builds.content.BuildsPickTest;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.AreaId;
@@ -393,10 +395,10 @@ class ContentSearchTest {
     @Test
     void inTheBuildsNAndShiftNGoToTheMatchesWhileASearchIsKeptElseToAnotherBuild() throws Exception {
         List<String> keys = net.vanfleteren.jazygit.ui.keys.Keymap.standard()
-                .bindings(net.vanfleteren.jazygit.ui.keys.Scopes.BUILDS.id())
+                .bindings(BuildsAction.SCOPE.id())
                 .map(net.vanfleteren.jazygit.ui.keys.Keymap.Binding::key);
         Driven driven = new Driven(
-                BuildsPickTest.steppable(), net.vanfleteren.jazygit.ui.branches.BranchesPanel.PANE, AreaId.BUILDS);
+                BuildsPickTest.steppable(), net.vanfleteren.jazygit.ui.branches.BranchesPanel.PANE, BuildsView.AREA);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
             SettledPilot.focus(testRunner, driven.area().id());
             driven.screen(testRunner);

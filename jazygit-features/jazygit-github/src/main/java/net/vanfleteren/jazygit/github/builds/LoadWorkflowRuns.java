@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.github.builds;
+package net.vanfleteren.jazygit.github.builds;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -15,7 +15,7 @@ public record LoadWorkflowRuns(String workflowId, Option<String> after) implemen
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("state.work.workflowRuns"));
+        return Option.of(Label.of("github.work.workflowRuns"));
     }
 
     @Override
@@ -29,11 +29,11 @@ public record LoadWorkflowRuns(String workflowId, Option<String> after) implemen
                 .checks()
                 .workflowRuns(workflowId, after)
                 .mapLeft(Failure::of)
-                .fold(this::failed, page -> new BuildsViewMsg.RunsRead(workflowId, after, page));
+                .fold(this::failed, page -> new BuildsMsg.RunsRead(workflowId, after, page));
     }
 
     @Override
     public Msg failed(Failure failure) {
-        return new BuildsViewMsg.RunsFailed(workflowId, after, failure);
+        return new BuildsMsg.RunsFailed(workflowId, after, failure);
     }
 }

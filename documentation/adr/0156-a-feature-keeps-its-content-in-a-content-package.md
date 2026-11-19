@@ -38,3 +38,5 @@ panel is a view too, but its parts are not dialogs, nor named after one thing: a
   content package.
 - A source that must give way to another that is asked after it says so itself, as the builds do; the order of the
   sources alone no longer says which wins.
+
+Amended by ADR 157: the model of the builds moved to `github.builds` as well, kept in a part of the model.

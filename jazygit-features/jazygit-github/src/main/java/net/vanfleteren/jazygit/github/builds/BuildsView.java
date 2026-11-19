@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.github.builds;
 
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
@@ -15,8 +15,10 @@ import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.gh.model.RepoWorkflow;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.Part;
 
 /**
  * The builds of a local branch on GitHub, which the content panel shows in place of its log (ADR 131).
@@ -60,6 +62,16 @@ public record BuildsView(
      * How many commits are read at first, and how many more each time more are asked for (ADR 131, 132).
      */
     public static final int COMMITS = 100;
+
+    /**
+     * Where the model keeps the builds that show: of one branch at most, none while they do not show.
+     */
+    public static final Part<Option<BuildsView>> PART = Part.of("github.builds", Option.none());
+
+    /**
+     * The id of the area of the content panel the builds show in (ADR 131).
+     */
+    public static final AreaId AREA = new AreaId("branch-builds");
 
     /**
      * The builds of {@code branch}, which follows {@code onGitHub}, before any is read.

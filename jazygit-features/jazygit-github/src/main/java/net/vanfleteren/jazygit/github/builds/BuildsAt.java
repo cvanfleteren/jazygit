@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.github.builds;
+package net.vanfleteren.jazygit.github.builds;
 
 /**
  * What the keys of the builds of a branch act on, which have no cursor (ADR 131).

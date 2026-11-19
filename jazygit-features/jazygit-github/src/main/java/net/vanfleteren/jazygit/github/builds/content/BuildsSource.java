@@ -5,12 +5,11 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.github.builds.BuildsView;
+import net.vanfleteren.jazygit.github.builds.WorkflowRuns;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
-import net.vanfleteren.jazygit.state.view.BuildsView;
-import net.vanfleteren.jazygit.state.view.WorkflowRuns;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.content.ContentArea;
 import net.vanfleteren.jazygit.ui.content.ContentSource;
@@ -28,17 +27,15 @@ public record BuildsSource() implements ContentSource {
      * The builds of the branch highlighted in the branches pane, in place of its log (ADR 131), which take the focus
      * from the branches once they show after {@code B} opened them.
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.BUILDS, BranchesPanel.PANE)
-            .opening(model -> model.repoView().branches().builds().map(BuildsView::branch));
+    static final ContentArea AREA = ContentArea.of(BuildsView.AREA, BranchesPanel.PANE)
+            .opening(model -> model.part(BuildsView.PART).map(BuildsView::branch));
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
         if (pane != Mirrored.BRANCHES) {
             return Option.none();
         }
-        return model.repoView()
-                .branches()
-                .builds()
+        return model.part(BuildsView.PART)
                 .filter(view -> model.repoView().branches().tab() == BranchesTab.LOCAL
                         // A divergence or the commits of a branch opened over the builds show in their place, as the
                         // content panel's own sources asked for them before the builds.

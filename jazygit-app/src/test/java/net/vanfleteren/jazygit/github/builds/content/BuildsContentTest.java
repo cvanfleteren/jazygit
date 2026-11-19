@@ -13,6 +13,8 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.github.builds.BuildsShown;
+import net.vanfleteren.jazygit.github.builds.BuildsView;
 import net.vanfleteren.jazygit.github.builds.LoadBuilds;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Failure;
@@ -24,8 +26,6 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.BranchChecksMsg;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
-import net.vanfleteren.jazygit.state.view.BuildsShown;
-import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.ui.content.Shown;
 import net.vanfleteren.jazygit.ui.content.Tone;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
@@ -46,7 +46,7 @@ class BuildsContentTest {
 
         assertEquals(
                 Option.of(BuildsView.reading(BuildsFixtures.MAIN, BuildsFixtures.ORIGIN_MAIN)),
-                asked.model().repoView().branches().builds());
+                asked.model().part(BuildsView.PART));
         assertEquals(List.of(new LoadBuilds(BuildsFixtures.ORIGIN_MAIN, Option.none())), asked.cmds());
         assertEquals(
                 "Builds: main · reading, 0 commits so far",
@@ -60,7 +60,7 @@ class BuildsContentTest {
 
         Next again = Update.update(shown, new BuildsMsg.Toggled(BuildsFixtures.MAIN));
 
-        assertEquals(Option.none(), again.model().repoView().branches().builds());
+        assertEquals(Option.none(), again.model().part(BuildsView.PART));
         assertEquals(
                 AreaId.LOG,
                 ((Shown.Area) BuildsFixtures.content(again.model())).area().id());
@@ -116,7 +116,7 @@ class BuildsContentTest {
             assertEquals(page < 4, !read.cmds().isEmpty());
         }
 
-        BuildsView view = reading.repoView().branches().builds().get();
+        BuildsView view = reading.part(BuildsView.PART).get();
         assertFalse(view.reading());
         assertEquals(100, view.commits());
         assertEquals(4, view.builds().getOrElse(List.empty()).size());
@@ -153,7 +153,7 @@ class BuildsContentTest {
                         new BuildsMsg.Read(
                                 BuildsFixtures.ORIGIN_MAIN, Option.of("c175"), Option.of(page(25, Option.of("c200")))))
                 .model();
-        BuildsView view = done.repoView().branches().builds().get();
+        BuildsView view = done.part(BuildsView.PART).get();
         assertFalse(view.reading());
         assertEquals(200, view.commits());
         assertEquals(3, view.builds().getOrElse(List.empty()).size());
@@ -199,7 +199,7 @@ class BuildsContentTest {
                 "Builds: main · 25 commits, could not read more · m to try again",
                 ((Shown.Area) BuildsFixtures.content(stopped)).title());
         assertEquals(List.of(new LoadBuilds(BuildsFixtures.ORIGIN_MAIN, Option.of("c25"))), again.cmds());
-        BuildsView view = again.model().repoView().branches().builds().get();
+        BuildsView view = again.model().part(BuildsView.PART).get();
         assertTrue(view.reading());
         assertEquals(Option.none(), view.stopped());
         assertEquals(125, view.limit());
@@ -215,7 +215,7 @@ class BuildsContentTest {
                 new BuildsMsg.Read(BuildsFixtures.ORIGIN_MAIN, Option.none(), Option.of(page(3, Option.none()))));
 
         assertTrue(read.cmds().isEmpty());
-        assertFalse(read.model().repoView().branches().builds().get().reading());
+        assertFalse(read.model().part(BuildsView.PART).get().reading());
     }
 
     @Test
@@ -315,8 +315,7 @@ class BuildsContentTest {
                 .model();
 
         assertInstanceOf(
-                Loadable.Failed.class,
-                failed.repoView().branches().builds().get().builds());
+                Loadable.Failed.class, failed.part(BuildsView.PART).get().builds());
         assertEquals(Tone.ERROR, ((Shown.Message) BuildsFixtures.content(failed)).tone());
     }
 
@@ -337,7 +336,7 @@ class BuildsContentTest {
         Next again = Update.update(failed, new BuildsMsg.MoreRequested());
 
         assertEquals(List.of(new LoadBuilds(BuildsFixtures.ORIGIN_MAIN, Option.none())), again.cmds());
-        BuildsView view = again.model().repoView().branches().builds().get();
+        BuildsView view = again.model().part(BuildsView.PART).get();
         assertTrue(view.reading());
         assertInstanceOf(Loadable.Loading.class, view.builds());
         assertTrue(Update.update(again.model(), new BuildsMsg.MoreRequested())
@@ -350,7 +349,7 @@ class BuildsContentTest {
                 .model();
         assertEquals(
                 new Loadable.Loaded<>(List.of(BuildsFixtures.BUILD)),
-                read.repoView().branches().builds().get().builds());
+                read.part(BuildsView.PART).get().builds());
     }
 
     @Test
@@ -373,7 +372,7 @@ class BuildsContentTest {
         assertTrue(failed.cmds().isEmpty());
         assertEquals(
                 List.of(BuildsFixtures.BUILD),
-                failed.model().repoView().branches().builds().get().builds().getOrElse(List.empty()));
+                failed.model().part(BuildsView.PART).get().builds().getOrElse(List.empty()));
         assertEquals(
                 "Builds: main · 25 commits, could not read more · m to try again",
                 ((Shown.Area) BuildsFixtures.content(failed.model())).title());

@@ -8,21 +8,20 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.github.builds.BuildPickPopup;
+import net.vanfleteren.jazygit.github.builds.BuildsAction;
+import net.vanfleteren.jazygit.github.builds.BuildsAt;
 import net.vanfleteren.jazygit.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.github.builds.BuildsPopup;
+import net.vanfleteren.jazygit.github.builds.BuildsShown;
+import net.vanfleteren.jazygit.github.builds.BuildsView;
+import net.vanfleteren.jazygit.github.builds.BuildsView.FileAt;
 import net.vanfleteren.jazygit.github.builds.BuildsWindowPopup;
+import net.vanfleteren.jazygit.github.builds.ReadWorkflows;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.github.builds.BuildsAt;
-import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
-import net.vanfleteren.jazygit.state.github.builds.ReadWorkflows;
-import net.vanfleteren.jazygit.state.view.BuildsShown;
-import net.vanfleteren.jazygit.state.view.BuildsView;
-import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
 import net.vanfleteren.jazygit.ui.content.Shown;
 import net.vanfleteren.jazygit.ui.keys.Keymap;
-import net.vanfleteren.jazygit.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -36,25 +35,29 @@ public class BuildsPickTest {
         Keymap keys = Keymap.standard();
 
         assertEquals(
-                Option.of(new BuildsMsg.Stepped(1)), keys.handle(Scopes.BUILDS, KeyEvent.ofChar(']'), Option.none()));
+                Option.of(new BuildsMsg.Stepped(1)),
+                keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar(']'), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.Stepped(-1)), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('['), Option.none()));
+                Option.of(new BuildsMsg.Stepped(-1)),
+                keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('['), Option.none()));
         assertEquals(
                 Option.of(new BuildsMsg.PickRequested()),
-                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('w'), Option.none()));
+                keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('w'), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.Closed()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('B'), Option.none()));
+                Option.of(new BuildsMsg.Closed()),
+                keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('B'), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.AllToggled()), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('a'), Option.none()));
+                Option.of(new BuildsMsg.AllToggled()),
+                keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('a'), Option.none()));
         assertEquals(
                 Option.of(new BuildsMsg.WindowRequested()),
-                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('c'), Option.none()));
+                keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('c'), Option.none()));
         assertEquals(
                 Option.of(new BuildsMsg.BuildStepped(1)),
-                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('n'), Option.none()));
+                keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('n'), Option.none()));
         assertEquals(
                 Option.of(new BuildsMsg.BuildStepped(-1)),
-                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('N'), Option.none()));
+                keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('N'), Option.none()));
     }
 
     @Test
@@ -63,12 +66,11 @@ public class BuildsPickTest {
                 .model();
         BuildsView.Pipeline lint = new BuildsView.Pipeline("Markdown", "pull_request");
 
-        Model clicked = Update.update(shown, new BuildsViewMsg.TabClicked(lint)).model();
+        Model clicked = Update.update(shown, new BuildsMsg.TabClicked(lint)).model();
         Model closed = Update.update(clicked, new BuildsMsg.Closed()).model();
 
-        assertEquals(
-                Option.of(lint), clicked.repoView().branches().builds().get().selected());
-        assertEquals(Option.none(), closed.repoView().branches().builds());
+        assertEquals(Option.of(lint), clicked.part(BuildsView.PART).get().selected());
+        assertEquals(Option.none(), closed.part(BuildsView.PART));
     }
 
     @Test
@@ -121,7 +123,7 @@ public class BuildsPickTest {
 
         Model again = Update.update(picked, new BuildsMsg.Toggled(BuildsFixtures.LOCAL))
                 .model();
-        assertEquals(Option.of(lint), again.repoView().branches().builds().get().selected());
+        assertEquals(Option.of(lint), again.part(BuildsView.PART).get().selected());
     }
 
     @Test
@@ -151,7 +153,7 @@ public class BuildsPickTest {
 
         Model other = Update.update(picked, new BuildsMsg.Toggled(BuildsFixtures.LOCAL))
                 .model();
-        assertEquals(Option.of(2), other.repoView().branches().builds().get().window());
+        assertEquals(Option.of(2), other.part(BuildsView.PART).get().window());
     }
 
     @Test
@@ -184,9 +186,9 @@ public class BuildsPickTest {
                                         new BuildsPage(List.of(BuildsFixtures.BUILD, lint, before), 2, Option.none()))))
                 .model();
         Model picked = Update.update(
-                        Update.update(read, new BuildsViewMsg.TabClicked(new BuildsView.Pipeline("Build", "push")))
+                        Update.update(read, new BuildsMsg.TabClicked(new BuildsView.Pipeline("Build", "push")))
                                 .model(),
-                        new BuildsViewMsg.BuildClicked(2))
+                        new BuildsMsg.BuildClicked(2))
                 .model();
         assertEquals(
                 Option.of(new BuildPickPopup(List.of(BuildsFixtures.BUILD, before), Option.of(2L))),
@@ -196,7 +198,7 @@ public class BuildsPickTest {
 
         // On another tab, the time line shows its last build: the popup marks that.
         Model otherTab = Update.update(
-                        picked, new BuildsViewMsg.TabClicked(new BuildsView.Pipeline("Markdown", "pull_request")))
+                        picked, new BuildsMsg.TabClicked(new BuildsView.Pipeline("Markdown", "pull_request")))
                 .model();
         assertEquals(
                 Option.of(new BuildPickPopup(List.of(lint), Option.none())),
@@ -210,7 +212,7 @@ public class BuildsPickTest {
         assertEquals(
                 Option.of(new BuildPickPopup(List.of(BuildsFixtures.BUILD), Option.none())),
                 Update.update(fewer, new BuildsMsg.BuildPickRequested()).model().popup(BuildPickPopup.class));
-        assertEquals(Option.of(2L), fewer.repoView().branches().builds().get().picked());
+        assertEquals(Option.of(2L), fewer.part(BuildsView.PART).get().picked());
     }
 
     @Test
@@ -246,10 +248,10 @@ public class BuildsPickTest {
         assertEquals(Option.of(2L), drawn.picked());
 
         Model again =
-                Update.update(picked.model(), new BuildsViewMsg.BuildClicked(2)).model();
-        assertEquals(Option.none(), again.repoView().branches().builds().get().picked());
-        Model clicked = Update.update(again, new BuildsViewMsg.BuildClicked(1)).model();
-        assertEquals(Option.of(1L), clicked.repoView().branches().builds().get().picked());
+                Update.update(picked.model(), new BuildsMsg.BuildClicked(2)).model();
+        assertEquals(Option.none(), again.part(BuildsView.PART).get().picked());
+        Model clicked = Update.update(again, new BuildsMsg.BuildClicked(1)).model();
+        assertEquals(Option.of(1L), clicked.part(BuildsView.PART).get().picked());
     }
 
     @Test
@@ -275,8 +277,7 @@ public class BuildsPickTest {
 
     @Test
     void aPickThatNoLongerShowsIsSteppedFromTheLastBuildDoneThatShows() {
-        Model oldest =
-                Update.update(steppable(), new BuildsViewMsg.BuildClicked(3)).model();
+        Model oldest = Update.update(steppable(), new BuildsMsg.BuildClicked(3)).model();
         Model fewer =
                 Update.update(oldest, new BuildsMsg.WindowPicked(Option.of(2))).model();
 
@@ -328,11 +329,11 @@ public class BuildsPickTest {
         Keymap keys = Keymap.standard();
         Option<BuildsAt> searching = Option.of(new BuildsAt(true));
 
-        assertEquals(Option.none(), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('n'), searching));
-        assertEquals(Option.none(), keys.handle(Scopes.BUILDS, KeyEvent.ofChar('N'), searching));
+        assertEquals(Option.none(), keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('n'), searching));
+        assertEquals(Option.none(), keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('N'), searching));
         assertEquals(
                 Option.of(new BuildsMsg.BuildStepped(1)),
-                keys.handle(Scopes.BUILDS, KeyEvent.ofChar('n'), Option.of(new BuildsAt(false))));
+                keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('n'), Option.of(new BuildsAt(false))));
     }
 
     /**
@@ -374,6 +375,6 @@ public class BuildsPickTest {
     }
 
     private static Option<Long> picked(Model model) {
-        return model.repoView().branches().builds().get().picked();
+        return model.part(BuildsView.PART).get().picked();
     }
 }

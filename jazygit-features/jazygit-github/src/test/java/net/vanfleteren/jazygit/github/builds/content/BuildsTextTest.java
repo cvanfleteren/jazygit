@@ -16,9 +16,9 @@ import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
-import net.vanfleteren.jazygit.state.view.BuildsShown;
-import net.vanfleteren.jazygit.state.view.BuildsView;
+import net.vanfleteren.jazygit.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.github.builds.BuildsShown;
+import net.vanfleteren.jazygit.github.builds.BuildsView;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -229,10 +229,10 @@ class BuildsTextTest {
                 .indexWhere(line -> line.contains("commit   when"));
 
         assertEquals(
-                Option.of(new BuildsViewMsg.TabClicked(new BuildsView.Pipeline("Publish", "push"))),
+                Option.of(new BuildsMsg.TabClicked(new BuildsView.Pipeline("Publish", "push"))),
                 body.clicked(80, 0, publish));
-        assertFalse(body.clicked(80, 1, publish).exists(BuildsViewMsg.TabClicked.class::isInstance));
-        assertEquals(Option.of(new BuildsViewMsg.BuildClicked(40L)), body.clicked(80, list + 1, 3));
+        assertFalse(body.clicked(80, 1, publish).exists(BuildsMsg.TabClicked.class::isInstance));
+        assertEquals(Option.of(new BuildsMsg.BuildClicked(40L)), body.clicked(80, list + 1, 3));
     }
 
     @Test

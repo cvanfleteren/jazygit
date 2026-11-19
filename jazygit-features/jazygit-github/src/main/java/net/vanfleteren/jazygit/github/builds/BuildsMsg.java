@@ -1,14 +1,19 @@
 package net.vanfleteren.jazygit.github.builds;
 
+import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
+import net.vanfleteren.jazygit.gh.model.RepoWorkflow;
+import net.vanfleteren.jazygit.gh.model.WorkflowRunsPage;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.github.builds.BuildsView.FileAt;
+import net.vanfleteren.jazygit.github.builds.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 
 /**
  * Showing the builds of a local branch on GitHub (ADR 131).
@@ -89,4 +94,35 @@ public sealed interface BuildsMsg extends Msg {
      * The user chose {@code pipeline} in the popup.
      */
     record Picked(Pipeline pipeline) implements BuildsMsg {}
+
+    /**
+     * The user clicked the tab of {@code pipeline}.
+     */
+    record TabClicked(Pipeline pipeline) implements BuildsMsg {}
+
+    /**
+     * The user clicked the build of the run {@code run}, in the chart or the list: its jobs show on one time line, or
+     * those of the last build again when it already did (ADR 133).
+     */
+    record BuildClicked(long run) implements BuildsMsg {}
+
+    /**
+     * The files of workflows were read at the commit of a build, each as its workflow, or none when it could not be.
+     */
+    record WorkflowsRead(Map<FileAt, Option<Workflow>> workflows) implements BuildsMsg {}
+
+    /**
+     * Runs of the workflow {@code workflowId} on every branch were read from {@code after} on; none when it is no
+     * workflow.
+     */
+    record RunsRead(String workflowId, Option<String> after, Option<WorkflowRunsPage> page) implements BuildsMsg {}
+
+    record RunsFailed(String workflowId, Option<String> after, Failure failure) implements BuildsMsg {}
+
+    /**
+     * The workflows of the repository were read.
+     */
+    record RepoWorkflowsRead(List<RepoWorkflow> workflows) implements BuildsMsg {}
+
+    record RepoWorkflowsFailed(Failure failure) implements BuildsMsg {}
 }

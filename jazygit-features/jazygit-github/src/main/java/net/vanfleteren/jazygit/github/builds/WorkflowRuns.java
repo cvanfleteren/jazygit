@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.github.builds;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;

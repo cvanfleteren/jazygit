@@ -1,16 +1,15 @@
-package net.vanfleteren.jazygit.state.github.builds;
+package net.vanfleteren.jazygit.github.builds;
 
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.github.builds.BuildsView.FileAt;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
-import net.vanfleteren.jazygit.state.view.Workflow;
 
 /**
  * Reads the file of a workflow at the commit of a build, and those of the workflows of this repository it calls, to
@@ -32,12 +31,12 @@ public record ReadWorkflows(FileAt file) implements Cmd {
                 .flatMap(Workflow::called)
                 .map(path -> new FileAt(file.sha(), path))
                 .map(at -> Tuple.of(at, read(env, at))));
-        return new BuildsViewMsg.WorkflowsRead(called.put(file, workflow));
+        return new BuildsMsg.WorkflowsRead(called.put(file, workflow));
     }
 
     @Override
     public Msg failed(Failure failure) {
-        return new BuildsViewMsg.WorkflowsRead(HashMap.of(file, Option.none()));
+        return new BuildsMsg.WorkflowsRead(HashMap.of(file, Option.none()));
     }
 
     /**
