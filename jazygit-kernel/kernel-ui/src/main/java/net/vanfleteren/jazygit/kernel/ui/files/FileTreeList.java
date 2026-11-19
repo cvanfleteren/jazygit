@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.BorderBar;
+import net.vanfleteren.jazygit.kernel.ui.widgets.KnownHeight;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ListFilter;
 
 /**
@@ -376,7 +377,7 @@ final class FileTreeList<T extends Pathed> {
         steppedTo = Option.none();
         // A directory merged with its only child directories can be long, so it keeps both ends when it does not fit.
         // What the tree says instead of files, such as an error, is cut at its end like any other text.
-        StyledElement<?> element = net.vanfleteren.jazygit.ui.widgets.KnownHeight.line(() -> switch (node.data()) {
+        StyledElement<?> element = KnownHeight.line(() -> switch (node.data()) {
             case FileTree.File<T> file -> drawFile.apply(file);
             case FileTree.Dir<T> dir -> Toolkit.text(node.label()).ellipsisMiddle();
             case null -> Toolkit.text(node.label());
