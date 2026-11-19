@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.app.askpass;
 
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -20,6 +22,9 @@ public final class PopupAsking implements Asking {
     private final Consumer<Boolean> pasteAsKeys;
     // The question the popup asks, if it is open; only touched on the render thread.
     private Option<Pending> pending = Option.none();
+    // The questions withdrawn before they reached the render thread, as their operation ended in between; only touched
+    // on the render thread.
+    private Set<Long> withdrawnEarly = HashSet.empty();
 
     /**
      * @param onRenderThread runs what it is given on the render thread, between two frames
@@ -36,6 +41,11 @@ public final class PopupAsking implements Asking {
     public CompletableFuture<Option<SecretBuffer>> ask(long request, String prompt) {
         CompletableFuture<Option<SecretBuffer>> answer = new CompletableFuture<>();
         onRenderThread.accept(() -> {
+            if (withdrawnEarly.contains(request)) {
+                withdrawnEarly = withdrawnEarly.remove(request);
+                answer.complete(Option.none());
+                return;
+            }
             // One question at a time: one still open is withdrawn.
             pending.forEach(open -> close(open, false));
             pending = Option.of(new Pending(request, new SecretBuffer(), answer));
@@ -45,10 +55,20 @@ public final class PopupAsking implements Asking {
         return answer;
     }
 
+    /**
+     * Closes the popup of {@code request}; one that has not opened yet, as the question is still on its way to the
+     * render thread, does not open once it arrives.
+     */
     @Override
     public void withdraw(long request) {
-        onRenderThread.accept(
-                () -> pending.filter(open -> open.request() == request).forEach(open -> close(open, false)));
+        onRenderThread.accept(() -> {
+            Option<Pending> open = pending.filter(asked -> asked.request() == request);
+            if (open.isDefined()) {
+                close(open.get(), false);
+            } else {
+                withdrawnEarly = withdrawnEarly.add(request);
+            }
+        });
     }
 
     /**

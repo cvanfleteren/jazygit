@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.app.askpass;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
@@ -70,6 +71,26 @@ class PopupAskingTest {
 
         assertEquals(Option.none(), answer.join());
         assertEquals(List.of(true, false), pastingAsKeys);
+    }
+
+    /**
+     * The operation can end after the server started asking but before the question reached the render thread: the
+     * withdrawal comes first there, and the question then opens nothing.
+     */
+    @Test
+    void aQuestionWithdrawnBeforeItArrivesOpensNoPopup() {
+        java.util.Queue<Runnable> renderThread = new java.util.ArrayDeque<>();
+        PopupAsking queued = new PopupAsking(renderThread::add, sent::add, pastingAsKeys::add);
+
+        queued.withdraw(1);
+        CompletableFuture<Option<SecretBuffer>> answer = queued.ask(1, PROMPT);
+        renderThread.forEach(Runnable::run);
+
+        assertTrue(answer.isDone(), "answered");
+        assertEquals(Option.none(), answer.join());
+        assertEquals(List.of(), sent);
+        assertEquals(List.of(), pastingAsKeys);
+        assertEquals(0, queued.typed());
     }
 
     @Test
