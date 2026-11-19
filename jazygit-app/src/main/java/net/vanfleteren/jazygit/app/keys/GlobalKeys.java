@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.app.keys;
 
+import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.branches.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.changes.cherrypick.CherryPickMsg;
@@ -110,10 +111,10 @@ final class GlobalKeys {
     }
 
     /**
-     * Whether {@code event} is the character {@code c}, without Ctrl or Alt.
+     * Whether {@code event} is the character {@code c}, without Ctrl, Alt, Super, Hyper or Meta.
      */
     static boolean isChar(KeyEvent event, char c) {
-        return event.isChar(c) && !event.hasCtrl() && !event.hasAlt();
+        return KeyTrigger.ch(c).matches(event);
     }
 
     /**

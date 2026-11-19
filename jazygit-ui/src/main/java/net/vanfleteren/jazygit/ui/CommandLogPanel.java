@@ -20,6 +20,7 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.bindings.Actions;
+import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
@@ -254,7 +255,7 @@ public final class CommandLogPanel {
     }
 
     private static boolean plain(KeyEvent event, char c) {
-        return event.isChar(c) && !event.hasCtrl() && !event.hasAlt();
+        return KeyTrigger.ch(c).matches(event);
     }
 
     /**
