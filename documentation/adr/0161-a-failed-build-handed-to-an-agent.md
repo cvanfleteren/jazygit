@@ -41,8 +41,12 @@ checks on the tip of a branch, which can come from several workflow runs, and on
   one type, here a `FailedBuild`. A `Feature` lists the actions it contributes for each key, and the app gathers them
   and hands them to the views that show that subject, as ADR 158 foresaw for the badges. An action has a label, a key
   and its help text, whether it is enabled or why not, and what it does with the subject: a `Cmd`.
-- The views show a contributed action as one of their own, in their keys, their hints and the help. A keymap test
-  fails when a contributed key is one the view already has, as a contributor cannot see the view's keys.
+- The views show a contributed action as one of their own, in their keys, their hints and the help. A view that shows
+  a subject has a key `Scope` for it, so its keys and the contributed ones are bindings alike: the checks popup, which
+  matches its keys itself in `ChecksDialog.keys`, gets one (`ChecksAction.SCOPE`), as the builds have
+  `BuildsAction.SCOPE`.
+- A keymap test fails when a contributed key is one the view already has, as a contributor cannot see the view's
+  keys, and when two features contribute the same key for one subject.
 - `features-github` gives the subject: the builds give the failed jobs of the build shown; the checks popup the
   failed checks of the tip of the branch, across runs. The agent works out which of them matter. Not: a subject of
   one job, nor of the check picked once ADR 160 picks one, as more than one may have failed; nor of a whole branch
