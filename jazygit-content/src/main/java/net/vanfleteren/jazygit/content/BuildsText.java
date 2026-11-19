@@ -300,6 +300,11 @@ final class BuildsText {
     private record JobRun(Outcome outcome, Duration took) {}
 
     /**
+     * A build under the chart: the day it was on, whether that day starts at it, and the column it starts at.
+     */
+    private record DayMark(String day, boolean starts, int column) {}
+
+    /**
      * How the builds are drawn.
      *
      * @param styles the styles of the theme
@@ -503,15 +508,16 @@ final class BuildsText {
          */
         private List<Line> axis(List<Build> shown, int each) {
             List<String> days = shown.map(build -> day.format(build.createdAt()));
-            List<Boolean> starts = days.zipWithIndex()
-                    .map(dated -> dated._2() == 0 || !dated._1().equals(days.get(dated._2() - 1)));
+            // A day starts at a build on another day than the one before it.
+            List<Boolean> starts = days.zip(days.map(Option::some).prepend(Option.none()))
+                    .map(pair -> !pair._2().contains(pair._1()));
             String labels = days.zip(starts)
                     .zipWithIndex()
+                    .map(dated -> new DayMark(dated._1()._1(), dated._1()._2(), dated._2() * each))
                     .foldLeft(
                             "",
-                            (done, dated) -> dated._1()._2() && done.length() <= dated._2() * each
-                                    ? done + " ".repeat(dated._2() * each - done.length())
-                                            + dated._1()._1() + " "
+                            (done, mark) -> mark.starts() && done.length() <= mark.column()
+                                    ? done + " ".repeat(mark.column() - done.length()) + mark.day() + " "
                                     : done);
             return List.of(
                             Line.from(dim(" ".repeat(SCALE - 1) + "└"
@@ -607,16 +613,7 @@ final class BuildsText {
             return Option.when(
                     !shards.isEmpty(),
                     () -> new JobRun(
-                            new Build(
-                                            build.workflow(),
-                                            build.event(),
-                                            build.runId(),
-                                            build.attempt(),
-                                            build.sha(),
-                                            build.title(),
-                                            build.createdAt(),
-                                            shards)
-                                    .outcome(),
+                            Outcome.of(shards),
                             shards.flatMap(Build.Job::duration).max().getOrElse(Duration.ZERO)));
         }
 
@@ -652,11 +649,9 @@ final class BuildsText {
                                             : Span.raw(" ".repeat(run._2())))
                             .getOrElse(() -> Span.raw(" ".repeat(run._2()))));
             int half = passed.size() / 2;
-            Option<Duration> trend = Option.when(
-                    half > 0,
-                    () -> median(passed.drop(half))
-                            .get()
-                            .minus(median(passed.take(half)).get()));
+            Option<Duration> trend = Option.when(half > 0, half)
+                    .flatMap(older -> median(passed.drop(older))
+                            .flatMap(newer -> median(passed.take(older)).map(newer::minus)));
             Option<Duration> last =
                     runs.reverse().flatMap(run -> run).headOption().map(JobRun::took);
             return Line.from(List.of(Span.raw(pad(name, columns.name())))
