@@ -1,17 +1,14 @@
-package net.vanfleteren.jazygit.state.github.builds;
+package net.vanfleteren.jazygit.github.builds;
 
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.github.builds.BuildsView.FileAt;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.view.BuildsView;
-import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
-import net.vanfleteren.jazygit.state.view.Workflow;
-import net.vanfleteren.jazygit.state.view.WorkflowRuns;
 
 /**
  * What the builds of a branch read besides its builds, once they show what needs it (ADR 131): the files of the
@@ -26,9 +23,7 @@ public final class BuildsReads {
      * {@code model}, reading what its builds show and is not read yet, nor being read.
      */
     public static Next next(Model model) {
-        return model.repoView()
-                .branches()
-                .builds()
+        return model.part(BuildsView.PART)
                 .filter(view -> view.builds().toOption().isDefined())
                 .map(view -> {
                     List<FileAt> files = view.unread();
@@ -44,11 +39,7 @@ public final class BuildsReads {
                     List<Cmd> cmds = files.<Cmd>map(ReadWorkflows::new)
                             .appendAll(Option.when(repo, LoadRepoWorkflows::new))
                             .appendAll(runs.map(id -> new LoadWorkflowRuns(id, Option.none())));
-                    return new Next(
-                            model.withRepoView(model.repoView()
-                                    .withBranches(model.repoView().branches().withBuilds(Option.of(asked)))),
-                            cmds,
-                            false);
+                    return new Next(model.withPart(BuildsView.PART, Option.of(asked)), cmds, false);
                 })
                 .getOrElse(() -> Next.of(model));
     }

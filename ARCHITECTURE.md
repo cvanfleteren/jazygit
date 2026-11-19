@@ -32,7 +32,7 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | `jazygit-lens` | `lens`: `Lens`, where a value sits in another; a tool any part may use. | vavr |
 | `jazygit-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
 | `jazygit-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
-| `jazygit-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, and a subpackage per part of the model. | lens, image, settings, git, gh, json, yaml, xml |
+| `jazygit-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, a subpackage per part of the model, and `Part`, a part a feature keeps itself. | lens, image, settings, git, gh, json, yaml, xml |
 | `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
 | `jazygit-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | ui |
@@ -124,6 +124,10 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
 - **A feature keeps its content in a `content` package**: what a feature shows in the content panel, its source, body
   and text, is in a `content` package of the feature, as the builds of a branch in `github.builds.content` (ADR 156).
   The rules take its classes for views, as they take the dialogs.
+- **A feature keeps its part of the model**: what a feature keeps in the model beyond a popup is a value under a
+  `state.Part` it declares in its own package, as the builds of a branch under `BuildsView.PART`; the `Model` holds
+  them in `parts` by the part's name, without naming them (ADR 157), and `PartNamesTest` checks that no two parts
+  share a name. What the panes and several features read stays a field of the `Model`.
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys`, a dialog or a feature's content runs git or gh.
@@ -242,6 +246,7 @@ Each feature package follows the same shape:
 | `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages. |
 | `XxxCmd` | `RewordCmd` | The IO the feature asks for, usually an `OperationCmd` with its `Operation`. |
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
+| `XxxView` | `BuildsView` | What the feature keeps in the model beyond a popup, if anything, as a `Part` it declares (`BuildsView.PART`). |
 | `XxxDialogs` | `CommitDialog.reword` | The dialogs, mostly as data (`ConfirmDialog.Spec`, ...), as `PopupSlot`s. |
 | `XxxKeys` / `XxxAction` | `DropAction` | The keys, added to the immutable `Keymap`; an action bundles one operation's keys and popups. |
 | `XxxFeature` | `CommitFeature` | Its `FEATURE`, a `Feature` of the feature's actions, and of what it shows in the content panel, if anything (`ContentSource`): what `Keymap`, `Popups` and the content panel know of it. |

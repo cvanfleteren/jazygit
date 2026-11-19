@@ -6,19 +6,16 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.github.builds.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.github.builds.BuildsReads;
-import net.vanfleteren.jazygit.state.github.builds.LoadWorkflowRuns;
 import net.vanfleteren.jazygit.state.popup.PopupUpdate;
-import net.vanfleteren.jazygit.state.view.BuildsView;
-import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
-import net.vanfleteren.jazygit.state.view.WorkflowRuns;
 
 /**
  * Showing the builds of a local branch on GitHub, reading them some commits at a time, and choosing the tab and
- * whether it shows the runs of every branch (ADR 131).
+ * whether it shows the runs of every branch (ADR 131); and what they read besides, each reading what it then needs.
  */
 public final class BuildsUpdate {
 
@@ -27,10 +24,7 @@ public final class BuildsUpdate {
     public static Next update(Model model, BuildsMsg msg) {
         return switch (msg) {
             case BuildsMsg.Toggled(BranchName branch) ->
-                model.repoView()
-                                .branches()
-                                .builds()
-                                .exists(view -> view.branch().equals(branch))
+                model.part(BuildsView.PART).exists(view -> view.branch().equals(branch))
                         ? Next.of(shown(model, Option.none()))
                         : onGitHub(model, branch)
                                 .map(remote -> Next.of(
@@ -47,9 +41,7 @@ public final class BuildsUpdate {
             case BuildsMsg.AllToggled() ->
                 BuildsReads.next(changed(model, view -> view.withAllBranches(!view.allBranches())));
             case BuildsMsg.PickRequested() ->
-                model.repoView()
-                        .branches()
-                        .builds()
+                model.part(BuildsView.PART)
                         .flatMap(view -> view.shownOf())
                         .map(shown -> PopupUpdate.ask(
                                 model,
@@ -63,9 +55,7 @@ public final class BuildsUpdate {
                         .getOrElse(() -> Next.of(model));
             case BuildsMsg.MoreRequested() -> more(model);
             case BuildsMsg.BuildPickRequested() ->
-                model.repoView()
-                        .branches()
-                        .builds()
+                model.part(BuildsView.PART)
                         .flatMap(view -> view.shownOf())
                         .flatMap(shown -> shown.builds()
                                 .toOption()
@@ -76,13 +66,44 @@ public final class BuildsUpdate {
                 BuildsReads.next(changed(model.withoutPopup(BuildPickPopup.class), view -> view.withPicked(run)));
             case BuildsMsg.BuildStepped(int by) -> BuildsReads.next(changed(model, view -> view.steppedPick(by)));
             case BuildsMsg.WindowRequested() ->
-                PopupUpdate.ask(
-                        model, model.repoView().branches().builds().map(view -> new BuildsWindowPopup(view.window())));
+                PopupUpdate.ask(model, model.part(BuildsView.PART).map(view -> new BuildsWindowPopup(view.window())));
             case BuildsMsg.WindowPicked(Option<Integer> builds) ->
                 BuildsReads.next(changed(model.withoutPopup(BuildsWindowPopup.class), view -> view.withWindow(builds)));
             case BuildsMsg.Picked(Pipeline pipeline) ->
                 BuildsReads.next(changed(model.withoutPopup(BuildsPopup.class), view -> view.withSelected(pipeline)));
+            case BuildsMsg.TabClicked(Pipeline pipeline) ->
+                BuildsReads.next(changed(model, view -> view.withSelected(pipeline)));
+            case BuildsMsg.BuildClicked(long run) -> BuildsReads.next(changed(model, view -> view.toggledPick(run)));
+            case BuildsMsg.WorkflowsRead(var workflows) ->
+                Next.of(changed(model, view -> view.withWorkflows(workflows)));
+            case BuildsMsg.RunsRead(String id, var after, var page) ->
+                runsAwaited(model, id, after, runs -> runs.read(page));
+            case BuildsMsg.RunsFailed(String id, var after, var failure) ->
+                runsAwaited(model, id, after, runs -> runs.failed(failure));
+            case BuildsMsg.RepoWorkflowsRead(var workflows) ->
+                BuildsReads.next(
+                        changed(model, view -> view.withRepoWorkflows(Option.of(new Loadable.Loaded<>(workflows)))));
+            case BuildsMsg.RepoWorkflowsFailed(var failure) ->
+                Next.of(changed(model, view -> view.withRepoWorkflows(Option.of(new Loadable.Failed<>(failure)))));
         };
+    }
+
+    /**
+     * {@code model} with what {@code read} makes of the runs of the workflow {@code id} from {@code after} on, when
+     * those are still awaited; reading on from where they end while more are to be read.
+     */
+    private static Next runsAwaited(Model model, String id, Option<String> after, UnaryOperator<WorkflowRuns> read) {
+        return model.part(BuildsView.PART)
+                .flatMap(view -> view.runs()
+                        .get(id)
+                        .filter(runs -> runs.awaits(after))
+                        .map(runs -> {
+                            WorkflowRuns now = read.apply(runs);
+                            Next shown = BuildsReads.next(shown(
+                                    model, Option.of(view.withRuns(view.runs().put(id, now)))));
+                            return now.reading() ? shown.and(new LoadWorkflowRuns(id, now.after())) : shown;
+                        }))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**
@@ -90,9 +111,7 @@ public final class BuildsUpdate {
      * branch, more runs of the workflow of the tab shown; else more commits of the branch (ADR 132).
      */
     private static Next more(Model model) {
-        return model.repoView()
-                .branches()
-                .builds()
+        return model.part(BuildsView.PART)
                 .flatMap(view -> view.allBranches() ? moreRuns(model, view) : moreCommits(model, view))
                 .getOrElse(() -> Next.of(model));
     }
@@ -124,9 +143,7 @@ public final class BuildsUpdate {
      * How many builds of {@code tab} are read: of the branch, or on every branch.
      */
     private static Option<Integer> count(Model model, Pipeline tab) {
-        return model.repoView()
-                .branches()
-                .builds()
+        return model.part(BuildsView.PART)
                 .flatMap(view -> view.allBranches()
                         ? view.runsOf(tab.workflow())
                                 .flatMap(runs -> runs.builds().toOption())
@@ -140,9 +157,7 @@ public final class BuildsUpdate {
      */
     private static Next awaited(
             Model model, RemoteBranch branch, Option<String> after, UnaryOperator<BuildsView> read) {
-        return model.repoView()
-                .branches()
-                .builds()
+        return model.part(BuildsView.PART)
                 .filter(view -> view.awaits(branch, after))
                 .map(read)
                 .map(view -> {
@@ -157,9 +172,7 @@ public final class BuildsUpdate {
      * every branch: a branch with builds of the same workflow shows those (ADR 131).
      */
     private static BuildsView kept(Model model, BuildsView view) {
-        return model.repoView()
-                .branches()
-                .builds()
+        return model.part(BuildsView.PART)
                 .map(before -> before.selected()
                         .map(view::withSelected)
                         .getOrElse(view)
@@ -172,16 +185,13 @@ public final class BuildsUpdate {
      * {@code model} with the builds view as {@code change} makes it.
      */
     private static Model changed(Model model, UnaryOperator<BuildsView> change) {
-        return model.repoView()
-                .branches()
-                .builds()
+        return model.part(BuildsView.PART)
                 .map(view -> shown(model, Option.of(change.apply(view))))
                 .getOrElse(model);
     }
 
     private static Model shown(Model model, Option<BuildsView> builds) {
-        return model.withRepoView(
-                model.repoView().withBranches(model.repoView().branches().withBuilds(builds)));
+        return model.withPart(BuildsView.PART, builds);
     }
 
     /**

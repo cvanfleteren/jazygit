@@ -21,16 +21,15 @@ import net.vanfleteren.jazygit.git.files.StubDiffs;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.github.builds.BuildsView.FileAt;
 import net.vanfleteren.jazygit.github.builds.LoadBuilds;
+import net.vanfleteren.jazygit.github.builds.ReadWorkflows;
+import net.vanfleteren.jazygit.github.builds.Workflow;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
-import net.vanfleteren.jazygit.state.github.builds.ReadWorkflows;
-import net.vanfleteren.jazygit.state.view.BuildsView.FileAt;
-import net.vanfleteren.jazygit.state.view.Workflow;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.content.Shown;
@@ -139,7 +138,7 @@ class BuildsWorkflowsTest {
 
         Model known = Update.update(
                         read,
-                        new BuildsViewMsg.WorkflowsRead(HashMap.of(
+                        new BuildsMsg.WorkflowsRead(HashMap.of(
                                 publish, Workflow.parse("jobs:\n  verify: {}\n  package:\n    needs: verify\n"))))
                 .model();
 
@@ -166,8 +165,8 @@ class BuildsWorkflowsTest {
                 }),
                 StubGitHub.of());
 
-        BuildsViewMsg.WorkflowsRead read = (BuildsViewMsg.WorkflowsRead)
-                new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
+        BuildsMsg.WorkflowsRead read =
+                (BuildsMsg.WorkflowsRead) new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
 
         assertEquals(2, read.workflows().size());
         assertEquals(
@@ -197,8 +196,8 @@ class BuildsWorkflowsTest {
             }
         }));
 
-        BuildsViewMsg.WorkflowsRead read = (BuildsViewMsg.WorkflowsRead)
-                new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
+        BuildsMsg.WorkflowsRead read =
+                (BuildsMsg.WorkflowsRead) new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
 
         assertEquals(
                 List.of("test"),
@@ -228,8 +227,8 @@ class BuildsWorkflowsTest {
                     }
                 }));
 
-        BuildsViewMsg.WorkflowsRead read = (BuildsViewMsg.WorkflowsRead)
-                new ReadWorkflows(new FileAt(sha, ".github/workflows/build.yml")).run(env);
+        BuildsMsg.WorkflowsRead read =
+                (BuildsMsg.WorkflowsRead) new ReadWorkflows(new FileAt(sha, ".github/workflows/build.yml")).run(env);
 
         assertTrue(read.workflows()
                 .get(new FileAt(sha, ".github/workflows/build.yml"))
@@ -242,8 +241,7 @@ class BuildsWorkflowsTest {
         Env env = new Env(StubGit.of(), StubGitHub.of());
         FileAt file = new FileAt("abcdef0123456789abcdef0123456789abcdef01", ".github/workflows/gone.yml");
 
-        assertEquals(
-                new BuildsViewMsg.WorkflowsRead(HashMap.of(file, Option.none())), new ReadWorkflows(file).run(env));
+        assertEquals(new BuildsMsg.WorkflowsRead(HashMap.of(file, Option.none())), new ReadWorkflows(file).run(env));
     }
 
     @Test
@@ -276,7 +274,7 @@ class BuildsWorkflowsTest {
                         Option.of("c25"),
                         Option.of(new BuildsPage(List.empty(), 25, Option.none()))));
 
-        assertEquals(new BuildsViewMsg.WorkflowsRead(HashMap.of(publish, Option.none())), failed);
+        assertEquals(new BuildsMsg.WorkflowsRead(HashMap.of(publish, Option.none())), failed);
         assertTrue(after.cmds()
                 .appendAll(again.cmds())
                 .filter(ReadWorkflows.class::isInstance)

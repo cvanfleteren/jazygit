@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.github.builds;
+package net.vanfleteren.jazygit.github.builds;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -15,7 +15,7 @@ public record LoadRepoWorkflows() implements Cmd {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("state.work.repoWorkflows"));
+        return Option.of(Label.of("github.work.repoWorkflows"));
     }
 
     @Override
@@ -29,11 +29,11 @@ public record LoadRepoWorkflows() implements Cmd {
                 .checks()
                 .workflows()
                 .mapLeft(Failure::of)
-                .fold(this::failed, BuildsViewMsg.RepoWorkflowsRead::new);
+                .fold(this::failed, BuildsMsg.RepoWorkflowsRead::new);
     }
 
     @Override
     public Msg failed(Failure failure) {
-        return new BuildsViewMsg.RepoWorkflowsFailed(failure);
+        return new BuildsMsg.RepoWorkflowsFailed(failure);
     }
 }

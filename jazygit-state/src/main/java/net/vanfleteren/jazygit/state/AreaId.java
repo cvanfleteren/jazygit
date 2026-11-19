@@ -65,11 +65,6 @@ public record AreaId(String value) implements Focus.OnScreen {
      */
     public static final AreaId LOG = new AreaId("branch-log");
 
-    /**
-     * The area of the builds of the branch highlighted in the branches pane (ADR 131).
-     */
-    public static final AreaId BUILDS = new AreaId("branch-builds");
-
     @Override
     public String id() {
         return value;

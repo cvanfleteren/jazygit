@@ -33,10 +33,9 @@ import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.github.builds.BuildsView;
 import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.view.BuildsView;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import org.junit.jupiter.api.Test;
@@ -112,30 +111,23 @@ class JazygitAppBuildsTest {
             awaitModel(
                     testRunner,
                     app,
-                    model -> model.repoView()
-                            .branches()
-                            .builds()
+                    model -> model.part(BuildsView.PART)
                             .exists(view -> view.builds().toOption().isDefined()));
             SettledPilot.settle(testRunner, app.drawnAt::size);
-            assertEquals(AreaId.BUILDS.value(), onRenderThread(testRunner, () -> focusedId(testRunner)));
+            assertEquals(BuildsView.AREA.value(), onRenderThread(testRunner, () -> focusedId(testRunner)));
 
             // "✓ Build │ ✓ Markdown": Markdown from the eleventh column of the first line on.
-            Rect area = pilot.findElement(AreaId.BUILDS.value());
+            Rect area = pilot.findElement(BuildsView.AREA.value());
             pilot.mousePress(MouseButton.LEFT, area.left() + 1 + 12, area.top() + 1);
             awaitModel(
                     testRunner,
                     app,
-                    model -> model.repoView()
-                            .branches()
-                            .builds()
+                    model -> model.part(BuildsView.PART)
                             .flatMap(BuildsView::selected)
                             .contains(new BuildsView.Pipeline("Markdown", "pull_request")));
 
             pilot.press('B');
-            awaitModel(
-                    testRunner,
-                    app,
-                    model -> model.repoView().branches().builds().isEmpty());
+            awaitModel(testRunner, app, model -> model.part(BuildsView.PART).isEmpty());
             SettledPilot.settle(testRunner, app.drawnAt::size);
             assertEquals(BranchesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
         } finally {

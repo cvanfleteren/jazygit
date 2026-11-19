@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.github.builds;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.gh.model.Build;
 import net.vanfleteren.jazygit.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
+import net.vanfleteren.jazygit.github.builds.BuildsView.Pipeline;
 import org.junit.jupiter.api.Test;
 
 /**

@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.github.builds;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.Build;
+import net.vanfleteren.jazygit.github.builds.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.state.popup.Popup;
-import net.vanfleteren.jazygit.state.view.BuildsView.Pipeline;
 
 /**
  * Asking which workflow's builds to show, of the many a branch has (ADR 131).

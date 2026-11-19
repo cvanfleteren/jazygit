@@ -2,15 +2,15 @@ package net.vanfleteren.jazygit.github.builds.content;
 
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.github.builds.BuildsAction;
+import net.vanfleteren.jazygit.github.builds.BuildsAt;
+import net.vanfleteren.jazygit.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.github.builds.BuildsAt;
-import net.vanfleteren.jazygit.state.github.builds.BuildsViewMsg;
-import net.vanfleteren.jazygit.state.view.BuildsShown;
 import net.vanfleteren.jazygit.ui.content.Body;
 import net.vanfleteren.jazygit.ui.content.DrawContext;
 import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.content.KeyContext;
-import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
  * The builds of a branch, of the newest commit first (ADR 131), drawn as wide as the area, as its chart has a column
@@ -33,7 +33,7 @@ record BuildsBody(BuildsShown shown) implements Body {
      */
     @Override
     public Option<Msg> key(KeyEvent event, KeyContext context) {
-        return context.keymap().handle(Scopes.BUILDS, event, Option.of(new BuildsAt(context.searching())));
+        return context.keymap().handle(BuildsAction.SCOPE, event, Option.of(new BuildsAt(context.searching())));
     }
 
     /**
@@ -43,7 +43,7 @@ record BuildsBody(BuildsShown shown) implements Body {
     @Override
     public Option<Msg> clicked(int width, int line, int column) {
         Option<Msg> tab =
-                line == 0 ? BuildsText.tabAt(shown, width, column).map(BuildsViewMsg.TabClicked::new) : Option.none();
-        return tab.orElse(() -> BuildsText.buildAt(shown, width, line, column).map(BuildsViewMsg.BuildClicked::new));
+                line == 0 ? BuildsText.tabAt(shown, width, column).map(BuildsMsg.TabClicked::new) : Option.none();
+        return tab.orElse(() -> BuildsText.buildAt(shown, width, line, column).map(BuildsMsg.BuildClicked::new));
     }
 }
