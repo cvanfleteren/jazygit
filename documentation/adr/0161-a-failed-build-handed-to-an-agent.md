@@ -109,6 +109,11 @@ checks on the tip of a branch, which can come from several workflow runs, and on
   own key and its own views to show it.
 - An agent gets no logs from jazygit: one that cannot run `gh`, or the program the hint names, cannot read them.
 - What the agent does is its own: jazygit does not show its output, and does not know when one left running is done.
+- The prompt holds text that others choose: the names of jobs and of the branch, and, through the logs the agent is
+  told to read, what a build printed; a pull request from a fork can set any of it. An agent that runs commands in
+  the worktree can be steered by it. The risk is accepted, as the agent only starts when the user asks: jazygit's
+  own prompt fences what the forge gave as data, and what the agent may do is up to the user, through the agent's
+  own flags in `command`. A change that starts an agent without the user asking needs to weigh this again.
 - Moving the editors onto the shared type of program changes no setting of theirs.
 - ADR 160 (#587), still open, picks a check in the checks popup and keeps the logs of checks in a cache directory.
   The check picked changes nothing for `I`: it hands over every failed check. Naming the logs already kept in the
