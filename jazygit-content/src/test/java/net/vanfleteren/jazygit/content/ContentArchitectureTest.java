@@ -15,6 +15,16 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.CompoundElement;
+import java.lang.classfile.instruction.InvokeDynamicInstruction;
+import java.lang.constant.ClassDesc;
+import java.net.URI;
+import java.util.stream.Stream;
 import net.vanfleteren.jazygit.AppRules;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.ui.content.Body;
@@ -72,19 +82,7 @@ class ContentArchitectureTest {
     static final ArchRule noneAsksWhichBodyItIs = noClasses()
             .that()
             .doNotImplement(Body.class)
-            .should(new ArchCondition<JavaClass>("check whether a value is one kind of body") {
-                @Override
-                public void check(JavaClass item, ConditionEvents events) {
-                    item.getInstanceofChecks().stream()
-                            .filter(check -> check.getRawType().isAssignableTo(Body.class)
-                                    && !check.getRawType().isEquivalentTo(Body.class))
-                            .forEach(check -> events.add(SimpleConditionEvent.satisfied(
-                                    check,
-                                    item.getName() + " checks for "
-                                            + check.getRawType().getSimpleName() + " in "
-                                            + check.getSourceCodeLocation())));
-                }
-            });
+            .should(asksWhichKindOf(Body.class, "check whether a value is one kind of body"));
 
     /**
      * What sets apart content that is no diff, its body says, keys included (ADR 155): nothing in the content asks
@@ -92,19 +90,74 @@ class ContentArchitectureTest {
      */
     @ArchTest
     static final ArchRule noneAsksWhichContentItIs = noClasses()
-            .should(new ArchCondition<JavaClass>("check whether what an area shows is one kind of content but a diff") {
-                @Override
-                public void check(JavaClass item, ConditionEvents events) {
-                    item.getInstanceofChecks().stream()
-                            .filter(check -> check.getRawType().isAssignableTo(ScrolledContent.Other.class)
-                                    && !check.getRawType().isEquivalentTo(ScrolledContent.Other.class))
-                            .forEach(check -> events.add(SimpleConditionEvent.satisfied(
-                                    check,
-                                    item.getName() + " checks for "
-                                            + check.getRawType().getSimpleName() + " in "
-                                            + check.getSourceCodeLocation())));
-                }
-            });
+            .should(asksWhichKindOf(
+                    ScrolledContent.Other.class, "check whether what an area shows is one kind of content but a diff"));
+
+    /**
+     * Holds for a class that tells one kind of {@code kind} apart from the others, by {@code instanceof} or by a case of
+     * a pattern switch. A pattern switch compiles to no {@code instanceof}, but to a {@code typeSwitch} whose
+     * arguments are the classes of its cases, which ArchUnit does not import: those are read from the class file.
+     */
+    private static ArchCondition<JavaClass> asksWhichKindOf(Class<?> kind, String description) {
+        return new ArchCondition<>(description) {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                item.getInstanceofChecks().stream()
+                        .filter(check -> check.getRawType().isAssignableTo(kind)
+                                && !check.getRawType().isEquivalentTo(kind))
+                        .forEach(check -> events.add(SimpleConditionEvent.satisfied(
+                                check,
+                                item.getName() + " checks for "
+                                        + check.getRawType().getSimpleName() + " in "
+                                        + check.getSourceCodeLocation())));
+                switchedOn(item)
+                        .filter(label -> kind.isAssignableFrom(label) && !kind.equals(label))
+                        .forEach(label -> events.add(SimpleConditionEvent.satisfied(
+                                item, item.getName() + " switches on " + label.getSimpleName())));
+            }
+        };
+    }
+
+    /**
+     * The classes the cases of the pattern switches of {@code item} are of.
+     */
+    private static Stream<Class<?>> switchedOn(JavaClass item) {
+        return item.getSource().stream().flatMap(source -> {
+            ClassModel model = ClassFile.of().parse(bytes(source.getUri()));
+            return model.methods().stream()
+                    .flatMap(method -> method.code().stream())
+                    .flatMap(CompoundElement::elementStream)
+                    .filter(InvokeDynamicInstruction.class::isInstance)
+                    .map(InvokeDynamicInstruction.class::cast)
+                    .filter(ContentArchitectureTest::typeSwitch)
+                    .flatMap(indy -> indy.bootstrapArgs().stream())
+                    .filter(ClassDesc.class::isInstance)
+                    .map(label -> loaded((ClassDesc) label));
+        });
+    }
+
+    private static boolean typeSwitch(InvokeDynamicInstruction indy) {
+        return indy.bootstrapMethod().owner().equals(ClassDesc.of("java.lang.runtime.SwitchBootstraps"))
+                && indy.bootstrapMethod().methodName().equals("typeSwitch");
+    }
+
+    private static Class<?> loaded(ClassDesc label) {
+        String descriptor = label.descriptorString();
+        String name = descriptor.substring(1, descriptor.length() - 1).replace('/', '.');
+        try {
+            return Class.forName(name, false, ContentArchitectureTest.class.getClassLoader());
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("A case of a switch is of a class not on the class path: " + name, e);
+        }
+    }
+
+    private static byte[] bytes(URI uri) {
+        try (InputStream in = uri.toURL().openStream()) {
+            return in.readAllBytes();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 
     private static boolean holdsTuple(JavaType type) {
         return type.getAllInvolvedRawTypes().stream()
