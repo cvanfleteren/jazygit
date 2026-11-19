@@ -57,20 +57,23 @@ checks on the tip of a branch, which can come from several workflow runs, and on
   terminal = true
   ```
 
-  - `name`, `command`, `terminal` and `shortcut` are as for an editor (ADR 110): the command is a list run without a
-    shell, `terminal = true` hands the terminal over to the agent, else it is started and left running, as an agent
-    in a tmux window of its own is.
+  - `name`, `terminal` and `shortcut` are as for an editor (ADR 110). An agent has one `command`, a list run without
+    a shell, as an editor's `dir-command` and `file-command` are (ADR 145); `terminal = true` hands the terminal over
+    to the agent, else it is started and left running, as an agent in a tmux window of its own is.
   - The command takes `{prompt}` and `{dir}`; without `{prompt}`, the prompt is added as the last argument.
   - `prompt`: what the agent is asked, if not jazygit's own text. It takes `{repo}`, `{branch}`, `{commit}`, `{pr}`
     (empty without a pull request), `{failures}` (the failed jobs with their URLs, one per line) and `{logs}` (how to
     read their logs).
-  - An entry that is wrong, as one with a placeholder it does not know, is left out and reported as
+  - A `{…}` that is no placeholder of its list stays as it is, in a command or a prompt, as in an editor's command:
+    a prompt can hold braces, as of JSON, without escaping them. Not: reporting it as a problem, which would drop
+    editors that work today once they share the type.
+  - An entry that is wrong otherwise, as one without a `name` or with an empty `command`, is left out and reported as
     `SettingsProblem.Invalid` under its keys, as an editor is.
 - Not: an agent jazygit knows of, as Claude with its flags. jazygit names no agent; Claude is the example in the
   documentation.
-- The editors and the agents share one type of program in `kernel-settings`: its name, its command, `terminal`, its
-  shortcut, how its placeholders are filled in and how a wrong entry is reported. Each list adds only its own
-  placeholders.
+- The editors and the agents share one type of program in `kernel-settings`: its name, `terminal`, its shortcut, how
+  a command list is read and its placeholders filled in, and how a wrong entry is reported. An editor keeps its two
+  commands and an agent has one; each list adds only its own placeholders.
 - Only in `config.toml` for now: a section of the settings panel that a feature contributes is for a later ADR.
 
 ### Investigating
