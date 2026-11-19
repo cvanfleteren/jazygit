@@ -40,7 +40,7 @@ class BranchCheckRunsQueryTest {
                           "statusCheckRollup": { "contexts": { "nodes": [ %s ] } }, %s } },
                         "b1": { "name": "feat/x", "target": { "__typename": "Commit",
                           "statusCheckRollup": { "contexts": { "nodes": [
-                            { "__typename": "StatusContext", "context": "ci/status", "state": "SUCCESS" } ] } },
+                            { "__typename": "StatusContext", "context": "ci/status", "state": "SUCCESS", "targetUrl": null } ] } },
                           "checkSuites": { "nodes": [] } } },
                         "b2": null""".formatted(VERIFY_PASSED, WAITING_SUITES)).get();
 

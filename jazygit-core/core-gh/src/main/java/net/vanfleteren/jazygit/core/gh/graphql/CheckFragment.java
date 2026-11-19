@@ -8,6 +8,7 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.integer;
 import static net.vanfleteren.jazygit.lib.json.Decoder.longValue;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map2;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map3;
+import static net.vanfleteren.jazygit.lib.json.Decoder.map4;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map5;
 import static net.vanfleteren.jazygit.lib.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
@@ -36,8 +37,8 @@ public final class CheckFragment {
             databaseId name status conclusion startedAt completedAt \
             checkSuite { workflowRun { databaseId createdAt runAttempt event workflow { name } } }""";
     // A check with its name, its state and how it ran, in GraphQL.
-    public static final String FIELDS =
-            "__typename ... on CheckRun { " + CHECK_RUN_FIELDS + " } ... on StatusContext { context state }";
+    public static final String FIELDS = "__typename ... on CheckRun { " + CHECK_RUN_FIELDS
+            + " detailsUrl } ... on StatusContext { context state targetUrl }";
     // A check with only its state, in GraphQL.
     static final String STATE_FIELDS =
             "__typename ... on CheckRun { status conclusion } ... on StatusContext { state }";
@@ -99,16 +100,19 @@ public final class CheckFragment {
             "__typename",
             HashMap.of(
                     "CheckRun",
-                    map3(
+                    map4(
                             field("name", nullable(string())),
                             STATE,
                             RUN,
-                            (name, state, run) -> new Check(name.getOrElse(""), state(state), run)),
+                            field("detailsUrl", nullable(string())),
+                            (name, state, run, url) -> new Check(name.getOrElse(""), state(state), run, url)),
                     "StatusContext",
-                    map2(
+                    map3(
                             field("context", nullable(string())),
                             STATE,
-                            (context, state) -> new Check(context.getOrElse(""), state(state)))),
+                            field("targetUrl", nullable(string())),
+                            (context, state, url) ->
+                                    new Check(context.getOrElse(""), state(state), Option.none(), url))),
             succeed(new Check("", Checks.NONE)));
 
     private static final Set<String> FAILED =

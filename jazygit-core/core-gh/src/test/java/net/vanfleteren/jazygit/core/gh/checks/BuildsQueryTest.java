@@ -49,7 +49,7 @@ class BuildsQueryTest {
 
     private static String job(long id, String name, String conclusion, long runId, int attempt, String event) {
         return """
-                { "__typename": "CheckRun", "databaseId": %d, "name": "%s", "status": "COMPLETED",
+                { "__typename": "CheckRun", "detailsUrl": null, "databaseId": %d, "name": "%s", "status": "COMPLETED",
                   "conclusion": %s, "startedAt": "2026-11-14T23:00:10Z", "completedAt": "2026-11-14T23:04:00Z",
                   "checkSuite": { "workflowRun": { "databaseId": %d, "createdAt": "2026-11-14T23:00:00Z",
                     "runAttempt": %d, "event": "%s", "workflow": { "name": "Publish", "id": "W_1" },

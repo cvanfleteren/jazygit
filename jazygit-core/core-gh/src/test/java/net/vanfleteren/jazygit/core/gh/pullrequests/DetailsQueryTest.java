@@ -168,8 +168,8 @@ class DetailsQueryTest {
                                 { "nodes": [ { "requestedReviewer": { "__typename": "User", "login": "carol" } },
                                   { "requestedReviewer": { "__typename": "Team", "name": "core-team" } } ] }""")
                         .put("commits", commits(3, "\"2026-10-12T09:00:00Z\"", rollup("""
-                                                { "__typename": "StatusContext", "context": "build", "state": "PENDING" },
-                                                { "__typename": "StatusContext", "context": "ci/lint", "state": "SUCCESS" }"""), NO_SUITES))
+                                                { "__typename": "StatusContext", "context": "build", "state": "PENDING", "targetUrl": null },
+                                                { "__typename": "StatusContext", "context": "ci/lint", "state": "SUCCESS", "targetUrl": null }"""), NO_SUITES))
                         .put("reviewThreads", threads)));
     }
 
@@ -243,7 +243,7 @@ class DetailsQueryTest {
                                 JANUARY,
                                 rollup(
                                         VERIFY_PASSED + ", "
-                                                + "{ \"__typename\": \"StatusContext\", \"context\": \"ci/status\", \"state\": null }"),
+                                                + "{ \"__typename\": \"StatusContext\", \"context\": \"ci/status\", \"state\": null, \"targetUrl\": null }"),
                                 WAITING_SUITES)))
                 .get()
                 .checks();

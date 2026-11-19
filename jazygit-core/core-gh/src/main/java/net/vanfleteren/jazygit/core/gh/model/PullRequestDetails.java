@@ -428,14 +428,22 @@ public record PullRequestDetails(
      * @param name  the name of the check run, or the context of the commit status
      * @param state how it is doing; {@link Checks#NONE} for a status nobody set
      * @param run   when it ran, for a check run of a workflow; none for a commit status, which GitHub does not time
+     * @param url   where GitHub shows a check run, or where a commit status links to; none when GitHub gives none
      */
-    public record Check(String name, Checks state, Option<CheckRun> run) {
+    public record Check(String name, Checks state, Option<CheckRun> run, Option<String> url) {
 
         /**
-         * A check without timing.
+         * A check without timing or link.
          */
         public Check(String name, Checks state) {
-            this(name, state, Option.none());
+            this(name, state, Option.none(), Option.none());
+        }
+
+        /**
+         * A check without link.
+         */
+        public Check(String name, Checks state, Option<CheckRun> run) {
+            this(name, state, run, Option.none());
         }
 
         /**
