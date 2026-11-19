@@ -49,6 +49,10 @@
             <artifactId>jazygit-yaml</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-xml</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.vavr</groupId>
             <artifactId>vavr</artifactId>
         </dependency>

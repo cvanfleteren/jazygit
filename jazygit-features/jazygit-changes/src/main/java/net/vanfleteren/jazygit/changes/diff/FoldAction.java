@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
- * Closing every node of a version of JSON or YAML rendered, or opening them all, {@code z}, in every rich diff and in
+ * Closing every node of a version of JSON, YAML or XML rendered, or opening them all, {@code z}, in every rich diff and in
  * the diff of a pull request's files (ADR 122, 123). Enter on one node is the key that shows the lines a marker leaves
  * out ({@link ExpandAction}), as a version rendered has no markers.
  */

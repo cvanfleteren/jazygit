@@ -5,17 +5,21 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.json.JsonTree;
 import net.vanfleteren.jazygit.json.NotJson;
+import net.vanfleteren.jazygit.xml.NotXml;
+import net.vanfleteren.jazygit.xml.XmlTree;
 import net.vanfleteren.jazygit.yaml.NotYaml;
 import net.vanfleteren.jazygit.yaml.YamlTree;
 
 /**
- * Data as it is written, JSON or YAML, read to be drawn and folded (ADR 122, 123): what {@code jazygit-json} and
- * {@code jazygit-yaml} read, as one tree, each node with the lines of its source. Neither reader knows of the other.
+ * Data as it is written, JSON, YAML or XML, read to be drawn and folded (ADR 122, 123, 151): what {@code jazygit-json},
+ * {@code jazygit-yaml} and {@code jazygit-xml} read, as one tree, each node with the lines of its source. None of the
+ * readers knows of the others.
  */
 public sealed interface Tree {
 
     /**
-     * The documents of {@code text}, a file of {@code kind}: one for JSON, one or more for YAML; or why it holds none.
+     * The documents of {@code text}, a file of {@code kind}: one for JSON, one or more for YAML, one for XML, its root
+     * the {@link Markup} of its top; or why it holds none.
      */
     static Either<Unread, List<Document>> read(Rendered kind, String text) {
         return switch (kind) {
@@ -28,6 +32,12 @@ public sealed interface Tree {
                         .<Unread>mapLeft(Unread.NoYaml::new)
                         .map(documents ->
                                 documents.map(document -> new Document(document.line(), of(document.root()))));
+            case XML ->
+                XmlTree.read(text)
+                        .<Unread>mapLeft(Unread.NoXml::new)
+                        .map(nodes -> List.of(new Document(
+                                nodes.head().line(),
+                                new Markup(nodes.head().line(), nodes.last().end(), nodes.map(Tree::of)))));
             case MARKDOWN -> Either.left(new Unread.NoTree());
         };
     }
@@ -113,6 +123,22 @@ public sealed interface Tree {
         };
     }
 
+    private static Tree of(XmlTree tree) {
+        return switch (tree) {
+            case XmlTree.Element element ->
+                new Element(
+                        element.line(),
+                        element.tagEnd(),
+                        element.end(),
+                        element.name(),
+                        element.attributes().map(attribute -> new Attribute(attribute.name(), attribute.value())),
+                        element.children().map(Tree::of));
+            case XmlTree.Text text -> new Text(text.line(), text.end(), text.cdata(), text.lines());
+            case XmlTree.Comment comment ->
+                new Comment(comment.line(), comment.end(), comment.first(), comment.lines());
+        };
+    }
+
     private static Properties of(YamlTree.Properties properties) {
         return new Properties(properties.tag(), properties.anchor());
     }
@@ -153,6 +179,46 @@ public sealed interface Tree {
             return line;
         }
     }
+
+    /**
+     * The top of a document of XML: its root element, and the comments before and after it.
+     */
+    record Markup(int line, int end, List<Tree> nodes) implements Tree {}
+
+    /**
+     * An element of XML.
+     *
+     * @param tagEnd   the line its start tag ends on
+     * @param name     its name as written, its prefix too
+     * @param children its elements, texts and comments, in order
+     */
+    record Element(int line, int tagEnd, int end, String name, List<Attribute> attributes, List<Tree> children)
+            implements Tree {}
+
+    /**
+     * An attribute of an element, a declaration of a namespace too.
+     */
+    record Attribute(String name, String value) {
+
+        /**
+         * Whether it declares a namespace: {@code xmlns}, or {@code xmlns:prefix}.
+         */
+        public boolean namespace() {
+            return name.equals("xmlns") || name.startsWith("xmlns:");
+        }
+    }
+
+    /**
+     * Text of XML, or a section of CDATA, trimmed: its {@code n}th line is on line {@code line + n}.
+     */
+    record Text(int line, int end, boolean cdata, List<String> lines) implements Tree {}
+
+    /**
+     * A comment of XML.
+     *
+     * @param first the line of the first of its {@code lines}
+     */
+    record Comment(int line, int end, int first, List<String> lines) implements Tree {}
 
     /**
      * A field of a mapping.
@@ -212,6 +278,8 @@ public sealed interface Tree {
         record NoJson(NotJson why) implements Unread {}
 
         record NoYaml(NotYaml why) implements Unread {}
+
+        record NoXml(NotXml why) implements Unread {}
 
         /**
          * The file is of a kind that is not read as a tree, as Markdown.

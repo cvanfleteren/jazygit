@@ -24,6 +24,7 @@
           ./jazygit-test-support
           ./jazygit-json
           ./jazygit-yaml
+          ./jazygit-xml
           ./jazygit-syntax
           ./jazygit-process
           ./jazygit-git

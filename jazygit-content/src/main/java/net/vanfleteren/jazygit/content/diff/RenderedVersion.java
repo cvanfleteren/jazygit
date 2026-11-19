@@ -22,8 +22,8 @@ import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
- * A version of a file rendered in place of its diff (ADR 103): Markdown as prose, JSON and YAML as a tree (ADR 122,
- * 123), with a bar in the gutter beside what changed.
+ * A version of a file rendered in place of its diff (ADR 103): Markdown as prose, JSON, YAML and XML as a tree (ADR
+ * 122, 123, 151), with a bar in the gutter beside what changed.
  */
 final class RenderedVersion {
 
@@ -105,7 +105,7 @@ final class RenderedVersion {
     }
 
     /**
-     * The rows of a version of JSON or YAML rendered, a file of {@code kind}, its source {@code lines}, read as
+     * The rows of a version of JSON, YAML or XML rendered, a file of {@code kind}, its source {@code lines}, read as
      * {@code fold} says, {@code width} columns wide, its gutter included (ADR 122, 123): each a stop of the cursor, but
      * the keys of a table, with a bar in the gutter when a line it stands for changed, those lines placed on it. A file
      * that cannot be read is its source, after a line that says why, its lines placed on them, and no stops but the bar

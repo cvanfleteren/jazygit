@@ -26,7 +26,7 @@ import net.vanfleteren.jazygit.state.load.ReadVersion;
 import org.junit.jupiter.api.Test;
 
 /**
- * Opening and closing the nodes of a version of JSON or YAML rendered, Enter and {@code z} (ADR 122, 123).
+ * Opening and closing the nodes of a version of JSON, YAML or XML rendered, Enter and {@code z} (ADR 122, 123).
  */
 class FoldUpdateTest {
 
@@ -140,6 +140,28 @@ class FoldUpdateTest {
         Model closed =
                 Update.update(yaml, new FoldMsg.AllToggled(at(RUN, MANIFESTS))).model();
         assertEquals(HashMap.of("/0", false, "/0/run", false, "/1", false), nodes(closed));
+    }
+
+    @Test
+    void theRootElementOfXmlFoldsByEnterButZLeavesItAsItIs() {
+        DiffText pom = DiffText.of("diff --git a/a.xml b/a.xml\n--- a/a.xml\n+++ b/a.xml\n"
+                + "@@ -1,6 +1,6 @@\n"
+                + " <project>\n"
+                + "   <dependencies>\n"
+                + "-    <dependency><id>a</id></dependency>\n"
+                + "+    <dependency><id>b</id></dependency>\n"
+                + "   </dependencies>\n"
+                + " </project>\n");
+        Anchor.Node project = new Anchor.Node("a.xml", "/project", new Anchor.OnLine("a.xml", Side.RIGHT, 1));
+        Model xml = rendered(pom, new Anchor.OnLine("a.xml", Side.RIGHT, 3));
+
+        Model closed =
+                Update.update(xml, new FoldMsg.AllToggled(at(project, pom))).model();
+        assertEquals(
+                HashMap.of("/project/dependencies", false, "/project/dependencies/dependency", false), nodes(closed));
+
+        Model folded = Update.update(xml, new FoldMsg.Toggled(at(project, pom))).model();
+        assertEquals(HashMap.of("/project", false), nodes(folded));
     }
 
     /**

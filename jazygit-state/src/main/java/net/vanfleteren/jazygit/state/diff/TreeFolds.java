@@ -2,15 +2,17 @@ package net.vanfleteren.jazygit.state.diff;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 
 /**
- * How a version of JSON or YAML rendered is laid out, as far as folding it needs (ADR 122, 123): which of its mappings
- * and sequences are drawn on a line of their own, which are a table or packed, which blocks it has, and so which are
- * nodes that fold, each named by its path from the root as a JSON Pointer, and whether it is open.
+ * How a version of JSON, YAML or XML rendered is laid out, as far as folding it needs (ADR 122, 123, 151): which of its
+ * mappings and sequences are drawn on a line of their own, which are a table or packed, which blocks it has, which
+ * elements and comments of XML hold more than a row, and so which are nodes that fold, each named by its path from the
+ * root, as a JSON Pointer, or for XML as XPath writes one, and whether it is open.
  */
 public final class TreeFolds {
 
@@ -62,6 +64,13 @@ public final class TreeFolds {
             case Tree.Block block -> block.lines().size();
             case Tree.Scalar scalar -> 0;
             case Tree.Alias alias -> 0;
+            case Tree.Markup markup -> markup.nodes().size();
+            case Tree.Element element ->
+                text(element)
+                        .map(text -> text.lines().size())
+                        .getOrElse(() -> element.children().size());
+            case Tree.Text text -> text.lines().size();
+            case Tree.Comment comment -> comment.lines().size();
         };
     }
 
@@ -145,15 +154,146 @@ public final class TreeFolds {
      * Whether {@code tree} is a node that folds: a mapping or a sequence drawn on a row of its own, or a block.
      */
     public static boolean folds(Tree tree) {
-        return (container(tree) && !oneLine(tree)) || tree instanceof Tree.Block;
+        return switch (tree) {
+            case Tree.Element element -> !oneRow(element);
+            case Tree.Comment comment -> comment.lines().size() > 1;
+            default -> (container(tree) && !oneLine(tree)) || tree instanceof Tree.Block;
+        };
     }
 
     /**
-     * Whether the node {@code tree} at {@code pointer} is open: as the user {@code chose}, else open when it has no
-     * more than {@link #STARTS_OPEN} entries.
+     * Whether the node {@code tree} at {@code pointer} is open: as the user {@code chose}, else open when it is the root
+     * element of XML, or has no more than {@link #STARTS_OPEN} entries.
      */
     public static boolean open(Map<String, Boolean> chose, String pointer, Tree tree) {
-        return chose.get(pointer).getOrElse(() -> size(tree) <= STARTS_OPEN);
+        return chose.get(pointer).getOrElse(() -> root(pointer, tree) || size(tree) <= STARTS_OPEN);
+    }
+
+    /**
+     * Whether the node {@code tree} at {@code pointer} is the root element of XML, which {@code z} leaves as it is
+     * (ADR 151).
+     */
+    public static boolean root(String pointer, Tree tree) {
+        return tree instanceof Tree.Element && pointer.lastIndexOf('/') == 0;
+    }
+
+    /**
+     * The text {@code element} holds, when it holds that alone.
+     */
+    public static Option<Tree.Text> text(Tree.Element element) {
+        return element.children().size() == 1 && element.children().head() instanceof Tree.Text text
+                ? Option.of(text)
+                : Option.none();
+    }
+
+    /**
+     * Whether {@code element} is drawn on one row: it holds nothing, or text on one line alone.
+     */
+    public static boolean oneRow(Tree.Element element) {
+        return element.children().isEmpty()
+                || text(element).exists(text -> text.lines().size() == 1);
+    }
+
+    /**
+     * Whether all {@code element} holds are elements of one name.
+     */
+    public static boolean alike(Tree.Element element) {
+        List<Tree> children = element.children();
+        return !children.isEmpty()
+                && children.forAll(child -> child instanceof Tree.Element)
+                && children.map(child -> ((Tree.Element) child).name())
+                                .distinct()
+                                .size()
+                        == 1;
+    }
+
+    /**
+     * The columns of {@code element} as a table, if it is one (ADR 151): it holds two or more elements of one name, and
+     * else only comments of one line, each holding only attributes and elements of text on one line or of none, of names
+     * it has once, with no attributes. A column for each attribute, {@code @name}, and each element, in the order they
+     * are first seen.
+     */
+    public static Option<List<String>> columns(Tree.Element element) {
+        List<Tree.Element> records = element.children()
+                .filter(child -> child instanceof Tree.Element)
+                .map(Tree.Element.class::cast);
+        boolean others = element.children()
+                .forAll(child -> child instanceof Tree.Element
+                        || child instanceof Tree.Comment comment
+                                && comment.lines().size() == 1);
+        if (records.size() < 2
+                || !others
+                || records.map(Tree.Element::name).distinct().size() > 1) {
+            return Option.none();
+        }
+        Option<List<List<String>>> keys =
+                Option.sequence(records.map(TreeFolds::record)).map(List::ofAll);
+        return keys.map(each -> each.flatMap(names -> names).distinct()).filter(columns -> !columns.isEmpty());
+    }
+
+    /**
+     * The keys of {@code element} as a row of a table: its attributes as {@code @name}, then its elements, if it is one.
+     */
+    private static Option<List<String>> record(Tree.Element element) {
+        List<Option<String>> cells = element.children()
+                .map(child ->
+                        child instanceof Tree.Element cell && cell.attributes().isEmpty() && oneRow(cell)
+                                ? Option.of(cell.name())
+                                : Option.<String>none());
+        if (cells.exists(Option::isEmpty)) {
+            return Option.none();
+        }
+        List<String> names = cells.map(Option::get);
+        return Option.when(
+                names.distinct().size() == names.size(),
+                () -> element.attributes()
+                        .map(attribute -> "@" + attribute.name())
+                        .appendAll(names));
+    }
+
+    /**
+     * The text of the cell {@code column} of {@code element}, a row of a table; empty where it has none.
+     */
+    public static String cell(Tree.Element element, String column) {
+        if (column.startsWith("@")) {
+            return element.attributes()
+                    .find(attribute -> attribute.name().equals(column.substring(1)))
+                    .map(Tree.Attribute::value)
+                    .getOrElse("");
+        }
+        return element.children()
+                .find(child -> child instanceof Tree.Element cell && cell.name().equals(column))
+                .flatMap(child -> text((Tree.Element) child))
+                .map(text -> text.lines().head())
+                .getOrElse("");
+    }
+
+    /**
+     * Each of {@code nodes}, what an element or the top of XML holds, with its path under {@code pointer}, as XPath
+     * writes one: an element by its name, a text as {@code text()}, a comment as {@code comment()}, each with an index
+     * from 1 where it has siblings named the same.
+     */
+    public static List<Placed> xpaths(List<Tree> nodes, String pointer) {
+        Map<String, Integer> counts =
+                nodes.map(TreeFolds::xpathName).groupBy(name -> name).mapValues(List::size);
+        // In one pass, carrying how many of each name came before: an element of thousands is named in linear time.
+        return nodes.foldLeft(Tuple.of(List.<Placed>empty(), HashMap.<String, Integer>empty()), (done, node) -> {
+                    String name = xpathName(node);
+                    int index = done._2.get(name).getOrElse(0) + 1;
+                    String step = counts.get(name).get() > 1 ? name + "[" + index + "]" : name;
+                    return Tuple.of(done._1.prepend(new Placed(child(pointer, step), node)), done._2.put(name, index));
+                })
+                ._1
+                .reverse();
+    }
+
+    private static String xpathName(Tree node) {
+        return switch (node) {
+            case Tree.Element element -> element.name();
+            case Tree.Text text -> "text()";
+            case Tree.Comment comment -> "comment()";
+            default -> "node()";
+        };
     }
 
     /**
@@ -215,7 +355,13 @@ public final class TreeFolds {
             return LinkedHashMap.empty();
         }
         Map<String, Tree> own = LinkedHashMap.of(pointer, tree);
-        return table(tree).isDefined() || packed(tree) || tree instanceof Tree.Block
+        boolean whole = tree instanceof Tree.Element element
+                && (text(element).isDefined() || columns(element).isDefined());
+        return table(tree).isDefined()
+                        || packed(tree)
+                        || tree instanceof Tree.Block
+                        || tree instanceof Tree.Comment
+                        || whole
                 ? own
                 : children(tree, pointer).foldLeft(own, (done, child) -> done.merge(nodes(child._2, child._1)));
     }
@@ -226,7 +372,19 @@ public final class TreeFolds {
                 mapping.fields().map(field -> Tuple.of(child(pointer, field.key()), field.value()));
             case Tree.Sequence sequence ->
                 sequence.elements().zipWithIndex((element, index) -> Tuple.of(child(pointer, "" + index), element));
+            case Tree.Markup markup -> xpaths(markup.nodes(), pointer).map(Placed::pair);
+            case Tree.Element element -> xpaths(element.children(), pointer).map(Placed::pair);
             default -> List.empty();
         };
+    }
+
+    /**
+     * A node of XML and its path.
+     */
+    public record Placed(String pointer, Tree node) {
+
+        private Tuple2<String, Tree> pair() {
+            return Tuple.of(pointer, node);
+        }
     }
 }

@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
  * Showing the lines a marker of a rich diff leaves out, from its cursor (ADR 77): in every rich diff, and in the diff
- * of a pull request's files next to the keys of its review. Enter also opens or closes a node of JSON or YAML rendered
+ * of a pull request's files next to the keys of its review. Enter also opens or closes a node of JSON, YAML or XML rendered
  * (ADR 122), and shows the hunks a marker of the diff filters hides, or hides them again (ADR 144).
  */
 public final class ExpandAction {
@@ -29,7 +29,7 @@ public final class ExpandAction {
 
     /**
      * Enter, which shows all the lines a marker leaves out while the cursor is on one, and opens or closes the node of
-     * a version of JSON or YAML rendered it is on (ADR 122): one key bound once, as a version rendered has no markers.
+     * a version of JSON, YAML or XML rendered it is on (ADR 122): one key bound once, as a version rendered has no markers.
      */
     private static Binding<DiffCursorAt> enter() {
         Binding<DiffCursorAt> gap = onGap(Keymap.ENTER, "changes.help.diff.expandAll", ExpandMsg.Toward.ALL);

@@ -13,9 +13,9 @@ import net.vanfleteren.jazygit.state.diff.TreeFolds;
 import net.vanfleteren.jazygit.state.diff.Version;
 
 /**
- * Opening and closing the nodes of a version of JSON or YAML rendered (ADR 122, 123): what the user chose for a node is
+ * Opening and closing the nodes of a version of JSON, YAML or XML rendered (ADR 122, 123): what the user chose for a node is
  * kept by its path with the version, so the new version and the original share it, and a version read again keeps it.
- * Nothing happens where the area shows no version of JSON or YAML rendered, or the cursor is on no node.
+ * Nothing happens where the area shows no version of JSON, YAML or XML rendered, or the cursor is on no node.
  */
 public final class FoldUpdate {
 
@@ -35,7 +35,9 @@ public final class FoldUpdate {
                                                         !TreeFolds.open(version.nodes(), node.pointer(), tree)))
                                 : Option.none());
             case FoldMsg.AllToggled(DiffCursorAt at) ->
-                chosen(model, at, (version, nodes) -> {
+                chosen(model, at, (version, all) -> {
+                    // The root element of XML is left as it is: z acts on what is below it (ADR 151).
+                    Map<String, Tree> nodes = all.filter((pointer, tree) -> !TreeFolds.root(pointer, tree));
                     boolean anyOpen = nodes.exists(node -> TreeFolds.open(version.nodes(), node._1, node._2));
                     return Option.when(
                             !nodes.isEmpty(),
@@ -46,7 +48,7 @@ public final class FoldUpdate {
     }
 
     /**
-     * {@code model} with the nodes of the version of JSON or YAML rendered the cursor {@code at} is in as {@code choose}
+     * {@code model} with the nodes of the version of JSON, YAML or XML rendered the cursor {@code at} is in as {@code choose}
      * says, given the version and every node of it that folds, by its path; as it was when there is no such version, or
      * {@code choose} gives none.
      */

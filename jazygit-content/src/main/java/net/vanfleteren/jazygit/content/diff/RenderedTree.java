@@ -15,14 +15,16 @@ import net.vanfleteren.jazygit.state.diff.TreeFolds;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.theme.Theme;
+import net.vanfleteren.jazygit.xml.NotXml;
 import net.vanfleteren.jazygit.yaml.NotYaml;
 
 /**
- * A version of a JSON or a YAML file rendered (ADR 122, 123): a tree of rows, its guides as tamboui draws those of a
- * tree, a container of scalars that fits on one line, a long sequence of scalars packed into as many values a row as
- * the width holds, a sequence of records as a table, a mapping in a sequence named by one of its fields, a block of
- * YAML as its lines, each document of a file of more than one as a node, and each node that folds open or closed as
- * the user chose. Each row knows the lines of the source it stands for, and the node it is, which the cursor stops on.
+ * A version of a JSON, a YAML or an XML file rendered (ADR 122, 123, 151): a tree of rows, its guides as tamboui draws
+ * those of a tree, a container of scalars that fits on one line, a long sequence of scalars packed into as many values
+ * a row as the width holds, a sequence of records as a table, a mapping in a sequence named by one of its fields, a
+ * block of YAML as its lines, each document of a file of more than one as a node, an element of XML with its
+ * attributes, its text, its comments and its records as a table, and each node that folds open or closed as the user
+ * chose. Each row knows the lines of the source it stands for, and the node it is, which the cursor stops on.
  */
 final class RenderedTree {
 
@@ -33,11 +35,15 @@ final class RenderedTree {
     private static final String NULL = "null";
     private static final String BLOCK_INDENT = "    ";
     private static final int PREVIEW = 40;
+    private static final String LINES = "≡";
+    private static final String COMMENT_OPEN = "<!--";
+    private static final String COMMENT_CLOSE = "-->";
+    private static final String CDATA = "CDATA";
 
     private RenderedTree() {}
 
     /**
-     * The rows of the {@code lines} of a file of {@code kind}, JSON or YAML, packed to {@code width} columns, its nodes
+     * The rows of the {@code lines} of a file of {@code kind}, JSON, YAML or XML, packed to {@code width} columns, its nodes
      * open as {@code chose} says ({@link TreeFolds#open}), styled as {@code styles} says; or, when they cannot be read,
      * or are {@code cut} short, the line that says why, to show over them as source.
      */
@@ -49,7 +55,12 @@ final class RenderedTree {
             Map<String, Boolean> chose,
             Theme.SpanStyles styles) {
         if (cut) {
-            return Either.left(Messages.get(kind == Rendered.YAML ? "content.yaml.cut" : "content.json.cut"));
+            return Either.left(Messages.get(
+                    switch (kind) {
+                        case YAML -> "content.yaml.cut";
+                        case XML -> "content.xml.cut";
+                        default -> "content.json.cut";
+                    }));
         }
         return Tree.read(kind, lines.mkString("\n"))
                 .mapLeft(RenderedTree::why)
@@ -63,6 +74,7 @@ final class RenderedTree {
         return switch (unread) {
             case Tree.Unread.NoJson(NotJson not) -> why(not);
             case Tree.Unread.NoYaml(NotYaml not) -> why(not);
+            case Tree.Unread.NoXml(NotXml not) -> why(not);
             case Tree.Unread.NoTree none -> Messages.get("content.json.nothing");
         };
     }
@@ -94,6 +106,37 @@ final class RenderedTree {
             case NotYaml.TooDeep(int depth) -> Messages.get("content.yaml.tooDeep", String.valueOf(depth));
             case NotYaml.Broken(int line, int column, String problem) ->
                 Messages.get("content.yaml.broken", String.valueOf(line), String.valueOf(column), problem);
+        };
+    }
+
+    /**
+     * What the line over XML that is not well formed says: where reading stopped, and why, in jazygit's words
+     * (ADR 151).
+     */
+    static String why(NotXml not) {
+        return switch (not) {
+            case NotXml.Nothing nothing -> Messages.get("content.xml.nothing");
+            case NotXml.TooDeep(int depth) -> Messages.get("content.xml.tooDeep", String.valueOf(depth));
+            case NotXml.Broken(int line, int column, NotXml.Problem problem) ->
+                Messages.get("content.xml.broken", String.valueOf(line), String.valueOf(column), problem(problem));
+        };
+    }
+
+    private static String problem(NotXml.Problem problem) {
+        return switch (problem) {
+            case NotXml.Problem.Expected(String what)
+            when what.equals(NotXml.Problem.NAME) -> Messages.get("content.xml.expectedName");
+            case NotXml.Problem.Expected(String what)
+            when what.equals(NotXml.Problem.QUOTED) -> Messages.get("content.xml.expectedQuoted");
+            case NotXml.Problem.Expected(String what) -> Messages.get("content.xml.expected", what);
+            case NotXml.Problem.Closes(String open, String close) -> Messages.get("content.xml.closes", close, open);
+            case NotXml.Problem.ClosesNothing(String close) -> Messages.get("content.xml.closesNothing", close);
+            case NotXml.Problem.EndsInside(String name) -> Messages.get("content.xml.endsInside", name);
+            case NotXml.Problem.Twice(String name) -> Messages.get("content.xml.twice", name);
+            case NotXml.Problem.MoreAfter more -> Messages.get("content.xml.moreAfter");
+            case NotXml.Problem.TextOutside outside -> Messages.get("content.xml.textOutside");
+            case NotXml.Problem.LessThan less -> Messages.get("content.xml.lessThan");
+            case NotXml.Problem.Ampersand ampersand -> Messages.get("content.xml.ampersand");
         };
     }
 
@@ -161,7 +204,7 @@ final class RenderedTree {
             case Tree.Sequence sequence -> sequence.properties();
             case Tree.Scalar scalar -> scalar.properties();
             case Tree.Block block -> block.properties();
-            case Tree.Alias alias -> Tree.Properties.NONE;
+            default -> Tree.Properties.NONE;
         };
     }
 
@@ -206,6 +249,56 @@ final class RenderedTree {
                 .map(RenderedTree::text)
                 .appendAll(
                         sequence.elements().exists(element -> !TreeFolds.leaf(element)) ? List.of("…") : List.empty()));
+    }
+
+    /**
+     * What a closed element of XML shows of what it holds: the names of its elements, or when they are all of one name,
+     * those of what the first holds, or the texts they hold; its first line where it holds text alone.
+     */
+    private static String preview(Tree.Element element) {
+        Option<Tree.Text> text = TreeFolds.text(element);
+        if (text.isDefined()) {
+            return firstLine(text.get().lines());
+        }
+        List<Tree.Element> elements = element.children()
+                .filter(child -> child instanceof Tree.Element)
+                .map(Tree.Element.class::cast);
+        if (elements.isEmpty()) {
+            return element.children()
+                    .find(child -> child instanceof Tree.Text)
+                    .map(child -> firstLine(((Tree.Text) child).lines()))
+                    .getOrElse("");
+        }
+        if (elements.map(Tree.Element::name).distinct().size() > 1) {
+            return fitting(elements.map(Tree.Element::name));
+        }
+        List<String> inside = elements.head()
+                .children()
+                .filter(child -> child instanceof Tree.Element)
+                .map(child -> ((Tree.Element) child).name());
+        return inside.isEmpty()
+                ? fitting(elements.map(each -> TreeFolds.text(each)
+                        .map(only -> flat(only.lines().head()))
+                        .getOrElse(each.name())))
+                : "{" + fitting(inside) + "}";
+    }
+
+    /**
+     * The first line of {@code lines} that holds anything, cut to {@value #PREVIEW} columns, and an ellipsis when that
+     * is not all of them.
+     */
+    private static String firstLine(List<String> lines) {
+        String first = lines.find(line -> !line.isBlank()).getOrElse("");
+        boolean more = TextWidth.of(first) > PREVIEW || lines.size() > 1;
+        return TextWidth.start(first, PREVIEW) + (more ? " …" : "");
+    }
+
+    /**
+     * A comment of one line: {@code <!-- what it says -->}.
+     */
+    private static String oneComment(Tree.Comment comment) {
+        String says = comment.lines().head();
+        return says.isEmpty() ? COMMENT_OPEN + COMMENT_CLOSE : COMMENT_OPEN + " " + says + " " + COMMENT_CLOSE;
     }
 
     /**
@@ -285,7 +378,7 @@ final class RenderedTree {
     }
 
     /**
-     * A row of a version of JSON or YAML rendered.
+     * A row of a version of JSON, YAML or XML rendered.
      *
      * @param line    what it draws
      * @param pointer the path of what it draws, which the cursor stops on; none for the first row of a table, which
@@ -310,6 +403,9 @@ final class RenderedTree {
         }
 
         List<TreeRow> root(Tree root) {
+            if (root instanceof Tree.Markup markup) {
+                return TreeFolds.xpaths(markup.nodes(), "").flatMap(node -> xml(node, "", ""));
+            }
             if (TreeFolds.leaf(root)) {
                 return List.of(new TreeRow(line(leaf(root)), Option.of(""), List.of(root.line())));
             }
@@ -600,6 +696,195 @@ final class RenderedTree {
                             styles.of(syntax(scalar.kind())));
                 default -> dim(pad(text, width));
             };
+        }
+
+        /**
+         * The rows of a node of XML, {@code node} at its path, after the guides {@code guides}, what it holds after the
+         * guides {@code inner} (ADR 151).
+         */
+        private List<TreeRow> xml(TreeFolds.Placed node, String guides, String inner) {
+            String pointer = node.pointer();
+            return switch (node.node()) {
+                case Tree.Element element -> element(element, pointer, guides, inner);
+                case Tree.Text text -> textRows(text, pointer, guides, inner);
+                case Tree.Comment comment -> comment(comment, pointer, guides, inner);
+                default -> List.empty();
+            };
+        }
+
+        /**
+         * The rows of what an element of XML at {@code pointer} holds, each after the guides {@code prefix}.
+         */
+        private List<TreeRow> xmlChildren(List<Tree> children, String pointer, String prefix) {
+            List<TreeFolds.Placed> nodes = TreeFolds.xpaths(children, pointer);
+            return nodes.zipWithIndex().flatMap(at -> {
+                boolean last = at._2 == nodes.size() - 1;
+                return xml(at._1, prefix + connector(last, false), prefix + continued(last, false));
+            });
+        }
+
+        private List<TreeRow> element(Tree.Element element, String pointer, String guides, String inner) {
+            List<Span> head = List.of(dim(guides), Span.styled(element.name(), styles.of(Theme.Classes.SYNTAX_KEYWORD)))
+                    .appendAll(element.attributes().flatMap(this::attribute));
+            Option<Tree.Text> text = TreeFolds.text(element);
+            if (TreeFolds.oneRow(element)) {
+                List<Span> after = text.map(only -> List.of(Span.raw(GAP)).appendAll(textSpans(only, 0)))
+                        .getOrElse(List.empty());
+                return List.of(new TreeRow(
+                        line(head.appendAll(after)), Option.of(pointer), range(element.line(), element.end())));
+            }
+            boolean open = TreeFolds.open(chose, pointer, element);
+            int size = TreeFolds.size(element);
+            String count =
+                    text.isDefined() ? LINES + size : TreeFolds.alike(element) ? "[" + size + "]" : "{" + size + "}";
+            List<Span> closed = open ? List.empty() : List.of(Span.raw(GAP), dim(preview(element)));
+            TreeRow row = new TreeRow(
+                    line(head.append(Span.raw(" ")).append(dim(count)).appendAll(closed)),
+                    Option.of(pointer),
+                    open ? range(element.line(), element.tagEnd()) : range(element.line(), element.end()));
+            if (!open) {
+                return List.of(row);
+            }
+            if (text.isDefined()) {
+                Tree.Text only = text.get();
+                return only.lines()
+                        .zipWithIndex((written, at) -> new TreeRow(
+                                line(List.of(dim(inner + BLOCK_INDENT), Span.raw(written))),
+                                Option.of(TreeFolds.child(pointer, String.valueOf(at))),
+                                List.of(only.line() + at)))
+                        .prepend(row);
+            }
+            Option<List<String>> columns = TreeFolds.columns(element);
+            return (columns.isDefined()
+                            ? xmlTable(element, columns.get(), pointer, inner)
+                            : xmlChildren(element.children(), pointer, inner))
+                    .prepend(row);
+        }
+
+        /**
+         * The spans of an attribute, after a blank: its value in quotes, a declaration of a namespace dim.
+         */
+        private List<Span> attribute(Tree.Attribute attribute) {
+            String value = "\"" + flat(attribute.value()) + "\"";
+            return attribute.namespace()
+                    ? List.of(Span.raw(" "), dim(attribute.name() + "=" + value))
+                    : List.of(
+                            Span.raw(" "),
+                            Span.raw(attribute.name() + "="),
+                            Span.styled(value, styles.of(Theme.Classes.SYNTAX_STRING)));
+        }
+
+        /**
+         * The spans of the line {@code at} of {@code text}: the first after a dim mark when it is a section of CDATA.
+         */
+        private List<Span> textSpans(Tree.Text text, int at) {
+            Span written = Span.raw(text.lines().get(at));
+            return text.cdata() && at == 0 ? List.of(dim(CDATA + " "), written) : List.of(written);
+        }
+
+        /**
+         * The rows of a text among elements: a row for each of its lines, each standing for its own line.
+         */
+        private List<TreeRow> textRows(Tree.Text text, String pointer, String guides, String inner) {
+            return text.lines()
+                    .zipWithIndex((written, at) -> new TreeRow(
+                            line(List.of(dim(at == 0 ? guides : inner)).appendAll(textSpans(text, at))),
+                            Option.of(at == 0 ? pointer : TreeFolds.child(pointer, String.valueOf(at))),
+                            List.of(text.line() + at)));
+        }
+
+        /**
+         * The rows of a comment: one, dim, or, of more lines, a node of a row for each.
+         */
+        private List<TreeRow> comment(Tree.Comment comment, String pointer, String guides, String inner) {
+            if (!TreeFolds.folds(comment)) {
+                return List.of(new TreeRow(
+                        line(List.of(dim(guides), dim(oneComment(comment)))),
+                        Option.of(pointer),
+                        range(comment.line(), comment.end())));
+            }
+            boolean open = TreeFolds.open(chose, pointer, comment);
+            List<Span> closed = open ? List.empty() : List.of(Span.raw(GAP), dim(firstLine(comment.lines())));
+            TreeRow row = new TreeRow(
+                    line(List.of(
+                                    dim(guides),
+                                    dim(COMMENT_OPEN + " " + LINES
+                                            + comment.lines().size()))
+                            .appendAll(closed)),
+                    Option.of(pointer),
+                    open ? List.of(comment.line()) : range(comment.line(), comment.end()));
+            if (!open) {
+                return List.of(row);
+            }
+            return comment.lines()
+                    .zipWithIndex((written, at) -> new TreeRow(
+                            line(List.of(dim(inner + BLOCK_INDENT), dim(written))),
+                            Option.of(TreeFolds.child(pointer, String.valueOf(at))),
+                            List.of(comment.first() + at)))
+                    .prepend(row);
+        }
+
+        /**
+         * The element {@code element} drawn as a table with the {@code columns}: their names, then a row of each of its
+         * elements, numbered from 1, a comment between them a row of its own.
+         */
+        private List<TreeRow> xmlTable(Tree.Element element, List<String> columns, String pointer, String prefix) {
+            List<TreeFolds.Placed> nodes = TreeFolds.xpaths(element.children(), pointer);
+            List<Tree.Element> records = element.children()
+                    .filter(child -> child instanceof Tree.Element)
+                    .map(Tree.Element.class::cast);
+            // A vector, not a list: each row of a table of thousands looks its cells up by its index.
+            Vector<Vector<String>> cells = records.map(
+                            record -> columns.map(column -> flat(TreeFolds.cell(record, column)))
+                                    .toVector())
+                    .toVector();
+            List<Integer> widths =
+                    columns.zipWithIndex((name, column) -> cells.map(row -> TextWidth.of(row.get(column)))
+                            .append(TextWidth.of(name))
+                            .max()
+                            .getOrElse(0));
+            int digits = String.valueOf(records.size()).length();
+            int lastColumn = columns.size() - 1;
+            TreeRow names = new TreeRow(
+                    line(List.of(dim(prefix + GUIDES.vertical()), Span.raw(" ".repeat(digits) + GAP))
+                            .appendAll(columns.zipWithIndex((name, column) -> Span.raw(
+                                    column == lastColumn ? name : pad(name, widths.get(column)) + COLUMN_GAP)))),
+                    Option.none(),
+                    List.of(element.tagEnd()));
+            // Each node with the number of the records up to it, its own too, as its index.
+            Vector<Integer> numbers = nodes.toVector()
+                    .scanLeft(0, (count, node) -> count + (node.node() instanceof Tree.Element ? 1 : 0))
+                    .tail();
+            return nodes.zipWithIndex((node, at) -> {
+                        boolean last = at == nodes.size() - 1;
+                        String guides = prefix + connector(last, false);
+                        if (node.node() instanceof Tree.Comment comment) {
+                            return comment(comment, node.pointer(), guides, prefix + continued(last, false))
+                                    .head();
+                        }
+                        Tree.Element record = (Tree.Element) node.node();
+                        int number = numbers.get(at);
+                        Vector<String> row = cells.get(number - 1);
+                        List<Span> shown = columns.zipWithIndex((name, column) ->
+                                xmlCell(name, row.get(column), column == lastColumn ? 0 : widths.get(column)));
+                        return new TreeRow(
+                                line(List.of(dim(guides), dim(padLeft(String.valueOf(number), digits)), Span.raw(GAP))
+                                        .appendAll(shown)),
+                                Option.of(node.pointer()),
+                                range(record.line(), record.end()));
+                    })
+                    .prepend(names);
+        }
+
+        /**
+         * A cell of a table of XML, {@code width} columns wide and a gap after it, or as wide as it is when it is last:
+         * the value of an attribute coloured as a string, text plain.
+         */
+        private Span xmlCell(String column, String text, int width) {
+            String shown = width == 0 ? text : pad(text, width) + COLUMN_GAP;
+            return column.startsWith("@")
+                    ? Span.styled(shown, styles.of(Theme.Classes.SYNTAX_STRING))
+                    : Span.raw(shown);
         }
 
         private Span dim(String text) {
