@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.syntax.Lexer;
 import net.vanfleteren.jazygit.syntax.Token;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;

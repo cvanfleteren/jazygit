@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.diff.Blamed;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;

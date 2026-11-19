@@ -5,9 +5,12 @@ import net.vanfleteren.jazygit.content.diff.DiffCursor;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.ui.keys.Keymap;
+import net.vanfleteren.jazygit.ui.keys.Scopes;
 
 /**
  * What a {@link ScrollArea} knows of itself between frames, as last shown: a value {@link AreaFit} works out anew each
@@ -29,7 +32,8 @@ import net.vanfleteren.jazygit.state.diff.Version;
  * @param notice  what the title says until the next key: that n went past the last match, or could not go to one, or
  *                that a line is not there (ADR 126, 140)
  * @param focused whether the area had the focus when it was last shown
- * @param review  whether it shows the diff of a pull request's files, whose keys comment on it (ADR 60)
+ * @param keys    the keys of the cursor on what it shows: those that comment on the diff of a pull request's files
+ *                (ADR 60), else those of a diff
  * @param version the version of its file the area shows, if it shows one: on a line of it blamed, Enter opens its
  *                commit (ADR 147)
  */
@@ -45,7 +49,7 @@ record AreaState(
         GoToLine line,
         Option<String> notice,
         boolean focused,
-        boolean review,
+        Keymap.Scope<DiffCursorAt> keys,
         Option<Version> version) {
 
     /**
@@ -64,7 +68,7 @@ record AreaState(
                 new GoToLine(Option.none(), Option.none()),
                 Option.none(),
                 false,
-                false,
+                Scopes.DIFF,
                 Option.none());
     }
 
@@ -98,17 +102,17 @@ record AreaState(
 
     AreaState withStyled(Option<Styled> styled) {
         return new AreaState(
-                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, review, version);
+                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, keys, version);
     }
 
     AreaState withCursor(Option<DiffCursor> cursor) {
         return new AreaState(
-                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, review, version);
+                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, keys, version);
     }
 
     AreaState withSent(Option<Sent> sent) {
         return new AreaState(
-                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, review, version);
+                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, keys, version);
     }
 
     AreaState withColumn(int column) {
@@ -117,35 +121,35 @@ record AreaState(
 
     AreaState withColumns(Columns columns) {
         return new AreaState(
-                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, review, version);
+                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, keys, version);
     }
 
     AreaState withDrawnIn(Option<DrawnIn> drawnIn) {
         return new AreaState(
-                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, review, version);
+                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, keys, version);
     }
 
     AreaState withSearch(Search search) {
         return new AreaState(
-                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, review, version);
+                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, keys, version);
     }
 
     AreaState withLine(GoToLine line) {
         return new AreaState(
-                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, review, version);
+                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, keys, version);
     }
 
     AreaState withNotice(Option<String> notice) {
         return new AreaState(
-                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, review, version);
+                area, styled, cursor, shownAt, sent, columns, drawnIn, search, line, notice, focused, keys, version);
     }
 
     /**
      * The area as a frame shows it: what is shown {@code at}, with the focus or not, and what of it.
      */
-    AreaState shown(Scrolled at, boolean focused, boolean review, Option<Version> version) {
+    AreaState shown(Scrolled at, boolean focused, Keymap.Scope<DiffCursorAt> keys, Option<Version> version) {
         return new AreaState(
-                area, styled, cursor, at, sent, columns, drawnIn, search, line, notice, focused, review, version);
+                area, styled, cursor, at, sent, columns, drawnIn, search, line, notice, focused, keys, version);
     }
 
     /**

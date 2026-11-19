@@ -33,7 +33,7 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | `jazygit-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
 | `jazygit-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
 | `jazygit-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, and a subpackage per part of the model. | lens, image, settings, git, gh, json, yaml, xml |
-| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
+| `jazygit-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
 | `jazygit-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | ui |
 | ↳ `jazygit-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress. | ui |
@@ -106,9 +106,13 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   `state` itself uses them all, and they all use it, as the `Model` holds them), and those of `ui`.
 - **The subpackages of `ui` follow the panes**: the shell (`ui` itself: `LeftColumn`, the status and command log
   panels, `Feature`) → the panes (`branches`, `commits`, `files`, `stash`, `github`) → `markdown`, `widgets`,
-  `edit` → `keys`, `text`, `theme`, `i18n`. The content panel, which uses the panes, and the rich diff are
+  `edit` → `content`, `keys`, `text`, `theme`, `i18n`. The content panel, which uses the panes, and the rich diff are
   `jazygit-content`, beside the features: no feature draws them. Nothing in them uses the shell
   (`UiArchitectureTest`).
+- **Each kind of content draws itself**: what an area of the content panel shows is a `ui.content.Body`, an open
+  interface: it draws itself and says what sets it apart (drawn to the width of its area, its keys, its clicks). It is
+  in `ui`, below the panes, so a group of features can add a kind of its own; nothing in `jazygit-content` but a body
+  asks which kind of body a value is (`ContentArchitectureTest`).
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys` or a dialog runs git or gh. `ui.text.ErrorText` is the

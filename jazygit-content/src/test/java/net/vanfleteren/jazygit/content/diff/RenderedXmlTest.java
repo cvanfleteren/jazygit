@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.Rendered;
 import net.vanfleteren.jazygit.state.diff.Tree;
 import net.vanfleteren.jazygit.state.diff.TreeFolds;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 

@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import org.junit.jupiter.api.Test;
 
 /**

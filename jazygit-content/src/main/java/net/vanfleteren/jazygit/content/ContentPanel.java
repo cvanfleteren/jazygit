@@ -2,9 +2,6 @@ package net.vanfleteren.jazygit.content;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import dev.tamboui.text.Line;
-import dev.tamboui.text.Span;
-import dev.tamboui.text.Text;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import io.vavr.collection.List;
@@ -13,24 +10,17 @@ import io.vavr.control.Option;
 import java.time.ZoneId;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
-import net.vanfleteren.jazygit.content.ContentView.ShownChanges;
-import net.vanfleteren.jazygit.content.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.content.ContentView.Tone;
-import net.vanfleteren.jazygit.content.diff.Drawn;
-import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
-import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
-import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.git.model.Stash;
-import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Focus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
-import net.vanfleteren.jazygit.ui.commits.AheadView;
+import net.vanfleteren.jazygit.ui.content.Body;
+import net.vanfleteren.jazygit.ui.content.DrawContext;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
@@ -164,32 +154,7 @@ public final class ContentPanel {
      * (ADR 103). Only the diff of a pull request's files has ranges.
      */
     Drawn bodyDrawn(Body body, Option<DiffStops.HunkAt> asGiven, int width) {
-        return switch (body) {
-            case Body.Diff(ShownChanges(ShownDiff diff, DiffLook look), var remarks) ->
-                ContentText.diffDrawn(diff, look, remarks, asGiven, styles, width);
-            case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
-                plain(ContentText.logText(commits, ZoneId.systemDefault(), ahead, styles));
-            case Body.Builds(var shown) -> Drawn.plain(BuildsText.lines(shown, ZoneId.systemDefault(), styles, width));
-            case Body.CommitChanges(Commit commit, ShownChanges(ShownDiff changes, DiffLook look)) ->
-                ContentText.commitDrawn(commit, changes, look, styles, width);
-            case Body.StashChanges(Stash stash, ShownChanges(ShownDiff changes, DiffLook look)) ->
-                ContentText.stashDrawn(stash, changes, look, styles, width);
-            case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
-                plain(ContentText.pullRequestText(pullRequest, preview, styles));
-            case Body.Note(String text, Tone tone) ->
-                Drawn.plain(List.of(text.split("\n", -1))
-                        .map(line -> Line.from(Span.styled(
-                                line,
-                                styles.of(
-                                        switch (tone) {
-                                            case DIM -> Theme.Classes.DIM;
-                                            case ERROR -> Theme.Classes.ERROR;
-                                        })))));
-        };
-    }
-
-    private static Drawn plain(Text text) {
-        return Drawn.plain(List.ofAll(text.lines()));
+        return body.draw(new DrawContext(styles, ZoneId.systemDefault(), asGiven, width));
     }
 
     /**

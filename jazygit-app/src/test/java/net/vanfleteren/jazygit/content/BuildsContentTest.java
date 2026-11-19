@@ -144,7 +144,7 @@ class BuildsContentTest {
         Shown.Area area = (Shown.Area) content(read.model());
         assertEquals(ContentArea.BUILDS, area.area());
         assertEquals("Builds: main · reading, 25 commits so far", area.title());
-        BuildsShown drawn = ((ContentView.Body.Builds) area.body()).shown();
+        BuildsShown drawn = ((BuildsBody) area.body()).shown();
         assertEquals(new BuildsView.Pipeline("Build", "push"), drawn.shown());
         assertEquals(new Loadable.Loaded<>(List.of(BUILD)), drawn.builds());
         assertEquals(Option.none(), drawn.baseline());
@@ -520,9 +520,7 @@ class BuildsContentTest {
 
         assertEquals(
                 HashMap.of(1L, HashMap.of("verify", HashSet.<String>empty(), "package", HashSet.of("verify"))),
-                ((ContentView.Body.Builds) ((Shown.Area) content(known)).body())
-                        .shown()
-                        .needs());
+                ((BuildsBody) ((Shown.Area) content(known)).body()).shown().needs());
     }
 
     @Test
@@ -709,9 +707,7 @@ class BuildsContentTest {
         BuildsView.Pipeline lint = new BuildsView.Pipeline("Markdown", "pull_request");
         assertEquals(
                 build,
-                ((ContentView.Body.Builds) ((Shown.Area) content(read)).body())
-                        .shown()
-                        .shown());
+                ((BuildsBody) ((Shown.Area) content(read)).body()).shown().shown());
 
         Model asked = Update.update(read, new BuildsMsg.PickRequested()).model();
         assertEquals(
@@ -722,12 +718,10 @@ class BuildsContentTest {
         assertTrue(picked.popup(BuildsPopup.class).isEmpty());
         assertEquals(
                 lint,
-                ((ContentView.Body.Builds) ((Shown.Area) content(picked)).body())
-                        .shown()
-                        .shown());
+                ((BuildsBody) ((Shown.Area) content(picked)).body()).shown().shown());
         assertEquals(
                 build,
-                ((ContentView.Body.Builds) ((Shown.Area) content(Update.update(picked, new BuildsMsg.Stepped(1))
+                ((BuildsBody) ((Shown.Area) content(Update.update(picked, new BuildsMsg.Stepped(1))
                                         .model()))
                                 .body())
                         .shown()
@@ -753,7 +747,7 @@ class BuildsContentTest {
 
         Model picked =
                 Update.update(asked, new BuildsMsg.WindowPicked(Option.of(2))).model();
-        BuildsShown drawn = ((ContentView.Body.Builds) ((Shown.Area) content(picked)).body()).shown();
+        BuildsShown drawn = ((BuildsBody) ((Shown.Area) content(picked)).body()).shown();
         assertTrue(picked.popup(BuildsWindowPopup.class).isEmpty());
         assertEquals(2, drawn.builds().getOrElse(List.empty()).size());
         assertEquals(3, drawn.of());
@@ -826,7 +820,7 @@ class BuildsContentTest {
         Next picked = Update.update(asked, new BuildsMsg.BuildPicked(Option.of(2L)));
         assertTrue(picked.model().popup(BuildPickPopup.class).isEmpty());
         assertEquals(List.of(new ReadWorkflows(new FileAt(older, ".github/workflows/publish.yml"))), picked.cmds());
-        BuildsShown drawn = ((ContentView.Body.Builds) ((Shown.Area) content(picked.model())).body()).shown();
+        BuildsShown drawn = ((BuildsBody) ((Shown.Area) content(picked.model())).body()).shown();
         assertEquals(Option.of(2L), drawn.picked());
 
         Model again =

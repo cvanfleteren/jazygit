@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content.diff;
+package net.vanfleteren.jazygit.ui.content;
 
 import dev.tamboui.text.Line;
 import io.vavr.collection.List;
@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.ui.text.Rows;
  * and what works out how wide the widest of them is.
  *
  * @param widest  how wide the widest line is, worked out when it is asked for: the lines of a diff are not drawn for
- *                it, as each is no wider than its file ({@link Marked#width}); other lines are drawn to be measured, as
+ *                it, as each is no wider than its file; other lines are drawn to be measured, as
  *                {@link Rows#widest} does. In the split view, as wide as the area and as far as its halves scroll
  *                sideways
  * @param halves  where the halves of each row of the split view are, by the index of the row; none for a row as wide
@@ -44,28 +44,8 @@ public record Drawn(
      */
     public static final int PINNED = Integer.MAX_VALUE;
 
-    Drawn(Rows rows, List<Stop> stops) {
+    private Drawn(Rows rows, List<Stop> stops) {
         this(rows, stops, List.empty(), rows::widest, Vector.empty(), Vector.empty(), Option.none(), Option.none());
-    }
-
-    static Drawn of(List<Marked> marked) {
-        return new Drawn(
-                Rows.drawn(marked.map(Marked::line), marked.map(Marked::source)),
-                marked.zipWithIndex().flatMap(line -> line._1().marks().map(mark -> new Stop(mark, line._2()))),
-                marked.zipWithIndex().flatMap(line -> line._1().places().map(anchor -> new Place(anchor, line._2()))),
-                // On the threads of the common pool, as Rows.widest measures, for the lines that are drawn for it.
-                () -> marked.toJavaParallelStream()
-                        .mapToInt(Marked::measured)
-                        .max()
-                        .orElse(0),
-                marked.exists(line -> line.halves().isDefined())
-                        ? marked.map(Marked::halves).toVector()
-                        : Vector.empty(),
-                marked.exists(line -> line.kept() > 0)
-                        ? marked.map(Marked::kept).toVector()
-                        : Vector.empty(),
-                Option.none(),
-                Option.none());
     }
 
     /**
@@ -152,14 +132,14 @@ public record Drawn(
     /**
      * These lines with the rule between the halves of the split view at column {@code column} of the area.
      */
-    Drawn withDivider(int column) {
+    public Drawn withDivider(int column) {
         return new Drawn(rows, stops, places, widest, halves, kept, Option.some(column), note);
     }
 
     /**
      * These lines with {@code says} in the title of the area, after what it says already.
      */
-    Drawn withNote(String says) {
+    public Drawn withNote(String says) {
         return new Drawn(
                 rows,
                 stops,
@@ -168,7 +148,7 @@ public record Drawn(
                 halves,
                 kept,
                 divider,
-                Option.some(note.map(before -> Messages.get("content.notes", before, says))
+                Option.some(note.map(before -> Messages.get("panel.notes", before, says))
                         .getOrElse(says)));
     }
 
@@ -212,7 +192,7 @@ public record Drawn(
         /**
          * This stop in the half of {@code side} (ADR 139).
          */
-        Mark onSide(ReviewThread.Side side) {
+        public Mark onSide(ReviewThread.Side side) {
             return new Mark(anchor, lines, width, hunk, Option.some(side), column, also, order);
         }
     }

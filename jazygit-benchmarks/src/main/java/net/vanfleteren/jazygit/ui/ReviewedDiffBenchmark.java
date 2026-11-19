@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
-import net.vanfleteren.jazygit.content.diff.Drawn;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import io.vavr.collection.HashSet;

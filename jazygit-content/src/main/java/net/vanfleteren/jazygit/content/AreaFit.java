@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.content;
 
-import static net.vanfleteren.jazygit.content.ContentText.drawnToWidth;
-import static net.vanfleteren.jazygit.content.ContentText.markedHunk;
 import static net.vanfleteren.jazygit.content.ContentText.window;
 import static net.vanfleteren.jazygit.content.ContentText.windowed;
 
@@ -12,10 +10,8 @@ import net.vanfleteren.jazygit.content.AreaState.GoToLine;
 import net.vanfleteren.jazygit.content.AreaState.Search;
 import net.vanfleteren.jazygit.content.AreaState.Sent;
 import net.vanfleteren.jazygit.content.AreaState.Wanted;
-import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.ContentView.Shown;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
-import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.content.diff.RichDiff;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.settings.ThemeName;
@@ -25,6 +21,8 @@ import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.view.ContentSearch;
+import net.vanfleteren.jazygit.ui.content.Body;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.i18n.Messages;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -95,12 +93,12 @@ final class AreaFit {
         Option<Styled> last = before.styled()
                 .filter(drawn -> drawn.body().equals(body)
                         && drawn.theme() == theme
-                        && (!drawnToWidth(body) || drawn.width() == width));
+                        && (!body.drawnToWidth() || drawn.width() == width));
         int near = before.cursor().map(DiffCursor::stop).getOrElse(0);
         // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
         // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
         Option<DiffStops.HunkAt> asGiven = told.mark()
-                .flatMap(mark -> last.map(drawn -> drawn.hunk(mark, near)).getOrElse(() -> markedHunk(body, mark)));
+                .flatMap(mark -> last.map(drawn -> drawn.hunk(mark, near)).getOrElse(() -> body.markedHunk(mark)));
         // The matches are found once per body and query, not per frame (ADR 126).
         Styled current = last.filter(drawn -> drawn.asGiven().equals(asGiven))
                 .getOrElse(() -> Styled.of(body, theme, asGiven, showing.style().drawn(body, asGiven, width), width))
@@ -147,8 +145,11 @@ final class AreaFit {
         Option<Wanted> wanted = before.line()
                 .wanted()
                 .filter(asked -> focused && asked.content().equals(content));
-        boolean review = showing.shown().body() instanceof Body.Diff(var _, var remarks) && remarks.isDefined();
-        return before.shown(known, focused, review, model.repoView().version(before.area(), content))
+        return before.shown(
+                        known,
+                        focused,
+                        showing.shown().body().cursorKeys(),
+                        model.repoView().version(before.area(), content))
                 .withSearch(new Search(typing, before.search().current()))
                 .withLine(new GoToLine(number, wanted))
                 .withNotice(notice);

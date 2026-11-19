@@ -2,13 +2,13 @@ package net.vanfleteren.jazygit.content;
 
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.content.ContentView.Body;
 import net.vanfleteren.jazygit.content.diff.DiffCursor;
-import net.vanfleteren.jazygit.content.diff.Drawn;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Found;
+import net.vanfleteren.jazygit.ui.content.Body;
+import net.vanfleteren.jazygit.ui.content.Drawn;
 import net.vanfleteren.jazygit.ui.text.Rows;
 
 /**

@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
+import net.vanfleteren.jazygit.ui.content.Drawn;
+import net.vanfleteren.jazygit.ui.content.Halves;
 import net.vanfleteren.jazygit.ui.text.Rows;
 import org.junit.jupiter.api.Test;
 

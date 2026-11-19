@@ -105,7 +105,7 @@ class BuildsEveryBranchTest {
     }
 
     private static BuildsShown shown(Model model) {
-        return ((ContentView.Body.Builds) ((Shown.Area) ContentView.of(model, BranchesPanel.PANE)).body()).shown();
+        return ((BuildsBody) ((Shown.Area) ContentView.of(model, BranchesPanel.PANE)).body()).shown();
     }
 
     @Test
