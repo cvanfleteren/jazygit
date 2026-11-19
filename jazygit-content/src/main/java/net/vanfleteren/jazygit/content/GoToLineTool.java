@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.content;
 
 import dev.tamboui.toolkit.element.StyledElement;
+import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.control.Option;
@@ -32,9 +33,7 @@ final class GoToLineTool implements AreaTool {
 
     @Override
     public Option<Reaction> key(AreaState state, Viewport view, KeyEvent event) {
-        return Option.when(
-                event.isChar(AreaLines.GO_TO_LINE) && !event.hasCtrl() && !event.hasAlt(),
-                () -> AreaLines.opened(state, view));
+        return Option.when(KeyTrigger.ch(AreaLines.GO_TO_LINE).matches(event), () -> AreaLines.opened(state, view));
     }
 
     @Override

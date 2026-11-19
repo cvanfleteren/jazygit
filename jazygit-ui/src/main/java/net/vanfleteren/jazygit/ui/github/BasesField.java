@@ -155,9 +155,8 @@ public final class BasesField<B> {
         if (event.hasCtrl() && event.isChar(CLEAR_KEY)) {
             return Option.of("");
         }
-        return Option.when(
-                event.code() == KeyCode.CHAR && !event.hasCtrl() && !event.hasAlt() && event.codePoint() >= ' ',
-                () -> typed + event.string());
+        // Typing takes a keypad digit and AltGr text too; string() is the text the terminal sent, or the character.
+        return Option.when(event.isTyping(), () -> typed + event.string());
     }
 
     /**
