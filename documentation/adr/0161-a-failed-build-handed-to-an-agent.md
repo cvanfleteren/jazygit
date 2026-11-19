@@ -131,3 +131,5 @@ checks on the tip of a branch, which can come from several workflow runs, and on
 - ADR 160 picks a check in the checks popup and keeps the logs of checks in a cache directory.
   The check picked changes nothing for `I`: it hands over every failed check. Naming the logs already kept in the
   prompt is for a later change.
+
+Amended by ADR 162: the agent is told the account the repository uses on its forge, and how to run as it.
