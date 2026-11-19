@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content;
+package net.vanfleteren.jazygit.github.builds.content;
 
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;

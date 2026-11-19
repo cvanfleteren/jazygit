@@ -62,14 +62,14 @@ record CommitSource() implements ContentSource {
         String title = Messages.get("content.panel.commit.title");
         DiffLook look = model.preferences().diffLook();
         return detail.map(Preview::shown)
-                .map(shown -> Shows.whenLoaded(
+                .map(shown -> Shown.whenLoaded(
                         title,
                         shown.value(),
                         changes -> commit.apply(shown.key())
                                 .<Shown>map(found -> commitArea(area, found, changes, options, look))
-                                .getOrElse(() -> Shows.loading(title))))
-                .getOrElse(() -> nothing.map(message -> Shows.dim(title, Messages.get(message)))
-                        .getOrElse(() -> Shows.loading(title)));
+                                .getOrElse(() -> Shown.loading(title))))
+                .getOrElse(() -> nothing.map(message -> Shown.dim(title, Messages.get(message)))
+                        .getOrElse(() -> Shown.loading(title)));
     }
 
     private static Shown.Area commitArea(

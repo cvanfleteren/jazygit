@@ -47,6 +47,17 @@ public final class AppRules {
     static final String DIALOGS = ".*Dialogs?(\\$.*)?";
 
     /**
+     * The packages in which a feature keeps what it shows in the content panel, its source and its body, which are
+     * views as its dialogs are (ADR 156): a {@code content} package in a feature, as {@code github.builds.content}.
+     */
+    static final String[] FEATURE_CONTENT = {
+        "..jazygit.changes..content..",
+        "..jazygit.branches..content..",
+        "..jazygit.github..content..",
+        "..jazygit.chrome..content.."
+    };
+
+    /**
      * The packages of the features, in their groups.
      */
     static final String[] FEATURES = {
@@ -349,6 +360,8 @@ public final class AppRules {
             .or()
             .haveNameMatching(DIALOGS)
             .or()
+            .resideInAnyPackage(FEATURE_CONTENT)
+            .or()
             .haveSimpleNameEndingWith("Keys")
             .should()
             .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
@@ -430,6 +443,9 @@ public final class AppRules {
             .areDeclaredInClassesThat()
             .haveNameNotMatching(DIALOGS)
             .and()
+            .areDeclaredInClassesThat()
+            .resideOutsideOfPackages(FEATURE_CONTENT)
+            .and()
             .doNotHaveModifier(JavaModifier.SYNTHETIC)
             .should(Values.holdAValue())
             .allowEmptyShould(true);
@@ -458,6 +474,8 @@ public final class AppRules {
             .doNotHaveFullyQualifiedName(PROGRAM)
             .and()
             .haveNameNotMatching(DIALOGS)
+            .and()
+            .resideOutsideOfPackages(FEATURE_CONTENT)
             .should()
             .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
                     "a constructor of a collection that changes or a StringBuilder",
@@ -490,6 +508,8 @@ public final class AppRules {
             .resideInAnyPackage(PURE_PACKAGES)
             .and()
             .haveNameNotMatching(DIALOGS)
+            .and()
+            .resideOutsideOfPackages(FEATURE_CONTENT)
             .should(Values.extendNothing())
             .allowEmptyShould(true);
     /**
@@ -516,6 +536,8 @@ public final class AppRules {
             .resideInAnyPackage("..jazygit.ui..", "..jazygit.content..", "..jazygit.app.keys..")
             .or()
             .haveNameMatching(DIALOGS)
+            .or()
+            .resideInAnyPackage(FEATURE_CONTENT)
             .should()
             .dependOnClassesThat(runsGitOrGh())
             .allowEmptyShould(true);
@@ -531,6 +553,8 @@ public final class AppRules {
             .resideOutsideOfPackage(ROOT + ".app")
             .and()
             .haveNameNotMatching(DIALOGS)
+            .and()
+            .resideOutsideOfPackages(FEATURE_CONTENT)
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("..jazygit.ui.i18n..", "dev.tamboui..")
@@ -549,6 +573,9 @@ public final class AppRules {
             .and()
             .areDeclaredInClassesThat()
             .haveNameNotMatching(DIALOGS)
+            .and()
+            .areDeclaredInClassesThat()
+            .resideOutsideOfPackages(FEATURE_CONTENT)
             .should()
             .beFinal()
             .allowEmptyShould(true);

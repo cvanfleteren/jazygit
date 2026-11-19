@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content;
+package net.vanfleteren.jazygit.github.builds.content;
 
 import static org.junit.jupiter.api.Assertions.*;
 

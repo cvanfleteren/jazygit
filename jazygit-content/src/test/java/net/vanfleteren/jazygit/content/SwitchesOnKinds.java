@@ -18,9 +18,9 @@ final class SwitchesOnKinds {
         };
     }
 
-    static boolean isBuilds(Body body) {
+    static boolean isStash(Body body) {
         return switch (body) {
-            case BuildsBody builds -> true;
+            case StashBody stash -> true;
             default -> false;
         };
     }

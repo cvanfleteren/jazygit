@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.github;
 
 import net.vanfleteren.jazygit.github.browse.BrowseAction;
 import net.vanfleteren.jazygit.github.builds.BuildsAction;
+import net.vanfleteren.jazygit.github.builds.content.BuildsSource;
 import net.vanfleteren.jazygit.github.checkout.CheckoutPullRequestAction;
 import net.vanfleteren.jazygit.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.github.create.CreatePullRequestAction;
@@ -30,18 +31,20 @@ public final class GitHubFeature {
                     added.add(scope, Binding.always("r", "github.help.prs.refresh", PrOverviewMsg.Refresh::new))));
 
     /**
-     * The operations, in the order their keys are listed in a panel.
+     * The operations, in the order their keys are listed in a panel, and the builds of a branch in the content panel
+     * (ADR 131).
      */
     public static final Feature FEATURE = Feature.of(
-            ShowPullRequestAction.ACTION,
-            ShowChecksAction.ACTION,
-            BuildsAction.ACTION,
-            CheckoutPullRequestAction.ACTION,
-            REFRESH,
-            CreatePullRequestAction.ACTION,
-            BrowseAction.ACTION,
-            ReviewAction.ACTION,
-            VerdictAction.ACTION);
+                    ShowPullRequestAction.ACTION,
+                    ShowChecksAction.ACTION,
+                    BuildsAction.ACTION,
+                    CheckoutPullRequestAction.ACTION,
+                    REFRESH,
+                    CreatePullRequestAction.ACTION,
+                    BrowseAction.ACTION,
+                    ReviewAction.ACTION,
+                    VerdictAction.ACTION)
+            .showing(new BuildsSource());
 
     private GitHubFeature() {}
 }

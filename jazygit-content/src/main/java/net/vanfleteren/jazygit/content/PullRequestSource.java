@@ -43,12 +43,12 @@ record PullRequestSource() implements ContentSource {
                 .preview()
                 .map(Preview::shown)
                 .map(preview -> pullRequest(title, preview))
-                .getOrElse(() -> Shows.dim(title, Messages.get("content.noPullRequest")));
+                .getOrElse(() -> Shown.dim(title, Messages.get("content.noPullRequest")));
     }
 
     private static Shown pullRequest(String title, Preview<PullRequestSummary, PullRequestPreview> preview) {
         PullRequestSummary pullRequest = preview.key();
-        return Shows.whenLoaded(
+        return Shown.whenLoaded(
                 title,
                 preview.value(),
                 read -> new Shown.Area(

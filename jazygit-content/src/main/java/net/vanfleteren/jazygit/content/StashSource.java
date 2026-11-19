@@ -47,13 +47,13 @@ record StashSource() implements ContentSource {
                 .flatMap(detail -> model.repo()
                         .stash(detail.key())
                         .map(stash ->
-                                Shows.whenLoaded(title, detail.value(), changes -> stashArea(model, stash, changes))))
-                .getOrElse(() -> Shows.whenLoaded(
+                                Shown.whenLoaded(title, detail.value(), changes -> stashArea(model, stash, changes))))
+                .getOrElse(() -> Shown.whenLoaded(
                         title,
                         model.repo().stashes(),
                         stashes -> stashes.isEmpty()
-                                ? Shows.dim(title, Messages.get("content.noStashes"))
-                                : Shows.loading(title)));
+                                ? Shown.dim(title, Messages.get("content.noStashes"))
+                                : Shown.loading(title)));
     }
 
     private static Shown stashArea(Model model, Stash stash, DiffText changes) {

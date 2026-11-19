@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.github.builds.content.BuildsContentTest;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;

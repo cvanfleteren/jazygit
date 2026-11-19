@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content;
+package net.vanfleteren.jazygit.github.builds.content;
 
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
@@ -72,9 +72,9 @@ final class JobTrain {
                 needs.isEmpty() || build.outcome() == Outcome.RUNNING ? HashSet.empty() : critical(groups);
         Line header = Line.from(Span.styled(
                 " ".repeat(name + width + 2)
-                        + padLeft(Messages.get("content.builds.train.took"), TOOK)
-                        + padLeft(Messages.get("content.builds.train.waited"), WAITED)
-                        + padLeft(Messages.get("content.builds.train.vsMedian"), VS),
+                        + padLeft(Messages.get("github.builds.train.took"), TOOK)
+                        + padLeft(Messages.get("github.builds.train.waited"), WAITED)
+                        + padLeft(Messages.get("github.builds.train.vsMedian"), VS),
                 styles.of(Theme.Classes.DIM)));
         return layout.rows()
                 .zipWithIndex()

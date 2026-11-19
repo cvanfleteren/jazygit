@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content;
+package net.vanfleteren.jazygit.github.builds.content;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -11,6 +11,8 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.content.ContentPanel;
+import net.vanfleteren.jazygit.content.ContentViews;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.checks.StubChecks;
 import net.vanfleteren.jazygit.gh.model.Build;
@@ -32,6 +34,7 @@ import net.vanfleteren.jazygit.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.github.builds.BuildsPopup;
 import net.vanfleteren.jazygit.github.builds.BuildsWindowPopup;
 import net.vanfleteren.jazygit.github.builds.LoadBuilds;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -63,7 +66,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Showing the builds of a local branch on GitHub in place of its log, read some commits at a time (ADR 131).
  */
-class BuildsContentTest {
+public class BuildsContentTest {
 
     private static final BranchName MAIN = new BranchName("main");
     private static final BranchName LOCAL = new BranchName("local");
@@ -110,7 +113,7 @@ class BuildsContentTest {
     }
 
     private static Shown content(Model model) {
-        return ContentView.of(model, BranchesPanel.PANE);
+        return ContentViews.of(model, BranchesPanel.PANE);
     }
 
     @Test
@@ -131,7 +134,7 @@ class BuildsContentTest {
         Next again = Update.update(shown, new BuildsMsg.Toggled(MAIN));
 
         assertEquals(Option.none(), again.model().repoView().branches().builds());
-        assertEquals(BranchLogSource.AREA, ((Shown.Area) content(again.model())).area());
+        assertEquals(AreaId.LOG, ((Shown.Area) content(again.model())).area().id());
     }
 
     /**
@@ -411,7 +414,7 @@ class BuildsContentTest {
         other = Update.update(other, TestModels.branchLogLoaded(new BranchRef.Local(LOCAL), List.empty()))
                 .model();
 
-        assertEquals(BranchLogSource.AREA, ((Shown.Area) content(other)).area());
+        assertEquals(AreaId.LOG, ((Shown.Area) content(other)).area().id());
     }
 
     @Test
@@ -920,7 +923,7 @@ class BuildsContentTest {
     /**
      * The builds of the main branch, read: one running, then two done, titled "Running", "Done" and "Older".
      */
-    static Model steppable() {
+    public static Model steppable() {
         Build tip = withFile(new Build("Build", "push", 1, 1, "abcdef0", "Running", BUILD.createdAt(), List.empty()));
         Build done = withFile(new Build(
                 "Build", "push", 2, 1, "1234567", "Done", BUILD.createdAt().minusSeconds(60), BUILD.jobs()));

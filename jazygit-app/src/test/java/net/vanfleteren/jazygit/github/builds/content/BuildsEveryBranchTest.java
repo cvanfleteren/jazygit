@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.content;
+package net.vanfleteren.jazygit.github.builds.content;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -8,6 +8,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import net.vanfleteren.jazygit.content.ContentViews;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.checks.StubChecks;
 import net.vanfleteren.jazygit.gh.model.Build;
@@ -105,7 +106,7 @@ class BuildsEveryBranchTest {
     }
 
     private static BuildsShown shown(Model model) {
-        return ((BuildsBody) ((Shown.Area) ContentView.of(model, BranchesPanel.PANE)).body()).shown();
+        return ((BuildsBody) ((Shown.Area) ContentViews.of(model, BranchesPanel.PANE)).body()).shown();
     }
 
     @Test
@@ -149,7 +150,7 @@ class BuildsEveryBranchTest {
         assertEquals(List.of(new LoadRepoWorkflows()), every.cmds());
         assertEquals(
                 "Builds: main · last 3 commits · every branch",
-                ((Shown.Area) ContentView.of(every.model(), BranchesPanel.PANE)).title());
+                ((Shown.Area) ContentViews.of(every.model(), BranchesPanel.PANE)).title());
         assertInstanceOf(Loadable.Loading.class, shown(every.model()).builds());
 
         Model listed = Update.update(
@@ -209,7 +210,7 @@ class BuildsEveryBranchTest {
                 .model();
         assertEquals(
                 "Builds: main · last 3 commits · every branch · m for more",
-                ((Shown.Area) ContentView.of(hundred, BranchesPanel.PANE)).title());
+                ((Shown.Area) ContentViews.of(hundred, BranchesPanel.PANE)).title());
 
         Next more = Update.update(hundred, new BuildsMsg.MoreRequested());
 
@@ -233,7 +234,7 @@ class BuildsEveryBranchTest {
     }
 
     private static String title(Model model) {
-        return ((Shown.Area) ContentView.of(model, BranchesPanel.PANE)).title();
+        return ((Shown.Area) ContentViews.of(model, BranchesPanel.PANE)).title();
     }
 
     private static final Failure TIMEOUT = Failure.of(new GhError.UnexpectedOutput("timeout"));

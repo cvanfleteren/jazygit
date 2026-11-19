@@ -121,11 +121,15 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
 - **A kind of content keeps its own keys, scroll value and focus**: a body can handle keys of its own, content that is
   no diff is a `ScrolledContent.Other` of its source, and an area says what is opened in it, which takes the focus from
   its pane (ADR 155). Nothing in `jazygit-content` asks which kind of `Other` a value is (`ContentArchitectureTest`).
+- **A feature keeps its content in a `content` package**: what a feature shows in the content panel, its source, body
+  and text, is in a `content` package of the feature, as the builds of a branch in `github.builds.content` (ADR 156).
+  The rules take its classes for views, as they take the dialogs.
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
-- **Views use `ui` only to draw.** Nothing in `ui`, `app.keys` or a dialog runs git or gh. `ui.text.ErrorText` is the
-  only place that turns errors into text.
-- **Only views use `ui.i18n` and TamboUI**: `ui`, `app.keys`, the dialogs of the features and the app itself.
+- **Views use `ui` only to draw.** Nothing in `ui`, `app.keys`, a dialog or a feature's content runs git or gh.
+  `ui.text.ErrorText` is the only place that turns errors into text.
+- **Only views use `ui.i18n` and TamboUI**: `ui`, `app.keys`, the dialogs and the content of the features and the
+  app itself.
 
 ## The runtime loop
 

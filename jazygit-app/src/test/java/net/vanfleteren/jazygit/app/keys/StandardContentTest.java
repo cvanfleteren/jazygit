@@ -60,13 +60,13 @@ class StandardContentTest {
     void theAppAsksTheSourcesOfTheFeaturesBeforeTheContentPanelsOwn() {
         assertEquals(
                 List.of(
+                        "BuildsSource",
                         "PullRequestSource",
                         "CommitFilesSource",
                         "UnchangedSource",
                         "FileDiffsSource",
                         "DivergenceSource",
                         "BranchCommitsSource",
-                        "BuildsSource",
                         "BranchLogSource",
                         "CommitSource",
                         "StashSource"),
@@ -92,6 +92,23 @@ class StandardContentTest {
     @Test
     void theBuildsOfABranchComeBeforeItsLog() {
         assertEquals(List.of("BuildsSource", "BranchLogSource"), answering(buildsOpen(), Mirrored.BRANCHES));
+    }
+
+    /**
+     * The builds are the GitHub feature's, asked before the content panel's own sources, yet a divergence or the
+     * commits of a branch opened over them still show in their place, as before the builds left the content panel.
+     */
+    @Test
+    void whatIsOpenedOverTheBuildsComesBeforeThem() {
+        Model builds = buildsOpen();
+        Model diverged = builds.mapRepoView(repoView -> repoView.mapBranches(branches ->
+                branches.withDivergence(diverged().repoView().branches().divergence())));
+        Model commits = builds.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withBranchCommits(
+                branchCommitsOpen().repoView().branches().branchCommits())));
+
+        assertEquals("DivergenceSource", answering(diverged, Mirrored.BRANCHES).head());
+        assertEquals(
+                "BranchCommitsSource", answering(commits, Mirrored.BRANCHES).head());
     }
 
     @Test
