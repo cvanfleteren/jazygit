@@ -71,8 +71,7 @@ record BranchLogSource() implements ContentSource {
      */
     private static String noLogText(NoLog noLog) {
         return switch (noLog) {
-            case NoLog.Unfetched(var pullRequest) ->
-                Messages.get("content.unfetched", String.valueOf(pullRequest.value()));
+            case NoLog.Unfetched(var what) -> Messages.get("content.unfetched", what);
             case NoLog.Detached(var at) -> Messages.get("content.detached", at.shortSha());
         };
     }

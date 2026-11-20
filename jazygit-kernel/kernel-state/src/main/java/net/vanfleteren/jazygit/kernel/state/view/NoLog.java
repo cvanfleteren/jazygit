@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.kernel.state.view;
 
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -9,9 +8,11 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 public sealed interface NoLog {
 
     /**
-     * A pull request of a stack whose branch is neither checked out nor fetched (ADR 72).
+     * What belongs to a group of branches but whose branch is neither checked out nor fetched (ADR 72, ADR 167).
+     *
+     * @param what what it is called, as {@code #95}
      */
-    record Unfetched(PrNumber pullRequest) implements NoLog {}
+    record Unfetched(String what) implements NoLog {}
 
     /**
      * HEAD, detached at {@code at}, listed first in the local branches: its log is the one the commits pane shows.

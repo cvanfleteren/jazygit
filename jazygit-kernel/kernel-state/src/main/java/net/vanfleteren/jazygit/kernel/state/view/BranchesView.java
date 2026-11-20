@@ -13,11 +13,12 @@ import lombok.With;
  *                      in place of the local branches while it is open
  * @param branchCommits the commits of a branch, local or remote, which the pane lists in place of the branches while
  *                      it is open
- * @param noLog         the row highlighted in the pane in place of a branch that has no log, and why: a pull request
- *                      of a stack whose branch is neither checked out nor fetched (ADR 72), or a detached HEAD
- * @param closedStacks  the numbers of the stacks the pane shows closed, as only their header; a stack starts open
- *                      (ADR 72)
- * @param stacking      whether the pane lists the branches of a stack under a header, or as any other branch (ADR 87)
+ * @param noLog         the row highlighted in the pane in place of a branch that has no log, and why: what belongs to
+ *                      a group of branches but is neither checked out nor fetched (ADR 72), or a detached HEAD
+ * @param closedGroups  the keys of the groups of branches the pane shows closed, as only their header; a group starts
+ *                      open (ADR 72, ADR 167)
+ * @param grouped       whether the pane lists the branches of a group under its header, or as any other branch
+ *                      (ADR 87)
  */
 @With
 public record BranchesView(
@@ -25,9 +26,9 @@ public record BranchesView(
         Option<DivergenceView> divergence,
         Option<BranchCommitsView> branchCommits,
         Option<NoLog> noLog,
-        Set<Integer> closedStacks,
-        Stacking stacking) {
+        Set<String> closedGroups,
+        boolean grouped) {
 
-    public static final BranchesView INITIAL = new BranchesView(
-            BranchesTab.LOCAL, Option.none(), Option.none(), Option.none(), HashSet.empty(), Stacking.STACKED);
+    public static final BranchesView INITIAL =
+            new BranchesView(BranchesTab.LOCAL, Option.none(), Option.none(), Option.none(), HashSet.empty(), true);
 }

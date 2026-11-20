@@ -235,7 +235,7 @@ class FilesPane:
         self.repo = ui.repo
 
     # What the pane says in place of the files of a row of the branches that has none to list (ADR 141).
-    UNLISTED = ("has no base branch to compare it with", "A stack: its branches list their files",
+    UNLISTED = ("has no base branch to compare it with", "A group: its branches list their files",
                 "Not checked out here: no files to list")
 
     def lists_a_commit(self) -> bool:

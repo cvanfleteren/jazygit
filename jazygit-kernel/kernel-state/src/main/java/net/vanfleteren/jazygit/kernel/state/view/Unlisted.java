@@ -14,12 +14,12 @@ public sealed interface Unlisted {
     record NoBase(BranchName branch) implements Unlisted {}
 
     /**
-     * The header of a stack of pull requests: its branches list their files.
+     * The header of a group of branches (ADR 167): its branches list their files.
      */
-    record Stack() implements Unlisted {}
+    record Group() implements Unlisted {}
 
     /**
-     * A pull request of a stack whose branch is not checked out here.
+     * What belongs to a group of branches but is not checked out here.
      */
     record NotHere() implements Unlisted {}
 }

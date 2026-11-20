@@ -98,7 +98,7 @@ class FollowedFilesTest {
                 Option.of(followed(new Followed.Files(BRANCH), Scopes.BRANCHES.pane())),
                 change(MODEL, Scopes.BRANCHES.pane(), new Followed.Files(BRANCH)));
 
-        Followed nothing = new Followed.Nothing(new Unlisted.Stack());
+        Followed nothing = new Followed.Nothing(new Unlisted.Group());
         assertEquals(
                 Option.of(followed(nothing, Scopes.BRANCHES.pane())), change(MODEL, Scopes.BRANCHES.pane(), nothing));
         assertEquals(Option.none(), change(unlisted(MODEL), Scopes.BRANCHES.pane(), nothing));
@@ -249,7 +249,7 @@ class FollowedFilesTest {
 
     private static Model unlisted(Model model) {
         return model.mapRepoView(view -> view.mapFiles(
-                files -> files.withUnlisted(Option.of(new UnlistedFor(new Unlisted.Stack(), Scopes.BRANCHES.pane())))));
+                files -> files.withUnlisted(Option.of(new UnlistedFor(new Unlisted.Group(), Scopes.BRANCHES.pane())))));
     }
 
     private static SelectionMsg.FilesFollowed followed(Followed followed, PaneId from) {

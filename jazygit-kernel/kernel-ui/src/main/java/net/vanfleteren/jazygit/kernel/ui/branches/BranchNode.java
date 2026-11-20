@@ -1,21 +1,17 @@
 package net.vanfleteren.jazygit.kernel.ui.branches;
 
-import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import java.util.function.Function;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups.Entry;
+import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups.Group;
 
 /**
- * A row of the local branches (ADR 72): a branch, the header of a stack of pull requests on GitHub that has a local
- * branch, a pull request of such a stack whose branch is not checked out here, or a detached HEAD, listed first.
+ * A row of the local branches (ADR 72): a branch, the header of a group the features make of branches (ADR 167), what
+ * belongs to such a group but is no local branch here, or a detached HEAD, listed first.
  */
 sealed interface BranchNode {
 
@@ -25,83 +21,58 @@ sealed interface BranchNode {
     String key();
 
     /**
-     * The nodes of {@code branches}, in their order (ADR 41): a branch in a stack on GitHub brings in its whole stack,
-     * a header and, when the stack is open, its pull requests under it, the bottom one first; at the first of its
-     * branches, so a stack sits where the one of its branches that saw activity last does, and the checked out
-     * branch's stack comes first. Unless {@code stacked}, every branch is a node of its own, also one in a stack
-     * (ADR 87).
+     * The nodes of {@code branches}, in their order (ADR 41): a branch in a group brings in its whole group, a header
+     * and, when the group is open, what is under it; at the first of its branches, so a group sits where the one of its
+     * branches that saw activity last does, and the checked out branch's group comes first. Unless {@code grouped},
+     * every branch is a node of its own, also one in a group (ADR 87).
      *
-     * @param pullRequest the open pull request of a branch, if it has one
-     * @param stacked     whether the stacks show
-     * @param closed      the numbers of the stacks shown closed
-     * @param fetched     the remote-tracking branch on GitHub of a branch a pull request merges from, if it was fetched
+     * @param groups  the groups the features make of {@code branches}
+     * @param grouped whether the groups show
+     * @param closed  the keys of the groups shown closed
      */
-    static List<BranchNode> of(
-            List<Branch> branches,
-            Function<Branch, Option<PullRequest>> pullRequest,
-            boolean stacked,
-            Set<Integer> closed,
-            Function<GhBranch, Option<RemoteBranch>> fetched) {
-        List<Option<PullRequestStack>> stacks = branches.map(branch ->
-                stacked ? pullRequest.apply(branch).flatMap(PullRequest::stack) : Option.<PullRequestStack>none());
-        return branches.zip(stacks)
+    static List<BranchNode> of(List<Branch> branches, List<Group> groups, boolean grouped, Set<String> closed) {
+        if (!grouped) {
+            return branches.map(branch -> new Leaf(branch, false));
+        }
+        List<Option<Group>> of =
+                branches.map(branch -> groups.find(group -> group.members().contains(branch.name())));
+        return branches.zip(of)
                 .zipWithIndex()
                 .flatMap(indexed -> indexed._1()
                         ._2()
                         .fold(
                                 () -> List.<BranchNode>of(new Leaf(indexed._1()._1(), false)),
-                                stack -> stacks.take(indexed._2())
-                                                .exists(earlier ->
-                                                        earlier.exists(seen -> seen.number() == stack.number()))
+                                group -> of.take(indexed._2())
+                                                .exists(earlier -> earlier.exists(
+                                                        seen -> seen.key().equals(group.key())))
                                         ? List.<BranchNode>empty()
-                                        : stack(stack.number(), branches.zip(stacks), pullRequest, closed, fetched)));
+                                        : group(group, branches, closed)));
     }
 
     /**
-     * The header of the stack numbered {@code number} and, when it is open, its pull requests under it.
+     * The header of {@code group} and, when it is open, what is under it.
      */
-    private static List<BranchNode> stack(
-            int number,
-            List<Tuple2<Branch, Option<PullRequestStack>>> branches,
-            Function<Branch, Option<PullRequest>> pullRequest,
-            Set<Integer> closed,
-            Function<GhBranch, Option<RemoteBranch>> fetched) {
-        List<Tuple2<Branch, PullRequestStack>> members = branches.flatMap(
-                branch -> branch._2().filter(stack -> stack.number() == number).map(stack -> branch.map2(s -> stack)));
-        // The stacks of its pull requests are read with each, and the one that lists the most of them says most.
-        PullRequestStack stack =
-                members.map(Tuple2::_2).maxBy(read -> read.entries().size()).get();
-        List<BranchNode> leaves = stack.entries()
-                .sortBy(PullRequestStack.Entry::position)
-                .map(entry -> members.find(member -> pullRequest
-                                .apply(member._1())
-                                .exists(pr -> pr.number().equals(entry.number())))
-                        .<BranchNode>map(member -> new Leaf(member._1(), true))
-                        .getOrElse(() ->
-                                new Other(number, entry, entry.headBranch().flatMap(fetched))));
-        // A branch whose pull request the stack it was read with does not list goes after the ones it does.
-        List<BranchNode> unlisted = members.filter(member -> !leaves.exists(
-                        leaf -> leaf instanceof Leaf listed && listed.branch().equals(member._1())))
-                .sortBy(member -> member._2().position())
-                .map(member -> new Leaf(member._1(), true));
-        List<BranchNode> under = leaves.appendAll(unlisted);
-        boolean open = !closed.contains(number);
-        return List.<BranchNode>of(new Header(
-                        stack,
-                        open,
-                        members.map(Tuple2::_1),
-                        under.filter(Leaf.class::isInstance)
-                                .map(leaf -> ((Leaf) leaf).branch().name())
-                                .lastOption()))
+    private static List<BranchNode> group(Group group, List<Branch> branches, Set<String> closed) {
+        List<Branch> members = branches.filter(branch -> group.members().contains(branch.name()));
+        List<BranchNode> under = group.entries().flatMap(entry -> switch (entry) {
+            case Entry.Member member ->
+                members.find(branch -> branch.name().equals(member.branch()))
+                        .<BranchNode>map(branch -> new Leaf(branch, true))
+                        .toList();
+            case Entry.Elsewhere elsewhere -> List.<BranchNode>of(new Other(group.key(), elsewhere));
+        });
+        boolean open = !closed.contains(group.key());
+        return List.<BranchNode>of(
+                        new Header(group, open, members, group.members().lastOption()))
                 .appendAll(open ? under : List.empty());
     }
 
     /**
      * A local branch.
      *
-     * @param inStack whether it is listed under the header of its stack
+     * @param inGroup whether it is listed under the header of its group
      */
-    record Leaf(Branch branch, boolean inStack) implements BranchNode {
+    record Leaf(Branch branch, boolean inGroup) implements BranchNode {
 
         @Override
         public String key() {
@@ -110,19 +81,18 @@ sealed interface BranchNode {
     }
 
     /**
-     * The header of a stack on GitHub that has a local branch.
+     * The header of a group.
      *
-     * @param stack    the stack, as the pull request that lists the most of it has it
-     * @param open     whether its pull requests are listed under it
+     * @param group    the group
+     * @param open     whether what is in it is listed under it
      * @param branches its local branches
-     * @param top      the local branch of it that is the highest in it, whose log shows the whole stack
+     * @param top      the last local branch of it, whose log the header shows
      */
-    record Header(PullRequestStack stack, boolean open, List<Branch> branches, Option<BranchName> top)
-            implements BranchNode {
+    record Header(Group group, boolean open, List<Branch> branches, Option<BranchName> top) implements BranchNode {
 
         @Override
         public String key() {
-            return "stack:" + stack.number();
+            return group.key();
         }
     }
 
@@ -139,16 +109,15 @@ sealed interface BranchNode {
     }
 
     /**
-     * A pull request of a stack whose branch is not checked out here, or that is merged or closed.
+     * What belongs to a group but is no local branch here.
      *
-     * @param stack   the number of its stack
-     * @param fetched the remote-tracking branch of its branch, whose log it shows, if that was fetched
+     * @param group the key of its group
      */
-    record Other(int stack, PullRequestStack.Entry entry, Option<RemoteBranch> fetched) implements BranchNode {
+    record Other(String group, Entry.Elsewhere entry) implements BranchNode {
 
         @Override
         public String key() {
-            return "pullRequest:" + entry.number().value();
+            return entry.key();
         }
     }
 }

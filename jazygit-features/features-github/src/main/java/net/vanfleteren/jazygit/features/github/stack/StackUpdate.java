@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutRequest;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutUpdate;
+import net.vanfleteren.jazygit.features.github.panes.StackGroups;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.AddChosen;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.BottomChosen;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.Changed;
@@ -102,18 +103,19 @@ public final class StackUpdate {
      * Opens stack {@code stack} in the branches pane, or closes it.
      */
     private static Next toggled(Model model, int stack) {
-        return Next.of(model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withClosedStacks(
-                branches.closedStacks().contains(stack)
-                        ? branches.closedStacks().remove(stack)
-                        : branches.closedStacks().add(stack)))));
+        String group = StackGroups.key(stack);
+        return Next.of(model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withClosedGroups(
+                branches.closedGroups().contains(group)
+                        ? branches.closedGroups().remove(group)
+                        : branches.closedGroups().add(group)))));
     }
 
     /**
      * Shows the stacks in the branches pane, or lists their branches as any other.
      */
     private static Next viewToggled(Model model) {
-        return Next.of(model.mapRepoView(repoView -> repoView.mapBranches(
-                branches -> branches.withStacking(branches.stacking().toggled()))));
+        return Next.of(model.mapRepoView(
+                repoView -> repoView.mapBranches(branches -> branches.withGrouped(!branches.grouped()))));
     }
 
     /**

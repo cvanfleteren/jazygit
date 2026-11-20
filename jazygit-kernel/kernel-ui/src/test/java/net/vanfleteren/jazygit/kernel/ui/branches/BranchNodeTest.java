@@ -2,104 +2,83 @@ package net.vanfleteren.jazygit.kernel.ui.branches;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups.Entry;
+import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups.Group;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import org.junit.jupiter.api.Test;
 
 /**
- * The nodes of the local branches: a stack on GitHub with a local branch is a header with its pull requests under
- * it (ADR 72).
+ * The nodes of the local branches: a group a feature makes of branches is a header with what is in it under it
+ * (ADR 72, ADR 167). The pane knows no feature: these groups are a test's own.
  */
 class BranchNodeTest {
-
-    private static final List<PullRequestStack.Entry> ENTRIES = List.of(
-            new PullRequestStack.Entry(1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
-            new PullRequestStack.Entry(2, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")),
-            new PullRequestStack.Entry(
-                    3, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")));
 
     private static Branch branch(String name) {
         return Fixtures.branch(new BranchName(name), false, new Sha("aaaa"));
     }
 
-    private static PullRequest stacked(int number, String head, int position, List<PullRequestStack.Entry> entries) {
-        return new PullRequest(
-                new PrNumber(number),
-                new GhBranch(head),
-                Option.none(),
-                false,
-                Checks.NONE,
-                Review.NONE,
-                Option.of(new PullRequestStack(12, position, entries.size(), entries)),
-                Option.none());
+    private static Entry member(String name) {
+        return new Entry.Member(new BranchName(name));
     }
 
-    private static List<String> keys(List<Branch> branches, Map<String, PullRequest> byBranch, Set<Integer> closed) {
-        return BranchNode.of(
-                        branches, branch -> byBranch.get(branch.name().value()), true, closed, head -> Option.none())
-                .map(BranchNode::key);
+    private static Entry elsewhere(String key, String text) {
+        return new Entry.Elsewhere(key, text, Option.none(), key);
+    }
+
+    private static Group group(String key, Entry... entries) {
+        return new Group(
+                key,
+                List.of(LoadableList.Seg.of("group " + key)),
+                List.of(LoadableList.Seg.of(" 3 things")),
+                List.of(entries),
+                new BranchGroups.Keys<>(Scopes.BRANCHES, new BranchName("x")));
+    }
+
+    private static List<String> keys(List<Branch> branches, List<Group> groups, Set<String> closed) {
+        return BranchNode.of(branches, groups, true, closed).map(BranchNode::key);
     }
 
     @Test
-    void aStackIsAHeaderWithItsPullRequestsUnderItBottomFirst() {
+    void aGroupIsAHeaderWithWhatIsInItUnderItInItsOrder() {
         List<Branch> branches = List.of(branch("feat/c"), branch("feat/x"), branch("feat/a"), branch("feat/b"));
-        Map<String, PullRequest> prs = HashMap.of(
-                "feat/a", stacked(96, "feat/a", 1, ENTRIES),
-                "feat/b", stacked(97, "feat/b", 2, ENTRIES),
-                "feat/c", stacked(98, "feat/c", 3, ENTRIES));
+        Group group = group("g", member("feat/a"), member("feat/b"), member("feat/c"));
 
         assertEquals(
-                List.of("stack:12", "branch:feat/a", "branch:feat/b", "branch:feat/c", "branch:feat/x"),
-                keys(branches, prs, HashSet.empty()));
+                List.of("g", "branch:feat/a", "branch:feat/b", "branch:feat/c", "branch:feat/x"),
+                keys(branches, List.of(group), HashSet.empty()));
     }
 
     @Test
-    void aStackSitsWhereItsMostRecentBranchDoes() {
+    void aGroupSitsWhereItsMostRecentBranchDoes() {
         List<Branch> branches = List.of(branch("feat/x"), branch("feat/b"), branch("main"), branch("feat/a"));
-        Map<String, PullRequest> prs = HashMap.of(
-                "feat/a", stacked(96, "feat/a", 1, ENTRIES.take(2)),
-                "feat/b", stacked(97, "feat/b", 2, ENTRIES.take(2)));
+        Group group = group("g", member("feat/a"), member("feat/b"));
 
         assertEquals(
-                List.of("branch:feat/x", "stack:12", "branch:feat/a", "branch:feat/b", "branch:main"),
-                keys(branches, prs, HashSet.empty()));
+                List.of("branch:feat/x", "g", "branch:feat/a", "branch:feat/b", "branch:main"),
+                keys(branches, List.of(group), HashSet.empty()));
     }
 
     @Test
-    void aPullRequestOfTheStackWhoseBranchIsNotCheckedOutStillShows() {
-        List<PullRequestStack.Entry> entries = List.of(
-                new PullRequestStack.Entry(
-                        1, new PrNumber(95), State.MERGED, new GhBranch("feat/0"), new GhBranch("main")),
-                new PullRequestStack.Entry(
-                        2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("feat/0")),
-                new PullRequestStack.Entry(
-                        3, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")));
+    void whatIsInAGroupButNoBranchHereStillShowsDimmedUnderIt() {
+        Group group = group(
+                "g",
+                elsewhere("pullRequest:95", "#95 ◆ merged"),
+                elsewhere("pullRequest:96", "#96 not checked out"),
+                member("feat/b"));
 
-        List<BranchNode> nodes = BranchNode.of(
-                List.of(branch("feat/b")),
-                branch -> Option.of(stacked(97, "feat/b", 3, entries)),
-                true,
-                HashSet.empty(),
-                head -> Option.none());
+        List<BranchNode> nodes = BranchNode.of(List.of(branch("feat/b")), List.of(group), true, HashSet.empty());
 
-        assertEquals(
-                List.of("stack:12", "pullRequest:95", "pullRequest:96", "branch:feat/b"), nodes.map(BranchNode::key));
+        assertEquals(List.of("g", "pullRequest:95", "pullRequest:96", "branch:feat/b"), nodes.map(BranchNode::key));
         assertEquals(
                 List.of("    #95 ◆ merged", "    #96 not checked out"),
                 nodes.drop(1)
@@ -109,66 +88,64 @@ class BranchNodeTest {
     }
 
     @Test
-    void unstackedEveryBranchIsANodeOfItsOwnInItsOrder() {
+    void ungroupedEveryBranchIsANodeOfItsOwnInItsOrder() {
         List<Branch> branches = List.of(branch("feat/c"), branch("feat/x"), branch("feat/a"), branch("feat/b"));
-        Map<String, PullRequest> prs = HashMap.of(
-                "feat/a", stacked(96, "feat/a", 1, ENTRIES),
-                "feat/b", stacked(97, "feat/b", 2, ENTRIES),
-                "feat/c", stacked(98, "feat/c", 3, ENTRIES));
+        Group group = group("g", member("feat/a"), member("feat/b"), member("feat/c"));
 
-        List<BranchNode> nodes = BranchNode.of(
-                branches, branch -> prs.get(branch.name().value()), false, HashSet.of(12), head -> Option.none());
+        List<BranchNode> nodes = BranchNode.of(branches, List.of(group), false, HashSet.of("g"));
 
         assertEquals(
                 List.of("branch:feat/c", "branch:feat/x", "branch:feat/a", "branch:feat/b"),
                 nodes.map(BranchNode::key));
-        assertEquals(List.of(false, false, false, false), nodes.map(node -> ((BranchNode.Leaf) node).inStack()));
+        assertEquals(List.of(false, false, false, false), nodes.map(node -> ((BranchNode.Leaf) node).inGroup()));
     }
 
     @Test
-    void aClosedStackIsItsHeaderAlone() {
+    void aClosedGroupIsItsHeaderAlone() {
         List<Branch> branches = List.of(branch("feat/a"), branch("feat/b"), branch("feat/x"));
-        Map<String, PullRequest> prs = HashMap.of(
-                "feat/a", stacked(96, "feat/a", 1, ENTRIES.take(2)),
-                "feat/b", stacked(97, "feat/b", 2, ENTRIES.take(2)));
+        Group group = group("g", member("feat/a"), member("feat/b"));
 
-        assertEquals(List.of("stack:12", "branch:feat/x"), keys(branches, prs, HashSet.of(12)));
+        assertEquals(List.of("g", "branch:feat/x"), keys(branches, List.of(group), HashSet.of("g")));
     }
 
     @Test
-    void theHeaderNamesTheStackItsBaseAndHowManyPullRequestsItHas() {
+    void theHeaderShowsWhetherItIsOpenItsTitleThenWhatItsFeatureShowsAfterTheSpinner() {
         BranchNode.Header open = (BranchNode.Header) BranchNode.of(
                         List.of(branch("feat/a"), branch("feat/b")),
-                        branch -> Option.of(
-                                branch.name().value().equals("feat/a")
-                                        ? stacked(96, "feat/a", 1, ENTRIES)
-                                        : stacked(97, "feat/b", 2, ENTRIES)),
+                        List.of(group("g", member("feat/a"), member("feat/b"))),
                         true,
-                        HashSet.empty(),
-                        head -> Option.none())
+                        HashSet.empty())
                 .head();
 
         assertEquals(
-                "▾ stack #12 → main  3 PRs",
-                LocalBranchesList.header(open, false, Option.none()).text());
+                "▾ group g  3 things",
+                LocalBranchesList.header(open, Option.none()).text());
         assertEquals(
-                "▾ stack #12 → main  3 PRs  diverged: rebase it",
-                LocalBranchesList.header(open, true, Option.none()).text());
-        assertEquals(
-                "▾ stack #12 → main  Pushing ⠋  3 PRs",
-                LocalBranchesList.header(open, false, Option.of("Pushing ⠋")).text());
+                "▾ group g  Pushing ⠋  3 things",
+                LocalBranchesList.header(open, Option.of("Pushing ⠋")).text());
         assertEquals(Option.of(new BranchName("feat/b")), open.top());
         assertEquals(
-                "▸ stack #12 → main  3 PRs",
+                "▸ group g  3 things",
                 LocalBranchesList.header(
-                                new BranchNode.Header(open.stack(), false, open.branches(), open.top()),
-                                false,
-                                Option.none())
+                                new BranchNode.Header(open.group(), false, open.branches(), open.top()), Option.none())
                         .text());
     }
 
     @Test
-    void aBranchInAStackIsIndentedOnBothItsLines() {
+    void aBranchAnEarlierFeatureGroupedStaysInItsGroup() {
+        List<Branch> branches = List.of(branch("feat/a"), branch("feat/b"));
+        BranchGroups groups = new BranchGroups(List.of(
+                (model, listed) -> List.of(group("first", member("feat/a"))),
+                (model, listed) -> List.of(group("second", member("feat/a"), member("feat/b")))));
+
+        List<Group> made = groups.of(TestModels.loaded(), branches);
+
+        assertEquals(List.of("first", "second"), made.map(Group::key));
+        assertEquals(List.of(new BranchName("feat/b")), made.last().members());
+    }
+
+    @Test
+    void aBranchInAGroupIsIndentedOnBothItsLines() {
         LoadableList.Row row = LocalBranchesList.indented(new LoadableList.Row(
                 List.of(LoadableList.Seg.of("feat/a")), Option.of(List.of(LoadableList.Seg.of("  4d")))));
 

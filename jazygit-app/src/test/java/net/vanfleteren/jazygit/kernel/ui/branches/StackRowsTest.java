@@ -82,7 +82,7 @@ class StackRowsTest {
 
     private static Model closed(Model model) {
         return model.mapRepoView(
-                repoView -> repoView.mapBranches(branches -> branches.withClosedStacks(HashSet.of(12))));
+                repoView -> repoView.mapBranches(branches -> branches.withClosedGroups(HashSet.of("stack:12"))));
     }
 
     private static Option<Msg> selecting(BranchRef branch) {
@@ -108,7 +108,7 @@ class StackRowsTest {
                         selecting(new BranchRef.Local(MAIN)),
                         // The header shows the highest branch of the stack, whose log holds all of it.
                         selecting(new BranchRef.Local(FEAT_B)),
-                        Option.of(new SelectionMsg.NoLogSelected(new NoLog.Unfetched(new PrNumber(95)))),
+                        Option.of(new SelectionMsg.NoLogSelected(new NoLog.Unfetched("#95"))),
                         selecting(new BranchRef.Local(FEAT_A)),
                         selecting(new BranchRef.Local(FEAT_B)),
                         selecting(new BranchRef.Remote(ORIGIN_FEAT_C))),
@@ -135,7 +135,7 @@ class StackRowsTest {
         assertEquals(
                 java.util.List.of(
                         Option.of(new Followed.WorkingTree()),
-                        Option.of(new Followed.Nothing(new Unlisted.Stack())),
+                        Option.of(new Followed.Nothing(new Unlisted.Group())),
                         nothingHere,
                         BranchFiles.of(OPEN, FEAT_A),
                         BranchFiles.of(OPEN, FEAT_B),
@@ -148,12 +148,12 @@ class StackRowsTest {
         Model unfetched = Update.update(
                         Update.update(OPEN, new SelectionMsg.BranchSelected(new BranchRef.Local(MAIN)))
                                 .model(),
-                        new SelectionMsg.NoLogSelected(new NoLog.Unfetched(new PrNumber(95))))
+                        new SelectionMsg.NoLogSelected(new NoLog.Unfetched("#95")))
                 .model();
 
         assertEquals(Option.none(), unfetched.repoView().preview().branchLog());
         assertEquals(
-                Option.of(new NoLog.Unfetched(new PrNumber(95))),
+                Option.of(new NoLog.Unfetched("#95")),
                 unfetched.repoView().branches().noLog());
         assertEquals(
                 Option.none(),
