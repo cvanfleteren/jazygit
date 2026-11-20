@@ -13,7 +13,7 @@ public final class RecentReposFeature {
      * The shortcut that asks which recent repository to switch to, wherever the focus is.
      */
     private static final FeatureAction GLOBAL_KEY = FeatureAction.ofKeys(keys -> keys.global(
-            Keymap.Global.Dispatching.ofCtrl('r', "app.help.global.recentRepos", RecentReposMsg.Requested::new)));
+            Keymap.Global.Dispatching.ofCtrl('r', "branches.help.global.recentRepos", RecentReposMsg.Requested::new)));
 
     /**
      * What the app knows of it: its keys and its popups.

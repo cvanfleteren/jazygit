@@ -14,7 +14,7 @@ public final class InProgressFeature {
      * wherever the focus is.
      */
     private static final FeatureAction GLOBAL_KEY = FeatureAction.ofKeys(keys -> keys.global(
-            Keymap.Global.Dispatching.ofChar('M', "app.help.global.inProgress", InProgressMsg.Requested::new)));
+            Keymap.Global.Dispatching.ofChar('M', "changes.help.global.inProgress", InProgressMsg.Requested::new)));
 
     /**
      * What the app knows of it: its keys and its popups.

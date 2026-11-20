@@ -16,7 +16,7 @@ public final class HelpFeature {
      */
     private static final FeatureAction GLOBAL_KEY =
             FeatureAction.ofKeys(keys -> keys.global(Keymap.Global.Dispatching.listedOnly(
-                    Keymap.HELP_KEY, "app.help.global.help", () -> new PopupMsg.Dismissed(HelpPopup.class))));
+                    Keymap.HELP_KEY, "chrome.help.global.help", () -> new PopupMsg.Dismissed(HelpPopup.class))));
 
     /**
      * What the app knows of it: its keys and its popups.

@@ -35,8 +35,8 @@ public final class GitHubFeature {
     /**
      * The shortcut that switches between the repository and the pull requests, wherever the focus is.
      */
-    private static final FeatureAction SCREEN = FeatureAction.ofKeys(keys ->
-            keys.global(Keymap.Global.Dispatching.ofCtrl('p', "app.help.global.screen", PrOverviewMsg.Toggled::new)));
+    private static final FeatureAction SCREEN = FeatureAction.ofKeys(keys -> keys.global(
+            Keymap.Global.Dispatching.ofCtrl('p', "github.help.global.screen", PrOverviewMsg.Toggled::new)));
 
     /**
      * The operations, in the order their keys are listed in a panel, the builds of a branch in the content panel

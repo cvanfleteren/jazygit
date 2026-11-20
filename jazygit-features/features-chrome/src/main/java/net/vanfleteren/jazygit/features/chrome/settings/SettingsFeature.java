@@ -13,7 +13,7 @@ public final class SettingsFeature {
      * The shortcut that shows the settings, wherever the focus is.
      */
     private static final FeatureAction GLOBAL_KEY = FeatureAction.ofKeys(keys -> keys.global(
-            Keymap.Global.Dispatching.ofCtrl('s', "app.help.global.settings", SettingsPanelMsg.Requested::new)));
+            Keymap.Global.Dispatching.ofCtrl('s', "chrome.help.global.settings", SettingsPanelMsg.Requested::new)));
 
     /**
      * What the app knows of it: its keys and its popups.

@@ -15,14 +15,15 @@ public final class DiffFeature {
      * The shortcuts of the diff options, which work wherever the focus is: the options themselves, the split, and the
      * context.
      */
-    private static final FeatureAction GLOBAL_KEYS = FeatureAction.ofKeys(keys -> keys.global(
-                    Keymap.Global.Dispatching.ofCtrl('d', "app.help.global.diffOptions", DiffOptionsMsg.Requested::new))
-            .global(Keymap.Global.Dispatching.ofChar(
-                    '|', "app.help.global.diffSplit", DiffOptionsMsg.SplitToggled::new))
-            .global(Keymap.Global.Dispatching.ofChar(
-                    '}', "app.help.global.moreContext", DiffOptionsMsg.ContextWidened::new))
-            .global(Keymap.Global.Dispatching.ofChar(
-                    '{', "app.help.global.lessContext", DiffOptionsMsg.ContextNarrowed::new)));
+    private static final FeatureAction GLOBAL_KEYS =
+            FeatureAction.ofKeys(keys -> keys.global(Keymap.Global.Dispatching.ofCtrl(
+                            'd', "changes.help.global.diffOptions", DiffOptionsMsg.Requested::new))
+                    .global(Keymap.Global.Dispatching.ofChar(
+                            '|', "changes.help.global.diffSplit", DiffOptionsMsg.SplitToggled::new))
+                    .global(Keymap.Global.Dispatching.ofChar(
+                            '}', "changes.help.global.moreContext", DiffOptionsMsg.ContextWidened::new))
+                    .global(Keymap.Global.Dispatching.ofChar(
+                            '{', "changes.help.global.lessContext", DiffOptionsMsg.ContextNarrowed::new)));
 
     /**
      * What the app knows of it: its keys and its popups.

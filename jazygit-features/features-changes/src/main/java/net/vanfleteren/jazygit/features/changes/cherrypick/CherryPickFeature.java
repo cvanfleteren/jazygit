@@ -13,7 +13,7 @@ public final class CherryPickFeature {
      * Escape lets go of the commit copied to cherry-pick. It only gets here when nothing else, like a dialog, took it.
      */
     private static final FeatureAction GLOBAL_KEY = FeatureAction.ofKeys(keys -> keys.global(
-            Keymap.Global.Dispatching.ofEscape("app.help.global.cherryPickDrop", CherryPickMsg.Dropped::new)));
+            Keymap.Global.Dispatching.ofEscape("changes.help.global.cherryPickDrop", CherryPickMsg.Dropped::new)));
 
     /**
      * What the app knows of it: its keys and its popups.
