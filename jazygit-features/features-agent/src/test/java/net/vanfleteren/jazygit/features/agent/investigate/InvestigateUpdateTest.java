@@ -240,6 +240,11 @@ class InvestigateUpdateTest {
     }
 
     @Test
+    void thePlaceholderOfTheChangeRequestIsItsNumberAloneWhateverTheForgeCallsIt() {
+        assertEquals("PR 12", Prompt.of(failed(MAIN_BRANCH), Option.of("PR {pr}"), Option.none()));
+    }
+
+    @Test
     void aPromptOfTheUserLeavesWhatIsNoPlaceholderAndEmptiesWhatIsNotKnown() {
         FailedBuild unknown =
                 new FailedBuild(Option.none(), FEATURE, Option.none(), Option.none(), List.of(VERIFY), false, "");
