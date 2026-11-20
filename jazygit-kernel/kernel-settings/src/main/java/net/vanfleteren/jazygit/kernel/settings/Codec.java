@@ -28,6 +28,26 @@ public interface Codec<T> {
     Map<List<String>, Object> encode(String key, T value);
 
     /**
+     * Whether saving refuses to write this setting when the file changed at its key since it was read, rather than
+     * write over what another session or the user wrote there: so it is for a list the panel edits, which is written
+     * as a whole, and would lose an entry another added (ADR 164). A setting of one value is written over.
+     */
+    default boolean guarded() {
+        return false;
+    }
+
+    /**
+     * A list the settings panel edits, kept as an array of tables, one per entry, which {@code entry} reads and keeps
+     * (ADR 164). An entry the app cannot read is kept as it was and reported, with the keys of what is wrong in it;
+     * what a table has at keys {@code entry} does not read, or at keys whose value is wrong, is kept with its entry
+     * and written back, unless the entry now has a value there. A value that is no array of tables is wrong as a
+     * whole.
+     */
+    static <E> Codec<Entries<E>> tables(TableCodec<E> entry) {
+        return new TablesCodec<>(entry);
+    }
+
+    /**
      * This codec, for a setting that may be unset: unset, it keeps nothing in the file.
      */
     default Codec<Option<T>> optional() {

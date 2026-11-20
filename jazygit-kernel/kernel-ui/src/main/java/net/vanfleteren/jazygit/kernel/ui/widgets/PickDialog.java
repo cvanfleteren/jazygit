@@ -203,7 +203,8 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
 
     /**
      * What {@code event}, which is not a key of the list, does with the filter closed: Space switches the highlighted
-     * row when the dialog has it so, the arrows to the sides step its value, and a letter picks its row.
+     * row when the dialog has it so, a key of the dialog's own acts, on the highlighted row if it needs one, the
+     * arrows to the sides step the row's value, and a letter picks its row.
      */
     private EventResult unlisted(FilteredCursor<Row<T>> view, KeyEvent event) {
         Option<Row<T>> highlighted = view.highlighted();
@@ -211,6 +212,12 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
             return highlighted
                     .map(row -> send(spec.onPick().apply(row.spaced().getOrElse(row.value()))))
                     .getOrElse(EventResult.UNHANDLED);
+        }
+        Option<Msg> keyed = spec.keyed()
+                .find(action -> event.isChar(action.key()))
+                .flatMap(action -> action.msg().apply(highlighted.map(Row::value)));
+        if (keyed.isDefined()) {
+            return send(keyed.get());
         }
         boolean back = event.matches(Actions.MOVE_LEFT);
         if (back || event.matches(Actions.MOVE_RIGHT)) {
@@ -307,6 +314,15 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     public record Steps<T>(T back, T forward) {}
 
     /**
+     * A key of the dialog's own, as one that deletes the highlighted row.
+     *
+     * @param key the character that does it
+     * @param msg what it sends, given what the highlighted row stands for, if a row is highlighted; nothing when it
+     *            does nothing then
+     */
+    public record Keyed<T>(char key, Function<Option<T>, Option<Msg>> msg) {}
+
+    /**
      * A cell of a row.
      *
      * @param cssClass the class it is drawn with, if any
@@ -354,6 +370,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      * @param spacePicks whether Space picks the highlighted row too, as in a list whose rows are switched on and off
      *                   in place, while the filter is closed
      * @param hint       the message key of the hint under the rows while the filter is closed, if not the usual one
+     * @param keyed      the dialog's own keys, as one that deletes the highlighted row, while the filter is closed
      */
     public record Spec<P extends Popup, T>(
             String id,
@@ -364,7 +381,8 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
             Supplier<Msg> onCancel,
             Option<String> emptyKey,
             boolean spacePicks,
-            Option<String> hint) {
+            Option<String> hint,
+            List<Keyed<T>> keyed) {
 
         /**
          * A dialog whose rows Enter picks, and their letters, but not Space.
@@ -377,7 +395,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                 Function<T, Msg> onPick,
                 Supplier<Msg> onCancel,
                 Option<String> emptyKey) {
-            this(id, popupType, title, rows, onPick, onCancel, emptyKey, false, Option.none());
+            this(id, popupType, title, rows, onPick, onCancel, emptyKey, false, Option.none(), List.empty());
         }
 
         /**
@@ -409,21 +427,40 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
          * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
          */
         public Spec<P, T> cancelledBy(Supplier<Msg> onCancel) {
-            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, spacePicks, hint);
+            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, spacePicks, hint, keyed);
         }
 
         /**
          * This dialog, whose highlighted row Space picks too.
          */
         public Spec<P, T> pickedBySpace() {
-            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, true, hint);
+            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, true, hint, keyed);
         }
 
         /**
          * This dialog, with the hint of the message key {@code key} under its rows while the filter is closed.
          */
         public Spec<P, T> hintedBy(String key) {
-            return new Spec<>(id, popupType, title, rows, onPick, onCancel, emptyKey, spacePicks, Option.of(key));
+            return new Spec<>(
+                    id, popupType, title, rows, onPick, onCancel, emptyKey, spacePicks, Option.of(key), keyed);
+        }
+
+        /**
+         * This dialog, with {@code keyed} as keys of its own besides.
+         */
+        @SafeVarargs
+        public final Spec<P, T> withKeys(Keyed<T>... keyed) {
+            return new Spec<>(
+                    id,
+                    popupType,
+                    title,
+                    rows,
+                    onPick,
+                    onCancel,
+                    emptyKey,
+                    spacePicks,
+                    hint,
+                    this.keyed.appendAll(List.of(keyed)));
         }
     }
 }

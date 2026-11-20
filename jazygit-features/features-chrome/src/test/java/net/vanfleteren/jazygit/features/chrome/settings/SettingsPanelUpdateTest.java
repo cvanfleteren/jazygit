@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -23,10 +24,15 @@ import net.vanfleteren.jazygit.features.changes.diff.DiffOptionsUpdate;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeMsg;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemePopup;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeScope;
+import net.vanfleteren.jazygit.kernel.settings.Codec;
+import net.vanfleteren.jazygit.kernel.settings.Decoded;
+import net.vanfleteren.jazygit.kernel.settings.Entries;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
+import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsProblem;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
+import net.vanfleteren.jazygit.kernel.settings.TableCodec;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -37,6 +43,9 @@ import net.vanfleteren.jazygit.kernel.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.kernel.state.preferences.SettingsError;
 import net.vanfleteren.jazygit.kernel.state.preferences.SettingsMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.ShowAgain;
+import net.vanfleteren.jazygit.kernel.state.settings.Form;
+import net.vanfleteren.jazygit.kernel.state.settings.ListPopup;
+import net.vanfleteren.jazygit.kernel.state.settings.ListSetting;
 import net.vanfleteren.jazygit.kernel.state.settings.SectionReads;
 import net.vanfleteren.jazygit.kernel.state.settings.SettingMsg;
 import net.vanfleteren.jazygit.kernel.state.settings.SettingsPanelPopup;
@@ -329,6 +338,49 @@ class SettingsPanelUpdateTest {
                 Option.of(READ.withSettings(read.preferences().settings())
                         .with(SettingsPanelUpdate.FILE, Option.of(FILE.toString()))),
                 read.popup(SettingsPanelPopup.class));
+    }
+
+    /**
+     * A list of names, which a list dialog edits over the settings panel.
+     */
+    private static final ListSetting<String> NAMES = new ListSetting<>(
+            SettingKey.of("names", Entries.none(), Codec.tables(new TableCodec<String>() {
+                @Override
+                public List<String> fields() {
+                    return List.of("name");
+                }
+
+                @Override
+                public Decoded<String> decode(String at, LinkedHashMap<String, Object> table) {
+                    return new Decoded<>(table.get("name").map(String::valueOf), List.empty());
+                }
+
+                @Override
+                public LinkedHashMap<String, Object> encode(String name) {
+                    return LinkedHashMap.of("name", name);
+                }
+            })),
+            "names",
+            name -> name,
+            new Form<>("", List.empty(), (name, others) -> List.empty()));
+
+    @Test
+    void readingTheFileWhileAListIsOpenShowsItInThePanelTheListGoesBackTo() {
+        Model model = TestModels.loaded().openPopup(new ListPopup(NAMES, READ));
+
+        Model read = Update.update(
+                        model,
+                        new SettingsPanelMsg.FileRead(
+                                Option.of(FILE.toString()), read(Settings.DEFAULT.withAnimations(false))))
+                .model();
+
+        assertFalse(read.preferences().settings().animations());
+        assertEquals(
+                Option.of(new ListPopup(
+                        NAMES,
+                        READ.withSettings(read.preferences().settings())
+                                .with(SettingsPanelUpdate.FILE, Option.of(FILE.toString())))),
+                read.popup(ListPopup.class));
     }
 
     @Test
