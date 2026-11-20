@@ -19,7 +19,9 @@ class GitHubAccountTest {
                         "github.com",
                         "put GH_TOKEN=\"$(gh auth token --user alice --hostname github.com)\" before each gh command,"
                                 + " as in GH_TOKEN=\"$(gh auth token --user alice --hostname github.com)\" gh run view"
-                                + " 401; never run gh auth switch, which changes the account of every program"),
+                                + " 401; if gh auth token gives nothing, stop and say so rather than running gh"
+                                + " without it, which would run as the active account; never run gh auth switch, which"
+                                + " changes the account of every program"),
                 GitHubAccount.forge(new GhAccount("github.com", "alice")));
     }
 
@@ -28,8 +30,9 @@ class GitHubAccountTest {
         assertEquals(
                 "put GH_ENTERPRISE_TOKEN=\"$(gh auth token --user bob --hostname ghe.corp)\" GH_HOST=ghe.corp before"
                         + " each gh command, as in GH_ENTERPRISE_TOKEN=\"$(gh auth token --user bob --hostname"
-                        + " ghe.corp)\" GH_HOST=ghe.corp gh run view 401; never run gh auth switch, which changes the"
-                        + " account of every program",
+                        + " ghe.corp)\" GH_HOST=ghe.corp gh run view 401; if gh auth token gives nothing, stop and say"
+                        + " so rather than running gh without it, which would run as the active account; never run gh"
+                        + " auth switch, which changes the account of every program",
                 GitHubAccount.forge(new GhAccount("ghe.corp", "bob")).runAs());
     }
 }

@@ -44,8 +44,11 @@ public final class GitHubAccount {
         return new ForgeAccount(
                 account.user(),
                 account.host(),
-                "put " + variables + " before each gh command, as in " + variables + " gh run view 401; never run gh"
-                        + " auth switch, which changes the account of every program");
+                // An empty token is as none: gh then runs as its active account, which the agent would not notice.
+                "put " + variables + " before each gh command, as in " + variables + " gh run view 401; if gh auth"
+                        + " token gives nothing, stop and say so rather than running gh without it, which would run"
+                        + " as the active account; never run gh auth switch, which changes the account of every"
+                        + " program");
     }
 
     /**
