@@ -34,6 +34,13 @@ class LocalBranchesListTest {
     private static final BranchRef ORIGIN_MAIN =
             new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main")));
 
+    /**
+     * What a feature shows of a branch, as the pane is given it (ADR 167).
+     */
+    private static List<LoadableList.Seg> badges(String... texts) {
+        return List.of(texts).map(LoadableList.Seg::of);
+    }
+
     @Test
     void theCurrentBranchStandsOutByTheStyleOfItsNameAlone() {
         LoadableList.Row current = LocalBranchesList.row(
@@ -72,10 +79,7 @@ class LocalBranchesListTest {
                 branch,
                 Duration.ofDays(3),
                 Option.of(new BaseDistance(ORIGIN_MAIN, new Sha("1"), 1, 58)),
-                BranchSegs.gitHub(
-                        Option.of(new PullRequest(
-                                new PrNumber(42), new GhBranch("b"), false, Checks.PASSING, Review.APPROVED)),
-                        Option.none()),
+                badges(" ✓", " #42", "  +"),
                 Option.of("Pushing |"));
 
         assertEquals("feature  Pushing |", row.text());
@@ -90,10 +94,7 @@ class LocalBranchesListTest {
                 Duration.ofDays(2),
                 Option.of(new BaseDistance(new BranchRef.Local(new BranchName("feat/a")), new Sha("1"), 0, 1)),
                 Option.of(new BranchName("feat/a")),
-                BranchSegs.gitHub(
-                        Option.of(new PullRequest(
-                                new PrNumber(97), new GhBranch("feat/b"), false, Checks.PASSING, Review.NONE)),
-                        Option.none()),
+                badges(" ✓", " #97"),
                 Option.none());
 
         assertEquals(Option.of("  2d  ⇣1 on feat/a  ✓ #97"), row.detailText());
@@ -142,10 +143,7 @@ class LocalBranchesListTest {
                 Duration.ofDays(2),
                 Option.none(),
                 Option.of(new BranchName("feature/a-very-long-name")),
-                BranchSegs.gitHub(
-                        Option.of(new PullRequest(
-                                new PrNumber(42), new GhBranch("b"), false, Checks.PASSING, Review.APPROVED)),
-                        Option.none()),
+                badges(" ✓", " #42", "  +"),
                 Option.none());
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(row::element)) {
             return RenderedText.ofSize(runner, row::element, width, 2)
@@ -283,7 +281,7 @@ class LocalBranchesListTest {
                 Fixtures.branch(new BranchName("feat/payment-retry-backoff"), false, new Sha("1")),
                 Duration.ofDays(3),
                 Option.none(),
-                BranchSegs.gitHub(Option.none(), Option.of(Checks.FAILING)),
+                badges(" ✗"),
                 Option.of("Pushing |"));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> Toolkit.text(""), new Size(40, 8))) {

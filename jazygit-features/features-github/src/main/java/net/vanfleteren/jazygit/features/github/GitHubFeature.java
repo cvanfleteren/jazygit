@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.github;
 
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
+import net.vanfleteren.jazygit.features.github.badges.GitHubBadge;
 import net.vanfleteren.jazygit.features.github.browse.BrowseAction;
 import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
 import net.vanfleteren.jazygit.features.github.builds.content.BuildsSource;
@@ -64,7 +65,7 @@ public final class GitHubFeature {
     /**
      * The operations, in the order their keys are listed in a panel, the builds of a branch in the content panel
      * (ADR 131), and how gh runs in the settings panel (ADR 163). It reads from GitHub as the timers say, and as what
-     * happens in the kernel makes it do.
+     * happens in the kernel makes it do, and shows how each branch is doing on GitHub in the branches pane (ADR 167).
      */
     public static final Feature FEATURE = Feature.of(
                     ShowPullRequestAction.ACTION,
@@ -88,7 +89,8 @@ public final class GitHubFeature {
             .every(CheckTimings.READ_WHILE_PENDING, ChecksMsg.Tick::new)
             .every(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new)
             .every(STACK_CHECK_INTERVAL, StackMsg.Tick::new)
-            .reacting(GitHubReactions::to);
+            .reacting(GitHubReactions::to)
+            .badging(GitHubBadge::of);
 
     private GitHubFeature() {}
 }

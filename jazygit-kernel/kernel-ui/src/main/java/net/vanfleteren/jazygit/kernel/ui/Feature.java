@@ -7,14 +7,15 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Reactions.Reaction;
+import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
 
 /**
  * A feature, as the app knows it: its actions, which bring its keys and its popups, what it shows in the content
- * panel, the settings it keeps, the sections it adds to the settings panel, what it does every so often, and what it
- * answers of what happens in the kernel. Each feature package declares one, as {@code XxxFeature.FEATURE}, and
+ * panel, the settings it keeps, the sections it adds to the settings panel, what it does every so often, what it
+ * answers of what happens in the kernel, and what it shows of a branch in the branches pane. Each feature package declares one, as {@code XxxFeature.FEATURE}, and
  * {@code Features.ALL} lists it; that is all a new feature changes outside its package (ADR 127).
  *
  * <p>Making the standard keymap makes every feature, so a feature does not ask for {@code Keymap.standard()} while its
@@ -28,6 +29,7 @@ import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
  * @param settings    the sections it adds to the settings panel, in this order (ADR 163)
  * @param timers      what it dispatches every so often, without input
  * @param reactions   what it answers of what happens in the kernel, whichever part it keeps (ADR 158)
+ * @param badges      what it shows of a branch in the branches pane, beside what git says (ADR 167)
  */
 public record Feature(
         List<FeatureAction> actions,
@@ -35,14 +37,16 @@ public record Feature(
         List<SettingKey<?>> settingKeys,
         List<SettingsSection> settings,
         List<Timer> timers,
-        List<Reaction> reactions) {
+        List<Reaction> reactions,
+        List<BranchBadges.Badge> badges) {
 
     /**
      * The feature of {@code actions}, in that order, which shows nothing in the content panel of its own, has no
-     * settings, dispatches nothing every so often and answers nothing.
+     * settings, dispatches nothing every so often, answers nothing and shows nothing of a branch.
      */
     public static Feature of(FeatureAction... actions) {
-        return new Feature(List.of(actions), List.empty(), List.empty(), List.empty(), List.empty(), List.empty());
+        return new Feature(
+                List.of(actions), List.empty(), List.empty(), List.empty(), List.empty(), List.empty(), List.empty());
     }
 
     /**
@@ -50,21 +54,23 @@ public record Feature(
      */
     public Feature showing(ContentSource... contents) {
         return new Feature(
-                actions, this.contents.appendAll(List.of(contents)), settingKeys, settings, timers, reactions);
+                actions, this.contents.appendAll(List.of(contents)), settingKeys, settings, timers, reactions, badges);
     }
 
     /**
      * This feature, keeping the settings of {@code keys} in the settings file as well.
      */
     public Feature keeping(SettingKey<?>... keys) {
-        return new Feature(actions, contents, settingKeys.appendAll(List.of(keys)), settings, timers, reactions);
+        return new Feature(
+                actions, contents, settingKeys.appendAll(List.of(keys)), settings, timers, reactions, badges);
     }
 
     /**
      * This feature, adding {@code sections} to the settings panel as well, in that order.
      */
     public Feature withSettings(SettingsSection... sections) {
-        return new Feature(actions, contents, settingKeys, settings.appendAll(List.of(sections)), timers, reactions);
+        return new Feature(
+                actions, contents, settingKeys, settings.appendAll(List.of(sections)), timers, reactions, badges);
     }
 
     /**
@@ -73,7 +79,7 @@ public record Feature(
      */
     public Feature every(Duration interval, Supplier<Msg> msg) {
         return new Feature(
-                actions, contents, settingKeys, settings, timers.append(new Timer(interval, msg)), reactions);
+                actions, contents, settingKeys, settings, timers.append(new Timer(interval, msg)), reactions, badges);
     }
 
     /**
@@ -81,7 +87,15 @@ public record Feature(
      * leaves the model as it is for those that are none of its concern.
      */
     public Feature reacting(Reaction reaction) {
-        return new Feature(actions, contents, settingKeys, settings, timers, reactions.append(reaction));
+        return new Feature(actions, contents, settingKeys, settings, timers, reactions.append(reaction), badges);
+    }
+
+    /**
+     * This feature, also showing what {@code badge} makes of a branch in the branches pane, after the badges of the
+     * features before it (ADR 167).
+     */
+    public Feature badging(BranchBadges.Badge badge) {
+        return new Feature(actions, contents, settingKeys, settings, timers, reactions, badges.append(badge));
     }
 
     /**

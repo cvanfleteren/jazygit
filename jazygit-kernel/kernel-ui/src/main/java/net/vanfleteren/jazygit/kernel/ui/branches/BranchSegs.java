@@ -7,17 +7,10 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
-import net.vanfleteren.jazygit.core.gh.timing.Eta;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
-import net.vanfleteren.jazygit.kernel.ui.github.CheckTimesText;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestSymbols;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
@@ -25,8 +18,9 @@ import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
 /**
- * The parts of a row the lists of the branches pane have in common: how far a branch is from its upstream, how it
- * is doing on GitHub, and the spinner of a busy one. The symbols are one column wide (ADR 45).
+ * The parts of a row the lists of the branches pane have in common, from what git says: how far a branch is from its
+ * upstream and its base, its parent, whether it is checked out elsewhere, and the spinner of a busy one. What the
+ * features show of it comes from its {@link BranchBadges} (ADR 167). The symbols are one column wide (ADR 45).
  */
 final class BranchSegs {
 
@@ -126,152 +120,11 @@ final class BranchSegs {
     }
 
     /**
-     * The pull request of a branch, with a leading space: how its CI checks are doing, where those of a branch
-     * without one show too, then its number (dimmed for a draft), then apart where its review stands, then apart
-     * where it sits in its stack; nothing for a branch without one (ADR 45).
+     * The time a list shows of a branch (ADR 124): its age, counted from {@code since}, and the text of its badges that
+     * changes with the time, {@code badges}.
      */
-    static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest) {
-        return pullRequest(pullRequest, Option.none());
-    }
-
-    /**
-     * The pull request of a branch, as {@link #pullRequest(Option)}, but with how {@code merge} goes instead of its
-     * checks and review while it goes, or went (ADR 24).
-     */
-    static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest, Option<MergeStatus> merge) {
-        return pullRequest(pullRequest, merge, false, Option.none());
-    }
-
-    /**
-     * The pull request of a branch, as {@link #pullRequest(Option, Option)}, with its checks waiting to start while
-     * they run and {@code waiting} (ADR 35), and {@code after} after their symbol.
-     */
-    private static List<LoadableList.Seg> pullRequest(
-            Option<PullRequest> pullRequest, Option<MergeStatus> merge, boolean waiting, Option<String> after) {
-        return pullRequest
-                .toList()
-                .flatMap(pr -> merge.fold(
-                                () -> checks(pr.checks(), waiting, after),
-                                status -> List.of(symbol(PullRequestSymbols.merge(status))))
-                        .append(LoadableList.Seg.styled(
-                                " #" + pr.number().value(),
-                                pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
-                        .appendAll(group(
-                                merge.isDefined()
-                                        ? List.empty()
-                                        : PullRequestSymbols.review(pr.review())
-                                                .map(BranchSegs::symbol)
-                                                .toList()))
-                        .appendAll(group(pr.stack()
-                                .map(PullRequestSymbols::stack)
-                                .map(BranchSegs::symbol)
-                                .toList())));
-    }
-
-    /**
-     * How checks that are {@code state} are doing, waiting to start while they run and {@code waiting}, with
-     * {@code after} after their symbol, dimmed, while they run.
-     */
-    private static List<LoadableList.Seg> checks(Checks state, boolean waiting, Option<String> after) {
-        return PullRequestSymbols.checks(state, waiting)
-                .map(BranchSegs::symbol)
-                .toList()
-                .appendAll(after.filter(text -> state == Checks.PENDING)
-                        .map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.DIM)));
-    }
-
-    /**
-     * How a branch is doing on GitHub, with a leading space: its pull request, if it has one, else how the CI
-     * checks on its tip are doing; nothing for a branch with neither.
-     */
-    static List<LoadableList.Seg> gitHub(Option<PullRequest> pullRequest, Option<Checks> checks) {
-        return gitHub(pullRequest, Option.none(), checks);
-    }
-
-    /**
-     * How a branch is doing on GitHub, as {@link #gitHub(Option, Option)}, with how the merge of its pull request
-     * goes, if there is one.
-     */
-    static List<LoadableList.Seg> gitHub(
-            Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<Checks> checks) {
-        return gitHub(pullRequest, merge, checks, Option.none());
-    }
-
-    /**
-     * How a branch is doing on GitHub, as {@link #gitHub(Option, Option, Option)}, with when its checks are expected
-     * to be done, {@code eta}, after their symbol while they run (ADR 32).
-     */
-    static List<LoadableList.Seg> gitHub(
-            Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<Checks> checks, Option<String> eta) {
-        return gitHub(pullRequest, merge, checks, false, eta);
-    }
-
-    /**
-     * How a branch is doing on GitHub, as {@link #gitHub(Option, Option, Option, Option)}, but while its checks all
-     * wait to start, {@code waiting}, waiting and then how long they have at {@code now}: {@code ◌ 3m}; only
-     * {@code ◌} for a re-run (ADR 35).
-     */
-    static List<LoadableList.Seg> gitHub(
-            Option<PullRequest> pullRequest,
-            Option<MergeStatus> merge,
-            Option<Checks> checks,
-            Option<Waiting> waiting,
-            Option<String> eta,
-            Instant now) {
-        return gitHub(pullRequest, merge, checks, waiting.isDefined(), after(waiting, eta, now));
-    }
-
-    /**
-     * How a branch is doing on GitHub, with its checks waiting to start while they run and {@code waiting}, and
-     * {@code after} after their symbol.
-     */
-    private static List<LoadableList.Seg> gitHub(
-            Option<PullRequest> pullRequest,
-            Option<MergeStatus> merge,
-            Option<Checks> checks,
-            boolean waiting,
-            Option<String> after) {
-        return pullRequest.isDefined()
-                ? pullRequest(pullRequest, merge, waiting, after)
-                : checks.toList().flatMap(state -> checks(state, waiting, after));
-    }
-
-    /**
-     * What a list shows after the symbol of the checks of a branch at {@code now}: while they all wait to start,
-     * {@code waiting}, how long they have; else when they are expected to be done, {@code eta}.
-     */
-    private static Option<String> after(Option<Waiting> waiting, Option<String> eta, Instant now) {
-        return waiting.map(known -> known.since().map(since -> CheckTimesText.waited(Duration.between(since, now))))
-                .getOrElse(eta);
-    }
-
-    /**
-     * The time a list shows of a branch (ADR 124): its age, counted from {@code since}, and how its checks are doing
-     * in time, with the functions its row draws them with. What does not change with the time is looked up once.
-     */
-    static ShownTime shownTime(Model model, Instant since, Option<Waiting> waiting, Option<Eta> eta) {
-        boolean learning = model.part(GitHubState.PART).learningCheckTimes();
+    static ShownTime shownTime(Instant since, BranchBadges.Shown badges) {
         return ShownTime.reading(now -> TimeText.age(Duration.between(since, now)) + " "
-                + after(waiting, eta(eta, learning, now), now).getOrElse(""));
-    }
-
-    /**
-     * When the checks of a branch are expected to be done, as the lists show it, from what {@code model} knows
-     * (ADR 32).
-     */
-    static Option<String> eta(Model model, Option<Eta> eta) {
-        return eta(eta, model.part(GitHubState.PART).learningCheckTimes(), model.now());
-    }
-
-    /**
-     * When the checks of a branch are expected to be done, as the lists show it at {@code now}, while the checks that
-     * ran lately are read or not, {@code learning}.
-     */
-    private static Option<String> eta(Option<Eta> eta, boolean learning, Instant now) {
-        return eta.flatMap(known -> CheckTimesText.brief(known, learning, now));
-    }
-
-    private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {
-        return LoadableList.Seg.styled(" " + symbol.text(), symbol.cssClass());
+                + badges.timed().apply(now));
     }
 }

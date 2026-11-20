@@ -135,3 +135,6 @@ checks on the tip of a branch, which can come from several workflow runs, and on
 Amended by ADR 162: the agent is told the account the repository uses on its forge, and how to run as it.
 
 Amended by ADR 164: the settings panel edits the agents, which the app now writes back to `config.toml`.
+
+Amended by ADR 167: the stack of pull requests attaches its actions to the branches' scope from `features-github`,
+as the failed build's actions are.

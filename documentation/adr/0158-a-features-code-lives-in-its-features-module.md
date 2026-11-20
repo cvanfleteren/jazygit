@@ -79,3 +79,6 @@ So adding or changing a feature edits the kernel, and the features cannot be rea
 
 Amended by ADR 166: the features add timers, and answer the events of the kernel with reactions whichever part
 they keep; the events are `LogRead`, `OperationDone`, `Fetched` and `RepositoryOpened`.
+
+Amended by ADR 167: the branches pane is the first that another group of features draws in, through its typed key
+`BranchBadges`, which `features-github` fills with how a branch is doing on GitHub; a group of branches is its second.

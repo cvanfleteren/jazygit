@@ -75,11 +75,24 @@ public class BranchesPanel {
      */
     public BranchesPanel(
             Consumer<Msg> dispatch, Consumer<BranchesTab> tabClicked, Clock clock, Theme.Highlights highlights) {
+        this(dispatch, tabClicked, clock, highlights, BranchBadges.standard());
+    }
+
+    /**
+     * @param badges what the features show of a branch: {@link BranchBadges#standard()}, the app's, or a test's own
+     *               (ADR 167)
+     */
+    public BranchesPanel(
+            Consumer<Msg> dispatch,
+            Consumer<BranchesTab> tabClicked,
+            Clock clock,
+            Theme.Highlights highlights,
+            BranchBadges badges) {
         this.tabClicked = tabClicked;
         // Only the list shown is rendered, that of the tab, or the divergence or the commits of a branch in its place,
         // so only it gets keys: TamboUI routes them to the elements of the last frame.
-        localList = new LocalBranchesList(ID, dispatch, clock, highlights);
-        remoteList = new RemoteBranchesList(ID, dispatch, clock, highlights);
+        localList = new LocalBranchesList(ID, dispatch, clock, highlights, badges);
+        remoteList = new RemoteBranchesList(ID, dispatch, clock, highlights, badges);
         worktreeList = new WorktreesList(ID, dispatch, highlights);
         divergenceList = new DivergenceList(ID, dispatch, highlights);
         branchCommitsList = new BranchCommitsList(ID, dispatch, highlights);
@@ -188,10 +201,17 @@ public class BranchesPanel {
     }
 
     /**
-     * The times the pane shows in {@code model} (ADR 124): those of the list it shows, which a divergence or the
-     * commits of a branch shown in its place hide.
+     * The times the pane shows in {@code model} (ADR 124), with the app's badges.
      */
     public static List<ShownTime> shownTimes(Model model) {
+        return shownTimes(model, BranchBadges.standard());
+    }
+
+    /**
+     * The times the pane shows in {@code model} (ADR 124), with {@code badges}: those of the list it shows, which a
+     * divergence or the commits of a branch shown in its place hide.
+     */
+    public static List<ShownTime> shownTimes(Model model, BranchBadges badges) {
         BranchesTab tab = model.repoView().branches().tab();
         if (model.screen() != Screen.REPOSITORY
                 || divergence(model).isDefined()
@@ -199,8 +219,8 @@ public class BranchesPanel {
             return List.empty();
         }
         return tab == BranchesTab.LOCAL
-                ? LocalBranchesList.shownTimes(model)
-                : tab == BranchesTab.REMOTE ? RemoteBranchesList.shownTimes(model) : List.empty();
+                ? LocalBranchesList.shownTimes(model, badges)
+                : tab == BranchesTab.REMOTE ? RemoteBranchesList.shownTimes(model, badges) : List.empty();
     }
 
     /**

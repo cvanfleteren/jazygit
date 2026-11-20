@@ -77,8 +77,8 @@ needs a closed world. Today a `Feature` contributes its actions, with their keys
 panel (`ContentSource`); actions on another feature's subject go through a hosted key scope (`Keymap.host`, as
 `Scopes.FAILED_BUILD`); its state is a `Part` of its own (ADR 157); the settings it keeps in `config.toml` are
 `SettingKey`s (`Feature.settingKeys`, through `keeping`), and the rows it adds to the settings panel are
-`SettingsSection`s (`Feature.settings`, through `withSettings`) (ADR 163). Branch badges are a planned extension point
-that does not exist yet. A feature uses only the features its module may depend on (ADR 159), and reaches anything
+`SettingsSection`s (`Feature.settings`, through `withSettings`) (ADR 163); what it shows of a branch in the branches
+pane are `BranchBadges` (`Feature.badges`, through `badging`) (ADR 167). A feature uses only the features its module may depend on (ADR 159), and reaches anything
 else, such as a pane of a later group or a subject another feature produces, only
 through an extension point, as `features-agent` does (ADR 161). New feature state goes in the feature's own part, not
 in a new field of a kernel record. The failed-checks agent action is the reference pattern: a forge produces a neutral
