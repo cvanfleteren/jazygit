@@ -62,7 +62,9 @@ The updates, messages, popups and the model are pure. Pure code:
   jazygit ships one file (ADR 84). Tests may use `ImageIO`.
 
 ## Architecture direction: forge neutral, everything a plugin
-jazygit's kernel knows about git, not about GitHub or any other forge. Forge-specific code (GitHub today; GitLab,
+jazygit's kernel is to know about git, not about GitHub or any other forge (#588). It does not yet: `Model.gitHub`,
+`Env.gitHub`, `kernel.state.github` and the branch rows still name `core.gh` types. Add no more, and move them out when
+a change touches them. Forge-specific code (GitHub today; GitLab,
 Forgejo, Bitbucket later) lives in its own feature modules. Those modules talk to the rest of the app only through
 neutral models such as `FailedBuild`, a PR, or a review thread. A forge's own ids, CLI commands and URLs never become
 part of those models. Features are plugins: each one contributes its keybindings, actions on subjects, branch badges,
