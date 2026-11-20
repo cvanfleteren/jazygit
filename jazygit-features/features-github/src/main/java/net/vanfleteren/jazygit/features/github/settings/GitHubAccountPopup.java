@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.chrome.settings;
+package net.vanfleteren.jazygit.features.github.settings;
 
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 

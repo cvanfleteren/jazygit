@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.features.chrome.settings;
 
 import io.vavr.collection.List;
-import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
@@ -22,76 +21,12 @@ public sealed interface SettingsPanelMsg extends Msg {
      */
     record Requested() implements SettingsPanelMsg {}
 
-    /**
-     * How gh is set up for the repository, as read for the settings.
-     */
-    record GitHubRead(GitHubSetup gitHub) implements SettingsPanelMsg {}
-
     record ThemeRequested() implements SettingsPanelMsg {}
 
     /**
      * The user asked to choose the theme of the repository's own (ADR 70).
      */
     record RepositoryThemeRequested() implements SettingsPanelMsg {}
-
-    /**
-     * The user turned the animations on or off (ADR 81).
-     */
-    record AnimationsToggled() implements SettingsPanelMsg {}
-
-    /**
-     * The user turned reading the repository every so often on or off (ADR 125).
-     */
-    record AutoRefreshToggled() implements SettingsPanelMsg {}
-
-    /**
-     * The user turned fetching from the remotes every so often on or off (ADR 125).
-     */
-    record AutoFetchToggled() implements SettingsPanelMsg {}
-
-    record GhExecutableRequested() implements SettingsPanelMsg {}
-
-    /**
-     * The user confirmed the gh executable typed in the popup; blank for the one on the PATH.
-     */
-    record GhExecutableEntered() implements SettingsPanelMsg {}
-
-    /**
-     * Whether {@code executable}, none for the one on the PATH, is a gh that runs, by its version.
-     */
-    record GhExecutableChecked(Option<String> executable, Either<Failure, String> version)
-            implements SettingsPanelMsg {}
-
-    record AccountRequested() implements SettingsPanelMsg {}
-
-    /**
-     * The user asked to set the browser of the account the repository uses (ADR 88).
-     */
-    record BrowserRequested() implements SettingsPanelMsg {}
-
-    /**
-     * The user confirmed the browser typed in the popup; blank for none.
-     */
-    record BrowserEntered() implements SettingsPanelMsg {}
-
-    /**
-     * The user chose the account the repository uses; none for gh's active one.
-     */
-    record AccountChosen(Option<String> user) implements SettingsPanelMsg {}
-
-    /**
-     * The repository uses the account chosen now, and is shown again with it.
-     */
-    record AccountSet() implements SettingsPanelMsg {}
-
-    record AccountNotSet(Failure failure) implements SettingsPanelMsg {}
-
-    /**
-     * The repository is shown again, with the settings changed.
-     */
-    record Reopened() implements SettingsPanelMsg {}
-
-    record NotReopened(Failure failure) implements SettingsPanelMsg {}
 
     /**
      * The user asked to open the settings file in git's editor (ADR 111).

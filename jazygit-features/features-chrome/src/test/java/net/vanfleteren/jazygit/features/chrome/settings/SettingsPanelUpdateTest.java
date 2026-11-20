@@ -1,31 +1,20 @@
 package net.vanfleteren.jazygit.features.chrome.settings;
 
-import static net.vanfleteren.jazygit.kernel.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.account.StubAccount;
-import net.vanfleteren.jazygit.core.gh.model.ChosenBrowser;
-import net.vanfleteren.jazygit.core.gh.model.GhAccount;
-import net.vanfleteren.jazygit.core.gh.model.GhLogin;
-import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
-import net.vanfleteren.jazygit.core.git.branches.StubConfig;
-import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.files.StubEditor;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
@@ -34,64 +23,53 @@ import net.vanfleteren.jazygit.features.changes.diff.DiffOptionsUpdate;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeMsg;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemePopup;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeScope;
-import net.vanfleteren.jazygit.kernel.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsProblem;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.*;
-import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.operation.CommandLog;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.kernel.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.kernel.state.preferences.SettingsError;
 import net.vanfleteren.jazygit.kernel.state.preferences.SettingsMsg;
+import net.vanfleteren.jazygit.kernel.state.preferences.ShowAgain;
+import net.vanfleteren.jazygit.kernel.state.settings.SectionReads;
+import net.vanfleteren.jazygit.kernel.state.settings.SettingMsg;
+import net.vanfleteren.jazygit.kernel.state.settings.SettingsPanelPopup;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import org.junit.jupiter.api.Test;
 
 class SettingsPanelUpdateTest {
 
-    private static final GitHubSetup SETUP = new GitHubSetup(
-            Either.right("2.102.0"),
-            "github.com",
-            Option.none(),
-            Either.right(List.of(
-                    new GhLogin("github.com", "alice", true, true),
-                    new GhLogin("github.com", "alice-work", false, true))),
-            Option.of(new GhAccount("github.com", "alice")),
-            Option.of(new ChosenBrowser("xdg-open", ChosenBrowser.Source.DESKTOP)));
-    private static final SettingsPanelPopup READ = new SettingsPanelPopup(
-            ThemeName.DARK,
-            RepositoryTheme.NONE,
-            Option.none(),
-            Option.of(SETUP),
-            true,
-            true,
-            true,
-            AccountBrowsers.NONE,
-            Option.none());
+    private static final SettingsPanelPopup READ = new SettingsPanelPopup(TestModels.PLAIN.settings());
 
     @Test
-    void requestingShowsTheSettingsAndReadsHowGhIsSetUp() {
-        Next next = Update.update(TestModels.loaded(), new SettingsPanelMsg.Requested());
+    void requestingShowsTheSettingsAndReadsWhatEachSectionReadsThenTheFile() {
+        SectionReads added = model -> List.of(new SettingsPanelCmd.EditFile());
+
+        Next next = SettingsPanelUpdate.requested(TestModels.loaded(), List.of(added));
+
+        assertEquals(Option.of(READ), next.model().popup(SettingsPanelPopup.class));
+        assertEquals(List.of(new SettingsPanelCmd.EditFile(), new SettingsPanelCmd.ReadFile()), next.cmds());
+    }
+
+    @Test
+    void thePanelShowsTheThemeTheGitConfigurationGivesTheRepository() {
+        RepositoryTheme own = new RepositoryTheme(Option.of(ThemeName.EMBER), Option.none());
+
+        Next next = Update.update(
+                TestModels.loaded().mapPreferences(preferences -> preferences.withRepositoryTheme(own)),
+                new SettingsPanelMsg.Requested());
 
         assertEquals(
-                Option.of(new SettingsPanelPopup(
-                        ThemeName.DARK,
-                        RepositoryTheme.NONE,
-                        Option.none(),
-                        Option.none(),
-                        true,
-                        true,
-                        true,
-                        AccountBrowsers.NONE,
-                        Option.none())),
-                next.model().popup(SettingsPanelPopup.class));
-        assertEquals(List.of(new SettingsPanelCmd.ReadGitHub("gh"), new SettingsPanelCmd.ReadFile()), next.cmds());
+                Option.of(own),
+                next.model()
+                        .popup(SettingsPanelPopup.class)
+                        .map(panel -> panel.section(SettingsPanelUpdate.REPOSITORY_THEME)));
     }
 
     @Test
@@ -102,25 +80,6 @@ class SettingsPanelUpdateTest {
 
         assertEquals(typing, next.model());
         assertEquals(List.empty(), next.cmds());
-    }
-
-    @Test
-    void whatIsReadShowsInTheOpenPanel() {
-        Model open = Update.update(TestModels.loaded(), new SettingsPanelMsg.Requested())
-                .model();
-
-        Model read = Update.update(open, new SettingsPanelMsg.GitHubRead(SETUP)).model();
-
-        assertEquals(Option.of(READ), read.popup(SettingsPanelPopup.class));
-    }
-
-    @Test
-    void whatIsReadAfterThePanelClosedIsDropped() {
-        Model closed = TestModels.loaded();
-
-        assertEquals(
-                closed,
-                Update.update(closed, new SettingsPanelMsg.GitHubRead(SETUP)).model());
     }
 
     @Test
@@ -167,179 +126,19 @@ class SettingsPanelUpdateTest {
     }
 
     @Test
-    void anEnteredGhExecutableIsCheckedFirst() {
-        Model entering = Update.update(
-                        TestModels.loaded().openPopup(READ), new SettingsPanelMsg.GhExecutableRequested())
-                .model();
-        assertEquals(Option.of(new GhExecutablePopup("")), entering.popup(GhExecutablePopup.class));
-
-        Next next = Update.update(typed(entering, "  /opt/gh/bin/gh "), new SettingsPanelMsg.GhExecutableEntered());
-
-        assertEquals(Option.none(), next.model().popup());
-        assertEquals(List.of(new SettingsPanelCmd.CheckGhExecutable(Option.of("/opt/gh/bin/gh"))), next.cmds());
-    }
-
-    @Test
-    void onlyTheCheckOfTheGhExecutableEnteredLastDecidesInWhateverOrderTheChecksFinish() {
-        Model first = Update.update(
-                        typed(TestModels.loaded().openPopup(new GhExecutablePopup("")), "/old/gh"),
-                        new SettingsPanelMsg.GhExecutableEntered())
-                .model();
-        Model second = Update.update(
-                        typed(first.openPopup(new GhExecutablePopup("")), "/new/gh"),
-                        new SettingsPanelMsg.GhExecutableEntered())
-                .model();
-        Settings chosen = TestModels.PLAIN.settings().withGhExecutable(Option.of("/new/gh"));
-
-        Next latestFirst = Update.update(
-                second, new SettingsPanelMsg.GhExecutableChecked(Option.of("/new/gh"), Either.right("2.102.0")));
-        Next olderAfter = Update.update(
-                latestFirst.model(),
-                new SettingsPanelMsg.GhExecutableChecked(Option.of("/old/gh"), Either.right("2.102.0")));
-        Next olderFirst = Update.update(
-                second, new SettingsPanelMsg.GhExecutableChecked(Option.of("/old/gh"), Either.right("2.102.0")));
-
-        assertEquals(chosen, latestFirst.model().preferences().settings());
-        assertEquals(chosen, olderAfter.model().preferences().settings());
-        assertEquals(List.empty(), olderAfter.cmds());
-        assertEquals(second, olderFirst.model());
-        assertEquals(List.empty(), olderFirst.cmds());
-    }
-
-    @Test
-    void aCheckOfAnotherGhExecutableIsDroppedOnceTheOneOnThePathWasEnteredLast() {
-        Settings saved = TestModels.PLAIN.settings().withGhExecutable(Option.of("/opt/gh/bin/gh"));
-        Model first = Update.update(
-                        typed(
-                                TestModels.loaded()
-                                        .mapPreferences(preferences -> preferences.withSettings(saved))
-                                        .openPopup(new GhExecutablePopup("")),
-                                "/old/gh"),
-                        new SettingsPanelMsg.GhExecutableEntered())
-                .model();
-        Model onThePath = Update.update(
-                        typed(first.openPopup(new GhExecutablePopup("/old/gh")), " "),
-                        new SettingsPanelMsg.GhExecutableEntered())
-                .model();
-
-        Next older = Update.update(
-                onThePath, new SettingsPanelMsg.GhExecutableChecked(Option.of("/old/gh"), Either.right("2.102.0")));
-        Next latest = Update.update(
-                onThePath, new SettingsPanelMsg.GhExecutableChecked(Option.none(), Either.right("2.102.0")));
-
-        assertEquals(onThePath, older.model());
-        assertEquals(List.empty(), older.cmds());
-        assertEquals(Option.none(), latest.model().preferences().settings().ghExecutable());
-        assertEquals(
-                List.of(
-                        new SaveSettings(saved, TestModels.PLAIN.settings()),
-                        new SettingsPanelCmd.Reopen(Landing.START)),
-                latest.cmds());
-    }
-
-    @Test
-    void anEmptyGhExecutableIsTheOneOnThePath() {
-        Model entering = TestModels.loaded().openPopup(new GhExecutablePopup("/opt/gh/bin/gh"));
-
-        Next next = Update.update(typed(entering, " "), new SettingsPanelMsg.GhExecutableEntered());
-
-        assertEquals(List.of(new SettingsPanelCmd.CheckGhExecutable(Option.none())), next.cmds());
-    }
-
-    @Test
-    void aGhExecutableThatRunsIsKeptAndTheRepositoryShownAgain() {
-        Settings chosen = TestModels.PLAIN.settings().withGhExecutable(Option.of("/opt/gh/bin/gh"));
-
-        Next next = Update.update(
-                TestModels.loaded()
-                        .mapPreferences(
-                                preferences -> preferences.withGhExecutableEntered(Option.of("/opt/gh/bin/gh"))),
-                new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
-
-        assertEquals(chosen, next.model().preferences().settings());
-        assertEquals(
-                List.of(
-                        new SaveSettings(TestModels.PLAIN.settings(), chosen),
-                        new SettingsPanelCmd.Reopen(Landing.START)),
-                next.cmds());
-    }
-
-    @Test
-    void theRepositoryIsShownAgainWhereItWas() {
-        Model there = TestModels.loaded()
-                .mapRepoView(view -> view.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES))
-                        .withFocusedPane(Option.of(new PaneId("commits"))))
-                .mapPreferences(preferences -> preferences.withGhExecutableEntered(Option.of("/opt/gh/bin/gh")));
-
-        Next next = Update.update(
-                there, new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
-
-        assertEquals(
-                Option.of(new SettingsPanelCmd.Reopen(
-                        new Landing(BranchesTab.WORKTREES, Option.of(new PaneId("commits"))))),
-                next.cmds().find(SettingsPanelCmd.Reopen.class::isInstance));
-    }
-
-    @Test
-    void aGhExecutableThatDoesNotRunIsNotUsed() {
-        Failure failure = new Failure.GitHub(new GhError.GhUnavailable(new java.io.IOException("no such file")));
-
-        Next next = Update.update(
-                TestModels.loaded()
-                        .mapPreferences(preferences -> preferences.withGhExecutableEntered(Option.of("/nowhere/gh"))),
-                new SettingsPanelMsg.GhExecutableChecked(Option.of("/nowhere/gh"), Either.left(failure)));
-
-        assertEquals(TestModels.PLAIN.settings(), next.model().preferences().settings());
-        assertEquals(List.empty(), next.cmds());
-        assertEquals(
-                Option.of(
-                        new ErrorPopup(new SettingsPanelError.GhExecutableUnusable(Option.of("/nowhere/gh"), failure))),
-                next.model().popup(ErrorPopup.class));
-    }
-
-    @Test
-    void theAccountIsChosenFromTheOnesRead() {
-        Model choosing = Update.update(TestModels.loaded().openPopup(READ), new SettingsPanelMsg.AccountRequested())
-                .model();
-        assertEquals(Option.of(new GitHubAccountPopup(SETUP)), choosing.popup(GitHubAccountPopup.class));
-
-        Next next = Update.update(choosing, new SettingsPanelMsg.AccountChosen(Option.of("alice-work")));
-
-        assertEquals(Option.none(), next.model().popup());
-        assertEquals(List.of(new SettingsPanelCmd.SetAccount(Option.of("alice-work"), Landing.START)), next.cmds());
-    }
-
-    @Test
-    void theAccountCannotBeChosenWhileTheAccountsAreRead() {
-        Model reading = TestModels.loaded()
-                .openPopup(new SettingsPanelPopup(
-                        ThemeName.DARK,
-                        RepositoryTheme.NONE,
-                        Option.none(),
-                        Option.none(),
-                        true,
-                        true,
-                        true,
-                        AccountBrowsers.NONE,
-                        Option.none()));
-
-        assertEquals(
-                reading,
-                Update.update(reading, new SettingsPanelMsg.AccountRequested()).model());
-    }
-
-    @Test
     void theAnimationsAreTurnedOffAndOnAgainAndKeptWithThePanelStillOpen() {
         Model open = TestModels.loaded().openPopup(READ);
         Settings kept = open.preferences().settings();
 
-        Next off = Update.update(open, new SettingsPanelMsg.AnimationsToggled());
+        Next off = Update.update(open, new SettingMsg.Toggled(Settings.ANIMATIONS));
 
         assertFalse(off.model().preferences().settings().animations());
-        assertEquals(Option.of(READ.withAnimations(false)), off.model().popup(SettingsPanelPopup.class));
+        assertEquals(
+                Option.of(READ.withSettings(kept.withAnimations(false))),
+                off.model().popup(SettingsPanelPopup.class));
         assertEquals(List.of(new SaveSettings(kept, kept.withAnimations(false))), off.cmds());
 
-        Next on = Update.update(off.model(), new SettingsPanelMsg.AnimationsToggled());
+        Next on = Update.update(off.model(), new SettingMsg.Toggled(Settings.ANIMATIONS));
 
         assertTrue(on.model().preferences().settings().animations());
         assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
@@ -350,13 +149,15 @@ class SettingsPanelUpdateTest {
         Model open = TestModels.loaded().openPopup(READ);
         Settings kept = open.preferences().settings();
 
-        Next off = Update.update(open, new SettingsPanelMsg.AutoRefreshToggled());
+        Next off = Update.update(open, new SettingMsg.Toggled(Settings.AUTO_REFRESH));
 
         assertFalse(off.model().preferences().settings().autoRefresh());
-        assertEquals(Option.of(READ.withAutoRefresh(false)), off.model().popup(SettingsPanelPopup.class));
+        assertEquals(
+                Option.of(READ.withSettings(kept.withAutoRefresh(false))),
+                off.model().popup(SettingsPanelPopup.class));
         assertEquals(List.of(new SaveSettings(kept, kept.withAutoRefresh(false))), off.cmds());
 
-        Next on = Update.update(off.model(), new SettingsPanelMsg.AutoRefreshToggled());
+        Next on = Update.update(off.model(), new SettingMsg.Toggled(Settings.AUTO_REFRESH));
 
         assertTrue(on.model().preferences().settings().autoRefresh());
         assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
@@ -367,152 +168,18 @@ class SettingsPanelUpdateTest {
         Model open = TestModels.loaded().openPopup(READ);
         Settings kept = open.preferences().settings();
 
-        Next off = Update.update(open, new SettingsPanelMsg.AutoFetchToggled());
+        Next off = Update.update(open, new SettingMsg.Toggled(Settings.AUTO_FETCH));
 
         assertFalse(off.model().preferences().settings().autoFetch());
-        assertEquals(Option.of(READ.withAutoFetch(false)), off.model().popup(SettingsPanelPopup.class));
+        assertEquals(
+                Option.of(READ.withSettings(kept.withAutoFetch(false))),
+                off.model().popup(SettingsPanelPopup.class));
         assertEquals(List.of(new SaveSettings(kept, kept.withAutoFetch(false))), off.cmds());
 
-        Next on = Update.update(off.model(), new SettingsPanelMsg.AutoFetchToggled());
+        Next on = Update.update(off.model(), new SettingMsg.Toggled(Settings.AUTO_FETCH));
 
         assertTrue(on.model().preferences().settings().autoFetch());
         assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
-    }
-
-    @Test
-    void theBrowserOfTheAccountIsAskedWithTheOneSetNow() {
-        Model open = TestModels.loaded()
-                .openPopup(READ.withBrowsers(
-                        AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox -P personal"))));
-
-        Model asking =
-                Update.update(open, new SettingsPanelMsg.BrowserRequested()).model();
-
-        assertEquals(
-                Option.of(new AccountBrowserPopup(new GhAccount("github.com", "alice"), "firefox -P personal")),
-                asking.popup(AccountBrowserPopup.class));
-    }
-
-    @Test
-    void theBrowserCannotBeSetWhileTheAccountIsNotKnown() {
-        Model unknown = TestModels.loaded()
-                .openPopup(READ.withGitHub(Option.of(new GitHubSetup(
-                        SETUP.version(), SETUP.host(), SETUP.user(), SETUP.logins(), Option.none(), Option.none()))));
-        Model reading = TestModels.loaded().openPopup(READ.withGitHub(Option.none()));
-
-        assertEquals(
-                unknown,
-                Update.update(unknown, new SettingsPanelMsg.BrowserRequested()).model());
-        assertEquals(
-                reading,
-                Update.update(reading, new SettingsPanelMsg.BrowserRequested()).model());
-    }
-
-    @Test
-    void anEnteredBrowserIsKeptForTheAccount() {
-        GhAccount alice = new GhAccount("github.com", "alice");
-        Settings kept = TestModels.PLAIN.settings();
-        Settings chosen = kept.withBrowsers(AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")));
-
-        Next next = Update.update(
-                typed(TestModels.loaded().openPopup(new AccountBrowserPopup(alice, "")), " firefox "),
-                new SettingsPanelMsg.BrowserEntered());
-
-        assertEquals(Option.none(), next.model().popup());
-        assertEquals(chosen, next.model().preferences().settings());
-        assertEquals(List.of(new SaveSettings(kept, chosen)), next.cmds());
-    }
-
-    @Test
-    void anEmptyBrowserTakesTheAccountsAway() {
-        GhAccount alice = new GhAccount("github.com", "alice");
-        Model set = TestModels.loaded()
-                .mapPreferences(preferences -> preferences.withSettings(preferences
-                        .settings()
-                        .withBrowsers(AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")))));
-        Settings kept = set.preferences().settings();
-
-        Next next = Update.update(
-                set.openPopup(new AccountBrowserPopup(alice, "  ")), new SettingsPanelMsg.BrowserEntered());
-
-        assertEquals(AccountBrowsers.NONE, next.model().preferences().settings().browsers());
-        assertEquals(List.of(new SaveSettings(kept, kept.withBrowsers(AccountBrowsers.NONE))), next.cmds());
-    }
-
-    @Test
-    void choosingTheAccountInUseChangesNothing() {
-        Model choosing = TestModels.loaded().openPopup(new GitHubAccountPopup(SETUP));
-
-        Next next = Update.update(choosing, new SettingsPanelMsg.AccountChosen(Option.none()));
-
-        assertEquals(Option.none(), next.model().popup());
-        assertEquals(List.empty(), next.cmds());
-    }
-
-    @Test
-    void readingHowGhIsSetUp() {
-        Env env = new Env(
-                StubGit.of()
-                        .withConfig(new StubConfig() {
-                            @Override
-                            public Either<GitError, Option<String>> local(String key) {
-                                return Either.right(Option.when(key.equals(GitHubAccount.USER_KEY), "alice-work"));
-                            }
-                        })
-                        .withRemotes(new StubRemotes() {
-                            @Override
-                            public Either<GitError, Map<RemoteName, String>> urls() {
-                                return Either.right(
-                                        HashMap.of(new RemoteName("origin"), "git@github.com:team/repo.git"));
-                            }
-                        }),
-                StubGitHub.of().withAccount(new StubAccount() {
-                    @Override
-                    public Either<GhError, List<GhLogin>> logins() {
-                        return Either.right(SETUP.logins().get());
-                    }
-                }));
-
-        Msg read = new SettingsPanelCmd.ReadGitHub("gh").run(env);
-
-        assertEquals(
-                new SettingsPanelMsg.GitHubRead(new GitHubSetup(
-                        Either.right("2.102.0"),
-                        "github.com",
-                        Option.of("alice-work"),
-                        SETUP.logins(),
-                        Option.none(),
-                        Option.none())),
-                read);
-    }
-
-    @Test
-    void settingTheAccountConfiguresItAndShowsTheRepositoryAgain() {
-        java.util.List<String> done = new ArrayList<>();
-        Env env = new Env(
-                StubGit.of(Path.of("/repos/a")).withConfig(new StubConfig() {
-                    @Override
-                    public Either<GitFailure, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
-                        done.add(key + "=" + value.getOrElse("<unset>"));
-                        return Either.right(List.empty());
-                    }
-                }),
-                StubGitHub.of(),
-                SettingsStore.NONE,
-                RecentRepositories.NONE,
-                (directory, landing) -> {
-                    done.add("reopened " + directory + " on " + landing.branchesTab());
-                    return Either.right(directory);
-                });
-
-        Msg set = new SettingsPanelCmd.SetAccount(
-                        Option.of("alice-work"), new Landing(BranchesTab.REMOTE, Option.none()))
-                .run(env);
-
-        assertEquals(new SettingsPanelMsg.AccountSet(), set);
-        assertEquals(
-                List.of("jazygit.githubUser=alice-work", "reopened " + Path.of("/repos/a") + " on REMOTE"),
-                List.ofAll(done));
     }
 
     private static final Path FILE = Path.of("/home/me/.config/jazygit/config.toml");
@@ -641,9 +308,7 @@ class SettingsPanelUpdateTest {
 
         assertEquals(edited, model.preferences().settings());
         assertEquals(read(edited), model.preferences().file());
-        assertEquals(
-                Option.of(READ.withTheme(ThemeName.DARCULA).withAnimations(false)),
-                model.popup(SettingsPanelPopup.class));
+        assertEquals(Option.of(READ.withSettings(edited)), model.popup(SettingsPanelPopup.class));
         assertEquals(Option.none(), model.outcome().error());
     }
 
@@ -653,7 +318,7 @@ class SettingsPanelUpdateTest {
         Model model = TestModels.loaded()
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withAnimations(false)))
-                .openPopup(READ.withAnimations(false));
+                .openPopup(READ.withSettings(READ.settings().withAnimations(false)));
 
         Model read = Update.update(
                         model, new SettingsPanelMsg.FileRead(Option.of(FILE.toString()), SettingsStore.Loaded.DEFAULT))
@@ -661,7 +326,8 @@ class SettingsPanelUpdateTest {
 
         assertFalse(read.preferences().settings().animations());
         assertEquals(
-                Option.of(READ.withAnimations(false).withFile(Option.of(FILE.toString()))),
+                Option.of(READ.withSettings(read.preferences().settings())
+                        .with(SettingsPanelUpdate.FILE, Option.of(FILE.toString()))),
                 read.popup(SettingsPanelPopup.class));
     }
 
@@ -757,7 +423,7 @@ class SettingsPanelUpdateTest {
                         List.empty(), read(Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh")))));
 
         assertEquals(Option.of("/opt/gh"), next.model().preferences().settings().ghExecutable());
-        assertEquals(List.of(new SettingsPanelCmd.Reopen(Landing.of(model.repoView()))), next.cmds());
+        assertEquals(List.of(new ShowAgain(Landing.of(model.repoView()))), next.cmds());
     }
 
     @Test
@@ -774,7 +440,7 @@ class SettingsPanelUpdateTest {
         Model shownAgain = Update.update(TestModels.loaded(), SettingsPanelUpdate.carried(next.model()))
                 .model();
 
-        assertEquals(List.of(new SettingsPanelCmd.Reopen(Landing.of(model.repoView()))), next.cmds());
+        assertEquals(List.of(new ShowAgain(Landing.of(model.repoView()))), next.cmds());
         assertEquals(
                 Option.of(new SettingsError.NotReread(INVALID_THEME)),
                 shownAgain.outcome().error());

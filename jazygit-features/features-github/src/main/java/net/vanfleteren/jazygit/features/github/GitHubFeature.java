@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestActio
 import net.vanfleteren.jazygit.features.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestAction;
 import net.vanfleteren.jazygit.features.github.review.ReviewAction;
+import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsDialogs;
 import net.vanfleteren.jazygit.features.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictAction;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
@@ -31,8 +32,8 @@ public final class GitHubFeature {
                     added.add(scope, Binding.always("r", "github.help.prs.refresh", PrOverviewMsg.Refresh::new))));
 
     /**
-     * The operations, in the order their keys are listed in a panel, and the builds of a branch in the content panel
-     * (ADR 131).
+     * The operations, in the order their keys are listed in a panel, the builds of a branch in the content panel
+     * (ADR 131), and how gh runs in the settings panel (ADR 163).
      */
     public static final Feature FEATURE = Feature.of(
                     ShowPullRequestAction.ACTION,
@@ -43,8 +44,10 @@ public final class GitHubFeature {
                     CreatePullRequestAction.ACTION,
                     BrowseAction.ACTION,
                     ReviewAction.ACTION,
-                    VerdictAction.ACTION)
-            .showing(new BuildsSource());
+                    VerdictAction.ACTION,
+                    FeatureAction.ofPopups(GitHubSettingsDialogs::popups))
+            .showing(new BuildsSource())
+            .withSettings(GitHubSettingsDialogs.SECTION);
 
     private GitHubFeature() {}
 }

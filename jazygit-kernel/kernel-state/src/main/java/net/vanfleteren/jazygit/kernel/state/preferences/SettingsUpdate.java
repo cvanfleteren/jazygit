@@ -24,6 +24,10 @@ public final class SettingsUpdate {
                 yield Next.of(shown.map(problem -> carried.fail(new SettingsError.NotReread(problem)))
                         .getOrElse(carried));
             }
+            // The app shows the repository again already, with a model of its own.
+            case SettingsMsg.ShownAgain() -> Next.of(model);
+            case SettingsMsg.NotShownAgain(Failure failure) ->
+                Next.of(model.fail(new SettingsError.NotShownAgain(failure)));
         };
     }
 }

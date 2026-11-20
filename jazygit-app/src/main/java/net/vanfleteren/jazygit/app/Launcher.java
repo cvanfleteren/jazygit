@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.app.cli.StartupCli;
 import net.vanfleteren.jazygit.app.cli.StartupOptions;
+import net.vanfleteren.jazygit.app.keys.StandardSettings;
 import net.vanfleteren.jazygit.core.askpass.AskpassHelper;
 import net.vanfleteren.jazygit.core.askpass.AskpassServer;
 import net.vanfleteren.jazygit.core.git.CliGit;
@@ -90,7 +91,7 @@ final class Launcher {
                     RecentRepositories recent = new RecentRepositoriesFile(
                             SettingsPaths.stateFile(),
                             directory -> RepositoryIdentity.read(directory).map(RepositoryIdentity::commonDir));
-                    SettingsStore settings = new SettingsFile(SettingsPaths.configFile(), SettingKeys.KERNEL);
+                    SettingsStore settings = new SettingsFile(SettingsPaths.configFile(), StandardSettings.keys());
                     SettingsStore.Loaded loaded = settings.load();
                     FormerState.forget(SettingsPaths.stateFile())
                             .onFailure(failed -> LoggerFactory.getLogger(Launcher.class)

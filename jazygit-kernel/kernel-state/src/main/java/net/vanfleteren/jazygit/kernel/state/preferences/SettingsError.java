@@ -63,4 +63,15 @@ public sealed interface SettingsError extends AppError {
             return Phrase.of("state.error.settings.notSaved", Phrase.failure(failure));
         }
     }
+
+    /**
+     * The repository could not be shown again with the settings changed; they hold from the next start.
+     */
+    record NotShownAgain(Failure failure) implements SettingsError {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("state.error.settings.notShownAgain", Phrase.failure(failure));
+        }
+    }
 }

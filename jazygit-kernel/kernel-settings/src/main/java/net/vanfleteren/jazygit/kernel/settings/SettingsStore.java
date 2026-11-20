@@ -92,7 +92,7 @@ public interface SettingsStore {
         public Applied appliedTo(Settings inUse, Loaded before) {
             List<SettingKey<?>> changed = keys.all()
                     .filter(key -> valid(key.path())
-                            && (!before.valid(key.path()) || key.differs(settings, before.settings())));
+                            && (!before.valid(key.path()) || key.changed(settings, before.settings())));
             return new Applied(
                     changed.foldLeft(inUse, (applied, key) -> key.take(applied, settings)),
                     changed.map(SettingKey::path).toSet());
@@ -103,7 +103,7 @@ public interface SettingsStore {
          * that differ between them, which saving writes, as {@code next} has them, and valid now.
          */
         public Loaded saved(Settings previous, Settings next) {
-            List<SettingKey<?>> written = keys.all().filter(key -> key.differs(previous, next));
+            List<SettingKey<?>> written = keys.all().filter(key -> key.changed(previous, next));
             Set<String> paths = written.map(SettingKey::path).toSet();
             return new Loaded(
                     written.foldLeft(settings, (file, key) -> key.take(file, next)),

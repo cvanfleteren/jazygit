@@ -1,9 +1,7 @@
 package net.vanfleteren.jazygit.features.chrome.settings;
 
-import io.vavr.control.Either;
+import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import net.vanfleteren.jazygit.features.changes.diff.DiffOptionsUpdate;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeScope;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeUpdate;
@@ -11,54 +9,50 @@ import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsProblem;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Landing;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.CommandLog;
 import net.vanfleteren.jazygit.kernel.state.preferences.Preferences;
-import net.vanfleteren.jazygit.kernel.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.kernel.state.preferences.SettingsError;
 import net.vanfleteren.jazygit.kernel.state.preferences.SettingsMsg;
+import net.vanfleteren.jazygit.kernel.state.preferences.ShowAgain;
+import net.vanfleteren.jazygit.kernel.state.settings.PanelReads;
+import net.vanfleteren.jazygit.kernel.state.settings.SectionReads;
+import net.vanfleteren.jazygit.kernel.state.settings.SectionState;
+import net.vanfleteren.jazygit.kernel.state.settings.SettingsPanelPopup;
 
 /**
- * Looking at the settings and changing them: the theme, whether what moves moves smoothly, whether the repository is
- * read and the remotes fetched from every so often, the gh executable, the account gh and git use for the repository,
- * and the browser of that account. A change to how gh runs shows the repository again, as if the app
- * had been started with it. The settings file opens in git's editor, and is read again after it, and as the panel
- * opens (ADR 111).
+ * Looking at the settings: opening the panel, which each of its sections reads for, choosing the theme from it, and
+ * the settings file, which opens in git's editor, and is read again after it, and as the panel opens (ADR 111). A
+ * setting is changed through {@code SettingChange.set}, by its row or by the section that owns it (ADR 163).
  */
 public final class SettingsPanelUpdate {
+
+    /**
+     * The theme the git configuration gives the repository (ADR 70), as the panel read it when it opened.
+     */
+    public static final SectionState<RepositoryTheme> REPOSITORY_THEME =
+            new SectionState<>("chrome:repositoryTheme", RepositoryTheme.NONE);
+    /**
+     * The settings file, which {@code e} opens; none while it is read, or when the settings are kept in no file
+     * (ADR 111).
+     */
+    public static final SectionState<Option<String>> FILE = new SectionState<>("chrome:file", Option.none());
 
     private SettingsPanelUpdate() {}
 
     public static Next update(Model model, SettingsPanelMsg msg) {
         return switch (msg) {
-            case SettingsPanelMsg.Requested() -> requested(model);
-            case SettingsPanelMsg.GitHubRead(GitHubSetup gitHub) -> gitHubRead(model, gitHub);
+            case SettingsPanelMsg.Requested() -> requested(model, PanelReads.standard());
             // Cancelling the theme goes back to the settings, on the setting it was asked for from.
             case SettingsPanelMsg.ThemeRequested() ->
                 askTheme(model, ThemeScope.EVERYWHERE, SettingsPanelDialogs.THEME_KEY);
             case SettingsPanelMsg.RepositoryThemeRequested() ->
                 askTheme(model, ThemeScope.REPOSITORY, SettingsPanelDialogs.REPOSITORY_THEME_KEY);
-            case SettingsPanelMsg.AnimationsToggled() -> toggled(model, Settings::animations, Settings::withAnimations);
-            case SettingsPanelMsg.AutoRefreshToggled() ->
-                toggled(model, Settings::autoRefresh, Settings::withAutoRefresh);
-            case SettingsPanelMsg.AutoFetchToggled() -> toggled(model, Settings::autoFetch, Settings::withAutoFetch);
-            case SettingsPanelMsg.GhExecutableRequested() -> ghExecutableRequested(model);
-            case SettingsPanelMsg.GhExecutableEntered() -> ghExecutableEntered(model);
-            case SettingsPanelMsg.GhExecutableChecked(var executable, var version) ->
-                ghExecutableChecked(model, executable, version);
-            case SettingsPanelMsg.AccountRequested() -> accountRequested(model);
-            case SettingsPanelMsg.BrowserRequested() -> browserRequested(model);
-            case SettingsPanelMsg.BrowserEntered() -> browserEntered(model);
-            case SettingsPanelMsg.AccountChosen(Option<String> user) -> accountChosen(model, user);
-            // The app shows the repository again already, with a model of its own.
-            case SettingsPanelMsg.AccountSet(), SettingsPanelMsg.Reopened() -> Next.of(model);
-            case SettingsPanelMsg.AccountNotSet(var failure) ->
-                Next.of(model.fail(new SettingsPanelError.GitHubAccountNotSet(failure)));
-            case SettingsPanelMsg.NotReopened(var failure) ->
-                Next.of(model.fail(new SettingsPanelError.SettingsNotApplied(failure)));
             case SettingsPanelMsg.FileRequested() -> Next.of(model.clearError(), new SettingsPanelCmd.EditFile());
             case SettingsPanelMsg.FileRead(var file, var loaded) -> fileRead(model, file, loaded);
             // The file is read again when the panel opens next.
@@ -70,146 +64,18 @@ public final class SettingsPanelUpdate {
     }
 
     /**
-     * Opens the settings panel, reading what gh knows and the settings file for it. The key works everywhere, but
-     * does not take away a dialog that is open.
+     * Opens the settings panel, with what the sections {@code added} by the features read for it, and then the
+     * settings file. The key works everywhere, but does not take away a dialog that is open.
      */
-    private static Next requested(Model model) {
+    static Next requested(Model model, List<SectionReads> added) {
         if (model.popup().isDefined()) {
             return Next.of(model);
         }
-        return Next.of(
-                model.openPopup(new SettingsPanelPopup(
-                        model.preferences().settings().theme(),
-                        model.preferences().repositoryTheme(),
-                        model.preferences().settings().ghExecutable(),
-                        Option.none(),
-                        model.preferences().settings().animations(),
-                        model.preferences().settings().autoRefresh(),
-                        model.preferences().settings().autoFetch(),
-                        model.preferences().settings().browsers(),
-                        Option.none())),
-                new SettingsPanelCmd.ReadGitHub(model.preferences().settings().gh()),
-                new SettingsPanelCmd.ReadFile());
-    }
-
-    /**
-     * Shows what gh knows, read for a panel that may be closed already, or open on another gh executable.
-     */
-    private static Next gitHubRead(Model model, GitHubSetup gitHub) {
-        return Next.of(model.popup(SettingsPanelPopup.class)
-                .map(panel -> model.openPopup(panel.withGitHub(Option.of(gitHub))))
-                .getOrElse(model));
-    }
-
-    /**
-     * Turns the setting that {@code on} reads off if it is on, else on, from the open panel, keeping that for the next
-     * session, with the panel still open to show it.
-     */
-    private static Next toggled(
-            Model model, Function<Settings, Boolean> on, BiFunction<Settings, Boolean, Settings> with) {
-        return model.popup(SettingsPanelPopup.class)
-                .map(panel -> {
-                    Settings kept = model.preferences().settings();
-                    Settings chosen = with.apply(kept, !on.apply(kept));
-                    return Next.of(
-                            model.mapPreferences(preferences -> preferences.withSettings(chosen))
-                                    .openPopup(shown(panel, chosen)),
-                            new SaveSettings(kept, chosen));
-                })
-                .getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * {@code panel} showing the on or off settings of {@code settings}.
-     */
-    private static SettingsPanelPopup shown(SettingsPanelPopup panel, Settings settings) {
-        return panel.withAnimations(settings.animations())
-                .withAutoRefresh(settings.autoRefresh())
-                .withAutoFetch(settings.autoFetch());
-    }
-
-    /**
-     * Asks for the gh executable, starting from the one in use.
-     */
-    private static Next ghExecutableRequested(Model model) {
-        return Next.of(model.popup(SettingsPanelPopup.class)
-                .map(panel -> model.openPopup(
-                        new GhExecutablePopup(panel.ghExecutable().getOrElse(""))))
-                .getOrElse(model));
-    }
-
-    /**
-     * Checks the gh executable entered, none when it is blank.
-     */
-    private static Next ghExecutableEntered(Model model) {
-        return model.popup(GhExecutablePopup.class)
-                .map(popup -> Option.of(popup.executable().strip()).filter(path -> !path.isEmpty()))
-                .map(executable -> Next.of(
-                        model.withoutPopup(GhExecutablePopup.class)
-                                .mapPreferences(preferences -> preferences.withGhExecutableEntered(executable)),
-                        new SettingsPanelCmd.CheckGhExecutable(executable)))
-                .getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * Uses the gh at {@code executable} when it runs, else says why not. Another gh executable was entered since:
-     * the check of that one decides, whenever it finishes.
-     */
-    private static Next ghExecutableChecked(Model model, Option<String> executable, Either<Failure, String> version) {
-        if (!model.preferences().ghExecutableEntered().equals(executable)) {
-            return Next.of(model);
-        }
-        return version.fold(
-                failure -> Next.of(model.fail(new SettingsPanelError.GhExecutableUnusable(executable, failure))),
-                works -> useGhExecutable(model, executable));
-    }
-
-    /**
-     * Asks which account gh and git use, when gh could tell which there are.
-     */
-    private static Next accountRequested(Model model) {
-        return Next.of(model.popup(SettingsPanelPopup.class)
-                .flatMap(SettingsPanelPopup::gitHub)
-                .filter(gitHub -> gitHub.logins().isRight())
-                .map(gitHub -> model.openPopup(new GitHubAccountPopup(gitHub)))
-                .getOrElse(model));
-    }
-
-    /**
-     * Asks for the browser of the account in use, starting from the one it has.
-     */
-    private static Next browserRequested(Model model) {
-        return Next.of(model.popup(SettingsPanelPopup.class)
-                .flatMap(panel -> panel.gitHub()
-                        .flatMap(GitHubSetup::account)
-                        .map(account -> model.openPopup(new AccountBrowserPopup(
-                                account,
-                                panel.browsers()
-                                        .of(account.host(), account.user())
-                                        .getOrElse("")))))
-                .getOrElse(model));
-    }
-
-    /**
-     * Uses the browser entered for its account.
-     */
-    private static Next browserEntered(Model model) {
-        return model.popup(AccountBrowserPopup.class)
-                .map(popup -> useBrowser(model.withoutPopup(AccountBrowserPopup.class), popup))
-                .getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * Has gh and git use the account of {@code user}, when it is not the one in use already.
-     */
-    private static Next accountChosen(Model model, Option<String> user) {
-        return model.popup(GitHubAccountPopup.class)
-                .map(popup -> popup.gitHub().user().equals(user)
-                        ? Next.of(model.withoutPopup(GitHubAccountPopup.class))
-                        : Next.of(
-                                model.withoutPopup(GitHubAccountPopup.class).clearError(),
-                                new SettingsPanelCmd.SetAccount(user, Landing.of(model.repoView()))))
-                .getOrElse(Next.of(model));
+        List<Cmd> reads = added.flatMap(section -> section.on(model)).append(new SettingsPanelCmd.ReadFile());
+        return new Next(
+                model.openPopup(new SettingsPanelPopup(model.preferences().settings())
+                        .with(REPOSITORY_THEME, model.preferences().repositoryTheme())),
+                reads);
     }
 
     /**
@@ -218,7 +84,7 @@ public final class SettingsPanelUpdate {
     private static Next fileRead(Model model, Option<String> file, SettingsStore.Loaded loaded) {
         return read(
                 model.popup(SettingsPanelPopup.class)
-                        .map(panel -> model.openPopup(panel.withFile(file)))
+                        .map(panel -> model.openPopup(panel.with(FILE, file)))
                         .getOrElse(model),
                 loaded,
                 false);
@@ -241,7 +107,8 @@ public final class SettingsPanelUpdate {
     /**
      * What the session of {@code last} knew of the settings file, for the repository shown in its place: what the file
      * had, what was reported, and the problem in it the session was showing, which goes on showing there, as a read
-     * that changed the gh executable shows the repository again at once (ADR 111).
+     * that changed a setting that only applies to a repository shown anew shows the repository again at once
+     * (ADR 111).
      */
     public static SettingsMsg.Carried carried(Model last) {
         return new SettingsMsg.Carried(
@@ -259,7 +126,8 @@ public final class SettingsPanelUpdate {
      * opened (ADR 111). Only what changed in the file since it was last read or written, and is valid, is applied;
      * a setting only the session has, or a value that is not valid, leaves the one in use. What is wrong in the file
      * is reported after the editor always, else only when it differs from what was reported last. An open panel shows
-     * the settings as applied.
+     * the settings as applied. A changed setting that only applies to a repository shown anew, as the gh executable,
+     * shows the repository again.
      */
     static Next read(Model model, SettingsStore.Loaded loaded, boolean edited) {
         Preferences before = model.preferences();
@@ -271,53 +139,19 @@ public final class SettingsPanelUpdate {
                 .withReported(loaded.problem())
                 .withThemeOverride(applied.themeChanged() ? Option.none() : preferences.themeOverride()));
         Model shown = updated.popup(SettingsPanelPopup.class)
-                .map(panel -> updated.openPopup(shown(panel, settings)
-                        .withTheme(settings.theme())
-                        .withGhExecutable(settings.ghExecutable())
-                        .withBrowsers(settings.browsers())))
+                .map(panel -> updated.openPopup(panel.withSettings(settings)))
                 .getOrElse(updated);
         Option<SettingsProblem> report = edited
                 ? loaded.problem()
                 : loaded.problem().filter(problem -> !before.reported().contains(problem));
         Model reported = report.map(problem -> shown.fail(new SettingsError.NotReread(problem)))
                 .getOrElse(shown);
-        if (!settings.ghExecutable().equals(before.settings().ghExecutable())) {
+        if (loaded.keys().all().exists(key -> key.reopens() && key.changed(settings, before.settings()))) {
             // Shown again, the diffs are read with the settings as they are now, too.
-            return Next.of(reported, new SettingsPanelCmd.Reopen(Landing.of(reported.repoView())));
+            return Next.of(reported, new ShowAgain(Landing.of(reported.repoView())));
         }
         return settings.diffStyle().rich() == before.settings().diffStyle().rich()
                 ? Next.of(reported)
                 : DiffOptionsUpdate.changed(reported);
-    }
-
-    /**
-     * Opens the links of the account of {@code popup} in the browser typed in it from now on, none when it is blank,
-     * keeping that for the next session (ADR 88).
-     */
-    private static Next useBrowser(Model model, AccountBrowserPopup popup) {
-        Settings kept = model.preferences().settings();
-        Settings chosen = kept.withBrowsers(kept.browsers()
-                .with(
-                        popup.account().host(),
-                        popup.account().user(),
-                        Option.of(popup.browser().strip()).filter(browser -> !browser.isEmpty())));
-        return chosen.equals(kept)
-                ? Next.of(model)
-                : Next.of(
-                        model.mapPreferences(preferences -> preferences.withSettings(chosen)),
-                        new SaveSettings(kept, chosen));
-    }
-
-    /**
-     * Runs the gh at {@code executable} from now on, keeping it for the next session.
-     */
-    private static Next useGhExecutable(Model model, Option<String> executable) {
-        Settings chosen = model.preferences().settings().withGhExecutable(executable);
-        return chosen.equals(model.preferences().settings())
-                ? Next.of(model)
-                : Next.of(
-                        model.mapPreferences(preferences -> preferences.withSettings(chosen)),
-                        new SaveSettings(model.preferences().settings(), chosen),
-                        new SettingsPanelCmd.Reopen(Landing.of(model.repoView())));
     }
 }
