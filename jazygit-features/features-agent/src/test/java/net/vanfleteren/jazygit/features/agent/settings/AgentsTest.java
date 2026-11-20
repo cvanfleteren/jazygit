@@ -1,18 +1,20 @@
 package net.vanfleteren.jazygit.features.agent.settings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.vavr.Tuple;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.settings.Decoded;
+import net.vanfleteren.jazygit.kernel.settings.Entries;
 import net.vanfleteren.jazygit.kernel.settings.Kept;
 import net.vanfleteren.jazygit.kernel.settings.Programs;
 import org.junit.jupiter.api.Test;
 
 /**
- * The agents of the settings file, which a failed build is handed to (ADR 161).
+ * The agents of the settings file, which a failed build is handed to (ADR 161), and which the panel writes back
+ * (ADR 164).
  */
 class AgentsTest {
 
@@ -67,9 +69,16 @@ class AgentsTest {
                         LinkedHashMap.of("{branch}", "main", "{commit}", "abc")));
     }
 
+    /**
+     * The agents the settings file holds as {@code tables}, with the keys of what is wrong in them.
+     */
+    private static Decoded<Entries<AgentProgram>> read(Object tables) {
+        return Agents.SETTING.codec().decode(Agents.KEY, tables);
+    }
+
     @Test
     void theAgentsAreReadInTheirOrderWithTheirPromptAndShortcut() {
-        Agents.Read read = Agents.read(java.util.List.of(
+        Decoded<Entries<AgentProgram>> read = read(java.util.List.of(
                 table("name", "Claude", "command", java.util.List.of("claude", "{prompt}"), "terminal", true),
                 table(
                         "name",
@@ -82,18 +91,19 @@ class AgentsTest {
                         "Look at {failures}")));
 
         assertEquals(List.empty(), read.invalid());
+        Agents agents = Agents.of(read.value().get());
         assertEquals(
                 List.of(
                         new AgentProgram("Claude", List.of("claude", "{prompt}"), true, Option.none(), Option.none()),
                         new AgentProgram(
                                 "Codex", List.of("codex"), false, Option.of('x'), Option.of("Look at {failures}"))),
-                read.agents().all());
-        assertEquals(List.of('1', 'x'), read.agents().lettered().map(lettered -> lettered._1));
+                agents.all());
+        assertEquals(List.of('1', 'x'), agents.lettered().map(lettered -> lettered._1));
     }
 
     @Test
     void aWrongEntryIsLeftOutAndReportedTheOthersStay() {
-        Agents.Read read = Agents.read(java.util.List.of(
+        Decoded<Entries<AgentProgram>> read = read(java.util.List.of(
                 table("command", java.util.List.of("claude")),
                 table("name", "Empty", "command", java.util.List.of()),
                 table("name", "Bad", "command", java.util.List.of("x"), "terminal", "yes", "prompt", 3),
@@ -104,36 +114,81 @@ class AgentsTest {
                 read.invalid());
         assertEquals(
                 List.of(new AgentProgram("Good", List.of("good"), false, Option.none(), Option.none())),
-                read.agents().all());
+                Agents.of(read.value().get()).all());
+        // The ones that are wrong are kept, to be written back as they were.
+        assertEquals(4, read.value().get().all().size());
     }
 
     @Test
     void agentsThatAreNoArrayAreWrongAsAWhole() {
-        Agents.Read read = Agents.read("claude");
+        Decoded<Entries<AgentProgram>> read = read("claude");
 
         assertEquals(List.of("agents"), read.invalid());
-        assertEquals(Agents.NONE, read.agents());
+        assertEquals(Option.none(), read.value());
     }
 
     @Test
-    void theSettingReadsTheAgentsAndSaysWhatIsWrong() {
-        Decoded<Agents> read = Agents.SETTING
-                .codec()
-                .decode(
-                        "agents",
-                        java.util.List.of(
-                                table("name", "Claude", "command", java.util.List.of("claude")), table("name", "Bad")));
+    void aShortcutAnEarlierAgentHasIsReportedAndNotUsed() {
+        Decoded<Entries<AgentProgram>> read = read(java.util.List.of(
+                table("name", "Claude", "command", java.util.List.of("claude"), "shortcut", "c"),
+                table("name", "Codex", "command", java.util.List.of("codex"), "shortcut", "c")));
+
+        assertEquals(List.of("agents[2].shortcut"), read.invalid());
+        assertEquals(
+                List.of(Option.of('c'), Option.none()),
+                Agents.of(read.value().get()).all().map(AgentProgram::shortcut));
+    }
+
+    @Test
+    void aShortcutThatIsNoLetterIsReportedAndKeptInTheFile() {
+        Decoded<Entries<AgentProgram>> read = read(
+                java.util.List.of(table("name", "Claude", "command", java.util.List.of("claude"), "shortcut", "/")));
+
+        assertEquals(List.of("agents[1].shortcut"), read.invalid());
+        assertEquals(
+                java.util.List.of(table("name", "Claude", "command", java.util.List.of("claude"), "shortcut", "/")),
+                Agents.SETTING
+                        .codec()
+                        .encode(Agents.KEY, read.value().get())
+                        .get(List.of(Agents.KEY))
+                        .get());
+    }
+
+    @Test
+    void anAgentIsKeptWithWhatItSetsAndWhatItsTableHadBesides() {
+        Entries<AgentProgram> read = read(java.util.List.of(table(
+                        "name", "Claude", "command", java.util.List.of("claude"), "terminal", false, "model", "opus")))
+                .value()
+                .get();
+        Entries<AgentProgram> edited = read.replaced(
+                0,
+                new AgentProgram("Claude", List.of("claude", "-p"), true, Option.of('c'), Option.of("Fix {failures}")));
 
         assertEquals(
-                List.of(Tuple.of(
-                        '1', new AgentProgram("Claude", List.of("claude"), false, Option.none(), Option.none()))),
-                read.value().get().lettered());
-        assertEquals(List.of("agents[2].command"), read.invalid());
+                java.util.List.of(table(
+                        "name",
+                        "Claude",
+                        "command",
+                        java.util.List.of("claude", "-p"),
+                        "terminal",
+                        true,
+                        "shortcut",
+                        "c",
+                        "prompt",
+                        "Fix {failures}",
+                        "model",
+                        "opus")),
+                Agents.SETTING
+                        .codec()
+                        .encode(Agents.KEY, edited)
+                        .get(List.of(Agents.KEY))
+                        .get());
     }
 
     @Test
-    void onlyTheUserWritesTheAgents() {
-        assertEquals(Kept.NEVER, Agents.SETTING.kept());
-        assertEquals(Agents.NONE, Agents.SETTING.initial());
+    void theAppWritesTheAgentsOnceTheyChanged() {
+        assertEquals(Kept.WHEN_CHANGED, Agents.SETTING.kept());
+        assertEquals(Entries.none(), Agents.SETTING.initial());
+        assertTrue(Agents.SETTING.codec().guarded());
     }
 }

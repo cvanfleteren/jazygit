@@ -14,6 +14,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
+import net.vanfleteren.jazygit.kernel.settings.Entries;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
@@ -92,7 +93,7 @@ class InvestigateUpdateTest {
         return Update.update(branches, new LoadMsg.WorktreesLoaded(List.of(MAIN, LINKED)))
                 .model()
                 .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().with(Agents.SETTING, new Agents(agents))));
+                        preferences.withSettings(preferences.settings().with(Agents.SETTING, Entries.of(agents))));
     }
 
     @Test
@@ -156,8 +157,8 @@ class InvestigateUpdateTest {
 
         assertEquals(List.empty(), next.cmds());
         assertEquals(
-                Option.of("No agent is set to investigate a failed build. Add one to the settings file, config.toml,"
-                        + " such as:\n\n[[agents]]\nname = \"Claude\"\ncommand = [\"claude\", \"{prompt}\"]\n"
+                Option.of("No agent is set to investigate a failed build. Add one in the settings, under Agents, or in"
+                        + " the settings file, config.toml, such as:\n\n[[agents]]\nname = \"Claude\"\ncommand = [\"claude\", \"{prompt}\"]\n"
                         + "terminal = true"),
                 errorText(next.model()));
     }
@@ -199,7 +200,7 @@ class InvestigateUpdateTest {
         Model unread = model(List.of(CLAUDE))
                 .mapRepo(repo -> repo.withWorktrees(Loadable.loading()))
                 .mapPreferences(preferences -> preferences.withSettings(
-                        preferences.settings().with(Agents.SETTING, new Agents(List.of(CLAUDE)))));
+                        preferences.settings().with(Agents.SETTING, Entries.of(List.of(CLAUDE)))));
 
         Next next = Update.update(unread, new InvestigateMsg.Requested(failed(MAIN_BRANCH)));
 

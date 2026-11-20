@@ -58,7 +58,7 @@ class StandardSettingsTest {
         assertEquals(
                 new Agents(List.of(new AgentProgram(
                         "Claude", List.of("claude", "{prompt}"), false, Option.some('c'), Option.none()))),
-                loaded.settings().get(Agents.SETTING));
+                Agents.in(loaded.settings()));
         assertEquals(
                 Option.of(new SettingsProblem.Invalid(dir.resolve("config.toml"), List.of("agents[2].command"))),
                 loaded.problem());
@@ -81,6 +81,31 @@ class StandardSettingsTest {
     }
 
     @Test
+    void anAgentAddedInThePanelIsWrittenAfterTheOthersWhichStayAsTheyWere() throws IOException {
+        SettingsFile file = file(AGENTS.replace("shortcut = \"c\"", "shortcut = \"c\"\nmodel = \"opus\""));
+        Loaded loaded = file.load();
+        AgentProgram codex = new AgentProgram("Codex", List.of("codex"), true, Option.none(), Option.of("Fix it"));
+
+        file.save(
+                loaded.settings(),
+                loaded.settings()
+                        .with(
+                                Agents.SETTING,
+                                loaded.settings().get(Agents.SETTING).added(codex)));
+
+        String saved = Files.readString(dir.resolve("config.toml"));
+        assertTrue(saved.contains("theme = \"darcula\""), saved);
+        // A field the app does not know, and an entry it cannot read, are written back as they were.
+        assertTrue(saved.contains("model = \"opus\""), saved);
+        assertTrue(saved.contains("name = \"Broken\""), saved);
+        Loaded reread = file.load();
+        assertEquals(
+                List.of("Claude", "Codex"), Agents.in(reread.settings()).all().map(AgentProgram::name));
+        assertEquals(codex, Agents.in(reread.settings()).all().last());
+        assertEquals(loaded.problem(), reread.problem());
+    }
+
+    @Test
     void anAgentAddedToTheFileByHandIsAppliedWhenItIsReadAgain() throws IOException {
         SettingsFile file = file(AGENTS);
         Loaded loaded = file.load();
@@ -94,8 +119,7 @@ class StandardSettingsTest {
         SettingsStore.Applied applied = file.load().appliedTo(loaded.settings(), loaded);
 
         assertEquals(
-                List.of("Claude", "Codex"),
-                applied.settings().get(Agents.SETTING).all().map(AgentProgram::name));
+                List.of("Claude", "Codex"), Agents.in(applied.settings()).all().map(AgentProgram::name));
         assertTrue(
                 applied.changed().contains(Agents.SETTING.path()),
                 applied.changed().toString());

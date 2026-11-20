@@ -133,3 +133,5 @@ checks on the tip of a branch, which can come from several workflow runs, and on
   prompt is for a later change.
 
 Amended by ADR 162: the agent is told the account the repository uses on its forge, and how to run as it.
+
+Amended by ADR 164: the settings panel edits the agents, which the app now writes back to `config.toml`.
