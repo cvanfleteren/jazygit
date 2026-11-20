@@ -8,7 +8,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.gh.model.GhLogin;
-import net.vanfleteren.jazygit.kernel.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.settings.SettingsPanelPopup;
 import org.junit.jupiter.api.Test;
@@ -71,7 +70,8 @@ class GitHubSettingsDialogsTest {
 
         assertEquals(
                 "Browser for alice-work on github.com: firefox -P work",
-                GitHubSettingsDialogs.browser(popup.withSettings(Settings.DEFAULT.withBrowsers(
+                GitHubSettingsDialogs.browser(popup.withSettings(Settings.DEFAULT.with(
+                        GitHubSettings.BROWSERS,
                         AccountBrowsers.NONE.with("GitHub.com", "Alice-Work", Option.of("firefox -P work"))))));
         assertEquals(
                 "Browser for alice-work on github.com: none, xdg-open from the desktop",

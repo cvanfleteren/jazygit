@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.features.github.settings;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Landing;
@@ -49,8 +48,8 @@ public final class GitHubSettingsUpdate {
      * What the section reads as the settings panel opens: how the gh in use is set up for the repository.
      */
     public static List<Cmd> opened(Model model) {
-        return List.of(
-                new GitHubSettingsCmd.ReadGitHub(model.preferences().settings().gh()));
+        return List.of(new GitHubSettingsCmd.ReadGitHub(
+                GitHubSettings.gh(model.preferences().settings())));
     }
 
     /**
@@ -67,8 +66,8 @@ public final class GitHubSettingsUpdate {
      */
     private static Next ghExecutableRequested(Model model) {
         return Next.of(model.popup(SettingsPanelPopup.class)
-                .map(panel -> model.openPopup(
-                        new GhExecutablePopup(panel.settings().ghExecutable().getOrElse(""))))
+                .map(panel -> model.openPopup(new GhExecutablePopup(
+                        panel.settings().get(GitHubSettings.GH_EXECUTABLE).getOrElse(""))))
                 .getOrElse(model));
     }
 
@@ -95,7 +94,7 @@ public final class GitHubSettingsUpdate {
         }
         return version.fold(
                 failure -> Next.of(model.fail(new GitHubSettingsError.GhExecutableUnusable(executable, failure))),
-                works -> SettingChange.set(model, Settings.GH_EXECUTABLE, executable));
+                works -> SettingChange.set(model, GitHubSettings.GH_EXECUTABLE, executable));
     }
 
     /**
@@ -119,7 +118,7 @@ public final class GitHubSettingsUpdate {
                         .map(account -> model.openPopup(new AccountBrowserPopup(
                                 account,
                                 panel.settings()
-                                        .browsers()
+                                        .get(GitHubSettings.BROWSERS)
                                         .of(account.host(), account.user())
                                         .getOrElse("")))))
                 .getOrElse(model));
@@ -133,10 +132,10 @@ public final class GitHubSettingsUpdate {
         return model.popup(AccountBrowserPopup.class)
                 .map(popup -> SettingChange.set(
                         model.withoutPopup(AccountBrowserPopup.class),
-                        Settings.BROWSERS,
+                        GitHubSettings.BROWSERS,
                         model.preferences()
                                 .settings()
-                                .browsers()
+                                .get(GitHubSettings.BROWSERS)
                                 .with(
                                         popup.account().host(),
                                         popup.account().user(),

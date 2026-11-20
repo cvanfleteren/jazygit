@@ -1,0 +1,22 @@
+# my settings
+future = true
+old-key = "kept"
+
+[ui]
+# the one I like
+theme = "dark"
+other = 3
+
+[mine]
+x = [1, 2]
+
+[[editors]]
+# the IDE
+name = "IntelliJ"
+command = ["idea", "{dir}"]
+shortcut = "i"
+
+[[diff-filters]]
+id = "mine"
+name = "Generated sources"
+paths = ["**/generated/**"]

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.github;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.Bundles;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ class GitHubBundleTest {
 
     @Test
     void everyKeyTheCodeNamesIsInTheBundle() {
-        assertEquals(List.empty(), Bundles.missing("github"));
+        // The paths of the settings in the settings file, which start with the root but are no keys.
+        assertEquals(List.empty(), Bundles.missing("github", HashSet.of("github.executable", "github.browsers")));
     }
 }

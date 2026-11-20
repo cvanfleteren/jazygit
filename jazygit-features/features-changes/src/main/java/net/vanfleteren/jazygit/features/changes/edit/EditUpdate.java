@@ -40,7 +40,8 @@ public final class EditUpdate {
      * opens it at its start; else in the one set, or the one chosen of those.
      */
     private static Next open(Model model, String path, int line) {
-        Editors editors = model.preferences().settings().editors().files();
+        Editors editors =
+                model.preferences().settings().get(EditorSettings.EDITORS).files();
         if (editors.isEmpty()) {
             return OperationUpdate.start(model.clearError(), new EditCmd(List.of(path)));
         }

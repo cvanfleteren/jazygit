@@ -57,16 +57,6 @@ public record Settings(Map<String, Held<?>> held) {
                     "ui.theme", ThemeName.DARK, Codec.text(ThemeName::of, ThemeName::id))
             .withKept(Kept.ALWAYS);
     /**
-     * The gh executable to run, if not the one on the PATH; one that is blank is not valid.
-     */
-    public static final SettingKey<Option<String>> GH_EXECUTABLE = SettingKey.of(
-                    "github.executable",
-                    Option.none(),
-                    Codec.text(path -> Option.when(!path.isBlank(), path), path -> path)
-                            .optional())
-            // The GitHub client runs it, which a repository gets as it is shown.
-            .withReopens(true);
-    /**
      * The width of the left column of the repository screen.
      */
     public static final SettingKey<Integer> REPOSITORY_WIDTH =
@@ -117,24 +107,6 @@ public record Settings(Map<String, Held<?>> held) {
      */
     public static final SettingKey<Boolean> AUTO_FETCH = SettingKey.of("git.auto-fetch", true, Codec.bool());
     /**
-     * The browser of each GitHub account (ADR 88): a table of tables, by host and then by login.
-     */
-    public static final SettingKey<AccountBrowsers> BROWSERS = SettingKey.of(
-            "github.browsers",
-            AccountBrowsers.NONE,
-            Codec.of(
-                    Codec.whole(AccountBrowsers::read, browsers -> browsers)::decode,
-                    (key, browsers) -> browsers.entries()));
-    /**
-     * The editors (ADR 110). An entry that is wrong is left out, and reported; the others still apply. Only editors
-     * that are no array at all are not valid as a whole.
-     */
-    public static final SettingKey<Editors> EDITORS =
-            SettingKey.userOwned(Editors.KEY, Editors.NONE, Codec.readOnly(value -> {
-                Editors.Read read = Editors.read(value);
-                return new Decoded<>(Option.some(read.editors()), read.invalid());
-            }));
-    /**
      * The ids of the diff filters enabled (ADR 144), each once, in the order they were enabled.
      */
     public static final SettingKey<List<String>> DIFF_FILTERS =
@@ -169,14 +141,6 @@ public record Settings(Map<String, Held<?>> held) {
 
     public Settings withTheme(ThemeName theme) {
         return with(THEME, theme);
-    }
-
-    public Option<String> ghExecutable() {
-        return get(GH_EXECUTABLE);
-    }
-
-    public Settings withGhExecutable(Option<String> ghExecutable) {
-        return with(GH_EXECUTABLE, ghExecutable);
     }
 
     public int repositoryWidth() {
@@ -257,22 +221,6 @@ public record Settings(Map<String, Held<?>> held) {
 
     public Settings withAutoFetch(boolean on) {
         return with(AUTO_FETCH, on);
-    }
-
-    public AccountBrowsers browsers() {
-        return get(BROWSERS);
-    }
-
-    public Settings withBrowsers(AccountBrowsers browsers) {
-        return with(BROWSERS, browsers);
-    }
-
-    public Editors editors() {
-        return get(EDITORS);
-    }
-
-    public Settings withEditors(Editors editors) {
-        return with(EDITORS, editors);
     }
 
     public List<String> diffFilters() {
@@ -360,13 +308,6 @@ public record Settings(Map<String, Held<?>> held) {
                 .map(array -> List.ofAll((java.util.List<?>) array))
                 .filter(items -> items.forAll(String.class::isInstance))
                 .map(items -> items.map(String.class::cast).distinct());
-    }
-
-    /**
-     * The gh executable to run: the one chosen, else the one on the PATH.
-     */
-    public String gh() {
-        return ghExecutable().getOrElse("gh");
     }
 
     /**

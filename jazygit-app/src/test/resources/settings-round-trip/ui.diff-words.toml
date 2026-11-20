@@ -8,8 +8,10 @@ theme = "darcula"
 repository-width = 40
 diff-syntax = false
 repository-heights = [20, 20, 20]
+animations = false
 diff-filters = ["java-imports"]
 other = 3
+diff-words = false
 
 [git]
 # fetch by hand
@@ -35,11 +37,3 @@ shortcut = "i"
 id = "mine"
 name = "Generated sources"
 paths = ["**/generated/**"]
-
-[[agents]]
-# the main one
-name = "Claude"
-command = ["claude", "{prompt}"]
-terminal = true
-shortcut = "c"
-prompt = "Fix {failures}"

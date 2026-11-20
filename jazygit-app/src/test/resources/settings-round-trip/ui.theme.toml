@@ -4,7 +4,7 @@ old-key = "kept"
 
 [ui]
 # the one I like
-theme = "darcula"
+theme = "light"
 repository-width = 40
 diff-syntax = false
 repository-heights = [20, 20, 20]
@@ -15,6 +15,9 @@ other = 3
 [git]
 # fetch by hand
 auto-fetch = false
+
+[github]
+executable = "/opt/gh"
 
 [github.browsers."github.com"]
 # personal
@@ -33,11 +36,3 @@ shortcut = "i"
 id = "mine"
 name = "Generated sources"
 paths = ["**/generated/**"]
-
-[[agents]]
-# the main one
-name = "Claude"
-command = ["claude", "{prompt}"]
-terminal = true
-shortcut = "c"
-prompt = "Fix {failures}"

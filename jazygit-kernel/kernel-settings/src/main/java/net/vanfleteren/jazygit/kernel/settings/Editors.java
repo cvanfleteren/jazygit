@@ -21,7 +21,7 @@ public record Editors(List<EditorProgram> all) {
     /**
      * The key of the editors in the settings file: an array of tables.
      */
-    static final String KEY = "editors";
+    public static final String KEY = "editors";
 
     private static final String DIR_COMMAND = "dir-command";
     private static final String FILE_COMMAND = "file-command";
@@ -68,7 +68,7 @@ public record Editors(List<EditorProgram> all) {
      * character, is {@code /}, or is an earlier entry's is dropped. When {@code value} is no array, there are none,
      * and {@code editors} itself is wrong.
      */
-    static Read read(Object value) {
+    public static Read read(Object value) {
         return Programs.tables(value).map(Editors::entries).getOrElse(() -> new Read(NONE, List.of(KEY)));
     }
 
@@ -118,7 +118,7 @@ public record Editors(List<EditorProgram> all) {
     /**
      * Editors as read, with the keys of what was wrong in them.
      */
-    record Read(Editors editors, List<String> invalid) {
+    public record Read(Editors editors, List<String> invalid) {
 
         /**
          * These editors and those of {@code next} after them, with what was wrong in both.

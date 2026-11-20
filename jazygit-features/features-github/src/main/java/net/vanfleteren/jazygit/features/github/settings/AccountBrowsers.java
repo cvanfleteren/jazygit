@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.github.settings;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -9,8 +9,8 @@ import io.vavr.control.Option;
 import java.util.Locale;
 
 /**
- * The browser set for each GitHub account, by host and login, as the settings file keeps them under
- * {@code github.browsers} (ADR 88). Hosts and logins are matched as GitHub matches them, without regard to case, and
+ * The browser set for each GitHub account, by host and login, as the settings file keeps them under the key of
+ * {@link GitHubSettings#BROWSERS} (ADR 88). Hosts and logins are matched as GitHub matches them, without regard to case, and
  * kept as they were written.
  *
  * @param byHost the browser of each login, by host
@@ -70,11 +70,12 @@ public record AccountBrowsers(Map<String, Map<String, String>> byHost) {
     }
 
     /**
-     * The browsers as the settings file keeps them, by the path of their key.
+     * The browsers as the settings file keeps them: the host and then the login, in the table at {@code path}, the
+     * path of the key that holds them.
      */
-    Map<List<String>, Object> entries() {
+    Map<List<String>, Object> entries(List<String> path) {
         return byHost.flatMap(host -> host._2.map(login ->
-                        Tuple.<List<String>, Object>of(List.of("github", "browsers", host._1, login._1), login._2)))
+                        Tuple.<List<String>, Object>of(path.append(host._1).append(login._1), login._2)))
                 .foldLeft(LinkedHashMap.empty(), (entries, entry) -> entries.put(entry));
     }
 

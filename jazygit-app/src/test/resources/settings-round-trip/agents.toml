@@ -4,7 +4,7 @@ old-key = "kept"
 
 [ui]
 # the one I like
-theme = "light"
+theme = "darcula"
 repository-width = 40
 diff-syntax = false
 repository-heights = [20, 20, 20]
@@ -38,9 +38,7 @@ name = "Generated sources"
 paths = ["**/generated/**"]
 
 [[agents]]
-# the main one
-name = "Claude"
-command = ["claude", "{prompt}"]
+name = "Codex"
+command = ["codex"]
 terminal = true
-shortcut = "c"
-prompt = "Fix {failures}"
+prompt = "Fix it"

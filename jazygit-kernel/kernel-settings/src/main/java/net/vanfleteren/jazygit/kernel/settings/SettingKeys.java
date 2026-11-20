@@ -15,7 +15,6 @@ public record SettingKeys(List<SettingKey<?>> all) {
      */
     public static final SettingKeys KERNEL = new SettingKeys(List.of(
             Settings.THEME,
-            Settings.GH_EXECUTABLE,
             Settings.REPOSITORY_WIDTH,
             Settings.PULL_REQUESTS_WIDTH,
             Settings.DIFF_STYLE,
@@ -26,8 +25,6 @@ public record SettingKeys(List<SettingKey<?>> all) {
             Settings.ANIMATIONS,
             Settings.AUTO_REFRESH,
             Settings.AUTO_FETCH,
-            Settings.BROWSERS,
-            Settings.EDITORS,
             Settings.DIFF_FILTERS,
             Settings.FILTER_DEFINITIONS));
 

@@ -68,8 +68,8 @@ class OpenFileUpdateTest {
     private static final ScrolledContent CONTENT = new ScrolledContent.StashChanges(new Sha("5555"), CHANGES);
 
     private static Model model(EditorProgram... editors) {
-        return loaded().mapPreferences(preferences ->
-                preferences.withSettings(preferences.settings().withEditors(new Editors(List.of(editors)))));
+        return loaded().mapPreferences(preferences -> preferences.withSettings(
+                preferences.settings().with(EditorSettings.EDITORS, new Editors(List.of(editors)))));
     }
 
     /**

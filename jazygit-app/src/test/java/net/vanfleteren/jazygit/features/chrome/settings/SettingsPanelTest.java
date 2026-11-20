@@ -17,11 +17,12 @@ import net.vanfleteren.jazygit.app.keys.StandardSettings;
 import net.vanfleteren.jazygit.core.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.gh.model.GhLogin;
+import net.vanfleteren.jazygit.features.github.settings.AccountBrowsers;
+import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsCmd;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsMsg;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsUpdate;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSetup;
-import net.vanfleteren.jazygit.kernel.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.CursorFeedback;
@@ -83,7 +84,8 @@ class SettingsPanelTest {
     void showsThatGhIsReadWhileItIs() throws Exception {
         ChoiceDialog<SettingsPanelPopup> dialog =
                 new ChoiceDialog<>(SettingsPanelDialogs.PANEL, new ArrayList<Msg>()::add);
-        SettingsPanelPopup popup = panel(Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh")), Option.none());
+        SettingsPanelPopup popup =
+                panel(Settings.DEFAULT.with(GitHubSettings.GH_EXECUTABLE, Option.of("/opt/gh")), Option.none());
         Element view = stack(
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
@@ -103,7 +105,8 @@ class SettingsPanelTest {
                 Settings.DEFAULT
                         .withTheme(ThemeName.DARCULA)
                         .withAutoFetch(false)
-                        .withBrowsers(
+                        .with(
+                                GitHubSettings.BROWSERS,
                                 AccountBrowsers.NONE.with("github.com", "alice-work", Option.of("firefox -P work"))),
                 Option.of(setup(Option.of("alice-work"))));
         Element view = stack(

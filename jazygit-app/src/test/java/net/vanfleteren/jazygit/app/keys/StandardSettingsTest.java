@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.app.keys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
@@ -10,8 +11,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
+import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
+import net.vanfleteren.jazygit.features.github.settings.AccountBrowsers;
+import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
+import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
+import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.SettingKeys;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsFile;
 import net.vanfleteren.jazygit.kernel.settings.SettingsProblem;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
@@ -123,6 +130,205 @@ class StandardSettingsTest {
         assertTrue(
                 applied.changed().contains(Agents.SETTING.path()),
                 applied.changed().toString());
+    }
+
+    @Test
+    void readsTheEditorsInTheirOrder() throws IOException {
+        Loaded loaded = file("""
+                [[editors]]
+                name = "IntelliJ"
+                command = ["idea", "{dir}"]
+                shortcut = "i"
+
+                [[editors]]
+                name = "Neovim"
+                command = ["nvim", "."]
+                terminal = true
+                """).load();
+
+        assertEquals(Option.none(), loaded.problem());
+        assertEquals(
+                new Editors(List.of(
+                        EditorProgram.ofDir("IntelliJ", List.of("idea", "{dir}"), false, Option.of('i')),
+                        EditorProgram.ofDir("Neovim", List.of("nvim", "."), true, Option.none()))),
+                loaded.settings().get(EditorSettings.EDITORS));
+    }
+
+    @Test
+    void anEditorWithoutACommandIsLeftOutAndSaidSo() throws IOException {
+        Loaded loaded = file("""
+                [[editors]]
+                name = "Broken"
+
+                [[editors]]
+                name = "Kate"
+                dir-command = ["kate"]
+                """).load();
+
+        assertEquals(
+                Option.of(new SettingsProblem.Invalid(dir.resolve("config.toml"), List.of("editors[1].dir-command"))),
+                loaded.problem());
+        assertEquals(
+                List.of("Kate"),
+                loaded.settings().get(EditorSettings.EDITORS).all().map(EditorProgram::name));
+    }
+
+    @Test
+    void editorsWithOneWrongEntryStillApplyWhenTheFileIsReadAgain() throws IOException {
+        SettingsFile file = file("");
+        Loaded before = file.load();
+        Files.writeString(dir.resolve("config.toml"), """
+                [[editors]]
+                name = "Broken"
+
+                [[editors]]
+                name = "Kate"
+                dir-command = ["kate"]
+                """);
+
+        SettingsStore.Applied applied = file.load().appliedTo(before.settings(), before);
+
+        assertEquals(
+                List.of("Kate"),
+                applied.settings().get(EditorSettings.EDITORS).all().map(EditorProgram::name));
+    }
+
+    @Test
+    void savingAnotherSettingKeepsTheEditors() throws IOException {
+        SettingsFile file = file("""
+                [ui]
+                theme = "light"
+
+                [[editors]]
+                name = "Kate"
+                command = ["kate", "{dir}"]
+                shortcut = "k"
+                """);
+        Settings loaded = file.load().settings();
+
+        file.save(loaded, loaded.withTheme(ThemeName.DARCULA));
+
+        Settings reread = file.load().settings();
+        assertEquals(ThemeName.DARCULA, reread.theme());
+        assertEquals(loaded.get(EditorSettings.EDITORS), reread.get(EditorSettings.EDITORS));
+    }
+
+    @Test
+    void readsTheGhExecutable() throws IOException {
+        Settings settings = file("""
+                [github]
+                executable = "C:\\\\Tools\\\\gh.exe"
+                """).load().settings();
+
+        assertEquals(Option.of("C:\\Tools\\gh.exe"), settings.get(GitHubSettings.GH_EXECUTABLE));
+        assertEquals("C:\\Tools\\gh.exe", GitHubSettings.gh(settings));
+    }
+
+    @Test
+    void withoutAGhExecutableTheOneOnThePathRuns() {
+        assertEquals("gh", GitHubSettings.gh(Settings.DEFAULT));
+    }
+
+    @Test
+    void aBlankGhExecutableIsInvalid() throws IOException {
+        Loaded loaded = file("""
+                [github]
+                executable = " "
+                """).load();
+
+        assertEquals(Option.none(), loaded.settings().get(GitHubSettings.GH_EXECUTABLE));
+        assertEquals(
+                Option.of(new SettingsProblem.Invalid(dir.resolve("config.toml"), List.of("github.executable"))),
+                loaded.problem());
+    }
+
+    @Test
+    void savingTheGhExecutable() throws IOException {
+        SettingsFile file = file("");
+        Settings chosen = Settings.DEFAULT.with(GitHubSettings.GH_EXECUTABLE, Option.of("/opt/gh/bin/gh"));
+
+        file.save(Settings.DEFAULT, chosen);
+
+        assertEquals(chosen, file.load().settings());
+    }
+
+    @Test
+    void goingBackToTheGhOnThePathRemovesTheExecutable() throws IOException {
+        SettingsFile file = file("");
+        Settings chosen = Settings.DEFAULT.with(GitHubSettings.GH_EXECUTABLE, Option.of("/opt/gh/bin/gh"));
+        file.save(Settings.DEFAULT, chosen);
+
+        file.save(chosen, Settings.DEFAULT);
+
+        String saved = Files.readString(dir.resolve("config.toml"));
+        assertFalse(saved.contains("executable"), saved);
+        assertEquals(Settings.DEFAULT, file.load().settings());
+    }
+
+    @Test
+    void readsTheBrowserOfEachAccountMatchingHostAndLoginWithoutRegardToCase() throws IOException {
+        Loaded loaded = file("""
+                [github.browsers."github.com"]
+                cvf-work = "firefox -P work"
+                CVanfleteren = "firefox -P personal"
+                blank = " "
+
+                [github.browsers."GHE.acme.com"]
+                cvf = "chromium --profile-directory=Acme"
+                """).load();
+        AccountBrowsers browsers = loaded.settings().get(GitHubSettings.BROWSERS);
+
+        assertEquals(Option.none(), loaded.problem());
+        assertEquals(Option.of("firefox -P work"), browsers.of("github.com", "cvf-work"));
+        assertEquals(Option.of("firefox -P personal"), browsers.of("GitHub.com", "cvanfleteren"));
+        assertEquals(Option.of("chromium --profile-directory=Acme"), browsers.of("ghe.acme.com", "CVF"));
+        assertEquals(Option.none(), browsers.of("github.com", "blank"));
+        assertEquals(Option.none(), browsers.of("github.com", "cvf"));
+    }
+
+    @Test
+    void aBrowserThatIsNoTextIsInvalid() throws IOException {
+        Loaded loaded = file("""
+                [github.browsers."github.com"]
+                cvf = 3
+                """).load();
+
+        assertEquals(AccountBrowsers.NONE, loaded.settings().get(GitHubSettings.BROWSERS));
+        assertEquals(
+                Option.of(new SettingsProblem.Invalid(dir.resolve("config.toml"), List.of("github.browsers"))),
+                loaded.problem());
+    }
+
+    @Test
+    void savingABrowserKeepsTheOthersAndTakingTheLastAwayLeavesNoTable() throws IOException {
+        SettingsFile file = file("""
+                [github]
+                executable = "/opt/gh"
+
+                [github.browsers."github.com"]
+                # by hand
+                cvf = "firefox -P personal"
+                """);
+        Path path = dir.resolve("config.toml");
+        Settings read = file.load().settings();
+        Settings work = read.with(
+                GitHubSettings.BROWSERS,
+                read.get(GitHubSettings.BROWSERS).with("github.com", "cvf-work", Option.of("firefox -P work")));
+
+        file.save(read, work);
+
+        assertEquals(work, file.load().settings());
+        assertTrue(Files.readString(path).contains("# by hand"), Files.readString(path));
+
+        Settings none = work.with(
+                GitHubSettings.BROWSERS,
+                work.get(GitHubSettings.BROWSERS)
+                        .with("github.com", "CVF", Option.none())
+                        .with("github.com", "cvf-work", Option.none()));
+        file.save(work, none);
+
+        assertFalse(Files.readString(path).contains("browsers"), Files.readString(path));
+        assertEquals(none, file.load().settings());
     }
 
     private SettingsFile file(String content) throws IOException {

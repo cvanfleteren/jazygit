@@ -23,7 +23,6 @@ class SettingsTest {
      */
     private static final Settings CHANGED = Settings.DEFAULT
             .withTheme(ThemeName.DARCULA)
-            .withGhExecutable(Option.some("/opt/gh"))
             .withRepositoryWidth(40)
             .withPullRequestsWidth(50)
             .withDiffStyle(DiffStyle.PLAIN)
@@ -34,7 +33,6 @@ class SettingsTest {
             .withAnimations(false)
             .withAutoRefresh(false)
             .withAutoFetch(false)
-            .withBrowsers(AccountBrowsers.NONE.with("github.com", "octocat", Option.some("firefox")))
             .withDiffFilters(List.of("java-imports", "lockfiles"));
 
     @Test
@@ -51,8 +49,8 @@ class SettingsTest {
                 .filter(key -> !key.changed(Settings.DEFAULT, CHANGED))
                 .map(SettingKey::path);
 
-        // Only the user writes the editors and the diff filters.
-        assertEquals(List.of(Editors.KEY, FilterDefinitions.KEY), same);
+        // Only the user writes the diff filters.
+        assertEquals(List.of(FilterDefinitions.KEY), same);
     }
 
     @Test

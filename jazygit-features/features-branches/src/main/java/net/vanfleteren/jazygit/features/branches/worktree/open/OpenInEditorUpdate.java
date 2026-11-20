@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.branches.worktree.open;
 import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.Worktree;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
+import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -61,7 +62,8 @@ public final class OpenInEditorUpdate {
      * none set is said, with how to set one. An editor that only opens files is not among them (ADR 145).
      */
     private static Next editors(Model model, String location) {
-        Editors editors = model.preferences().settings().editors().worktrees();
+        Editors editors =
+                model.preferences().settings().get(EditorSettings.EDITORS).worktrees();
         if (editors.isEmpty()) {
             return Next.of(model.fail(new WorktreeError.NoEditorSet()));
         }

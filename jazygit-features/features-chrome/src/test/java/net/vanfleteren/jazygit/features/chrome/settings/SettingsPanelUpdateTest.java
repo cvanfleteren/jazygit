@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.kernel.settings.Decoded;
 import net.vanfleteren.jazygit.kernel.settings.Entries;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
+import net.vanfleteren.jazygit.kernel.settings.SettingKeys;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsProblem;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
@@ -193,9 +194,28 @@ class SettingsPanelUpdateTest {
 
     private static final Path FILE = Path.of("/home/me/.config/jazygit/config.toml");
     private static final SettingsProblem INVALID_THEME = new SettingsProblem.Invalid(FILE, List.of("ui.theme"));
+    /**
+     * A setting that shows the repository again when it changes in the file, as the gh executable does (ADR 163).
+     */
+    private static final SettingKey<Option<String>> EXECUTABLE = SettingKey.of(
+                    "github.executable",
+                    Option.none(),
+                    Codec.text(path -> Option.when(!path.isBlank(), path), path -> path)
+                            .optional())
+            .withReopens(true);
 
     private static SettingsStore.Loaded read(Settings settings) {
         return new SettingsStore.Loaded(settings, Option.none());
+    }
+
+    /**
+     * A file read with the gh executable set, by keys that have {@link #EXECUTABLE} too, with {@code problem} if any.
+     */
+    private static SettingsStore.Loaded readWithExecutable(Option<SettingsProblem> problem) {
+        return new SettingsStore.Loaded(
+                Settings.DEFAULT.with(EXECUTABLE, Option.of("/opt/gh")),
+                problem,
+                SettingKeys.KERNEL.and(List.of(EXECUTABLE)));
     }
 
     /**
@@ -469,12 +489,10 @@ class SettingsPanelUpdateTest {
     void aGhExecutableChangedInTheFileShowsTheRepositoryAgain() {
         Model model = TestModels.loaded().openPopup(READ);
 
-        Next next = Update.update(
-                model,
-                new SettingsPanelMsg.FileEdited(
-                        List.empty(), read(Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh")))));
+        Next next =
+                Update.update(model, new SettingsPanelMsg.FileEdited(List.empty(), readWithExecutable(Option.none())));
 
-        assertEquals(Option.of("/opt/gh"), next.model().preferences().settings().ghExecutable());
+        assertEquals(Option.of("/opt/gh"), next.model().preferences().settings().get(EXECUTABLE));
         assertEquals(List.of(new ShowAgain(Landing.of(model.repoView()))), next.cmds());
     }
 
@@ -483,11 +501,7 @@ class SettingsPanelUpdateTest {
         Model model = TestModels.loaded().openPopup(READ);
 
         Next next = Update.update(
-                model,
-                new SettingsPanelMsg.FileEdited(
-                        List.empty(),
-                        new SettingsStore.Loaded(
-                                Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh")), Option.of(INVALID_THEME))));
+                model, new SettingsPanelMsg.FileEdited(List.empty(), readWithExecutable(Option.of(INVALID_THEME))));
         // The repository is shown again, in a session of its own.
         Model shownAgain = Update.update(TestModels.loaded(), SettingsPanelUpdate.carried(next.model()))
                 .model();
