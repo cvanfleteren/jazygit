@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.features.branches.repos.RecentReposMsg;
+import net.vanfleteren.jazygit.features.changes.cherrypick.CherryPickMsg;
 import net.vanfleteren.jazygit.features.changes.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.features.changes.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.features.chrome.help.HelpMsg;
@@ -82,6 +83,11 @@ class KeymapTest {
         assertEquals(Option.of(new DiffOptionsMsg.ContextNarrowed()), keymap.handleGlobal(KeyEvent.ofChar('{')));
         assertTrue(keymap.globals().exists(global -> global.label().equals("}")));
         assertTrue(keymap.globals().exists(global -> global.label().equals("{")));
+    }
+
+    @Test
+    void escLetsGoOfTheCopiedCommitWhenNothingElseTakesIt() {
+        assertEquals(Option.of(new CherryPickMsg.Dropped()), keymap.handleGlobal(KeyEvent.ofKey(KeyCode.ESCAPE)));
     }
 
     @Test
