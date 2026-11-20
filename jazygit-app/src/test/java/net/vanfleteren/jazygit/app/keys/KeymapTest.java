@@ -40,11 +40,10 @@ class KeymapTest {
 
     @Test
     void ctrlSShowsTheSettings() {
-        assertTrue(GlobalKeys.isSettingsKey(KeyEvent.ofChar('s', dev.tamboui.tui.event.KeyModifiers.CTRL)));
-        assertFalse(GlobalKeys.isSettingsKey(KeyEvent.ofChar('s')));
         assertEquals(
                 Option.of(new SettingsPanelMsg.Requested()),
                 keymap.handleGlobal(KeyEvent.ofChar('s', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('s')));
     }
 
     @Test

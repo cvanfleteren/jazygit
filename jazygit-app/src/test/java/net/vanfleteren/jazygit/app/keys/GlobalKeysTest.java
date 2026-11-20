@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -26,6 +27,8 @@ class GlobalKeysTest {
 
     @Test
     void shiftIsPartOfTheCharacter() {
-        assertTrue(GlobalKeys.isInProgressKey(KeyEvent.ofChar('M', KeyModifiers.SHIFT)));
+        assertTrue(Keymap.standard()
+                .handleGlobal(KeyEvent.ofChar('M', KeyModifiers.SHIFT))
+                .isDefined());
     }
 }

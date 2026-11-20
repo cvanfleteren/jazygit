@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.kernel.ui.keys;
 
+import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.LinkedHashMap;
@@ -280,6 +281,40 @@ public final class Keymap {
             @Override
             public Msg action() {
                 return msg.get();
+            }
+
+            /**
+             * A key that sends {@code msg} when {@code c} is typed, without Ctrl, Alt, Super, Hyper or Meta.
+             */
+            public static Dispatching ofChar(char c, String descriptionKey, Supplier<Msg> msg) {
+                return new Dispatching(
+                        String.valueOf(c),
+                        descriptionKey,
+                        event -> KeyTrigger.ch(c).matches(event),
+                        msg);
+            }
+
+            /**
+             * A key that sends {@code msg} when Ctrl and {@code c} are pressed, in either case.
+             */
+            public static Dispatching ofCtrl(char c, String descriptionKey, Supplier<Msg> msg) {
+                return new Dispatching(
+                        "ctrl+" + c, descriptionKey, event -> event.hasCtrl() && event.isCharIgnoreCase(c), msg);
+            }
+
+            /**
+             * The Escape key, which sends {@code msg}.
+             */
+            public static Dispatching ofEscape(String descriptionKey, Supplier<Msg> msg) {
+                return new Dispatching("esc", descriptionKey, KeyEvent::isCancel, msg);
+            }
+
+            /**
+             * A key that is listed in the help, and runs from it, but that no key press matches: the panels take the
+             * press themselves.
+             */
+            public static Dispatching listedOnly(String label, String descriptionKey, Supplier<Msg> msg) {
+                return new Dispatching(label, descriptionKey, event -> false, msg);
             }
         }
     }
