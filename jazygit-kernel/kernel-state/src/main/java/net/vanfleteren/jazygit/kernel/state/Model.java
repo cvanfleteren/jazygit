@@ -53,6 +53,7 @@ import net.vanfleteren.jazygit.kernel.state.view.RepoView;
  * @param lineNumber     what is typed in the line to type a line number in to go to, while it is open (ADR 140)
  * @param preferences    how the user wants things shown, kept from one session to the next or for this one only
  * @param parts          what the features keep for themselves, each in a {@link Part} declared in its own package
+ * @param reactions      what the features answer of what happens in the kernel, whichever part they keep (ADR 158)
  * @param now            the time the last message was handled at, which tells how long ago things happened
  */
 @With
@@ -72,6 +73,7 @@ public record Model(
         Option<String> lineNumber,
         Preferences preferences,
         Parts parts,
+        Reactions reactions,
         Instant now) {
 
     /**
@@ -97,6 +99,7 @@ public record Model(
                 Option.none(),
                 Preferences.DEFAULT,
                 Parts.NONE,
+                Reactions.NONE,
                 Instant.EPOCH);
     }
 

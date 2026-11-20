@@ -529,7 +529,7 @@ class RebaseStackTest {
 
         assertInstanceOf(OperationMsg.Succeeded.class, done);
         assertEquals(java.util.List.of(List.of(Tuple.of(C, C), Tuple.of(D, D))), pushed);
-        assertEquals(true, cmd.changesGitHub());
+        assertEquals(true, cmd.changesForge());
         assertEquals(
                 Option.none(),
                 Update.update(TestModels.running(MODEL, cmd), done).model().popup());
@@ -563,7 +563,7 @@ class RebaseStackTest {
         cmd.run(new Env(pushingInto(pushed), StubGitHub.of()));
 
         assertEquals(java.util.List.of(), pushed);
-        assertEquals(false, cmd.changesGitHub());
+        assertEquals(false, cmd.changesForge());
     }
 
     @Test

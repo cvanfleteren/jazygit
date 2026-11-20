@@ -283,16 +283,16 @@ class JazygitAppWiringTest {
     }
 
     @Test
-    void theRepositoryTheRemotesAndGitHubAreEachReadEverySoOftenAndTheTimeIsNot() {
+    void theRepositoryAndWhatTheFeaturesReadAreEachReadEverySoOftenAndTheTimeIsNot() {
         assertEquals(
                 List.of(
                         Tuple.of(Timers.REFRESH_INTERVAL, TimerMsg.Tick.class),
-                        Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class),
+                        Tuple.of(Duration.ofSeconds(2), StackMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), PullRequestMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), ChecksMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(2), PullRequestMsg.MergeTick.class),
-                        Tuple.of(Duration.ofSeconds(2), StackMsg.Tick.class)),
+                        Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class)),
                 Timers.ALL.map(
                         timer -> Tuple.of(timer.interval(), timer.msg().get().getClass())));
     }

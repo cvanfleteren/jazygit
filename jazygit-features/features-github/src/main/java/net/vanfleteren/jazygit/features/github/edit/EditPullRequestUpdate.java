@@ -148,7 +148,7 @@ public final class EditPullRequestUpdate {
                         .filter(popup -> popup.number().equals(cmd.number()))
                         .map(popup -> readAgain(changed, popup.from()))
                         .getOrElse(() -> Next.of(changed)));
-        return cmd.changesGitHub() ? PrOverviewUpdate.reloadIfShown(back) : back;
+        return cmd.changesForge() ? PrOverviewUpdate.reloadIfShown(back) : back;
     }
 
     /**

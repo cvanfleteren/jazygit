@@ -4,15 +4,11 @@ import dev.tamboui.toolkit.app.ToolkitRunner;
 import io.vavr.collection.List;
 import java.time.Duration;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
-import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg;
-import net.vanfleteren.jazygit.features.changes.fetch.FetchMsg;
-import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
-import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TimerMsg;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.kernel.ui.Feature;
+import net.vanfleteren.jazygit.kernel.ui.Feature.Timer;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 
 /**
@@ -23,21 +19,10 @@ final class Timers {
     // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
     // Every 3 s rather than every second: reading the status was most of what an idle app cost (ADR 125).
     static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 3000));
-    static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
-    // How often GitHub is asked how the merges it does in the background are going (ADR 24).
-    static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
-    // What is dispatched every so often: the repository read again, and what the remotes and GitHub have. The time
-    // comes when a time shown changes (ADR 124).
-    static final List<Timer> ALL = List.of(
-            new Timer(REFRESH_INTERVAL, TimerMsg.Tick::new),
-            new Timer(FETCH_INTERVAL, FetchMsg.Tick::new),
-            new Timer(FETCH_INTERVAL, PrOverviewMsg.Tick::new),
-            // The dialogs that list checks read them only while one is not done, or once a minute (ADR 34).
-            new Timer(CheckTimings.READ_WHILE_PENDING, PullRequestMsg.Tick::new),
-            new Timer(CheckTimings.READ_WHILE_PENDING, ChecksMsg.Tick::new),
-            new Timer(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new),
-            // The pull requests are read again while they do not show a change made to the stacks yet (ADR 73).
-            new Timer(MERGE_CHECK_INTERVAL, StackMsg.Tick::new));
+    // What is dispatched every so often: the repository read again, and what each feature asks for, as what the remotes
+    // and the forge have. The time comes when a time shown changes (ADR 124).
+    static final List<Timer> ALL =
+            List.of(new Timer(REFRESH_INTERVAL, TimerMsg.Tick::new)).appendAll(Features.ALL.flatMap(Feature::timers));
 
     private Timers() {}
 
@@ -57,9 +42,4 @@ final class Timers {
     private static void every(ToolkitRunner runner, Duration interval, Runnable action) {
         runner.scheduleRepeating(() -> runner.runOnRenderThread(action), interval);
     }
-
-    /**
-     * Dispatches what {@code msg} makes every {@code interval}.
-     */
-    record Timer(Duration interval, Supplier<Msg> msg) {}
 }

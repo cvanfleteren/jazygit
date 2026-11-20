@@ -60,7 +60,7 @@ public sealed interface StackCmd extends OperationCmd {
         }
 
         @Override
-        public boolean changesGitHub() {
+        public boolean changesForge() {
             return true;
         }
 
@@ -108,7 +108,7 @@ public sealed interface StackCmd extends OperationCmd {
         }
 
         @Override
-        public boolean changesGitHub() {
+        public boolean changesForge() {
             return true;
         }
 

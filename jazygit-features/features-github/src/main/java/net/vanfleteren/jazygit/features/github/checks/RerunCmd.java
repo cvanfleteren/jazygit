@@ -37,7 +37,7 @@ public record RerunCmd(RemoteBranch branch, List<RerunPlan.Run> runs) implements
     }
 
     @Override
-    public boolean changesGitHub() {
+    public boolean changesForge() {
         return true;
     }
 

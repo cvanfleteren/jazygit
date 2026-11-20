@@ -85,6 +85,8 @@ public final class Program {
      * @param themeOverride the theme for this session instead of the saved one, if any
      * @param repositoryTheme the theme the git configuration gives the repository, before the saved one (ADR 70)
      * @param landing     where the repository is shown at first
+     * @param reactions     how the features answer what happens in the kernel, from the opening of the repository on
+     *                      (ADR 166); {@link Reactions#NONE} for none
      * @param io            where git is called; a single thread keeps git commands from running concurrently
      * @param background    where {@link Cmd#background() background} commands run, so they do not hold up the
      *                      others; several at once may
@@ -103,6 +105,7 @@ public final class Program {
             Option<ThemeName> themeOverride,
             RepositoryTheme repositoryTheme,
             Landing landing,
+            Reactions reactions,
             Executor io,
             Executor background,
             Executor ui,
@@ -112,7 +115,13 @@ public final class Program {
             Clock clock) {
         Program program = new Program(env, io, background, ui, bugs, modelChanged, quit, clock);
         program.apply(Update.begin(
-                env.git().repositoryName(), settings, themeOverride, repositoryTheme, landing, clock.instant()));
+                env.git().repositoryName(),
+                settings,
+                themeOverride,
+                repositoryTheme,
+                landing,
+                reactions,
+                clock.instant()));
         return program;
     }
 

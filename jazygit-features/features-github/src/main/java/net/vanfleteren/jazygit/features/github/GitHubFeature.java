@@ -1,14 +1,18 @@
 package net.vanfleteren.jazygit.features.github;
 
+import java.time.Duration;
+import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.features.github.browse.BrowseAction;
 import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
 import net.vanfleteren.jazygit.features.github.builds.content.BuildsSource;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestAction;
+import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestAction;
 import net.vanfleteren.jazygit.features.github.review.ReviewAction;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsDialogs;
+import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictAction;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
@@ -26,6 +30,16 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 public final class GitHubFeature {
 
     /**
+     * How often the pull requests screen reads what GitHub has again.
+     */
+    private static final Duration OVERVIEW_INTERVAL = Duration.ofMinutes(1);
+
+    /**
+     * How often GitHub is asked how the merges it does in the background are going (ADR 24).
+     */
+    private static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
+
+    /**
      * Reading the pull requests of the pull requests screen again.
      */
     private static final FeatureAction REFRESH = FeatureAction.ofKeys(keys -> Scopes.PULL_REQUESTS.foldLeft(
@@ -41,7 +55,8 @@ public final class GitHubFeature {
 
     /**
      * The operations, in the order their keys are listed in a panel, the builds of a branch in the content panel
-     * (ADR 131), and how gh runs in the settings panel (ADR 163).
+     * (ADR 131), and how gh runs in the settings panel (ADR 163). It reads from GitHub as the timers say, and as what
+     * happens in the kernel makes it do.
      */
     public static final Feature FEATURE = Feature.of(
                     ShowPullRequestAction.ACTION,
@@ -57,7 +72,13 @@ public final class GitHubFeature {
                     FeatureAction.ofPopups(GitHubSettingsDialogs::popups))
             .showing(new BuildsSource())
             .keeping(GitHubSettings.GH_EXECUTABLE, GitHubSettings.BROWSERS)
-            .withSettings(GitHubSettingsDialogs.SECTION);
+            .withSettings(GitHubSettingsDialogs.SECTION)
+            .every(OVERVIEW_INTERVAL, PrOverviewMsg.Tick::new)
+            // The dialogs that list checks read them only while one is not done, or once a minute (ADR 34).
+            .every(CheckTimings.READ_WHILE_PENDING, PullRequestMsg.Tick::new)
+            .every(CheckTimings.READ_WHILE_PENDING, ChecksMsg.Tick::new)
+            .every(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new)
+            .reacting(GitHubReactions::to);
 
     private GitHubFeature() {}
 }

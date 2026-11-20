@@ -86,6 +86,7 @@ public final class TestModels {
                 Option.none(),
                 RepositoryTheme.NONE,
                 Landing.START,
+                Reactions.NONE,
                 io,
                 background,
                 ui,

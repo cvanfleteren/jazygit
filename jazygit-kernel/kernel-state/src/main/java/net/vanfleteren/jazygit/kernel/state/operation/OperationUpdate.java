@@ -4,18 +4,19 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Jobs;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.RereadUpdate;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsUpdate;
 
 /**
  * Operations on the repository, whichever they are. One is started unless the repository is in the middle of
  * something. Once done, its commands are logged, its branch is no longer busy, a failure is shown, or a notice when
- * it stopped on conflicts, and the repository is read again to show what changed; and what GitHub knows, after one
- * that changed that.
+ * it stopped on conflicts, and the repository is read again to show what changed; the features are told, for those
+ * that read what the forge has to do so again after one that changed it.
  */
 public final class OperationUpdate {
 
@@ -60,11 +61,11 @@ public final class OperationUpdate {
     }
 
     /**
-     * The repository read again once {@code cmd} is done; and what GitHub knows, when it changed that.
+     * The repository read again once {@code cmd} is done, and what the features answer of it: those that read from
+     * the forge do so again, when it changed what the forge has.
      */
     private static Next refreshed(Model model, OperationCmd cmd) {
-        Next refreshed = RereadUpdate.refresh(model);
-        return cmd.changesGitHub() ? PullRequestsUpdate.loadAnyway(refreshed) : refreshed;
+        return Events.happened(RereadUpdate.refresh(model), new KernelEvent.OperationDone(cmd.changesForge()));
     }
 
     /**

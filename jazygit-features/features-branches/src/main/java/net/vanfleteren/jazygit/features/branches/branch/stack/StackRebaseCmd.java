@@ -115,7 +115,7 @@ public sealed interface StackRebaseCmd extends Cmd {
         }
 
         @Override
-        public boolean changesGitHub() {
+        public boolean changesForge() {
             return push;
         }
 
@@ -161,7 +161,7 @@ public sealed interface StackRebaseCmd extends Cmd {
         }
 
         @Override
-        public boolean changesGitHub() {
+        public boolean changesForge() {
             return true;
         }
 

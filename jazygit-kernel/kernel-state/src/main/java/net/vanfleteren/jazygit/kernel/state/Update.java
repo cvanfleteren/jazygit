@@ -35,7 +35,7 @@ public final class Update {
             RepositoryTheme repositoryTheme,
             Landing landing) {
         // Commits are loaded once the first status tells us where HEAD is.
-        return RereadUpdate.refresh(initial.mapRepoView(landing::applyTo)
+        Next read = RereadUpdate.refresh(initial.mapRepoView(landing::applyTo)
                 .mapJobs(jobs -> jobs.withOnArrival(landing.then()))
                 .mapPreferences(preferences -> preferences
                         .withSettings(settings.settings())
@@ -44,11 +44,13 @@ public final class Update {
                         .withThemeOverride(themeOverride)
                         .withRepositoryTheme(repositoryTheme))
                 .mapOutcome(outcome -> outcome.withError(settings.problem().map(SettingsError.NotLoaded::new))));
+        return Events.happened(read, new KernelEvent.RepositoryOpened());
     }
 
     /**
      * The start of a session as {@link #init(Model, SettingsStore.Loaded, Option, RepositoryTheme, Landing)} starts
-     * it, at {@code now}: the commands it asks for are stamped (ADR 33).
+     * it, at {@code now}: the commands it asks for are stamped (ADR 33). The features answer what happens in the
+     * kernel with {@code reactions}, from the opening of the repository on (ADR 166).
      */
     public static Step begin(
             String repositoryName,
@@ -56,9 +58,15 @@ public final class Update {
             Option<ThemeName> themeOverride,
             RepositoryTheme repositoryTheme,
             Landing landing,
+            Reactions reactions,
             Instant now) {
         return stamped(
-                init(Model.initial(repositoryName).withNow(now), settings, themeOverride, repositoryTheme, landing),
+                init(
+                        Model.initial(repositoryName).withNow(now).withReactions(reactions),
+                        settings,
+                        themeOverride,
+                        repositoryTheme,
+                        landing),
                 now);
     }
 
