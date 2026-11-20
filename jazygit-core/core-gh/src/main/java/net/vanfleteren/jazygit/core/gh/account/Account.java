@@ -33,6 +33,14 @@ public interface Account {
     Option<GhAccount> current();
 
     /**
+     * The account the repository is configured to use, on the host its remotes give, an ssh alias resolved; none when
+     * none is configured, and gh runs as its active one (ADR 162).
+     */
+    default Option<GhAccount> configured() {
+        return Option.none();
+    }
+
+    /**
      * The browser gh would open a link to {@code host} in, and what chose it; none when gh would leave it to the
      * system (ADR 85).
      */

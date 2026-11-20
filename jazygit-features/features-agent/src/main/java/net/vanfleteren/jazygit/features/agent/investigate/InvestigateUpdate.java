@@ -57,7 +57,6 @@ public final class InvestigateUpdate {
     }
 
     private static Next start(Model model, AgentProgram agent, FailedBuild build, String worktree) {
-        return OperationUpdate.start(
-                model.clearError(), new InvestigateCmd(agent, worktree, Prompt.of(build, agent.prompt())));
+        return OperationUpdate.start(model.clearError(), new InvestigateCmd(agent, worktree, build));
     }
 }

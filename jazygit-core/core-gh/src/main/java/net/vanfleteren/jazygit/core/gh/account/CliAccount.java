@@ -87,9 +87,13 @@ public final class CliAccount implements Account {
 
     @Override
     public Option<GhAccount> current() {
+        return configured().orElse(() -> activeAccount(SshHost.resolve(worktree, host.get())));
+    }
+
+    @Override
+    public Option<GhAccount> configured() {
         return token.configured()
-                .map(configured -> new GhAccount(SshHost.resolve(worktree, configured.host()), configured.user()))
-                .orElse(() -> activeAccount(SshHost.resolve(worktree, host.get())));
+                .map(configured -> new GhAccount(SshHost.resolve(worktree, configured.host()), configured.user()));
     }
 
     @Override
