@@ -191,6 +191,24 @@ class EntriesFileTest {
     }
 
     @Test
+    void anEntryThatIsWrongAndMovedUpDoesNotStopTheNextSave() throws IOException {
+        Files.writeString(file(), """
+                [[tools]]
+                name = "vim"
+
+                [[tools]]
+                terminal = "yes"
+                """);
+        Settings read = store().load().settings();
+        Settings deleted = read.with(TOOLS, read.get(TOOLS).removed(0));
+        assertEquals(Either.right(deleted), store().save(read, deleted));
+
+        Settings added = deleted.with(TOOLS, deleted.get(TOOLS).added(new Tool("code", false)));
+
+        assertEquals(Either.right(added), store().save(deleted, added));
+    }
+
+    @Test
     void aSettingOfOneValueIsWrittenOverWhateverTheFileHasNow() throws IOException {
         Files.writeString(file(), """
                 [ui]

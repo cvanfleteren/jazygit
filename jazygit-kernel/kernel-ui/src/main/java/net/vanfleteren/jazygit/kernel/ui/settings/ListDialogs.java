@@ -100,12 +100,28 @@ public final class ListDialogs {
                                         WARNING
                                                 + Messages.get(
                                                         "settingsPanel.list.wrong",
-                                                        invalid(entry._1).mkString(", ")),
+                                                        invalid(list.key().path(), entry._1)
+                                                                .mkString(", ")),
                                         Theme.Classes.ERROR)))));
     }
 
-    private static <E> List<String> invalid(Entries.Entry<E> entry) {
-        return entry instanceof Entries.Entry.Invalid<E> invalid ? invalid.wrong() : List.empty();
+    /**
+     * What is wrong in {@code entry} of the list at {@code path}, by the keys of its fields: not where it was in the
+     * list when it was read, as {@code tools[2].name} says, which a delete or a move above it changes.
+     */
+    private static <E> List<String> invalid(String path, Entries.Entry<E> entry) {
+        return entry instanceof Entries.Entry.Invalid<E> invalid
+                ? invalid.wrong().map(key -> inEntry(path, key))
+                : List.empty();
+    }
+
+    /**
+     * {@code key}, the key of what is wrong in an entry of the list at {@code path}, without the list and the place in
+     * it; as it is when that leaves nothing.
+     */
+    private static String inEntry(String path, String key) {
+        String field = key.replaceFirst("^" + java.util.regex.Pattern.quote(path) + "\\[\\d+]\\.", "");
+        return field.isEmpty() ? key : field;
     }
 
     private static String formTitle(FormPopup<?> popup) {

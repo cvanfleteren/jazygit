@@ -94,10 +94,22 @@ class ListDialogsTest {
     @Test
     void theEntriesShowByNameOrByWhatIsWrongInThem() {
         assertEquals(
-                List.of(List.of("vim"), List.of("⚠ not valid: tools[2].name")),
+                List.of(List.of("vim"), List.of("⚠ not valid: name")),
                 ListDialogs.entryRows(
                                 LIST,
                                 TestModels.loaded().preferences().settings().with(TOOLS, TOOLS_READ))
+                        .map(row -> row.cells().map(PickDialog.Cell::text)));
+    }
+
+    @Test
+    void whatIsWrongInAnEntryDoesNotNameWhereItWasOnceItMoved() {
+        Entries<Tool> moved = TOOLS_READ.moved(1, -1);
+
+        assertEquals(
+                List.of(List.of("⚠ not valid: name"), List.of("vim")),
+                ListDialogs.entryRows(
+                                LIST,
+                                TestModels.loaded().preferences().settings().with(TOOLS, moved))
                         .map(row -> row.cells().map(PickDialog.Cell::text)));
     }
 

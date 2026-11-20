@@ -4,6 +4,7 @@ import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.UnmodifiableConfig;
 import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -108,7 +109,9 @@ public final class SettingsFile implements SettingsStore {
     private Try<CommentedConfig> unchangedSince(CommentedConfig config, Settings previous, Settings next) {
         Option<String> changed = keys.all()
                 .filter(key -> key.codec().guarded() && key.changed(previous, next))
-                .filter(key -> !asRead(config, key).equals(previous.get(key)))
+                // What each would write, not the values read: an entry that is wrong names its place in the list,
+                // which a delete or a move above it changes, while what is written stays the same.
+                .filter(key -> changedIn(config, key, previous))
                 .map(SettingKey::path)
                 .headOption();
         return changed.isEmpty()
@@ -116,6 +119,20 @@ public final class SettingsFile implements SettingsStore {
                 : Try.failure(new IllegalStateException(changed.get()
                         + " changed in the settings file since it was read; it is read again as the settings panel"
                         + " opens"));
+    }
+
+    /**
+     * Whether {@code config} keeps {@code key} otherwise than {@code previous} does.
+     */
+    private static <T> boolean changedIn(CommentedConfig config, SettingKey<T> key, Settings previous) {
+        return !written(key, asRead(config, key)).equals(written(key, previous.get(key)));
+    }
+
+    /**
+     * What {@code value} of {@code key} is kept as in the settings file.
+     */
+    private static <T> Map<List<String>, Object> written(SettingKey<T> key, T value) {
+        return key.codec().encode(key.path(), value);
     }
 
     /**
