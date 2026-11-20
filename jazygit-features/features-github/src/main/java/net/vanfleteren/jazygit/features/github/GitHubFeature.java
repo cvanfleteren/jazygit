@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.features.github.verdict.VerdictAction;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
@@ -32,6 +33,12 @@ public final class GitHubFeature {
                     added.add(scope, Binding.always("r", "github.help.prs.refresh", PrOverviewMsg.Refresh::new))));
 
     /**
+     * The shortcut that switches between the repository and the pull requests, wherever the focus is.
+     */
+    private static final FeatureAction SCREEN = FeatureAction.ofKeys(keys -> keys.global(
+            Keymap.Global.Dispatching.ofCtrl('p', "github.help.global.screen", PrOverviewMsg.Toggled::new)));
+
+    /**
      * The operations, in the order their keys are listed in a panel, the builds of a branch in the content panel
      * (ADR 131), and how gh runs in the settings panel (ADR 163).
      */
@@ -41,6 +48,7 @@ public final class GitHubFeature {
                     BuildsAction.ACTION,
                     CheckoutPullRequestAction.ACTION,
                     REFRESH,
+                    SCREEN,
                     CreatePullRequestAction.ACTION,
                     BrowseAction.ACTION,
                     ReviewAction.ACTION,

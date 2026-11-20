@@ -114,7 +114,10 @@ class HelpDialogTest {
         for (String scope : List.of(Scopes.FILES.id(), Scopes.BRANCHES.id(), Scopes.COMMITS.id(), Scopes.STASH.id())) {
             String screen = screen(scope);
             assertTrue(screen.contains("Global"), screen);
-            assertTrue(screen.contains("      ctrl+s Show the settings…"), screen);
+            // ? is the first global key listed, as it was before the features brought their own.
+            List<String> lines = List.of(screen.split("\n"));
+            int global = lines.indexWhere(line -> line.contains("Global"));
+            assertTrue(lines.get(global + 1).contains("? Show the keys of the panel"), screen);
         }
     }
 
@@ -142,9 +145,11 @@ class HelpDialogTest {
     @Test
     void theArrowsSkipTheHeadingsAndStopAtTheEnds() throws Exception {
         int panelKeys = Keymap.standard().bindings(Scopes.BRANCHES.id()).size();
-        // Past the panel keys, the legend and the heading, to the second global key, after ?.
+        // Past the panel keys, the legend and the heading, to the global key ctrl+r.
+        int ctrlR =
+                Keymap.standard().globals().indexWhere(global -> global.label().equals("ctrl+r"));
         assertEquals(List.of(new HelpMsg.Chosen(new RecentReposMsg.Requested())), press(onFeature(), r -> {
-            for (int i = 0; i < panelKeys + 1; i++) {
+            for (int i = 0; i < panelKeys + ctrlR; i++) {
                 SettledPilot.of(r).press(KeyCode.DOWN);
             }
             SettledPilot.of(r).press(KeyCode.ENTER);
@@ -176,8 +181,10 @@ class HelpDialogTest {
     @Test
     void theGlobalKeysRunToo() throws Exception {
         int panelKeys = Keymap.standard().bindings(Scopes.BRANCHES.id()).size();
+        int questionMark =
+                Keymap.standard().globals().indexWhere(global -> global.label().equals("?"));
         assertEquals(List.of(new HelpMsg.Chosen(new PopupMsg.Dismissed(HelpPopup.class))), press(onFeature(), r -> {
-            for (int i = 0; i < panelKeys; i++) {
+            for (int i = 0; i < panelKeys + questionMark; i++) {
                 SettledPilot.of(r).press(KeyCode.DOWN);
             }
             SettledPilot.of(r).press(KeyCode.ENTER);
