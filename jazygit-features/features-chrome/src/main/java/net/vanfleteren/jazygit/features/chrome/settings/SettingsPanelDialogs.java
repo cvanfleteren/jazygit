@@ -9,12 +9,15 @@ import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.kernel.state.settings.SettingsPanelPopup;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.settings.ListDialogs;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsRows;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSections;
 import net.vanfleteren.jazygit.kernel.ui.text.HomeDir;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
+import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog;
+import net.vanfleteren.jazygit.kernel.ui.widgets.TextInputDialog;
 
 /**
  * The settings panel: its own sections, how the UI looks and how git runs, then the sections the features add, then
@@ -102,10 +105,15 @@ public final class SettingsPanelDialogs {
     }
 
     /**
-     * The popups of this feature, which send what the user does to {@code dispatch}.
+     * The popups of this feature, which send what the user does to {@code dispatch}: the panel, and the dialogs that
+     * edit a list of the settings any section has (ADR 164).
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningToFocus(new ChoiceDialog<>(PANEL, dispatch)));
+        return List.of(
+                PopupSlot.returningToFocus(new ChoiceDialog<>(PANEL, dispatch)),
+                PopupSlot.returningToFocus(new PickDialog<>(ListDialogs.LIST, dispatch)),
+                PopupSlot.returningToFocus(new PickDialog<>(ListDialogs.FORM, dispatch)),
+                PopupSlot.returningToFocus(new TextInputDialog<>(ListDialogs.FIELD, dispatch)));
     }
 
     /**
