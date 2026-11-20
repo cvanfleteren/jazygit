@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github.settings;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.kernel.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.kernel.settings.Codec;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
@@ -30,7 +30,7 @@ public final class GitHubSettings {
             AccountBrowsers.NONE,
             Codec.of(
                     Codec.whole(AccountBrowsers::read, browsers -> browsers)::decode,
-                    (key, browsers) -> browsers.entries()));
+                    (key, browsers) -> browsers.entries(List.of(key.split("\\.")))));
 
     private GitHubSettings() {}
 

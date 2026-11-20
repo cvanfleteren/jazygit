@@ -23,7 +23,6 @@ import net.vanfleteren.jazygit.core.git.model.RemoteName;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
-import net.vanfleteren.jazygit.kernel.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;

@@ -12,8 +12,8 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
 import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
+import net.vanfleteren.jazygit.features.github.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
-import net.vanfleteren.jazygit.kernel.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
@@ -171,6 +171,26 @@ class StandardSettingsTest {
         assertEquals(
                 List.of("Kate"),
                 loaded.settings().get(EditorSettings.EDITORS).all().map(EditorProgram::name));
+    }
+
+    @Test
+    void editorsWithOneWrongEntryStillApplyWhenTheFileIsReadAgain() throws IOException {
+        SettingsFile file = file("");
+        Loaded before = file.load();
+        Files.writeString(dir.resolve("config.toml"), """
+                [[editors]]
+                name = "Broken"
+
+                [[editors]]
+                name = "Kate"
+                dir-command = ["kate"]
+                """);
+
+        SettingsStore.Applied applied = file.load().appliedTo(before.settings(), before);
+
+        assertEquals(
+                List.of("Kate"),
+                applied.settings().get(EditorSettings.EDITORS).all().map(EditorProgram::name));
     }
 
     @Test

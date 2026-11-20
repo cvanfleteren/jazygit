@@ -8,7 +8,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.gh.model.GhLogin;
-import net.vanfleteren.jazygit.kernel.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.settings.SettingsPanelPopup;
 import org.junit.jupiter.api.Test;
