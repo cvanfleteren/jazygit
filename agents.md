@@ -81,11 +81,10 @@ panel (`ContentSource`); actions on another feature's subject go through a hoste
 pane are `BranchBadges` (`Feature.badges`, through `badging`) (ADR 167). A feature uses only the features its module may
 depend on (ADR 159), and reaches anything else, such as a pane of a later group or a subject another feature produces,
 only through an extension point, as `features-agent` does (ADR 161). New feature state goes in the feature's own part,
-not
-in a new field of a kernel record. The failed-checks agent action is the reference pattern: a forge produces a neutral
-subject, and an action consumes it without knowing which forge produced it. When you add a feature, first ask which
-extension point it plugs into. If none fits, add a general one rather than a special case, and enforce the boundary
-through module dependencies, not just tests.
+not in a new field of a kernel record. The failed-checks agent action is the reference pattern: a forge produces a
+neutral subject, and an action consumes it without knowing which forge produced it. When you add a feature, first ask
+which extension point it plugs into. If none fits, add a general one rather than a special case, and enforce the
+boundary through module dependencies, not just tests.
 
 ## UI conventions
 - An action that does not apply right now shows disabled, with the reason, in its menu or dialog; it stays visible.
