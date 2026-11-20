@@ -4,6 +4,7 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.Programs;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
@@ -48,7 +49,7 @@ public final class Prompt {
                 BRANCH,
                 build.branch().value(),
                 COMMIT,
-                build.commit().getOrElse(""),
+                build.commit().map(Sha::value).getOrElse(""),
                 PR,
                 build.changeRequest()
                         .map(request -> String.valueOf(request.number()))
@@ -85,10 +86,11 @@ public final class Prompt {
      */
     private static String standard(FailedBuild build, Option<ForgeAccount> account) {
         String where = build.repository().map(repo -> " of " + repo).getOrElse("");
-        String commit =
-                build.commit().map(sha -> " at commit " + sha).getOrElse(" at the tip of the branch on the remote");
+        String commit = build.commit()
+                .map(sha -> " at commit " + sha.value())
+                .getOrElse(" at the tip of the branch on the remote");
         String compare = build.commit()
-                .map(sha -> "git log " + sha + "..HEAD and git log HEAD.." + sha)
+                .map(sha -> "git log " + sha.value() + "..HEAD and git log HEAD.." + sha.value())
                 .getOrElse("git log @{upstream}..HEAD and git log HEAD..@{upstream}");
         String request = build.changeRequest()
                 .map(change -> " (" + change.noun() + " #" + change.number() + ")")

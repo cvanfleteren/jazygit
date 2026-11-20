@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 
 /**
@@ -28,7 +29,7 @@ public final class FailedBuilds {
         return new FailedBuild(
                 Option.none(),
                 branch,
-                Option.of(build.sha()),
+                Sha.parse(build.sha()),
                 pullRequest.map(FailedBuilds::request),
                 failures.map(Failure::job),
                 build.outcome() == Build.Outcome.RUNNING,

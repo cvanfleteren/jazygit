@@ -58,7 +58,7 @@ class InvestigateUpdateTest {
         return new FailedBuild(
                 Option.of("o/r"),
                 branch,
-                Option.of("abc123"),
+                Option.of(new Sha("abc123")),
                 Option.of(new FailedBuild.ChangeRequest("merge request", 12)),
                 jobs,
                 running,
