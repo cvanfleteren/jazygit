@@ -4,7 +4,6 @@ import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.FileAt;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -44,9 +43,10 @@ public record ReadWorkflows(FileAt file) implements Cmd {
      * fetched once the pull request is merged and its branch deleted, and GitHub still has it (ADR 138).
      */
     private static Option<Workflow> read(Env env, FileAt at) {
-        return Sha.parse(at.sha())
-                .toEither(() -> "")
-                .flatMap(sha -> env.git().diffs().treeText(sha, at.path()).mapLeft(error -> ""))
+        return env.git()
+                .diffs()
+                .treeText(at.sha(), at.path())
+                .mapLeft(error -> "")
                 .orElse(() ->
                         env.gitHub().checks().workflowFile(at.sha(), at.path()).mapLeft(error -> ""))
                 .toOption()

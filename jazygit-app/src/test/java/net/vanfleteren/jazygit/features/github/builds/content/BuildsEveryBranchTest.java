@@ -65,7 +65,7 @@ class BuildsEveryBranchTest {
                 "pull_request",
                 runId,
                 1,
-                sha,
+                new Sha(sha),
                 "Commit " + runId,
                 AT.plusSeconds(600 * runId),
                 List.of(new Build.Job(

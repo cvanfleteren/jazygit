@@ -10,6 +10,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
@@ -21,6 +22,9 @@ import org.junit.jupiter.api.Test;
 class BuildsSourceTest {
 
     private static final BranchName FEAT = new BranchName("feat");
+    private static final String AAA = "a".repeat(40);
+    private static final String MAIN = "b".repeat(40);
+    private static final String FEAT_TIP = "c".repeat(40);
     private static final Instant T = Instant.parse("2026-11-19T10:00:00Z");
 
     private static Build build(long run, String sha) {
@@ -29,13 +33,13 @@ class BuildsSourceTest {
                 "push",
                 run,
                 1,
-                sha,
+                new Sha(sha),
                 "Commit " + run,
                 T,
                 List.of(new Build.Job("verify", "FAILURE", Option.of(T), Option.of(T))));
     }
 
-    private static BuildsShown shown(List<Build> builds, boolean allBranches, Set<String> mine, long picked) {
+    private static BuildsShown shown(List<Build> builds, boolean allBranches, Set<Sha> mine, long picked) {
         return new BuildsShown(
                 List.empty(),
                 List.empty(),
@@ -52,19 +56,21 @@ class BuildsSourceTest {
     @Test
     void theBuildOnTheTimeLineOfTheBranchIsHandedOver() {
         Option<FailedBuild> failed = BuildsSource.failedBuild(
-                FEAT, shown(List.of(build(401, "aaa")), false, HashSet.empty(), 401), Option.none());
+                FEAT, shown(List.of(build(401, AAA)), false, HashSet.empty(), 401), Option.none());
 
-        assertEquals(Option.of("aaa"), failed.flatMap(FailedBuild::commit));
+        assertEquals(Option.of(new Sha(AAA)), failed.flatMap(FailedBuild::commit));
     }
 
     @Test
     void withEveryBranchShownTheRunOfAnotherBranchIsNotHandedOverAsThisOnes() {
-        BuildsShown other = shown(List.of(build(401, "main1"), build(402, "feat1")), true, HashSet.of("feat1"), 401);
-        BuildsShown own = shown(List.of(build(401, "main1"), build(402, "feat1")), true, HashSet.of("feat1"), 402);
+        BuildsShown other =
+                shown(List.of(build(401, MAIN), build(402, FEAT_TIP)), true, HashSet.of(new Sha(FEAT_TIP)), 401);
+        BuildsShown own =
+                shown(List.of(build(401, MAIN), build(402, FEAT_TIP)), true, HashSet.of(new Sha(FEAT_TIP)), 402);
 
         assertEquals(Option.none(), BuildsSource.failedBuild(FEAT, other, Option.none()));
         assertEquals(
-                Option.of("feat1"),
+                Option.of(new Sha(FEAT_TIP)),
                 BuildsSource.failedBuild(FEAT, own, Option.none()).flatMap(FailedBuild::commit));
     }
 }

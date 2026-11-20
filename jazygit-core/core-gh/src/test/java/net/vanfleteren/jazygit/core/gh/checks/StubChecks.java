@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.gh.model.*;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * {@link Checks} for tests: a repository {@code owner/repo} without branches, checks or protected branches. Fakes
@@ -67,7 +68,7 @@ public interface StubChecks extends Checks {
      * A repository without the file: GitHub answers 404.
      */
     @Override
-    default Either<GhError, String> workflowFile(String sha, String path) {
+    default Either<GhError, String> workflowFile(Sha sha, String path) {
         return Either.left(new GhError.CommandFailed(Option.of("gh: Not Found (HTTP 404)"), 1));
     }
 

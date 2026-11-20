@@ -67,7 +67,7 @@ class CheckOutStackTest {
                     State.OPEN,
                     new GhBranch("feat/a"),
                     new GhBranch("main"),
-                    Option.of("1".repeat(40)),
+                    Option.of(new Sha("1".repeat(40))),
                     false),
             new Entry(
                     3,
@@ -75,7 +75,7 @@ class CheckOutStackTest {
                     State.OPEN,
                     new GhBranch("feat/b"),
                     new GhBranch("feat/a"),
-                    Option.of("b".repeat(40)),
+                    Option.of(new Sha("b".repeat(40))),
                     false),
             new Entry(
                     4,
@@ -83,7 +83,7 @@ class CheckOutStackTest {
                     State.OPEN,
                     new GhBranch("feat/c"),
                     new GhBranch("feat/b"),
-                    Option.of("c".repeat(40)),
+                    Option.of(new Sha("c".repeat(40))),
                     false));
 
     private static PullRequestStack stack(List<Entry> entries, int position) {
@@ -274,7 +274,7 @@ class CheckOutStackTest {
                         State.OPEN,
                         Option.of(new GhBranch("feat/c")),
                         Option.of(new GhBranch("feat/b")),
-                        Option.of("c".repeat(40)),
+                        Option.of(new Sha("c".repeat(40))),
                         false,
                         true));
 

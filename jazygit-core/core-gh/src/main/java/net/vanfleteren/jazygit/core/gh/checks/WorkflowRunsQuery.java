@@ -17,9 +17,12 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.gh.graphql.ObjectIds;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.WorkflowRunsPage;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -53,11 +56,11 @@ final class WorkflowRunsQuery {
     // Whether a run is done, its commit, its branch, its pull request and its jobs.
     static final Decoder<Suite> SUITE = map5(
             field("status", string()).map(status -> status.equals("COMPLETED")),
-            field("branch", nullable(field("name", string()))),
+            field("branch", nullable(field("name", string().map(BranchName::new)))),
             field(
                     "commit",
                     map2(
-                            field("oid", string()),
+                            field("oid", ObjectIds.SHA),
                             field("message", string()),
                             (oid, message) ->
                                     new Commit(oid, message.lines().findFirst().orElse("")))),
@@ -120,10 +123,14 @@ final class WorkflowRunsQuery {
                 Run::new);
     }
 
-    private record Commit(String sha, String title) {}
+    private record Commit(Sha sha, String title) {}
 
     private record Suite(
-            boolean done, Option<String> branch, Commit commit, Option<Integer> pullRequest, List<Build.Job> jobs) {}
+            boolean done,
+            Option<BranchName> branch,
+            Commit commit,
+            Option<Integer> pullRequest,
+            List<Build.Job> jobs) {}
 
     private record RunsRead(Option<String> next, List<Run> runs) {}
 

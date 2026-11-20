@@ -116,12 +116,12 @@ class CliBaseDistanceTest {
     @Test
     void theCountsAreTheTipThenTheCommitsAheadAndBehindOfEachBase() {
         Sha tip = new Sha("a".repeat(40));
-        List<String> commits = List.of("1111", "2222");
+        List<Sha> commits = List.of(new Sha("1111"), new Sha("2222"));
         HashMap<BranchName, CliBaseDistance.Base> branches = HashMap.of(
                 FEATURE,
-                new CliBaseDistance.Base(ORIGIN_MAIN, "2222"),
+                new CliBaseDistance.Base(ORIGIN_MAIN, new Sha("2222")),
                 STACKED,
-                new CliBaseDistance.Base(new BranchRef.Local(FEATURE), "1111"));
+                new CliBaseDistance.Base(new BranchRef.Local(FEATURE), new Sha("1111")));
 
         assertEquals(
                 HashMap.of(
@@ -189,14 +189,15 @@ class CliBaseDistanceTest {
     void eachBranchTakesTheCommitOfTheFirstBaseThatIsThere() {
         assertEquals(
                 List.of(
-                        io.vavr.Tuple.of(FEATURE, new CliBaseDistance.Base(ORIGIN_MAIN, "2222")),
-                        io.vavr.Tuple.of(STACKED, new CliBaseDistance.Base(new BranchRef.Local(FEATURE), "1111"))),
+                        io.vavr.Tuple.of(FEATURE, new CliBaseDistance.Base(ORIGIN_MAIN, new Sha("2222"))),
+                        io.vavr.Tuple.of(
+                                STACKED, new CliBaseDistance.Base(new BranchRef.Local(FEATURE), new Sha("1111")))),
                 CliBaseDistance.bases(
                         HashMap.of(
-                                "refs/heads/feature", "1111",
-                                "refs/heads/main", "3333",
-                                "refs/heads/stacked", "4444",
-                                "refs/remotes/origin/main", "2222"),
+                                "refs/heads/feature", new Sha("1111"),
+                                "refs/heads/main", new Sha("3333"),
+                                "refs/heads/stacked", new Sha("4444"),
+                                "refs/remotes/origin/main", new Sha("2222")),
                         HashMap.of(STACKED, FEATURE),
                         Option.of(MAIN)));
     }

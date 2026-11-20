@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Where a pull request sits in a stack of them: each one targets the branch of the one below it, and the bottom one
@@ -74,7 +75,7 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
             State state,
             Option<GhBranch> headBranch,
             Option<GhBranch> baseBranch,
-            Option<String> headOid,
+            Option<Sha> headOid,
             boolean queued,
             boolean fork) {
 
@@ -87,7 +88,7 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
                 State state,
                 GhBranch headBranch,
                 GhBranch baseBranch,
-                Option<String> headOid,
+                Option<Sha> headOid,
                 boolean queued) {
             this(position, number, state, Option.of(headBranch), Option.of(baseBranch), headOid, queued, false);
         }

@@ -50,7 +50,7 @@ class BuildsWorkflowsTest {
                         "push",
                         index,
                         1,
-                        "abcdef" + index,
+                        new Sha("abcdef" + index),
                         "Commit " + index,
                         Instant.parse("2026-11-14T00:00:00Z").plusSeconds(600L * index),
                         BuildsFixtures.BUILD
@@ -101,7 +101,7 @@ class BuildsWorkflowsTest {
                         Option.of("c25"),
                         Option.of(new BuildsPage(List.empty(), 25, Option.none()))));
 
-        FileAt publish = new FileAt("abcdef0", ".github/workflows/publish.yml");
+        FileAt publish = new FileAt(new Sha("abcdef0"), ".github/workflows/publish.yml");
         assertEquals(
                 List.of(new ReadWorkflows(publish), new LoadBuilds(BuildsFixtures.ORIGIN_MAIN, Option.of("c25"))),
                 read.cmds());
@@ -115,7 +115,7 @@ class BuildsWorkflowsTest {
                 "push",
                 1,
                 1,
-                "abcdef0",
+                new Sha("abcdef0"),
                 "A commit",
                 Instant.parse("2026-11-14T23:00:00Z"),
                 List.of(
@@ -134,7 +134,7 @@ class BuildsWorkflowsTest {
                                 Option.none(),
                                 Option.of(new BuildsPage(List.of(withFile), 3, Option.none()))))
                 .model();
-        FileAt publish = new FileAt("abcdef0", ".github/workflows/publish.yml");
+        FileAt publish = new FileAt(new Sha("abcdef0"), ".github/workflows/publish.yml");
 
         Model known = Update.update(
                         read,
@@ -165,14 +165,14 @@ class BuildsWorkflowsTest {
                 }),
                 StubGitHub.of());
 
-        BuildsMsg.WorkflowsRead read =
-                (BuildsMsg.WorkflowsRead) new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
+        BuildsMsg.WorkflowsRead read = (BuildsMsg.WorkflowsRead)
+                new ReadWorkflows(new FileAt(new Sha(sha), ".github/workflows/publish.yml")).run(env);
 
         assertEquals(2, read.workflows().size());
         assertEquals(
                 List.of("test"),
                 read.workflows()
-                        .get(new FileAt(sha, ".github/workflows/build.yml"))
+                        .get(new FileAt(new Sha(sha), ".github/workflows/build.yml"))
                         .get()
                         .get()
                         .jobs()
@@ -186,23 +186,23 @@ class BuildsWorkflowsTest {
         ArrayList<String> asked = new ArrayList<>();
         Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
             @Override
-            public Either<GhError, String> workflowFile(String at, String path) {
+            public Either<GhError, String> workflowFile(Sha at, String path) {
                 asked.add(path);
-                return at.equals(sha) && path.equals(".github/workflows/publish.yml")
+                return at.value().equals(sha) && path.equals(".github/workflows/publish.yml")
                         ? Either.right("jobs:\n  verify:\n    uses: ./.github/workflows/build.yml\n")
-                        : at.equals(sha) && path.equals(".github/workflows/build.yml")
+                        : at.value().equals(sha) && path.equals(".github/workflows/build.yml")
                                 ? Either.right("jobs:\n  test: {}\n")
                                 : StubChecks.super.workflowFile(at, path);
             }
         }));
 
-        BuildsMsg.WorkflowsRead read =
-                (BuildsMsg.WorkflowsRead) new ReadWorkflows(new FileAt(sha, ".github/workflows/publish.yml")).run(env);
+        BuildsMsg.WorkflowsRead read = (BuildsMsg.WorkflowsRead)
+                new ReadWorkflows(new FileAt(new Sha(sha), ".github/workflows/publish.yml")).run(env);
 
         assertEquals(
                 List.of("test"),
                 read.workflows()
-                        .get(new FileAt(sha, ".github/workflows/build.yml"))
+                        .get(new FileAt(new Sha(sha), ".github/workflows/build.yml"))
                         .get()
                         .get()
                         .jobs()
@@ -222,16 +222,16 @@ class BuildsWorkflowsTest {
                 }),
                 StubGitHub.of().withChecks(new StubChecks() {
                     @Override
-                    public Either<GhError, String> workflowFile(String at, String path) {
+                    public Either<GhError, String> workflowFile(Sha at, String path) {
                         throw new AssertionError("asked GitHub for " + path);
                     }
                 }));
 
-        BuildsMsg.WorkflowsRead read =
-                (BuildsMsg.WorkflowsRead) new ReadWorkflows(new FileAt(sha, ".github/workflows/build.yml")).run(env);
+        BuildsMsg.WorkflowsRead read = (BuildsMsg.WorkflowsRead)
+                new ReadWorkflows(new FileAt(new Sha(sha), ".github/workflows/build.yml")).run(env);
 
         assertTrue(read.workflows()
-                .get(new FileAt(sha, ".github/workflows/build.yml"))
+                .get(new FileAt(new Sha(sha), ".github/workflows/build.yml"))
                 .get()
                 .isDefined());
     }
@@ -239,7 +239,7 @@ class BuildsWorkflowsTest {
     @Test
     void aWorkflowThatCannotBeReadIsNone() {
         Env env = new Env(StubGit.of(), StubGitHub.of());
-        FileAt file = new FileAt("abcdef0123456789abcdef0123456789abcdef01", ".github/workflows/gone.yml");
+        FileAt file = new FileAt(new Sha("abcdef0123456789abcdef0123456789abcdef01"), ".github/workflows/gone.yml");
 
         assertEquals(new BuildsMsg.WorkflowsRead(HashMap.of(file, Option.none())), new ReadWorkflows(file).run(env));
     }
@@ -250,11 +250,11 @@ class BuildsWorkflowsTest {
         // reached (ADR 138).
         Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
             @Override
-            public Either<GhError, String> workflowFile(String at, String path) {
+            public Either<GhError, String> workflowFile(Sha at, String path) {
                 return Either.left(new GhError.TimedOut("api"));
             }
         }));
-        FileAt publish = new FileAt("abcdef0", ".github/workflows/publish.yml");
+        FileAt publish = new FileAt(new Sha("abcdef0"), ".github/workflows/publish.yml");
         Model shown = Update.update(BuildsFixtures.model(), new BuildsMsg.Toggled(BuildsFixtures.MAIN))
                 .model();
         Next read = Update.update(

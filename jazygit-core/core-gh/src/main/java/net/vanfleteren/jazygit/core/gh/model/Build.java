@@ -7,6 +7,8 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * A workflow run on a commit of a branch, with its jobs: one build of the branch (ADR 131).
@@ -28,7 +30,7 @@ public record Build(
         String event,
         long runId,
         int attempt,
-        String sha,
+        Sha sha,
         String title,
         Instant createdAt,
         List<Job> jobs,
@@ -46,7 +48,7 @@ public record Build(
             String event,
             long runId,
             int attempt,
-            String sha,
+            Sha sha,
             String title,
             Instant createdAt,
             List<Job> jobs) {
@@ -61,7 +63,7 @@ public record Build(
             String event,
             long runId,
             int attempt,
-            String sha,
+            Sha sha,
             String title,
             Instant createdAt,
             List<Job> jobs,
@@ -125,7 +127,7 @@ public record Build(
      * @param branch      the branch it ran on; none when GitHub does not say, as of a branch deleted since
      * @param pullRequest the number of the pull request it ran for, if it ran for one
      */
-    public record Origin(Option<String> workflowId, Option<String> branch, Option<Integer> pullRequest) {
+    public record Origin(Option<String> workflowId, Option<BranchName> branch, Option<Integer> pullRequest) {
 
         public static final Origin NONE = new Origin(Option.none(), Option.none(), Option.none());
     }

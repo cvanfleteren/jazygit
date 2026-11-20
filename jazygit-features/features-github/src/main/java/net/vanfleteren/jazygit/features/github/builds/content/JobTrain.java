@@ -332,7 +332,7 @@ final class JobTrain {
          * How it ended: as a build of its members would.
          */
         Outcome outcome() {
-            return new Build("", "", 0, 1, "", "", start(), members).outcome();
+            return Outcome.of(members);
         }
 
         /**

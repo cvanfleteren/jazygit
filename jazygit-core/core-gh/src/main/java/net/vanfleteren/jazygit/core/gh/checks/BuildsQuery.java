@@ -27,12 +27,14 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.Comparator;
 import net.vanfleteren.jazygit.core.gh.graphql.CheckFragment;
+import net.vanfleteren.jazygit.core.gh.graphql.ObjectIds;
 import net.vanfleteren.jazygit.core.gh.graphql.SuiteFragment;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -112,7 +114,7 @@ final class BuildsQuery {
     // The builds on one commit, the newest first. Its title is the first line of its message, as GitHub's
     // messageHeadline cuts it off at 72 characters with an ellipsis.
     static final Decoder<List<Build>> COMMIT = map4(
-            field("oid", string()),
+            field("oid", ObjectIds.SHA),
             field("message", string())
                     .map(message -> message.lines().findFirst().orElse("")),
             CHECKS,
@@ -173,7 +175,7 @@ final class BuildsQuery {
      * first: its check runs grouped by their workflow run, and its workflow runs waiting to start without a job, of an
      * event that builds the code.
      */
-    private static List<Build> builds(String sha, String title, List<Tuple2<Check, Workflow>> checks, List<Held> held) {
+    private static List<Build> builds(Sha sha, String title, List<Tuple2<Check, Workflow>> checks, List<Held> held) {
         List<Tuple3<String, CheckRun, Workflow>> runs = checks.flatMap(
                         check -> check._1().run().map(run -> Tuple.of(check._1().name(), run, check._2())))
                 .filter(named -> EVENTS.contains(named._2().event()));
@@ -217,7 +219,7 @@ final class BuildsQuery {
      */
     record Held(String workflow, String event, long runId, int attempt, Instant createdAt, Workflow source) {
 
-        Build build(String sha, String title) {
+        Build build(Sha sha, String title) {
             return new Build(
                     workflow,
                     event,

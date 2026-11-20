@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.Test;
 class FailedBuildsTest {
 
     private static final BranchName FEAT = new BranchName("feat");
+    private static final String COMMIT = "0123456789abcdef0123456789abcdef01234567";
     private static final Instant T = Instant.parse("2026-11-19T10:00:00Z");
 
     private static Build.Job job(String name, String conclusion) {
@@ -42,7 +44,7 @@ class FailedBuildsTest {
                 "push",
                 401,
                 1,
-                "abc123",
+                new Sha(COMMIT),
                 "Fix",
                 T,
                 List.of(job("verify", "FAILURE"), job("lint", "SUCCESS"), job("docs", "TIMED_OUT")));
@@ -52,7 +54,7 @@ class FailedBuildsTest {
         assertEquals(
                 List.of(new FailedBuild.Job("verify", Option.none()), new FailedBuild.Job("docs", Option.none())),
                 failed.jobs());
-        assertEquals(Option.of("abc123"), failed.commit());
+        assertEquals(Option.of(new Sha(COMMIT)), failed.commit());
         assertFalse(failed.running());
         assertEquals("gh run view 401 --log-failed", failed.logs());
     }
@@ -61,7 +63,7 @@ class FailedBuildsTest {
     void thePullRequestOfTheBranchIsHandedOverAsTheChangeRequestTheForgeCallsIt() {
         PullRequest pullRequest =
                 new PullRequest(new PrNumber(12), new GhBranch("feat"), false, Checks.FAILING, Review.NONE);
-        Build build = new Build("CI", "push", 401, 1, "abc123", "Fix", T, List.of(job("verify", "FAILURE")));
+        Build build = new Build("CI", "push", 401, 1, new Sha(COMMIT), "Fix", T, List.of(job("verify", "FAILURE")));
 
         assertEquals(
                 Option.of(new FailedBuild.ChangeRequest("pull request", 12)),
@@ -75,8 +77,8 @@ class FailedBuildsTest {
 
     @Test
     void aBuildWithAJobStillRunningIsRunning() {
-        Build build =
-                new Build("CI", "push", 401, 1, "abc123", "Fix", T, List.of(job("verify", "FAILURE"), job("e2e", "")));
+        Build build = new Build(
+                "CI", "push", 401, 1, new Sha(COMMIT), "Fix", T, List.of(job("verify", "FAILURE"), job("e2e", "")));
 
         FailedBuild failed = FailedBuilds.of(FEAT, build, Option.none());
 

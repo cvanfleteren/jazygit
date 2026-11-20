@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.process.Limited;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -23,7 +24,8 @@ class WorkflowFileQueryTest {
                         "Accept: application/vnd.github.raw",
                         "repos/{owner}/{repo}/contents/.github/workflows/build.yml"
                                 + "?ref=868abc7105503ff12f23c6dfbad4e8cd9089c419"),
-                WorkflowFileQuery.command("868abc7105503ff12f23c6dfbad4e8cd9089c419", ".github/workflows/build.yml")
+                WorkflowFileQuery.command(
+                                new Sha("868abc7105503ff12f23c6dfbad4e8cd9089c419"), ".github/workflows/build.yml")
                         .executed()
                         .commandLine());
     }
@@ -43,7 +45,7 @@ class WorkflowFileQueryTest {
     void aPathIsEncodedSegmentBySegment() {
         assertEquals(
                 "repos/{owner}/{repo}/contents/.github/workflows/my%20build%23.yml?ref=abc",
-                WorkflowFileQuery.command("abc", ".github/workflows/my build#.yml")
+                WorkflowFileQuery.command(new Sha("abc"), ".github/workflows/my build#.yml")
                         .executed()
                         .commandLine()
                         .last());

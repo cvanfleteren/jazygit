@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -68,10 +69,10 @@ class StackFragmentTest {
         Option<PullRequestStack> read = stack("""
                         { "stackEntry": { "position": 2 }, "stack": { "number": 7, "size": 2, "entries": { "nodes": [
                           { "position": 1, "pullRequest": { "number": 94, "state": "MERGED",
-                            "headRefName": "feat/a", "baseRefName": "main", "headRefOid": "abc123",
+                            "headRefName": "feat/a", "baseRefName": "main", "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                             "isInMergeQueue": false } },
                           { "position": 2, "pullRequest": { "number": 95, "state": "OPEN",
-                            "headRefName": "feat/b", "baseRefName": "feat/a", "headRefOid": "def456",
+                            "headRefName": "feat/b", "baseRefName": "feat/a", "headRefOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                             "isInMergeQueue": true } } ] } } }""").get();
 
         assertEquals(
@@ -82,7 +83,7 @@ class StackFragmentTest {
                                 State.MERGED,
                                 new GhBranch("feat/a"),
                                 new GhBranch("main"),
-                                Option.of("abc123"),
+                                Option.of(new Sha("a".repeat(40))),
                                 false),
                         new PullRequestStack.Entry(
                                 2,
@@ -90,7 +91,7 @@ class StackFragmentTest {
                                 State.OPEN,
                                 new GhBranch("feat/b"),
                                 new GhBranch("feat/a"),
-                                Option.of("def456"),
+                                Option.of(new Sha("b".repeat(40))),
                                 true))),
                 read.map(PullRequestStack::entries));
     }
@@ -100,7 +101,7 @@ class StackFragmentTest {
         Option<PullRequestStack> read = stack("""
                         { "stackEntry": { "position": 1 }, "stack": { "number": 7, "size": 1, "entries": { "nodes": [
                           { "position": 1, "pullRequest": { "number": 94, "state": "OPEN",
-                            "headRefName": "feat/a", "baseRefName": "main", "headRefOid": "abc123",
+                            "headRefName": "feat/a", "baseRefName": "main", "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                             "isInMergeQueue": false, "isCrossRepository": true } } ] } } }""").get();
 
         assertEquals(
@@ -110,7 +111,7 @@ class StackFragmentTest {
                         State.OPEN,
                         Option.of(new GhBranch("feat/a")),
                         Option.of(new GhBranch("main")),
-                        Option.of("abc123"),
+                        Option.of(new Sha("a".repeat(40))),
                         false,
                         true))),
                 read.map(PullRequestStack::entries));

@@ -18,6 +18,8 @@ import java.util.Comparator;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.Build.Outcome;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -222,13 +224,6 @@ final class BuildsText {
     }
 
     /**
-     * The first seven characters of {@code sha}, as the builds show a commit.
-     */
-    private static String shortSha(String sha) {
-        return sha.substring(0, Math.min(7, sha.length()));
-    }
-
-    /**
      * How much longer than {@code median} {@code build} took, when it passed.
      */
     private static Option<Duration> difference(Build build, Option<Duration> median) {
@@ -324,7 +319,7 @@ final class BuildsText {
     private record Drawing(
             Theme.SpanStyles styles,
             Map<Long, Map<String, Set<String>>> needs,
-            Set<String> mine,
+            Set<Sha> mine,
             boolean allBranches,
             Option<BuildsShown.Baseline> baseline,
             int of,
@@ -552,7 +547,7 @@ final class BuildsText {
             return build.origin()
                     .pullRequest()
                     .map(number -> "#" + number)
-                    .orElse(build.origin().branch())
+                    .orElse(build.origin().branch().map(BranchName::value))
                     .getOrElse("–");
         }
 
@@ -680,15 +675,7 @@ final class BuildsText {
                         Line header = Line.from(List.of(
                                         outcome(build.outcome()),
                                         Span.raw(" "),
-                                        span(
-                                                build.sha()
-                                                        .substring(
-                                                                0,
-                                                                Math.min(
-                                                                        7,
-                                                                        build.sha()
-                                                                                .length())),
-                                                Theme.Classes.SHA),
+                                        span(build.sha().shortSha(), Theme.Classes.SHA),
                                         Span.raw(" " + build.title()),
                                         dim(Messages.get(
                                                 chosen ? "github.builds.pickedBuild" : "github.builds.lastBuild",
@@ -745,7 +732,7 @@ final class BuildsText {
                                             .max()
                                             .getOrElse(0)
                                     + 1),
-                    widest(builds.map(build -> shortSha(build.sha())), "github.builds.commit"),
+                    widest(builds.map(build -> build.sha().shortSha()), "github.builds.commit"),
                     // A day of two digits is reserved for, so that the column stays put as older builds are read.
                     widest(
                             builds.map(build -> when.format(build.createdAt())).append(when.format(WIDEST_DAY)),
@@ -796,7 +783,7 @@ final class BuildsText {
                             outcome(build.outcome()), chosen ? span(PICKED, Theme.Classes.BOLD) : Span.raw(" "))
                     .appendAll(forWhat(build, columns))
                     .appendAll(List.of(
-                            span(padRight(shortSha(build.sha()), columns.commit()), Theme.Classes.SHA),
+                            span(padRight(build.sha().shortSha(), columns.commit()), Theme.Classes.SHA),
                             dim(GAP + padLeft(when.format(build.createdAt()), columns.when()) + GAP),
                             Span.raw(padLeft(
                                     build.duration().map(BuildsText::duration).getOrElse("–"), columns.time())),

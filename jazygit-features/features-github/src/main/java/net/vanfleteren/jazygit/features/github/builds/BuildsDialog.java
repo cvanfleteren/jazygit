@@ -69,14 +69,7 @@ public final class BuildsDialog {
                             Option.of(build.runId()),
                             List.of(
                                     outcome(Option.of(build.outcome())),
-                                    Cell.styled(
-                                            build.sha()
-                                                    .substring(
-                                                            0,
-                                                            Math.min(
-                                                                    7,
-                                                                    build.sha().length())),
-                                            Theme.Classes.SHA),
+                                    Cell.styled(build.sha().shortSha(), Theme.Classes.SHA),
                                     Cell.styled(WHEN.format(build.createdAt()), Theme.Classes.DIM),
                                     Cell.of(build.duration().map(TimeText::took).getOrElse("–")),
                                     Cell.of(build.title()).capped(50),

@@ -14,7 +14,6 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Revision;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.StackLayer;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError.StackRefusal;
@@ -151,7 +150,6 @@ public record StackRebase(
     private static List<Revision> where(Model model, RemoteName remote, PullRequestStack.Entry entry) {
         Option<BranchName> name = entry.headBranch().map(FromGitHub::branch);
         return entry.headOid()
-                .flatMap(Sha::parse)
                 .<Revision>map(Revision.Commit::new)
                 .toList()
                 .appendAll(name.flatMap(known -> model.repo().remoteBranch(new RemoteBranch(remote, known)))

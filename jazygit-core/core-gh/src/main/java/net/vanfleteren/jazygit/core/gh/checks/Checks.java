@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.*;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * How the CI checks are doing on the branches of the repository, how long they take, and which branches are
@@ -53,7 +54,7 @@ public interface Checks {
      * The file at {@code path} of the commit {@code sha} of the repository, as GitHub has it: the file of a workflow of
      * a build whose commit is not fetched (ADR 138).
      */
-    Either<GhError, String> workflowFile(String sha, String path);
+    Either<GhError, String> workflowFile(Sha sha, String path);
 
     /**
      * The names of the protected branches of the repository (ADR 72).

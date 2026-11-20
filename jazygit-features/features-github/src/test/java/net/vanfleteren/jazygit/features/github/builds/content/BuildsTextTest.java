@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
@@ -45,7 +46,7 @@ class BuildsTextTest {
                 "push",
                 index,
                 1,
-                "abcdef0" + index,
+                new Sha("abcdef0" + index),
                 "Commit " + index,
                 MIDNIGHT.plusSeconds(start),
                 List.of(
@@ -271,7 +272,7 @@ class BuildsTextTest {
                 "push",
                 2,
                 1,
-                "abcdef02",
+                new Sha("abcdef02"),
                 "Commit 2",
                 MIDNIGHT.plusSeconds(7200),
                 List.of(job("package", "SUCCESS", 7200 + 168, 7200 + 413)));
@@ -280,7 +281,7 @@ class BuildsTextTest {
                 "push",
                 1,
                 2,
-                "abcdef01",
+                new Sha("abcdef01"),
                 "Commit 1",
                 MIDNIGHT.plusSeconds(3600),
                 List.of(job("package", "SUCCESS", 5000, 5240)));
@@ -299,7 +300,7 @@ class BuildsTextTest {
                 "push",
                 3,
                 1,
-                "abcdef03",
+                new Sha("abcdef03"),
                 "Commit 3",
                 MIDNIGHT.plusSeconds(10800),
                 List.of(new Build.Job("package", "", Option.none(), Option.none())));
@@ -314,8 +315,8 @@ class BuildsTextTest {
     @Test
     void aBuildHeldBackByItsConcurrencyGroupRunsWithoutATimeYet() {
         // GitHub gives it no job until the build before it is done.
-        Build held =
-                new Build("Publish", "push", 3, 1, "abcdef03", "Commit 3", MIDNIGHT.plusSeconds(10800), List.empty());
+        Build held = new Build(
+                "Publish", "push", 3, 1, new Sha("abcdef03"), "Commit 3", MIDNIGHT.plusSeconds(10800), List.empty());
         List<String> lines = drawn(List.of(held, build("Publish", 1, "SUCCESS", 240)));
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
@@ -419,7 +420,8 @@ class BuildsTextTest {
     @Test
     void aLongBranchIsCutToTheWidestTheColumnOfWhatABuildRanForIs() {
         List<String> lines = drawnOnEveryBranch(
-                PUBLISH, new Build.Origin(Option.none(), Option.of("feature/a-long-branch"), Option.none()));
+                PUBLISH,
+                new Build.Origin(Option.none(), Option.of(new BranchName("feature/a-long-branch")), Option.none()));
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
         assertEquals("    for           commit   when           time  queued  vs median  title", lines.get(header));

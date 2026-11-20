@@ -277,7 +277,7 @@ class RebaseStackTest {
                         State.MERGED,
                         new GhBranch("feat/b"),
                         new GhBranch("main"),
-                        Option.of("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"),
+                        Option.of(new Sha("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0")),
                         false),
                 new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
                 new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
@@ -299,7 +299,7 @@ class RebaseStackTest {
                         State.MERGED,
                         new GhBranch("feat/b"),
                         new GhBranch("main"),
-                        Option.of("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"),
+                        Option.of(new Sha("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0")),
                         false),
                 new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
                 new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));

@@ -14,6 +14,7 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +36,7 @@ class JobTrainTest {
             "push",
             1,
             1,
-            "b17c669",
+            new Sha("b17c669"),
             "A sealed Focus",
             START,
             List.of(
@@ -132,7 +133,7 @@ class JobTrainTest {
                 "push",
                 1,
                 1,
-                "abc",
+                new Sha("abc"),
                 "Title",
                 START,
                 List.of(
@@ -154,7 +155,7 @@ class JobTrainTest {
                 "push",
                 1,
                 1,
-                "abc",
+                new Sha("abc"),
                 "Title",
                 START,
                 List.of(job("Publish fat-jar and native image / build", 2, 120), job("verify", 120, 240)));
@@ -236,7 +237,7 @@ class JobTrainTest {
                 "push",
                 1,
                 2,
-                "b17c669",
+                new Sha("b17c669"),
                 "A sealed Focus",
                 START,
                 BUILD.jobs()
@@ -274,7 +275,7 @@ class JobTrainTest {
                 "push",
                 1,
                 1,
-                "b17c669",
+                new Sha("b17c669"),
                 "A sealed Focus",
                 START,
                 BUILD.jobs()

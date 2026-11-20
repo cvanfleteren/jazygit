@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.build;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * What failed on one commit of a branch, as a view of a forge shows it, for an action on it, as handing it to an agent
@@ -22,7 +23,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 public record FailedBuild(
         Option<String> repository,
         BranchName branch,
-        Option<String> commit,
+        Option<Sha> commit,
         Option<ChangeRequest> changeRequest,
         List<Job> jobs,
         boolean running,

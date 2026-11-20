@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildPickPopup;
 import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
 import net.vanfleteren.jazygit.features.github.builds.BuildsAt;
@@ -80,7 +81,7 @@ public class BuildsPickTest {
                 "pull_request",
                 2,
                 1,
-                "abcdef0",
+                new Sha("abcdef0"),
                 "A commit",
                 BuildsFixtures.BUILD.createdAt(),
                 BuildsFixtures.BUILD.jobs());
@@ -163,7 +164,7 @@ public class BuildsPickTest {
                 "push",
                 2,
                 1,
-                "1234567",
+                new Sha("1234567"),
                 "Before",
                 BuildsFixtures.BUILD.createdAt().minusSeconds(3600),
                 BuildsFixtures.BUILD.jobs());
@@ -172,7 +173,7 @@ public class BuildsPickTest {
                 "pull_request",
                 3,
                 1,
-                "abcdef0",
+                new Sha("abcdef0"),
                 "A commit",
                 BuildsFixtures.BUILD.createdAt(),
                 BuildsFixtures.BUILD.jobs());
@@ -224,7 +225,7 @@ public class BuildsPickTest {
                 "push",
                 2,
                 1,
-                older,
+                new Sha(older),
                 "Before",
                 BuildsFixtures.BUILD.createdAt().minusSeconds(3600),
                 BuildsFixtures.BUILD.jobs()));
@@ -243,7 +244,8 @@ public class BuildsPickTest {
 
         Next picked = Update.update(asked, new BuildsMsg.BuildPicked(Option.of(2L)));
         assertTrue(picked.model().popup(BuildPickPopup.class).isEmpty());
-        assertEquals(List.of(new ReadWorkflows(new FileAt(older, ".github/workflows/publish.yml"))), picked.cmds());
+        assertEquals(
+                List.of(new ReadWorkflows(new FileAt(new Sha(older), ".github/workflows/publish.yml"))), picked.cmds());
         BuildsShown drawn = ((BuildsBody) ((Shown.Area) BuildsFixtures.content(picked.model())).body()).shown();
         assertEquals(Option.of(2L), drawn.picked());
 
@@ -292,14 +294,14 @@ public class BuildsPickTest {
 
     @Test
     void withNoBuildDoneNAndNPickTheNewest() {
-        Build running =
-                new Build("Build", "push", 1, 1, "abcdef0", "Running", BuildsFixtures.BUILD.createdAt(), List.empty());
+        Build running = new Build(
+                "Build", "push", 1, 1, new Sha("abcdef0"), "Running", BuildsFixtures.BUILD.createdAt(), List.empty());
         Build queued = new Build(
                 "Build",
                 "push",
                 2,
                 1,
-                "1234567",
+                new Sha("1234567"),
                 "Queued",
                 BuildsFixtures.BUILD.createdAt().minusSeconds(60),
                 List.empty());
@@ -340,14 +342,14 @@ public class BuildsPickTest {
      * The builds of the main branch, read: one running, then two done, titled "Running", "Done" and "Older".
      */
     public static Model steppable() {
-        Build tip = BuildsFixtures.withFile(
-                new Build("Build", "push", 1, 1, "abcdef0", "Running", BuildsFixtures.BUILD.createdAt(), List.empty()));
+        Build tip = BuildsFixtures.withFile(new Build(
+                "Build", "push", 1, 1, new Sha("abcdef0"), "Running", BuildsFixtures.BUILD.createdAt(), List.empty()));
         Build done = BuildsFixtures.withFile(new Build(
                 "Build",
                 "push",
                 2,
                 1,
-                "1234567",
+                new Sha("1234567"),
                 "Done",
                 BuildsFixtures.BUILD.createdAt().minusSeconds(60),
                 BuildsFixtures.BUILD.jobs()));
@@ -356,7 +358,7 @@ public class BuildsPickTest {
                 "push",
                 3,
                 1,
-                "7654321",
+                new Sha("7654321"),
                 "Older",
                 BuildsFixtures.BUILD.createdAt().minusSeconds(120),
                 BuildsFixtures.BUILD.jobs()));
