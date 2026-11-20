@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
 
 /**
- * The outcome of keeping the settings.
+ * The outcome of keeping the settings, and of showing the repository again with them.
  */
 public sealed interface SettingsMsg extends Msg {
 
@@ -33,4 +33,11 @@ public sealed interface SettingsMsg extends Msg {
      */
     record Carried(SettingsStore.Loaded file, Option<SettingsProblem> reported, Option<SettingsProblem> shown)
             implements SettingsMsg {}
+
+    /**
+     * The repository is shown again, with the settings changed; the app shows it with a model of its own already.
+     */
+    record ShownAgain() implements SettingsMsg {}
+
+    record NotShownAgain(Failure failure) implements SettingsMsg {}
 }

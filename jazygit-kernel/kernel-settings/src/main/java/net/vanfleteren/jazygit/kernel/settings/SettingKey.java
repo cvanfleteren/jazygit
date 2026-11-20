@@ -15,16 +15,18 @@ import lombok.With;
  * @param initial what it is when the file does not set it, or sets it to nothing valid
  * @param codec   how it is read from the file and kept there
  * @param kept    when it is kept in the file
+ * @param reopens whether it only applies to a repository shown anew, as the gh executable does, so that a change to it
+ *                shows the repository again
  * @param <T>     what it is
  */
 @With
-public record SettingKey<T>(String path, T initial, Codec<T> codec, Kept kept) {
+public record SettingKey<T>(String path, T initial, Codec<T> codec, Kept kept, boolean reopens) {
 
     /**
      * A setting at {@code path}, kept in the file once it differs from {@code initial}.
      */
     public static <T> SettingKey<T> of(String path, T initial, Codec<T> codec) {
-        return new SettingKey<>(path, initial, codec, Kept.WHEN_CHANGED);
+        return new SettingKey<>(path, initial, codec, Kept.WHEN_CHANGED, false);
     }
 
     /**
@@ -32,7 +34,14 @@ public record SettingKey<T>(String path, T initial, Codec<T> codec, Kept kept) {
      * it.
      */
     public static <T> SettingKey<T> userOwned(String path, T initial, Codec<T> codec) {
-        return new SettingKey<>(path, initial, codec, Kept.NEVER);
+        return new SettingKey<>(path, initial, codec, Kept.NEVER, false);
+    }
+
+    /**
+     * Whether {@code first} and {@code second} differ in this setting.
+     */
+    public boolean changed(Settings first, Settings second) {
+        return !first.get(this).equals(second.get(this));
     }
 
     /**
@@ -69,12 +78,5 @@ public record SettingKey<T>(String path, T initial, Codec<T> codec, Kept kept) {
      */
     Settings take(Settings to, Settings from) {
         return to.with(this, from.get(this));
-    }
-
-    /**
-     * Whether {@code first} and {@code second} differ in this setting.
-     */
-    boolean differs(Settings first, Settings second) {
-        return !first.get(this).equals(second.get(this));
     }
 }

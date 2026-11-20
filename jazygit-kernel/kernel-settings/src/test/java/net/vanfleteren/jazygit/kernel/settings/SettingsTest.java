@@ -48,7 +48,7 @@ class SettingsTest {
     @Test
     void eachSettingDiffersFromTheDefaultInTheChangedSettings() {
         List<String> same = KERNEL.all()
-                .filter(key -> !key.differs(Settings.DEFAULT, CHANGED))
+                .filter(key -> !key.changed(Settings.DEFAULT, CHANGED))
                 .map(SettingKey::path);
 
         // Only the user writes the editors, the diff filters and the agents.

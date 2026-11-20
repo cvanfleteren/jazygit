@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd;
-import net.vanfleteren.jazygit.features.chrome.settings.SettingsPanelCmd;
+import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimesCmd;
 import net.vanfleteren.jazygit.kernel.state.github.LoadBranchCheckRuns;
@@ -49,8 +49,8 @@ class BackgroundCmdTest {
                 new CommitFilesCmd.LoadReviewRemarks(new PrNumber(7), HashSet.empty(), 0),
                 new CheckTimesCmd.TopUpCheckTimes("owner/repo", Instant.EPOCH),
                 new CheckTimesCmd.RecordCheckTimes("owner/repo", List.empty(), Instant.EPOCH, false),
-                new SettingsPanelCmd.CheckGhExecutable(Option.none()),
-                new SettingsPanelCmd.ReadGitHub("gh"));
+                new GitHubSettingsCmd.CheckGhExecutable(Option.none()),
+                new GitHubSettingsCmd.ReadGitHub("gh"));
 
         for (Cmd read : reads) {
             assertTrue(read.background(), () -> read.getClass().getSimpleName());

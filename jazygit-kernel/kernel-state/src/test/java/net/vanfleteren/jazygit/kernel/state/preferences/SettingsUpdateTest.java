@@ -143,6 +143,25 @@ class SettingsUpdateTest {
     }
 
     @Test
+    void showingTheRepositoryAgainThatFailsShowsTheError() {
+        Failure failure = new Failure.Settings(new SettingsProblem.Unwritable(FILE, "read-only"));
+
+        Model after = Update.update(TestModels.loaded(), new SettingsMsg.NotShownAgain(failure))
+                .model();
+
+        AppError error = new SettingsError.NotShownAgain(failure);
+        assertEquals(Option.of(error), after.outcome().error());
+        assertEquals(Option.of(new ErrorPopup(error)), after.popup());
+    }
+
+    @Test
+    void theRepositoryShownAgainChangesNothing() {
+        Model model = TestModels.loaded();
+
+        assertEquals(model, Update.update(model, new SettingsMsg.ShownAgain()).model());
+    }
+
+    @Test
     void savingThatFailsKeepsTheSettingAndShowsTheError() {
         Model model = TestModels.loaded().mapPreferences(preferences -> preferences.withSettings(DARCULA));
         SettingsProblem unwritable = new SettingsProblem.Unwritable(FILE, "read-only");

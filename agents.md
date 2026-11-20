@@ -72,9 +72,11 @@ values that the forge side writes and nothing else interprets, as `FailedBuild`'
 Features are plugins, at compile time: each is listed in `Features.ALL`, never loaded at runtime, as the native image
 needs a closed world. Today a `Feature` contributes its actions, with their keys, and what it shows in the content
 panel (`ContentSource`); actions on another feature's subject go through a hosted key scope (`Keymap.host`, as
-`Scopes.FAILED_BUILD`); its state is a `Part` of its own (ADR 157). Branch badges, settings keys and settings-panel
-sections are planned extension points that do not exist yet. A feature uses only the features its module may depend
-on (ADR 159), and reaches anything else, such as a pane of a later group or a subject another feature produces, only
+`Scopes.FAILED_BUILD`); its state is a `Part` of its own (ADR 157); the settings it keeps in `config.toml` are
+`SettingKey`s (`Feature.settingKeys`, through `keeping`), and the rows it adds to the settings panel are
+`SettingsSection`s (`Feature.settings`, through `withSettings`) (ADR 163). Branch badges are a planned extension point
+that does not exist yet. A feature uses only the features its module may depend on (ADR 159), and reaches anything
+else, such as a pane of a later group or a subject another feature produces, only
 through an extension point, as `features-agent` does (ADR 161). New feature state goes in the feature's own part, not
 in a new field of a kernel record. The failed-checks agent action is the reference pattern: a forge produces a neutral
 subject, and an action consumes it without knowing which forge produced it. When you add a feature, first ask which

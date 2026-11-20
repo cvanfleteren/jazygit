@@ -42,12 +42,12 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | `jazygit-kernel` | The kernel: what every feature builds on. | lib, core |
 | ↳ `kernel-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
 | ↳ `kernel-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, a subpackage per part of the model, and `Part`, a part a feature keeps itself. | lens, image, settings, git, gh, json, yaml, xml |
-| ↳ `kernel-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
+| ↳ `kernel-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), `ui.settings` (`SettingsSection`, a section of the settings panel), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
 | ↳ `kernel-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | kernel |
 | ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits` and `changes.panes.stash`, the commits and stash panes (ADR 158). | ui |
 | ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
-| ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds. | branches, changes |
+| ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds, and how gh runs in the settings panel. | branches, changes |
 | ↳ `features-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
 | `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `StandardContent`, `Features`). Builds the fat jar and the native image. | the four groups, content, askpass, TamboUI's backend, picocli |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
@@ -266,7 +266,7 @@ Each feature package follows the same shape:
 | `XxxView` | `BuildsView` | What the feature keeps in the model beyond a popup, if anything, as a `Part` it declares (`BuildsView.PART`). |
 | `XxxDialogs` | `CommitDialog.reword` | The dialogs, mostly as data (`ConfirmDialog.Spec`, ...), as `PopupSlot`s. |
 | `XxxKeys` / `XxxAction` | `DropAction` | The keys, added to the immutable `Keymap`; an action bundles one operation's keys and popups. |
-| `XxxFeature` | `CommitFeature` | Its `FEATURE`, a `Feature` of the feature's actions, and of what it shows in the content panel, if anything (`ContentSource`): what `Keymap`, `Popups` and the content panel know of it. |
+| `XxxFeature` | `CommitFeature` | Its `FEATURE`, a `Feature` of the feature's actions, of what it shows in the content panel, if anything (`ContentSource`), and of its settings, if any: the `SettingKey`s it keeps in `config.toml` and the `SettingsSection`s it adds to the settings panel (ADR 163). What `Keymap`, `Popups`, the content panel and the settings panel know of it. |
 
 A feature lives in the group of features it belongs to, and is wired in by one line in `Features.ALL`, whose order is
 the order of the keys in a panel; nothing else outside its package names it (ADR 127). Its text is in its group's

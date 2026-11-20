@@ -33,6 +33,13 @@ public record SettingKeys(List<SettingKey<?>> all) {
             Settings.AGENTS));
 
     /**
+     * These keys, then {@code more}, as the app gathers the kernel's and each feature's.
+     */
+    public SettingKeys and(Iterable<? extends SettingKey<?>> more) {
+        return new SettingKeys(all.appendAll(more));
+    }
+
+    /**
      * The paths that clash: one that two keys have, or one that is inside another's, as {@code ui} is in
      * {@code ui.theme}, so that writing one would change the other. None when the keys can all be kept.
      */
