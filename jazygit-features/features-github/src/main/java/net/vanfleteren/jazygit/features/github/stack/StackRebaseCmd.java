@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -27,12 +27,12 @@ import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 public sealed interface StackRebaseCmd extends Cmd {
 
     // It does not start while the repository is in the middle of something, as any rebase.
-    Operation REBASE_STACK = Operation.of("branches.log.title.rebaseStack", "branches.error.rebaseStack.failed")
+    Operation REBASE_STACK = Operation.of("github.log.title.rebaseStack", "github.error.rebaseStack.failed")
             .waitingForUnfinished()
-            .labelledWhenBusy("branches.branches.busy.rebaseStack");
+            .labelledWhenBusy("github.branches.busy.rebaseStack");
 
-    Operation PUSH_STACK = Operation.of("branches.log.title.pushStack", "branches.error.pushStack.failed")
-            .labelledWhenBusy("branches.branches.busy.push");
+    Operation PUSH_STACK = Operation.of("github.log.title.pushStack", "github.error.pushStack.failed")
+            .labelledWhenBusy("github.branches.busy.push");
 
     /**
      * The branches of the stack, busy while it is rebased or pushed: each shows a spinner, and so does the header of the

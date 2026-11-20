@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
@@ -28,7 +28,7 @@ public record ReadBuiltOn(
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("branches.work.builtOn", top.value()));
+        return Option.of(Label.of("github.work.builtOn", top.value()));
     }
 
     @Override

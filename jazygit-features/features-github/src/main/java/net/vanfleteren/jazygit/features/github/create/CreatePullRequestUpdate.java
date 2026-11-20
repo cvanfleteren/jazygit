@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd.PushSettingUpstream;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackPopups;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.Base;
@@ -27,6 +26,7 @@ import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.ReadT
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.RecordParent;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.RereadTitle;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg.*;
+import net.vanfleteren.jazygit.features.github.stack.StackPopups;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.*;

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -23,10 +23,10 @@ import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
  */
 public sealed interface StackCheckoutCmd extends OperationCmd {
 
-    Operation FETCH_STACK = Operation.of("branches.log.title.fetchStack", "branches.error.fetchStack.failed");
+    Operation FETCH_STACK = Operation.of("github.log.title.fetchStack", "github.error.fetchStack.failed");
 
-    Operation CHECK_OUT_STACK = Operation.of("branches.log.title.checkOutStack", "branches.error.checkOutStack.failed")
-            .labelledWhenBusy("branches.branches.busy.checkOutStack");
+    Operation CHECK_OUT_STACK = Operation.of("github.log.title.checkOutStack", "github.error.checkOutStack.failed")
+            .labelledWhenBusy("github.branches.busy.checkOutStack");
 
     /**
      * Fetches the branches of the open pull requests of {@code stack} from {@code remote}, then reads the branches,

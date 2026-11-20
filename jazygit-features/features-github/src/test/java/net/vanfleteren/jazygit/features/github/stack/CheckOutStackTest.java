@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,9 +34,9 @@ import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackCheckout.Kind;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackCheckout.Landing;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackCheckout.Status;
+import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Kind;
+import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Landing;
+import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Status;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;

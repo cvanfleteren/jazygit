@@ -25,7 +25,6 @@ import net.vanfleteren.jazygit.core.git.files.Status;
 import net.vanfleteren.jazygit.core.git.files.StubStatus;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.git.process.GitError;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg;
 import net.vanfleteren.jazygit.features.changes.commit.CommitDialog;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchMsg;
@@ -33,6 +32,7 @@ import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.TimerMsg;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
@@ -287,11 +287,11 @@ class JazygitAppWiringTest {
         assertEquals(
                 List.of(
                         Tuple.of(Timers.REFRESH_INTERVAL, TimerMsg.Tick.class),
-                        Tuple.of(Duration.ofSeconds(2), StackMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), PullRequestMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), ChecksMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(2), PullRequestMsg.MergeTick.class),
+                        Tuple.of(Duration.ofSeconds(2), StackMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class)),
                 Timers.ALL.map(
                         timer -> Tuple.of(timer.interval(), timer.msg().get().getClass())));

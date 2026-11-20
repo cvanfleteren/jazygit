@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackChoice.BaseChange;
+import net.vanfleteren.jazygit.features.github.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -22,11 +22,11 @@ import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
  */
 public sealed interface StackCmd extends OperationCmd {
 
-    Operation MAKE_STACK = Operation.of("branches.log.title.makeStack", "branches.error.makeStack.failed");
+    Operation MAKE_STACK = Operation.of("github.log.title.makeStack", "github.error.makeStack.failed");
 
-    Operation ADD_TO_STACK = Operation.of("branches.log.title.addToStack", "branches.error.addToStack.failed");
+    Operation ADD_TO_STACK = Operation.of("github.log.title.addToStack", "github.error.addToStack.failed");
 
-    Operation UNSTACK = Operation.of("branches.log.title.unstack", "branches.error.unstack.failed");
+    Operation UNSTACK = Operation.of("github.log.title.unstack", "github.error.unstack.failed");
 
     /**
      * What the pull requests read from GitHub show once they show this change, which they are read again for until

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -28,20 +28,20 @@ public final class StackDialogs {
             "stack-menu",
             StackPopups.Menu.class,
             menu -> menu.stack()
-                    .map(stack -> Messages.get("branches.dialog.stack.title", String.valueOf(stack.number())))
+                    .map(stack -> Messages.get("github.dialog.stack.title", String.valueOf(stack.number())))
                     .getOrElse(() -> Messages.get(
-                            "branches.dialog.stack.titleBranch",
+                            "github.dialog.stack.titleBranch",
                             menu.branch().map(branch -> branch.name().value()).getOrElse(""))),
             List.of(
-                    new Choice<StackPopups.Menu>('m', "branches.dialog.stack.make", StackMsg.MakeChosen::new)
+                    new Choice<StackPopups.Menu>('m', "github.dialog.stack.make", StackMsg.MakeChosen::new)
                             .shownWhen((model, menu) -> menu.canMake())
-                            .withDetails("branches.dialog.stack.make.details"),
-                    new Choice<StackPopups.Menu>('o', "branches.dialog.stack.stackOn", StackMsg.StackOnChosen::new)
+                            .withDetails("github.dialog.stack.make.details"),
+                    new Choice<StackPopups.Menu>('o', "github.dialog.stack.stackOn", StackMsg.StackOnChosen::new)
                             .shownWhen((model, menu) -> menu.canStackOn())
-                            .withDetails("branches.dialog.stack.stackOn.details"),
-                    new Choice<StackPopups.Menu>('a', "branches.dialog.stack.add", StackMsg.AddChosen::new)
+                            .withDetails("github.dialog.stack.stackOn.details"),
+                    new Choice<StackPopups.Menu>('a', "github.dialog.stack.add", StackMsg.AddChosen::new)
                             .shownWhen((model, menu) -> menu.canAdd())
-                            .withDetails("branches.dialog.stack.add.details"),
+                            .withDetails("github.dialog.stack.add.details"),
                     // Disabled, with why, when there is nothing to check out or update (ADR 99).
                     new Choice<StackPopups.Menu>(
                                     'c',
@@ -50,15 +50,15 @@ public final class StackDialogs {
                                     (model, menu) -> menu.canCheckOut())
                             .shownWhen((model, menu) -> menu.canUnstack())
                             .withDetails(StackDialogs::checkoutDetails),
-                    new Choice<StackPopups.Menu>('r', "branches.dialog.stack.rebase", StackMsg.RebaseChosen::new)
+                    new Choice<StackPopups.Menu>('r', "github.dialog.stack.rebase", StackMsg.RebaseChosen::new)
                             .shownWhen((model, menu) -> menu.canUnstack())
-                            .withDetails("branches.dialog.stack.rebase.details"),
-                    new Choice<StackPopups.Menu>('p', "branches.dialog.stack.push", StackMsg.PushChosen::new)
+                            .withDetails("github.dialog.stack.rebase.details"),
+                    new Choice<StackPopups.Menu>('p', "github.dialog.stack.push", StackMsg.PushChosen::new)
                             .shownWhen((model, menu) -> menu.canUnstack())
-                            .withDetails("branches.dialog.stack.push.details"),
-                    new Choice<StackPopups.Menu>('u', "branches.dialog.stack.unstack", StackMsg.UnstackChosen::new)
+                            .withDetails("github.dialog.stack.push.details"),
+                    new Choice<StackPopups.Menu>('u', "github.dialog.stack.unstack", StackMsg.UnstackChosen::new)
                             .shownWhen((model, menu) -> menu.canUnstack())
-                            .withDetails("branches.dialog.stack.unstack.details")));
+                            .withDetails("github.dialog.stack.unstack.details")));
 
     /**
      * The pull requests the one of the branch can be stacked on: in no stack, or on the top of one.
@@ -68,11 +68,11 @@ public final class StackDialogs {
             StackPopups.StackOn.class,
             popup -> popup.pullRequest()
                     .map(pr -> Messages.get(
-                            "branches.dialog.stackOn.title",
+                            "github.dialog.stackOn.title",
                             String.valueOf(pr.number().value()),
                             popup.branch().name().value()))
                     .getOrElse(() -> Messages.get(
-                            "branches.dialog.stackOn.titleNoPullRequest",
+                            "github.dialog.stackOn.titleNoPullRequest",
                             popup.branch().name().value())),
             popup -> popup.targets()
                     .map(target -> new PickDialog.Row<>(
@@ -85,7 +85,7 @@ public final class StackDialogs {
                                             target.pullRequest()
                                                     .stack()
                                                     .map(stack -> Messages.get(
-                                                            "branches.dialog.stackOn.top",
+                                                            "github.dialog.stackOn.top",
                                                             String.valueOf(stack.number())))
                                                     .getOrElse(""),
                                             Theme.Classes.DIM)))),
@@ -98,8 +98,7 @@ public final class StackDialogs {
             "stack-unstack",
             StackPopups.Unstack.class,
             popup -> Messages.get(
-                    "branches.dialog.unstack.title",
-                    String.valueOf(popup.stack().number())),
+                    "github.dialog.unstack.title", String.valueOf(popup.stack().number())),
             StackDialogs::unstacked,
             () -> new PopupMsg.Confirmed(StackPopups.Unstack.class));
 
@@ -111,13 +110,13 @@ public final class StackDialogs {
             "stack-rebase",
             StackPopups.RebaseConfirm.class,
             popup -> Messages.get(
-                    "branches.dialog.rebaseStack.title",
+                    "github.dialog.rebaseStack.title",
                     String.valueOf(popup.cmd().rebase().stack())),
             StackDialogs::rebased,
             'l',
             popup -> true,
             StackMsg.RebaseLocallyChosen::new,
-            "branches.dialog.rebaseStack.hint");
+            "github.dialog.rebaseStack.hint");
 
     /**
      * Asks before linking branches as a stack; when a branch is not on the one below, {@code r} links them and rebases
@@ -127,7 +126,7 @@ public final class StackDialogs {
             "stack-confirm",
             StackPopups.Confirm.class,
             confirm -> Messages.get(
-                    "branches.dialog.makeStack.confirmTitle",
+                    "github.dialog.makeStack.confirmTitle",
                     confirm.cmd()
                             .pullRequests()
                             .map(number -> "#" + number.value())
@@ -136,7 +135,7 @@ public final class StackDialogs {
             'r',
             confirm -> !confirm.diverged().isEmpty(),
             StackMsg.LinkAndRebaseChosen::new,
-            "branches.dialog.makeStack.hintRebase");
+            "github.dialog.makeStack.hintRebase");
 
     private StackDialogs() {}
 
@@ -160,8 +159,8 @@ public final class StackDialogs {
     static String checkoutLabel(StackPopups.Menu menu) {
         return Messages.get(
                 menu.checkout() == StackCheckout.Status.CHECK_OUT || menu.checkout() == StackCheckout.Status.NOTHING
-                        ? "branches.dialog.stack.checkout"
-                        : "branches.dialog.stack.update");
+                        ? "github.dialog.stack.checkout"
+                        : "github.dialog.stack.update");
     }
 
     /**
@@ -170,10 +169,10 @@ public final class StackDialogs {
     static String checkoutDetails(StackPopups.Menu menu) {
         return Messages.get(
                 switch (menu.checkout()) {
-                    case CHECK_OUT -> "branches.dialog.stack.checkout.details";
-                    case UPDATE -> "branches.dialog.stack.update.details";
-                    case UP_TO_DATE -> "branches.dialog.stack.update.upToDate";
-                    case NOTHING -> "branches.dialog.stack.checkout.nothing";
+                    case CHECK_OUT -> "github.dialog.stack.checkout.details";
+                    case UPDATE -> "github.dialog.stack.update.details";
+                    case UP_TO_DATE -> "github.dialog.stack.update.upToDate";
+                    case NOTHING -> "github.dialog.stack.checkout.nothing";
                 });
     }
 
@@ -194,13 +193,13 @@ public final class StackDialogs {
                 .map(line -> pad("#" + line.number().value(), numbers) + "  "
                         + pad(line.branch().value(), width) + "  "
                         + Messages.get(
-                                "branches.dialog.checkoutStack." + kindKey(line.kind()),
+                                "github.dialog.checkoutStack." + kindKey(line.kind()),
                                 line.commits(),
                                 line.upstream().shortName()));
         List<String> skipped = Option.when(
                         !checkout.skipped().isEmpty(),
                         () -> Messages.get(
-                                "branches.dialog.checkoutStack.skipped",
+                                "github.dialog.checkoutStack.skipped",
                                 checkout.skipped()
                                         .map(number -> "#" + number.value())
                                         .mkString(", ")))
@@ -215,27 +214,27 @@ public final class StackDialogs {
      */
     private static String landings(StackCheckout checkout) {
         if (!checkout.startable()) {
-            return Messages.get("branches.dialog.checkoutStack.refused");
+            return Messages.get("github.dialog.checkoutStack.refused");
         }
         StackCheckout.Landing preferred = checkout.preferred();
         List<String> options = checkout.top()
                 .map(top -> marked(
-                        Messages.get("branches.dialog.checkoutStack.top", top.value()),
+                        Messages.get("github.dialog.checkoutStack.top", top.value()),
                         preferred == StackCheckout.Landing.TOP))
                 .toList()
                 .appendAll(checkout.asked()
                         .map(asked -> marked(
                                 Messages.get(
-                                        "branches.dialog.checkoutStack.asked",
+                                        "github.dialog.checkoutStack.asked",
                                         String.valueOf(checkout.on().get().value()),
                                         asked.value()),
                                 preferred == StackCheckout.Landing.ASKED)))
-                .append(Messages.get("branches.dialog.checkoutStack.stay"));
-        return Messages.get("branches.dialog.checkoutStack.then") + "\n" + options.mkString("\n");
+                .append(Messages.get("github.dialog.checkoutStack.stay"));
+        return Messages.get("github.dialog.checkoutStack.then") + "\n" + options.mkString("\n");
     }
 
     private static String marked(String option, boolean preferred) {
-        return preferred ? option + "  " + Messages.get("branches.dialog.checkoutStack.enter") : option;
+        return preferred ? option + "  " + Messages.get("github.dialog.checkoutStack.enter") : option;
     }
 
     private static String pad(String text, int width) {
@@ -262,13 +261,13 @@ public final class StackDialogs {
     static String rebased(StackPopups.RebaseConfirm popup) {
         StackRebaseCmd.RebaseStack cmd = popup.cmd();
         String branches = Messages.get(
-                "branches.dialog.rebaseStack.message",
+                "github.dialog.rebaseStack.message",
                 cmd.rebase().branches().map(branch -> branch.value()).mkString(", "),
                 cmd.rebase().base().label());
         List<String> dropped = cmd.commits()
                 .flatMap(layer -> layer.merges()
                         .map(merge -> Messages.get(
-                                "branches.dialog.rebaseStack.dropped",
+                                "github.dialog.rebaseStack.dropped",
                                 layer.branch().value(),
                                 merge.subject())));
         return dropped.isEmpty() ? branches : branches + "\n\n" + dropped.mkString("\n");
@@ -278,10 +277,10 @@ public final class StackDialogs {
      * What stays of a stack taken apart: its open pull requests, unlinked, and its merged ones, in it on GitHub.
      */
     static String unstacked(StackPopups.Unstack popup) {
-        String open = Messages.get("branches.dialog.unstack.message", popup.open());
+        String open = Messages.get("github.dialog.unstack.message", popup.open());
         return popup.staying() == 0
                 ? open
-                : open + "\n" + Messages.get("branches.dialog.unstack.staying", popup.staying());
+                : open + "\n" + Messages.get("github.dialog.unstack.staying", popup.staying());
     }
 
     /**
@@ -291,24 +290,23 @@ public final class StackDialogs {
         List<String> changes = confirm.cmd()
                 .changes()
                 .map(change -> Messages.get(
-                        "branches.dialog.makeStack.change",
+                        "github.dialog.makeStack.change",
                         String.valueOf(change.number().value()),
                         change.from().map(GhBranch::name).getOrElse("?"),
                         change.to().name()));
         List<String> diverged = confirm.diverged()
                 .map(branch -> Messages.get(
-                        "branches.dialog.makeStack.behind",
+                        "github.dialog.makeStack.behind",
                         branch.branch().value(),
                         String.valueOf(branch.behind()),
                         branch.below().value()));
         return List.of(
                         Option.when(
                                 !changes.isEmpty(),
-                                () -> Messages.get("branches.dialog.makeStack.confirmMessage", changes.mkString("\n"))),
+                                () -> Messages.get("github.dialog.makeStack.confirmMessage", changes.mkString("\n"))),
                         Option.when(
                                 !diverged.isEmpty(),
-                                () -> Messages.get(
-                                        "branches.dialog.makeStack.divergedMessage", diverged.mkString("\n"))))
+                                () -> Messages.get("github.dialog.makeStack.divergedMessage", diverged.mkString("\n"))))
                 .flatMap(section -> section)
                 .mkString("\n\n");
     }

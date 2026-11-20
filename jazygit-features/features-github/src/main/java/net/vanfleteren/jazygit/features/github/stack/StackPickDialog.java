@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import static dev.tamboui.toolkit.Toolkit.list;
 import static dev.tamboui.toolkit.Toolkit.row;
@@ -14,7 +14,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackChoice.Refusal;
+import net.vanfleteren.jazygit.features.github.stack.StackChoice.Refusal;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
@@ -35,7 +35,7 @@ final class StackPickDialog implements PopupView {
 
     static final String ID = "stack-pick";
 
-    private static final String HINT = "branches.dialog.makeStack.hint";
+    private static final String HINT = "github.dialog.makeStack.hint";
 
     // The columns a branch is indented by per branch it is built on, past the branch the popup is opened on.
     private static final int INDENT = 2;
@@ -72,7 +72,7 @@ final class StackPickDialog implements PopupView {
             Option<String> creating = pick.refused().isEmpty() && pick.addTo().isDefined()
                     ? choice.toCreate()
                             .map(row -> Messages.get(
-                                    "branches.dialog.addToStack.create",
+                                    "github.dialog.addToStack.create",
                                     row.branch().name().value(),
                                     choice.rows().head().branch().name().value()))
                     : Option.none();
@@ -90,10 +90,10 @@ final class StackPickDialog implements PopupView {
                     .orElse(() -> creating.map(text -> List.<StyledElement<?>>of(text(""), text(text))))
                     .getOrElse(List.empty());
             String title = pick.addTo()
-                    .map(stack -> Messages.get("branches.dialog.addToStack.title", String.valueOf(stack)))
+                    .map(stack -> Messages.get("github.dialog.addToStack.title", String.valueOf(stack)))
                     .getOrElse(() -> choice.base()
-                            .map(base -> Messages.get("branches.dialog.makeStack.title", base.value()))
-                            .getOrElse(() -> Messages.get("branches.dialog.makeStack.titleNoBase")));
+                            .map(base -> Messages.get("github.dialog.makeStack.title", base.value()))
+                            .getOrElse(() -> Messages.get("github.dialog.makeStack.titleNoBase")));
             int width = lines.appendAll(why)
                     .appendAll(creating)
                     .append(Messages.get(HINT))
@@ -120,7 +120,7 @@ final class StackPickDialog implements PopupView {
                 .flatMap(below -> model.repo()
                         .behindParent(row.branch().name())
                         .map(behind -> Messages.get(
-                                "branches.dialog.makeStack.notOn",
+                                "github.dialog.makeStack.notOn",
                                 String.valueOf(behind),
                                 choice.rows().get(below).branch().name().value())));
     }
@@ -135,8 +135,8 @@ final class StackPickDialog implements PopupView {
                 : index == choice.bottom() ? "┗" : index == choice.top() ? "┏" : choice.isChosen(index) ? "┃" : " ";
         String pullRequest = row.pullRequest()
                 .map(pr -> "#" + pr.number().value())
-                .getOrElse(() -> Messages.get("branches.dialog.makeStack.noPullRequest"));
-        String here = index == choice.branch() ? "  " + Messages.get("branches.dialog.makeStack.thisBranch") : "";
+                .getOrElse(() -> Messages.get("github.dialog.makeStack.noPullRequest"));
+        String here = index == choice.branch() ? "  " + Messages.get("github.dialog.makeStack.thisBranch") : "";
         return mark + " " + " ".repeat(INDENT * row.depth())
                 + row.branch().name().value() + "  " + pullRequest
                 + behind.map(text -> "  " + text).getOrElse("")
@@ -156,15 +156,15 @@ final class StackPickDialog implements PopupView {
         String top = choice.rows().head().branch().name().value();
         return switch (refusal) {
             case Refusal.NoPullRequest(List<BranchName> branches) ->
-                Messages.get("branches.dialog.makeStack.noPullRequests", names(branches));
+                Messages.get("github.dialog.makeStack.noPullRequests", names(branches));
             case Refusal.Stacked(List<BranchName> branches) ->
-                Messages.get("branches.dialog.makeStack.stacked", names(branches));
+                Messages.get("github.dialog.makeStack.stacked", names(branches));
             case Refusal.TooFew() ->
                 !adding
-                        ? Messages.get("branches.dialog.makeStack.tooFew")
+                        ? Messages.get("github.dialog.makeStack.tooFew")
                         : choice.rows().size() == 1
-                                ? Messages.get("branches.dialog.addToStack.none", top)
-                                : Messages.get("branches.dialog.addToStack.nothing", top);
+                                ? Messages.get("github.dialog.addToStack.none", top)
+                                : Messages.get("github.dialog.addToStack.nothing", top);
         };
     }
 

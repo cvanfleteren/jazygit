@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsDialogs;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.ShowPullRequestAction;
+import net.vanfleteren.jazygit.features.github.stack.StackAction;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictAction;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
@@ -24,7 +26,8 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
  * The GitHub operations: showing a pull request and what is done from there, showing the checks and the builds of a branch,
- * creating a pull request, checking one out, and opening a branch or pull request in the browser. Adding an operation is adding its subpackage, and listing its
+ * creating a pull request, checking one out, the stacks of pull requests and what is done with them (ADR 72, 73, 87, 99),
+ * and opening a branch or pull request in the browser. Adding an operation is adding its subpackage, and listing its
  * action here.
  */
 public final class GitHubFeature {
@@ -38,6 +41,11 @@ public final class GitHubFeature {
      * How often GitHub is asked how the merges it does in the background are going (ADR 24).
      */
     private static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
+
+    /**
+     * How often the pull requests are read again while they do not show a change made to the stacks yet (ADR 73).
+     */
+    private static final Duration STACK_CHECK_INTERVAL = Duration.ofSeconds(2);
 
     /**
      * Reading the pull requests of the pull requests screen again.
@@ -66,6 +74,7 @@ public final class GitHubFeature {
                     REFRESH,
                     SCREEN,
                     CreatePullRequestAction.ACTION,
+                    StackAction.ACTION,
                     BrowseAction.ACTION,
                     ReviewAction.ACTION,
                     VerdictAction.ACTION,
@@ -78,6 +87,7 @@ public final class GitHubFeature {
             .every(CheckTimings.READ_WHILE_PENDING, PullRequestMsg.Tick::new)
             .every(CheckTimings.READ_WHILE_PENDING, ChecksMsg.Tick::new)
             .every(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new)
+            .every(STACK_CHECK_INTERVAL, StackMsg.Tick::new)
             .reacting(GitHubReactions::to);
 
     private GitHubFeature() {}

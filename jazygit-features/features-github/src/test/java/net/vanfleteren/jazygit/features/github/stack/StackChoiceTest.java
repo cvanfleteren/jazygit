@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -19,9 +19,9 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackChoice.BaseChange;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackChoice.Plan;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackChoice.Refusal;
+import net.vanfleteren.jazygit.features.github.stack.StackChoice.BaseChange;
+import net.vanfleteren.jazygit.features.github.stack.StackChoice.Plan;
+import net.vanfleteren.jazygit.features.github.stack.StackChoice.Refusal;
 import org.junit.jupiter.api.Test;
 
 /**
