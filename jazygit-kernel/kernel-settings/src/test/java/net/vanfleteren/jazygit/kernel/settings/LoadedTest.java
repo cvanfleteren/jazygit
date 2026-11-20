@@ -32,7 +32,7 @@ class LoadedTest {
         Applied applied = now.appliedTo(Settings.DEFAULT, DEFAULT);
 
         assertEquals(Settings.DEFAULT.withTheme(ThemeName.DARCULA), applied.settings());
-        assertEquals(HashSet.of(Settings.THEME), applied.changed());
+        assertEquals(HashSet.of(Settings.THEME.path()), applied.changed());
         assertTrue(applied.themeChanged());
     }
 
@@ -55,7 +55,7 @@ class LoadedTest {
         Applied applied = now.appliedTo(inUse, DEFAULT);
 
         assertEquals(Settings.DEFAULT.withAnimations(false).withTheme(ThemeName.DARCULA), applied.settings());
-        assertFalse(applied.changed().contains(Settings.ANIMATIONS));
+        assertFalse(applied.changed().contains(Settings.ANIMATIONS.path()));
     }
 
     @Test
@@ -72,7 +72,7 @@ class LoadedTest {
     void aValueThatIsNotValidKeepsTheOneInUse() {
         Settings inUse = Settings.DEFAULT.withTheme(ThemeName.DARCULA);
         // Read with the default in place of the theme that is not valid.
-        Loaded now = invalid(Settings.DEFAULT.withAnimations(false), Settings.THEME);
+        Loaded now = invalid(Settings.DEFAULT.withAnimations(false), Settings.THEME.path());
 
         Applied applied = now.appliedTo(inUse, read(inUse));
 
@@ -83,7 +83,7 @@ class LoadedTest {
     @Test
     void aValueMadeValidAgainIsAppliedEvenWhenItIsWhatTheDefaultWas() {
         Settings inUse = Settings.DEFAULT.withTheme(ThemeName.DARCULA);
-        Loaded before = invalid(Settings.DEFAULT, Settings.THEME);
+        Loaded before = invalid(Settings.DEFAULT, Settings.THEME.path());
 
         Applied applied = read(Settings.DEFAULT).appliedTo(inUse, before);
 
@@ -159,16 +159,16 @@ class LoadedTest {
 
     @Test
     void savingASettingThatWasNotValidMakesItValid() {
-        Loaded before = invalid(Settings.DEFAULT, Settings.THEME, Settings.ANIMATIONS);
+        Loaded before = invalid(Settings.DEFAULT, Settings.THEME.path(), Settings.ANIMATIONS.path());
 
         Loaded saved = before.saved(Settings.DEFAULT, Settings.DEFAULT.withTheme(ThemeName.DARCULA));
 
-        assertEquals(invalid(Settings.DEFAULT.withTheme(ThemeName.DARCULA), Settings.ANIMATIONS), saved);
+        assertEquals(invalid(Settings.DEFAULT.withTheme(ThemeName.DARCULA), Settings.ANIMATIONS.path()), saved);
     }
 
     @Test
     void savingTheLastSettingThatWasNotValidLeavesNoProblem() {
-        Loaded before = invalid(Settings.DEFAULT, Settings.THEME);
+        Loaded before = invalid(Settings.DEFAULT, Settings.THEME.path());
 
         Loaded saved = before.saved(Settings.DEFAULT, Settings.DEFAULT.withTheme(ThemeName.DARCULA));
 

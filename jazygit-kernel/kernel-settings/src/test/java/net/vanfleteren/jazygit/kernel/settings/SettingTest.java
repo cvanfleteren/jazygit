@@ -46,7 +46,7 @@ class SettingTest {
     void eachSettingDiffersFromTheDefaultInTheChangedSettings() {
         List<String> same = Setting.ALL
                 .filter(setting -> !setting.differs(Settings.DEFAULT, CHANGED))
-                .map(Setting::key);
+                .map(Setting::path);
 
         // Only the user writes the editors, the diff filters and the agents.
         assertEquals(List.of(Editors.KEY, FilterDefinitions.KEY, Agents.KEY), same);
@@ -75,6 +75,46 @@ class SettingTest {
                 .take(Settings.DEFAULT, CHANGED);
 
         assertEquals(Settings.DEFAULT.withDiffStyle(DiffStyle.PLAIN), taken);
+    }
+
+    @Test
+    void eachSettingIsAtAKeyOfItsOwnThatIsInNoOther() {
+        List<List<String>> paths =
+                Setting.ALL.map(setting -> List.of(setting.path().split("\\.")));
+
+        assertEquals(
+                List.empty(),
+                paths.crossProduct()
+                        .filter(pair -> pair._1 != pair._2 && pair._2.startsWith(pair._1))
+                        .toList());
+    }
+
+    @Test
+    void theDefaultsAreTheInitialValues() {
+        assertTrue(Setting.ALL.forAll(SettingTest::initialByDefault));
+    }
+
+    private static <T> boolean initialByDefault(Setting<T> setting) {
+        return setting.lens().get(Settings.DEFAULT).contains(setting.key().initial());
+    }
+
+    @Test
+    void anUnsetOptionalSettingKeepsNothing() {
+        Codec<Option<String>> codec = Codec.text(Option::some, text -> text).optional();
+
+        assertTrue(codec.encode("github.executable", Option.none()).isEmpty());
+        assertEquals(
+                List.of(Tuple.of(List.of("github", "executable"), (Object) "/opt/gh")),
+                codec.encode("github.executable", Option.some("/opt/gh")).toList());
+    }
+
+    @Test
+    void aValueThatIsNotValidAsAWholeIsWrongAtItsKey() {
+        assertEquals(
+                new Decoded<>(Option.none(), List.of("ui.animations")),
+                Codec.bool().decode("ui.animations", "yes"));
+        assertEquals(
+                new Decoded<>(Option.some(false), List.empty()), Codec.bool().decode("ui.animations", false));
     }
 
     /**

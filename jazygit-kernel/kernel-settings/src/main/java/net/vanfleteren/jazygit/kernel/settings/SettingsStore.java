@@ -79,11 +79,11 @@ public interface SettingsStore {
          * and a value that is not valid does not undo the one in use (ADR 111).
          */
         public Applied appliedTo(Settings inUse, Loaded before) {
-            List<Setting<?>> changed = Setting.ALL.filter(setting -> valid(setting.key())
-                    && (!before.valid(setting.key()) || setting.differs(settings, before.settings())));
+            List<Setting<?>> changed = Setting.ALL.filter(setting -> valid(setting.path())
+                    && (!before.valid(setting.path()) || setting.differs(settings, before.settings())));
             return new Applied(
                     changed.foldLeft(inUse, (applied, setting) -> setting.take(applied, settings)),
-                    changed.map(Setting::key).toSet());
+                    changed.map(Setting::path).toSet());
         }
 
         /**
@@ -92,7 +92,7 @@ public interface SettingsStore {
          */
         public Loaded saved(Settings previous, Settings next) {
             List<Setting<?>> written = Setting.ALL.filter(setting -> setting.differs(previous, next));
-            Set<String> keys = written.map(Setting::key).toSet();
+            Set<String> keys = written.map(Setting::path).toSet();
             return new Loaded(
                     written.foldLeft(settings, (file, setting) -> setting.take(file, next)),
                     problem.flatMap(found -> switch (found) {
@@ -117,7 +117,7 @@ public interface SettingsStore {
          * Whether the theme changed in the file, which replaces a theme asked for at startup, as choosing one does.
          */
         public boolean themeChanged() {
-            return changed.contains(Settings.THEME);
+            return changed.contains(Settings.THEME.path());
         }
     }
 }

@@ -84,84 +84,127 @@ public record Settings(
     public static final List<Integer> DEFAULT_PULL_REQUESTS_HEIGHTS = List.of(32, 32);
 
     /**
-     * The settings of a first session.
+     * The theme the UI is drawn in. The file shows it at its initial value too.
      */
-    public static final Settings DEFAULT = new Settings(
-            ThemeName.DARK,
+    static final SettingKey<ThemeName> THEME = SettingKey.of(
+                    "ui.theme", ThemeName.DARK, Codec.text(ThemeName::of, ThemeName::id))
+            .withKept(Kept.ALWAYS);
+    /**
+     * The gh executable to run, if not the one on the PATH; one that is blank is not valid.
+     */
+    static final SettingKey<Option<String>> GH_EXECUTABLE = SettingKey.of(
+            "github.executable",
             Option.none(),
-            DEFAULT_WIDTH,
-            DEFAULT_WIDTH,
-            // The default has become rich diffs.
-            DiffStyle.RICH,
-            true,
-            true,
+            Codec.text(path -> Option.when(!path.isBlank(), path), path -> path).optional());
+    /**
+     * The width of the left column of the repository screen.
+     */
+    static final SettingKey<Integer> REPOSITORY_WIDTH =
+            SettingKey.of("ui.repository-width", DEFAULT_WIDTH, Codec.whole(Settings::width, width -> width));
+    /**
+     * The width of the left column of the pull requests screen.
+     */
+    static final SettingKey<Integer> PULL_REQUESTS_WIDTH =
+            SettingKey.of("ui.pull-requests-width", DEFAULT_WIDTH, Codec.whole(Settings::width, width -> width));
+    /**
+     * The diff style; the default has become rich diffs.
+     */
+    static final SettingKey<DiffStyle> DIFF_STYLE =
+            SettingKey.of("ui.diff-style", DiffStyle.RICH, Codec.text(DiffStyle::of, DiffStyle::id));
+    /**
+     * Whether the rich view colours code by its syntax.
+     */
+    static final SettingKey<Boolean> DIFF_SYNTAX = SettingKey.of("ui.diff-syntax", true, Codec.bool());
+    /**
+     * Whether the rich view highlights the changed words of a line.
+     */
+    static final SettingKey<Boolean> DIFF_WORDS = SettingKey.of("ui.diff-words", true, Codec.bool());
+    /**
+     * The heights of the panes of the left column of the repository screen. The TOML writer writes a java.util list
+     * as an array.
+     */
+    static final SettingKey<List<Integer>> REPOSITORY_HEIGHTS = SettingKey.of(
+            "ui.repository-heights",
             DEFAULT_REPOSITORY_HEIGHTS,
+            Codec.whole(value -> heights(value, DEFAULT_REPOSITORY_HEIGHTS.size()), List::toJavaList));
+    /**
+     * The heights of the panes of the left column of the pull requests screen.
+     */
+    static final SettingKey<List<Integer>> PULL_REQUESTS_HEIGHTS = SettingKey.of(
+            "ui.pull-requests-heights",
             DEFAULT_PULL_REQUESTS_HEIGHTS,
-            true,
-            true,
-            true,
+            Codec.whole(value -> heights(value, DEFAULT_PULL_REQUESTS_HEIGHTS.size()), List::toJavaList));
+    /**
+     * Whether what moves on the screen moves there smoothly (ADR 81).
+     */
+    static final SettingKey<Boolean> ANIMATIONS = SettingKey.of("ui.animations", true, Codec.bool());
+    /**
+     * Whether the repository is read again every so often (ADR 125).
+     */
+    static final SettingKey<Boolean> AUTO_REFRESH = SettingKey.of("git.auto-refresh", true, Codec.bool());
+    /**
+     * Whether the remotes are fetched from every so often (ADR 125).
+     */
+    static final SettingKey<Boolean> AUTO_FETCH = SettingKey.of("git.auto-fetch", true, Codec.bool());
+    /**
+     * The browser of each GitHub account (ADR 88): a table of tables, by host and then by login.
+     */
+    static final SettingKey<AccountBrowsers> BROWSERS = SettingKey.of(
+            "github.browsers",
             AccountBrowsers.NONE,
-            Editors.NONE,
-            List.empty(),
-            FilterDefinitions.NONE,
-            Agents.NONE);
+            Codec.of(
+                    Codec.whole(AccountBrowsers::read, browsers -> browsers)::decode,
+                    (key, browsers) -> browsers.entries()));
+    /**
+     * The editors (ADR 110). An entry that is wrong is left out, and reported; the others still apply. Only editors
+     * that are no array at all are not valid as a whole.
+     */
+    static final SettingKey<Editors> EDITORS = SettingKey.userOwned(Editors.KEY, Editors.NONE, Codec.readOnly(value -> {
+        Editors.Read read = Editors.read(value);
+        return new Decoded<>(Option.some(read.editors()), read.invalid());
+    }));
+    /**
+     * The ids of the diff filters enabled (ADR 144), each once, in the order they were enabled.
+     */
+    static final SettingKey<List<String>> DIFF_FILTERS =
+            SettingKey.of("ui.diff-filters", List.empty(), Codec.whole(Settings::ids, List::toJavaList));
+    /**
+     * The diff filters the user set (ADR 144); as the editors.
+     */
+    static final SettingKey<FilterDefinitions> FILTER_DEFINITIONS =
+            SettingKey.userOwned(FilterDefinitions.KEY, FilterDefinitions.NONE, Codec.readOnly(value -> {
+                FilterDefinitions.Read read = FilterDefinitions.read(value, false);
+                return new Decoded<>(Option.some(read.filters()), read.invalid());
+            }));
+    /**
+     * The agents a failed build can be handed to (ADR 161); as the editors.
+     */
+    static final SettingKey<Agents> AGENTS = SettingKey.userOwned(Agents.KEY, Agents.NONE, Codec.readOnly(value -> {
+        Agents.Read read = Agents.read(value);
+        return new Decoded<>(Option.some(read.agents()), read.invalid());
+    }));
 
     /**
-     * The key of the theme in the settings file.
+     * The settings of a first session: each at its initial value.
      */
-    static final String THEME = "ui.theme";
-    /**
-     * The key of the gh executable in the settings file.
-     */
-    static final String GH_EXECUTABLE = "github.executable";
-    /**
-     * The key of the width of the left column of the repository screen in the settings file.
-     */
-    static final String REPOSITORY_WIDTH = "ui.repository-width";
-    /**
-     * The key of the width of the left column of the pull requests screen in the settings file.
-     */
-    static final String PULL_REQUESTS_WIDTH = "ui.pull-requests-width";
-    /**
-     * The key of the diff style in the settings file.
-     */
-    static final String DIFF_STYLE = "ui.diff-style";
-    /**
-     * The key of whether the rich view colours code by its syntax in the settings file.
-     */
-    static final String DIFF_SYNTAX = "ui.diff-syntax";
-    /**
-     * The key of whether the rich view highlights the changed words of a line in the settings file.
-     */
-    static final String DIFF_WORDS = "ui.diff-words";
-    /**
-     * The key of the heights of the panes of the left column of the repository screen in the settings file.
-     */
-    static final String REPOSITORY_HEIGHTS = "ui.repository-heights";
-    /**
-     * The key of the heights of the panes of the left column of the pull requests screen in the settings file.
-     */
-    static final String PULL_REQUESTS_HEIGHTS = "ui.pull-requests-heights";
-    /**
-     * The key of whether what moves on the screen moves there smoothly in the settings file (ADR 81).
-     */
-    static final String ANIMATIONS = "ui.animations";
-    /**
-     * The key of whether the repository is read again every so often in the settings file (ADR 125).
-     */
-    static final String AUTO_REFRESH = "git.auto-refresh";
-    /**
-     * The key of whether the remotes are fetched from every so often in the settings file (ADR 125).
-     */
-    static final String AUTO_FETCH = "git.auto-fetch";
-    /**
-     * The key of the table of the browser of each GitHub account in the settings file (ADR 88).
-     */
-    static final String BROWSERS = "github.browsers";
-    /**
-     * The key of the ids of the diff filters enabled in the settings file (ADR 144).
-     */
-    static final String DIFF_FILTERS = "ui.diff-filters";
+    public static final Settings DEFAULT = new Settings(
+            THEME.initial(),
+            GH_EXECUTABLE.initial(),
+            REPOSITORY_WIDTH.initial(),
+            PULL_REQUESTS_WIDTH.initial(),
+            DIFF_STYLE.initial(),
+            DIFF_SYNTAX.initial(),
+            DIFF_WORDS.initial(),
+            REPOSITORY_HEIGHTS.initial(),
+            PULL_REQUESTS_HEIGHTS.initial(),
+            ANIMATIONS.initial(),
+            AUTO_REFRESH.initial(),
+            AUTO_FETCH.initial(),
+            BROWSERS.initial(),
+            EDITORS.initial(),
+            DIFF_FILTERS.initial(),
+            FILTER_DEFINITIONS.initial(),
+            AGENTS.initial());
 
     /**
      * {@code width} brought within the widths the left column may have.
@@ -221,6 +264,17 @@ public record Settings(
                 .filter(heights -> heights.forAll(height -> height >= MIN_HEIGHT)
                         && 100 - heights.sum().longValue() >= MIN_HEIGHT)
                 .map(heights -> heights.map(Long::intValue));
+    }
+
+    /**
+     * The ids {@code value} holds, if it is an array of text: each once, in its order.
+     */
+    private static Option<List<String>> ids(Object value) {
+        return Option.of(value)
+                .filter(java.util.List.class::isInstance)
+                .map(array -> List.ofAll((java.util.List<?>) array))
+                .filter(items -> items.forAll(String.class::isInstance))
+                .map(items -> items.map(String.class::cast).distinct());
     }
 
     /**

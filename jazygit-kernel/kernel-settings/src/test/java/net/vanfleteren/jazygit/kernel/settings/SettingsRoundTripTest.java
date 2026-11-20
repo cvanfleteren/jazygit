@@ -114,24 +114,28 @@ class SettingsRoundTripTest {
      * away from its default where the user's file has none.
      */
     private static final Map<String, UnaryOperator<Settings>> CHANGES = LinkedHashMap.ofEntries(
-            change(Settings.THEME, settings -> settings.withTheme(ThemeName.LIGHT)),
-            change(Settings.GH_EXECUTABLE, settings -> settings.withGhExecutable(Option.none())),
-            change(Settings.REPOSITORY_WIDTH, settings -> settings.withRepositoryWidth(Settings.DEFAULT_WIDTH)),
-            change(Settings.PULL_REQUESTS_WIDTH, settings -> settings.withPullRequestsWidth(50)),
-            change(Settings.DIFF_STYLE, settings -> settings.withDiffStyle(DiffStyle.PLAIN)),
-            change(Settings.DIFF_SYNTAX, settings -> settings.withDiffSyntax(true)),
-            change(Settings.DIFF_WORDS, settings -> settings.withDiffWords(false)),
-            change(Settings.REPOSITORY_HEIGHTS, settings -> settings.withRepositoryHeights(List.of(25, 25, 25))),
-            change(Settings.PULL_REQUESTS_HEIGHTS, settings -> settings.withPullRequestsHeights(List.of(40, 30))),
-            change(Settings.ANIMATIONS, settings -> settings.withAnimations(true)),
-            change(Settings.AUTO_REFRESH, settings -> settings.withAutoRefresh(false)),
-            // The last key of its table: the table goes too.
-            change(Settings.AUTO_FETCH, settings -> settings.withAutoFetch(true)),
+            change(Settings.THEME.path(), settings -> settings.withTheme(ThemeName.LIGHT)),
+            change(Settings.GH_EXECUTABLE.path(), settings -> settings.withGhExecutable(Option.none())),
+            change(Settings.REPOSITORY_WIDTH.path(), settings -> settings.withRepositoryWidth(Settings.DEFAULT_WIDTH)),
+            change(Settings.PULL_REQUESTS_WIDTH.path(), settings -> settings.withPullRequestsWidth(50)),
+            change(Settings.DIFF_STYLE.path(), settings -> settings.withDiffStyle(DiffStyle.PLAIN)),
+            change(Settings.DIFF_SYNTAX.path(), settings -> settings.withDiffSyntax(true)),
+            change(Settings.DIFF_WORDS.path(), settings -> settings.withDiffWords(false)),
+            change(Settings.REPOSITORY_HEIGHTS.path(), settings -> settings.withRepositoryHeights(List.of(25, 25, 25))),
             change(
-                    Settings.BROWSERS,
+                    Settings.PULL_REQUESTS_HEIGHTS.path(),
+                    settings -> settings.withPullRequestsHeights(List.of(40, 30))),
+            change(Settings.ANIMATIONS.path(), settings -> settings.withAnimations(true)),
+            change(Settings.AUTO_REFRESH.path(), settings -> settings.withAutoRefresh(false)),
+            // The last key of its table: the table goes too.
+            change(Settings.AUTO_FETCH.path(), settings -> settings.withAutoFetch(true)),
+            change(
+                    Settings.BROWSERS.path(),
                     settings -> settings.withBrowsers(
                             settings.browsers().with("github.com", "cvf-work", Option.some("firefox -P work")))),
-            change(Settings.DIFF_FILTERS, settings -> settings.withDiffFilters(List.of("java-imports", "lockfiles"))));
+            change(
+                    Settings.DIFF_FILTERS.path(),
+                    settings -> settings.withDiffFilters(List.of("java-imports", "lockfiles"))));
 
     @TempDir
     Path dir;
@@ -144,7 +148,7 @@ class SettingsRoundTripTest {
     @Test
     void eachSettingTheAppWritesHasAChange() {
         List<String> written =
-                Setting.ALL.map(Setting::key).removeAll(List.of(Editors.KEY, FilterDefinitions.KEY, Agents.KEY));
+                Setting.ALL.map(Setting::path).removeAll(List.of(Editors.KEY, FilterDefinitions.KEY, Agents.KEY));
 
         assertEquals(written, CHANGES.keySet().toList());
     }
