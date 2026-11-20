@@ -113,6 +113,65 @@ class StackGroupsTest {
     }
 
     @Test
+    void theReadThatListsTheMostPullRequestsOfTheStackSaysWhatItHas() {
+        // feat/a was read with the stack as it was before feat/c joined it; it is listed first all the same.
+        Model model = withPullRequests(
+                TestModels.loaded(),
+                HashMap.of(
+                        "feat/a", stacked(96, "feat/a", 1, ENTRIES.take(2)),
+                        "feat/b", stacked(97, "feat/b", 2, ENTRIES)));
+
+        Group group = StackGroups.of(model, List.of(branch("feat/a"), branch("feat/b")))
+                .head();
+
+        assertEquals(" 3 PRs", text(group.after()));
+        assertEquals(List.of("feat/a", "feat/b", "pullRequest:98 #98 not checked out"), entries(group));
+    }
+
+    @Test
+    void aBranchTheStackItIsShownWithDoesNotListComesAfterTheListedOnesByItsPosition() {
+        Model model = withPullRequests(
+                TestModels.loaded(),
+                HashMap.of(
+                        "feat/a", stacked(96, "feat/a", 1, ENTRIES),
+                        "feat/b", stacked(97, "feat/b", 2, ENTRIES),
+                        "feat/c", stacked(98, "feat/c", 3, ENTRIES),
+                        "feat/z", stacked(100, "feat/z", 5, List.of(entry(5, 100, "feat/z", "feat/y"))),
+                        "feat/y", stacked(99, "feat/y", 4, List.of(entry(4, 99, "feat/y", "feat/c")))));
+
+        Group group = StackGroups.of(
+                        model,
+                        List.of(
+                                branch("feat/z"),
+                                branch("feat/y"),
+                                branch("feat/a"),
+                                branch("feat/b"),
+                                branch("feat/c")))
+                .head();
+
+        assertEquals(List.of("feat/a", "feat/b", "feat/c", "feat/y", "feat/z"), entries(group));
+    }
+
+    @Test
+    void aClosedPullRequestOfTheStackSaysItIsClosed() {
+        List<PullRequestStack.Entry> entries = List.of(
+                new PullRequestStack.Entry(
+                        1, new PrNumber(95), State.CLOSED, new GhBranch("feat/0"), new GhBranch("main")),
+                new PullRequestStack.Entry(
+                        2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("feat/0")));
+        Model model = withPullRequests(TestModels.loaded(), HashMap.of("feat/a", stacked(96, "feat/a", 2, entries)));
+
+        Group group = StackGroups.of(model, List.of(branch("feat/a"))).head();
+
+        assertEquals(List.of("pullRequest:95 #95 closed", "feat/a"), entries(group));
+    }
+
+    private static PullRequestStack.Entry entry(int position, int number, String head, String base) {
+        return new PullRequestStack.Entry(
+                position, new PrNumber(number), State.OPEN, new GhBranch(head), new GhBranch(base));
+    }
+
+    @Test
     void theHeaderNamesTheStackItsBaseAndHowManyPullRequestsItHas() {
         Model model = withPullRequests(
                 TestModels.loaded(),
