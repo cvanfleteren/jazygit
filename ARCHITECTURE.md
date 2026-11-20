@@ -49,6 +49,7 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
 | ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds, and how gh runs in the settings panel. | branches, changes |
 | ↳ `features-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
+| ↳ `features-agent` | `agent.*`: handing a failed build to a coding agent (ADR 161); it knows no forge, and reaches the build only through the keys a forge's views host. | — |
 | `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `StandardContent`, `Features`). Builds the fat jar and the native image. | the four groups, content, askpass, TamboUI's backend, picocli |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, ui, JMH |

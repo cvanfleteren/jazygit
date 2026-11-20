@@ -9,7 +9,11 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
+import net.vanfleteren.jazygit.core.gh.model.GhBranch;
+import net.vanfleteren.jazygit.core.gh.model.PrNumber;
+import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
@@ -46,13 +50,27 @@ class FailedBuildsTest {
         FailedBuild failed = FailedBuilds.of(FEAT, build, Option.none());
 
         assertEquals(
-                List.of(
-                        new FailedBuild.Job("verify", Option.of("401"), Option.none()),
-                        new FailedBuild.Job("docs", Option.of("401"), Option.none())),
+                List.of(new FailedBuild.Job("verify", Option.none()), new FailedBuild.Job("docs", Option.none())),
                 failed.jobs());
         assertEquals(Option.of("abc123"), failed.commit());
         assertFalse(failed.running());
         assertEquals("gh run view 401 --log-failed", failed.logs());
+    }
+
+    @Test
+    void thePullRequestOfTheBranchIsHandedOverAsTheChangeRequestTheForgeCallsIt() {
+        PullRequest pullRequest =
+                new PullRequest(new PrNumber(12), new GhBranch("feat"), false, Checks.FAILING, Review.NONE);
+        Build build = new Build("CI", "push", 401, 1, "abc123", "Fix", T, List.of(job("verify", "FAILURE")));
+
+        assertEquals(
+                Option.of(new FailedBuild.ChangeRequest("pull request", 12)),
+                FailedBuilds.of(FEAT, build, Option.of(pullRequest)).changeRequest());
+        assertEquals(
+                Option.of(new FailedBuild.ChangeRequest("pull request", 12)),
+                FailedBuilds.of(FEAT, "o/r", List.empty(), Option.of(pullRequest))
+                        .changeRequest());
+        assertEquals(Option.none(), FailedBuilds.of(FEAT, build, Option.none()).changeRequest());
     }
 
     @Test

@@ -336,7 +336,7 @@ class KeymapTest {
                 new BranchName("feat"),
                 Option.none(),
                 Option.none(),
-                List.of(new FailedBuild.Job("verify", Option.of("401"), Option.none())),
+                List.of(new FailedBuild.Job("verify", Option.none())),
                 false,
                 "gh run view 401 --log-failed --repo o/r");
 

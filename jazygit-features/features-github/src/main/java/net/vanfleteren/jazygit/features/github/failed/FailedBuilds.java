@@ -21,18 +21,18 @@ public final class FailedBuilds {
      * What failed in {@code build} of {@code branch}, with its pull request, if it has one.
      */
     public static FailedBuild of(BranchName branch, Build build, Option<PullRequest> pullRequest) {
-        String run = String.valueOf(build.runId());
-        List<FailedBuild.Job> jobs = build.jobs()
+        Option<String> run = Option.of(String.valueOf(build.runId()));
+        List<Failure> failures = build.jobs()
                 .filter(job -> Build.Outcome.of(List.of(job)) == Build.Outcome.FAILED)
-                .map(job -> new FailedBuild.Job(job.name(), Option.of(run), Option.none()));
+                .map(job -> new Failure(new FailedBuild.Job(job.name(), Option.none()), run));
         return new FailedBuild(
                 Option.none(),
                 branch,
                 Option.of(build.sha()),
-                pullRequest.map(pr -> pr.number().value()),
-                jobs,
+                pullRequest.map(FailedBuilds::request),
+                failures.map(Failure::job),
                 build.outcome() == Build.Outcome.RUNNING,
-                logs(Option.none(), jobs));
+                logs(Option.none(), failures));
     }
 
     /**
@@ -42,30 +42,43 @@ public final class FailedBuilds {
      */
     public static FailedBuild of(
             BranchName branch, String repository, List<Check> checks, Option<PullRequest> pullRequest) {
-        List<FailedBuild.Job> jobs = checks.filter(check -> check.state() == Checks.FAILING)
-                .map(check -> new FailedBuild.Job(
-                        check.name(), check.run().map(run -> String.valueOf(run.runId())), check.url()));
+        List<Failure> failures = checks.filter(check -> check.state() == Checks.FAILING)
+                .map(check -> new Failure(
+                        new FailedBuild.Job(check.name(), check.url()),
+                        check.run().map(run -> String.valueOf(run.runId()))));
         return new FailedBuild(
                 Option.of(repository),
                 branch,
                 Option.none(),
-                pullRequest.map(pr -> pr.number().value()),
-                jobs,
+                pullRequest.map(FailedBuilds::request),
+                failures.map(Failure::job),
                 checks.exists(check -> !check.done()),
-                logs(Option.of(repository), jobs));
+                logs(Option.of(repository), failures));
+    }
+
+    private static FailedBuild.ChangeRequest request(PullRequest pullRequest) {
+        return new FailedBuild.ChangeRequest(
+                "pull request", pullRequest.number().value());
     }
 
     /**
-     * How to read the logs of {@code jobs}: with gh, once for each run they are part of; a commit status has its logs
-     * outside GitHub, where it links to.
+     * How to read the logs of {@code failures}: with gh, once for each run they are part of; a commit status has its
+     * logs outside GitHub, where it links to.
      */
-    static String logs(Option<String> repository, List<FailedBuild.Job> jobs) {
+    private static String logs(Option<String> repository, List<Failure> failures) {
         String repo = repository.map(name -> " --repo " + name).getOrElse("");
         List<String> runs =
-                jobs.flatMap(FailedBuild.Job::run).distinct().map(run -> "gh run view " + run + " --log-failed" + repo);
-        List<String> statuses = jobs.filter(job -> job.run().isEmpty())
+                failures.flatMap(Failure::run).distinct().map(run -> "gh run view " + run + " --log-failed" + repo);
+        List<String> statuses = failures.filter(failure -> failure.run().isEmpty())
+                .map(Failure::job)
                 .map(job -> job.name() + ": its logs are not on GitHub"
                         + job.url().map(url -> ", but at " + url).getOrElse(""));
         return runs.appendAll(statuses).mkString("\n");
     }
+
+    /**
+     * A job that failed, with the workflow run it is part of: what GitHub needs to read its logs, which a
+     * {@link FailedBuild} does not carry.
+     */
+    private record Failure(FailedBuild.Job job, Option<String> run) {}
 }

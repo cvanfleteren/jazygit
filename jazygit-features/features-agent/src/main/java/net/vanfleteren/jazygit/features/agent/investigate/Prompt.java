@@ -43,13 +43,22 @@ public final class Prompt {
      */
     static Map<String, String> values(FailedBuild build, Option<ForgeAccount> account) {
         return LinkedHashMap.of(
-                REPO, build.repository().getOrElse(""),
-                BRANCH, build.branch().value(),
-                COMMIT, build.commit().getOrElse(""),
-                PR, build.pullRequest().map(String::valueOf).getOrElse(""),
-                FAILURES, failures(build),
-                LOGS, build.logs(),
-                ACCOUNT, account.map(Prompt::account).getOrElse(""));
+                REPO,
+                build.repository().getOrElse(""),
+                BRANCH,
+                build.branch().value(),
+                COMMIT,
+                build.commit().getOrElse(""),
+                PR,
+                build.changeRequest()
+                        .map(request -> String.valueOf(request.number()))
+                        .getOrElse(""),
+                FAILURES,
+                failures(build),
+                LOGS,
+                build.logs(),
+                ACCOUNT,
+                account.map(Prompt::account).getOrElse(""));
     }
 
     /**
@@ -81,10 +90,10 @@ public final class Prompt {
         String compare = build.commit()
                 .map(sha -> "git log " + sha + "..HEAD and git log HEAD.." + sha)
                 .getOrElse("git log @{upstream}..HEAD and git log HEAD..@{upstream}");
-        String pr = build.pullRequest()
-                .map(number -> " (pull request #" + number + ")")
+        String request = build.changeRequest()
+                .map(change -> " (" + change.noun() + " #" + change.number() + ")")
                 .getOrElse("");
-        return "The CI build of branch " + build.branch().value() + where + pr + " failed," + commit + ".\n"
+        return "The CI build of branch " + build.branch().value() + where + request + " failed," + commit + ".\n"
                 + "That build is of the branch on the forge, and may differ from what is checked out here: local"
                 + " commits not pushed or not pulled yet, or an older build. " + compare + " show how.\n"
                 + account.map(known -> account(known) + "\n").getOrElse("")
