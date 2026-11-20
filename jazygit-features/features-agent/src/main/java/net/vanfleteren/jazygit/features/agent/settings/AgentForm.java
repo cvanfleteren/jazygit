@@ -12,10 +12,11 @@ import net.vanfleteren.jazygit.kernel.state.settings.Field;
 import net.vanfleteren.jazygit.kernel.state.settings.FieldProblem;
 import net.vanfleteren.jazygit.kernel.state.settings.Form;
 import net.vanfleteren.jazygit.kernel.state.settings.ListSetting;
+import net.vanfleteren.jazygit.kernel.state.settings.Others;
 
 /**
  * The agents as the settings panel edits them (ADR 164): the list, and the form of one agent, with what is wrong in
- * it. A name, a command and a shortcut that is not taken are needed to save an agent; a placeholder in its prompt
+ * it. A name, a command and a shortcut no earlier agent holds are needed to save an agent; a placeholder in its prompt
  * that jazygit does not fill only warns, as such braces are kept (ADR 161).
  */
 public final class AgentForm {
@@ -64,13 +65,13 @@ public final class AgentForm {
     /**
      * What is wrong with {@code agent}, given {@code others}, the other agents of the list.
      */
-    static List<FieldProblem> problems(AgentProgram agent, List<AgentProgram> others) {
+    static List<FieldProblem> problems(AgentProgram agent, Others<AgentProgram> others) {
         return List.<FieldProblem>empty()
                 .appendAll(Option.when(
                         agent.name().isBlank(), () -> FieldProblem.error(NAME, "agent.settings.problem.empty")))
                 .appendAll(Option.when(
                         !agent.name().isBlank()
-                                && others.exists(other -> other.name().equals(agent.name())),
+                                && others.all().exists(other -> other.name().equals(agent.name())),
                         () -> FieldProblem.error(NAME, "agent.settings.problem.nameTaken")))
                 .appendAll(Option.when(
                         agent.command().headOption().forAll(String::isBlank),
@@ -79,12 +80,22 @@ public final class AgentForm {
                 .appendAll(agent.prompt().toList().flatMap(AgentForm::unknown));
     }
 
-    private static List<FieldProblem> shortcut(char letter, List<AgentProgram> others) {
+    /**
+     * What is wrong with {@code letter} as a shortcut: one that is no shortcut, or that an agent before this one
+     * holds, keeps it from being saved; one that an agent after it has too only warns, as this one holds it, and the
+     * later one goes without (as {@link Agents#of} has it).
+     */
+    private static List<FieldProblem> shortcut(char letter, Others<AgentProgram> others) {
         if (Programs.shortcut(String.valueOf(letter), HashSet.empty()).isEmpty()) {
             return List.of(FieldProblem.error(SHORTCUT, "agent.settings.problem.shortcut", String.valueOf(letter)));
         }
-        return others.find(other -> other.shortcut().contains(letter))
+        return others.before()
+                .find(other -> other.shortcut().contains(letter))
                 .map(other -> FieldProblem.error(SHORTCUT, "agent.settings.problem.shortcutTaken", other.name()))
+                .orElse(() -> others.after()
+                        .find(other -> other.shortcut().contains(letter))
+                        .map(other ->
+                                FieldProblem.warning(SHORTCUT, "agent.settings.problem.shortcutAlso", other.name())))
                 .toList();
     }
 

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.kernel.state.settings;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.settings.Entries;
@@ -47,13 +48,15 @@ public record FormPopup<E>(
     }
 
     /**
-     * The other entries of the list, in {@code entries}, that the entry is checked against.
+     * The other entries of the list, in {@code entries}, that the entry is checked against: those before it and
+     * those after it; all before a new one, which goes at the end.
      */
-    public List<E> others(Entries<E> entries) {
-        return entries.all()
-                .zipWithIndex()
-                .filter(entry -> !index.contains(entry._2))
-                .flatMap(entry -> entry._1.value());
+    public Others<E> others(Entries<E> entries) {
+        int at = index.getOrElse(entries.all().size());
+        List<Tuple2<Entries.Entry<E>, Integer>> numbered = entries.all().zipWithIndex();
+        return new Others<>(
+                numbered.filter(entry -> entry._2 < at).flatMap(entry -> entry._1.value()),
+                numbered.filter(entry -> entry._2 > at).flatMap(entry -> entry._1.value()));
     }
 
     /**

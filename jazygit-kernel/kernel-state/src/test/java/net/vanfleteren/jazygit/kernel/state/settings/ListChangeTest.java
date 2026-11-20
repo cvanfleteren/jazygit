@@ -67,7 +67,7 @@ class ListChangeTest {
             (tool, others) -> Option.when(tool.name().isBlank(), FieldProblem.error("name", "empty"))
                     .toList()
                     .appendAll(Option.when(
-                            others.exists(other -> other.name().equals(tool.name())),
+                            others.all().exists(other -> other.name().equals(tool.name())),
                             FieldProblem.error("name", "taken")))
                     .appendAll(Option.when(tool.shortcut().contains('x'), FieldProblem.warning("shortcut", "odd"))));
 

@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.state.settings.Field;
 import net.vanfleteren.jazygit.kernel.state.settings.FieldProblem;
+import net.vanfleteren.jazygit.kernel.state.settings.Others;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,7 +23,7 @@ class AgentFormTest {
             new AgentProgram("Codex", List.of("codex"), false, Option.of('x'), Option.none());
 
     private static List<FieldProblem> problems(AgentProgram agent, AgentProgram... others) {
-        return AgentForm.FORM.problems(agent, List.of(others));
+        return AgentForm.FORM.problems(agent, Others.before(List.of(others)));
     }
 
     @SuppressWarnings("unchecked")
@@ -36,7 +37,7 @@ class AgentFormTest {
     @Test
     void anAgentWithANameACommandAndAFreeShortcutHasNothingWrong() {
         assertEquals(List.empty(), problems(CLAUDE, CODEX));
-        assertTrue(AgentForm.FORM.savable(CLAUDE, List.of(CODEX)));
+        assertTrue(AgentForm.FORM.savable(CLAUDE, Others.before(List.of(CODEX))));
     }
 
     @Test
@@ -46,7 +47,7 @@ class AgentFormTest {
                         FieldProblem.error(AgentForm.NAME, "agent.settings.problem.empty"),
                         FieldProblem.error(AgentForm.COMMAND, "agent.settings.problem.empty")),
                 problems(AgentForm.BLANK));
-        assertFalse(AgentForm.FORM.savable(AgentForm.BLANK, List.empty()));
+        assertFalse(AgentForm.FORM.savable(AgentForm.BLANK, Others.before(List.empty())));
     }
 
     @Test
@@ -58,6 +59,17 @@ class AgentFormTest {
                         FieldProblem.error(AgentForm.NAME, "agent.settings.problem.nameTaken"),
                         FieldProblem.error(AgentForm.SHORTCUT, "agent.settings.problem.shortcutTaken", "Claude")),
                 problems(twin, CLAUDE));
+    }
+
+    @Test
+    void theAgentThatHoldsAShortcutKeepsItWhenALaterOneHasItTooAndIsToldSo() {
+        AgentProgram later = CODEX.withShortcut(Option.of('c'));
+        Others<AgentProgram> others = new Others<>(List.empty(), List.of(later));
+
+        assertEquals(
+                List.of(FieldProblem.warning(AgentForm.SHORTCUT, "agent.settings.problem.shortcutAlso", "Codex")),
+                AgentForm.FORM.problems(CLAUDE, others));
+        assertTrue(AgentForm.FORM.savable(CLAUDE, others));
     }
 
     @Test
@@ -80,7 +92,7 @@ class AgentFormTest {
                         "{brnach}",
                         "{repo}, {branch}, {commit}, {pr}, {failures}, {logs}, {account}")),
                 problems);
-        assertTrue(AgentForm.FORM.savable(agent, List.empty()));
+        assertTrue(AgentForm.FORM.savable(agent, Others.before(List.empty())));
     }
 
     @Test
