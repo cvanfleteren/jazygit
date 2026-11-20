@@ -114,12 +114,7 @@ public record Agents(List<AgentProgram> all) {
                         (agents, agent) -> agents.append(
                                 agents.exists(earlier -> earlier.shortcut().isDefined()
                                                 && earlier.shortcut().equals(agent.shortcut()))
-                                        ? new AgentProgram(
-                                                agent.name(),
-                                                agent.command(),
-                                                agent.terminal(),
-                                                Option.none(),
-                                                agent.prompt())
+                                        ? agent.withShortcut(Option.none())
                                         : agent)));
     }
 
