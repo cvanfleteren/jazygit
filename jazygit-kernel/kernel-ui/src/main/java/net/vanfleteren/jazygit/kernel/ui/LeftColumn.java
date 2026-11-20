@@ -99,6 +99,10 @@ public final class LeftColumn {
         List<Panel> shown = model.screen().equals(Screen.REPOSITORY)
                 ? repositoryPanes(model, focus, inUse)
                 : panesOf(model.screen()).map(pane -> pane.render(model, focus, inUse));
+        if (shown.isEmpty()) {
+            // A screen whose feature made none of its panes shows the status alone.
+            return new Rendered(column(status(model)), List.empty());
+        }
         List<Integer> heights = model.preferences().leftHeights(model.screen());
         List<Panel> panes = rows.fold(
                 () -> shown.init()
@@ -126,11 +130,9 @@ public final class LeftColumn {
     public List<Msg> selectionChanges(Model model, Option<PaneId> inUse) {
         return !model.screen().equals(Screen.REPOSITORY)
                 // The content panel shows the item highlighted in the pane in use.
-                ? model.screen()
-                        .panes()
-                        .zip(panesOf(model.screen()))
-                        .filter(pane -> inUse.contains(pane._1))
-                        .flatMap(pane -> pane._2.selectionChange(model))
+                ? panesOf(model.screen())
+                        .filter(pane -> inUse.contains(pane.pane()))
+                        .flatMap(pane -> pane.selectionChange(model))
                 : List.of(
                                 branchesPanel.selectionChange(model),
                                 commitsPanel.selectionChange(model),
@@ -141,10 +143,12 @@ public final class LeftColumn {
     }
 
     /**
-     * The panes of {@code screen}, a screen a feature brings, top to bottom.
+     * The panes of {@code screen}, a screen a feature brings, top to bottom: those its feature made, in the order the
+     * screen lists them, matched by their ids.
      */
     private List<LeftPane> panesOf(Screen screen) {
-        return screenPanes.get(screen).getOrElse(List.empty());
+        List<LeftPane> made = screenPanes.get(screen).getOrElse(List.empty());
+        return screen.panes().flatMap(id -> made.find(pane -> pane.pane().equals(id)));
     }
 
     /**

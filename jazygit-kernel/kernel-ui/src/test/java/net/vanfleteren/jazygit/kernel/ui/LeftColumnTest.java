@@ -15,7 +15,9 @@ import dev.tamboui.toolkit.focus.FocusManager;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Focus;
+import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
@@ -24,7 +26,9 @@ import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsScreen;
 import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
+import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -69,6 +73,64 @@ class LeftColumnTest {
         assertEquals(tops.size(), tops.distinct().size(), "the tops of " + panes);
     }
 
+    @Test
+    void thePanesAFeatureMakesShowInTheOrderItsScreenListsThemWhicheverOrderItMadeThemIn() {
+        // A screen the kernel does not know, whose feature makes its panes bottom first (ADR 168).
+        PaneId top = new PaneId("top");
+        PaneId bottom = new PaneId("bottom");
+        Screen other = new Screen(
+                "other",
+                List.of(top, bottom),
+                Settings.leftWidth("ui.other-width"),
+                Settings.leftHeights("ui.other-heights", List.of(50)));
+        ElementRegistry registry = new ElementRegistry();
+        FocusManager focus = new FocusManager();
+        DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, registry));
+        columnWith(spec(other, (dispatch, open, highlights) -> List.of(standIn(bottom), standIn(top))))
+                .render(TestModels.loaded().withScreen(other), Option.none(), Option.none(), Option.none())
+                .column()
+                .render(Frame.forTesting(Buffer.empty(AREA)), AREA, context);
+
+        assertTrue(registry.getArea("top").y() < registry.getArea("bottom").y());
+    }
+
+    @Test
+    void aScreenWhoseFeatureMadeNoPaneShowsTheStatusAlone() {
+        Screen bare = new Screen(
+                "bare",
+                List.of(new PaneId("missing")),
+                Settings.leftWidth("ui.bare-width"),
+                Settings.leftHeights("ui.bare-heights", List.empty()));
+
+        LeftColumn.Rendered rendered = columnWith(spec(bare, (dispatch, open, highlights) -> List.empty()))
+                .render(TestModels.loaded().withScreen(bare), Option.none(), Option.none(), Option.none());
+
+        assertEquals(List.empty(), rendered.panes());
+    }
+
+    private static LeftColumn columnWith(ScreenSpec spec) {
+        return new LeftColumn(
+                msg -> {},
+                StyleEngine.create(),
+                Clock.systemUTC(),
+                id -> {},
+                tab -> {},
+                highlights -> COMMITS,
+                highlights -> STASH,
+                Screens.of(List.of(spec)));
+    }
+
+    private static ScreenSpec spec(Screen screen, ScreenSpec.Panes panes) {
+        return new ScreenSpec(
+                screen,
+                "screen.repository",
+                panes,
+                model -> Option.none(),
+                model -> Freshness.NEVER,
+                "status.fetch",
+                model -> List.empty());
+    }
+
     @ParameterizedTest
     @MethodSource("screens")
     void aCollapsedColumnIsAnEmptyPanelMarkedAtItsTopRight(Screen screen) {
@@ -101,6 +163,11 @@ class LeftColumnTest {
 
     private static LeftPane standIn(PaneId id) {
         return new LeftPane() {
+            @Override
+            public PaneId pane() {
+                return id;
+            }
+
             @Override
             public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
                 return panel().id(id.id());

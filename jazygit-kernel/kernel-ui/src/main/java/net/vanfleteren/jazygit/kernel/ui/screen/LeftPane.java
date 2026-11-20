@@ -15,6 +15,11 @@ import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 public interface LeftPane {
 
     /**
+     * The id of the pane, by which its screen lists it ({@code Screen.panes}) and the focus names it.
+     */
+    PaneId pane();
+
+    /**
      * The pane as {@code model} shows it.
      *
      * @param focus what has the focus, if anything

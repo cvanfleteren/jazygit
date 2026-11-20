@@ -170,6 +170,7 @@ public final class PullRequestsPanel implements LeftPane {
     /**
      * The pane, as the focus is on it.
      */
+    @Override
     public PaneId pane() {
         return scope.pane();
     }

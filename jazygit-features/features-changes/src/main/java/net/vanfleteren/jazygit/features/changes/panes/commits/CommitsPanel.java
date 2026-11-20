@@ -208,6 +208,14 @@ public class CommitsPanel implements LeftPane {
     }
 
     /**
+     * The id of the pane, by which its screen lists it.
+     */
+    @Override
+    public PaneId pane() {
+        return PANE;
+    }
+
+    /**
      * The message to send when the highlighted commit is not the one whose changes {@code model} holds.
      */
     @Override
