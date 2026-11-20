@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.RepoWorkflow;
 import net.vanfleteren.jazygit.core.gh.model.WorkflowRunsPage;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -20,7 +21,7 @@ class WorkflowRunsQueryTest {
     private static final String RUN = """
             { "databaseId": 7, "createdAt": "2026-11-15T08:00:00Z", "runAttempt": 2, "event": "%s",
               "file": { "path": ".github/workflows/build.yml" },
-              "checkSuite": { "status": "IN_PROGRESS", "branch": %s, "commit": { "oid": "abc", "message": "Title\\n\\nBody" },
+              "checkSuite": { "status": "IN_PROGRESS", "branch": %s, "commit": { "oid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "message": "Title\\n\\nBody" },
                 "matchingPullRequests": { "nodes": [ { "number": 405 } ] },
                 "checkRuns": { "nodes": [
                   { "name": "verify", "status": "COMPLETED", "conclusion": "SUCCESS",
@@ -47,7 +48,9 @@ class WorkflowRunsQueryTest {
         assertEquals(2, build.attempt());
         assertEquals("Title", build.title());
         assertEquals(Option.of(".github/workflows/build.yml"), build.file());
-        assertEquals(new Build.Origin(Option.of("W_1"), Option.of("feature"), Option.of(405)), build.origin());
+        assertEquals(
+                new Build.Origin(Option.of("W_1"), Option.of(new BranchName("feature")), Option.of(405)),
+                build.origin());
         assertEquals(List.of("SUCCESS", ""), build.jobs().map(Build.Job::conclusion));
         assertEquals(Build.Outcome.RUNNING, build.outcome());
     }
@@ -67,7 +70,7 @@ class WorkflowRunsQueryTest {
                 { "databaseId": %d, "createdAt": "2026-11-15T08:00:00Z", "runAttempt": 1, "event": "push",
                   "file": { "path": ".github/workflows/build.yml" },
                   "checkSuite": { "status": "%s", "branch": { "name": "main" },
-                    "commit": { "oid": "abc", "message": "Title" }, "matchingPullRequests": { "nodes": [] },
+                    "commit": { "oid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "message": "Title" }, "matchingPullRequests": { "nodes": [] },
                     "checkRuns": { "nodes": [] } } }""".formatted(id, status);
     }
 
@@ -107,5 +110,16 @@ class WorkflowRunsQueryTest {
                           { "node_id": "W_1", "name": "Build", "path": ".github/workflows/build.yml", "state": "active" },
                           { "node_id": "W_2", "name": "Old", "path": ".github/workflows/old.yml",
                             "state": "disabled_manually" } ] }""", RepoWorkflowsQuery.DECODER));
+    }
+
+    @Test
+    void aRunOfACommitWhoseIdIsNotAnObjectIdIsNotRead() {
+        String run = RUN.formatted("push", "null")
+                .replace("\"oid\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"", "\"oid\": \"not-an-oid\"");
+
+        assertTrue(GhProcess.decoded("""
+                        { "data": { "node": { "name": "Build", "runs": {
+                          "pageInfo": { "hasNextPage": false, "endCursor": null }, "nodes": [ %s ] } } } }""".formatted(run), WorkflowRunsQuery.decoder("W_1"))
+                .isLeft());
     }
 }

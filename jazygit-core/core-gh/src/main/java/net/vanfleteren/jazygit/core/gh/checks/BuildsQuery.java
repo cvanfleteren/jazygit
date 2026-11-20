@@ -27,6 +27,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.Comparator;
 import net.vanfleteren.jazygit.core.gh.graphql.CheckFragment;
+import net.vanfleteren.jazygit.core.gh.graphql.ObjectIds;
 import net.vanfleteren.jazygit.core.gh.graphql.SuiteFragment;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
@@ -113,7 +114,7 @@ final class BuildsQuery {
     // The builds on one commit, the newest first. Its title is the first line of its message, as GitHub's
     // messageHeadline cuts it off at 72 characters with an ellipsis.
     static final Decoder<List<Build>> COMMIT = map4(
-            field("oid", string().map(Sha::new)),
+            field("oid", ObjectIds.SHA),
             field("message", string())
                     .map(message -> message.lines().findFirst().orElse("")),
             CHECKS,
