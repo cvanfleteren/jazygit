@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.SettingKeys;
 import net.vanfleteren.jazygit.kernel.settings.SettingsFile;
 import net.vanfleteren.jazygit.kernel.settings.SettingsProblem;
+import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore.Loaded;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import org.junit.jupiter.api.Test;
@@ -77,6 +78,27 @@ class StandardSettingsTest {
         assertTrue(saved.contains("name = \"Broken\""), saved);
         assertEquals(
                 loaded.settings().get(Agents.SETTING), file.load().settings().get(Agents.SETTING));
+    }
+
+    @Test
+    void anAgentAddedToTheFileByHandIsAppliedWhenItIsReadAgain() throws IOException {
+        SettingsFile file = file(AGENTS);
+        Loaded loaded = file.load();
+        Files.writeString(dir.resolve("config.toml"), AGENTS + """
+
+                [[agents]]
+                name = "Codex"
+                command = ["codex"]
+                """);
+
+        SettingsStore.Applied applied = file.load().appliedTo(loaded.settings(), loaded);
+
+        assertEquals(
+                List.of("Claude", "Codex"),
+                applied.settings().get(Agents.SETTING).all().map(AgentProgram::name));
+        assertTrue(
+                applied.changed().contains(Agents.SETTING.path()),
+                applied.changed().toString());
     }
 
     private SettingsFile file(String content) throws IOException {
