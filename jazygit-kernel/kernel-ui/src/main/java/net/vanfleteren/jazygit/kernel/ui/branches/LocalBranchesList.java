@@ -36,8 +36,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
  * The local branches, with the name of the current branch in bold and a colour of its own. Space checks out the highlighted branch, P pushes it, R asks
  * for a new name for it, d asks where to delete it, n asks for the name of a new branch starting at it, w checks it
  * out in a new worktree.
- * A branch with a pull request shows its number, its CI checks and its review; one without shows the CI checks
- * of the branch it follows on GitHub.
+ * A branch shows what the features show of it, its badges, such as its pull request on GitHub (ADR 167).
  * <p>
  * A stack of pull requests on GitHub with a local branch is one node: a header, and its pull requests under it in
  * GitHub's order, indented (ADR 72). Enter on the header opens or closes it; the keys of a branch do nothing there.
@@ -51,6 +50,7 @@ class LocalBranchesList implements BranchesTabList {
 
     private final LoadableList<List<BranchNode>> list;
     private final Keymap keymap = Keymap.standard();
+    private final BranchBadges badges;
     private final Clock clock;
     private final PaneId pane;
     // Whether the files pane was locked to the branches at the last render (ADR 149).
@@ -64,9 +64,12 @@ class LocalBranchesList implements BranchesTabList {
      * @param dispatch   receives the messages for the user's actions, on the render thread
      * @param clock      animates the spinners of the busy branches
      * @param highlights how the highlighted branch is shown, also when the pane is not in use
+     * @param badges     what the features show of a branch
      */
-    LocalBranchesList(String id, Consumer<Msg> dispatch, Clock clock, Theme.Highlights highlights) {
+    LocalBranchesList(
+            String id, Consumer<Msg> dispatch, Clock clock, Theme.Highlights highlights, BranchBadges badges) {
         this.clock = clock;
+        this.badges = badges;
         this.pane = new PaneId(id);
         list = new LoadableList<>(Messages.get("panel.branches.title"), id, LocalBranchesList::reselect, highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
@@ -78,8 +81,8 @@ class LocalBranchesList implements BranchesTabList {
 
     /**
      * A branch on two lines (ADR 45): its name and its spinner while it is busy; below them its age, how far it is
-     * from its upstream and from its base (ADR 46), how it is doing on GitHub and whether it is checked out in
-     * another worktree.
+     * from its upstream and from its base (ADR 46), its badges (ADR 167) and whether it is checked out in another
+     * worktree.
      *
      * @param distance how far the branch is from its base, if that is known
      * @param spinner  the label and the spinner frame of a busy branch, as one text
@@ -88,9 +91,9 @@ class LocalBranchesList implements BranchesTabList {
             Branch b,
             Duration since,
             Option<BaseDistance> distance,
-            List<LoadableList.Seg> gitHub,
+            List<LoadableList.Seg> badges,
             Option<String> spinner) {
-        return row(b, since, distance, Option.none(), gitHub, spinner);
+        return row(b, since, distance, Option.none(), badges, spinner);
     }
 
     /**
@@ -104,7 +107,7 @@ class LocalBranchesList implements BranchesTabList {
             Duration since,
             Option<BaseDistance> distance,
             Option<BranchName> parent,
-            List<LoadableList.Seg> gitHub,
+            List<LoadableList.Seg> badges,
             Option<String> spinner) {
         return new LoadableList.Row(List.of(
                                 b.current()
@@ -116,7 +119,7 @@ class LocalBranchesList implements BranchesTabList {
                         .appendAll(BranchSegs.group(BranchSegs.sync(b)))
                         .appendAll(BranchSegs.group(
                                 BranchSegs.baseDistance(b, distance).appendAll(BranchSegs.parent(parent))))
-                        .appendAll(BranchSegs.group(gitHub))
+                        .appendAll(BranchSegs.group(badges))
                         .appendAll(BranchSegs.group(BranchSegs.worktree(b))));
     }
 
@@ -126,18 +129,17 @@ class LocalBranchesList implements BranchesTabList {
      * parent, which GitHub does not merge (ADR 73).
      */
     static Option<BranchName> shownParent(Model model, Branch branch) {
+        GitHubState gitHub = model.part(GitHubState.PART);
         return model.repo()
                 .parents()
                 .get(branch.name())
                 .filter(parent -> !GitHubBases.root(
                         parent,
                         AheadUpdate.main(model),
-                        model.part(GitHubState.PART).protectedBranches().getOrElse(HashSet.empty())))
-                .filter(parent -> model.part(GitHubState.PART)
-                                .pullRequest(branch)
-                                .flatMap(PullRequest::stack)
-                                .isEmpty()
-                        || model.repo().behindParent(branch.name()).isDefined());
+                        gitHub.protectedBranches().getOrElse(HashSet.empty())))
+                .filter(parent ->
+                        gitHub.pullRequest(branch).flatMap(PullRequest::stack).isEmpty()
+                                || model.repo().behindParent(branch.name()).isDefined());
     }
 
     /**
@@ -289,18 +291,16 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     /**
-     * The times the list shows (ADR 124): the age of each branch, and how its checks are doing in time.
+     * The times the list shows (ADR 124): the age of each branch, and the text of its badges that changes with the
+     * time.
      */
-    static List<ShownTime> shownTimes(Model model) {
+    static List<ShownTime> shownTimes(Model model, BranchBadges badges) {
         return model.repo()
                 .branches()
                 .toOption()
                 .toList()
-                .flatMap(read -> read.map(b -> BranchSegs.shownTime(
-                        model,
-                        b.lastActivity(),
-                        model.part(GitHubState.PART).waiting(b),
-                        model.part(GitHubState.PART).eta(b))));
+                .flatMap(read -> read.map(
+                        b -> BranchSegs.shownTime(b.lastActivity(), badges.of(model, new BranchRef.Local(b.name())))));
     }
 
     @Override
@@ -324,14 +324,7 @@ class LocalBranchesList implements BranchesTabList {
                 Duration.between(b.lastActivity(), model.now()),
                 model.repo().baseDistance().get(b.name()),
                 shownParent(model, b),
-                BranchSegs.gitHub(
-                        model.part(GitHubState.PART).pullRequest(b),
-                        model.part(GitHubState.PART)
-                                .merge(model.part(GitHubState.PART).pullRequest(b)),
-                        model.part(GitHubState.PART).checks(b),
-                        model.part(GitHubState.PART).waiting(b),
-                        BranchSegs.eta(model, model.part(GitHubState.PART).eta(b)),
-                        model.now()),
+                badges.of(model, new BranchRef.Local(b.name())).segs(),
                 spinnerOf.apply(new BranchRef.Local(b.name())));
         return list.render(
                 nodes,
@@ -371,14 +364,14 @@ class LocalBranchesList implements BranchesTabList {
      * The remote-tracking branch on GitHub of {@code head}, the branch a pull request merges from, if it was fetched.
      */
     static Option<RemoteBranch> fetched(Model model, GhBranch head) {
+        GitHubState gitHub = model.part(GitHubState.PART);
         return model.repo()
                 .remoteBranches()
                 .toOption()
                 .getOrElse(List.empty())
                 .iterator()
                 .map(RemoteRef::branch)
-                .find(remote -> remote.branch().equals(FromGitHub.branch(head))
-                        && model.part(GitHubState.PART).mayBeOnGitHub(remote));
+                .find(remote -> remote.branch().equals(FromGitHub.branch(head)) && gitHub.mayBeOnGitHub(remote));
     }
 
     /**

@@ -6,11 +6,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -40,14 +35,7 @@ class RemoteBranchesListTest {
     @Test
     void aRemoteBranchShowsItsSpinnerBesideItsNameAndItsPullRequestBelowIt() {
         LoadableList.Row row = RemoteBranchesList.row(
-                FEATURE,
-                Duration.ofMinutes(5),
-                false,
-                BranchSegs.gitHub(
-                        Option.of(
-                                new PullRequest(new PrNumber(42), new GhBranch("b"), false, Checks.NONE, Review.NONE)),
-                        Option.none()),
-                Option.of("Pushing |"));
+                FEATURE, Duration.ofMinutes(5), false, List.of(LoadableList.Seg.of(" #42")), Option.of("Pushing |"));
 
         assertEquals("origin/feature  Pushing |", row.text());
         assertEquals(
