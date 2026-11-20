@@ -82,10 +82,11 @@ public final class SettingsFile implements SettingsStore {
     private Try<Path> saved(Settings previous, Settings next) {
         // A file that cannot be read is left alone, rather than replaced by one with only these settings.
         Try<CommentedConfig> current = Files.exists(file) ? TomlFile.read(file) : Try.success(TomlFile.newConfig());
-        return current.map(config -> next.entries(keys)
+        return current.flatMap(config -> unchangedSince(config, previous, next))
+                .map(config -> next.entries(keys)
                         .filter(entry -> !previous.entries(keys).contains(entry))
                         .foldLeft(config, (changed, entry) -> {
-                            changed.set(entry._1.toJavaList(), entry._2);
+                            changed.set(entry._1.toJavaList(), toml(changed, entry._2));
                             return changed;
                         }))
                 // A setting back at its default has no entry anymore, nor a table it leaves empty.
@@ -97,6 +98,51 @@ public final class SettingsFile implements SettingsStore {
                             return withoutEmptyTables(changed, key.dropRight(1));
                         }))
                 .flatMap(config -> TomlFile.write(file, config));
+    }
+
+    /**
+     * {@code config}, the file as it is now, unless a guarded setting that {@code next} changes from {@code previous}
+     * changed in it since {@code previous} was read or written: another session, or the user, wrote there meanwhile,
+     * and writing the setting as a whole would lose that (ADR 164).
+     */
+    private Try<CommentedConfig> unchangedSince(CommentedConfig config, Settings previous, Settings next) {
+        Option<String> changed = keys.all()
+                .filter(key -> key.codec().guarded() && key.changed(previous, next))
+                .filter(key -> !asRead(config, key).equals(previous.get(key)))
+                .map(SettingKey::path)
+                .headOption();
+        return changed.isEmpty()
+                ? Try.success(config)
+                : Try.failure(new IllegalStateException(changed.get()
+                        + " changed in the settings file since it was read; it is read again as the settings panel"
+                        + " opens"));
+    }
+
+    /**
+     * What {@code config} has of {@code key}, as a read would take it: its initial value when it has none, or none
+     * valid.
+     */
+    private static <T> T asRead(CommentedConfig config, SettingKey<T> key) {
+        return Option.ofOptional(
+                        config.getOptional(List.of(key.path().split("\\.")).toJavaList()))
+                .flatMap(found -> key.codec().decode(key.path(), plain(found)).value())
+                .getOrElse(key.initial());
+    }
+
+    /**
+     * {@code value} as the TOML library writes it in {@code config}: a {@link java.util.Map} as a table, also one in
+     * an array, as an array of tables.
+     */
+    private static Object toml(CommentedConfig config, Object value) {
+        if (value instanceof java.util.Map<?, ?> table) {
+            CommentedConfig written = config.createSubConfig();
+            table.forEach(
+                    (key, field) -> written.set(List.of(String.valueOf(key)).toJavaList(), toml(config, field)));
+            return written;
+        }
+        return value instanceof java.util.List<?> array
+                ? List.ofAll(array).map(item -> toml(config, item)).toJavaList()
+                : value;
     }
 
     /**
