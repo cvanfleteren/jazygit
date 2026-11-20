@@ -38,7 +38,7 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `core-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
 | ↳ `core-repo` | `repo`: what a repository is made of, as values that git and gh share: `Sha`, `BranchName`, `Commit`, `Branch`, `Upstream`, `Tag`, `Stash` (ADR 165). | vavr |
 | ↳ `core-git` | `git`, `git.model`: running git, and what it reports as values, as diffs, blame and the status. | repo, base, process, syntax |
-| ↳ `core-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
+| ↳ `core-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, repo, json |
 | ↳ `core-askpass` | `askpass`: lets ssh ask the user through jazygit: the socket, the helper ssh runs, its launcher (ADR 150). | process, git |
 | `jazygit-kernel` | The kernel: what every feature builds on. | lib, core |
 | ↳ `kernel-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |

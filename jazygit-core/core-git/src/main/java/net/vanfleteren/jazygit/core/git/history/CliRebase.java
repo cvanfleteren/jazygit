@@ -57,7 +57,7 @@ public final class CliRebase {
                 "jazygit-message",
                 file -> Files.writeString(file, message.text()),
                 failed -> new GitFailure(failed, List.empty()),
-                file -> base(worktree, sha.value())
+                file -> base(worktree, sha)
                         .flatMap(base -> rebase(
                                 worktree,
                                 interactive(
@@ -92,7 +92,9 @@ public final class CliRebase {
      */
     public static Either<GitFailure, List<ExecutedCommand>> squash(Path worktree, Sha sha, SquashMode mode) {
         return GitProcess.run(worktree, git("rev-parse", sha.value() + "^"))
-                .flatMap(parent -> base(worktree, parent.stdout().strip()))
+                .flatMap(parent -> GitOutput.sha(parent.stdout())
+                        .mapLeft(error -> new GitFailure(error, parent.log()))
+                        .flatMap(grandparent -> base(worktree, grandparent)))
                 .flatMap(base -> rebase(
                         worktree,
                         interactive(
@@ -113,7 +115,7 @@ public final class CliRebase {
     public static Either<GitFailure, List<ExecutedCommand>> fixupInto(Path worktree, Sha sha) {
         return GitProcess.run(worktree, git("rev-parse", "HEAD"))
                 .map(head -> head.stdout().strip())
-                .flatMap(head -> base(worktree, sha.value())
+                .flatMap(head -> base(worktree, sha)
                         .flatMap(base -> rebase(
                                 worktree,
                                 interactive(
@@ -131,7 +133,7 @@ public final class CliRebase {
      * @return the command lines that were run
      */
     public static Either<GitFailure, List<ExecutedCommand>> drop(Path worktree, Sha sha) {
-        return base(worktree, sha.value())
+        return base(worktree, sha)
                 .flatMap(base -> rebase(
                         worktree,
                         interactive(
@@ -299,9 +301,9 @@ public final class CliRebase {
     /**
      * What to rebase onto to rewrite {@code commit}: its parent, or {@code --root} for a root commit.
      */
-    private static Either<GitFailure, String> base(Path worktree, String commit) {
+    private static Either<GitFailure, String> base(Path worktree, Sha commit) {
         // "<sha> <parents...>": only the sha when it is a root commit.
-        return GitProcess.run(worktree, git("rev-list", "--parents", "-n", "1", commit))
-                .map(output -> output.stdout().strip().contains(" ") ? commit + "^" : "--root");
+        return GitProcess.run(worktree, git("rev-list", "--parents", "-n", "1", commit.value()))
+                .map(output -> output.stdout().strip().contains(" ") ? commit.value() + "^" : "--root");
     }
 }

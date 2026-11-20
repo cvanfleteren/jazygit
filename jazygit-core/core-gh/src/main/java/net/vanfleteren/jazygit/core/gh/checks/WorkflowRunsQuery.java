@@ -20,6 +20,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.WorkflowRunsPage;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -57,7 +58,7 @@ final class WorkflowRunsQuery {
             field(
                     "commit",
                     map2(
-                            field("oid", string()),
+                            field("oid", string().map(Sha::new)),
                             field("message", string()),
                             (oid, message) ->
                                     new Commit(oid, message.lines().findFirst().orElse("")))),
@@ -120,7 +121,7 @@ final class WorkflowRunsQuery {
                 Run::new);
     }
 
-    private record Commit(String sha, String title) {}
+    private record Commit(Sha sha, String title) {}
 
     private record Suite(
             boolean done, Option<String> branch, Commit commit, Option<Integer> pullRequest, List<Build.Job> jobs) {}

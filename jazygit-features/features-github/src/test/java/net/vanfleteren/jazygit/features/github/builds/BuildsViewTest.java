@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.Pipeline;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +32,7 @@ class BuildsViewTest {
                 pipeline.event(),
                 1,
                 1,
-                sha,
+                new Sha(sha),
                 "Title",
                 at,
                 List.of(new Build.Job("job", conclusion, Option.of(at), Option.of(at.plusSeconds(60)))));

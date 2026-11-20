@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -21,7 +22,7 @@ class BuildTest {
     }
 
     private static Build build(int attempt, Build.Job... jobs) {
-        return new Build("Build", "push", 1, attempt, "abc", "Title", CREATED, List.of(jobs));
+        return new Build("Build", "push", 1, attempt, new Sha("abc"), "Title", CREATED, List.of(jobs));
     }
 
     @Test

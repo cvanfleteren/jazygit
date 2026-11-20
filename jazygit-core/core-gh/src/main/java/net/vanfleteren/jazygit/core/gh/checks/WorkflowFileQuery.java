@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.process.Limit;
 import net.vanfleteren.jazygit.core.process.Limited;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * The file of a workflow at a commit, as GitHub has it, over REST: for a build on a commit that is not fetched, as one
@@ -34,7 +35,7 @@ final class WorkflowFileQuery {
     /**
      * The command that prints the file at {@code path} in the commit {@code sha}, as it is, not as JSON.
      */
-    static GhCommand command(String sha, String path) {
+    static GhCommand command(Sha sha, String path) {
         String encoded = List.of(path.split("/"))
                 .map(segment ->
                         URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20"))
@@ -43,6 +44,7 @@ final class WorkflowFileQuery {
                 "api",
                 "-H",
                 "Accept: application/vnd.github.raw",
-                "repos/{owner}/{repo}/contents/" + encoded + "?ref=" + URLEncoder.encode(sha, StandardCharsets.UTF_8));
+                "repos/{owner}/{repo}/contents/" + encoded + "?ref="
+                        + URLEncoder.encode(sha.value(), StandardCharsets.UTF_8));
     }
 }

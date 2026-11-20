@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -75,7 +76,7 @@ class BuildsQueryTest {
         assertEquals("Publish", build.workflow());
         assertEquals("push", build.event());
         assertEquals(10, build.runId());
-        assertEquals("aaa", build.sha());
+        assertEquals(new Sha("aaa"), build.sha());
         assertEquals("Newest", build.title());
         assertEquals(Instant.parse("2026-11-14T23:00:00Z"), build.createdAt());
         assertEquals(List.of("build", "verify / acceptance (1/6)"), build.jobs().map(Build.Job::name));
@@ -107,7 +108,7 @@ class BuildsQueryTest {
         assertEquals("Publish", held.workflow());
         assertEquals("push", held.event());
         assertEquals(1, held.attempt());
-        assertEquals("aaa", held.sha());
+        assertEquals(new Sha("aaa"), held.sha());
         assertEquals("Tip", held.title());
         assertEquals(Instant.parse("2026-11-14T23:10:00Z"), held.createdAt());
         assertTrue(held.jobs().isEmpty());

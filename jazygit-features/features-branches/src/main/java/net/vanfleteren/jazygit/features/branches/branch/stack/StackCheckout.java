@@ -13,7 +13,6 @@ import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.github.FromGitHub;
 
@@ -69,7 +68,6 @@ public record StackCheckout(int stack, List<Line> lines, List<PrNumber> skipped,
         boolean atHead = open.zip(local)
                 .forAll(pair -> pair._1()
                         .headOid()
-                        .flatMap(Sha::parse)
                         .exists(head -> head.equals(pair._2().get().tip())));
         return atHead ? Status.UP_TO_DATE : Status.UPDATE;
     }

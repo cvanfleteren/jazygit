@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -48,7 +49,8 @@ public final class StackFragment {
                                     field("baseRefName", string()).map(GhBranch::named),
                                     // Read since ADR 74; an answer without them is still read.
                                     optionalField("headRefOid", nullable(string()))
-                                            .map(oid -> oid.flatMap(read -> read)),
+                                            .map(oid ->
+                                                    oid.flatMap(read -> read).flatMap(Sha::parse)),
                                     optionalField("isInMergeQueue", bool()).map(queued -> queued.getOrElse(false)),
                                     // Read since ADR 99.
                                     optionalField("isCrossRepository", bool()).map(fork -> fork.getOrElse(false)),

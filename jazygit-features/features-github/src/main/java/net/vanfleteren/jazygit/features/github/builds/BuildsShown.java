@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.Build;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 
@@ -33,7 +34,7 @@ public record BuildsShown(
         boolean allBranches,
         @With Loadable<List<Build>> builds,
         int of,
-        Set<String> mine,
+        Set<Sha> mine,
         Option<Baseline> baseline,
         Map<Long, Map<String, Set<String>>> needs,
         Option<Long> picked) {

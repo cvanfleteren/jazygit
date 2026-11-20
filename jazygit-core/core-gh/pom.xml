@@ -22,6 +22,10 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
+            <artifactId>core-repo</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
             <artifactId>lib-json</artifactId>
         </dependency>
         <dependency>

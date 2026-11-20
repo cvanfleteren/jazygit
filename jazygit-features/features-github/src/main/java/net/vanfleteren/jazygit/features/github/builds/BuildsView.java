@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.core.gh.model.RepoWorkflow;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -475,7 +476,7 @@ public record BuildsView(
     public Option<BuildsShown> shownOf() {
         List<Build> builds = loaded();
         List<Pipeline> all = tabs();
-        Set<String> mine = HashSet.ofAll(builds.map(Build::sha));
+        Set<Sha> mine = HashSet.ofAll(builds.map(Build::sha));
         return shownTab().map(tab -> {
             Loadable<List<Build>> ofTab = allBranches
                     ? runsOf(tab.workflow()).map(WorkflowRuns::builds).getOrElse(Loadable::loading)
@@ -531,13 +532,13 @@ public record BuildsView(
     }
 
     private static List<Pipeline> onTip(List<Build> builds) {
-        Option<String> tip = builds.headOption().map(Build::sha);
+        Option<Sha> tip = builds.headOption().map(Build::sha);
         return builds.filter(build -> tip.contains(build.sha()))
                 .map(Pipeline::of)
                 .distinct();
     }
 
-    private Option<Workflow> workflow(String sha, String path) {
+    private Option<Workflow> workflow(Sha sha, String path) {
         return workflows.get(new FileAt(sha, path)).flatMap(read -> read);
     }
 
@@ -547,7 +548,7 @@ public record BuildsView(
      * @param sha  the commit
      * @param path its path
      */
-    public record FileAt(String sha, String path) {}
+    public record FileAt(Sha sha, String path) {}
 
     /**
      * A workflow as it runs for one event, like {@code Build} for {@code pull_request}, or for any: the builds of one

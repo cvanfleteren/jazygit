@@ -102,8 +102,8 @@ public final class CliStatus implements Status {
      * HEAD as described by the {@code branch.head} and {@code branch.oid} headers, which say
      * {@code (detached)} and {@code (initial)} for a detached HEAD and a repository without commits.
      */
-    private static Head head(String branch, Option<String> oid) {
-        Option<Sha> commit = oid.filter(o -> !o.equals("(initial)")).flatMap(Sha::parse);
+    private static Head head(String branch, Option<Sha> oid) {
+        Option<Sha> commit = oid;
         return commit.filter(c -> branch.equals("(detached)"))
                 .<Head>map(Head.Detached::new)
                 .getOrElse(() -> new Head.OnBranch(new BranchName(branch), commit));
@@ -186,7 +186,7 @@ public final class CliStatus implements Status {
      */
     private record Parsed(
             Option<String> head,
-            Option<String> oid,
+            Option<Sha> oid,
             Map<String, FileEntry> byPath,
             Option<Function<String, FileEntry>> origin) {
 
@@ -205,7 +205,8 @@ public final class CliStatus implements Status {
         }
 
         Parsed withOid(String commit) {
-            return new Parsed(head, Option.of(commit), byPath, origin);
+            // "(initial)", for a repository without commits, is no sha.
+            return new Parsed(head, Sha.parse(commit), byPath, origin);
         }
     }
 

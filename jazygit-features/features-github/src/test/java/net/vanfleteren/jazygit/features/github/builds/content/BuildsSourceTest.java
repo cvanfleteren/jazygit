@@ -33,13 +33,13 @@ class BuildsSourceTest {
                 "push",
                 run,
                 1,
-                sha,
+                new Sha(sha),
                 "Commit " + run,
                 T,
                 List.of(new Build.Job("verify", "FAILURE", Option.of(T), Option.of(T))));
     }
 
-    private static BuildsShown shown(List<Build> builds, boolean allBranches, Set<String> mine, long picked) {
+    private static BuildsShown shown(List<Build> builds, boolean allBranches, Set<Sha> mine, long picked) {
         return new BuildsShown(
                 List.empty(),
                 List.empty(),
@@ -63,8 +63,10 @@ class BuildsSourceTest {
 
     @Test
     void withEveryBranchShownTheRunOfAnotherBranchIsNotHandedOverAsThisOnes() {
-        BuildsShown other = shown(List.of(build(401, MAIN), build(402, FEAT_TIP)), true, HashSet.of(FEAT_TIP), 401);
-        BuildsShown own = shown(List.of(build(401, MAIN), build(402, FEAT_TIP)), true, HashSet.of(FEAT_TIP), 402);
+        BuildsShown other =
+                shown(List.of(build(401, MAIN), build(402, FEAT_TIP)), true, HashSet.of(new Sha(FEAT_TIP)), 401);
+        BuildsShown own =
+                shown(List.of(build(401, MAIN), build(402, FEAT_TIP)), true, HashSet.of(new Sha(FEAT_TIP)), 402);
 
         assertEquals(Option.none(), BuildsSource.failedBuild(FEAT, other, Option.none()));
         assertEquals(

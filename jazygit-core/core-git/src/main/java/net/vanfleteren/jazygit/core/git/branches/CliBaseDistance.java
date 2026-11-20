@@ -42,10 +42,9 @@ final class CliBaseDistance {
      */
     static Map<BranchName, BaseDistance> read(
             Path worktree, Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
-        List<Tuple2<BranchName, Base>> bases =
-                bases(tips.mapKeys(GitArgs::revision).mapValues(Sha::value), parents, main);
+        List<Tuple2<BranchName, Base>> bases = bases(tips.mapKeys(GitArgs::revision), parents, main);
         Map<BranchName, Base> branches = HashMap.ofEntries(bases);
-        List<String> commits = bases.map(branch -> branch._2.commit()).distinct();
+        List<Sha> commits = bases.map(branch -> branch._2.commit()).distinct();
         return distances(worktree, commits, branches)
                 .getOrElse(() -> commits.size() < 2
                         ? HashMap.empty()
@@ -62,7 +61,7 @@ final class CliBaseDistance {
      * @param refs the commit of each ref, by its full name
      */
     static List<Tuple2<BranchName, Base>> bases(
-            Map<String, String> refs, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+            Map<String, Sha> refs, Map<BranchName, BranchName> parents, Option<BranchName> main) {
         return refs.keySet()
                 .toList()
                 .sorted()
@@ -81,7 +80,7 @@ final class CliBaseDistance {
      * its name.
      */
     private static Either<GitError, Map<BranchName, BaseDistance>> distances(
-            Path worktree, List<String> commits, Map<BranchName, Base> branches) {
+            Path worktree, List<Sha> commits, Map<BranchName, Base> branches) {
         return commits.isEmpty()
                 ? Either.right(HashMap.empty())
                 : GitProcess.read(
@@ -90,7 +89,8 @@ final class CliBaseDistance {
                                 "for-each-ref",
                                 "--format="
                                         + List.of("%(refname)", "%(objectname)")
-                                                .appendAll(commits.map(commit -> "%(ahead-behind:" + commit + ")"))
+                                                .appendAll(
+                                                        commits.map(commit -> "%(ahead-behind:" + commit.value() + ")"))
                                                 .mkString(GitOutput.REF_FIELD_SEPARATOR),
                                 HEADS),
                         raw -> parseCounts(raw, commits, branches));
@@ -103,7 +103,7 @@ final class CliBaseDistance {
      * is at none of {@code commits}, are left out.
      */
     static Either<UnexpectedOutput, Map<BranchName, BaseDistance>> parseCounts(
-            String raw, List<String> commits, Map<BranchName, Base> branches) {
+            String raw, List<Sha> commits, Map<BranchName, Base> branches) {
         return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(line -> parseLine(line, commits, branches)))
                 .map(found -> HashMap.ofEntries(found.flatMap(entry -> entry)));
     }
@@ -113,7 +113,7 @@ final class CliBaseDistance {
      * {@code branches} or its base is at none of {@code commits}.
      */
     private static Either<UnexpectedOutput, Option<Tuple2<BranchName, BaseDistance>>> parseLine(
-            String line, List<String> commits, Map<BranchName, Base> branches) {
+            String line, List<Sha> commits, Map<BranchName, Base> branches) {
         return GitOutput.fields(line, 2 + commits.size())
                 .flatMap(fields -> GitOutput.after(fields.get(0), HEADS)
                         .map(BranchName::new)
@@ -148,5 +148,5 @@ final class CliBaseDistance {
     /**
      * The base of a branch, and the commit it is at.
      */
-    record Base(BranchRef ref, String commit) {}
+    record Base(BranchRef ref, Sha commit) {}
 }

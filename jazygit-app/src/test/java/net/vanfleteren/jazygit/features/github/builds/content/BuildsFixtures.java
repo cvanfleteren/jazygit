@@ -40,7 +40,7 @@ final class BuildsFixtures {
             "push",
             1,
             1,
-            "abcdef0",
+            new Sha("abcdef0"),
             "A commit",
             Instant.parse("2026-11-14T23:00:00Z"),
             List.of(new Build.Job(

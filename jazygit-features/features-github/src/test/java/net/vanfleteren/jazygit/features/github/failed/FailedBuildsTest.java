@@ -44,7 +44,7 @@ class FailedBuildsTest {
                 "push",
                 401,
                 1,
-                COMMIT,
+                new Sha(COMMIT),
                 "Fix",
                 T,
                 List.of(job("verify", "FAILURE"), job("lint", "SUCCESS"), job("docs", "TIMED_OUT")));
@@ -63,7 +63,7 @@ class FailedBuildsTest {
     void thePullRequestOfTheBranchIsHandedOverAsTheChangeRequestTheForgeCallsIt() {
         PullRequest pullRequest =
                 new PullRequest(new PrNumber(12), new GhBranch("feat"), false, Checks.FAILING, Review.NONE);
-        Build build = new Build("CI", "push", 401, 1, COMMIT, "Fix", T, List.of(job("verify", "FAILURE")));
+        Build build = new Build("CI", "push", 401, 1, new Sha(COMMIT), "Fix", T, List.of(job("verify", "FAILURE")));
 
         assertEquals(
                 Option.of(new FailedBuild.ChangeRequest("pull request", 12)),
@@ -77,8 +77,8 @@ class FailedBuildsTest {
 
     @Test
     void aBuildWithAJobStillRunningIsRunning() {
-        Build build =
-                new Build("CI", "push", 401, 1, COMMIT, "Fix", T, List.of(job("verify", "FAILURE"), job("e2e", "")));
+        Build build = new Build(
+                "CI", "push", 401, 1, new Sha(COMMIT), "Fix", T, List.of(job("verify", "FAILURE"), job("e2e", "")));
 
         FailedBuild failed = FailedBuilds.of(FEAT, build, Option.none());
 

@@ -55,7 +55,7 @@ class JazygitAppBuildsTest {
                 "pull_request",
                 run,
                 1,
-                "abcdef0",
+                new Sha("abcdef0"),
                 "A commit",
                 AT,
                 List.of(new Build.Job("job", "SUCCESS", Option.of(AT), Option.of(AT.plusSeconds(60)))));

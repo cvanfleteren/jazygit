@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * {@link Checks} through gh, of the repository gh finds from the git remotes of its working tree (ADR 114).
@@ -62,7 +63,7 @@ public final class CliChecks implements Checks {
     }
 
     @Override
-    public Either<GhError, String> workflowFile(String sha, String path) {
+    public Either<GhError, String> workflowFile(Sha sha, String path) {
         return process.read(WorkflowFileQuery.command(sha, path), WorkflowFileQuery.LIMIT)
                 .flatMap(WorkflowFileQuery::text);
     }

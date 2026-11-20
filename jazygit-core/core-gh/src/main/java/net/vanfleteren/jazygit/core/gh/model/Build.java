@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * A workflow run on a commit of a branch, with its jobs: one build of the branch (ADR 131).
@@ -28,7 +29,7 @@ public record Build(
         String event,
         long runId,
         int attempt,
-        String sha,
+        Sha sha,
         String title,
         Instant createdAt,
         List<Job> jobs,
@@ -46,7 +47,7 @@ public record Build(
             String event,
             long runId,
             int attempt,
-            String sha,
+            Sha sha,
             String title,
             Instant createdAt,
             List<Job> jobs) {
@@ -61,7 +62,7 @@ public record Build(
             String event,
             long runId,
             int attempt,
-            String sha,
+            Sha sha,
             String title,
             Instant createdAt,
             List<Job> jobs,
