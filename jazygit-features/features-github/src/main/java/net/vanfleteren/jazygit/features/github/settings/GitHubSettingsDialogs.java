@@ -97,8 +97,9 @@ public final class GitHubSettingsDialogs {
     }
 
     private static String ghExecutable(SettingsPanelPopup popup) {
-        String executable =
-                popup.settings().ghExecutable().getOrElse(() -> Messages.get("github.dialog.settings.gh.onPath"));
+        String executable = popup.settings()
+                .get(GitHubSettings.GH_EXECUTABLE)
+                .getOrElse(() -> Messages.get("github.dialog.settings.gh.onPath"));
         String version = popup.section(GitHubSettingsUpdate.SETUP)
                 .map(gitHub -> gitHub.version().fold(failure -> WARNING + ErrorText.of(failure), found -> found))
                 .getOrElse(SettingsRows::reading);
@@ -126,7 +127,7 @@ public final class GitHubSettingsDialogs {
                                 account.user(),
                                 account.host(),
                                 popup.settings()
-                                        .browsers()
+                                        .get(GitHubSettings.BROWSERS)
                                         .of(account.host(), account.user())
                                         .getOrElse(() -> instead(gitHub.browser()))))
                         .getOrElse(() -> Messages.get("github.dialog.settings.browser.unknown")))

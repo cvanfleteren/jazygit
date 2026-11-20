@@ -15,9 +15,10 @@ public final class EditFeature {
      * What the app knows of it: its keys and the menu of the editors that open files.
      */
     public static final Feature FEATURE = Feature.of(
-            FeatureAction.ofKeys(EditKeys::register),
-            FeatureAction.ofPopups(
-                    dispatch -> List.of(PopupSlot.returningToFocus(new PickDialog<>(EditDialog.MENU, dispatch)))));
+                    FeatureAction.ofKeys(EditKeys::register),
+                    FeatureAction.ofPopups(dispatch ->
+                            List.of(PopupSlot.returningToFocus(new PickDialog<>(EditDialog.MENU, dispatch)))))
+            .keeping(EditorSettings.EDITORS);
 
     private EditFeature() {}
 }

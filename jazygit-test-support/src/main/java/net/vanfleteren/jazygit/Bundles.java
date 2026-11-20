@@ -61,9 +61,18 @@ public final class Bundles {
      * {@code "github.error.review." + why}.
      */
     public static List<String> missing(String root) {
+        return missing(root, HashSet.empty());
+    }
+
+    /**
+     * As {@link #missing(String)}, but a text of {@code notKeys} is not asked for: one that starts with the root and
+     * names something else, as the path of a setting in the settings file.
+     */
+    public static List<String> missing(String root, Set<String> notKeys) {
         Set<String> keys = keys(root);
         return literals(Path.of("src", "main", "java"))
                 .filter(text -> text.startsWith(root + ".") && text.length() > root.length() + 1)
+                .filter(text -> !notKeys.contains(text))
                 .filter(text -> !keys.contains(text) && keys.forAll(key -> !key.startsWith(text)))
                 .distinct()
                 .sorted();

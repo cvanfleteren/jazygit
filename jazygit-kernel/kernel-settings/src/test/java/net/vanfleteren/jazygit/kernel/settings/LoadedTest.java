@@ -113,16 +113,6 @@ class LoadedTest {
     }
 
     @Test
-    void editorsWithOneWrongEntryStillApply() {
-        Editors editors = new Editors(List.of(EditorProgram.ofDir("Kate", List.of("kate"), false, Option.none())));
-        Loaded now = invalid(Settings.DEFAULT.withEditors(editors), "editors[2].command");
-
-        Applied applied = now.appliedTo(Settings.DEFAULT, DEFAULT);
-
-        assertEquals(editors, applied.settings().editors());
-    }
-
-    @Test
     void savingPutsTheSettingsThatChangedInWhatTheFileHas() {
         Loaded before = read(Settings.DEFAULT.withTheme(ThemeName.LIGHT));
         // The session has animations off, which the file does not.

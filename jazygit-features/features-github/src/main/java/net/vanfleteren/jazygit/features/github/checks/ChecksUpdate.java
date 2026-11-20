@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.features.changes.edit.EditCmd;
+import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.features.changes.edit.OpenFileCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
@@ -153,7 +154,8 @@ public final class ChecksUpdate {
      */
     private static Next logRead(Model model, CheckLogCmd cmd, String file, int line, List<ExecutedCommand> commands) {
         Model done = OperationUpdate.done(model, cmd, commands).clearError();
-        Editors editors = done.preferences().settings().editors().files();
+        Editors editors =
+                done.preferences().settings().get(EditorSettings.EDITORS).files();
         if (editors.isEmpty()) {
             return OperationUpdate.start(done, new EditCmd(List.of(file)));
         }

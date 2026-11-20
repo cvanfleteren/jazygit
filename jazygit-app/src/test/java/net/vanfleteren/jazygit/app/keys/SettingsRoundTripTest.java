@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.app.keys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -15,15 +15,30 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
+import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
+import net.vanfleteren.jazygit.features.agent.settings.Agents;
+import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
+import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
+import net.vanfleteren.jazygit.kernel.settings.AccountBrowsers;
+import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
+import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
+import net.vanfleteren.jazygit.kernel.settings.Editors;
+import net.vanfleteren.jazygit.kernel.settings.FilterDefinition;
+import net.vanfleteren.jazygit.kernel.settings.FilterDefinitions;
+import net.vanfleteren.jazygit.kernel.settings.SettingKey;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.settings.SettingsFile;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore.Loaded;
+import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * The settings file, byte for byte: a user's file is read as it was, and a change to one setting writes exactly what
- * it wrote before. This holds the settings to their file while their code is reshaped.
+ * The settings file, byte for byte, with the keys the app gathers (ADR 163): a user's file is read as it was, and a
+ * change to one setting writes exactly what it wrote before. This holds the settings to their file while their code is
+ * reshaped.
  *
  * <p>The files written are kept in {@code src/test/resources/settings-round-trip}. When a change to what is written
  * is wanted, run this test with {@code -Dsettings.round-trip.update=true} to write them again, and review the diff.
@@ -72,14 +87,6 @@ class SettingsRoundTripTest {
             name = "Generated sources"
             paths = ["**/generated/**"]
 
-            [[agents]]
-            # the main one
-            name = "Claude"
-            command = ["claude", "{prompt}"]
-            terminal = true
-            shortcut = "c"
-            prompt = "Fix {failures}"
-
             [mine]
             x = [1, 2]
             """;
@@ -89,15 +96,19 @@ class SettingsRoundTripTest {
      */
     private static final Settings USERS_SETTINGS = Settings.DEFAULT
             .withTheme(ThemeName.DARCULA)
-            .withGhExecutable(Option.some("/opt/gh"))
+            .with(GitHubSettings.GH_EXECUTABLE, Option.some("/opt/gh"))
             .withRepositoryWidth(40)
             .withDiffSyntax(false)
             .withRepositoryHeights(List.of(20, 20, 20))
             .withAnimations(false)
             .withAutoFetch(false)
-            .withBrowsers(AccountBrowsers.NONE.with("github.com", "cvf", Option.some("firefox -P personal")))
-            .withEditors(new Editors(
-                    List.of(EditorProgram.ofDir("IntelliJ", List.of("idea", "{dir}"), false, Option.some('i')))))
+            .with(
+                    GitHubSettings.BROWSERS,
+                    AccountBrowsers.NONE.with("github.com", "cvf", Option.some("firefox -P personal")))
+            .with(
+                    EditorSettings.EDITORS,
+                    new Editors(List.of(
+                            EditorProgram.ofDir("IntelliJ", List.of("idea", "{dir}"), false, Option.some('i')))))
             .withDiffFilters(List.of("java-imports"))
             .withFilterDefinitions(new FilterDefinitions(List.of(new FilterDefinition(
                     "mine",
@@ -108,12 +119,11 @@ class SettingsRoundTripTest {
                     false))));
 
     /**
-     * A change to each setting the app writes, by the key it has in the file: to another value, to its default, or
+     * A change to each setting the app writes, in the order the file has them: to another value, to its default, or
      * away from its default where the user's file has none.
      */
     private static final Map<String, UnaryOperator<Settings>> CHANGES = LinkedHashMap.ofEntries(
             change(Settings.THEME.path(), settings -> settings.withTheme(ThemeName.LIGHT)),
-            change(Settings.GH_EXECUTABLE.path(), settings -> settings.withGhExecutable(Option.none())),
             change(Settings.REPOSITORY_WIDTH.path(), settings -> settings.withRepositoryWidth(Settings.DEFAULT_WIDTH)),
             change(Settings.PULL_REQUESTS_WIDTH.path(), settings -> settings.withPullRequestsWidth(50)),
             change(Settings.DIFF_STYLE.path(), settings -> settings.withDiffStyle(DiffStyle.PLAIN)),
@@ -128,25 +138,41 @@ class SettingsRoundTripTest {
             // The last key of its table: the table goes too.
             change(Settings.AUTO_FETCH.path(), settings -> settings.withAutoFetch(true)),
             change(
-                    Settings.BROWSERS.path(),
-                    settings -> settings.withBrowsers(
-                            settings.browsers().with("github.com", "cvf-work", Option.some("firefox -P work")))),
-            change(
                     Settings.DIFF_FILTERS.path(),
-                    settings -> settings.withDiffFilters(List.of("java-imports", "lockfiles"))));
+                    settings -> settings.withDiffFilters(List.of("java-imports", "lockfiles"))),
+            change(
+                    GitHubSettings.GH_EXECUTABLE.path(),
+                    settings -> settings.with(GitHubSettings.GH_EXECUTABLE, Option.none())),
+            change(
+                    GitHubSettings.BROWSERS.path(),
+                    settings -> settings.with(
+                            GitHubSettings.BROWSERS,
+                            settings.get(GitHubSettings.BROWSERS)
+                                    .with("github.com", "cvf-work", Option.some("firefox -P work")))),
+            change(
+                    Agents.SETTING.path(),
+                    settings -> settings.with(
+                            Agents.SETTING,
+                            settings.get(Agents.SETTING)
+                                    .added(new AgentProgram(
+                                            "Codex", List.of("codex"), true, Option.none(), Option.of("Fix it"))))));
 
     @TempDir
     Path dir;
 
     @Test
     void theUsersFileIsReadAsItWas() throws IOException {
-        assertEquals(new Loaded(USERS_SETTINGS, Option.none()), usersFile().load());
+        assertEquals(
+                new Loaded(USERS_SETTINGS, Option.none(), StandardSettings.keys()),
+                usersFile().load());
     }
 
     @Test
     void eachSettingTheAppWritesHasAChange() {
-        List<String> written =
-                SettingKeys.KERNEL.all().map(SettingKey::path).removeAll(List.of(Editors.KEY, FilterDefinitions.KEY));
+        List<String> written = StandardSettings.keys()
+                .all()
+                .map(SettingKey::path)
+                .removeAll(List.of(EditorSettings.EDITORS.path(), Settings.FILTER_DEFINITIONS.path()));
 
         assertEquals(written, CHANGES.keySet().toList());
     }
@@ -181,14 +207,18 @@ class SettingsRoundTripTest {
         SettingsFile file = usersFile();
         Settings read = file.load().settings();
 
-        file.save(read, Settings.DEFAULT.withEditors(read.editors()).withFilterDefinitions(read.filterDefinitions()));
+        file.save(
+                read,
+                Settings.DEFAULT
+                        .with(EditorSettings.EDITORS, read.get(EditorSettings.EDITORS))
+                        .withFilterDefinitions(read.filterDefinitions()));
 
         assertWritten("back-to-default");
     }
 
     @Test
     void savingWithoutAFileWritesWhatItDid() throws IOException {
-        SettingsFile file = new SettingsFile(dir.resolve("config.toml"));
+        SettingsFile file = new SettingsFile(dir.resolve("config.toml"), StandardSettings.keys());
 
         file.save(
                 Settings.DEFAULT,
@@ -200,7 +230,7 @@ class SettingsRoundTripTest {
     private SettingsFile usersFile() throws IOException {
         Path file = dir.resolve("config.toml");
         Files.writeString(file, USERS_FILE);
-        return new SettingsFile(file);
+        return new SettingsFile(file, StandardSettings.keys());
     }
 
     /**

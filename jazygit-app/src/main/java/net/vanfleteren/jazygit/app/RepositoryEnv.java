@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhToken;
 import net.vanfleteren.jazygit.core.git.CliGit;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.process.SshAsking;
+import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore;
 import net.vanfleteren.jazygit.kernel.settings.CollapsedStore;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
@@ -41,17 +42,20 @@ final class RepositoryEnv {
             Repositories repositories,
             Terminal terminal,
             SshAsking ssh) {
-        GhToken token = new GhToken(git.worktree(), settings.gh(), () -> GitHubAccount.configured(git));
+        GhToken token = new GhToken(git.worktree(), GitHubSettings.gh(settings), () -> GitHubAccount.configured(git));
         // Without the token, git still talks to the remotes, as the credential helper's own account.
         return new Env(
                 CliGit.withCredentials(git, () -> token.environment().getOrElse(HashMap.empty()), ssh),
                 // The browser of an account is read as a link opens, so one set since holds (ADR 88).
                 CliGitHub.of(
                         git.worktree(),
-                        settings.gh(),
+                        GitHubSettings.gh(settings),
                         token,
                         () -> GitHubAccount.host(git),
-                        account -> store.load().settings().browsers().of(account.host(), account.user()),
+                        account -> store.load()
+                                .settings()
+                                .get(GitHubSettings.BROWSERS)
+                                .of(account.host(), account.user()),
                         ssh,
                         SettingsPaths.cacheDir()),
                 store,

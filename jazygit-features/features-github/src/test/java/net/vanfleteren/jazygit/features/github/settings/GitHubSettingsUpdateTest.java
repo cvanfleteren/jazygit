@@ -107,7 +107,7 @@ class GitHubSettingsUpdateTest {
                         typed(first.openPopup(new GhExecutablePopup("")), "/new/gh"),
                         new GitHubSettingsMsg.GhExecutableEntered())
                 .model();
-        Settings chosen = TestModels.PLAIN.settings().withGhExecutable(Option.of("/new/gh"));
+        Settings chosen = TestModels.PLAIN.settings().with(GitHubSettings.GH_EXECUTABLE, Option.of("/new/gh"));
 
         Next latestFirst = Update.update(
                 second, new GitHubSettingsMsg.GhExecutableChecked(Option.of("/new/gh"), Either.right("2.102.0")));
@@ -126,7 +126,7 @@ class GitHubSettingsUpdateTest {
 
     @Test
     void aCheckOfAnotherGhExecutableIsDroppedOnceTheOneOnThePathWasEnteredLast() {
-        Settings saved = TestModels.PLAIN.settings().withGhExecutable(Option.of("/opt/gh/bin/gh"));
+        Settings saved = TestModels.PLAIN.settings().with(GitHubSettings.GH_EXECUTABLE, Option.of("/opt/gh/bin/gh"));
         Model first = Update.update(
                         typed(
                                 TestModels.loaded()
@@ -147,7 +147,7 @@ class GitHubSettingsUpdateTest {
 
         assertEquals(onThePath, older.model());
         assertEquals(List.empty(), older.cmds());
-        assertEquals(Option.none(), latest.model().preferences().settings().ghExecutable());
+        assertEquals(Option.none(), latest.model().preferences().settings().get(GitHubSettings.GH_EXECUTABLE));
         assertEquals(
                 List.of(new SaveSettings(saved, TestModels.PLAIN.settings()), new ShowAgain(Landing.START)),
                 latest.cmds());
@@ -164,7 +164,7 @@ class GitHubSettingsUpdateTest {
 
     @Test
     void aGhExecutableThatRunsIsKeptAndTheRepositoryShownAgain() {
-        Settings chosen = TestModels.PLAIN.settings().withGhExecutable(Option.of("/opt/gh/bin/gh"));
+        Settings chosen = TestModels.PLAIN.settings().with(GitHubSettings.GH_EXECUTABLE, Option.of("/opt/gh/bin/gh"));
 
         Next next = Update.update(
                 TestModels.loaded()
@@ -235,7 +235,8 @@ class GitHubSettingsUpdateTest {
     void theBrowserOfTheAccountIsAskedWithTheOneSetNow() {
         Model open = TestModels.loaded()
                 .openPopup(READ.withSettings(READ.settings()
-                        .withBrowsers(
+                        .with(
+                                GitHubSettings.BROWSERS,
                                 AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox -P personal")))));
 
         Model asking =
@@ -272,7 +273,8 @@ class GitHubSettingsUpdateTest {
     void anEnteredBrowserIsKeptForTheAccount() {
         GhAccount alice = new GhAccount("github.com", "alice");
         Settings kept = TestModels.PLAIN.settings();
-        Settings chosen = kept.withBrowsers(AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")));
+        Settings chosen = kept.with(
+                GitHubSettings.BROWSERS, AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")));
 
         Next next = Update.update(
                 typed(TestModels.loaded().openPopup(new AccountBrowserPopup(alice, "")), " firefox "),
@@ -289,14 +291,17 @@ class GitHubSettingsUpdateTest {
         Model set = TestModels.loaded()
                 .mapPreferences(preferences -> preferences.withSettings(preferences
                         .settings()
-                        .withBrowsers(AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")))));
+                        .with(
+                                GitHubSettings.BROWSERS,
+                                AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")))));
         Settings kept = set.preferences().settings();
 
         Next next = Update.update(
                 set.openPopup(new AccountBrowserPopup(alice, "  ")), new GitHubSettingsMsg.BrowserEntered());
 
-        assertEquals(AccountBrowsers.NONE, next.model().preferences().settings().browsers());
-        assertEquals(List.of(new SaveSettings(kept, kept.withBrowsers(AccountBrowsers.NONE))), next.cmds());
+        assertEquals(AccountBrowsers.NONE, next.model().preferences().settings().get(GitHubSettings.BROWSERS));
+        assertEquals(
+                List.of(new SaveSettings(kept, kept.with(GitHubSettings.BROWSERS, AccountBrowsers.NONE))), next.cmds());
     }
 
     @Test

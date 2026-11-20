@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.model.Upstream;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.features.changes.edit.EditCmd;
+import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.features.changes.edit.OpenFileCmd;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
@@ -77,8 +78,9 @@ class CheckLogUpdateTest {
                 Option.of(new Upstream(new BranchRef.Remote(FEATURE), 0, 0)));
         Model model = Update.update(
                         TestModels.localBranchesRead(
-                                        loaded().mapPreferences(preferences -> preferences.withSettings(
-                                                preferences.settings().withEditors(new Editors(List.of(editors))))),
+                                        loaded().mapPreferences(preferences -> preferences.withSettings(preferences
+                                                .settings()
+                                                .with(EditorSettings.EDITORS, new Editors(List.of(editors))))),
                                         List.of(mine))
                                 .model(),
                         new BranchChecksMsg.Loaded(new GitHubChecks(

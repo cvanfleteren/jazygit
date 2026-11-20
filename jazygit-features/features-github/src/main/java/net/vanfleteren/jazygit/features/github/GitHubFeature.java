@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestActio
 import net.vanfleteren.jazygit.features.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestAction;
 import net.vanfleteren.jazygit.features.github.review.ReviewAction;
+import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsDialogs;
 import net.vanfleteren.jazygit.features.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictAction;
@@ -55,6 +56,7 @@ public final class GitHubFeature {
                     VerdictAction.ACTION,
                     FeatureAction.ofPopups(GitHubSettingsDialogs::popups))
             .showing(new BuildsSource())
+            .keeping(GitHubSettings.GH_EXECUTABLE, GitHubSettings.BROWSERS)
             .withSettings(GitHubSettingsDialogs.SECTION);
 
     private GitHubFeature() {}

@@ -15,9 +15,14 @@ import org.junit.jupiter.api.Test;
  */
 class AppBundleTest {
 
-    // A host, and the titles of ReviewDialog, which finish as ...titleLine, ...titleEditFile and so on.
-    private static final Set<String> NOT_KEYS =
-            HashSet.of("github.com", "github.dialog.review.title", "github.dialog.review.titleEdit");
+    // A host, the paths of the GitHub settings in the settings file, and the titles of ReviewDialog, which finish as
+    // ...titleLine, ...titleEditFile and so on.
+    private static final Set<String> NOT_KEYS = HashSet.of(
+            "github.com",
+            "github.executable",
+            "github.browsers",
+            "github.dialog.review.title",
+            "github.dialog.review.titleEdit");
 
     private static final List<String> ROOTS =
             List.of("ui", "state", "content", "changes", "branches", "github", "chrome", "app");

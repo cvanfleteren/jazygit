@@ -37,11 +37,3 @@ shortcut = "i"
 id = "mine"
 name = "Generated sources"
 paths = ["**/generated/**"]
-
-[[agents]]
-# the main one
-name = "Claude"
-command = ["claude", "{prompt}"]
-terminal = true
-shortcut = "c"
-prompt = "Fix {failures}"

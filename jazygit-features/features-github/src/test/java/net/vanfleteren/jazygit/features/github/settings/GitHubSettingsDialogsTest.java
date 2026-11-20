@@ -71,7 +71,8 @@ class GitHubSettingsDialogsTest {
 
         assertEquals(
                 "Browser for alice-work on github.com: firefox -P work",
-                GitHubSettingsDialogs.browser(popup.withSettings(Settings.DEFAULT.withBrowsers(
+                GitHubSettingsDialogs.browser(popup.withSettings(Settings.DEFAULT.with(
+                        GitHubSettings.BROWSERS,
                         AccountBrowsers.NONE.with("GitHub.com", "Alice-Work", Option.of("firefox -P work"))))));
         assertEquals(
                 "Browser for alice-work on github.com: none, xdg-open from the desktop",

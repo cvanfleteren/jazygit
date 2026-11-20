@@ -5,6 +5,7 @@ old-key = "kept"
 [ui]
 # the one I like
 theme = "darcula"
+repository-width = 40
 diff-syntax = false
 repository-heights = [20, 20, 20]
 animations = false
@@ -21,6 +22,7 @@ executable = "/opt/gh"
 [github.browsers."github.com"]
 # personal
 cvf = "firefox -P personal"
+cvf-work = "firefox -P work"
 
 [mine]
 x = [1, 2]
@@ -35,11 +37,3 @@ shortcut = "i"
 id = "mine"
 name = "Generated sources"
 paths = ["**/generated/**"]
-
-[[agents]]
-# the main one
-name = "Claude"
-command = ["claude", "{prompt}"]
-terminal = true
-shortcut = "c"
-prompt = "Fix {failures}"

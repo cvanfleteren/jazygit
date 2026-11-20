@@ -12,6 +12,11 @@ animations = false
 diff-filters = ["java-imports"]
 other = 3
 
+[git]
+# fetch by hand
+auto-fetch = false
+auto-refresh = false
+
 [github]
 executable = "/opt/gh"
 
@@ -32,11 +37,3 @@ shortcut = "i"
 id = "mine"
 name = "Generated sources"
 paths = ["**/generated/**"]
-
-[[agents]]
-# the main one
-name = "Claude"
-command = ["claude", "{prompt}"]
-terminal = true
-shortcut = "c"
-prompt = "Fix {failures}"

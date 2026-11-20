@@ -47,7 +47,7 @@ public record AccountBrowsers(Map<String, Map<String, String>> byHost) {
      * The browsers {@code value} holds, a table of hosts whose tables give each login its browser, as the settings file
      * is read; a blank browser is not set. None when {@code value} is not such a table.
      */
-    static Option<AccountBrowsers> read(Object value) {
+    public static Option<AccountBrowsers> read(Object value) {
         return table(value)
                 .flatMap(hosts -> List.ofAll(hosts)
                         .map(host -> table(host._2)
@@ -72,7 +72,7 @@ public record AccountBrowsers(Map<String, Map<String, String>> byHost) {
     /**
      * The browsers as the settings file keeps them, by the path of their key.
      */
-    Map<List<String>, Object> entries() {
+    public Map<List<String>, Object> entries() {
         return byHost.flatMap(host -> host._2.map(login ->
                         Tuple.<List<String>, Object>of(List.of("github", "browsers", host._1, login._1), login._2)))
                 .foldLeft(LinkedHashMap.empty(), (entries, entry) -> entries.put(entry));

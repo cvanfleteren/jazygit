@@ -12,3 +12,9 @@ auto-refresh = false
 
 [github.browsers."github.com"]
 cvf-work = "firefox -P work"
+
+[[agents]]
+name = "Codex"
+command = ["codex"]
+terminal = true
+prompt = "Fix it"
