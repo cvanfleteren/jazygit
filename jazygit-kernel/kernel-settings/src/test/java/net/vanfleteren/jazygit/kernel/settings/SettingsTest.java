@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /**
  * The table of settings: what a setting keeps in the file, it reads back.
  */
-class SettingTest {
+class SettingsTest {
 
     private static final SettingKeys KERNEL = SettingKeys.KERNEL;
 
