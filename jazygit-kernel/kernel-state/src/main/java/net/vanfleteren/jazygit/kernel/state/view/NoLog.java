@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.kernel.state.view;
 
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * A row highlighted in the branches pane that has no log to show, and why, which the content panel says in its place.

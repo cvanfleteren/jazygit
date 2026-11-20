@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.core.git.model.Diffs;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Cmd;

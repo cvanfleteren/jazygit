@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.kernel.ui.text;
 
-import net.vanfleteren.jazygit.core.git.model.InProgress;
+import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 
 /**

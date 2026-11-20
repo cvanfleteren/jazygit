@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.cherrypick;
 
-import net.vanfleteren.jazygit.core.git.model.Commit;
+import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;

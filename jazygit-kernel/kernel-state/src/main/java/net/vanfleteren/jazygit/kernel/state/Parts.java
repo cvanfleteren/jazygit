@@ -4,8 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.TreeMap;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Commit;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.load.Targeted;
 
 /**

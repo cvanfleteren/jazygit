@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.git.model.Diffs;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

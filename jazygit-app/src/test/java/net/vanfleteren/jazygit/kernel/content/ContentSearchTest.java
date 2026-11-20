@@ -9,7 +9,7 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;

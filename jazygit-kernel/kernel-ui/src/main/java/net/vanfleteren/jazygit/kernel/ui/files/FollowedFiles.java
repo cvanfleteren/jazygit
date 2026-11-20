@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.kernel.ui.files;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;

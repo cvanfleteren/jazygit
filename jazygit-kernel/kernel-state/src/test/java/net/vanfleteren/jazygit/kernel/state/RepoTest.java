@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.git.model.Sha;
-import net.vanfleteren.jazygit.core.git.model.Stash;
+import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.core.repo.Stash;
 import org.junit.jupiter.api.Test;
 
 /**

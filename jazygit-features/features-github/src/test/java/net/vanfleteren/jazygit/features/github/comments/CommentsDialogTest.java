@@ -27,7 +27,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestComment.Kind;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Model;

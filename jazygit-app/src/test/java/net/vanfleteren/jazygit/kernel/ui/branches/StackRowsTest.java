@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.load.BranchFiles;

@@ -4,7 +4,7 @@ import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.FileAt;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;

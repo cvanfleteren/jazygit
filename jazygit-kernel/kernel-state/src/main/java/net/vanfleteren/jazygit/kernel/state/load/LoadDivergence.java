@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.kernel.state.load;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.Divergence;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Divergence;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Label;

@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.features.branches.branch.push;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Branch;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.PushMode;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd.PushSettingUpstream;

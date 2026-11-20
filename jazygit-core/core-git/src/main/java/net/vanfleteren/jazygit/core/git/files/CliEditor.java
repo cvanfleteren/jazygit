@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.regex.Pattern;
-import net.vanfleteren.jazygit.core.git.model.CommitMessage;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.EditorExitedAtStart;
@@ -23,6 +22,7 @@ import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.Exec;
 import net.vanfleteren.jazygit.core.process.ExecFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 
 /**
  * Opens files in the editor git uses for commit messages, on the terminal.

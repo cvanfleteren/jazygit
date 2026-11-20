@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.kernel.state;
 
-import net.vanfleteren.jazygit.core.git.model.Branch;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 
 /**
  * Why a branch has no upstream to pull from, reset onto, or be compared with: none was set, or it was deleted on the

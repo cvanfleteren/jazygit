@@ -5,15 +5,15 @@ import static net.vanfleteren.jazygit.core.git.StubGit.ran;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.CommitMessage;
 import net.vanfleteren.jazygit.core.git.model.ResetMode;
 import net.vanfleteren.jazygit.core.git.model.ResetTarget;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.model.SquashMode;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * {@link Commits} for tests: creating, rewriting and moving commits succeeds without running anything. Fakes override

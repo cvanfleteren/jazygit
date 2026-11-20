@@ -38,7 +38,7 @@ public final class StashUpdate {
     /**
      * Only a stash that is listed is unstashed or deleted.
      */
-    private static boolean listed(Model model, net.vanfleteren.jazygit.core.git.model.Stash stash) {
+    private static boolean listed(Model model, net.vanfleteren.jazygit.core.repo.Stash stash) {
         return model.repo().stash(stash.sha()).isDefined();
     }
 }

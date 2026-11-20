@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.compose.ComposeMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;

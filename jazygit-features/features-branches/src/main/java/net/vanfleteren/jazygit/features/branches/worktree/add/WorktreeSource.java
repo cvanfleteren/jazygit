@@ -2,10 +2,10 @@ package net.vanfleteren.jazygit.features.branches.worktree.add;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.core.git.model.NewBranchStart;
-import net.vanfleteren.jazygit.core.git.model.Revision;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.kernel.state.github.FromGitHub;
 
 /**

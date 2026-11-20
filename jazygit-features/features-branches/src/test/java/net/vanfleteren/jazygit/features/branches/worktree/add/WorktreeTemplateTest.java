@@ -6,9 +6,9 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.Head;
-import net.vanfleteren.jazygit.core.git.model.Worktree;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.Worktree;
 import org.junit.jupiter.api.Test;
 
 /**

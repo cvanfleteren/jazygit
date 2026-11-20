@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.Folding;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.GitHubError;

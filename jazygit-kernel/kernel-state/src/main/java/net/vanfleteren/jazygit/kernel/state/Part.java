@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.kernel.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Commit;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.load.Targeted;
 import net.vanfleteren.jazygit.lib.lens.Lens;
 

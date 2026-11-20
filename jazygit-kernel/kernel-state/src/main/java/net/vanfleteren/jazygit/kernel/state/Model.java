@@ -9,6 +9,7 @@ import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffLines;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;

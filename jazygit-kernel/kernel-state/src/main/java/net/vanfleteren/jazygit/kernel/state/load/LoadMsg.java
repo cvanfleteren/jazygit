@@ -6,6 +6,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;

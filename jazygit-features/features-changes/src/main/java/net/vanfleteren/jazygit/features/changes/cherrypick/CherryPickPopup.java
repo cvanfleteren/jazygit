@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.changes.cherrypick;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.Commit;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.kernel.state.popup.ConfirmablePopup;
 
 /**

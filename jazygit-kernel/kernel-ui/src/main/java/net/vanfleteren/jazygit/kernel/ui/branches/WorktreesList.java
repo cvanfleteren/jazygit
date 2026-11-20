@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;

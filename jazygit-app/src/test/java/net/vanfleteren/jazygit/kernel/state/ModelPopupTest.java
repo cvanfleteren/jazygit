@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.kernel.state;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchPopup;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget;

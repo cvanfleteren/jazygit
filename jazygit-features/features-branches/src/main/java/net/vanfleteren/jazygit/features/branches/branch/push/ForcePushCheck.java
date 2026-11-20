@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.branches.branch.push;
 
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;

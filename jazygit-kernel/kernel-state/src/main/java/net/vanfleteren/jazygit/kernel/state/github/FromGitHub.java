@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.kernel.state.github;
 
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 
 /**
  * What GitHub's branches are called in git: the one place a branch gh read is named for git, the way back of

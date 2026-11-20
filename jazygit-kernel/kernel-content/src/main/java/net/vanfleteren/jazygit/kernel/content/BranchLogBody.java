@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.kernel.content;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.git.model.Commit;
+import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.kernel.ui.commits.AheadView;
 import net.vanfleteren.jazygit.kernel.ui.content.Body;
 import net.vanfleteren.jazygit.kernel.ui.content.DrawContext;

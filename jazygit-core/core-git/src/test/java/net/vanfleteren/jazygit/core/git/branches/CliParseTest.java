@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.*;
 import org.junit.jupiter.api.Test;
 
 /**

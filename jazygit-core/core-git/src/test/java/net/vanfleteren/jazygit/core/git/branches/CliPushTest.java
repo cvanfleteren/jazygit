@@ -3,9 +3,9 @@ package net.vanfleteren.jazygit.core.git.branches;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.PushDefault;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import org.junit.jupiter.api.Test;
 
 class CliPushTest {

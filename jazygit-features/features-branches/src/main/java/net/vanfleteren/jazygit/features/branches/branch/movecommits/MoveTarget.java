@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.branches.branch.movecommits;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 
 /**
  * The branch the commits move to.

@@ -2,10 +2,10 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Commit;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * What an area of the content panel shows, which where it is {@link Scrolled scrolled} to holds for: one of the diffs,

@@ -9,7 +9,7 @@ import io.vavr.control.Option;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import net.vanfleteren.jazygit.core.git.model.Blame;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.diff.Blamed;
 import net.vanfleteren.jazygit.kernel.ui.commits.CommitRows;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;

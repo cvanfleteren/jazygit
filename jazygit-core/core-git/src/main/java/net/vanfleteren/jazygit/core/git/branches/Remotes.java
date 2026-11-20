@@ -5,17 +5,17 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.core.git.files.Diffs;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DeleteScope;
-import net.vanfleteren.jazygit.core.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.core.git.model.PushMode;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 
 /**
  * The remotes, and everything that talks to them: pushing, pulling and fetching, deleting a branch on its remote and

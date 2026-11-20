@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.features.changes.fetch;
 
 import io.vavr.collection.List;
 import java.time.Duration;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;

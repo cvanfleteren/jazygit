@@ -4,9 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.Head;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog.Cell;

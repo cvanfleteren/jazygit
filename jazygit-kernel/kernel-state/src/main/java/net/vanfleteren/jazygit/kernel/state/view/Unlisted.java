@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.kernel.state.view;
 
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 
 /**
  * Why the row highlighted in the pane with the focus has no files to list, which the files pane says in their place

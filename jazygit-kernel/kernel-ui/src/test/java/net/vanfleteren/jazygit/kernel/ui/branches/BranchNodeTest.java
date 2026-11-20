@@ -15,10 +15,10 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
-import net.vanfleteren.jazygit.core.git.model.Branch;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import org.junit.jupiter.api.Test;
 

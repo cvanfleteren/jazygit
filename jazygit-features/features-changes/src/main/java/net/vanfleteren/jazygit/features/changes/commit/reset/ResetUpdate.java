@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.git.model.ResetMode;
 import net.vanfleteren.jazygit.core.git.model.ResetTarget;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;

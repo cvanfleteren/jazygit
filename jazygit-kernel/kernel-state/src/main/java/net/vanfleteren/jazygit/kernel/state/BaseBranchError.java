@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.kernel.state;
 
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 
 /**
  * Why a branch cannot be compared with the main branch.

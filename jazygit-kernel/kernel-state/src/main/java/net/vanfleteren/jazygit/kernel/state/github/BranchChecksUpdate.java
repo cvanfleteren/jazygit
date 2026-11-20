@@ -4,9 +4,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
-import net.vanfleteren.jazygit.core.git.model.Branch;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 

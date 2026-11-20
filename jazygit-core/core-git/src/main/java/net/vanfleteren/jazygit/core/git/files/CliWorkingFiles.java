@@ -13,11 +13,11 @@ import java.nio.file.Path;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.Limit;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * All files of a working tree, and what one of them holds on disk (ADR 108): the files pane lists them with its

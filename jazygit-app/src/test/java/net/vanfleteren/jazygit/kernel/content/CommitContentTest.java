@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.*;

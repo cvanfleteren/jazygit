@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.util.Comparator;
 import lombok.With;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 
 /**
  * What git reports about the repository: each part is loading until it was read once, and the one read last when

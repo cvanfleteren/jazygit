@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 
 /**
  * A merge of a pull request that GitHub was asked for, which it does in the background (ADR 24).

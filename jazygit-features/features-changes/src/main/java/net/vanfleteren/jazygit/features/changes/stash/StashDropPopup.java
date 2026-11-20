@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.changes.stash;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Stash;
+import net.vanfleteren.jazygit.core.repo.Stash;
 import net.vanfleteren.jazygit.kernel.state.popup.ConfirmablePopup;
 
 /**

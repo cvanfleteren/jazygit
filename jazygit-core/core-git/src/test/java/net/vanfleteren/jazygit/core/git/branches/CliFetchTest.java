@@ -7,7 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;

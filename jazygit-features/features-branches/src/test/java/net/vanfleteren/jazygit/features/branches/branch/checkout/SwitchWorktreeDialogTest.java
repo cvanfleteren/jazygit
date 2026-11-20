@@ -9,7 +9,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import java.util.ArrayList;
 import java.util.Arrays;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;

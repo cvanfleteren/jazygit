@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.InProgress;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitError.CommandFailed;
 import net.vanfleteren.jazygit.core.git.process.GitError.EditorExitedAtStart;
 import net.vanfleteren.jazygit.core.git.process.GitError.SshKeyRefused;
 import net.vanfleteren.jazygit.core.git.process.GitError.StashNotRestored;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
 import net.vanfleteren.jazygit.kernel.state.AppError;

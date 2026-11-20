@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.branches.branch.upstream;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Branch;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

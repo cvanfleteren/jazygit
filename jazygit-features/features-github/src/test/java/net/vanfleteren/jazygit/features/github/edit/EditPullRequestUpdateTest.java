@@ -35,15 +35,15 @@ import net.vanfleteren.jazygit.core.gh.pullrequests.StubPullRequests;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubEditor;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.core.git.model.Sha;
-import net.vanfleteren.jazygit.core.git.model.Upstream;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.EditBody;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.SavePullRequest;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.LoadPullRequestDetails;
@@ -111,8 +111,7 @@ class EditPullRequestUpdateTest {
                 .model();
     }
 
-    private static net.vanfleteren.jazygit.core.git.model.Branch tracking(
-            String name, String remote, boolean isDefault) {
+    private static net.vanfleteren.jazygit.core.repo.Branch tracking(String name, String remote, boolean isDefault) {
         return Fixtures.branch(
                 new BranchName(name),
                 false,

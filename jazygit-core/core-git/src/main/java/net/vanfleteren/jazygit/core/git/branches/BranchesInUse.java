@@ -10,9 +10,9 @@ import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.core.git.process.HeadFile;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 
 /**
  * The branch a worktree rebases or bisects, with its HEAD detached meanwhile, so that neither {@code %(worktreepath)}

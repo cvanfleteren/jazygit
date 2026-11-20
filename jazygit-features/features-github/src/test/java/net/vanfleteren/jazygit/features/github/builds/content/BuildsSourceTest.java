@@ -9,7 +9,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;

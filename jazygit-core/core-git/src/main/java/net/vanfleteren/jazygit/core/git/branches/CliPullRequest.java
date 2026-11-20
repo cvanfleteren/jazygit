@@ -12,15 +12,15 @@ import java.nio.file.Path;
 import java.util.Locale;
 import net.vanfleteren.jazygit.core.git.files.CliDiffs;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
-import net.vanfleteren.jazygit.core.git.model.PullRequestCommits;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
-import net.vanfleteren.jazygit.core.git.model.Revision;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
+import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.Revision;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Reads the files a pull request on GitHub changes through the git command line tool, as GitHub shows them: its head

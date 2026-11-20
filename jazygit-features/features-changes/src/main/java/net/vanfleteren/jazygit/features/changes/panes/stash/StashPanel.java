@@ -4,7 +4,7 @@ import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.core.git.model.Stash;
+import net.vanfleteren.jazygit.core.repo.Stash;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;

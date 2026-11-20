@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Blames;

@@ -6,13 +6,13 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.core.git.model.InProgress;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.StoppedOnConflicts;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.InProgress;
 
 /**
  * What the repository is in the middle of: a merge, a rebase, a cherry-pick or revert, or conflicts still to

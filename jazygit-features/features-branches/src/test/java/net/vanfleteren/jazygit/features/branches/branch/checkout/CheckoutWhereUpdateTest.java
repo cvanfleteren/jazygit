@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NameAsked;

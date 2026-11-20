@@ -8,10 +8,10 @@ import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.history.StubHistory;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.core.git.model.Revision;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import org.junit.jupiter.api.Test;
 

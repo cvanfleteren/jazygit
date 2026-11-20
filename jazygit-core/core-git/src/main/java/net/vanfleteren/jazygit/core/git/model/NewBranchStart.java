@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.core.git.model;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Revision;
 
 /**
  * Where a new branch starts, and whether it follows what it starts at (ADR 40).

@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.core.git.branches.StubBranches;
 import net.vanfleteren.jazygit.core.git.history.StubHistory;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;

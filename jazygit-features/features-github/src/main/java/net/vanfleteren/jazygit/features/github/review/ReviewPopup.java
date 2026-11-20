@@ -6,7 +6,7 @@ import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.compose.ComposePopup;
 import net.vanfleteren.jazygit.features.github.compose.EditorFile;
 import net.vanfleteren.jazygit.kernel.state.AreaId;

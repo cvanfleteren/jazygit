@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.core.gh.pullrequests.StubPullRequests;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;

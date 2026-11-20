@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.kernel.state.diff;
 
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.PullRequestCommits;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Whose changes the files are.

@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.features.changes.inprogress;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.core.git.model.InProgress;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;
+import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;

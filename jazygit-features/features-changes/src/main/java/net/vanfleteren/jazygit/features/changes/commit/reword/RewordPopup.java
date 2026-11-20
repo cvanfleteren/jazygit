@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.features.changes.commit.reword;
 
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.core.git.model.Commit;
-import net.vanfleteren.jazygit.core.git.model.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.features.changes.commit.MessagePopup;
 
 /**

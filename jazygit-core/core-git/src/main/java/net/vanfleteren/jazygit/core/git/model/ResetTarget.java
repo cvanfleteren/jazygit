@@ -1,5 +1,9 @@
 package net.vanfleteren.jazygit.core.git.model;
 
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Revision;
+import net.vanfleteren.jazygit.core.repo.Sha;
+
 /**
  * Where a reset moves the checked out branch to.
  */

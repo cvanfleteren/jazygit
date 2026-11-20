@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.changes.fetch;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.RereadUpdate;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;

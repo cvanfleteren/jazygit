@@ -5,16 +5,16 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.branches.Branches;
 import net.vanfleteren.jazygit.core.git.history.Integrate;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.CommitMessage;
 import net.vanfleteren.jazygit.core.git.model.ResetMode;
 import net.vanfleteren.jazygit.core.git.model.ResetTarget;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.model.SquashMode;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Creating and rewriting commits, as git commit does, and through an interactive rebase for older commits; moving

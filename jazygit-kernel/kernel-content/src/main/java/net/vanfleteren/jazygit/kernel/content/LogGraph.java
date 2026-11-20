@@ -6,7 +6,7 @@ import io.vavr.control.Option;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import net.vanfleteren.jazygit.core.git.model.CommitGraph;
+import net.vanfleteren.jazygit.core.repo.CommitGraph;
 
 /**
  * The rails of a commit graph as text, like {@code git log --graph} draws them.

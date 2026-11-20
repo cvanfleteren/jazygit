@@ -7,15 +7,8 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.Commit;
-import net.vanfleteren.jazygit.core.git.model.InProgress;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;
 import net.vanfleteren.jazygit.core.git.model.MergeMode;
-import net.vanfleteren.jazygit.core.git.model.Revision;
-import net.vanfleteren.jazygit.core.git.model.Sha;
-import net.vanfleteren.jazygit.core.git.model.StackLayer;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
@@ -23,6 +16,13 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.git.process.TempFiles;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Revision;
+import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.core.repo.StackLayer;
 
 /**
  * The {@link Integrate} of a repository, through {@code git merge}, {@code git cherry-pick}, {@code git revert} and

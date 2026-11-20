@@ -13,7 +13,7 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.kernel.content.diff.DiffCursor;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;

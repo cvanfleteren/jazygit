@@ -10,7 +10,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.kernel.state.load;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.AllBranches;
+import net.vanfleteren.jazygit.core.repo.AllBranches;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.GitHubBases;

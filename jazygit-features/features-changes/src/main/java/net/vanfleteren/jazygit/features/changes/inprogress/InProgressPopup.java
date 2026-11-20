@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.inprogress;
 
-import net.vanfleteren.jazygit.core.git.model.InProgress;
+import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

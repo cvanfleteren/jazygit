@@ -4,10 +4,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.Git;
-import net.vanfleteren.jazygit.core.git.model.InProgress;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.kernel.state.operation.GitOperationCmd;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 

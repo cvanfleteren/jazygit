@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.kernel.ui.keys;
 
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;

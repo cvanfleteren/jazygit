@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
 import net.vanfleteren.jazygit.kernel.settings.Entries;

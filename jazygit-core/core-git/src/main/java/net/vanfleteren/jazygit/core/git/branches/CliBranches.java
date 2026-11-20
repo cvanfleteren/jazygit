@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.core.git.branches;
 
-import static net.vanfleteren.jazygit.core.git.model.BranchRef.HEADS;
-import static net.vanfleteren.jazygit.core.git.model.BranchRef.REMOTES;
 import static net.vanfleteren.jazygit.core.git.process.GitCommand.git;
+import static net.vanfleteren.jazygit.core.repo.BranchRef.HEADS;
+import static net.vanfleteren.jazygit.core.repo.BranchRef.REMOTES;
 
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.*;
 
 /**
  * The {@link Branches} of a repository, through the {@code git} command line tool. The branches are read through

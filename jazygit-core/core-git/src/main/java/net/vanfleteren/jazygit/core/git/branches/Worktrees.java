@@ -3,13 +3,13 @@ package net.vanfleteren.jazygit.core.git.branches;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.NewBranchStart;
-import net.vanfleteren.jazygit.core.git.model.Revision;
-import net.vanfleteren.jazygit.core.git.model.Worktree;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Revision;
+import net.vanfleteren.jazygit.core.repo.Worktree;
 
 /**
  * Listing, adding and removing the worktrees of the repository, as git worktree does (ADR 69).

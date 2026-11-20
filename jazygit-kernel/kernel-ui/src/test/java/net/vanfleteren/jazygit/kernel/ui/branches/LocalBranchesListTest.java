@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;

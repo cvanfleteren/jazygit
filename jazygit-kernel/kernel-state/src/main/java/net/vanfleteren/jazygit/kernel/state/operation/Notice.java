@@ -2,10 +2,10 @@ package net.vanfleteren.jazygit.kernel.state.operation;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.InProgress;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * What the user is told about how the last operation went, when that is no failure but still needs their

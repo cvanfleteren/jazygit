@@ -2,6 +2,11 @@ package net.vanfleteren.jazygit.core.git.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Revision;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 class RevisionTest {

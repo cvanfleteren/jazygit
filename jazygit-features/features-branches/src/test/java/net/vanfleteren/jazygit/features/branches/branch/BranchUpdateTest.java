@@ -10,6 +10,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd.CheckoutWithStash;
@@ -745,7 +746,7 @@ class BranchUpdateTest {
 
     @Test
     void newBranchRequestedAtACommitOpensTheDialogWithItsSha() {
-        net.vanfleteren.jazygit.core.git.model.Commit commit = net.vanfleteren.jazygit.core.git.model.Fixtures.commit(
+        net.vanfleteren.jazygit.core.repo.Commit commit = net.vanfleteren.jazygit.core.git.model.Fixtures.commit(
                 new Sha("abc1234567"), "Ada", "a@e.com", java.time.Instant.EPOCH, "msg", "");
         Model model = Update.update(loaded(), TestModels.commitsLoaded(List.of(commit)))
                 .model();

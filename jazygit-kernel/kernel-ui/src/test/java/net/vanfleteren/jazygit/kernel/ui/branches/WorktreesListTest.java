@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;

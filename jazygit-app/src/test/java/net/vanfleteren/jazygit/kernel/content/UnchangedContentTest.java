@@ -8,7 +8,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.VersionMsg;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github.edit;
 
 import lombok.With;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 
 /**
  * What the popup to edit a pull request holds of it.

@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.ThreadsByPath;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.PaneId;

@@ -7,8 +7,8 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.Pipeline;
 import org.junit.jupiter.api.Test;
 

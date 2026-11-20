@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.timing.Eta;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;

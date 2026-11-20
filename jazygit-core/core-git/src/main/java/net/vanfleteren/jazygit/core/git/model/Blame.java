@@ -11,6 +11,8 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Who last changed each line of a file, as {@code git blame --porcelain} says (ADR 147).

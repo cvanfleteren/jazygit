@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.kernel.content;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.Commit;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;

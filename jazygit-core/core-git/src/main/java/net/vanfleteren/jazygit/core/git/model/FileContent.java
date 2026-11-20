@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.core.git.model;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * What a file holds, as a file without changes shows it: on disk, in the working tree (ADR 108), or in a commit

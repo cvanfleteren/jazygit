@@ -6,6 +6,14 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.AllBranches;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteRef;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**

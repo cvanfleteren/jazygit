@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.features.branches.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.kernel.state.Env;

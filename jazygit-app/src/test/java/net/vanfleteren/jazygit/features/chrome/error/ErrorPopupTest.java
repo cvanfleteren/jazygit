@@ -5,7 +5,7 @@ import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.SetUpstreamPopup;

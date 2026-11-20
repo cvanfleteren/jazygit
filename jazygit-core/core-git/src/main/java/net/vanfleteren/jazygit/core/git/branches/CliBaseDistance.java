@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.core.git.branches;
 
-import static net.vanfleteren.jazygit.core.git.model.BranchRef.HEADS;
+import static net.vanfleteren.jazygit.core.repo.BranchRef.HEADS;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -11,15 +11,15 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.git.model.BaseDistance;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * How far each local branch is from its base (ADR 46): the commits it has that the base does not, and those the base

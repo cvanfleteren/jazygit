@@ -12,14 +12,8 @@ import net.vanfleteren.jazygit.core.git.history.CliHistory;
 import net.vanfleteren.jazygit.core.git.history.CliInProgress;
 import net.vanfleteren.jazygit.core.git.history.CliRebase;
 import net.vanfleteren.jazygit.core.git.history.Unfinished;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.CommitMessage;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.core.git.model.ResetMode;
 import net.vanfleteren.jazygit.core.git.model.ResetTarget;
-import net.vanfleteren.jazygit.core.git.model.Revision;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.model.SquashMode;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
@@ -27,6 +21,12 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Revision;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * The {@link Commits} of a repository: creates and rewrites commits through {@code git commit}, and through

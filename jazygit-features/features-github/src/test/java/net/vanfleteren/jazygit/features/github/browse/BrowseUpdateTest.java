@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
