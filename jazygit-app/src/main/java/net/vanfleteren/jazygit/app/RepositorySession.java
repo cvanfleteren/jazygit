@@ -198,7 +198,10 @@ final class RepositorySession {
             stop(running);
             open(
                     RepositoryEnv.reopen(env, git, last.preferences().settings(), ssh),
-                    new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
+                    new SettingsStore.Loaded(
+                            last.preferences().settings(),
+                            Option.none(),
+                            last.preferences().file().keys()),
                     last.preferences().themeOverride(),
                     repositoryTheme,
                     landing);

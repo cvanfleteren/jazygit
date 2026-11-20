@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.kernel.settings;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -22,6 +23,13 @@ import org.junit.jupiter.api.io.TempDir;
 class SettingsFileTest {
 
     private static final Settings DARCULA = Settings.DEFAULT.withTheme(ThemeName.DARCULA);
+
+    /**
+     * A setting of another owner than the kernel, which a store of its keys reads and writes.
+     */
+    private static final SettingKey<Boolean> MINE = SettingKey.of("mine.on", false, Codec.bool());
+
+    private static final SettingKeys MINE_ONLY = new SettingKeys(List.of(MINE));
 
     @TempDir
     Path dir;
@@ -682,5 +690,70 @@ class SettingsFileTest {
                 TomlFile.read(file()).get().entrySet().stream()
                         .filter(entry -> entry.getKey().startsWith("key"))
                         .count());
+    }
+
+    private SettingsFile mineOnly() {
+        return new SettingsFile(file(), MINE_ONLY);
+    }
+
+    @Test
+    void aStoreReadsOnlyTheKeysItIsGiven() throws IOException {
+        write("""
+                [mine]
+                on = true
+
+                [ui]
+                theme = "light"
+                """);
+
+        Loaded loaded = mineOnly().load();
+
+        assertEquals(new Loaded(Settings.DEFAULT.with(MINE, true), Option.none(), MINE_ONLY), loaded);
+        assertEquals(ThemeName.DARK, loaded.settings().theme());
+    }
+
+    @Test
+    void aStoreWritesOnlyTheKeysItIsGivenAndLeavesTheOthers() throws IOException {
+        write("""
+                [ui]
+                # the one I like
+                theme = "light"
+
+                [mine]
+                on = true
+                """);
+        Loaded before = mineOnly().load();
+        Settings off = before.settings().with(MINE, false);
+
+        mineOnly().save(before.settings(), off);
+
+        assertEquals("""
+                [ui]
+                # the one I like
+                theme = "light"
+                """, Files.readString(file()));
+        assertEquals(off, before.saved(before.settings(), off).settings());
+        assertEquals(MINE_ONLY, before.saved(before.settings(), off).keys());
+    }
+
+    @Test
+    void aReadAppliesWhatChangedAmongTheKeysOfTheStore() throws IOException {
+        write("""
+                [ui]
+                theme = "light"
+                """);
+        Loaded before = mineOnly().load();
+        write("""
+                [ui]
+                theme = "darcula"
+
+                [mine]
+                on = true
+                """);
+
+        SettingsStore.Applied applied = mineOnly().load().appliedTo(before.settings(), before);
+
+        assertEquals(HashSet.of(MINE.path()), applied.changed());
+        assertEquals(Settings.DEFAULT.with(MINE, true), applied.settings());
     }
 }

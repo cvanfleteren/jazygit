@@ -55,10 +55,21 @@ public interface SettingsStore {
     /**
      * The settings read, and what was wrong with them, if anything. Kept, too, as what the file had when it was last
      * read or written, to tell what changed in it since (ADR 111).
+     *
+     * @param settings the settings read
+     * @param problem  what was wrong with them, if anything
+     * @param keys     the settings the store reads and writes
      */
-    record Loaded(Settings settings, Option<SettingsProblem> problem) {
+    record Loaded(Settings settings, Option<SettingsProblem> problem, SettingKeys keys) {
 
         public static final Loaded DEFAULT = new Loaded(Settings.DEFAULT, Option.none());
+
+        /**
+         * The kernel's own settings read, as {@code settings}, with what was wrong with them.
+         */
+        public Loaded(Settings settings, Option<SettingsProblem> problem) {
+            this(settings, problem, SettingKeys.KERNEL);
+        }
 
         /**
          * Whether the setting at {@code key} was read with a valid value, or without one, which is its default: not
@@ -79,11 +90,12 @@ public interface SettingsStore {
          * and a value that is not valid does not undo the one in use (ADR 111).
          */
         public Applied appliedTo(Settings inUse, Loaded before) {
-            List<Setting<?>> changed = Setting.ALL.filter(setting -> valid(setting.path())
-                    && (!before.valid(setting.path()) || setting.differs(settings, before.settings())));
+            List<SettingKey<?>> changed = keys.all()
+                    .filter(key -> valid(key.path())
+                            && (!before.valid(key.path()) || key.differs(settings, before.settings())));
             return new Applied(
-                    changed.foldLeft(inUse, (applied, setting) -> setting.take(applied, settings)),
-                    changed.map(Setting::path).toSet());
+                    changed.foldLeft(inUse, (applied, key) -> key.take(applied, settings)),
+                    changed.map(SettingKey::path).toSet());
         }
 
         /**
@@ -91,17 +103,18 @@ public interface SettingsStore {
          * that differ between them, which saving writes, as {@code next} has them, and valid now.
          */
         public Loaded saved(Settings previous, Settings next) {
-            List<Setting<?>> written = Setting.ALL.filter(setting -> setting.differs(previous, next));
-            Set<String> keys = written.map(Setting::path).toSet();
+            List<SettingKey<?>> written = keys.all().filter(key -> key.differs(previous, next));
+            Set<String> paths = written.map(SettingKey::path).toSet();
             return new Loaded(
-                    written.foldLeft(settings, (file, setting) -> setting.take(file, next)),
+                    written.foldLeft(settings, (file, key) -> key.take(file, next)),
                     problem.flatMap(found -> switch (found) {
                         case SettingsProblem.Invalid(var file, var invalid) ->
                             Option.when(
-                                    !invalid.removeAll(keys).isEmpty(),
-                                    () -> new SettingsProblem.Invalid(file, invalid.removeAll(keys)));
+                                    !invalid.removeAll(paths).isEmpty(),
+                                    () -> new SettingsProblem.Invalid(file, invalid.removeAll(paths)));
                         default -> Option.of(found);
-                    }));
+                    }),
+                    keys);
         }
     }
 

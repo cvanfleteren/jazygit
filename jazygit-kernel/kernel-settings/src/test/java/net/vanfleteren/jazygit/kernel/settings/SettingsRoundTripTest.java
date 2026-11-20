@@ -147,8 +147,10 @@ class SettingsRoundTripTest {
 
     @Test
     void eachSettingTheAppWritesHasAChange() {
-        List<String> written =
-                Setting.ALL.map(Setting::path).removeAll(List.of(Editors.KEY, FilterDefinitions.KEY, Agents.KEY));
+        List<String> written = SettingKeys.KERNEL
+                .all()
+                .map(SettingKey::path)
+                .removeAll(List.of(Editors.KEY, FilterDefinitions.KEY, Agents.KEY));
 
         assertEquals(written, CHANGES.keySet().toList());
     }
