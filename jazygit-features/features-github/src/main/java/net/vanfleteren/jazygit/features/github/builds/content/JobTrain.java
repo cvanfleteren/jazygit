@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.util.Comparator;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.Build.Outcome;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -333,7 +332,7 @@ final class JobTrain {
          * How it ended: as a build of its members would.
          */
         Outcome outcome() {
-            return new Build("", "", 0, 1, new Sha(""), "", start(), members).outcome();
+            return Outcome.of(members);
         }
 
         /**

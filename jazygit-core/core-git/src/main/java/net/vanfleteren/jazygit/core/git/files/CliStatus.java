@@ -99,11 +99,10 @@ public final class CliStatus implements Status {
     }
 
     /**
-     * HEAD as described by the {@code branch.head} and {@code branch.oid} headers, which say
-     * {@code (detached)} and {@code (initial)} for a detached HEAD and a repository without commits.
+     * HEAD as described by the {@code branch.head} header, which says {@code (detached)} for a detached HEAD, and
+     * the commit of the {@code branch.oid} header, none for a repository without commits.
      */
-    private static Head head(String branch, Option<Sha> oid) {
-        Option<Sha> commit = oid;
+    private static Head head(String branch, Option<Sha> commit) {
         return commit.filter(c -> branch.equals("(detached)"))
                 .<Head>map(Head.Detached::new)
                 .getOrElse(() -> new Head.OnBranch(new BranchName(branch), commit));
