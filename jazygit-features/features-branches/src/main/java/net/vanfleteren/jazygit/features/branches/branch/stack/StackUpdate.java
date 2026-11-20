@@ -370,11 +370,11 @@ public final class StackUpdate {
      * given up on: GitHub can list them as they were for a while after it made the change (ADR 73).
      */
     private static Next settling(Model model) {
-        return model.part(GitHubState.PART)
-                .stackChange()
+        GitHubState gitHub = model.part(GitHubState.PART);
+        return gitHub.stackChange()
                 .map(change -> {
-                    Model settled = model.mapPart(GitHubState.PART, gitHub -> gitHub.withStackChange(Option.none()));
-                    if (model.part(GitHubState.PART).pullRequests().exists(change::shownIn)) {
+                    Model settled = model.withPart(GitHubState.PART, gitHub.withStackChange(Option.none()));
+                    if (gitHub.pullRequests().exists(change::shownIn)) {
                         return change instanceof StackChange.Stacked stacked && stacked.rebase()
                                 ? rebaseListed(settled, stacked)
                                 : Next.of(settled);
@@ -415,12 +415,10 @@ public final class StackUpdate {
         if (branch.isDefined() && highlighted.isEmpty()) {
             return Next.of(model);
         }
-        Option<PullRequestStack> stacked = highlighted
-                .flatMap(model.part(GitHubState.PART)::pullRequest)
-                .flatMap(PullRequest::stack)
-                .orElse(() -> stack.flatMap(number -> stack(model, number)));
-        List<Branch> local = local(model);
         Option<PullRequest> pullRequest = highlighted.flatMap(model.part(GitHubState.PART)::pullRequest);
+        Option<PullRequestStack> stacked =
+                pullRequest.flatMap(PullRequest::stack).orElse(() -> stack.flatMap(number -> stack(model, number)));
+        List<Branch> local = local(model);
         StackPopups.Menu menu = new StackPopups.Menu(
                 highlighted,
                 pullRequest,
