@@ -68,6 +68,23 @@ class AppBundleTest {
     }
 
     /**
+     * A help text's details are in the bundle of the text they detail: the help looks up {@code <key>.details} next to
+     * {@code <key>}, so details left behind when the text moved to another bundle are never shown.
+     */
+    @Test
+    void everyHelpDetailsIsInTheBundleOfTheTextItDetails() {
+        String details = ".details";
+        assertEquals(
+                List.empty(),
+                ROOTS.flatMap(root -> {
+                            Set<String> keys = Bundles.keys(root);
+                            return keys.filter(key -> key.contains(".help.") && key.endsWith(details))
+                                    .filter(key -> !keys.contains(key.substring(0, key.length() - details.length())));
+                        })
+                        .sorted());
+    }
+
+    /**
      * A key of the views starts with no root but that of a module without such a key, so the views, not a module,
      * hold it: only {@code branches.*}, {@code settings.*} and such, which name no module's key.
      */
