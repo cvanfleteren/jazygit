@@ -107,7 +107,9 @@ class PullRequestRefreshUpdateTest {
         PullRequestPopup popup = dropped.popup(PullRequestPopup.class).get();
         assertEquals(Option.of(true), popup.draft());
         assertEquals(Reading.NOT, popup.reading());
-        assertEquals(drafted.gitHub().pullRequests(), dropped.gitHub().pullRequests());
+        assertEquals(
+                drafted.part(GitHubState.PART).pullRequests(),
+                dropped.part(GitHubState.PART).pullRequests());
     }
 
     @Test
@@ -152,7 +154,7 @@ class PullRequestRefreshUpdateTest {
         assertEquals(Reading.NOT, popup.reading());
         assertEquals(
                 List.of(new LoadPullRequestDetails(
-                        new PrNumber(42), failed.gitHub().nextRead())),
+                        new PrNumber(42), failed.part(GitHubState.PART).nextRead())),
                 Update.update(aMinuteOn(failed), new PullRequestMsg.Tick()).cmds());
     }
 
@@ -169,11 +171,11 @@ class PullRequestRefreshUpdateTest {
 
         assertEquals(
                 List.of(new LoadPullRequestDetails(
-                        new PrNumber(42), drafted.gitHub().nextRead())),
+                        new PrNumber(42), drafted.part(GitHubState.PART).nextRead())),
                 asked.cmds());
         PullRequestPopup popup = asked.model().popup(PullRequestPopup.class).get();
         assertEquals(Reading.ASKED, popup.reading());
-        assertEquals(drafted.gitHub().nextRead(), popup.read());
+        assertEquals(drafted.part(GitHubState.PART).nextRead(), popup.read());
     }
 
     @Test
@@ -193,7 +195,7 @@ class PullRequestRefreshUpdateTest {
 
         assertEquals(
                 List.of(new LoadPullRequestDetails(
-                        new PrNumber(42), running.gitHub().nextRead())),
+                        new PrNumber(42), running.part(GitHubState.PART).nextRead())),
                 Update.update(running.withNow(running.now().plusSeconds(10)), new PullRequestMsg.Tick())
                         .cmds());
     }
@@ -225,7 +227,7 @@ class PullRequestRefreshUpdateTest {
                         .cmds());
         assertEquals(
                 List.of(new LoadPullRequestDetails(
-                        new PrNumber(42), failed.gitHub().nextRead())),
+                        new PrNumber(42), failed.part(GitHubState.PART).nextRead())),
                 Update.update(aMinuteOn(failed), new PullRequestMsg.Tick()).cmds());
     }
 
@@ -252,7 +254,9 @@ class PullRequestRefreshUpdateTest {
                         listed, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(listed), before))
                 .model();
 
-        assertEquals(listed.gitHub().pullRequests(), dropped.gitHub().pullRequests());
+        assertEquals(
+                listed.part(GitHubState.PART).pullRequests(),
+                dropped.part(GitHubState.PART).pullRequests());
     }
 
     @Test
@@ -289,7 +293,7 @@ class PullRequestRefreshUpdateTest {
                         Review.NONE,
                         Option.none(),
                         Option.none())),
-                read.gitHub().pullRequest(PUSHED));
+                read.part(GitHubState.PART).pullRequest(PUSHED));
     }
 
     @Test
@@ -320,7 +324,9 @@ class PullRequestRefreshUpdateTest {
         PullRequestPopup popup = late.popup(PullRequestPopup.class).get();
         assertEquals(Option.of(true), popup.draft());
         assertEquals(Reading.NOT, popup.reading());
-        assertEquals(own.gitHub().pullRequests(), late.gitHub().pullRequests());
+        assertEquals(
+                own.part(GitHubState.PART).pullRequests(),
+                late.part(GitHubState.PART).pullRequests());
     }
 
     @Test
@@ -351,7 +357,8 @@ class PullRequestRefreshUpdateTest {
                 List.empty(), Update.update(reading, new PullRequestMsg.Tick()).cmds());
         assertEquals(
                 List.of(new LoadPullRequestDetails(
-                        new PrNumber(42), showingDetails().gitHub().nextRead())),
+                        new PrNumber(42),
+                        showingDetails().part(GitHubState.PART).nextRead())),
                 Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
                         .cmds());
         assertEquals(
@@ -438,7 +445,7 @@ class PullRequestRefreshUpdateTest {
         Model done = TestModels.done(drafting.model(), cmd, cmd.run(env())).model();
         assertEquals(
                 List.of(new LoadPullRequestDetails(
-                        new PrNumber(42), done.gitHub().nextRead())),
+                        new PrNumber(42), done.part(GitHubState.PART).nextRead())),
                 Update.update(aMinuteOn(done), new PullRequestMsg.Tick()).cmds());
     }
 

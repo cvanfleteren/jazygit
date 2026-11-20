@@ -84,6 +84,7 @@ import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.Loadable.Failed;
 import net.vanfleteren.jazygit.kernel.state.Loadable.Loaded;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.LoadBranchChecks;
 import net.vanfleteren.jazygit.kernel.state.github.PullRequestsMsg;
 import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
@@ -969,7 +970,9 @@ class ProgramTest {
         settleWithout(io);
         assertEquals(false, program.model().jobs().runs(new LoadRepositoryPullRequests()));
         assertEquals(false, program.model().jobs().runs(new LoadBranchChecks()));
-        assertEquals(Option.of(HashMap.empty()), program.model().gitHub().pullRequests());
+        assertEquals(
+                Option.of(HashMap.empty()),
+                program.model().part(GitHubState.PART).pullRequests());
     }
 
     @Test

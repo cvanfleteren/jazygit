@@ -27,8 +27,10 @@ public final class PullRequestsUpdate {
                         model,
                         GitHubReads.done(
                                 FailingRead.ran(
-                                        model.mapGitHub(gitHub ->
-                                                gitHub.withListed(pullRequests).withPullRequestsFailure(Option.none())),
+                                        model.mapPart(
+                                                GitHubState.PART,
+                                                gitHub -> gitHub.withListed(pullRequests)
+                                                        .withPullRequestsFailure(Option.none())),
                                         new LoadRepositoryPullRequests(),
                                         false),
                                 new LoadRepositoryPullRequests()));
@@ -37,8 +39,11 @@ public final class PullRequestsUpdate {
                         model,
                         GitHubReads.done(
                                 FailingRead.ran(
-                                        model.mapGitHub(gitHub -> gitHub.withProtectedBranches(Option.of(
-                                                branches.map(FromGitHub::branch).toSet()))),
+                                        model.mapPart(
+                                                GitHubState.PART,
+                                                gitHub -> gitHub.withProtectedBranches(
+                                                        Option.of(branches.map(FromGitHub::branch)
+                                                                .toSet()))),
                                         new LoadProtectedBranches(),
                                         false),
                                 new LoadProtectedBranches()));
@@ -52,12 +57,14 @@ public final class PullRequestsUpdate {
             // the repository not being available is, once: gh is not run as another one.
             case PullRequestsMsg.LoadFailed(var failure) -> {
                 Model failed = FailingRead.ran(
-                        model.mapGitHub(gitHub -> gitHub.withPullRequestsFailure(Option.of(failure))),
+                        model.mapPart(GitHubState.PART, gitHub -> gitHub.withPullRequestsFailure(Option.of(failure))),
                         new LoadRepositoryPullRequests(),
                         true);
                 yield GitHubReads.done(
                         failure.accountUnavailable()
-                                        && !model.gitHub().pullRequestsFailure().contains(failure)
+                                        && !model.part(GitHubState.PART)
+                                                .pullRequestsFailure()
+                                                .contains(failure)
                                 ? failed.fail(new PullRequestsError.Unavailable(failure))
                                 : failed,
                         new LoadRepositoryPullRequests());
@@ -101,7 +108,7 @@ public final class PullRequestsUpdate {
     }
 
     private static boolean unread(Next next) {
-        return next.model().gitHub().protectedBranches().isEmpty();
+        return next.model().part(GitHubState.PART).protectedBranches().isEmpty();
     }
 
     /**
@@ -111,8 +118,7 @@ public final class PullRequestsUpdate {
      */
     static Next branchesAgain(Model before, Next next) {
         Load load = LoadBranches.current(next.model(), LoadBranches.LISTED);
-        return GitHubBases.of(before.gitHub())
-                                .equals(GitHubBases.of(next.model().gitHub()))
+        return GitHubBases.in(before).equals(GitHubBases.in(next.model()))
                         || next.model().jobs().runs(load)
                 ? next
                 : next.and(load);

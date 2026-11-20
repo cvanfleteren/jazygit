@@ -85,7 +85,9 @@ class CheckTimesUpdateTest {
     }
 
     private static Model knowing(CheckHistory history, Option<Instant> toppedUp) {
-        return model().mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(CheckTimes.of(REPO, history, toppedUp))));
+        return model().mapPart(
+                        GitHubState.PART,
+                        gitHub -> gitHub.withCheckTimes(Option.of(CheckTimes.of(REPO, history, toppedUp))));
     }
 
     /**
@@ -125,7 +127,7 @@ class CheckTimesUpdateTest {
     }
 
     private static CheckTimes times(Next next) {
-        return next.model().gitHub().checkTimes().get();
+        return next.model().part(GitHubState.PART).checkTimes().get();
     }
 
     @Test
@@ -213,7 +215,9 @@ class CheckTimesUpdateTest {
     @Test
     void whatWasToppedUpIsKeptWhenNotKnownYet() {
         Model toppingUp = knowing(fresh())
-                .mapGitHub(gitHub -> gitHub.withCheckTimes(gitHub.checkTimes().map(times -> times.withTopUp(NOW))));
+                .mapPart(
+                        GitHubState.PART,
+                        gitHub -> gitHub.withCheckTimes(gitHub.checkTimes().map(times -> times.withTopUp(NOW))));
         Check another = check(3, "verify", "SUCCESS", 1);
 
         Next next = Update.update(
@@ -305,8 +309,10 @@ class CheckTimesUpdateTest {
         assertEquals(Option.of(other), file.get().toppedUp());
         Next next = Update.update(
                 knowing(fresh())
-                        .mapGitHub(gitHub ->
-                                gitHub.withCheckTimes(gitHub.checkTimes().map(times -> times.withTopUp(NOW)))),
+                        .mapPart(
+                                GitHubState.PART,
+                                gitHub -> gitHub.withCheckTimes(
+                                        gitHub.checkTimes().map(times -> times.withTopUp(NOW)))),
                 skipped);
         assertFalse(times(next).toppingUp());
         assertEquals(Option.of(other), times(next).toppedUp());

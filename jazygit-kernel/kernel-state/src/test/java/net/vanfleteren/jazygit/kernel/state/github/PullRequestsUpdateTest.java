@@ -39,7 +39,8 @@ class PullRequestsUpdateTest {
      * The repository read, with the protected branches read too: they are read once, before the first pull requests.
      */
     private static Model loaded() {
-        return TestModels.loaded().mapGitHub(gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.empty())));
+        return TestModels.loaded()
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.empty())));
     }
 
     private static final PullRequest FEATURE_PR =
@@ -53,14 +54,14 @@ class PullRequestsUpdateTest {
                 Option.of(FEATURE_PR),
                 Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(older, FEATURE_PR)))
                         .model()
-                        .gitHub()
+                        .part(GitHubState.PART)
                         .pullRequests()
                         .flatMap(open -> open.get(new BranchName("feature"))));
         assertEquals(
                 Option.of(FEATURE_PR),
                 Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR, older)))
                         .model()
-                        .gitHub()
+                        .part(GitHubState.PART)
                         .pullRequests()
                         .flatMap(open -> open.get(new BranchName("feature"))));
     }
@@ -73,7 +74,9 @@ class PullRequestsUpdateTest {
         Model failed = Update.update(withPr, new PullRequestsMsg.LoadFailed(refused("gh: not logged in")))
                 .model();
 
-        assertEquals(withPr.gitHub().pullRequests(), failed.gitHub().pullRequests());
+        assertEquals(
+                withPr.part(GitHubState.PART).pullRequests(),
+                failed.part(GitHubState.PART).pullRequests());
         assertEquals(Option.none(), failed.outcome().error());
         assertEquals(Option.none(), failed.popup());
     }
@@ -107,7 +110,7 @@ class PullRequestsUpdateTest {
         Model loaded =
                 Update.update(failed, new PullRequestsMsg.Loaded(List.empty())).model();
 
-        assertEquals(Option.none(), loaded.gitHub().pullRequestsFailure());
+        assertEquals(Option.none(), loaded.part(GitHubState.PART).pullRequestsFailure());
     }
 
     @Test
@@ -156,7 +159,7 @@ class PullRequestsUpdateTest {
         assertEquals(List.empty(), asked.cmds());
         assertEquals(
                 HashSet.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
-                asked.model().gitHub().again());
+                asked.model().part(GitHubState.PART).again());
 
         Next done = TestModels.done(
                 asked.model(), new LoadRepositoryPullRequests(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)));
@@ -165,11 +168,16 @@ class PullRequestsUpdateTest {
         assertEquals(
                 HashSet.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
                 TestModels.runningCmds(done.model()));
-        assertEquals(HashSet.of(new LoadBranchChecks()), done.model().gitHub().again());
+        assertEquals(
+                HashSet.of(new LoadBranchChecks()),
+                done.model().part(GitHubState.PART).again());
         // What the first read read shows until the one started after the change is done.
         assertEquals(
                 Option.of(FEATURE_PR),
-                done.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
+                done.model()
+                        .part(GitHubState.PART)
+                        .pullRequests()
+                        .flatMap(open -> open.get(new BranchName("feature"))));
 
         Next readAgain = TestModels.done(
                 done.model(), new LoadRepositoryPullRequests(), new PullRequestsMsg.Loaded(List.empty()));
@@ -177,7 +185,7 @@ class PullRequestsUpdateTest {
         assertEquals(List.empty(), readAgain.cmds());
         assertEquals(
                 Option.of(io.vavr.collection.HashMap.empty()),
-                readAgain.model().gitHub().pullRequests());
+                readAgain.model().part(GitHubState.PART).pullRequests());
     }
 
     @Test
@@ -190,7 +198,8 @@ class PullRequestsUpdateTest {
 
         assertEquals(List.of(new LoadRepositoryPullRequests()), failed.cmds());
         assertEquals(
-                HashSet.empty(), failed.model().gitHub().again().filter(LoadRepositoryPullRequests.class::isInstance));
+                HashSet.empty(),
+                failed.model().part(GitHubState.PART).again().filter(LoadRepositoryPullRequests.class::isInstance));
     }
 
     @Test
@@ -198,7 +207,7 @@ class PullRequestsUpdateTest {
         Next asked = PullRequestsUpdate.loadAnyway(Next.of(loaded()));
 
         assertEquals(List.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()), asked.cmds());
-        assertEquals(HashSet.empty(), asked.model().gitHub().again());
+        assertEquals(HashSet.empty(), asked.model().part(GitHubState.PART).again());
     }
 
     @Test
@@ -212,7 +221,8 @@ class PullRequestsUpdateTest {
                         TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new GhBranch("develop"))))
                 .model();
         assertEquals(
-                Option.of(HashSet.of(new BranchName("develop"))), read.gitHub().protectedBranches());
+                Option.of(HashSet.of(new BranchName("develop"))),
+                read.part(GitHubState.PART).protectedBranches());
         assertEquals(
                 List.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
                 Update.update(read, new PullRequestsMsg.Refresh()).cmds());
@@ -223,7 +233,7 @@ class PullRequestsUpdateTest {
         Model failed = Update.update(TestModels.loaded(), new PullRequestsMsg.ProtectedLoadFailed(refused("offline")))
                 .model();
 
-        assertEquals(Option.none(), failed.gitHub().protectedBranches());
+        assertEquals(Option.none(), failed.part(GitHubState.PART).protectedBranches());
     }
 
     @Test
@@ -240,7 +250,7 @@ class PullRequestsUpdateTest {
 
         Next read = Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(onA)));
         assertEquals(
-                List.of(new LoadBranches(GitHubBases.of(read.model().gitHub()))),
+                List.of(new LoadBranches(GitHubBases.in(read.model()))),
                 read.cmds().filter(LoadBranches.class::isInstance));
 
         Next same = Update.update(read.model(), new PullRequestsMsg.Loaded(List.of(onA)));
@@ -253,7 +263,7 @@ class PullRequestsUpdateTest {
                 TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new GhBranch("develop"))));
 
         assertEquals(
-                List.of(new LoadBranches(GitHubBases.of(read.model().gitHub()))),
+                List.of(new LoadBranches(GitHubBases.in(read.model()))),
                 read.cmds().filter(LoadBranches.class::isInstance));
     }
 }

@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
 import net.vanfleteren.jazygit.kernel.state.github.ChecksReached;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
@@ -331,7 +332,7 @@ public record ChecksPopup(
      */
     public Option<CheckTimes> times(Model model) {
         return checks.flatMap(Either::toOption)
-                .flatMap(read -> model.gitHub()
+                .flatMap(read -> model.part(GitHubState.PART)
                         .checkTimes()
                         .filter(known -> known.repository().equals(read.repository())));
     }

@@ -214,8 +214,10 @@ public final class CreatePullRequestUpdate {
             Model model, CreatePullRequest cmd, Option<PullRequest> pullRequest, List<ExecutedCommand> commands) {
         Next done = OperationUpdate.succeeded(model, cmd, commands)
                 .map(succeeded -> pullRequest
-                        .map(pr -> succeeded.mapGitHub(gitHub -> gitHub.withPullRequests(
-                                gitHub.pullRequests().map(open -> open.put(FromGitHub.branch(pr.headBranch()), pr)))))
+                        .map(pr -> succeeded.mapPart(
+                                GitHubState.PART,
+                                gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
+                                        .map(open -> open.put(FromGitHub.branch(pr.headBranch()), pr)))))
                         .getOrElse(succeeded));
         // A read that is still running may have missed it, so this one is started anyway. GitHub may have
         // changed the remote too, which a fetch brings in.
@@ -235,7 +237,7 @@ public final class CreatePullRequestUpdate {
             Model model, BranchName base) {
         return model.repo()
                 .branch(base)
-                .flatMap(model.gitHub()::pullRequest)
+                .flatMap(model.part(GitHubState.PART)::pullRequest)
                 .map(below -> below.stack()
                         .map(stack -> stack.isTop()
                                 ? Either.<CreatePullRequestCmd.NotTop, CreatePullRequestCmd.Stacking>right(

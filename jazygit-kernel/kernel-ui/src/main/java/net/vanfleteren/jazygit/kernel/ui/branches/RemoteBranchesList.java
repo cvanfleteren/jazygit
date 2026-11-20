@@ -11,6 +11,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -79,8 +80,8 @@ class RemoteBranchesList implements BranchesTabList {
                 .flatMap(read -> read.map(ref -> BranchSegs.shownTime(
                         model,
                         ref.tipTime(),
-                        model.gitHub().waiting(ref.branch()),
-                        model.gitHub().eta(ref.branch()))));
+                        model.part(GitHubState.PART).waiting(ref.branch()),
+                        model.part(GitHubState.PART).eta(ref.branch()))));
     }
 
     @Override
@@ -93,11 +94,13 @@ class RemoteBranchesList implements BranchesTabList {
                         Duration.between(ref.tipTime(), model.now()),
                         model.repo().trackingBranch(ref.branch()).isDefined(),
                         BranchSegs.gitHub(
-                                model.gitHub().pullRequest(ref.branch()),
-                                model.gitHub().merge(model.gitHub().pullRequest(ref.branch())),
-                                model.gitHub().checks(ref.branch()),
-                                model.gitHub().waiting(ref.branch()),
-                                BranchSegs.eta(model, model.gitHub().eta(ref.branch())),
+                                model.part(GitHubState.PART).pullRequest(ref.branch()),
+                                model.part(GitHubState.PART)
+                                        .merge(model.part(GitHubState.PART).pullRequest(ref.branch())),
+                                model.part(GitHubState.PART).checks(ref.branch()),
+                                model.part(GitHubState.PART).waiting(ref.branch()),
+                                BranchSegs.eta(
+                                        model, model.part(GitHubState.PART).eta(ref.branch())),
                                 model.now()),
                         spinnerOf.apply(new BranchRef.Remote(ref.branch())))),
                 focused,

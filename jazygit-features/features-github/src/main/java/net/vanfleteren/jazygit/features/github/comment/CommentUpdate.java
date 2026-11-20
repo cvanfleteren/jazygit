@@ -43,7 +43,8 @@ public final class CommentUpdate {
             // the dialog's own, read quietly (ADR 34).
             case CommentMsg.Sent(AddComment cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands)
-                        .map(succeeded -> succeeded.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())));
+                        .map(succeeded ->
+                                succeeded.mapPart(GitHubState.PART, gitHub -> gitHub.withChanged(cmd.number())));
                 yield done.model()
                         .popup(CommentPopup.class)
                         .filter(popup -> popup.number().equals(cmd.number()))

@@ -38,6 +38,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.StackChange;
 import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
@@ -85,10 +86,12 @@ class MakeStackTest {
                         name("feat/a"), name("main"),
                         name("feat/b"), name("feat/a"),
                         name("feat/c"), name("feat/b"))))
-                .mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(
-                        name("feat/a"), pr(96, "feat/a", "main"),
-                        name("feat/b"), b,
-                        name("feat/c"), pr(98, "feat/c", "feat/b")))));
+                .mapPart(
+                        GitHubState.PART,
+                        gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(
+                                name("feat/a"), pr(96, "feat/a", "main"),
+                                name("feat/b"), b,
+                                name("feat/c"), pr(98, "feat/c", "feat/b")))));
     }
 
     private static final Model MODEL = model(pr(97, "feat/b", "main"));
@@ -134,18 +137,20 @@ class MakeStackTest {
                     Review.NONE,
                     Option.of(STACK),
                     Option.none()))
-            .mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
-                    .map(open -> open.put(
-                            name("feat/a"),
-                            new PullRequest(
-                                    new PrNumber(96),
-                                    new GhBranch("feat/a"),
-                                    Option.of(new GhBranch("main")),
-                                    false,
-                                    Checks.NONE,
-                                    Review.NONE,
-                                    Option.of(new PullRequestStack(12, 1, 2, STACK.entries())),
-                                    Option.none())))));
+            .mapPart(
+                    GitHubState.PART,
+                    gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
+                            .map(open -> open.put(
+                                    name("feat/a"),
+                                    new PullRequest(
+                                            new PrNumber(96),
+                                            new GhBranch("feat/a"),
+                                            Option.of(new GhBranch("main")),
+                                            false,
+                                            Checks.NONE,
+                                            Review.NONE,
+                                            Option.of(new PullRequestStack(12, 1, 2, STACK.entries())),
+                                            Option.none())))));
 
     @Test
     void aBranchInAStackIsNotMadeOneAgainButAddedToOrUnstacked() {
@@ -506,49 +511,56 @@ class MakeStackTest {
                         List.of(new PrNumber(96), new PrNumber(97)),
                         Option.none(),
                         MODEL.now().plus(StackUpdate.SETTLING))),
-                changed.gitHub().stackChange());
+                changed.part(GitHubState.PART).stackChange());
 
         // GitHub still lists them as they were: they are read again.
         Update.Next waiting = Update.update(changed, new StackMsg.Tick());
         assertTrue(
                 waiting.cmds().exists(LoadRepositoryPullRequests.class::isInstance),
                 waiting.cmds().toString());
-        assertEquals(changed.gitHub().stackChange(), waiting.model().gitHub().stackChange());
+        assertEquals(
+                changed.part(GitHubState.PART).stackChange(),
+                waiting.model().part(GitHubState.PART).stackChange());
 
         // Once it lists them as one stack, nothing more is read for it.
-        Model listed = STACKED.mapGitHub(
-                gitHub -> gitHub.withStackChange(changed.gitHub().stackChange()));
+        Model listed = STACKED.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withStackChange(changed.part(GitHubState.PART).stackChange()));
         Update.Next seen = Update.update(listed, new StackMsg.Tick());
         assertEquals(List.empty(), seen.cmds());
-        assertEquals(Option.none(), seen.model().gitHub().stackChange());
+        assertEquals(Option.none(), seen.model().part(GitHubState.PART).stackChange());
     }
 
     @Test
     void aChangeGitHubDoesNotListInTimeIsGivenUpOn() {
-        Model late = MODEL.mapGitHub(gitHub -> gitHub.withStackChange(Option.of(new StackChange.Stacked(
-                List.of(new PrNumber(96), new PrNumber(97)),
-                Option.none(),
-                MODEL.now().minusSeconds(1)))));
+        Model late = MODEL.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withStackChange(Option.of(new StackChange.Stacked(
+                        List.of(new PrNumber(96), new PrNumber(97)),
+                        Option.none(),
+                        MODEL.now().minusSeconds(1)))));
 
         Update.Next given = Update.update(late, new StackMsg.Tick());
 
         assertEquals(List.empty(), given.cmds());
-        assertEquals(Option.none(), given.model().gitHub().stackChange());
+        assertEquals(Option.none(), given.model().part(GitHubState.PART).stackChange());
         assertEquals(Option.none(), given.model().outcome().notice());
     }
 
     @Test
     void aStackToBeRebasedThatGitHubDoesNotListInTimeSaysItWasNotRebased() {
-        Model late = MODEL.mapGitHub(gitHub -> gitHub.withStackChange(Option.of(new StackChange.Stacked(
-                List.of(new PrNumber(96), new PrNumber(97)),
-                Option.none(),
-                MODEL.now().minusSeconds(1),
-                true))));
+        Model late = MODEL.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withStackChange(Option.of(new StackChange.Stacked(
+                        List.of(new PrNumber(96), new PrNumber(97)),
+                        Option.none(),
+                        MODEL.now().minusSeconds(1),
+                        true))));
 
         Update.Next given = Update.update(late, new StackMsg.Tick());
 
         assertEquals(List.empty(), given.cmds());
-        assertEquals(Option.none(), given.model().gitHub().stackChange());
+        assertEquals(Option.none(), given.model().part(GitHubState.PART).stackChange());
         Notice notice = given.model().outcome().notice().get();
         assertEquals(new Notice.StackNotListed(new PrNumber(96)), notice);
         assertEquals(
@@ -561,8 +573,11 @@ class MakeStackTest {
     void anUnstackedStackIsShownOnceNoPullRequestIsInItAnyMore() {
         StackChange gone = new StackChange.Unstacked(12, MODEL.now());
 
-        assertEquals(false, gone.shownIn(STACKED.gitHub().pullRequests().get()));
-        assertEquals(true, gone.shownIn(MODEL.gitHub().pullRequests().get()));
+        assertEquals(
+                false,
+                gone.shownIn(STACKED.part(GitHubState.PART).pullRequests().get()));
+        assertEquals(
+                true, gone.shownIn(MODEL.part(GitHubState.PART).pullRequests().get()));
     }
 
     @Test
@@ -573,8 +588,10 @@ class MakeStackTest {
                 new BaseDistance(
                         new BranchRef.Remote(new RemoteBranch("origin", name("feat/b"))), new Sha("bbbb"), 1, 2))));
         // feat/b's pull request is on feat/a already, so no base changes: only the lag is asked about.
-        Model onA = lagging.mapGitHub(gitHub -> gitHub.withPullRequests(
-                gitHub.pullRequests().map(open -> open.put(name("feat/b"), pr(97, "feat/b", "feat/a")))));
+        Model onA = lagging.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withPullRequests(
+                        gitHub.pullRequests().map(open -> open.put(name("feat/b"), pr(97, "feat/b", "feat/a")))));
         Model picking = step(step(menu(onA, "feat/b"), new StackMsg.MakeChosen()), new StackMsg.TopChosen(2));
 
         Update.Next confirmed = Update.update(picking, new StackMsg.PickConfirmed());
@@ -618,12 +635,13 @@ class MakeStackTest {
                         List.of(new RemoteRef(
                                 new RemoteBranch("origin", name("main")), new Sha("aaaa"), Instant.EPOCH)))
                 .model();
-        Model listed = fetched.mapGitHub(
-                gitHub -> gitHub.withStackChange(changed.gitHub().stackChange()));
+        Model listed = fetched.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withStackChange(changed.part(GitHubState.PART).stackChange()));
 
         Update.Next settled = Update.update(listed, new StackMsg.Tick());
 
-        assertEquals(Option.none(), settled.model().gitHub().stackChange());
+        assertEquals(Option.none(), settled.model().part(GitHubState.PART).stackChange());
         assertTrue(
                 settled.cmds().exists(StackRebaseCmd.ReadStack.class::isInstance),
                 settled.cmds().toString());

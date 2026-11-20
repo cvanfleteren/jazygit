@@ -51,6 +51,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
@@ -99,9 +100,11 @@ class RebaseStackTest {
         Model remotes = TestModels.remoteBranchesRead(
                         read, List.of(new RemoteRef(new RemoteBranch("origin", MAIN), new Sha("0000"), Instant.EPOCH)))
                 .model();
-        return remotes.mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(
-                C, pr(98, "feat/c", entries, 1),
-                D, pr(99, "feat/d", entries, 2)))));
+        return remotes.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(
+                        C, pr(98, "feat/c", entries, 1),
+                        D, pr(99, "feat/d", entries, 2)))));
     }
 
     private static final List<Branch> LOCAL = List.of(

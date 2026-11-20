@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -66,15 +67,17 @@ class DivergedStackTest {
                 .model();
         return read.mapRepo(repo -> repo.withParents(HashMap.of(FEAT_C, MAIN, FEAT_D, FEAT_C))
                         .withBaseDistance(HashMap.of(FEAT_C, behind(MAIN, cBehind), FEAT_D, behind(FEAT_C, dBehind))))
-                .mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(
-                        FEAT_C, stacked(98, "feat/c", 1),
-                        FEAT_D, stacked(99, "feat/d", 2)))));
+                .mapPart(
+                        GitHubState.PART,
+                        gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(
+                                FEAT_C, stacked(98, "feat/c", 1),
+                                FEAT_D, stacked(99, "feat/d", 2)))));
     }
 
     private static BranchNode.Header header(Model model) {
         return (BranchNode.Header) BranchNode.of(
                         List.of(branch(FEAT_C), branch(FEAT_D)),
-                        model.gitHub()::pullRequest,
+                        model.part(GitHubState.PART)::pullRequest,
                         true,
                         HashSet.empty(),
                         head -> Option.none())

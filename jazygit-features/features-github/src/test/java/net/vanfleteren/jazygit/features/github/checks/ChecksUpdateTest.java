@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.BranchChecksMsg;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimesCmd;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.LoadBranchChecks;
 import net.vanfleteren.jazygit.kernel.state.github.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
@@ -169,7 +170,8 @@ class ChecksUpdateTest {
         Next next = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ));
 
         assertTrue(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
-        assertEquals(Option.of(Checks.PENDING), next.model().gitHub().checks(FEATURE));
+        assertEquals(
+                Option.of(Checks.PENDING), next.model().part(GitHubState.PART).checks(FEATURE));
     }
 
     @Test
@@ -195,7 +197,8 @@ class ChecksUpdateTest {
 
         Next next = Update.update(pushed, new ChecksMsg.Loaded(FEATURE, READ));
 
-        assertEquals(Option.of(Checks.PENDING), next.model().gitHub().checks(FEATURE));
+        assertEquals(
+                Option.of(Checks.PENDING), next.model().part(GitHubState.PART).checks(FEATURE));
     }
 
     // As gh reads them when the branch is gone on GitHub.
@@ -205,7 +208,7 @@ class ChecksUpdateTest {
                 Update.update(shown(), new ChecksMsg.Loaded(FEATURE, new PendingChecks("owner/repo", HashMap.empty())));
 
         assertFalse(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
-        assertEquals(shown().gitHub(), next.model().gitHub());
+        assertEquals(shown().part(GitHubState.PART), next.model().part(GitHubState.PART));
     }
 
     @Test
@@ -215,7 +218,7 @@ class ChecksUpdateTest {
         Next next = Update.update(shown(), new ChecksMsg.Loaded(fork, READ));
 
         assertFalse(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
-        assertEquals(shown().gitHub(), next.model().gitHub());
+        assertEquals(shown().part(GitHubState.PART), next.model().part(GitHubState.PART));
     }
 
     // What was read is as true once the popup is closed.

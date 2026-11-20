@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
@@ -157,13 +158,14 @@ class AutoMergeUpdateTest {
                         new PullRequestMsg.MergeAsked(merge, new MergeStatus.Failed("blocked"), List.empty()))
                 .model();
         assertEquals(
-                Option.of(new MergeStatus.Failed("blocked")), failed.gitHub().merge(new PrNumber(42)));
+                Option.of(new MergeStatus.Failed("blocked")),
+                failed.part(GitHubState.PART).merge(new PrNumber(42)));
         EnableAutoMerge cmd =
                 new EnableAutoMerge(FEATURE, new PrNumber(42), "PR_42", MergeMethod.SQUASH, Option.of(HEAD));
 
         Next done = TestModels.done(TestModels.running(failed, cmd), cmd, cmd.run(env()));
 
-        assertEquals(Option.none(), done.model().gitHub().merge(new PrNumber(42)));
+        assertEquals(Option.none(), done.model().part(GitHubState.PART).merge(new PrNumber(42)));
         assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertTrue(
                 done.cmds().contains(new LoadRepositoryPullRequests()),

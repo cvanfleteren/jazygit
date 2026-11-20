@@ -40,6 +40,7 @@ import net.vanfleteren.jazygit.features.branches.branch.stack.StackCheckout.Stat
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
@@ -138,19 +139,22 @@ class CheckOutStackTest {
     // main checked out, and feat/a of stack #12, whose pull request the model knows.
     private static Model model(List<Branch> local) {
         Model read = TestModels.localBranchesRead(TestModels.loaded(), local).model();
-        return read.mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(HashMap.ofEntries(local.filter(
-                        branch -> !branch.name().equals(MAIN))
-                .map(branch -> io.vavr.Tuple.of(
-                        branch.name(),
-                        new PullRequest(
-                                new PrNumber(96 + List.of(A, B, C).indexOf(branch.name())),
-                                new GhBranch(branch.name().value()),
-                                Option.none(),
-                                false,
-                                Checks.NONE,
-                                Review.NONE,
-                                Option.of(stack(ENTRIES, 2 + List.of(A, B, C).indexOf(branch.name()))),
-                                Option.none())))))));
+        return read.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withPullRequests(Option.of(HashMap.ofEntries(local.filter(
+                                branch -> !branch.name().equals(MAIN))
+                        .map(branch -> io.vavr.Tuple.of(
+                                branch.name(),
+                                new PullRequest(
+                                        new PrNumber(96 + List.of(A, B, C).indexOf(branch.name())),
+                                        new GhBranch(branch.name().value()),
+                                        Option.none(),
+                                        false,
+                                        Checks.NONE,
+                                        Review.NONE,
+                                        Option.of(stack(
+                                                ENTRIES, 2 + List.of(A, B, C).indexOf(branch.name()))),
+                                        Option.none())))))));
     }
 
     private static final Model ONE_LOCAL = model(List.of(MAIN_HERE, following(A, A_TIP, 0, 0)));

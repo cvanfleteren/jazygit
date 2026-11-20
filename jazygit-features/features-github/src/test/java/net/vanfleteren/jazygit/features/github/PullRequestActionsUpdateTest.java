@@ -42,6 +42,7 @@ import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.*;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
@@ -215,8 +216,12 @@ class PullRequestActionsUpdateTest {
 
         Next done = TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of(), mergingAtOnce())));
 
-        assertEquals(Option.of(FEATURE_PR), done.model().gitHub().pullRequests().flatMap(open -> open.get(FEATURE)));
-        assertEquals(Option.of(new MergeStatus.Merged()), done.model().gitHub().merge(new PrNumber(42)));
+        assertEquals(
+                Option.of(FEATURE_PR),
+                done.model().part(GitHubState.PART).pullRequests().flatMap(open -> open.get(FEATURE)));
+        assertEquals(
+                Option.of(new MergeStatus.Merged()),
+                done.model().part(GitHubState.PART).merge(new PrNumber(42)));
         assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertTrue(
                 done.cmds().contains(new LoadRepositoryPullRequests()),
@@ -231,8 +236,9 @@ class PullRequestActionsUpdateTest {
 
         assertEquals(Option.none(), merging.jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertEquals(
-                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(new PrNumber(42)));
-        assertTrue(merging.gitHub().merging(new PrNumber(42)));
+                Option.of(new MergeStatus.Pending("merge-42")),
+                merging.part(GitHubState.PART).merge(new PrNumber(42)));
+        assertTrue(merging.part(GitHubState.PART).merging(new PrNumber(42)));
         assertEquals(
                 "gh api --method PUT 'repos/{owner}/{repo}/pulls/42/merge-async' -f merge_method=merge -f sha=abc123",
                 merging.outcome().commandLog().last().commands().last().line());
@@ -312,7 +318,8 @@ class PullRequestActionsUpdateTest {
                 checking, new PullRequestMsg.MergeChecked(new PrNumber(42), "merge-42", new MergeStatus.Merged()));
 
         assertEquals(
-                Option.of(new MergeStatus.Merged()), merged.model().gitHub().merge(new PrNumber(42)));
+                Option.of(new MergeStatus.Merged()),
+                merged.model().part(GitHubState.PART).merge(new PrNumber(42)));
         assertTrue(
                 merged.cmds().contains(new LoadRepositoryPullRequests()),
                 merged.cmds().toString());
@@ -344,12 +351,12 @@ class PullRequestActionsUpdateTest {
                 Option.of(new MergeStatus.Failed("Required status check \"build\" is failing")),
                 Update.update(failed, new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                         .model()
-                        .gitHub()
+                        .part(GitHubState.PART)
                         .merge(new PrNumber(42)));
-        assertFalse(failed.gitHub().merging(new PrNumber(42)));
+        assertFalse(failed.part(GitHubState.PART).merging(new PrNumber(42)));
         assertEquals(
                 Option.of(new MergeStatus.Pending("merge-42")),
-                asked(failed).gitHub().merge(new PrNumber(42)));
+                asked(failed).part(GitHubState.PART).merge(new PrNumber(42)));
         assertEquals(
                 Option.none(),
                 Update.update(
@@ -361,7 +368,7 @@ class PullRequestActionsUpdateTest {
                                         Checks.FAILING,
                                         Review.APPROVED))))
                         .model()
-                        .gitHub()
+                        .part(GitHubState.PART)
                         .merge(new PrNumber(42)));
     }
 
@@ -380,7 +387,7 @@ class PullRequestActionsUpdateTest {
                 Option.of(new MergeStatus.Failed("conflicts")),
                 Update.update(reading, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(reading), read))
                         .model()
-                        .gitHub()
+                        .part(GitHubState.PART)
                         .merge(new PrNumber(42)));
         assertEquals(
                 Option.none(),
@@ -389,7 +396,7 @@ class PullRequestActionsUpdateTest {
                                 new PullRequestMsg.DetailsLoaded(
                                         new PrNumber(42), lastRead(reading), withARunningCheck(read)))
                         .model()
-                        .gitHub()
+                        .part(GitHubState.PART)
                         .merge(new PrNumber(42)));
     }
 
@@ -408,20 +415,20 @@ class PullRequestActionsUpdateTest {
                 Option.of(new MergeStatus.Failed("Required status check \"build\" is expected")),
                 Update.update(failed, new PullRequestsMsg.Loaded(List.of(pending)))
                         .model()
-                        .gitHub()
+                        .part(GitHubState.PART)
                         .merge(new PrNumber(42)));
         assertEquals(
                 Option.none(),
                 Update.update(failed, new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                         .model()
-                        .gitHub()
+                        .part(GitHubState.PART)
                         .merge(new PrNumber(42)));
     }
 
     @Test
     void aFailedMergeOfAStackNoLongerShowsOnceAPullRequestBelowChanged() {
         Model failed = askedFor(stackOfTwo(), "feature", 42, new MergeStatus.Failed("conflicts"));
-        List<PullRequest> bottomFixed = failed.gitHub()
+        List<PullRequest> bottomFixed = failed.part(GitHubState.PART)
                 .pullRequests()
                 .get()
                 .values()
@@ -434,8 +441,8 @@ class PullRequestActionsUpdateTest {
         Model read =
                 Update.update(failed, new PullRequestsMsg.Loaded(bottomFixed)).model();
 
-        assertEquals(Option.none(), read.gitHub().merge(new PrNumber(42)));
-        assertEquals(Option.none(), read.gitHub().merge(new PrNumber(41)));
+        assertEquals(Option.none(), read.part(GitHubState.PART).merge(new PrNumber(42)));
+        assertEquals(Option.none(), read.part(GitHubState.PART).merge(new PrNumber(41)));
     }
 
     @Test
@@ -448,7 +455,9 @@ class PullRequestActionsUpdateTest {
                         new PullRequestMsg.MergeChecked(new PrNumber(42), "merge-42", new MergeStatus.Enqueued()))
                 .model();
 
-        assertEquals(Option.of(new MergeStatus.Enqueued()), enqueued.gitHub().merge(new PrNumber(42)));
+        assertEquals(
+                Option.of(new MergeStatus.Enqueued()),
+                enqueued.part(GitHubState.PART).merge(new PrNumber(42)));
         assertEquals(
                 Option.of(new Notice.MergeEnqueued(FEATURE)), enqueued.outcome().notice());
     }
@@ -472,7 +481,7 @@ class PullRequestActionsUpdateTest {
                 Update.update(merging.withNow(Instant.parse("2026-10-23T10:10:05Z")), new PullRequestMsg.MergeTick());
 
         assertEquals(List.empty(), ticked.cmds());
-        assertEquals(Option.none(), ticked.model().gitHub().merge(new PrNumber(42)));
+        assertEquals(Option.none(), ticked.model().part(GitHubState.PART).merge(new PrNumber(42)));
         assertEquals(
                 Option.of(new Notice.MergeStillPending(FEATURE)),
                 ticked.model().outcome().notice());
@@ -529,8 +538,9 @@ class PullRequestActionsUpdateTest {
         Model merging = askedFor(failedBelow, "feature", 42, new MergeStatus.Pending("merge-42"));
 
         assertEquals(
-                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(new PrNumber(41)));
-        assertTrue(merging.gitHub().merging(new PrNumber(41)));
+                Option.of(new MergeStatus.Pending("merge-42")),
+                merging.part(GitHubState.PART).merge(new PrNumber(41)));
+        assertTrue(merging.part(GitHubState.PART).merging(new PrNumber(41)));
     }
 
     @Test
@@ -540,9 +550,11 @@ class PullRequestActionsUpdateTest {
         Model merging = askedFor(failedAbove, "base-work", 41, new MergeStatus.Pending("merge-41"));
 
         assertEquals(
-                Option.of(new MergeStatus.Pending("merge-41")), merging.gitHub().merge(new PrNumber(41)));
+                Option.of(new MergeStatus.Pending("merge-41")),
+                merging.part(GitHubState.PART).merge(new PrNumber(41)));
         assertEquals(
-                Option.of(new MergeStatus.Failed("conflicts")), merging.gitHub().merge(new PrNumber(42)));
+                Option.of(new MergeStatus.Failed("conflicts")),
+                merging.part(GitHubState.PART).merge(new PrNumber(42)));
     }
 
     @Test
@@ -581,9 +593,10 @@ class PullRequestActionsUpdateTest {
         Model merging = asked(stacked);
 
         assertEquals(
-                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(new PrNumber(41)));
-        assertEquals(Option.none(), merging.gitHub().merge(new PrNumber(43)));
-        assertEquals(Option.none(), merging.gitHub().merge(new PrNumber(40)));
+                Option.of(new MergeStatus.Pending("merge-42")),
+                merging.part(GitHubState.PART).merge(new PrNumber(41)));
+        assertEquals(Option.none(), merging.part(GitHubState.PART).merge(new PrNumber(43)));
+        assertEquals(Option.none(), merging.part(GitHubState.PART).merge(new PrNumber(40)));
     }
 
     @Test
@@ -630,6 +643,9 @@ class PullRequestActionsUpdateTest {
         assertEquals(Option.none(), failed.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
         assertEquals(
                 StubGitHub.of().pullRequests().details(new PrNumber(42)).get().listed(),
-                failed.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
+                failed.model()
+                        .part(GitHubState.PART)
+                        .pullRequests()
+                        .flatMap(open -> open.get(new BranchName("feature"))));
     }
 }

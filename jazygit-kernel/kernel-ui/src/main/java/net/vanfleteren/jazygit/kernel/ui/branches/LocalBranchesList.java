@@ -132,8 +132,8 @@ class LocalBranchesList implements BranchesTabList {
                 .filter(parent -> !GitHubBases.root(
                         parent,
                         AheadUpdate.main(model),
-                        model.gitHub().protectedBranches().getOrElse(HashSet.empty())))
-                .filter(parent -> model.gitHub()
+                        model.part(GitHubState.PART).protectedBranches().getOrElse(HashSet.empty())))
+                .filter(parent -> model.part(GitHubState.PART)
                                 .pullRequest(branch)
                                 .flatMap(PullRequest::stack)
                                 .isEmpty()
@@ -299,8 +299,8 @@ class LocalBranchesList implements BranchesTabList {
                 .flatMap(read -> read.map(b -> BranchSegs.shownTime(
                         model,
                         b.lastActivity(),
-                        model.gitHub().waiting(b),
-                        model.gitHub().eta(b))));
+                        model.part(GitHubState.PART).waiting(b),
+                        model.part(GitHubState.PART).eta(b))));
     }
 
     @Override
@@ -311,7 +311,7 @@ class LocalBranchesList implements BranchesTabList {
                 .branches()
                 .map(branches -> BranchNode.of(
                         branches,
-                        model.gitHub()::pullRequest,
+                        model.part(GitHubState.PART)::pullRequest,
                         model.repoView().branches().stacking() == Stacking.STACKED,
                         model.repoView().branches().closedStacks(),
                         head -> fetched(model, head)))
@@ -325,11 +325,12 @@ class LocalBranchesList implements BranchesTabList {
                 model.repo().baseDistance().get(b.name()),
                 shownParent(model, b),
                 BranchSegs.gitHub(
-                        model.gitHub().pullRequest(b),
-                        model.gitHub().merge(model.gitHub().pullRequest(b)),
-                        model.gitHub().checks(b),
-                        model.gitHub().waiting(b),
-                        BranchSegs.eta(model, model.gitHub().eta(b)),
+                        model.part(GitHubState.PART).pullRequest(b),
+                        model.part(GitHubState.PART)
+                                .merge(model.part(GitHubState.PART).pullRequest(b)),
+                        model.part(GitHubState.PART).checks(b),
+                        model.part(GitHubState.PART).waiting(b),
+                        BranchSegs.eta(model, model.part(GitHubState.PART).eta(b)),
                         model.now()),
                 spinnerOf.apply(new BranchRef.Local(b.name())));
         return list.render(
@@ -377,7 +378,7 @@ class LocalBranchesList implements BranchesTabList {
                 .iterator()
                 .map(RemoteRef::branch)
                 .find(remote -> remote.branch().equals(FromGitHub.branch(head))
-                        && model.gitHub().mayBeOnGitHub(remote));
+                        && model.part(GitHubState.PART).mayBeOnGitHub(remote));
     }
 
     /**

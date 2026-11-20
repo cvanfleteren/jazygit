@@ -143,7 +143,7 @@ public final class EditPullRequestUpdate {
      */
     private static Next saved(Model model, SavePullRequest cmd, List<ExecutedCommand> commands) {
         Next back = OperationUpdate.succeeded(model, cmd, commands)
-                .map(done -> done.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())))
+                .map(done -> done.mapPart(GitHubState.PART, gitHub -> gitHub.withChanged(cmd.number())))
                 .then(changed -> changed.popup(EditPullRequestPopup.class)
                         .filter(popup -> popup.number().equals(cmd.number()))
                         .map(popup -> readAgain(changed, popup.from()))
@@ -162,7 +162,7 @@ public final class EditPullRequestUpdate {
                         reopened,
                         popup -> popup.withSaving(false).withOpened(edited ? savedFields(popup) : popup.opened())));
         Next read = edited
-                ? failed.map(reopened -> reopened.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())))
+                ? failed.map(reopened -> reopened.mapPart(GitHubState.PART, gitHub -> gitHub.withChanged(cmd.number())))
                         .then(changed -> readUnder(changed, cmd.number()))
                 : failed;
         return edited && cmd.edit().base().isDefined()

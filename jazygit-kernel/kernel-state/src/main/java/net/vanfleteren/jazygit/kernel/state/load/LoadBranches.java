@@ -28,7 +28,7 @@ public record LoadBranches(GitHubBases gitHub) implements Load {
      * {@code load}, but a load of the branches as {@code model} would ask for it now: told what GitHub read last.
      */
     public static Load current(Model model, Load load) {
-        return load instanceof LoadBranches ? new LoadBranches(GitHubBases.of(model.gitHub())) : load;
+        return load instanceof LoadBranches ? new LoadBranches(GitHubBases.in(model)) : load;
     }
 
     @Override

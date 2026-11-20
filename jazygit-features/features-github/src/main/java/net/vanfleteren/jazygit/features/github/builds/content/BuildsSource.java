@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.features.github.failed.FailedBuilds;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
@@ -77,7 +78,8 @@ public record BuildsSource() implements ContentSource {
                                                 failedBuild(
                                                         view.branch(),
                                                         drawn,
-                                                        model.gitHub().pullRequest(remote)))))
+                                                        model.part(GitHubState.PART)
+                                                                .pullRequest(remote)))))
                                 .getOrElse(() -> noBuilds(view, title, remote)))
                         .getOrElse(() -> Shown.dim(
                                 title,

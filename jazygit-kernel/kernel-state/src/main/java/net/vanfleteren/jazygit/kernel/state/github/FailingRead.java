@@ -25,7 +25,7 @@ public record FailingRead(int times, Instant since) {
      * Whether the timers may start {@code read} at the time of {@code model}.
      */
     public static boolean due(Model model, Cmd read) {
-        return model.gitHub()
+        return model.part(GitHubState.PART)
                 .failing()
                 .get(read)
                 .forAll(failing -> !model.now()
@@ -36,10 +36,12 @@ public record FailingRead(int times, Instant since) {
      * {@code model} knowing that {@code read} just succeeded, or {@code failed}.
      */
     public static Model ran(Model model, Cmd read, boolean failed) {
-        return model.mapGitHub(gitHub -> gitHub.withFailing(
-                failed
-                        ? gitHub.failing().put(read, new FailingRead(1, model.now()), FailingRead::failedAgain)
-                        : gitHub.failing().remove(read)));
+        return model.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withFailing(
+                        failed
+                                ? gitHub.failing().put(read, new FailingRead(1, model.now()), FailingRead::failedAgain)
+                                : gitHub.failing().remove(read)));
     }
 
     /**

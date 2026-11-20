@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
 /**
@@ -205,6 +206,6 @@ public final class BuildsUpdate {
                 .toOption()
                 .flatMap(branches -> branches.find(local -> local.name().equals(branch)))
                 .flatMap(Branch::remoteUpstream)
-                .filter(remote -> model.gitHub().mayBeOnGitHub(remote));
+                .filter(remote -> model.part(GitHubState.PART).mayBeOnGitHub(remote));
     }
 }

@@ -35,7 +35,8 @@ final class GitHubReads {
      */
     static Next loadAnyway(Next next, Cmd read) {
         return next.model().jobs().runs(read)
-                ? next.map(model -> model.mapGitHub(
+                ? next.map(model -> model.mapPart(
+                        GitHubState.PART,
                         gitHub -> gitHub.withAgain(gitHub.again().add(read))))
                 : start(next, read);
     }
@@ -45,8 +46,9 @@ final class GitHubReads {
      * meanwhile.
      */
     static Next done(Model model, Cmd read) {
-        Model done = model.mapGitHub(gitHub -> gitHub.withAgain(gitHub.again().remove(read)));
-        return model.gitHub().again().contains(read) ? start(Next.of(done), read) : Next.of(done);
+        Model done = model.mapPart(
+                GitHubState.PART, gitHub -> gitHub.withAgain(gitHub.again().remove(read)));
+        return model.part(GitHubState.PART).again().contains(read) ? start(Next.of(done), read) : Next.of(done);
     }
 
     private static Next start(Next next, Cmd read) {

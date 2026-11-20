@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
@@ -140,7 +141,7 @@ class PrOverviewUpdateTest {
 
         assertEquals(
                 List.of(OLD.number()),
-                read.gitHub()
+                read.part(GitHubState.PART)
                         .pullRequests()
                         .get()
                         .values()

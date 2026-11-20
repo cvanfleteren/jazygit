@@ -24,9 +24,11 @@ public final class BranchChecksUpdate {
             case BranchChecksMsg.Loaded(GitHubChecks checks) -> {
                 Next done = GitHubReads.done(
                         FailingRead.ran(
-                                model.mapGitHub(gitHub -> gitHub.withBranchChecks(Option.of(checks))
-                                        .withPendingChecks(
-                                                gitHub.pendingChecks().map(pending -> pending.pendingIn(checks)))),
+                                model.mapPart(
+                                        GitHubState.PART,
+                                        gitHub -> gitHub.withBranchChecks(Option.of(checks))
+                                                .withPendingChecks(gitHub.pendingChecks()
+                                                        .map(pending -> pending.pendingIn(checks)))),
                                 new LoadBranchChecks(),
                                 false),
                         new LoadBranchChecks());
@@ -44,7 +46,7 @@ public final class BranchChecksUpdate {
             // How long the checks take is learned from them too.
             case BranchChecksMsg.RunsLoaded(PendingChecks checks) ->
                 CheckTimesUpdate.read(
-                        Next.of(model.mapGitHub(gitHub -> gitHub.withPendingChecks(Option.of(checks)))),
+                        Next.of(model.mapPart(GitHubState.PART, gitHub -> gitHub.withPendingChecks(Option.of(checks)))),
                         checks.repository(),
                         checks.byBranch().values().toList().flatMap(runs -> runs));
             case BranchChecksMsg.RunsFailed(var failure) -> Next.of(model);

@@ -55,9 +55,9 @@ public final class PullRequestUpdate {
             // A read that a later one was taken before, or that started before a change, is not taken: it would show
             // older details, or the change undone, here and on the branch; failing, it says nothing of them (ADR 34).
             case PullRequestMsg.DetailsLoaded(PrNumber number, long read, var details)
-            when !model.gitHub().current(number, read) -> Next.of(notTaken(model, number, read));
+            when !model.part(GitHubState.PART).current(number, read) -> Next.of(notTaken(model, number, read));
             case PullRequestMsg.DetailsFailed(PrNumber number, long read, var failure)
-            when !model.gitHub().current(number, read) -> Next.of(notTaken(model, number, read));
+            when !model.part(GitHubState.PART).current(number, read) -> Next.of(notTaken(model, number, read));
             case PullRequestMsg.DetailsLoaded(PrNumber number, long read, var details) ->
                 detailsLoaded(model, number, read, details);
             case PullRequestMsg.DetailsFailed(PrNumber number, long read, var failure) ->
@@ -123,7 +123,8 @@ public final class PullRequestUpdate {
                 model,
                 CheckTimesUpdate.read(
                         Next.of(shown(
-                                model.mapGitHub(
+                                model.mapPart(
+                                        GitHubState.PART,
                                         gitHub -> gitHub.withRead(details, read).withReadTaken(number, read)),
                                 number,
                                 read,
@@ -137,7 +138,10 @@ public final class PullRequestUpdate {
      */
     private static Next detailsFailed(Model model, PrNumber number, long read, Failure failure) {
         return Next.of(shown(
-                model.mapGitHub(gitHub -> gitHub.withReadTaken(number, read)), number, read, Either.left(failure)));
+                model.mapPart(GitHubState.PART, gitHub -> gitHub.withReadTaken(number, read)),
+                number,
+                read,
+                Either.left(failure)));
     }
 
     /**
@@ -206,7 +210,8 @@ public final class PullRequestUpdate {
      */
     private static Next autoMergeSet(Model model, AutoMergeCmd cmd, List<ExecutedCommand> commands) {
         return PrOverviewUpdate.reloadIfShown(OperationUpdate.succeeded(model, cmd, commands)
-                        .map(done -> done.mapGitHub(
+                        .map(done -> done.mapPart(
+                                GitHubState.PART,
                                 gitHub -> forgettingMerge(gitHub, cmd).withChanged(cmd.number()))))
                 .then(done -> readAgainOf(done, cmd.number()));
     }
@@ -217,7 +222,7 @@ public final class PullRequestUpdate {
      */
     private static Next autoMergeFailed(Model model, AutoMergeCmd cmd, Failure failure) {
         return OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
-                .map(done -> done.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())))
+                .map(done -> done.mapPart(GitHubState.PART, gitHub -> gitHub.withChanged(cmd.number())))
                 .then(done -> readAgainOf(done, cmd.number()));
     }
 
@@ -268,7 +273,7 @@ public final class PullRequestUpdate {
     private static Next draftSet(Model model, SetDraft cmd, List<ExecutedCommand> commands) {
         return PrOverviewUpdate.reloadIfShown(OperationUpdate.succeeded(model, cmd, commands)
                 .map(done -> mapShown(
-                        done.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())),
+                        done.mapPart(GitHubState.PART, gitHub -> gitHub.withChanged(cmd.number())),
                         cmd.number(),
                         popup -> popup.withDraft(cmd.draft()))));
     }
@@ -279,8 +284,11 @@ public final class PullRequestUpdate {
      */
     private static Next ended(Model model, ChangingCmd cmd, List<ExecutedCommand> commands) {
         Next ended = OperationUpdate.succeeded(model, cmd, commands)
-                .map(done -> done.mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
-                        .map(open -> open.filterValues(pr -> !pr.number().equals(cmd.number()))))));
+                .map(done -> done.mapPart(
+                        GitHubState.PART,
+                        gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
+                                .map(open ->
+                                        open.filterValues(pr -> !pr.number().equals(cmd.number()))))));
         // A read that is still running may have missed it, and would show it open again.
         return PrOverviewUpdate.reloadIfShown(FetchUpdate.requested(PullRequestsUpdate.loadAnyway(ended)));
     }
@@ -302,7 +310,8 @@ public final class PullRequestUpdate {
      * merging it already.
      */
     static boolean mergeable(Model model, PullRequestPopup popup) {
-        return popup.mergeable() && !model.gitHub().merging(popup.pullRequest().number());
+        return popup.mergeable()
+                && !model.part(GitHubState.PART).merging(popup.pullRequest().number());
     }
 
     /**
@@ -351,7 +360,7 @@ public final class PullRequestUpdate {
      * Whether the pull request {@code popup} shows reads, by a read that is still taken when it comes back.
      */
     private static boolean readRunning(Model model, PullRequestPopup popup) {
-        return popup.refreshing() && model.gitHub().current(popup.number(), popup.read());
+        return popup.refreshing() && model.part(GitHubState.PART).current(popup.number(), popup.read());
     }
 
     /**
@@ -359,8 +368,8 @@ public final class PullRequestUpdate {
      */
     public static Tuple2<Model, LoadPullRequestDetails> read(Model model, PrNumber number) {
         return Tuple.of(
-                model.mapGitHub(GitHubState::withReadGivenOut),
-                new LoadPullRequestDetails(number, model.gitHub().nextRead()));
+                model.mapPart(GitHubState.PART, GitHubState::withReadGivenOut),
+                new LoadPullRequestDetails(number, model.part(GitHubState.PART).nextRead()));
     }
 
     /**
@@ -425,15 +434,14 @@ public final class PullRequestUpdate {
      * branch it merges into.
      */
     private static Next requested(Model model, BranchName branch) {
+        GitHubState gitHub = model.part(GitHubState.PART);
         return model.idleBranch(branch)
-                .map(known -> model.gitHub()
-                        .pullRequest(known)
+                .map(known -> gitHub.pullRequest(known)
                         .map(pr -> show(model, branch, pr, false, false))
                         // Without the pull requests it is unknown whether there is one to open.
-                        .getOrElse(() -> model.gitHub().pullRequestsFailure().isDefined()
-                                        || model.gitHub().pullRequests().isEmpty()
-                                ? Next.of(model.fail(model.gitHub()
-                                        .pullRequestsFailure()
+                        .getOrElse(() -> gitHub.pullRequestsFailure().isDefined()
+                                        || gitHub.pullRequests().isEmpty()
+                                ? Next.of(model.fail(gitHub.pullRequestsFailure()
                                         .<AppError>map(PullRequestsError.Unavailable::new)
                                         .getOrElse(PullRequestsError.NotRead::new)))
                                 : CreatePullRequestUpdate.askPushed(model, known)))
@@ -448,7 +456,7 @@ public final class PullRequestUpdate {
         Model cleared = model.clearError();
         return cleared.repo()
                 .branch(branch)
-                .flatMap(known -> cleared.gitHub().pullRequest(known))
+                .flatMap(known -> cleared.part(GitHubState.PART).pullRequest(known))
                 .map(pr -> files(cleared, branch, pr, false))
                 .getOrElse(() -> CommitFilesUpdate.againstBase(cleared, branch));
     }

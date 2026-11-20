@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.popup.ErrorPopup;
 import org.junit.jupiter.api.Test;
 
@@ -106,7 +107,7 @@ class BaseUpdateTest {
                 Review.NONE,
                 Option.none(),
                 Option.none());
-        Model withPr = model().mapGitHub(gitHub -> gitHub.withListed(List.of(pr)));
+        Model withPr = model().mapPart(GitHubState.PART, gitHub -> gitHub.withListed(List.of(pr)));
 
         Next next = Update.update(withPr, new BaseMsg.Requested(FEATURE));
 

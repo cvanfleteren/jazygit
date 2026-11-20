@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.features.github.verdict.VerdictCmd.SubmitReview;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
@@ -147,7 +148,7 @@ public final class VerdictUpdate {
      */
     private static Next sent(Model model, SubmitReview cmd, List<ExecutedCommand> commands) {
         Next done = OperationUpdate.succeeded(model, cmd, commands)
-                .map(succeeded -> succeeded.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())));
+                .map(succeeded -> succeeded.mapPart(GitHubState.PART, gitHub -> gitHub.withChanged(cmd.number())));
         return done.model()
                 .popup(VerdictPopup.class)
                 .filter(popup -> popup.sending() && popup.number().equals(cmd.number()))
