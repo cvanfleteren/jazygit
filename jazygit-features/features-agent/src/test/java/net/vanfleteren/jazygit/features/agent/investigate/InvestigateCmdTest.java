@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.core.git.files.StubEditor;
 import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
-import net.vanfleteren.jazygit.kernel.settings.AgentProgram;
+import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubAccount;

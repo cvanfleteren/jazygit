@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.features.agent.investigate;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.kernel.settings.AgentProgram;
+import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog.Cell;

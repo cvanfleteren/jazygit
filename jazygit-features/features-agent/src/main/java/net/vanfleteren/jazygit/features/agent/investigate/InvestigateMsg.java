@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.agent.investigate;
 
-import net.vanfleteren.jazygit.kernel.settings.AgentProgram;
+import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;

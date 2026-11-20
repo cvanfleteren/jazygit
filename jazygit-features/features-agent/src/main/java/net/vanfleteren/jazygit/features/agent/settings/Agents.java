@@ -1,9 +1,13 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.agent.settings;
 
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.settings.Codec;
+import net.vanfleteren.jazygit.kernel.settings.Decoded;
+import net.vanfleteren.jazygit.kernel.settings.Programs;
+import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 
 /**
  * The agents the user set in the settings file, as its {@code [[agents]]} tables list them, in their order, which a
@@ -21,7 +25,16 @@ public record Agents(List<AgentProgram> all) {
     /**
      * The key of the agents in the settings file: an array of tables.
      */
-    static final String KEY = "agents";
+    public static final String KEY = "agents";
+
+    /**
+     * The agents as a setting, which this feature keeps (ADR 163). Only the user writes them, as the editors: an
+     * entry that is wrong is left out and reported, the others still apply.
+     */
+    public static final SettingKey<Agents> SETTING = SettingKey.userOwned(KEY, NONE, Codec.readOnly(value -> {
+        Read read = read(value);
+        return new Decoded<>(Option.some(read.agents()), read.invalid());
+    }));
 
     private static final String COMMAND = "command";
     private static final String PROMPT = "prompt";

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.agent.investigate;
 
 import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.kernel.settings.AgentProgram;
+import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.agent.settings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -6,6 +6,9 @@ import io.vavr.Tuple;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.settings.Decoded;
+import net.vanfleteren.jazygit.kernel.settings.Kept;
+import net.vanfleteren.jazygit.kernel.settings.Programs;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -113,16 +116,24 @@ class AgentsTest {
     }
 
     @Test
-    void theAgentsAreReadFromTheSettings() {
-        Settings.Read read = Settings.read(
-                SettingKeys.KERNEL,
-                key -> key.equals("agents")
-                        ? Option.of(java.util.List.of(table("name", "Claude", "command", java.util.List.of("claude"))))
-                        : Option.none());
+    void theSettingReadsTheAgentsAndSaysWhatIsWrong() {
+        Decoded<Agents> read = Agents.SETTING
+                .codec()
+                .decode(
+                        "agents",
+                        java.util.List.of(
+                                table("name", "Claude", "command", java.util.List.of("claude")), table("name", "Bad")));
 
         assertEquals(
                 List.of(Tuple.of(
                         '1', new AgentProgram("Claude", List.of("claude"), false, Option.none(), Option.none()))),
-                read.settings().agents().lettered());
+                read.value().get().lettered());
+        assertEquals(List.of("agents[2].command"), read.invalid());
+    }
+
+    @Test
+    void onlyTheUserWritesTheAgents() {
+        assertEquals(Kept.NEVER, Agents.SETTING.kept());
+        assertEquals(Agents.NONE, Agents.SETTING.initial());
     }
 }
