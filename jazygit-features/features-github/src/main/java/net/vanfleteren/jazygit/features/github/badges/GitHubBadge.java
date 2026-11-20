@@ -38,9 +38,7 @@ public final class GitHubBadge {
         return switch (ref) {
             case BranchRef.Local local ->
                 model.repo()
-                        .branches()
-                        .toOption()
-                        .flatMap(branches -> branches.find(b -> b.name().equals(local.branch())))
+                        .branch(local.branch())
                         .map(branch -> shown(model, state, branch))
                         .getOrElse(BranchBadges.Shown.NONE);
             case BranchRef.Remote remote ->

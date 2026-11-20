@@ -24,8 +24,9 @@ So the kernel could not be built without GitHub, and a second forge would have h
   are joined in the order of `Features.ALL`, and the app gives them to the pane as a service, as it gives the keymap
   (ADR 136). The pane composes the time of a row from the age of the branch and that text (ADR 124), so the wake-up of
   the redraw is unchanged. `BranchSegs` keeps what git gives: sync, base distance, parent, worktree, spinner.
-- **The order of a row is the one it has**: sync, base distance, parent, worktree, the badges, the spinner. No setting
-  orders the badges.
+- **The order of a row is the one it has**: under the name, which the spinner follows while the branch is busy, its
+  age, sync, base distance, parent, the badges, then whether another worktree has it checked out. No setting orders the
+  badges.
 - **A group of branches is a second key of the pane, forge-neutral.** A feature gives the pane an ordered tree: a
   header row, its branches indented under it, trailing dimmed rows, and whether it is open. The pane knows no pull
   request, and the kernel has no word "stack": its view state is `grouped` and `closedGroups`, as `Stacking` and

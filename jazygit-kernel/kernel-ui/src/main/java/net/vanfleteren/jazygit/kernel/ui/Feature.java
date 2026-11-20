@@ -15,8 +15,9 @@ import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
 /**
  * A feature, as the app knows it: its actions, which bring its keys and its popups, what it shows in the content
  * panel, the settings it keeps, the sections it adds to the settings panel, what it does every so often, what it
- * answers of what happens in the kernel, and what it shows of a branch in the branches pane. Each feature package declares one, as {@code XxxFeature.FEATURE}, and
- * {@code Features.ALL} lists it; that is all a new feature changes outside its package (ADR 127).
+ * answers of what happens in the kernel, and what it shows of a branch in the branches pane. Each feature package
+ * declares one, as {@code XxxFeature.FEATURE}, and {@code Features.ALL} lists it; that is all a new feature changes
+ * outside its package (ADR 127).
  *
  * <p>Making the standard keymap makes every feature, so a feature does not ask for {@code Keymap.standard()} while its
  * class is initialised.

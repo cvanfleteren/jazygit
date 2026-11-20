@@ -1,7 +1,10 @@
 package net.vanfleteren.jazygit.features.github.badges;
 
+import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.FEATURE;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -14,7 +17,16 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.features.github.PullRequestFixtures;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.Waiting;
+import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
@@ -203,6 +215,42 @@ class GitHubBadgeTest {
                         Option.of(new Waiting(Option.none())),
                         Option.of("~4m"),
                         NOW));
+    }
+
+    @Test
+    void aLocalBranchWithAPullRequestShowsIt() {
+        BranchBadges.Shown shown = GitHubBadge.of(PullRequestFixtures.withPr(), new BranchRef.Local(FEATURE));
+
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED),
+                        LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
+                        LoadableList.Seg.styled("  +", Theme.Classes.REVIEW_APPROVED)),
+                shown.segs());
+        // Its checks are done, so nothing of it changes with the time.
+        assertEquals("", shown.timed().apply(NOW));
+    }
+
+    @Test
+    void theBranchOnTheRemoteOfAPullRequestShowsItToo() {
+        // A remote is on GitHub once the checks of the branches said so.
+        Model model = PullRequestFixtures.withPr()
+                .mapPart(
+                        GitHubState.PART,
+                        state -> state.withBranchChecks(
+                                Option.of(new GitHubChecks(HashSet.of(new RemoteName("origin")), HashMap.empty()))));
+
+        BranchBadges.Shown shown = GitHubBadge.of(model, new BranchRef.Remote(new RemoteBranch("origin", FEATURE)));
+
+        assertTrue(
+                shown.segs().contains(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST)), shown.toString());
+    }
+
+    @Test
+    void aLocalBranchThatIsNotReadShowsNothing() {
+        assertEquals(
+                BranchBadges.Shown.NONE,
+                GitHubBadge.of(PullRequestFixtures.withPr(), new BranchRef.Local(new BranchName("unknown"))));
     }
 
     @Test

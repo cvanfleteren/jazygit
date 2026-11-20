@@ -71,14 +71,14 @@ public final class PullRequestFixtures {
             false,
             Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("ahead"))), 2, 0)));
 
-    static final BranchName FEATURE = PUSHED.name();
+    public static final BranchName FEATURE = PUSHED.name();
 
     static final PullRequest FEATURE_PR =
             new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
 
     private PullRequestFixtures() {}
 
-    static Model withPr() {
+    public static Model withPr() {
         return Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
     }
