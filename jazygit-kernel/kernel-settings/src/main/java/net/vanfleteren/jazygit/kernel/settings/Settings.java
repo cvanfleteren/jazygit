@@ -3,58 +3,20 @@ package net.vanfleteren.jazygit.kernel.settings;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.TreeMap;
 import io.vavr.control.Option;
 import java.util.function.Function;
-import lombok.With;
 
 /**
- * What the user chose to keep from one session to the next.
+ * What the user chose to keep from one session to the next: the value of each setting, by the path of its
+ * {@link SettingKey} (ADR 163). A setting not held has its initial value, and one set back to it is not held, so two
+ * settings with the same values are equal, whoever declared the keys.
  *
- * @param theme             the theme the UI is drawn in
- * @param ghExecutable      the gh executable to run, if not the one on the PATH
- * @param repositoryWidth   the share of the width the left column takes on the repository screen, in percent
- * @param pullRequestsWidth the share of the width the left column takes on the pull requests screen, in percent
- * @param diffStyle         how the diffs of the working tree, of a commit and of a stash are drawn
- * @param diffSyntax        whether the rich view colours the code of a diff by its syntax (ADR 53)
- * @param diffWords         whether the rich view highlights the words that changed in a changed line, not only the
- *                          line
- * @param repositoryHeights   the share of the height of the left column of the repository screen each pane under the
- *                            status takes but the last, which takes what is left, in percent
- * @param pullRequestsHeights the share of the height of the left column of the pull requests screen each pane under
- *                            the status takes but the last, which takes what is left, in percent
- * @param animations          whether what moves on the screen, like the left column stepped wider or narrower,
- *                            moves there smoothly, rather than at once (ADR 81)
- * @param autoRefresh         whether the repository is read again every so often, to show what changed outside the
- *                            app (ADR 125)
- * @param autoFetch           whether the remotes are fetched from at the start and every so often (ADR 125)
- * @param browsers            the browser set for each GitHub account (ADR 88)
- * @param editors             the editors a worktree can be opened in (ADR 110); only read, never written, as only
- *                            the user sets them
- * @param diffFilters         the ids of the diff filters enabled, in the order they were enabled (ADR 144)
- * @param filterDefinitions   the diff filters the user set (ADR 144); only read, never written, as only the user
- *                            sets them
- * @param agents              the agents a failed build can be handed to (ADR 161); only read, never written, as only
- *                            the user sets them
+ * <p>The kernel's own settings have an accessor and a wither each, which read and set their key.
+ *
+ * @param held each setting that differs from its initial value, with its value, by its path
  */
-@With
-public record Settings(
-        ThemeName theme,
-        Option<String> ghExecutable,
-        int repositoryWidth,
-        int pullRequestsWidth,
-        DiffStyle diffStyle,
-        boolean diffSyntax,
-        boolean diffWords,
-        List<Integer> repositoryHeights,
-        List<Integer> pullRequestsHeights,
-        boolean animations,
-        boolean autoRefresh,
-        boolean autoFetch,
-        AccountBrowsers browsers,
-        Editors editors,
-        List<String> diffFilters,
-        FilterDefinitions filterDefinitions,
-        Agents agents) {
+public record Settings(Map<String, Held<?>> held) {
 
     /**
      * The narrowest the left column may get, in percent of the width.
@@ -82,6 +44,11 @@ public record Settings(
      * left column; the last takes what is left, which is about as much in a column under the status.
      */
     public static final List<Integer> DEFAULT_PULL_REQUESTS_HEIGHTS = List.of(32, 32);
+
+    /**
+     * The settings of a first session: each at its initial value.
+     */
+    public static final Settings DEFAULT = new Settings(TreeMap.empty());
 
     /**
      * The theme the UI is drawn in. The file shows it at its initial value too.
@@ -185,26 +152,156 @@ public record Settings(
     }));
 
     /**
-     * The settings of a first session: each at its initial value.
+     * The value of {@code key}: its initial value while it is not held.
      */
-    public static final Settings DEFAULT = new Settings(
-            THEME.initial(),
-            GH_EXECUTABLE.initial(),
-            REPOSITORY_WIDTH.initial(),
-            PULL_REQUESTS_WIDTH.initial(),
-            DIFF_STYLE.initial(),
-            DIFF_SYNTAX.initial(),
-            DIFF_WORDS.initial(),
-            REPOSITORY_HEIGHTS.initial(),
-            PULL_REQUESTS_HEIGHTS.initial(),
-            ANIMATIONS.initial(),
-            AUTO_REFRESH.initial(),
-            AUTO_FETCH.initial(),
-            BROWSERS.initial(),
-            EDITORS.initial(),
-            DIFF_FILTERS.initial(),
-            FILTER_DEFINITIONS.initial(),
-            AGENTS.initial());
+    @SuppressWarnings("unchecked") // Only with() holds a value under a key's path, one of that key's type.
+    public <T> T get(SettingKey<T> key) {
+        return held.get(key.path()).map(value -> (T) value.value()).getOrElse(key.initial());
+    }
+
+    /**
+     * These settings with {@code value} for {@code key}; not held when that is its initial value.
+     */
+    public <T> Settings with(SettingKey<T> key, T value) {
+        return new Settings(
+                value.equals(key.initial()) ? held.remove(key.path()) : held.put(key.path(), new Held<>(key, value)));
+    }
+
+    public ThemeName theme() {
+        return get(THEME);
+    }
+
+    public Settings withTheme(ThemeName theme) {
+        return with(THEME, theme);
+    }
+
+    public Option<String> ghExecutable() {
+        return get(GH_EXECUTABLE);
+    }
+
+    public Settings withGhExecutable(Option<String> ghExecutable) {
+        return with(GH_EXECUTABLE, ghExecutable);
+    }
+
+    public int repositoryWidth() {
+        return get(REPOSITORY_WIDTH);
+    }
+
+    public Settings withRepositoryWidth(int width) {
+        return with(REPOSITORY_WIDTH, width);
+    }
+
+    public int pullRequestsWidth() {
+        return get(PULL_REQUESTS_WIDTH);
+    }
+
+    public Settings withPullRequestsWidth(int width) {
+        return with(PULL_REQUESTS_WIDTH, width);
+    }
+
+    public DiffStyle diffStyle() {
+        return get(DIFF_STYLE);
+    }
+
+    public Settings withDiffStyle(DiffStyle style) {
+        return with(DIFF_STYLE, style);
+    }
+
+    public boolean diffSyntax() {
+        return get(DIFF_SYNTAX);
+    }
+
+    public Settings withDiffSyntax(boolean on) {
+        return with(DIFF_SYNTAX, on);
+    }
+
+    public boolean diffWords() {
+        return get(DIFF_WORDS);
+    }
+
+    public Settings withDiffWords(boolean on) {
+        return with(DIFF_WORDS, on);
+    }
+
+    public List<Integer> repositoryHeights() {
+        return get(REPOSITORY_HEIGHTS);
+    }
+
+    public Settings withRepositoryHeights(List<Integer> heights) {
+        return with(REPOSITORY_HEIGHTS, heights);
+    }
+
+    public List<Integer> pullRequestsHeights() {
+        return get(PULL_REQUESTS_HEIGHTS);
+    }
+
+    public Settings withPullRequestsHeights(List<Integer> heights) {
+        return with(PULL_REQUESTS_HEIGHTS, heights);
+    }
+
+    public boolean animations() {
+        return get(ANIMATIONS);
+    }
+
+    public Settings withAnimations(boolean on) {
+        return with(ANIMATIONS, on);
+    }
+
+    public boolean autoRefresh() {
+        return get(AUTO_REFRESH);
+    }
+
+    public Settings withAutoRefresh(boolean on) {
+        return with(AUTO_REFRESH, on);
+    }
+
+    public boolean autoFetch() {
+        return get(AUTO_FETCH);
+    }
+
+    public Settings withAutoFetch(boolean on) {
+        return with(AUTO_FETCH, on);
+    }
+
+    public AccountBrowsers browsers() {
+        return get(BROWSERS);
+    }
+
+    public Settings withBrowsers(AccountBrowsers browsers) {
+        return with(BROWSERS, browsers);
+    }
+
+    public Editors editors() {
+        return get(EDITORS);
+    }
+
+    public Settings withEditors(Editors editors) {
+        return with(EDITORS, editors);
+    }
+
+    public List<String> diffFilters() {
+        return get(DIFF_FILTERS);
+    }
+
+    public Settings withDiffFilters(List<String> ids) {
+        return with(DIFF_FILTERS, ids);
+    }
+
+    public FilterDefinitions filterDefinitions() {
+        return get(FILTER_DEFINITIONS);
+    }
+
+    public Settings withFilterDefinitions(FilterDefinitions filters) {
+        return with(FILTER_DEFINITIONS, filters);
+    }
+
+    public Agents agents() {
+        return get(AGENTS);
+    }
+
+    public Settings withAgents(Agents agents) {
+        return with(AGENTS, agents);
+    }
 
     /**
      * {@code width} brought within the widths the left column may have.
@@ -232,11 +329,11 @@ public record Settings(
     }
 
     /**
-     * The settings that {@code value} finds by their dotted key: the default for the ones it does not find, and
-     * for the ones it finds no valid value for, whose keys come with them.
+     * The settings of {@code keys} that {@code value} finds by their dotted key: the initial value for the ones it
+     * does not find, and for the ones it finds no valid value for, whose keys come with them.
      */
-    static Read read(Function<String, Option<Object>> value) {
-        return Setting.ALL.foldLeft(new Read(DEFAULT, List.empty()), (read, setting) -> setting.readInto(read, value));
+    static Read read(SettingKeys keys, Function<String, Option<Object>> value) {
+        return keys.all().foldLeft(new Read(DEFAULT, List.empty()), (read, key) -> key.readInto(read, value));
     }
 
     /**
@@ -281,21 +378,25 @@ public record Settings(
      * The gh executable to run: the one chosen, else the one on the PATH.
      */
     public String gh() {
-        return ghExecutable.getOrElse("gh");
+        return ghExecutable().getOrElse("gh");
     }
 
     /**
-     * The settings as they are kept in the settings file, by the path of their key, each name of a table it is in
-     * and then its own; a setting left at its default has none. The editors are not among them: the user writes
-     * them, and saving leaves them as they are.
+     * The settings of {@code keys} as they are kept in the settings file, by the path of their key, each name of a
+     * table it is in and then its own; a setting at its initial value has none, unless it is always kept, nor has
+     * one only the user writes.
      */
-    Map<List<String>, Object> entries() {
-        return Setting.ALL.foldLeft(
-                LinkedHashMap.empty(), (entries, setting) -> entries.merge(setting.entriesOf(this)));
+    Map<List<String>, Object> entries(SettingKeys keys) {
+        return keys.all().foldLeft(LinkedHashMap.empty(), (entries, key) -> entries.merge(key.entriesOf(this)));
     }
 
     /**
      * Settings as read, with the keys that had an invalid value.
      */
     record Read(Settings settings, List<String> invalid) {}
+
+    /**
+     * A setting that is held, with its value.
+     */
+    public record Held<T>(SettingKey<T> key, T value) {}
 }

@@ -90,7 +90,7 @@ final class Launcher {
                     RecentRepositories recent = new RecentRepositoriesFile(
                             SettingsPaths.stateFile(),
                             directory -> RepositoryIdentity.read(directory).map(RepositoryIdentity::commonDir));
-                    SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
+                    SettingsStore settings = new SettingsFile(SettingsPaths.configFile(), SettingKeys.KERNEL);
                     SettingsStore.Loaded loaded = settings.load();
                     FormerState.forget(SettingsPaths.stateFile())
                             .onFailure(failed -> LoggerFactory.getLogger(Launcher.class)

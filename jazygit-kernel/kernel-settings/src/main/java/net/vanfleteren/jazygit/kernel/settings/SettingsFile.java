@@ -20,9 +20,21 @@ import java.nio.file.Path;
 public final class SettingsFile implements SettingsStore {
 
     private final Path file;
+    private final SettingKeys keys;
 
-    public SettingsFile(Path file) {
+    /**
+     * The settings of {@code keys} in {@code file}; what the file has at other keys is left as it is.
+     */
+    public SettingsFile(Path file, SettingKeys keys) {
         this.file = file;
+        this.keys = keys;
+    }
+
+    /**
+     * The kernel's own settings in {@code file}.
+     */
+    public SettingsFile(Path file) {
+        this(file, SettingKeys.KERNEL);
     }
 
     @Override
@@ -41,20 +53,22 @@ public final class SettingsFile implements SettingsStore {
     @Override
     public Loaded load() {
         if (!Files.exists(file)) {
-            return Loaded.DEFAULT;
+            return new Loaded(Settings.DEFAULT, Option.none(), keys);
         }
         return TomlFile.read(file)
                 .map(config -> Settings.read(
-                        key -> Option.ofOptional(config.getOptional(key)).map(SettingsFile::plain)))
+                        keys, key -> Option.ofOptional(config.getOptional(key)).map(SettingsFile::plain)))
                 .fold(
                         cause -> new Loaded(
                                 Settings.DEFAULT,
-                                Option.of(new SettingsProblem.Unreadable(file, TomlFile.reason(cause)))),
+                                Option.of(new SettingsProblem.Unreadable(file, TomlFile.reason(cause))),
+                                keys),
                         read -> new Loaded(
                                 read.settings(),
                                 Option.when(
                                         read.invalid().nonEmpty(),
-                                        () -> new SettingsProblem.Invalid(file, read.invalid()))));
+                                        () -> new SettingsProblem.Invalid(file, read.invalid())),
+                                keys));
     }
 
     @Override
@@ -68,16 +82,16 @@ public final class SettingsFile implements SettingsStore {
     private Try<Path> saved(Settings previous, Settings next) {
         // A file that cannot be read is left alone, rather than replaced by one with only these settings.
         Try<CommentedConfig> current = Files.exists(file) ? TomlFile.read(file) : Try.success(TomlFile.newConfig());
-        return current.map(config -> next.entries()
-                        .filter(entry -> !previous.entries().contains(entry))
+        return current.map(config -> next.entries(keys)
+                        .filter(entry -> !previous.entries(keys).contains(entry))
                         .foldLeft(config, (changed, entry) -> {
                             changed.set(entry._1.toJavaList(), entry._2);
                             return changed;
                         }))
                 // A setting back at its default has no entry anymore, nor a table it leaves empty.
-                .map(config -> previous.entries()
+                .map(config -> previous.entries(keys)
                         .keySet()
-                        .removeAll(next.entries().keySet())
+                        .removeAll(next.entries(keys).keySet())
                         .foldLeft(config, (changed, key) -> {
                             changed.remove(key.toJavaList());
                             return withoutEmptyTables(changed, key.dropRight(1));

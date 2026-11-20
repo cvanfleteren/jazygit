@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.Tuple;
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.Test;
  * The table of settings: what a setting keeps in the file, it reads back.
  */
 class SettingTest {
+
+    private static final SettingKeys KERNEL = SettingKeys.KERNEL;
 
     /**
      * Settings with each setting the app writes away from its default.
@@ -36,7 +39,7 @@ class SettingTest {
 
     @Test
     void eachSettingTheAppWritesIsReadBackAsItWas() {
-        Settings.Read read = Settings.read(key -> found(CHANGED.entries(), List.of(key.split("\\."))));
+        Settings.Read read = Settings.read(KERNEL, key -> found(CHANGED.entries(KERNEL), List.of(key.split("\\."))));
 
         assertEquals(CHANGED, read.settings());
         assertTrue(read.invalid().isEmpty());
@@ -44,9 +47,9 @@ class SettingTest {
 
     @Test
     void eachSettingDiffersFromTheDefaultInTheChangedSettings() {
-        List<String> same = Setting.ALL
-                .filter(setting -> !setting.differs(Settings.DEFAULT, CHANGED))
-                .map(Setting::path);
+        List<String> same = KERNEL.all()
+                .filter(key -> !key.differs(Settings.DEFAULT, CHANGED))
+                .map(SettingKey::path);
 
         // Only the user writes the editors, the diff filters and the agents.
         assertEquals(List.of(Editors.KEY, FilterDefinitions.KEY, Agents.KEY), same);
@@ -56,46 +59,49 @@ class SettingTest {
     void theDefaultsKeepOnlyTheThemeInTheFile() {
         assertEquals(
                 List.of(List.of("ui", "theme")),
-                Settings.DEFAULT.entries().keySet().toList());
+                Settings.DEFAULT.entries(KERNEL).keySet().toList());
     }
 
     @Test
     void aSettingSetBackToItsDefaultHasNoEntry() {
         Settings back = CHANGED.withRepositoryWidth(Settings.DEFAULT.repositoryWidth());
 
-        assertTrue(CHANGED.entries().containsKey(List.of("ui", "repository-width")));
-        assertFalse(back.entries().containsKey(List.of("ui", "repository-width")));
+        assertTrue(CHANGED.entries(KERNEL).containsKey(List.of("ui", "repository-width")));
+        assertFalse(back.entries(KERNEL).containsKey(List.of("ui", "repository-width")));
     }
 
     @Test
     void aSettingIsTakenOverOnItsOwn() {
-        Settings taken = Setting.ALL
-                .find(setting -> setting.key().equals(Settings.DIFF_STYLE))
-                .get()
-                .take(Settings.DEFAULT, CHANGED);
+        Settings taken = Settings.DIFF_STYLE.take(Settings.DEFAULT, CHANGED);
 
         assertEquals(Settings.DEFAULT.withDiffStyle(DiffStyle.PLAIN), taken);
     }
 
     @Test
-    void eachSettingIsAtAKeyOfItsOwnThatIsInNoOther() {
-        List<List<String>> paths =
-                Setting.ALL.map(setting -> List.of(setting.path().split("\\.")));
+    void aSettingSetBackToItsInitialValueIsNotHeld() {
+        Settings back = Settings.DEFAULT.withAnimations(false).withAnimations(true);
 
-        assertEquals(
-                List.empty(),
-                paths.crossProduct()
-                        .filter(pair -> pair._1 != pair._2 && pair._2.startsWith(pair._1))
-                        .toList());
+        assertEquals(Settings.DEFAULT, back);
+        assertTrue(back.held().isEmpty());
     }
 
     @Test
-    void theDefaultsAreTheInitialValues() {
-        assertTrue(Setting.ALL.forAll(SettingTest::initialByDefault));
+    void theOrderSettingsAreSetInDoesNotMatter() {
+        assertEquals(
+                Settings.DEFAULT.withAnimations(false).withTheme(ThemeName.LIGHT),
+                Settings.DEFAULT.withTheme(ThemeName.LIGHT).withAnimations(false));
     }
 
-    private static <T> boolean initialByDefault(Setting<T> setting) {
-        return setting.lens().get(Settings.DEFAULT).contains(setting.key().initial());
+    @Test
+    void aSettingOfAnotherOwnerIsHeldAsTheKernelsAre() {
+        SettingKey<Boolean> mine = SettingKey.of("mine.on", false, Codec.bool());
+        Settings on = Settings.DEFAULT.with(mine, true);
+
+        assertTrue(on.get(mine));
+        assertFalse(Settings.DEFAULT.get(mine));
+        assertEquals(Settings.DEFAULT, on.with(mine, false));
+        assertEquals(
+                LinkedHashMap.of(List.of("mine", "on"), (Object) true), on.entries(new SettingKeys(List.of(mine))));
     }
 
     @Test

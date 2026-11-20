@@ -114,9 +114,11 @@ class AgentsTest {
 
     @Test
     void theAgentsAreReadFromTheSettings() {
-        Settings.Read read = Settings.read(key -> key.equals("agents")
-                ? Option.of(java.util.List.of(table("name", "Claude", "command", java.util.List.of("claude"))))
-                : Option.none());
+        Settings.Read read = Settings.read(
+                SettingKeys.KERNEL,
+                key -> key.equals("agents")
+                        ? Option.of(java.util.List.of(table("name", "Claude", "command", java.util.List.of("claude"))))
+                        : Option.none());
 
         assertEquals(
                 List.of(Tuple.of(
