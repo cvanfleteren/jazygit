@@ -24,6 +24,14 @@ public final class StackAction {
 
     private StackAction() {}
 
+    /**
+     * What the branches pane knows the group of stack {@code number} by, and keeps it closed by (ADR 167): next to
+     * the scope its header's keys act on, so the stack's update and the pane's groups both find it here.
+     */
+    public static String groupKey(int number) {
+        return "stack:" + number;
+    }
+
     private static Keymap keys(Keymap keys) {
         Keymap branches = keys.add(
                         STACKS, Binding.onSelected(Keymap.ENTER, "github.help.stacks.toggle", StackMsg.Toggled::new))

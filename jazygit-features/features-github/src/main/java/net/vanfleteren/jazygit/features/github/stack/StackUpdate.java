@@ -24,7 +24,6 @@ import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutRequest;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutUpdate;
-import net.vanfleteren.jazygit.features.github.panes.StackGroups;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.AddChosen;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.BottomChosen;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.Changed;
@@ -103,7 +102,7 @@ public final class StackUpdate {
      * Opens stack {@code stack} in the branches pane, or closes it.
      */
     private static Next toggled(Model model, int stack) {
-        String group = StackGroups.key(stack);
+        String group = StackAction.groupKey(stack);
         return Next.of(model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withClosedGroups(
                 branches.closedGroups().contains(group)
                         ? branches.closedGroups().remove(group)

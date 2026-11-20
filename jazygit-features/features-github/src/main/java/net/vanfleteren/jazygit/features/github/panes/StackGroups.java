@@ -33,13 +33,6 @@ public final class StackGroups {
     private StackGroups() {}
 
     /**
-     * What the branches pane knows the group of stack {@code number} by, and keeps it closed by.
-     */
-    public static String key(int number) {
-        return "stack:" + number;
-    }
-
-    /**
      * The stacks of {@code branches} in {@code model}, in the order their first branch is listed.
      */
     public static List<Group> of(Model model, List<Branch> branches) {
@@ -80,7 +73,7 @@ public final class StackGroups {
                 ? List.of(LoadableList.Seg.styled(" " + Messages.get("github.stacks.diverged"), Theme.Classes.ERROR))
                 : List.empty();
         return new Group(
-                key(number),
+                StackAction.groupKey(number),
                 List.of(LoadableList.Seg.styled(
                         Messages.get(
                                 "github.stacks.header",
