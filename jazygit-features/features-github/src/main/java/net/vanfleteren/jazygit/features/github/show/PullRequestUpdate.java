@@ -434,19 +434,14 @@ public final class PullRequestUpdate {
      * branch it merges into.
      */
     private static Next requested(Model model, BranchName branch) {
+        GitHubState gitHub = model.part(GitHubState.PART);
         return model.idleBranch(branch)
-                .map(known -> model.part(GitHubState.PART)
-                        .pullRequest(known)
+                .map(known -> gitHub.pullRequest(known)
                         .map(pr -> show(model, branch, pr, false, false))
                         // Without the pull requests it is unknown whether there is one to open.
-                        .getOrElse(() -> model.part(GitHubState.PART)
-                                                .pullRequestsFailure()
-                                                .isDefined()
-                                        || model.part(GitHubState.PART)
-                                                .pullRequests()
-                                                .isEmpty()
-                                ? Next.of(model.fail(model.part(GitHubState.PART)
-                                        .pullRequestsFailure()
+                        .getOrElse(() -> gitHub.pullRequestsFailure().isDefined()
+                                        || gitHub.pullRequests().isEmpty()
+                                ? Next.of(model.fail(gitHub.pullRequestsFailure()
                                         .<AppError>map(PullRequestsError.Unavailable::new)
                                         .getOrElse(PullRequestsError.NotRead::new)))
                                 : CreatePullRequestUpdate.askPushed(model, known)))

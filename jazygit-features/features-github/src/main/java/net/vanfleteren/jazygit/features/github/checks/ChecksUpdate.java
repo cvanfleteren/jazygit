@@ -275,13 +275,13 @@ public final class ChecksUpdate {
      */
     public static Option<RemoteBranch> ofPullRequest(Model model, PullRequestPopup dialog) {
         BranchName head = FromGitHub.branch(dialog.pullRequest().headBranch());
-        return model.part(GitHubState.PART)
-                .branchChecks()
+        GitHubState gitHub = model.part(GitHubState.PART);
+        return gitHub.branchChecks()
                 .filter(checks -> dialog.detailsRead() && !dialog.fromFork())
                 .toList()
                 .flatMap(checks -> checks.remotes().toList().sorted())
                 .map(remote -> new RemoteBranch(remote, head))
-                .find(remote -> model.part(GitHubState.PART).checks(remote).exists(state -> state != Checks.NONE));
+                .find(remote -> gitHub.checks(remote).exists(state -> state != Checks.NONE));
     }
 
     /**
