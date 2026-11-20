@@ -88,10 +88,24 @@ public class BranchesPanel {
             Clock clock,
             Theme.Highlights highlights,
             BranchBadges badges) {
+        this(dispatch, tabClicked, clock, highlights, badges, BranchGroups.standard());
+    }
+
+    /**
+     * @param groups the groups the features make of the local branches: {@link BranchGroups#standard()}, the app's, or
+     *               a test's own (ADR 167)
+     */
+    public BranchesPanel(
+            Consumer<Msg> dispatch,
+            Consumer<BranchesTab> tabClicked,
+            Clock clock,
+            Theme.Highlights highlights,
+            BranchBadges badges,
+            BranchGroups groups) {
         this.tabClicked = tabClicked;
         // Only the list shown is rendered, that of the tab, or the divergence or the commits of a branch in its place,
         // so only it gets keys: TamboUI routes them to the elements of the last frame.
-        localList = new LocalBranchesList(ID, dispatch, clock, highlights, badges);
+        localList = new LocalBranchesList(ID, dispatch, clock, highlights, badges, groups);
         remoteList = new RemoteBranchesList(ID, dispatch, clock, highlights, badges);
         worktreeList = new WorktreesList(ID, dispatch, highlights);
         divergenceList = new DivergenceList(ID, dispatch, highlights);

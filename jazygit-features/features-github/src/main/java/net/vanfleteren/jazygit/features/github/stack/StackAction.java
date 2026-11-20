@@ -14,21 +14,34 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
  */
 public final class StackAction {
 
+    /**
+     * The number of the stack whose header is highlighted in the local branches (ADR 72): the keys of its group there
+     * (ADR 167).
+     */
+    public static final Keymap.Scope<Integer> STACKS = new Keymap.Scope<>("stacks", "github.panel.stacks.title");
+
     public static final FeatureAction ACTION = new FeatureAction(StackAction::keys, StackDialogs::popups);
 
     private StackAction() {}
 
+    /**
+     * What the branches pane knows the group of stack {@code number} by, and keeps it closed by (ADR 167): next to
+     * the scope its header's keys act on, so the stack's update and the pane's groups both find it here.
+     */
+    public static String groupKey(int number) {
+        return "stack:" + number;
+    }
+
     private static Keymap keys(Keymap keys) {
         Keymap branches = keys.add(
-                        Scopes.STACKS,
-                        Binding.onSelected(Keymap.ENTER, "github.help.stacks.toggle", StackMsg.Toggled::new))
+                        STACKS, Binding.onSelected(Keymap.ENTER, "github.help.stacks.toggle", StackMsg.Toggled::new))
                 .add(
-                        Scopes.STACKS,
+                        STACKS,
                         Binding.onSelected(
                                 "s",
                                 "github.help.stacks.menu",
                                 stack -> new StackMsg.MenuRequested(Option.none(), Option.of(stack))))
-                .add(Scopes.STACKS, Binding.always("S", "github.help.stacks.view", StackMsg.ViewToggled::new))
+                .add(STACKS, Binding.always("S", "github.help.stacks.view", StackMsg.ViewToggled::new))
                 .add(
                         Scopes.BRANCHES,
                         new Keymap.Binding<>(

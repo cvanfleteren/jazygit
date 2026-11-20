@@ -12,19 +12,13 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import org.junit.jupiter.api.Test;
@@ -161,6 +155,10 @@ class LocalBranchesListTest {
     }
 
     private static Option<BranchName> shownParent(Model model) {
+        return shownParent(model, List.empty());
+    }
+
+    private static Option<BranchName> shownParent(Model model, List<BranchGroups.Group> groups) {
         return LocalBranchesList.shownParent(
                 model,
                 model.repo()
@@ -168,7 +166,8 @@ class LocalBranchesListTest {
                         .toOption()
                         .get()
                         .find(b -> b.name().equals(FEATURE))
-                        .get());
+                        .get(),
+                groups);
     }
 
     @Test
@@ -195,32 +194,15 @@ class LocalBranchesListTest {
     }
 
     @Test
-    void aBranchInAStackOnGitHubShowsNoParent() {
-        PullRequestStack stack = new PullRequestStack(
-                12,
-                2,
-                2,
-                List.of(
-                        new PullRequestStack.Entry(
-                                1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
-                        new PullRequestStack.Entry(
-                                2, new PrNumber(97), State.OPEN, new GhBranch("feature"), new GhBranch("feat/a"))));
-        PullRequest stacked = new PullRequest(
-                new PrNumber(97),
-                new GhBranch("feature"),
-                Option.of(new GhBranch("feat/a")),
-                false,
-                Checks.NONE,
-                Review.NONE,
-                Option.of(stack),
-                Option.none());
+    void aBranchInAGroupShowsNoParentAsItsPlaceInItSaysIt() {
+        BranchGroups.Group group = new BranchGroups.Group(
+                "group",
+                List.empty(),
+                List.empty(),
+                List.of(new BranchGroups.Entry.Member(FEAT_A), new BranchGroups.Entry.Member(FEATURE)),
+                new BranchGroups.Keys<>(Scopes.BRANCHES, FEATURE));
 
-        assertEquals(
-                Option.none(),
-                shownParent(withParent(FEAT_A)
-                        .mapPart(
-                                GitHubState.PART,
-                                gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(FEATURE, stacked))))));
+        assertEquals(Option.none(), shownParent(withParent(FEAT_A), List.of(group)));
     }
 
     @Test

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestActio
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestAction;
+import net.vanfleteren.jazygit.features.github.panes.StackGroups;
 import net.vanfleteren.jazygit.features.github.review.ReviewAction;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsDialogs;
@@ -90,7 +91,8 @@ public final class GitHubFeature {
             .every(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new)
             .every(STACK_CHECK_INTERVAL, StackMsg.Tick::new)
             .reacting(GitHubReactions::to)
-            .badging(GitHubBadge::of);
+            .badging(GitHubBadge::of)
+            .grouping(StackGroups::of);
 
     private GitHubFeature() {}
 }

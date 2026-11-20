@@ -637,7 +637,7 @@ public class FilesPanel {
                 switch (why) {
                             case Unlisted.NoBase(var branch) ->
                                 Messages.get("panel.commitFiles.titleFor", branch.value());
-                            case Unlisted.Stack() -> Messages.get("panel.files.title");
+                            case Unlisted.Group() -> Messages.get("panel.files.title");
                             case Unlisted.NotHere() -> Messages.get("panel.files.title");
                         }
                         + locked,
@@ -655,7 +655,7 @@ public class FilesPanel {
     private static String unlistedText(Unlisted why) {
         return switch (why) {
             case Unlisted.NoBase(var branch) -> Messages.get("panel.files.unlisted.noBase", branch.value());
-            case Unlisted.Stack() -> Messages.get("panel.files.unlisted.stack");
+            case Unlisted.Group() -> Messages.get("panel.files.unlisted.group");
             case Unlisted.NotHere() -> Messages.get("panel.files.unlisted.notHere");
         };
     }

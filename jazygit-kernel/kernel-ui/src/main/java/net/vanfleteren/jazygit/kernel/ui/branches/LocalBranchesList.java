@@ -3,26 +3,22 @@ package net.vanfleteren.jazygit.kernel.ui.branches;
 import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyEvent;
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.load.BranchFiles;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
 import net.vanfleteren.jazygit.kernel.state.view.NoLog;
-import net.vanfleteren.jazygit.kernel.state.view.Stacking;
 import net.vanfleteren.jazygit.kernel.state.view.Unlisted;
+import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups.Group;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -38,19 +34,20 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
  * out in a new worktree.
  * A branch shows what the features show of it, its badges, such as its pull request on GitHub (ADR 167).
  * <p>
- * A stack of pull requests on GitHub with a local branch is one node: a header, and its pull requests under it in
- * GitHub's order, indented (ADR 72). Enter on the header opens or closes it; the keys of a branch do nothing there.
- * A pull request of it whose branch is not checked out shows the log of its remote-tracking branch, once that is
- * fetched. S lists the branches of the stacks as any other branch, and shows the stacks again (ADR 87).
+ * A group the features make of branches, as a stack of pull requests on GitHub, is one node: a header, and what is in
+ * it under it, indented (ADR 72, ADR 167). The keys on the header are those of the group; the keys of a branch do
+ * nothing there. What is in it but is no local branch shows the log of its remote-tracking branch, once that is
+ * fetched. The groups can also be left out, and their branches listed as any other (ADR 87).
  */
 class LocalBranchesList implements BranchesTabList {
 
-    // How far a branch under the header of its stack is indented.
+    // How far a branch under the header of its group is indented.
     private static final String INDENT = "    ";
 
     private final LoadableList<List<BranchNode>> list;
     private final Keymap keymap = Keymap.standard();
     private final BranchBadges badges;
+    private final BranchGroups groups;
     private final Clock clock;
     private final PaneId pane;
     // Whether the files pane was locked to the branches at the last render (ADR 149).
@@ -65,11 +62,18 @@ class LocalBranchesList implements BranchesTabList {
      * @param clock      animates the spinners of the busy branches
      * @param highlights how the highlighted branch is shown, also when the pane is not in use
      * @param badges     what the features show of a branch
+     * @param groups     the groups the features make of the branches
      */
     LocalBranchesList(
-            String id, Consumer<Msg> dispatch, Clock clock, Theme.Highlights highlights, BranchBadges badges) {
+            String id,
+            Consumer<Msg> dispatch,
+            Clock clock,
+            Theme.Highlights highlights,
+            BranchBadges badges,
+            BranchGroups groups) {
         this.clock = clock;
         this.badges = badges;
+        this.groups = groups;
         this.pane = new PaneId(id);
         list = new LoadableList<>(Messages.get("panel.branches.title"), id, LocalBranchesList::reselect, highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
@@ -125,21 +129,17 @@ class LocalBranchesList implements BranchesTabList {
 
     /**
      * The parent {@code branch} shows on its line 2 (ADR 72): none for one built on a root, which is what one expects,
-     * nor for one in a stack on GitHub, whose place in it says it, unless it does not have all the commits of that
-     * parent, which GitHub does not merge (ADR 73).
+     * nor for one in a group of {@code groups}, as a stack on GitHub, whose place in it says it, unless it does not
+     * have all the commits of that parent, which GitHub does not merge (ADR 73).
      */
-    static Option<BranchName> shownParent(Model model, Branch branch) {
-        GitHubState gitHub = model.part(GitHubState.PART);
+    static Option<BranchName> shownParent(Model model, Branch branch, List<Group> groups) {
+        GitHubBases bases = GitHubBases.in(model);
         return model.repo()
                 .parents()
                 .get(branch.name())
-                .filter(parent -> !GitHubBases.root(
-                        parent,
-                        AheadUpdate.main(model),
-                        gitHub.protectedBranches().getOrElse(HashSet.empty())))
-                .filter(parent ->
-                        gitHub.pullRequest(branch).flatMap(PullRequest::stack).isEmpty()
-                                || model.repo().behindParent(branch.name()).isDefined());
+                .filter(parent -> !bases.root(parent, AheadUpdate.main(model)))
+                .filter(parent -> !groups.exists(group -> group.members().contains(branch.name()))
+                        || model.repo().behindParent(branch.name()).isDefined());
     }
 
     /**
@@ -221,56 +221,23 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     /**
-     * The header of a stack on one line: whether it is open, its number and its base, then apart how many pull
-     * requests it has (ADR 72), and whether it {@code diverged}: GitHub does not merge it until it is rebased (ADR 73).
-     * While its branches are rebased or pushed, the {@code spinner} shows after its name, as on a busy branch, also
-     * while the stack is closed (ADR 74).
+     * The header of a group on one line (ADR 72, ADR 167): whether it is open, its title, then what its feature shows
+     * after it, each apart. While its branches are busy, the {@code spinner} shows after its title, as on a busy
+     * branch, also while the group is closed (ADR 74).
      */
-    static LoadableList.Row header(BranchNode.Header header, boolean diverged, Option<String> spinner) {
-        return new LoadableList.Row(List.of(
-                        LoadableList.Seg.styled(header.open() ? "▾ " : "▸ ", Theme.Classes.DIM),
-                        LoadableList.Seg.styled(
-                                Messages.get(
-                                        "branches.stack.header",
-                                        header.stack().number(),
-                                        header.stack()
-                                                .base()
-                                                .map(GhBranch::name)
-                                                .getOrElse("?")),
-                                Theme.Classes.PULL_REQUEST))
+    static LoadableList.Row header(BranchNode.Header header, Option<String> spinner) {
+        return new LoadableList.Row(List.of(LoadableList.Seg.styled(header.open() ? "▾ " : "▸ ", Theme.Classes.DIM))
+                .appendAll(header.group().title())
                 .appendAll(BranchSegs.group(BranchSegs.spinnerSeg(spinner).toList()))
-                .appendAll(BranchSegs.group(List.of(LoadableList.Seg.styled(
-                        " " + Messages.get("branches.stack.size", header.stack().size()), Theme.Classes.DIM))))
-                .appendAll(
-                        diverged
-                                ? BranchSegs.group(List.of(LoadableList.Seg.styled(
-                                        " " + Messages.get("branches.stack.diverged"), Theme.Classes.ERROR)))
-                                : List.empty()));
+                .appendAll(header.group().after().flatMap(seg -> BranchSegs.group(List.of(seg)))));
     }
 
     /**
-     * Whether a branch of the stack of {@code header} does not have all the commits of the one below it in the stack
-     * (ADR 73). One that is only behind the base of the stack is not: GitHub merges that.
-     */
-    static boolean diverged(Model model, BranchNode.Header header) {
-        List<BranchName> members = header.branches().map(Branch::name);
-        return header.branches()
-                .exists(b -> model.repo().parents().get(b.name()).exists(members::contains)
-                        && model.repo().behindParent(b.name()).isDefined());
-    }
-
-    /**
-     * A pull request of a stack whose branch is not checked out, or that is merged or closed, on one dimmed line
-     * under the header of its stack.
+     * What belongs to a group but is no local branch here, on one dimmed line under the header of its group.
      */
     static LoadableList.Row other(BranchNode.Other other) {
-        String key = switch (other.entry().state()) {
-            case OPEN -> "branches.stack.notCheckedOut";
-            case MERGED -> "branches.stack.merged";
-            case CLOSED -> "branches.stack.closed";
-        };
-        return LoadableList.Row.of(LoadableList.Seg.styled(
-                INDENT + Messages.get(key, other.entry().number().value()), Theme.Classes.DIM));
+        return LoadableList.Row.of(
+                LoadableList.Seg.styled(INDENT + other.entry().text(), Theme.Classes.DIM));
     }
 
     /**
@@ -307,14 +274,18 @@ class LocalBranchesList implements BranchesTabList {
     public Panel render(Model model, boolean focused, boolean active, Line title) {
         locked = PaneKeys.lockedTo(model, pane);
         Function<BranchRef, Option<String>> spinnerOf = BranchSegs.spinners(model, clock.instant());
+        List<Group> grouping = model.repo()
+                .branches()
+                .toOption()
+                .map(branches -> groups.of(model, branches))
+                .getOrElse(List.empty());
         Loadable<List<BranchNode>> read = model.repo()
                 .branches()
                 .map(branches -> BranchNode.of(
                         branches,
-                        model.part(GitHubState.PART)::pullRequest,
-                        model.repoView().branches().stacking() == Stacking.STACKED,
-                        model.repoView().branches().closedStacks(),
-                        head -> fetched(model, head)))
+                        grouping,
+                        model.repoView().branches().grouped(),
+                        model.repoView().branches().closedGroups()))
                 .map(branchNodes -> detachedHead(model)
                         .map(at -> branchNodes.prepend(new BranchNode.Detached(at)))
                         .getOrElse(branchNodes));
@@ -323,18 +294,17 @@ class LocalBranchesList implements BranchesTabList {
                 b,
                 Duration.between(b.lastActivity(), model.now()),
                 model.repo().baseDistance().get(b.name()),
-                shownParent(model, b),
+                shownParent(model, b, grouping),
                 badges.of(model, new BranchRef.Local(b.name())).segs(),
                 spinnerOf.apply(new BranchRef.Local(b.name())));
         return list.render(
                 nodes,
                 listed -> listed.map(node -> switch (node) {
                     case BranchNode.Leaf leaf ->
-                        leaf.inStack() ? indented(rowOf.apply(leaf.branch())) : rowOf.apply(leaf.branch());
+                        leaf.inGroup() ? indented(rowOf.apply(leaf.branch())) : rowOf.apply(leaf.branch());
                     case BranchNode.Header header ->
                         header(
                                 header,
-                                diverged(model, header),
                                 header.branches()
                                         .iterator()
                                         .flatMap(b -> spinnerOf.apply(new BranchRef.Local(b.name())))
@@ -361,23 +331,9 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     /**
-     * The remote-tracking branch on GitHub of {@code head}, the branch a pull request merges from, if it was fetched.
-     */
-    static Option<RemoteBranch> fetched(Model model, GhBranch head) {
-        GitHubState gitHub = model.part(GitHubState.PART);
-        return model.repo()
-                .remoteBranches()
-                .toOption()
-                .getOrElse(List.empty())
-                .iterator()
-                .map(RemoteRef::branch)
-                .find(remote -> remote.branch().equals(FromGitHub.branch(head)) && gitHub.mayBeOnGitHub(remote));
-    }
-
-    /**
-     * The branch whose log shows: the highlighted one, the highest local branch of the stack whose header is
-     * highlighted, whose log holds the whole stack, or the remote-tracking branch of the highlighted pull request that
-     * is not checked out, if it was fetched.
+     * The branch whose log shows: the highlighted one, the last local branch of the group whose header is highlighted,
+     * whose log holds the whole of a stack, or the remote-tracking branch of what belongs to a group but is not checked
+     * out, if it was fetched.
      */
     @Override
     public Option<BranchRef> selectedRef() {
@@ -385,7 +341,7 @@ class LocalBranchesList implements BranchesTabList {
             case BranchNode.Leaf leaf ->
                 Option.<BranchRef>of(new BranchRef.Local(leaf.branch().name()));
             case BranchNode.Header header -> header.top().map(BranchRef.Local::new);
-            case BranchNode.Other other -> other.fetched().map(BranchRef.Remote::new);
+            case BranchNode.Other other -> other.entry().log().map(BranchRef.Remote::new);
             case BranchNode.Detached detached -> Option.<BranchRef>none();
         });
     }
@@ -393,28 +349,28 @@ class LocalBranchesList implements BranchesTabList {
     /**
      * What the files pane lists for the highlighted row (ADR 141): a branch its files against its base, the main
      * branch what its tip changed, what is checked out here, a branch or a detached HEAD, the files of the working
-     * tree; a stack and a pull request of it whose branch is not checked out here have none.
+     * tree; a group and what belongs to it but is not checked out here have none.
      */
     @Override
     public Option<Followed> followed(Model model) {
         return selected().flatMap(node -> switch (node) {
             case BranchNode.Leaf leaf -> BranchFiles.of(model, leaf.branch().name());
-            case BranchNode.Header header -> Option.<Followed>of(new Followed.Nothing(new Unlisted.Stack()));
+            case BranchNode.Header header -> Option.<Followed>of(new Followed.Nothing(new Unlisted.Group()));
             case BranchNode.Other other -> Option.<Followed>of(new Followed.Nothing(new Unlisted.NotHere()));
             case BranchNode.Detached detached -> Option.<Followed>of(new Followed.WorkingTree());
         });
     }
 
     /**
-     * Why the highlighted row has no log: a pull request of a stack whose branch is neither checked out nor fetched, or
-     * a detached HEAD, whose log the commits pane shows.
+     * Why the highlighted row has no log: what belongs to a group but is neither checked out nor fetched, or a
+     * detached HEAD, whose log the commits pane shows.
      */
     @Override
     public Option<NoLog> noLog() {
         return selected().flatMap(node -> switch (node) {
             case BranchNode.Other other
-            when other.fetched().isEmpty() ->
-                Option.<NoLog>of(new NoLog.Unfetched(other.entry().number()));
+            when other.entry().log().isEmpty() ->
+                Option.<NoLog>of(new NoLog.Unfetched(other.entry().unknown()));
             case BranchNode.Detached detached -> Option.<NoLog>of(new NoLog.Detached(detached.at()));
             default -> Option.<NoLog>none();
         });
@@ -436,16 +392,16 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     /**
-     * What {@code event} does on the highlighted node: on a header, what the keys of a stack do, else what those of
+     * What {@code event} does on the highlighted node: on a header, what the keys of its group do, else what those of
      * the pane do that need no branch; on anything else, what the keys of a branch do.
      */
     private Option<Msg> keys(KeyEvent event) {
         return selected()
                 .filter(BranchNode.Header.class::isInstance)
-                .map(node -> ((BranchNode.Header) node).stack().number())
+                .map(node -> ((BranchNode.Header) node).group().keys())
                 .fold(
                         () -> keymap.handle(Scopes.BRANCHES, event, selectedBranch()),
-                        stack -> keymap.handle(Scopes.STACKS, event, Option.of(stack))
+                        keys -> keys.handle(keymap, event)
                                 .orElse(() -> keymap.handle(Scopes.BRANCHES, event, Option.none())));
     }
 }
