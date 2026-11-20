@@ -31,7 +31,7 @@ import net.vanfleteren.jazygit.kernel.state.view.*;
 /**
  * The branches and pull requests the pull request update tests share.
  */
-final class PullRequestFixtures {
+public final class PullRequestFixtures {
 
     static final Branch MAIN = Fixtures.branch(
             new BranchName("main"),
@@ -88,13 +88,19 @@ final class PullRequestFixtures {
     }
 
     /**
+     * The sample model, with GitHub's feature answering what happens in the kernel (ADR 166): the one place the
+     * tests of GitHub's pull requests give their model the reactions.
+     */
+    public static Model loadedWithTheFeature() {
+        return loaded().withReactions(new Reactions(GitHubFeature.FEATURE.reactions()));
+    }
+
+    /**
      * The branches, and no pull request from any of them; GitHub's feature answers what happens in the kernel.
      */
     static Model model() {
         // The default branch is listed last, to see it offered first.
-        Model branches = localBranchesRead(
-                        loaded().withReactions(new Reactions(GitHubFeature.FEATURE.reactions())),
-                        List.of(RELEASE, PUSHED, UNPUSHED, AHEAD, MAIN))
+        Model branches = localBranchesRead(loadedWithTheFeature(), List.of(RELEASE, PUSHED, UNPUSHED, AHEAD, MAIN))
                 .model();
         return Update.update(branches, new PullRequestsMsg.Loaded(List.empty())).model();
     }

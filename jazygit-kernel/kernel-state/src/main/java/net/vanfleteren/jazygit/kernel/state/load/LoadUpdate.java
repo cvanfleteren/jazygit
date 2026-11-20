@@ -13,11 +13,11 @@ import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.BaseBranchError;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
+import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.state.Parts;
 import net.vanfleteren.jazygit.kernel.state.Repo;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.UpstreamError;
@@ -168,7 +168,7 @@ public final class LoadUpdate {
      * A load asked for twice in the step runs once (ADR 39).
      */
     private static Next commitsLoaded(Next read) {
-        return read.then(model -> Parts.reacting(model, new KernelEvent.LogRead()));
+        return Events.happened(read, new KernelEvent.LogRead());
     }
 
     /**

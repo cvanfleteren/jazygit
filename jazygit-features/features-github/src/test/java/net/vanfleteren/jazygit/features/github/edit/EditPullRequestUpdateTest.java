@@ -44,7 +44,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
-import net.vanfleteren.jazygit.features.github.GitHubFeature;
+import net.vanfleteren.jazygit.features.github.PullRequestFixtures;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.EditBody;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.SavePullRequest;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.LoadPullRequestDetails;
@@ -55,7 +55,6 @@ import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.Repositories;
 import net.vanfleteren.jazygit.kernel.state.Terminal;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -104,7 +103,7 @@ class EditPullRequestUpdateTest {
      */
     private static Model withBranches() {
         return TestModels.localBranchesRead(
-                        loaded().withReactions(new Reactions(GitHubFeature.FEATURE.reactions())),
+                        PullRequestFixtures.loadedWithTheFeature(),
                         List.of(
                                 tracking("feature", "feature", false),
                                 tracking("release", "release-2", false),

@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.kernel.state.TimerMsg.Tick;
 import net.vanfleteren.jazygit.kernel.state.Update.Launch;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.Update.Step;
+import net.vanfleteren.jazygit.kernel.state.index.RefreshIndex;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.load.CheckMetadata;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
@@ -224,7 +225,13 @@ class UpdateTest {
         Instant now = Instant.parse("2026-10-22T10:00:00Z");
 
         Step begun = Update.begin(
-                "repo", SettingsStore.Loaded.DEFAULT, Option.none(), RepositoryTheme.NONE, Landing.START, now);
+                "repo",
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                RepositoryTheme.NONE,
+                Landing.START,
+                Reactions.NONE,
+                now);
 
         assertEquals(now, begun.model().now());
         assertEquals(TestModels.init("repo").cmds(), begun.launches().map(Launch::cmd));
@@ -234,6 +241,47 @@ class UpdateTest {
                 .values()
                 .forAll(running -> running.started().equals(now)));
         assertEquals(begun.launches().size(), begun.model().jobs().running().size());
+    }
+
+    @Test
+    void theReactionsAreAskedWhenTheRepositoryOpensAndTheirCommandsAreStamped() {
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+        Cmd marker = new RefreshIndex();
+        Reactions reactions = new Reactions(List.of((model, event) ->
+                event instanceof KernelEvent.RepositoryOpened ? Next.of(model, marker) : Next.of(model)));
+        Step without = Update.begin(
+                "repo",
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                RepositoryTheme.NONE,
+                Landing.START,
+                Reactions.NONE,
+                now);
+
+        Step begun = Update.begin(
+                "repo",
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                RepositoryTheme.NONE,
+                Landing.START,
+                reactions,
+                now);
+
+        assertEquals(
+                without.launches().map(Launch::cmd).append(marker),
+                begun.launches().map(Launch::cmd));
+        assertEquals(reactions, begun.model().reactions());
+    }
+
+    @Test
+    void theReactionsAreAskedWhenTheLogIsReadAgain() {
+        Cmd marker = new RefreshIndex();
+        Model model = loaded().withReactions(new Reactions(List.of(
+                (state, event) -> event instanceof KernelEvent.LogRead ? Next.of(state, marker) : Next.of(state))));
+
+        Next next = Update.update(model, TestModels.commitsLoaded(COMMITS));
+
+        assertTrue(next.cmds().contains(marker), next.cmds().toString());
     }
 
     @Test

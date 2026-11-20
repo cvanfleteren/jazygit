@@ -9,7 +9,6 @@ import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,7 @@ class GitHubReactionsTest {
     private static final LoadRepositoryPullRequests PULL_REQUESTS = new LoadRepositoryPullRequests();
 
     private static Model withTheFeature() {
-        return loaded().withReactions(new Reactions(GitHubFeature.FEATURE.reactions()));
+        return PullRequestFixtures.loadedWithTheFeature();
     }
 
     private static List<Cmd> readsAfter(Model model, KernelEvent event) {

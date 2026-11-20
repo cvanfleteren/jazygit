@@ -85,6 +85,8 @@ public final class Program {
      * @param themeOverride the theme for this session instead of the saved one, if any
      * @param repositoryTheme the theme the git configuration gives the repository, before the saved one (ADR 70)
      * @param landing     where the repository is shown at first
+     * @param reactions     how the features answer what happens in the kernel, from the opening of the repository on
+     *                      (ADR 166); {@link Reactions#NONE} for none
      * @param io            where git is called; a single thread keeps git commands from running concurrently
      * @param background    where {@link Cmd#background() background} commands run, so they do not hold up the
      *                      others; several at once may
@@ -96,40 +98,6 @@ public final class Program {
      * @param quit          run on the {@code ui} executor's thread once a message leaves a {@link Step} that asks
      *                      the app to stop
      * @param clock         the time the model is told with every message
-     */
-    public static Program start(
-            Env env,
-            SettingsStore.Loaded settings,
-            Option<ThemeName> themeOverride,
-            RepositoryTheme repositoryTheme,
-            Landing landing,
-            Executor io,
-            Executor background,
-            Executor ui,
-            Consumer<Throwable> bugs,
-            Runnable modelChanged,
-            Runnable quit,
-            Clock clock) {
-        return start(
-                env,
-                settings,
-                themeOverride,
-                repositoryTheme,
-                landing,
-                Reactions.NONE,
-                io,
-                background,
-                ui,
-                bugs,
-                modelChanged,
-                quit,
-                clock);
-    }
-
-    /**
-     * As {@link #start(Env, SettingsStore.Loaded, Option, RepositoryTheme, Landing, Executor, Executor, Executor,
-     * Consumer, Runnable, Runnable, Clock)}, the features answering what happens in the kernel with
-     * {@code reactions}.
      */
     public static Program start(
             Env env,
