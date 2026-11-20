@@ -155,6 +155,25 @@ class AgentsTest {
     }
 
     @Test
+    void aShortcutThatWasWrongInTheFileIsGoneOnceTheFormSavesTheAgentWithoutOne() {
+        Entries<AgentProgram> read = read(java.util.List.of(
+                        table("name", "Claude", "command", java.util.List.of("claude"), "shortcut", "/")))
+                .value()
+                .get();
+        AgentProgram claude = read.values().head();
+
+        Entries<AgentProgram> saved = read.replaced(0, claude.withShortcut(Option.none()));
+
+        assertEquals(
+                java.util.List.of(table("name", "Claude", "command", java.util.List.of("claude"))),
+                Agents.SETTING
+                        .codec()
+                        .encode(Agents.KEY, saved)
+                        .get(List.of(Agents.KEY))
+                        .get());
+    }
+
+    @Test
     void anAgentIsKeptWithWhatItSetsAndWhatItsTableHadBesides() {
         Entries<AgentProgram> read = read(java.util.List.of(table(
                         "name", "Claude", "command", java.util.List.of("claude"), "terminal", false, "model", "opus")))
