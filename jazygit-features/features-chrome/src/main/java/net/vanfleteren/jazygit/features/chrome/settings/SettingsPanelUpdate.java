@@ -82,12 +82,7 @@ public final class SettingsPanelUpdate {
      * Applies the settings file read as the panel opened, which shows where it is.
      */
     private static Next fileRead(Model model, Option<String> file, SettingsStore.Loaded loaded) {
-        return read(
-                model.popup(SettingsPanelPopup.class)
-                        .map(panel -> model.openPopup(panel.with(FILE, file)))
-                        .getOrElse(model),
-                loaded,
-                false);
+        return read(SettingsPanelPopup.changed(model, panel -> panel.with(FILE, file)), loaded, false);
     }
 
     /**
@@ -126,7 +121,7 @@ public final class SettingsPanelUpdate {
      * opened (ADR 111). Only what changed in the file since it was last read or written, and is valid, is applied;
      * a setting only the session has, or a value that is not valid, leaves the one in use. What is wrong in the file
      * is reported after the editor always, else only when it differs from what was reported last. An open panel shows
-     * the settings as applied. A changed setting that only applies to a repository shown anew, as the gh executable,
+     * the settings as applied, also one a list is open over (ADR 164). A changed setting that only applies to a repository shown anew, as the gh executable,
      * shows the repository again.
      */
     static Next read(Model model, SettingsStore.Loaded loaded, boolean edited) {
@@ -138,9 +133,7 @@ public final class SettingsPanelUpdate {
                 .withFile(loaded)
                 .withReported(loaded.problem())
                 .withThemeOverride(applied.themeChanged() ? Option.none() : preferences.themeOverride()));
-        Model shown = updated.popup(SettingsPanelPopup.class)
-                .map(panel -> updated.openPopup(panel.withSettings(settings)))
-                .getOrElse(updated);
+        Model shown = SettingsPanelPopup.changed(updated, panel -> panel.withSettings(settings));
         Option<SettingsProblem> report = edited
                 ? loaded.problem()
                 : loaded.problem().filter(problem -> !before.reported().contains(problem));

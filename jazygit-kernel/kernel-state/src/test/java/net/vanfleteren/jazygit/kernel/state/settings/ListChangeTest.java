@@ -243,6 +243,48 @@ class ListChangeTest {
         assertEquals(1, deleted.cmds().size());
     }
 
+    /**
+     * {@code model} once the settings file, read as the panel opened, gave {@code tools}: as the settings panel applies
+     * a read, to the settings and to the panel, wherever it is open.
+     */
+    private static Model fileRead(Model model, Entries<Tool> tools) {
+        Settings read = model.preferences().settings().with(TOOLS, tools);
+        return SettingsPanelPopup.changed(
+                model.mapPreferences(preferences -> preferences.withSettings(read)), panel -> panel.withSettings(read));
+    }
+
+    @Test
+    void theFileReadWhileTheListIsOpenIsWhatTheListShowsAndWhatADeleteActsOn() {
+        Model read = fileRead(listed(TWO), Entries.of(List.of(Tool.named("idea"))));
+
+        Next deleted = ListChange.update(read, new ListMsg.Deleted(0));
+
+        assertEquals(
+                List.of("idea"),
+                read.popup(ListPopup.class)
+                        .get()
+                        .panel()
+                        .settings()
+                        .get(TOOLS)
+                        .values()
+                        .map(Tool::name));
+        assertEquals(Entries.none(), deleted.model().preferences().settings().get(TOOLS));
+    }
+
+    @Test
+    void theFileReadWhileAFieldIsTypedInReachesThePanelTheFormGoesBackTo() {
+        Model typing = after(listed(TWO), new ListMsg.EditRequested(1), new ListMsg.FieldPicked(NAME));
+        Entries<Tool> one = Entries.of(List.of(Tool.named("idea")));
+
+        Model read = fileRead(typing, one);
+
+        assertEquals(
+                one,
+                read.popup(FieldPopup.class).get().form().panel().settings().get(TOOLS));
+        Model back = after(read, new ListMsg.FieldCancelled(), new ListMsg.FormCancelled(), new ListMsg.Closed());
+        assertEquals(one, back.popup(SettingsPanelPopup.class).get().settings().get(TOOLS));
+    }
+
     @Test
     void anEntryMovesAndTheListFollowsIt() {
         Next moved = ListChange.update(listed(TWO), new ListMsg.Moved(1, -1));

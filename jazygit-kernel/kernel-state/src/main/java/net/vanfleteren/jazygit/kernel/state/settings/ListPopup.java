@@ -9,4 +9,12 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
  * @param list  the list
  * @param panel the settings panel it was opened from, which closing it goes back to
  */
-public record ListPopup(ListSetting<?> list, SettingsPanelPopup panel) implements Popup {}
+public record ListPopup(ListSetting<?> list, SettingsPanelPopup panel) implements Popup {
+
+    /**
+     * This list, going back to {@code panel}.
+     */
+    public ListPopup withPanel(SettingsPanelPopup panel) {
+        return new ListPopup(list, panel);
+    }
+}

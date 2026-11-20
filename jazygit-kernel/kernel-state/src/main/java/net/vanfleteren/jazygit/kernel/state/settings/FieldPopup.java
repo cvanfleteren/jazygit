@@ -15,4 +15,11 @@ public record FieldPopup(FormPopup<?> form, int field, String text) implements T
     public FieldPopup withText(String text) {
         return new FieldPopup(form, field, text);
     }
+
+    /**
+     * This field, of {@code form}.
+     */
+    public FieldPopup withForm(FormPopup<?> form) {
+        return new FieldPopup(form, field, text);
+    }
 }

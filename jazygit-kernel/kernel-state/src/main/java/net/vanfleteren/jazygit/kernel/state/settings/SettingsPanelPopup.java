@@ -3,8 +3,10 @@ package net.vanfleteren.jazygit.kernel.state.settings;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**
@@ -44,5 +46,27 @@ public record SettingsPanelPopup(Settings settings, Map<String, Object> sections
     public <S> SettingsPanelPopup with(SectionState<S> state, S value) {
         return withSections(
                 value.equals(state.initial()) ? sections.remove(state.name()) : sections.put(state.name(), value));
+    }
+
+    /**
+     * {@code model} with {@code change} made to the settings panel that is open, or that the list, the form or the
+     * field open over it go back to (ADR 164), so what reaches the panel meanwhile, as the settings file read as it
+     * opened, is there when they draw from it and when the user goes back to it; as it is when no panel is.
+     */
+    public static Model changed(Model model, UnaryOperator<SettingsPanelPopup> change) {
+        return model.popup(SettingsPanelPopup.class)
+                .<Popup>map(change)
+                .orElse(() -> model.popup(ListPopup.class).map(list -> list.withPanel(change.apply(list.panel()))))
+                .orElse(() -> model.popup(FormPopup.class)
+                        .<FormPopup<?>>map(form -> form)
+                        .map(form -> withPanel(form, change)))
+                .orElse(() ->
+                        model.popup(FieldPopup.class).map(field -> field.withForm(withPanel(field.form(), change))))
+                .map(model::openPopup)
+                .getOrElse(model);
+    }
+
+    private static <E> FormPopup<E> withPanel(FormPopup<E> form, UnaryOperator<SettingsPanelPopup> change) {
+        return form.withPanel(change.apply(form.panel()));
     }
 }

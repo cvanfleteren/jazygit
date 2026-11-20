@@ -33,6 +33,13 @@ public record FormPopup<E>(
     }
 
     /**
+     * This form, going back to {@code panel} through the list.
+     */
+    public FormPopup<E> withPanel(SettingsPanelPopup panel) {
+        return new FormPopup<>(list, panel, index, draft, changed);
+    }
+
+    /**
      * This form with the entry changed to {@code draft}.
      */
     public FormPopup<E> drafting(E draft) {
