@@ -110,9 +110,50 @@ public final class Program {
             Runnable modelChanged,
             Runnable quit,
             Clock clock) {
+        return start(
+                env,
+                settings,
+                themeOverride,
+                repositoryTheme,
+                landing,
+                Reactions.NONE,
+                io,
+                background,
+                ui,
+                bugs,
+                modelChanged,
+                quit,
+                clock);
+    }
+
+    /**
+     * As {@link #start(Env, SettingsStore.Loaded, Option, RepositoryTheme, Landing, Executor, Executor, Executor,
+     * Consumer, Runnable, Runnable, Clock)}, the features answering what happens in the kernel with
+     * {@code reactions}.
+     */
+    public static Program start(
+            Env env,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            RepositoryTheme repositoryTheme,
+            Landing landing,
+            Reactions reactions,
+            Executor io,
+            Executor background,
+            Executor ui,
+            Consumer<Throwable> bugs,
+            Runnable modelChanged,
+            Runnable quit,
+            Clock clock) {
         Program program = new Program(env, io, background, ui, bugs, modelChanged, quit, clock);
         program.apply(Update.begin(
-                env.git().repositoryName(), settings, themeOverride, repositoryTheme, landing, clock.instant()));
+                env.git().repositoryName(),
+                settings,
+                themeOverride,
+                repositoryTheme,
+                landing,
+                reactions,
+                clock.instant()));
         return program;
     }
 

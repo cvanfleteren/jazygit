@@ -133,7 +133,7 @@ public sealed interface PullRequestCmd extends Cmd {
         }
 
         @Override
-        default boolean changesGitHub() {
+        default boolean changesForge() {
             return true;
         }
 
@@ -266,7 +266,7 @@ public sealed interface PullRequestCmd extends Cmd {
         }
 
         @Override
-        public boolean changesGitHub() {
+        public boolean changesForge() {
             return true;
         }
 

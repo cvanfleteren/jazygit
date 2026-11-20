@@ -22,10 +22,12 @@ import net.vanfleteren.jazygit.features.chrome.help.HelpFeature;
 import net.vanfleteren.jazygit.features.chrome.settings.SettingsFeature;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeFeature;
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
+import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 
 /**
- * The features of the app, which the standard keymap and the popups are made of (ADR 127). Adding a feature is
+ * The features of the app, which the standard keymap, the popups, the timers and the reactions to the kernel are made of
+ * (ADR 127). Adding a feature is
  * declaring its {@link Feature} in its package, and listing it here.
  */
 public final class Features {
@@ -56,6 +58,12 @@ public final class Features {
             InProgressFeature.FEATURE,
             HelpFeature.FEATURE,
             ErrorFeature.FEATURE);
+
+    /**
+     * What every feature answers of what happens in the kernel, which the model holds (ADR 158), in the order of the
+     * features.
+     */
+    public static final Reactions REACTIONS = new Reactions(ALL.flatMap(Feature::reactions));
 
     private Features() {}
 }

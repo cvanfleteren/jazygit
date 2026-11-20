@@ -53,10 +53,10 @@ public interface OperationCmd extends Cmd {
     }
 
     /**
-     * Whether the operation changes what GitHub knows, like a push, after which the pull requests and the checks
-     * of the branches are read again.
+     * Whether the operation changes what the repository's forge knows, like a push, after which the features that
+     * read from it do so again (the event {@code OperationDone}).
      */
-    default boolean changesGitHub() {
+    default boolean changesForge() {
         return false;
     }
 

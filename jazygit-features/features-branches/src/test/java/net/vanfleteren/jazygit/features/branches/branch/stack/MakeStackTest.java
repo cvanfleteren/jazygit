@@ -461,7 +461,7 @@ class MakeStackTest {
                                 "-F",
                                 "pull_requests[]=98")),
                 ((StackMsg.Changed) done).commands().map(ExecutedCommand::commandLine));
-        assertEquals(true, cmd.changesGitHub());
+        assertEquals(true, cmd.changesForge());
     }
 
     @Test

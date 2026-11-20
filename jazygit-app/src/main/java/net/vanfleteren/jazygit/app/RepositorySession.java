@@ -11,6 +11,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.core.git.CliGit;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.process.GitError;
@@ -157,6 +158,7 @@ final class RepositorySession {
                 themeOverride,
                 repositoryTheme,
                 landing,
+                Features.REACTIONS,
                 io,
                 background,
                 runner::runOnRenderThread,
@@ -166,10 +168,9 @@ final class RepositorySession {
                 clock);
         runtime = Option.of(new Runtime(io, background, program));
         started.accept(program.model());
-        // The first tick of the fetch is a while off, so it fetches now; the pull requests, and the new ones among
-        // them (ADR 29), show from the start, not only once the fetch is done (ADR 58).
+        // The first tick of the fetch is a while off, so it fetches now. The features read what they show of the
+        // repository from the start, as they answer its opening.
         program.dispatch(new FetchMsg.Tick());
-        program.dispatch(new PullRequestsMsg.Refresh());
     }
 
     /**

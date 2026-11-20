@@ -244,8 +244,8 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         }
 
         @Override
-        public boolean changesGitHub() {
-            return push.changesGitHub();
+        public boolean changesForge() {
+            return push.changesForge();
         }
 
         @Override

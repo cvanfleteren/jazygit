@@ -2,10 +2,11 @@ package net.vanfleteren.jazygit.features.changes.fetch;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.RereadUpdate;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsUpdate;
 
 /**
  * Fetching from the remotes in the background, one after the other, so the remote being fetched from can be
@@ -80,11 +81,11 @@ public final class FetchUpdate {
     /**
      * The fetch is done; one that was asked for meanwhile starts right away. The repository is read again at once
      * only when the fetch changed a remote-tracking branch: else the stamps the tick looks at tell what else changed
-     * meanwhile (ADR 58). GitHub is read again either way, as what it has changes on its own.
+     * meanwhile (ADR 58). The features are told either way, as what the remotes and their forge have changes on their own.
      */
     private static Next done(Model model) {
         Next read = model.jobs().fetchChanged() ? RereadUpdate.refresh(model) : Next.of(model);
-        Next done = PullRequestsUpdate.poll(read);
+        Next done = Events.happened(read, new KernelEvent.Fetched());
         return model.jobs().fetchAgain() ? start(done) : done;
     }
 }

@@ -35,7 +35,7 @@ public final class Update {
             RepositoryTheme repositoryTheme,
             Landing landing) {
         // Commits are loaded once the first status tells us where HEAD is.
-        return RereadUpdate.refresh(initial.mapRepoView(landing::applyTo)
+        Next read = RereadUpdate.refresh(initial.mapRepoView(landing::applyTo)
                 .mapJobs(jobs -> jobs.withOnArrival(landing.then()))
                 .mapPreferences(preferences -> preferences
                         .withSettings(settings.settings())
@@ -44,6 +44,7 @@ public final class Update {
                         .withThemeOverride(themeOverride)
                         .withRepositoryTheme(repositoryTheme))
                 .mapOutcome(outcome -> outcome.withError(settings.problem().map(SettingsError.NotLoaded::new))));
+        return Events.happened(read, new KernelEvent.RepositoryOpened());
     }
 
     /**
@@ -57,8 +58,28 @@ public final class Update {
             RepositoryTheme repositoryTheme,
             Landing landing,
             Instant now) {
+        return begin(repositoryName, settings, themeOverride, repositoryTheme, landing, Reactions.NONE, now);
+    }
+
+    /**
+     * As {@link #begin(String, SettingsStore.Loaded, Option, RepositoryTheme, Landing, Instant)}, the features
+     * answering what happens in the kernel with {@code reactions}, from the opening of the repository on.
+     */
+    public static Step begin(
+            String repositoryName,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            RepositoryTheme repositoryTheme,
+            Landing landing,
+            Reactions reactions,
+            Instant now) {
         return stamped(
-                init(Model.initial(repositoryName).withNow(now), settings, themeOverride, repositoryTheme, landing),
+                init(
+                        Model.initial(repositoryName).withNow(now).withReactions(reactions),
+                        settings,
+                        themeOverride,
+                        repositoryTheme,
+                        landing),
                 now);
     }
 

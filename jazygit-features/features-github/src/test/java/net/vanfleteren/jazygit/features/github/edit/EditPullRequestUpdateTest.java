@@ -44,6 +44,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.EditBody;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.SavePullRequest;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.LoadPullRequestDetails;
@@ -54,6 +55,7 @@ import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.Repositories;
 import net.vanfleteren.jazygit.kernel.state.Terminal;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -102,7 +104,7 @@ class EditPullRequestUpdateTest {
      */
     private static Model withBranches() {
         return TestModels.localBranchesRead(
-                        loaded(),
+                        loaded().withReactions(new Reactions(GitHubFeature.FEATURE.reactions())),
                         List.of(
                                 tracking("feature", "feature", false),
                                 tracking("release", "release-2", false),
@@ -259,7 +261,7 @@ class EditPullRequestUpdateTest {
         assertEquals(
                 Option.of(EDITING.withFields(OPENED.withBody("Because")).withSaving(true)),
                 next.model().popup());
-        assertFalse(cmd.changesGitHub());
+        assertFalse(cmd.changesForge());
         // An edit does not touch the branch.
         assertEquals(Option.none(), next.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
     }
@@ -274,7 +276,7 @@ class EditPullRequestUpdateTest {
                 new PullRequestEdit(Option.none(), Option.none(), Option.of(new GhBranch("release-2"))),
                 Option.of(true));
         assertEquals(List.of(cmd), next.cmds());
-        assertTrue(cmd.changesGitHub());
+        assertTrue(cmd.changesForge());
     }
 
     @Test

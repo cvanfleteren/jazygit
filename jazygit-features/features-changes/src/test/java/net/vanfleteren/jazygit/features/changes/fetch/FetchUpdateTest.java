@@ -12,10 +12,12 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.kernel.state.index.RefreshIndex;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
 import org.junit.jupiter.api.Test;
 
@@ -30,8 +32,15 @@ class FetchUpdateTest {
         return model.jobs().runs(FetchCmd.class::isInstance);
     }
 
+    /**
+     * What a feature asks for once a fetch is done, to tell it was told.
+     */
+    private static final RefreshIndex TOLD = new RefreshIndex();
+
     private static Model listing() {
-        return stepped(loaded(), new FetchMsg.Tick()).model();
+        Reactions told = new Reactions(List.of(
+                (model, event) -> event instanceof KernelEvent.Fetched ? Next.of(model, TOLD) : Next.of(model)));
+        return stepped(loaded().withReactions(told), new FetchMsg.Tick()).model();
     }
 
     @Test
@@ -45,7 +54,7 @@ class FetchUpdateTest {
     }
 
     @Test
-    void theRemotesAreFetchedOneAfterTheOtherAndThenTheBranchesReload() {
+    void theRemotesAreFetchedOneAfterTheOtherAndThenTheBranchesReloadAndTheFeaturesAreTold() {
         FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch(new RemoteName("origin"), List.of(new RemoteName("upstream")));
         FetchCmd.Fetch fromUpstream = new FetchCmd.Fetch(new RemoteName("upstream"), List.empty());
 
@@ -70,7 +79,7 @@ class FetchUpdateTest {
                 upstream.model(), fromUpstream, new FetchMsg.Fetched(new RemoteName("upstream"), List.empty(), true));
         assertFalse(fetching(done.model()));
         assertTrue(done.cmds().contains(LoadBranches.LISTED));
-        assertTrue(done.cmds().contains(new LoadRepositoryPullRequests()));
+        assertTrue(done.cmds().contains(TOLD));
         // Neither logged nor reported.
         assertEquals(List.of(), done.model().outcome().commandLog());
         assertEquals(Option.none(), done.model().outcome().error());
@@ -127,7 +136,7 @@ class FetchUpdateTest {
     }
 
     @Test
-    void aFetchThatChangedNothingReadsGitHubButNotTheRepositoryAgain() {
+    void aFetchThatChangedNothingTellsTheFeaturesButDoesNotReadTheRepositoryAgain() {
         FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch(new RemoteName("origin"), List.of(new RemoteName("upstream")));
         FetchCmd.Fetch fromUpstream = new FetchCmd.Fetch(new RemoteName("upstream"), List.empty());
         Model fetching = done(
@@ -148,9 +157,7 @@ class FetchUpdateTest {
                 new FetchMsg.Fetched(new RemoteName("upstream"), List.empty(), false));
 
         assertFalse(nothing.cmds().contains(LoadBranches.LISTED), nothing.cmds().toString());
-        assertTrue(
-                nothing.cmds().contains(new LoadRepositoryPullRequests()),
-                nothing.cmds().toString());
+        assertTrue(nothing.cmds().contains(TOLD), nothing.cmds().toString());
         assertTrue(
                 something.cmds().contains(LoadBranches.LISTED), something.cmds().toString());
     }

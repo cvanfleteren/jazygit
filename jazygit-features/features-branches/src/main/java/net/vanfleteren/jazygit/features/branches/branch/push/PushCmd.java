@@ -34,7 +34,7 @@ public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
     }
 
     @Override
-    default boolean changesGitHub() {
+    default boolean changesForge() {
         return true;
     }
 

@@ -76,3 +76,6 @@ So adding or changing a feature edits the kernel, and the features cannot be rea
   `Target`: a search cleared since is dropped.
 - With each move, `jazygit-state` and `jazygit-ui` lose a feature, and the groups of features gain what tests it; the
   tests that need the app's keymap stay in `jazygit-app`, in the package of what they test.
+
+Amended by ADR 166: the features add timers, and answer the events of the kernel with reactions whichever part
+they keep; the events are `LogRead`, `OperationDone`, `Fetched` and `RepositoryOpened`.

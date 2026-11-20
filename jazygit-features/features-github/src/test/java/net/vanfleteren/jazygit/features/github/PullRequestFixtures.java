@@ -88,11 +88,13 @@ final class PullRequestFixtures {
     }
 
     /**
-     * The branches, and no pull request from any of them.
+     * The branches, and no pull request from any of them; GitHub's feature answers what happens in the kernel.
      */
     static Model model() {
         // The default branch is listed last, to see it offered first.
-        Model branches = localBranchesRead(loaded(), List.of(RELEASE, PUSHED, UNPUSHED, AHEAD, MAIN))
+        Model branches = localBranchesRead(
+                        loaded().withReactions(new Reactions(GitHubFeature.FEATURE.reactions())),
+                        List.of(RELEASE, PUSHED, UNPUSHED, AHEAD, MAIN))
                 .model();
         return Update.update(branches, new PullRequestsMsg.Loaded(List.empty())).model();
     }

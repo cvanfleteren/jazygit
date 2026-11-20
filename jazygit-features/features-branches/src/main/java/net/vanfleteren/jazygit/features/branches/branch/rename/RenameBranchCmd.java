@@ -39,7 +39,7 @@ public record RenameBranchCmd(BranchName branch, BranchName newName, Option<Remo
     }
 
     @Override
-    public boolean changesGitHub() {
+    public boolean changesForge() {
         return upstream.isDefined();
     }
 

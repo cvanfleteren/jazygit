@@ -11,6 +11,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
@@ -56,9 +57,16 @@ class OperationUpdateTest {
     private static final PushCmd.Push PUSH = new PushCmd.Push(
             new BranchName("feature"), new RemoteBranch("origin", new BranchName("feature")), PushMode.FAST_FORWARD);
 
+    /**
+     * The sample model, the features of the app answering what happens in the kernel: GitHub's read from it again.
+     */
+    private static Model withTheFeatures() {
+        return loaded().withReactions(Features.REACTIONS);
+    }
+
     @Test
     void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
-        Model pushing = TestModels.running(CheckoutModels.withCheckoutError(loaded(), "foo", "boom"), PUSH);
+        Model pushing = TestModels.running(CheckoutModels.withCheckoutError(withTheFeatures(), "foo", "boom"), PUSH);
 
         Next next = TestModels.done(pushing, PUSH, succeeded(PUSH, "git push origin feature"));
 
@@ -83,7 +91,7 @@ class OperationUpdateTest {
     void onlyAnOperationThatChangesGitHubReadsItAgain() {
         PullCmd.Pull pull = new PullCmd.Pull(new BranchName("feature"));
 
-        Next next = Update.update(loaded(), succeeded(pull, "git pull"));
+        Next next = Update.update(withTheFeatures(), succeeded(pull, "git pull"));
 
         assertEquals(
                 List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStashes(), new LoadWorktrees()), next.cmds());

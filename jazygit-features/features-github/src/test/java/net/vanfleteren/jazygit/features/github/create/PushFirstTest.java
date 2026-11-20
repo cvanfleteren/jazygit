@@ -42,7 +42,7 @@ class PushFirstTest {
         assertEquals(FEATURE, first.branch());
         assertEquals(PUSH.operation(), first.operation());
         assertEquals(PUSH.guard(), first.guard());
-        assertEquals(PUSH.changesGitHub(), first.changesGitHub());
+        assertEquals(PUSH.changesForge(), first.changesForge());
         assertEquals(Either.left(REJECTED), first.perform(git));
     }
 }

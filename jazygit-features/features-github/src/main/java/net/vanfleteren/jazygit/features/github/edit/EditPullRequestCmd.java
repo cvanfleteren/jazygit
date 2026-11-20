@@ -72,7 +72,7 @@ public sealed interface EditPullRequestCmd extends Cmd {
          * A new base or draft shows on the branch, so the pull requests are read again.
          */
         @Override
-        public boolean changesGitHub() {
+        public boolean changesForge() {
             return edit.base().isDefined() || draft.isDefined();
         }
 
