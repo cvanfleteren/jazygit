@@ -48,22 +48,24 @@ record TablesCodec<E>(TableCodec<E> entry) implements Codec<Entries<E>> {
         Entries.Entry<E> read = decoded.value()
                 .<Entries.Entry<E>>map(found -> new Entries.Entry.Valid<>(
                         found,
-                        fields.filterKeys(field -> !entry.fields().contains(field)
-                                || decoded.invalid().contains(at + "." + field))))
+                        fields.filterKeys(field -> !entry.fields().contains(field)),
+                        fields.filterKeys(field -> entry.fields().contains(field)
+                                && decoded.invalid().contains(at + "." + field))))
                 .getOrElse(() -> new Entries.Entry.Invalid<>(fields, decoded.invalid()));
         return Tuple.of(read, decoded.invalid());
     }
 
     /**
-     * How {@code read} is kept in the array: the table of what it holds, then what its table had besides, unless it
-     * holds a value there now; one the app cannot read, as it was written.
+     * How {@code read} is kept in the array: the table of what it holds, then what its table had besides, and what
+     * it had wrong, unless it holds a value there now; one the app cannot read, as it was written.
      */
     private Object written(Entries.Entry<E> read) {
         return switch (read) {
             case Entries.Entry.Invalid<E> invalid -> plain(invalid.table());
             case Entries.Entry.Valid<E> valid -> {
                 LinkedHashMap<String, Object> known = entry.encode(valid.read());
-                yield plain(known.merge(valid.unknown().filterKeys(field -> !known.containsKey(field))));
+                yield plain(known.merge(
+                        valid.wrong().merge(valid.unknown()).filterKeys(field -> !known.containsKey(field))));
             }
         };
     }

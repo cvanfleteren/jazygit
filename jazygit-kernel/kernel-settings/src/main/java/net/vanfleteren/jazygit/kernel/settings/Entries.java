@@ -44,7 +44,8 @@ public record Entries<E>(List<Entry<E>> all) {
 
     /**
      * These entries with {@code value} in place of the one at {@code index}, which keeps what its table had that the
-     * app does not know; as they are when there is none there.
+     * app does not know, but not what it had wrong at a key the app reads: {@code value} sets that key now, or leaves
+     * it out; as they are when there is none there.
      */
     public Entries<E> replaced(int index, E value) {
         return at(index)
@@ -97,8 +98,19 @@ public record Entries<E>(List<Entry<E>> all) {
          *
          * @param read    what it holds
          * @param unknown what its table had at keys the app does not read, written back with it
+         * @param wrong   what its table had that was wrong at keys the app reads, left out of {@code read}; written
+         *                back with it until the entry is replaced, as the form then sets those keys, or leaves them
+         *                out
          */
-        record Valid<E>(E read, LinkedHashMap<String, Object> unknown) implements Entry<E> {
+        record Valid<E>(E read, LinkedHashMap<String, Object> unknown, LinkedHashMap<String, Object> wrong)
+                implements Entry<E> {
+
+            /**
+             * An entry the app could read, with nothing wrong in its table.
+             */
+            public Valid(E read, LinkedHashMap<String, Object> unknown) {
+                this(read, unknown, LinkedHashMap.empty());
+            }
 
             public static <E> Valid<E> of(E read) {
                 return new Valid<>(read, LinkedHashMap.empty());

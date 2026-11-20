@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.agent.investigate;
 
 import io.vavr.collection.LinkedHashMap;
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.settings.Programs;
@@ -20,6 +21,11 @@ public final class Prompt {
     static final String FAILURES = "{failures}";
     static final String LOGS = "{logs}";
     static final String ACCOUNT = "{account}";
+
+    /**
+     * The placeholders a prompt the user sets may have, in the order the settings panel lists them.
+     */
+    public static final List<String> PLACEHOLDERS = List.of(REPO, BRANCH, COMMIT, PR, FAILURES, LOGS, ACCOUNT);
 
     private Prompt() {}
 

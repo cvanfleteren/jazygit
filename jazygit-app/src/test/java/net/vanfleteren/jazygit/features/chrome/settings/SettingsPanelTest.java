@@ -120,6 +120,7 @@ class SettingsPanelTest {
             assertTrue(screen.contains("(a) Account for this repository on github.com: ⚠ alice-work"), screen);
             assertTrue(screen.contains("(b) Browser for alice-work on github.com: firefox -P work"), screen);
             assertTrue(screen.contains("(m) Animations: on"), screen);
+            assertTrue(screen.contains("(i) Agents: none"), screen);
             List<String> lines = List.of(screen.split("\n")).map(String::strip);
             assertEquals(
                     List.of(
@@ -135,9 +136,12 @@ class SettingsPanelTest {
                             "GitHub",
                             "(g)",
                             "(a)",
-                            "(b)"),
+                            "(b)",
+                            "",
+                            "Agents",
+                            "(i)"),
                     lines.dropWhile(line -> !line.contains("Appearance"))
-                            .take(13)
+                            .take(16)
                             .map(line -> line.replaceAll("^│", "").strip())
                             .map(line -> line.startsWith("(")
                                     ? line.substring(0, 3)

@@ -34,7 +34,7 @@ public final class InvestigateUpdate {
      * says why.
      */
     private static Next requested(Model model, FailedBuild build) {
-        Agents agents = model.preferences().settings().get(Agents.SETTING);
+        Agents agents = Agents.in(model.preferences().settings());
         if (agents.isEmpty()) {
             return Next.of(model.fail(new InvestigateError.NoAgentSet()));
         }

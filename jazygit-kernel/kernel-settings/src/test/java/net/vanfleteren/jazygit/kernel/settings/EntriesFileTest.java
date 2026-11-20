@@ -104,7 +104,8 @@ class EntriesFileTest {
         assertInstanceOf(Entries.Entry.Invalid.class, tools.all().get(1));
         assertEquals(
                 LinkedHashMap.of("terminal", (Object) "sometimes"),
-                tools.all().get(2).unknown());
+                ((Entries.Entry.Valid<Tool>) tools.all().get(2)).wrong());
+        assertEquals(LinkedHashMap.empty(), tools.all().get(2).unknown());
         assertEquals(
                 Option.of(new SettingsProblem.Invalid(
                         file(), List.of("tools[2].name", "tools[2].terminal", "tools[3].terminal"))),

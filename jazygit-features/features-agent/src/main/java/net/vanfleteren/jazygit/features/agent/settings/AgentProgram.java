@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.agent.settings;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import lombok.With;
 import net.vanfleteren.jazygit.kernel.settings.Program;
 import net.vanfleteren.jazygit.kernel.settings.Programs;
 
@@ -16,6 +17,7 @@ import net.vanfleteren.jazygit.kernel.settings.Programs;
  * @param shortcut the letter that chooses it in the menu of the agents, if the user gave it one
  * @param prompt   what it is asked, with the placeholders of the failed build in it; none for jazygit's own text
  */
+@With
 public record AgentProgram(
         String name, List<String> command, boolean terminal, Option<Character> shortcut, Option<String> prompt)
         implements Program {
