@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.Iterator;
@@ -24,18 +24,18 @@ import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutRequest;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutUpdate;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.AddChosen;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.BottomChosen;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.Changed;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.MakeChosen;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.MenuRequested;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.PickConfirmed;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.StackOnChosen;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.TargetChosen;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.Tick;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.Toggled;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.TopChosen;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg.UnstackChosen;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.AddChosen;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.BottomChosen;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.Changed;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.MakeChosen;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.MenuRequested;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.PickConfirmed;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.StackOnChosen;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.TargetChosen;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.Tick;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.Toggled;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.TopChosen;
+import net.vanfleteren.jazygit.features.github.stack.StackMsg.UnstackChosen;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.GitHubBases;
@@ -140,8 +140,8 @@ public final class StackUpdate {
                         .map(pick::withChoice)
                         .getOrElse(() -> pick.withRefused(
                                 pick.addTo().isDefined()
-                                        ? "branches.dialog.addToStack.bottomFixed"
-                                        : "branches.dialog.makeStack.bottomAbove")));
+                                        ? "github.dialog.addToStack.bottomFixed"
+                                        : "github.dialog.makeStack.bottomAbove")));
     }
 
     /**
@@ -153,7 +153,7 @@ public final class StackUpdate {
                 pick -> pick.choice()
                         .withTop(row)
                         .map(pick::withChoice)
-                        .getOrElse(() -> pick.withRefused("branches.dialog.makeStack.topBelow")));
+                        .getOrElse(() -> pick.withRefused("github.dialog.makeStack.topBelow")));
     }
 
     /**

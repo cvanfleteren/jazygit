@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.event.EventResult;

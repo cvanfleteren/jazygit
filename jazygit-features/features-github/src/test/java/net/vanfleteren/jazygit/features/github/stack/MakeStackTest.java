@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -32,7 +32,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackChoice.BaseChange;
+import net.vanfleteren.jazygit.features.github.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -191,7 +191,7 @@ class MakeStackTest {
                 List.of(new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(98)), Option.of(12))),
                 confirmed.cmds());
         assertEquals(
-                Option.of("branches.dialog.addToStack.bottomFixed"),
+                Option.of("github.dialog.addToStack.bottomFixed"),
                 step(picking, new StackMsg.BottomChosen(1))
                         .popup(StackPopups.Pick.class)
                         .flatMap(StackPopups.Pick::refused));
@@ -393,7 +393,7 @@ class MakeStackTest {
                 .get();
 
         assertEquals(1, pick.choice().top());
-        assertEquals(Option.of("branches.dialog.makeStack.topBelow"), pick.refused());
+        assertEquals(Option.of("github.dialog.makeStack.topBelow"), pick.refused());
     }
 
     @Test

@@ -20,8 +20,8 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.BranchCmd;
 import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackCmd;
 import net.vanfleteren.jazygit.features.github.OnGitHub;
+import net.vanfleteren.jazygit.features.github.stack.StackCmd;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 

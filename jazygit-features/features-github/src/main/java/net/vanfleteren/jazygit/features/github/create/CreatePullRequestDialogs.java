@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.features.github.create;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackPopups;
+import net.vanfleteren.jazygit.features.github.stack.StackPopups;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;

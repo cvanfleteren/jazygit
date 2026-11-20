@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
@@ -113,7 +113,7 @@ class StackPickDialogTest {
     @Test
     void aRefusedBottomSaysWhy() throws Exception {
         String screen =
-                render(new StackPopups.Pick(CHOICE, Option.of("branches.dialog.makeStack.bottomAbove"), Option.none()));
+                render(new StackPopups.Pick(CHOICE, Option.of("github.dialog.makeStack.bottomAbove"), Option.none()));
 
         assertTrue(screen.contains("The bottom is this branch or one below it"), screen);
     }

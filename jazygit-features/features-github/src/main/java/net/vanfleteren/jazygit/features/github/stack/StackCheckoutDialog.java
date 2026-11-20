@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.event.EventResult;
@@ -6,7 +6,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackCheckout.Landing;
+import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Landing;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
@@ -44,9 +44,9 @@ final class StackCheckoutDialog implements PopupView {
             StackCheckout checkout = popup.checkout();
             String text = StackDialogs.checkedOut(checkout);
             return DialogFrame.withHint(
-                            Messages.get("branches.dialog.checkoutStack.title", String.valueOf(checkout.stack())),
+                            Messages.get("github.dialog.checkoutStack.title", String.valueOf(checkout.stack())),
                             WIDTH,
-                            checkout.startable() ? "branches.dialog.checkoutStack.hint" : "changes.dialog.hint.close",
+                            checkout.startable() ? "github.dialog.checkoutStack.hint" : "changes.dialog.hint.close",
                             List.of(DialogFrame.wrapped(text, WIDTH, Integer.MAX_VALUE)))
                     .id(ID)
                     .focusable()

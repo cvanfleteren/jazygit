@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -21,26 +21,26 @@ public final class StackAction {
     private static Keymap keys(Keymap keys) {
         Keymap branches = keys.add(
                         Scopes.STACKS,
-                        Binding.onSelected(Keymap.ENTER, "branches.help.stacks.toggle", StackMsg.Toggled::new))
+                        Binding.onSelected(Keymap.ENTER, "github.help.stacks.toggle", StackMsg.Toggled::new))
                 .add(
                         Scopes.STACKS,
                         Binding.onSelected(
                                 "s",
-                                "branches.help.stacks.menu",
+                                "github.help.stacks.menu",
                                 stack -> new StackMsg.MenuRequested(Option.none(), Option.of(stack))))
-                .add(Scopes.STACKS, Binding.always("S", "branches.help.stacks.view", StackMsg.ViewToggled::new))
+                .add(Scopes.STACKS, Binding.always("S", "github.help.stacks.view", StackMsg.ViewToggled::new))
                 .add(
                         Scopes.BRANCHES,
                         new Keymap.Binding<>(
                                 "s",
-                                "branches.help.branches.stack",
+                                "github.help.branches.stack",
                                 branch -> branch.<Msg>map(
                                         name -> new StackMsg.MenuRequested(Option.of(name), Option.none()))))
-                .add(Scopes.BRANCHES, Binding.always("S", "branches.help.stacks.view", StackMsg.ViewToggled::new));
+                .add(Scopes.BRANCHES, Binding.always("S", "github.help.stacks.view", StackMsg.ViewToggled::new));
         return Scopes.PULL_REQUESTS.foldLeft(
                 branches,
                 (added, scope) -> added.add(
                         scope,
-                        Binding.onSelected("s", "branches.help.prs.stack", StackMsg.PullRequestMenuRequested::new)));
+                        Binding.onSelected("s", "github.help.prs.stack", StackMsg.PullRequestMenuRequested::new)));
     }
 }

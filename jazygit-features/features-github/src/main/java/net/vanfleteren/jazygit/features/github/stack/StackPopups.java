@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.branch.stack;
+package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackChoice.Plan;
-import net.vanfleteren.jazygit.features.branches.branch.stack.StackChoice.Refusal;
+import net.vanfleteren.jazygit.features.github.stack.StackChoice.Plan;
+import net.vanfleteren.jazygit.features.github.stack.StackChoice.Refusal;
 import net.vanfleteren.jazygit.kernel.state.popup.ConfirmablePopup;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
