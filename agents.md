@@ -61,6 +61,17 @@ The updates, messages, popups and the model are pure. Pure code:
 - Main code decodes images without AWT: `ImageIO` and tamboui-image make the native image need extra `.so` files, and
   jazygit ships one file (ADR 84). Tests may use `ImageIO`.
 
+## Architecture direction: forge neutral, everything a plugin
+jazygit's kernel knows about git, not about GitHub or any other forge. Forge-specific code (GitHub today; GitLab,
+Forgejo, Bitbucket later) lives in its own feature modules. Those modules talk to the rest of the app only through
+neutral models such as `FailedBuild`, a PR, or a review thread. A forge's own ids, CLI commands and URLs never become
+part of those models. Features are plugins: each one contributes its keybindings, actions on subjects, branch badges,
+settings keys and settings-panel sections through the `Feature` extension points. A feature never reaches into another
+feature or edits a kernel record to add itself. The failed-checks agent action is the reference pattern: a forge
+produces a neutral subject, and an action consumes it without knowing which forge produced it. When you add a feature,
+first ask which extension point it plugs into. If none fits, add a general one rather than a special case, and enforce
+the boundary through module dependencies, not just tests.
+
 ## UI conventions
 - An action that does not apply right now shows disabled, with the reason, in its menu or dialog; it stays visible.
 - Of the movement keys, only the arrows cross into another panel; h/j/k/l scroll or move the cursor inside the focused
