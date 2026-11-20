@@ -250,7 +250,7 @@ final class BranchSegs {
      * in time, with the functions its row draws them with. What does not change with the time is looked up once.
      */
     static ShownTime shownTime(Model model, Instant since, Option<Waiting> waiting, Option<Eta> eta) {
-        boolean learning = model.gitHub().learningCheckTimes();
+        boolean learning = model.part(GitHubState.PART).learningCheckTimes();
         return ShownTime.reading(now -> TimeText.age(Duration.between(since, now)) + " "
                 + after(waiting, eta(eta, learning, now), now).getOrElse(""));
     }
@@ -260,7 +260,7 @@ final class BranchSegs {
      * (ADR 32).
      */
     static Option<String> eta(Model model, Option<Eta> eta) {
-        return eta(eta, model.gitHub().learningCheckTimes(), model.now());
+        return eta(eta, model.part(GitHubState.PART).learningCheckTimes(), model.now());
     }
 
     /**

@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
@@ -198,7 +199,8 @@ public final class PullRequestsPanel {
                                                 model.prOverview()
                                                         .ofThisRepository(pr)
                                                         .getOrElse(false),
-                                                () -> model.gitHub().merge(pr.number()))
+                                                () -> model.part(GitHubState.PART)
+                                                        .merge(pr.number()))
                                         .flatMap(merge -> merge),
                                 model.prOverview().isUnseen(pr))),
                 focus.contains(scope.pane()),

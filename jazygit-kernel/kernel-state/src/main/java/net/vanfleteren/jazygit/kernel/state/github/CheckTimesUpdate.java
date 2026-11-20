@@ -31,7 +31,9 @@ public final class CheckTimesUpdate {
      */
     private static Next told(Model model, Next next) {
         Model after = next.model();
-        return after.gitHub().checkTimes().equals(model.gitHub().checkTimes())
+        return after.part(GitHubState.PART)
+                        .checkTimes()
+                        .equals(model.part(GitHubState.PART).checkTimes())
                 ? next
                 : next.map(changed -> changed.checkTimesChanged(model));
     }
@@ -104,17 +106,23 @@ public final class CheckTimesUpdate {
     }
 
     private static Model learned(Model model, String repository, CheckHistory history, Option<Instant> toppedUp) {
-        return model.mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(known(model, repository)
-                .map(times -> times.withKept(history, toppedUp))
-                .getOrElse(() -> CheckTimes.of(repository, history, toppedUp)))));
+        return model.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withCheckTimes(Option.of(known(model, repository)
+                        .map(times -> times.withKept(history, toppedUp))
+                        .getOrElse(() -> CheckTimes.of(repository, history, toppedUp)))));
     }
 
     private static Option<CheckTimes> known(Model model, String repository) {
-        return model.gitHub().checkTimes().filter(times -> times.repository().equals(repository));
+        return model.part(GitHubState.PART)
+                .checkTimes()
+                .filter(times -> times.repository().equals(repository));
     }
 
     private static Model mapKnown(Model model, String repository, UnaryOperator<CheckTimes> change) {
-        return model.mapGitHub(gitHub -> gitHub.withCheckTimes(
-                gitHub.checkTimes().map(times -> times.repository().equals(repository) ? change.apply(times) : times)));
+        return model.mapPart(
+                GitHubState.PART,
+                gitHub -> gitHub.withCheckTimes(gitHub.checkTimes()
+                        .map(times -> times.repository().equals(repository) ? change.apply(times) : times)));
     }
 }

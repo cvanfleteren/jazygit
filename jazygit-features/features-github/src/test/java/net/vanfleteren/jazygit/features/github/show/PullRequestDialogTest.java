@@ -48,6 +48,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.github.BranchChecksMsg;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
@@ -175,7 +176,7 @@ class PullRequestDialogTest {
         return screen(
                 PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
                         .with(Either.right(withChecks(checks)), 0),
-                model -> model.mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times))));
+                model -> model.mapPart(GitHubState.PART, gitHub -> gitHub.withCheckTimes(Option.of(times))));
     }
 
     private static int hintLine(String screen) {

@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
 import net.vanfleteren.jazygit.kernel.state.github.ChecksReached;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
@@ -293,7 +294,9 @@ public record PullRequestPopup(
      * How long checks take, as learned in {@code model}, of the repository of {@code pr}.
      */
     public static Option<CheckTimes> times(Model model, PullRequestDetails pr) {
-        return model.gitHub().checkTimes().filter(times -> times.repository().equals(pr.repository()));
+        return model.part(GitHubState.PART)
+                .checkTimes()
+                .filter(times -> times.repository().equals(pr.repository()));
     }
 
     /**

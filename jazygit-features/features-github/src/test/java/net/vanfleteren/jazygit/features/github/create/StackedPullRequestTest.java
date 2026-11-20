@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.Stack
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 
@@ -60,7 +61,8 @@ class StackedPullRequestTest {
                         TestModels.loaded(),
                         List.of(MAIN, FEAT_A, FEATURE).map(name -> Fixtures.branch(name, false, new Sha("aaaa"))))
                 .model();
-        return read.mapGitHub(
+        return read.mapPart(
+                GitHubState.PART,
                 gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(FEAT_A, pr(96, "feat/a", stack)))));
     }
 

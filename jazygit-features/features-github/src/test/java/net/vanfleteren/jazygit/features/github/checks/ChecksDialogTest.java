@@ -49,6 +49,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimesMsg;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
@@ -199,7 +200,7 @@ class ChecksDialogTest {
 
         String screen = screen(TestModels.loaded()
                 .withNow(NOW)
-                .mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times)))
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withCheckTimes(Option.of(times)))
                 .openPopup(read(List.of(check("package", Checks.PENDING, 30, Option.none())))));
 
         assertTrue(screen.contains("● 1 running · done in ~3m 40s"), screen);
@@ -646,7 +647,9 @@ class ChecksDialogTest {
     }
 
     private static Model timed(int seconds) {
-        return TestModels.loaded().withNow(NOW).mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times(seconds))));
+        return TestModels.loaded()
+                .withNow(NOW)
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withCheckTimes(Option.of(times(seconds))));
     }
 
     /**

@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.BranchChecksUpdate;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimesUpdate;
 import net.vanfleteren.jazygit.kernel.state.github.FromGitHub;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.operation.CommandLog;
@@ -274,13 +275,13 @@ public final class ChecksUpdate {
      */
     public static Option<RemoteBranch> ofPullRequest(Model model, PullRequestPopup dialog) {
         BranchName head = FromGitHub.branch(dialog.pullRequest().headBranch());
-        return model.gitHub()
+        return model.part(GitHubState.PART)
                 .branchChecks()
                 .filter(checks -> dialog.detailsRead() && !dialog.fromFork())
                 .toList()
                 .flatMap(checks -> checks.remotes().toList().sorted())
                 .map(remote -> new RemoteBranch(remote, head))
-                .find(remote -> model.gitHub().checks(remote).exists(state -> state != Checks.NONE));
+                .find(remote -> model.part(GitHubState.PART).checks(remote).exists(state -> state != Checks.NONE));
     }
 
     /**
@@ -298,7 +299,7 @@ public final class ChecksUpdate {
                                 .flatMap(Branch::remoteUpstream);
                     case BranchRef.Remote(RemoteBranch remote) -> Option.of(remote);
                 })
-                .filter(remote -> model.gitHub().checks(remote).exists(state -> state != Checks.NONE));
+                .filter(remote -> model.part(GitHubState.PART).checks(remote).exists(state -> state != Checks.NONE));
     }
 
     /**
@@ -311,7 +312,7 @@ public final class ChecksUpdate {
     private static Next caughtUp(Next next, RemoteBranch branch, List<Check> read) {
         return read.isEmpty()
                         || next.model()
-                                .gitHub()
+                                .part(GitHubState.PART)
                                 .checks(branch)
                                 .forAll(shown -> shown == Checks.combined(read.map(Check::state)))
                 ? next

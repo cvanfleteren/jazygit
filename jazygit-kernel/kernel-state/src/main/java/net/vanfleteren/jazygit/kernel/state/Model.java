@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.kernel.state.diff.Filtering;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.diff.Version;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.index.IndexRefresh;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
@@ -43,7 +42,6 @@ import net.vanfleteren.jazygit.kernel.state.view.RepoView;
  * @param repo           what git reports about the repository
  * @param repoView       what the repository screen shows besides what git reports, and where its focus was
  * @param prOverview     what the pull requests screen shows, and where its focus was
- * @param gitHub         what GitHub reports about the branches of the repository
  * @param jobs           what runs in the background, and when the remotes were last fetched from
  * @param outcome        what the user is told about the operations: how the last one went, and the commands run
  * @param popup          the popup that is open, if any; only one can be
@@ -63,7 +61,6 @@ public record Model(
         Repo repo,
         RepoView repoView,
         PrOverview prOverview,
-        GitHubState gitHub,
         Jobs jobs,
         Outcome outcome,
         Option<Popup> popup,
@@ -89,7 +86,6 @@ public record Model(
                 Repo.LOADING,
                 RepoView.INITIAL,
                 PrOverview.INITIAL,
-                GitHubState.NOT_READ,
                 Jobs.IDLE,
                 Outcome.NONE,
                 Option.none(),
@@ -181,13 +177,6 @@ public record Model(
      */
     public Model mapRepoView(UnaryOperator<RepoView> f) {
         return withRepoView(f.apply(repoView));
-    }
-
-    /**
-     * This model with {@code f} applied to what GitHub reports about the branches of the repository.
-     */
-    public Model mapGitHub(UnaryOperator<GitHubState> f) {
-        return withGitHub(f.apply(gitHub));
     }
 
     /**

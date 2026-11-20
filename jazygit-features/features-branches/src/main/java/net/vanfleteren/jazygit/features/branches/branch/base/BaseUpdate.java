@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.GitHubBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
@@ -50,8 +51,8 @@ public final class BaseUpdate {
                     if (root(model).test(name)) {
                         return Next.of(model.fail(new BranchError.RootHasNoBase(name)));
                     }
-                    Option<PullRequest> pr = model.gitHub().pullRequest(branch);
-                    return GitHubBases.of(model.gitHub())
+                    Option<PullRequest> pr = model.part(GitHubState.PART).pullRequest(branch);
+                    return GitHubBases.in(model)
                             .fromPullRequest(branch)
                             .flatMap(base -> pr.map(open -> Next.of(
                                     model.fail(new BranchError.BaseFromPullRequest(name, open.number(), base)))))
@@ -130,6 +131,6 @@ public final class BaseUpdate {
         return name -> GitHubBases.root(
                 name,
                 AheadUpdate.main(model),
-                model.gitHub().protectedBranches().getOrElse(HashSet.empty()));
+                model.part(GitHubState.PART).protectedBranches().getOrElse(HashSet.empty()));
     }
 }

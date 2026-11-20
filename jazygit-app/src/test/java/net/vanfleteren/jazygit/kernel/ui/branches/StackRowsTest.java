@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.stack.StackMsg;
 import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.load.BranchFiles;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.*;
@@ -69,9 +70,11 @@ class StackRowsTest {
                 .model()
                 .mapRepo(repo -> repo.withRemoteBranches(
                         new Loadable.Loaded<>(List.of(new RemoteRef(ORIGIN_FEAT_C, new Sha("cccc"), Instant.EPOCH)))))
-                .mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(
-                        FEAT_A, stacked(96, "feat/a", 2),
-                        FEAT_B, stacked(97, "feat/b", 3)))));
+                .mapPart(
+                        GitHubState.PART,
+                        gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(
+                                FEAT_A, stacked(96, "feat/a", 2),
+                                FEAT_B, stacked(97, "feat/b", 3)))));
     }
 
     // main; then ▾ stack #12, #95 ◆ merged, feat/a, feat/b, #98 not checked out.

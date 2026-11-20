@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError.StackRefusal;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.github.FromGitHub;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 
 /**
  * Where the open branches of a stack on GitHub are pushed (ADR 74): all to one remote, in one push, each to the
@@ -85,7 +86,7 @@ public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, Branch
                 .branches()
                 .toOption()
                 .getOrElse(List.empty())
-                .find(branch -> model.gitHub()
+                .find(branch -> model.part(GitHubState.PART)
                         .pullRequest(branch)
                         .exists(pr -> pr.number().equals(entry.number())));
     }

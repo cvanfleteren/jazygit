@@ -662,7 +662,10 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 Option.of(created),
-                done.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
+                done.model()
+                        .part(GitHubState.PART)
+                        .pullRequests()
+                        .flatMap(open -> open.get(new BranchName("feature"))));
         assertTrue(done.cmds().contains(new LoadRepositoryPullRequests()));
     }
 }

@@ -110,8 +110,8 @@ class PullRequestDetailsUpdateTest {
                 Review.CHANGES_REQUESTED,
                 Option.none(),
                 Option.none());
-        assertEquals(Option.of(now), loaded.gitHub().pullRequest(PUSHED));
-        assertEquals(Option.of(now), closed.gitHub().pullRequest(PUSHED));
+        assertEquals(Option.of(now), loaded.part(GitHubState.PART).pullRequest(PUSHED));
+        assertEquals(Option.of(now), closed.part(GitHubState.PART).pullRequest(PUSHED));
     }
 
     @Test
@@ -128,7 +128,7 @@ class PullRequestDetailsUpdateTest {
         Model loaded = Update.update(shown, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(shown), merged))
                 .model();
 
-        assertEquals(Option.none(), loaded.gitHub().pullRequest(PUSHED));
+        assertEquals(Option.none(), loaded.part(GitHubState.PART).pullRequest(PUSHED));
     }
 
     @Test
@@ -158,7 +158,9 @@ class PullRequestDetailsUpdateTest {
         Model other = Update.update(shown, new PullRequestMsg.DetailsLoaded(new PrNumber(7), lastRead(shown), details))
                 .model();
         assertEquals(shown.popup(), other.popup());
-        assertEquals(shown.gitHub().pullRequests(), other.gitHub().pullRequests());
+        assertEquals(
+                shown.part(GitHubState.PART).pullRequests(),
+                other.part(GitHubState.PART).pullRequests());
         Model closed = Update.update(shown, new PopupMsg.Dismissed(PullRequestPopup.class))
                 .model();
         assertEquals(Option.none(), closed.popup());
@@ -166,7 +168,9 @@ class PullRequestDetailsUpdateTest {
                         closed, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(closed), details))
                 .model();
         assertEquals(Option.none(), late.popup());
-        assertEquals(closed.gitHub().pullRequests(), late.gitHub().pullRequests());
+        assertEquals(
+                closed.part(GitHubState.PART).pullRequests(),
+                late.part(GitHubState.PART).pullRequests());
     }
 
     @Test
@@ -199,8 +203,8 @@ class PullRequestDetailsUpdateTest {
         Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
-        assertEquals(Option.of(FEATURE_PR), withPr.gitHub().pullRequest(renamed));
-        assertEquals(Option.none(), withPr.gitHub().pullRequest(UNPUSHED));
+        assertEquals(Option.of(FEATURE_PR), withPr.part(GitHubState.PART).pullRequest(renamed));
+        assertEquals(Option.none(), withPr.part(GitHubState.PART).pullRequest(UNPUSHED));
     }
 
     @Test
@@ -217,7 +221,7 @@ class PullRequestDetailsUpdateTest {
         Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
-        assertEquals(Option.of(FEATURE_PR), withPr.gitHub().pullRequest(onFork));
+        assertEquals(Option.of(FEATURE_PR), withPr.part(GitHubState.PART).pullRequest(onFork));
     }
 
     @Test

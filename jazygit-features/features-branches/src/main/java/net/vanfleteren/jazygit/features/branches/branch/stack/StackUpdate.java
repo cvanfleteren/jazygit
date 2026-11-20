@@ -41,6 +41,7 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.GitHubBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.PullRequestsUpdate;
 import net.vanfleteren.jazygit.kernel.state.github.StackChange;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
@@ -172,8 +173,10 @@ public final class StackUpdate {
      */
     private static Next changed(Model model, StackCmd cmd, List<ExecutedCommand> commands) {
         return OperationUpdate.succeeded(model, cmd, commands)
-                .map(done -> done.mapGitHub(gitHub ->
-                        gitHub.withStackChange(Option.of(cmd.change(model.now().plus(SETTLING))))));
+                .map(done -> done.mapPart(
+                        GitHubState.PART,
+                        gitHub -> gitHub.withStackChange(
+                                Option.of(cmd.change(model.now().plus(SETTLING))))));
     }
 
     /**
@@ -367,11 +370,11 @@ public final class StackUpdate {
      * given up on: GitHub can list them as they were for a while after it made the change (ADR 73).
      */
     private static Next settling(Model model) {
-        return model.gitHub()
+        return model.part(GitHubState.PART)
                 .stackChange()
                 .map(change -> {
-                    Model settled = model.mapGitHub(gitHub -> gitHub.withStackChange(Option.none()));
-                    if (model.gitHub().pullRequests().exists(change::shownIn)) {
+                    Model settled = model.mapPart(GitHubState.PART, gitHub -> gitHub.withStackChange(Option.none()));
+                    if (model.part(GitHubState.PART).pullRequests().exists(change::shownIn)) {
                         return change instanceof StackChange.Stacked stacked && stacked.rebase()
                                 ? rebaseListed(settled, stacked)
                                 : Next.of(settled);
@@ -393,7 +396,7 @@ public final class StackUpdate {
      * are read, then asked about; or it says why it is not rebased.
      */
     private static Next rebaseListed(Model model, StackChange.Stacked stacked) {
-        return model.gitHub()
+        return model.part(GitHubState.PART)
                 .pullRequests()
                 .flatMap(stacked::in)
                 .map(stack -> StackRebase.of(model, stack)
@@ -413,11 +416,11 @@ public final class StackUpdate {
             return Next.of(model);
         }
         Option<PullRequestStack> stacked = highlighted
-                .flatMap(model.gitHub()::pullRequest)
+                .flatMap(model.part(GitHubState.PART)::pullRequest)
                 .flatMap(PullRequest::stack)
                 .orElse(() -> stack.flatMap(number -> stack(model, number)));
         List<Branch> local = local(model);
-        Option<PullRequest> pullRequest = highlighted.flatMap(model.gitHub()::pullRequest);
+        Option<PullRequest> pullRequest = highlighted.flatMap(model.part(GitHubState.PART)::pullRequest);
         StackPopups.Menu menu = new StackPopups.Menu(
                 highlighted,
                 pullRequest,
@@ -435,7 +438,7 @@ public final class StackUpdate {
      * Stack {@code number} as a pull request of it with a local branch has it.
      */
     private static Option<PullRequestStack> stack(Model model, int number) {
-        return model.gitHub()
+        return model.part(GitHubState.PART)
                 .pullRequests()
                 .toList()
                 .flatMap(open -> open.values())
@@ -469,7 +472,7 @@ public final class StackUpdate {
         return local.filter(b -> !b.name().equals(branch.name())
                         && !root.test(b.name())
                         && !builtOn(model, b.name(), branch.name()))
-                .flatMap(b -> model.gitHub()
+                .flatMap(b -> model.part(GitHubState.PART)
                         .pullRequest(b)
                         .filter(pr -> pr.stack().forAll(PullRequestStack::isTop))
                         .map(pr -> new StackPopups.Target(b, pr)))
@@ -495,7 +498,7 @@ public final class StackUpdate {
         return name -> GitHubBases.root(
                 name,
                 AheadUpdate.main(model),
-                model.gitHub().protectedBranches().getOrElse(HashSet.empty()));
+                model.part(GitHubState.PART).protectedBranches().getOrElse(HashSet.empty()));
     }
 
     /**
@@ -510,7 +513,7 @@ public final class StackUpdate {
                             local(model),
                             model.repo().parents(),
                             root(model),
-                            model.gitHub()::pullRequest);
+                            model.part(GitHubState.PART)::pullRequest);
                     return Next.of(model.withoutPopup(StackPopups.Menu.class)
                             .openPopup(new StackPopups.Pick(choice, Option.none(), Option.none()))
                             .withListCursor(ListCursor.START.at(choice.branch())));
@@ -532,7 +535,10 @@ public final class StackUpdate {
                     Map<BranchName, Sha> eligible = unplaced(model, top);
                     // A branch found can be on one listed above the top by its parent too.
                     Map<BranchName, Sha> listed = StackChoice.above(
-                                    top, local(model), model.repo().parents(), model.gitHub()::pullRequest)
+                                    top,
+                                    local(model),
+                                    model.repo().parents(),
+                                    model.part(GitHubState.PART)::pullRequest)
                             .rows()
                             .drop(1)
                             .toMap(
@@ -585,7 +591,7 @@ public final class StackUpdate {
     }
 
     private static Next addPick(Model model, Branch top, int stack, Map<BranchName, BranchName> parents) {
-        StackChoice choice = StackChoice.above(top, local(model), parents, model.gitHub()::pullRequest);
+        StackChoice choice = StackChoice.above(top, local(model), parents, model.part(GitHubState.PART)::pullRequest);
         return Next.of(model.openPopup(new StackPopups.Pick(choice, Option.none(), Option.of(stack)))
                 .withListCursor(ListCursor.START.at(choice.top())));
     }
@@ -595,7 +601,7 @@ public final class StackUpdate {
      * {@code base} (ADR 148); nothing when {@code base} has none.
      */
     private static Next createFirst(Model model, BranchName branch, Branch base) {
-        return model.gitHub()
+        return model.part(GitHubState.PART)
                 .pullRequest(base)
                 .map(below -> PopupUpdate.ask(
                         model,

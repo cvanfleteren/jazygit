@@ -29,10 +29,10 @@ final class MergeUpdate {
      */
     static Next asked(Model model, MergePullRequest cmd, MergeStatus status, List<ExecutedCommand> commands) {
         PullRequestMerge merge = PullRequestMerge.asked(
-                cmd.number(), cmd.branch(), model.gitHub().below(cmd.number()), status, model.now());
+                cmd.number(), cmd.branch(), model.part(GitHubState.PART).below(cmd.number()), status, model.now());
         return went(
                 OperationUpdate.succeeded(model, cmd, commands)
-                        .map(done -> done.mapGitHub(gitHub -> gitHub.withMerge(merge))),
+                        .map(done -> done.mapPart(GitHubState.PART, gitHub -> gitHub.withMerge(merge))),
                 merge);
     }
 
@@ -41,17 +41,19 @@ final class MergeUpdate {
      * too long is left to GitHub, and the user told so.
      */
     static Next tick(Model model) {
-        List<PullRequestMerge> merges = model.gitHub().merges().values().toList();
+        List<PullRequestMerge> merges =
+                model.part(GitHubState.PART).merges().values().toList();
         List<PullRequestMerge> givenUp = merges.filter(merge -> merge.givenUp(model.now()));
         List<PullRequestMerge> toCheck =
                 merges.filter(PullRequestMerge::toCheck).removeAll(givenUp);
         Model left = givenUp.foldLeft(
                 model,
-                (m, merge) -> m.mapGitHub(
+                (m, merge) -> m.mapPart(
+                                GitHubState.PART,
                                 gitHub -> gitHub.withMerges(gitHub.merges().remove(merge.number())))
                         .inform(new Notice.MergeStillPending(merge.branch())));
-        Model checking =
-                toCheck.foldLeft(left, (m, merge) -> m.mapGitHub(gitHub -> gitHub.withMerge(merge.beingChecked())));
+        Model checking = toCheck.foldLeft(
+                left, (m, merge) -> m.mapPart(GitHubState.PART, gitHub -> gitHub.withMerge(merge.beingChecked())));
         return new Next(
                 checking,
                 toCheck.map(merge -> new CheckMerge(merge.number(), ((MergeStatus.Pending) merge.status()).id())));
@@ -64,7 +66,7 @@ final class MergeUpdate {
     static Next checked(Model model, PrNumber number, String id, MergeStatus status) {
         return pending(model, number, id)
                 .map(merge -> merge.checked(status))
-                .map(merge -> went(Next.of(model.mapGitHub(gitHub -> gitHub.withMerge(merge))), merge))
+                .map(merge -> went(Next.of(model.mapPart(GitHubState.PART, gitHub -> gitHub.withMerge(merge))), merge))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -74,12 +76,13 @@ final class MergeUpdate {
      */
     static Next checkFailed(Model model, PrNumber number, String id) {
         return Next.of(pending(model, number, id)
-                .map(merge -> model.mapGitHub(gitHub -> gitHub.withMerge(merge.checked(merge.status()))))
+                .map(merge ->
+                        model.mapPart(GitHubState.PART, gitHub -> gitHub.withMerge(merge.checked(merge.status()))))
                 .getOrElse(model));
     }
 
     private static Option<PullRequestMerge> pending(Model model, PrNumber number, String id) {
-        return model.gitHub()
+        return model.part(GitHubState.PART)
                 .merges()
                 .get(number)
                 .filter(merge -> merge.status() instanceof MergeStatus.Pending(String pending) && pending.equals(id));

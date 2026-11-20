@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
@@ -414,7 +415,7 @@ public final class ChecksDialog implements PopupView {
                         branch,
                         read.repository(),
                         popup.checksRead(),
-                        model.gitHub().pullRequest(popup.onGitHub())));
+                        model.part(GitHubState.PART).pullRequest(popup.onGitHub())));
     }
 
     /**

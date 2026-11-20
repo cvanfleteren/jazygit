@@ -34,6 +34,13 @@ public record GitHubBases(
     public static final GitHubBases NONE = new GitHubBases(HashMap.empty(), HashSet.empty(), Option.none());
 
     /**
+     * What GitHub read last, as {@code model} keeps it, says the branches are built on.
+     */
+    public static GitHubBases in(Model model) {
+        return of(model.part(GitHubState.PART));
+    }
+
+    /**
      * What {@code gitHub} read last says the branches are built on.
      */
     public static GitHubBases of(GitHubState gitHub) {

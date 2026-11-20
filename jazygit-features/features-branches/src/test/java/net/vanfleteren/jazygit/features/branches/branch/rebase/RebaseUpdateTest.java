@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -62,8 +63,8 @@ class RebaseUpdateTest {
     void aRootHasNoBase() {
         assertEquals(Option.none(), popup(checkedOut(MAIN), MAIN).base());
 
-        Model develop =
-                checkedOut(DEVELOP).mapGitHub(gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.of(DEVELOP))));
+        Model develop = checkedOut(DEVELOP)
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.of(DEVELOP))));
         assertEquals(Option.none(), popup(develop, DEVELOP).base());
     }
 

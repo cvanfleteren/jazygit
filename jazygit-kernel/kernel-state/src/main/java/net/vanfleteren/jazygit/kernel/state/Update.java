@@ -11,6 +11,7 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.Cmd.*;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.kernel.state.preferences.SettingsError;
 
@@ -165,7 +166,9 @@ public final class Update {
         long first = next.model().jobs().nextId();
         List<Cmd> cmds = next.cmds().distinct();
         return new Step(
-                next.model().mapJobs(jobs -> jobs.withStarted(cmds, now)).mapGitHub(gitHub -> gitHub.withStarted(cmds)),
+                next.model()
+                        .mapJobs(jobs -> jobs.withStarted(cmds, now))
+                        .mapPart(GitHubState.PART, gitHub -> gitHub.withStarted(cmds)),
                 cmds.zipWithIndex().map(cmd -> new Launch(first + cmd._2(), cmd._1())),
                 next.quit());
     }

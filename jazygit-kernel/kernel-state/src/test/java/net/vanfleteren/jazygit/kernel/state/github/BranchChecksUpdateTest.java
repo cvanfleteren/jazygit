@@ -91,7 +91,7 @@ class BranchChecksUpdateTest {
     void theBranchesAreReadAgainWhenTheRemotesOnGitHubAreRead() {
         Next read = Update.update(loaded(), new BranchChecksMsg.Loaded(ON_ORIGIN));
         assertEquals(
-                List.of(new LoadBranches(GitHubBases.of(read.model().gitHub()))),
+                List.of(new LoadBranches(GitHubBases.in(read.model()))),
                 read.cmds().filter(LoadBranches.class::isInstance));
 
         Next same = Update.update(read.model(), new BranchChecksMsg.Loaded(ON_ORIGIN));
@@ -194,19 +194,25 @@ class BranchChecksUpdateTest {
 
         assertEquals(
                 Option.of(new Waiting(Option.of(Instant.EPOCH))),
-                readOneByOne(List.of(passed, queued("verify", 1))).gitHub().waiting(remote("origin", "feature")));
+                readOneByOne(List.of(passed, queued("verify", 1)))
+                        .part(GitHubState.PART)
+                        .waiting(remote("origin", "feature")));
         assertEquals(
                 Option.none(),
                 readOneByOne(List.of(queued("verify", 1), running("package")))
-                        .gitHub()
+                        .part(GitHubState.PART)
                         .waiting(remote("origin", "feature")));
         // GitHub does not say when a re-run started.
         assertEquals(
                 Option.of(new Waiting(Option.none())),
-                readOneByOne(List.of(queued("verify", 2))).gitHub().waiting(remote("origin", "feature")));
+                readOneByOne(List.of(queued("verify", 2)))
+                        .part(GitHubState.PART)
+                        .waiting(remote("origin", "feature")));
         assertEquals(
                 Option.none(),
-                readOneByOne(List.of(queued("verify", 1))).gitHub().waiting(remote("origin", "done")));
+                readOneByOne(List.of(queued("verify", 1)))
+                        .part(GitHubState.PART)
+                        .waiting(remote("origin", "done")));
     }
 
     @Test
@@ -275,8 +281,10 @@ class BranchChecksUpdateTest {
                 new BranchChecksMsg.RunsLoaded(new PendingChecks(
                         "owner/repo", HashMap.of(new BranchName("feature"), List.of(running("verify"))))));
 
-        assertEquals(Option.of(new Eta.Unknown()), read.model().gitHub().eta(remote("origin", "feature")));
-        assertEquals(Option.none(), read.model().gitHub().eta(remote("origin", "done")));
+        assertEquals(
+                Option.of(new Eta.Unknown()),
+                read.model().part(GitHubState.PART).eta(remote("origin", "feature")));
+        assertEquals(Option.none(), read.model().part(GitHubState.PART).eta(remote("origin", "done")));
         assertEquals(
                 List.of(new CheckTimesCmd.RecordCheckTimes(
                         "owner/repo", List.empty(), read.model().now(), true)),
@@ -304,12 +312,12 @@ class BranchChecksUpdateTest {
                                 Instant.EPOCH.plusSeconds(i))));
         CheckTimes times = CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, Instant.EPOCH), Option.none());
 
-        Model model =
-                readOneByOne(List.of(running("package"))).mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times)));
+        Model model = readOneByOne(List.of(running("package")))
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withCheckTimes(Option.of(times)));
 
         assertEquals(
                 Option.of(new Eta.Expected(Instant.EPOCH.plusSeconds(254))),
-                model.gitHub().eta(remote("origin", "feature")));
+                model.part(GitHubState.PART).eta(remote("origin", "feature")));
     }
 
     @Test
@@ -323,8 +331,10 @@ class BranchChecksUpdateTest {
 
         Model done = Update.update(read, new BranchChecksMsg.Loaded(pending())).model();
 
-        assertEquals(Option.none(), done.gitHub().eta(remote("origin", "feature")));
-        assertEquals(HashMap.empty(), done.gitHub().pendingChecks().get().byBranch());
+        assertEquals(Option.none(), done.part(GitHubState.PART).eta(remote("origin", "feature")));
+        assertEquals(
+                HashMap.empty(),
+                done.part(GitHubState.PART).pendingChecks().get().byBranch());
     }
 
     @Test
@@ -332,7 +342,7 @@ class BranchChecksUpdateTest {
         Model failed = Update.update(withChecks(), new BranchChecksMsg.LoadFailed(refused("offline")))
                 .model();
 
-        assertEquals(Option.of(ON_ORIGIN), failed.gitHub().branchChecks());
+        assertEquals(Option.of(ON_ORIGIN), failed.part(GitHubState.PART).branchChecks());
         assertEquals(Option.none(), failed.outcome().error());
     }
 
@@ -364,7 +374,7 @@ class BranchChecksUpdateTest {
 
         Next done = TestModels.done(asked.model(), new LoadBranchChecks(), new BranchChecksMsg.Loaded(ON_ORIGIN));
         assertEquals(List.of(new LoadBranchChecks()), reads(done));
-        assertEquals(Option.of(ON_ORIGIN), done.model().gitHub().branchChecks());
+        assertEquals(Option.of(ON_ORIGIN), done.model().part(GitHubState.PART).branchChecks());
 
         assertEquals(
                 List.empty(),
@@ -376,11 +386,14 @@ class BranchChecksUpdateTest {
     void aBranchOnGitHubShowsItsChecksAndALocalBranchThoseOfItsUpstream() {
         Model model = withChecks();
 
-        assertEquals(Option.of(Checks.FAILING), model.gitHub().checks(remote("origin", "feature")));
-        assertEquals(Option.of(Checks.FAILING), model.gitHub().checks(following("mine", remote("origin", "feature"))));
-        assertEquals(Option.none(), model.gitHub().checks(remote("fork", "feature")));
-        assertEquals(Option.none(), model.gitHub().checks(following("feature", remote("fork", "feature"))));
-        assertEquals(Option.none(), model.gitHub().checks(remote("origin", "unknown")));
+        assertEquals(Option.of(Checks.FAILING), model.part(GitHubState.PART).checks(remote("origin", "feature")));
+        assertEquals(
+                Option.of(Checks.FAILING),
+                model.part(GitHubState.PART).checks(following("mine", remote("origin", "feature"))));
+        assertEquals(Option.none(), model.part(GitHubState.PART).checks(remote("fork", "feature")));
+        assertEquals(
+                Option.none(), model.part(GitHubState.PART).checks(following("feature", remote("fork", "feature"))));
+        assertEquals(Option.none(), model.part(GitHubState.PART).checks(remote("origin", "unknown")));
     }
 
     @Test
@@ -388,11 +401,14 @@ class BranchChecksUpdateTest {
         Model model = Update.update(withChecks(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                 .model();
 
-        assertEquals(Option.of(FEATURE_PR), model.gitHub().pullRequest(remote("origin", "feature")));
-        assertEquals(Option.none(), model.gitHub().pullRequest(remote("fork", "feature")));
+        assertEquals(Option.of(FEATURE_PR), model.part(GitHubState.PART).pullRequest(remote("origin", "feature")));
+        assertEquals(Option.none(), model.part(GitHubState.PART).pullRequest(remote("fork", "feature")));
         assertEquals(
-                Option.of(FEATURE_PR), model.gitHub().pullRequest(following("feature", remote("origin", "feature"))));
-        assertEquals(Option.none(), model.gitHub().pullRequest(following("feature", remote("fork", "feature"))));
+                Option.of(FEATURE_PR),
+                model.part(GitHubState.PART).pullRequest(following("feature", remote("origin", "feature"))));
+        assertEquals(
+                Option.none(),
+                model.part(GitHubState.PART).pullRequest(following("feature", remote("fork", "feature"))));
     }
 
     @Test
@@ -401,7 +417,8 @@ class BranchChecksUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(FEATURE_PR), model.gitHub().pullRequest(following("feature", remote("fork", "feature"))));
-        assertEquals(Option.none(), model.gitHub().pullRequest(remote("origin", "feature")));
+                Option.of(FEATURE_PR),
+                model.part(GitHubState.PART).pullRequest(following("feature", remote("fork", "feature"))));
+        assertEquals(Option.none(), model.part(GitHubState.PART).pullRequest(remote("origin", "feature")));
     }
 }

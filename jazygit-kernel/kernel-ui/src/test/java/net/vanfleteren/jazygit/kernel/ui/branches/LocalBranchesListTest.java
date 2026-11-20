@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
@@ -190,7 +191,9 @@ class LocalBranchesListTest {
         assertEquals(
                 Option.none(),
                 shownParent(withParent(FEAT_A)
-                        .mapGitHub(gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.of(FEAT_A))))));
+                        .mapPart(
+                                GitHubState.PART,
+                                gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.of(FEAT_A))))));
     }
 
     @Test
@@ -217,7 +220,9 @@ class LocalBranchesListTest {
         assertEquals(
                 Option.none(),
                 shownParent(withParent(FEAT_A)
-                        .mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(FEATURE, stacked))))));
+                        .mapPart(
+                                GitHubState.PART,
+                                gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(FEATURE, stacked))))));
     }
 
     @Test

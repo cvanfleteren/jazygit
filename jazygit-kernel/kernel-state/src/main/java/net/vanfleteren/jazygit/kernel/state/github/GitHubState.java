@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.Part;
 import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 
 /**
@@ -83,6 +84,12 @@ public record GitHubState(
             HashMap.empty(),
             HashMap.empty(),
             Option.none());
+
+    /**
+     * Where the model keeps what GitHub reports, as a part (ADR 157) rather than a field the model names: not kept until
+     * something was read, so a model that never read from GitHub keeps nothing of it.
+     */
+    public static final Part<GitHubState> PART = Part.of("github.state", NOT_READ);
 
     /**
      * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one

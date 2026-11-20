@@ -55,7 +55,7 @@ class FailingReadTest {
         Model read = Update.update(failedTimes(4), new PullRequestsMsg.Loaded(List.empty()))
                 .model();
 
-        assertTrue(read.gitHub().failing().isEmpty());
+        assertTrue(read.part(GitHubState.PART).failing().isEmpty());
         assertTrue(PullRequestsUpdate.poll(Next.of(read)).cmds().contains(new LoadRepositoryPullRequests()));
     }
 
@@ -69,7 +69,7 @@ class FailingReadTest {
 
         assertEquals(
                 2,
-                model.gitHub()
+                model.part(GitHubState.PART)
                         .failing()
                         .get(new LoadRepositoryPullRequests())
                         .get()
