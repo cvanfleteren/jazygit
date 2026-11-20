@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.features.github.create;
 import io.vavr.collection.List;
 import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

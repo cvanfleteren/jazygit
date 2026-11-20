@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.stash;
 
-import net.vanfleteren.jazygit.core.git.model.Stash;
+import net.vanfleteren.jazygit.core.repo.Stash;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;

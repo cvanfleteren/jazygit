@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
 import net.vanfleteren.jazygit.kernel.state.load.*;
@@ -49,7 +50,7 @@ class BranchLogContentTest {
 
     @Test
     void logLinesDrawMergedBranchesWithRails() {
-        List<Commit> log = net.vanfleteren.jazygit.core.git.model.CommitGraph.arrange(List.of(
+        List<Commit> log = net.vanfleteren.jazygit.core.repo.CommitGraph.arrange(List.of(
                 merge("m", "b", "f"),
                 ContentPanelFixtures.plain("f", "a"),
                 ContentPanelFixtures.plain("b", "a"),

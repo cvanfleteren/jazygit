@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.changes.commit.fixup;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.model.SquashMode;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.commit.squash.SquashCmd;
 import net.vanfleteren.jazygit.features.changes.commit.squash.SquashUpdate;
 import net.vanfleteren.jazygit.kernel.state.Model;

@@ -5,7 +5,7 @@ import io.vavr.collection.Map;
 import net.vanfleteren.jazygit.core.gh.model.BranchCheckRuns;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 
 /**
  * The checks, one by one and with their timing, on branches on GitHub (ADR 32): those whose checks are pending, for

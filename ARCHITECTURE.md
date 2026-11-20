@@ -22,7 +22,7 @@ The modules are in four groups, a folder each whose pom is the parent of its mod
 its group's (ADR 159). A group uses the groups above it in this table, never one below it, as `GroupsTest` in the app
 checks: the build only stops cycles. The packages below are
 named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.state`, `git.model` is
-`net.vanfleteren.jazygit.core.git.model`.
+`net.vanfleteren.jazygit.core.git.model`, `repo` is `net.vanfleteren.jazygit.core.repo`.
 
 | Module | Holds | Depends on |
 |---|---|---|
@@ -36,7 +36,8 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `lib-image` | `image`: PNG and GIF decoded into a `Picture`, without AWT (ADR 84). | vavr |
 | `jazygit-core` | The core: running git, gh and ssh, and what they report as values. | lib |
 | ↳ `core-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
-| ↳ `core-git` | `git`, `git.model`: running git, and what it reports as values. | base, process, syntax |
+| ↳ `core-repo` | `repo`: what a repository is made of, as values that git and gh share: `Sha`, `BranchName`, `Commit`, `Branch`, `Upstream`, `Tag`, `Stash` (ADR 165). | vavr |
+| ↳ `core-git` | `git`, `git.model`: running git, and what it reports as values, as diffs, blame and the status. | repo, base, process, syntax |
 | ↳ `core-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
 | ↳ `core-askpass` | `askpass`: lets ssh ask the user through jazygit: the socket, the helper ssh runs, its launcher (ADR 150). | process, git |
 | `jazygit-kernel` | The kernel: what every feature builds on. | lib, core |
@@ -82,6 +83,7 @@ graph TD
     Settings["settings<br/><i>config.toml, state.toml</i>"]
     Git["git.*<br/><i>Git, CliGit; roles in commits, branches, files, history;<br/>GitProcess, GitError in process</i>"]
     GitModel["git.model"]
+    Repo["repo<br/><i>Sha, BranchName, Commit, Branch, ...</i>"]
     Gh["gh.*<br/><i>GitHub, CliGitHub; a package per role;<br/>shared GraphQL; GhProcess, GhError in process</i>"]
     GhModel["gh.model"]
     Process["process<br/><i>Exec</i>"]
@@ -104,6 +106,8 @@ graph TD
     State --> Gh
     State --> Process
     Git --> GitModel
+    Git --> Repo
+    GitModel --> Repo
     Gh --> GhModel
     Git --> Process
     Gh --> Process

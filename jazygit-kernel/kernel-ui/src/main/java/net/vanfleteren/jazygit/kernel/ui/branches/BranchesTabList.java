@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.kernel.ui.branches;
 import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
 import net.vanfleteren.jazygit.kernel.state.view.NoLog;

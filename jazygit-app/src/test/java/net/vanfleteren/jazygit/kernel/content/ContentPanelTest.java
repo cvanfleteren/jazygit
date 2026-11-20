@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.changes.panes.stash.StashPanel;

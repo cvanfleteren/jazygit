@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The rules every module of the core keeps: core-process, core-git, core-gh and core-askpass. Each takes
+ * The rules every module of the core keeps: core-process, core-repo, core-git, core-gh and core-askpass. Each takes
  * them in with {@code ArchTests.in(CoreRules.class)}. That git and gh know nothing of each other, and the process layer of
  * neither, the compiler sees to: they are not on each other's classpath.
  */

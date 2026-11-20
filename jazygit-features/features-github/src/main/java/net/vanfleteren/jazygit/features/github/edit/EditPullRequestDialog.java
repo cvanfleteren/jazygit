@@ -11,7 +11,7 @@ import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.create.NewPullRequestDialog;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;

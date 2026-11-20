@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.features.branches.branch.rename;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Branch;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.rename.RenameBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.features.branches.branch.rename.RenameBranchMsg.LocallyChosen;

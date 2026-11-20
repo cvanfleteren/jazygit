@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 
 /**
  * What is read for the item highlighted in each pane. They are separate, not one preview: each pane keeps its own while

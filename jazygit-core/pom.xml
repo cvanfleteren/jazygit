@@ -19,6 +19,7 @@
     <!-- A module of the core uses the libraries and the core before it, never the kernel, the features or the app. -->
     <modules>
         <module>core-process</module>
+        <module>core-repo</module>
         <module>core-git</module>
         <module>core-gh</module>
         <module>core-askpass</module>

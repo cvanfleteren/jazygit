@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
-import net.vanfleteren.jazygit.core.git.model.Stash;
+import net.vanfleteren.jazygit.core.repo.Stash;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.PaneId;

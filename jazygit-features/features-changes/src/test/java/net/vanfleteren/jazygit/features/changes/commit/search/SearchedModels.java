@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.changes.commit.search;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.git.model.Commit;
 import net.vanfleteren.jazygit.core.git.model.CommitQuery;
+import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 

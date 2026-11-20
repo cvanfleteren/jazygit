@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.core.git.process;
 
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
-import net.vanfleteren.jazygit.core.git.model.Revision;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.Revision;
 
 /**
  * The one place a revision, a branch name or a remote is turned into text for git (ADR 40): a revision always as its

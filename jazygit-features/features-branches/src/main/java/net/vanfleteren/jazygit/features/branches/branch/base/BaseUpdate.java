@@ -10,7 +10,7 @@ import java.util.function.Predicate;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.git.model.BaseCandidate;
 import net.vanfleteren.jazygit.core.git.model.BaseCandidates;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.GitHubBases;

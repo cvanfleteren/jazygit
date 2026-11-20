@@ -11,6 +11,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutWherePopup;

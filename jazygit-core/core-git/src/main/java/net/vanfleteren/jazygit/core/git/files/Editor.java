@@ -4,10 +4,10 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.model.CommitMessage;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 
 /**
  * Editing files, as git edits commit messages (ADR 69).

@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.branches.branch.checkout;
 
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

@@ -5,10 +5,10 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.Head;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * What HEAD points to, read from the files of a repository rather than asked of git: cheap enough to do for

@@ -7,9 +7,9 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.model.CommitMessage;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 
 /**
  * {@link Editor} for tests: no editor runs, and what is edited is saved as it is. Fakes override what they need.

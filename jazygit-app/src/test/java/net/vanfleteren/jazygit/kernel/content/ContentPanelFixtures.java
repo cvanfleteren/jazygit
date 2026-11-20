@@ -8,6 +8,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.diff.*;

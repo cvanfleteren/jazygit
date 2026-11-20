@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.kernel.content;
 
 import io.vavr.control.Option;
 import java.util.function.UnaryOperator;
-import net.vanfleteren.jazygit.core.git.model.Stash;
+import net.vanfleteren.jazygit.core.repo.Stash;
 import net.vanfleteren.jazygit.kernel.ui.content.Body;
 import net.vanfleteren.jazygit.kernel.ui.content.DrawContext;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;

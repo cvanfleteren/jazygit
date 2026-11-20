@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.kernel.state.load;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;

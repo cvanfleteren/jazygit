@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
+import net.vanfleteren.jazygit.core.repo.*;
 
 /**
  * The {@link History} of a repository, through {@code git rev-parse} and {@code git log}. The checkout and the

@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.features.changes.commit.reword.RewordMsg;

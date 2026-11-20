@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.core.git.model;
 
+import net.vanfleteren.jazygit.core.repo.Sha;
+
 /**
  * The revision a version of a file is blamed at, the one its lines are of (ADR 147), and the path of the file there.
  */

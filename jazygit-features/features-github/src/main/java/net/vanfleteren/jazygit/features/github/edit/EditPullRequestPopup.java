@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.features.github.edit;
 
 import io.vavr.collection.List;
 import lombok.With;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.ShowsPullRequest;
 

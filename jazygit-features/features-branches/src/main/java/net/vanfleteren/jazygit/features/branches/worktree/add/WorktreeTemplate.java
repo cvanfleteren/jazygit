@@ -6,7 +6,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import net.vanfleteren.jazygit.core.git.model.Worktree;
+import net.vanfleteren.jazygit.core.repo.Worktree;
 
 /**
  * Where a new worktree starts out, worked out from a template of the git configuration (ADR 134): its variables in

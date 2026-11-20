@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.core.git.CliGit;
 import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.BlameAt;
 import net.vanfleteren.jazygit.core.git.model.BlameOptions;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;

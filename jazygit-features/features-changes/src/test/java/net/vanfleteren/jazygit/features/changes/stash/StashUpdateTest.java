@@ -10,9 +10,9 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
-import net.vanfleteren.jazygit.core.git.model.Head;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.stash.StashCmd.Stash;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -23,13 +23,11 @@ import org.junit.jupiter.api.Test;
 
 class StashUpdateTest {
 
-    private static final net.vanfleteren.jazygit.core.git.model.Stash STASH =
-            new net.vanfleteren.jazygit.core.git.model.Stash(
-                    "stash@{0}", new Sha("s0"), "x", Option.none(), java.time.Instant.EPOCH);
+    private static final net.vanfleteren.jazygit.core.repo.Stash STASH = new net.vanfleteren.jazygit.core.repo.Stash(
+            "stash@{0}", new Sha("s0"), "x", Option.none(), java.time.Instant.EPOCH);
     // Named like the listed one, as a stash that was added since; it is another one.
-    private static final net.vanfleteren.jazygit.core.git.model.Stash UNLISTED =
-            new net.vanfleteren.jazygit.core.git.model.Stash(
-                    "stash@{0}", new Sha("s1"), "y", Option.none(), java.time.Instant.EPOCH);
+    private static final net.vanfleteren.jazygit.core.repo.Stash UNLISTED = new net.vanfleteren.jazygit.core.repo.Stash(
+            "stash@{0}", new Sha("s1"), "y", Option.none(), java.time.Instant.EPOCH);
 
     private static Model withChanges() {
         Model model = loaded();

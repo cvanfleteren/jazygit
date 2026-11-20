@@ -15,8 +15,8 @@ import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedLine;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 
 /**

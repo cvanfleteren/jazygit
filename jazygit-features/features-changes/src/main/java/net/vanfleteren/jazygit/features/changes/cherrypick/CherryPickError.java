@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.cherrypick;
 
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 

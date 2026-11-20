@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github.browse;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.OnGitHub;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;

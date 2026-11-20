@@ -12,7 +12,7 @@ import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.core.git.model.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.features.changes.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.kernel.state.Model;

@@ -8,9 +8,9 @@ import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
-import net.vanfleteren.jazygit.core.git.model.PullRequestCommits;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Reading what changed, as git show and git diff show it: a commit, a pull request or a branch against its base,

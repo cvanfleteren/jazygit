@@ -3,12 +3,12 @@ package net.vanfleteren.jazygit.kernel.state.view;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.Commit;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
-import net.vanfleteren.jazygit.core.git.model.Divergence;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.Divergence;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 
 /**

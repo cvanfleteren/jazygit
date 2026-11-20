@@ -3,17 +3,17 @@ package net.vanfleteren.jazygit.core.git.files;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.GitMetadata;
-import net.vanfleteren.jazygit.core.git.model.Head;
 import net.vanfleteren.jazygit.core.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * {@link Status} for tests: on {@code main}, without changes, and without stamps. Fakes override what they need.

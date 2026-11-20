@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.kernel.state.view;
 
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.core.git.model.Commit;
+import net.vanfleteren.jazygit.core.repo.Commit;
 
 /**
  * What the commits pane and the logs show, apart from the previews read for the commit highlighted in it, and what

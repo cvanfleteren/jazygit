@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Conversation;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 

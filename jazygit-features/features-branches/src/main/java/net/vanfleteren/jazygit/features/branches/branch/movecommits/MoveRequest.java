@@ -2,10 +2,10 @@ package net.vanfleteren.jazygit.features.branches.branch.movecommits;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.Commit;
-import net.vanfleteren.jazygit.core.git.model.CommitRange;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.CommitRange;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 
 /**
  * Moving the commits of the checked out branch {@code from}, from {@code oldest} up to its tip, to a new branch.

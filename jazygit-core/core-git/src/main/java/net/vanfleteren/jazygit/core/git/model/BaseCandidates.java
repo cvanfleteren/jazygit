@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.git.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 
 /**
  * The branches a branch could be built on, as git tells them (ADR 143).

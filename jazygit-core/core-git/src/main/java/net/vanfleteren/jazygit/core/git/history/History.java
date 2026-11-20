@@ -3,21 +3,21 @@ package net.vanfleteren.jazygit.core.git.history;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Ahead;
 import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.BlameAt;
 import net.vanfleteren.jazygit.core.git.model.BlameOptions;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.Commit;
 import net.vanfleteren.jazygit.core.git.model.CommitQuery;
-import net.vanfleteren.jazygit.core.git.model.CommitRange;
-import net.vanfleteren.jazygit.core.git.model.Divergence;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.core.git.model.Revision;
-import net.vanfleteren.jazygit.core.git.model.Sha;
-import net.vanfleteren.jazygit.core.git.model.StackLayer;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.Ahead;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.CommitRange;
+import net.vanfleteren.jazygit.core.repo.Divergence;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Revision;
+import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.core.repo.StackLayer;
 
 /**
  * The history, as git log shows it (ADR 69).

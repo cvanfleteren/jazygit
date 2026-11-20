@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.kernel.content;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.IntFunction;
-import net.vanfleteren.jazygit.core.git.model.CommitGraph;
+import net.vanfleteren.jazygit.core.repo.CommitGraph;
 
 /**
  * {@link LogGraph} as it was before it was made fast enough for wide graphs: plain to read, and slow. The tests check

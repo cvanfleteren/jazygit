@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.features.branches.worktree.remove;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;

@@ -10,12 +10,9 @@ import java.nio.file.Path;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
-import net.vanfleteren.jazygit.core.git.model.Sha;
-import net.vanfleteren.jazygit.core.git.model.Stash;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.*;
@@ -24,6 +21,9 @@ import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.process.Limited;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.core.repo.Stash;
 
 /**
  * The {@link Stashes} of a repository, through the {@code git stash} command line tool. A checkout that takes the

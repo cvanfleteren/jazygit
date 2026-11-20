@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.kernel.state.build;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 
 /**
  * What failed on one commit of a branch, as a view of a forge shows it, for an action on it, as handing it to an agent

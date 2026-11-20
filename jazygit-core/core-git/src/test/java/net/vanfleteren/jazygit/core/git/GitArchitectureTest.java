@@ -11,9 +11,9 @@ import com.tngtech.archunit.junit.ArchTests;
 import com.tngtech.archunit.lang.ArchRule;
 import net.vanfleteren.jazygit.CoreRules;
 import net.vanfleteren.jazygit.ModelRules;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
-import net.vanfleteren.jazygit.core.git.model.Revision;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.Revision;
 
 /**
  * The rules of core-git: those of the whole core and of the models, and its own.

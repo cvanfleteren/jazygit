@@ -3,6 +3,9 @@ package net.vanfleteren.jazygit.core.git.model;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
+import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * The state of the working tree and HEAD, as reported by {@code git status}.

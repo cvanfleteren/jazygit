@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.github;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.git.Git;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
 
 /**

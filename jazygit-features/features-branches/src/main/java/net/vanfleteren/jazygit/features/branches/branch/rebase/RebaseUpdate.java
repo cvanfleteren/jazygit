@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.features.branches.branch.rebase;
 
 import io.vavr.collection.HashSet;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Branch;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.GitHubBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;

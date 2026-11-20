@@ -20,9 +20,6 @@ import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
-import net.vanfleteren.jazygit.core.git.model.PullRequestCommits;
-import net.vanfleteren.jazygit.core.git.model.Revision;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
@@ -31,6 +28,9 @@ import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.git.process.TempFiles;
 import net.vanfleteren.jazygit.core.process.Limit;
 import net.vanfleteren.jazygit.core.process.Limited;
+import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.Revision;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * The {@link Diffs} of a repository, through the {@code git diff} and {@code git show} command line tools. The

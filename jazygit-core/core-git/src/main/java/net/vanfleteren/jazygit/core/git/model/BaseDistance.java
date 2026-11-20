@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.core.git.model;
 
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Sha;
+
 /**
  * How far a branch is from its base, the branch it was made from (ADR 46).
  *

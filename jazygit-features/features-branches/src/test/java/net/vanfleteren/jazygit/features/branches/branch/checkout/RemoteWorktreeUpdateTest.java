@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.git.branches.StubWorktrees;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg;

@@ -7,18 +7,18 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.AllBranches;
 import net.vanfleteren.jazygit.core.git.model.BaseCandidates;
 import net.vanfleteren.jazygit.core.git.model.BaseDistance;
-import net.vanfleteren.jazygit.core.git.model.Branch;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.CaughtUpBranch;
-import net.vanfleteren.jazygit.core.git.model.RemoteRef;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.AllBranches;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteRef;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * {@link Branches} for tests: no branches, none with a parent, and changing them succeeds without running anything.

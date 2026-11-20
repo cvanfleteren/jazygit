@@ -3,10 +3,10 @@ package net.vanfleteren.jazygit.core.git.process;
 import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.InProgress;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 
 /**
  * Why a git operation failed, as data. Turning it into text is up to the caller.

@@ -3,10 +3,10 @@ package net.vanfleteren.jazygit.features.changes.commit.squash;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.core.git.Git;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.model.SquashMode;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.operation.GitOperationCmd;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 

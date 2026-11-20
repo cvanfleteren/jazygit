@@ -6,8 +6,8 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.time.Instant;
 import java.util.regex.Pattern;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitError.UnexpectedOutput;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Splitting and reading what git prints. Whatever does not have the expected shape is an

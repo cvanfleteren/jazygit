@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.branches.branch.pull;
 
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.Branches;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd.FastForward;

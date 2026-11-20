@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.git.Git;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.Commit;
 import org.junit.jupiter.api.Test;
 
 /**

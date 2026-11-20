@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github;
 
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 
 /**
  * What git's branches are called on GitHub: the one place a branch is named for gh, from the branch on the remote, so

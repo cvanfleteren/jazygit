@@ -39,7 +39,7 @@ public sealed interface StashCmd extends GitOperationCmd {
     /**
      * Deletes {@code stash}.
      */
-    record Drop(net.vanfleteren.jazygit.core.git.model.Stash stash) implements StashCmd {
+    record Drop(net.vanfleteren.jazygit.core.repo.Stash stash) implements StashCmd {
 
         @Override
         public Operation operation() {
@@ -55,7 +55,7 @@ public sealed interface StashCmd extends GitOperationCmd {
     /**
      * Applies {@code stash} and drops it.
      */
-    record Pop(net.vanfleteren.jazygit.core.git.model.Stash stash) implements StashCmd {
+    record Pop(net.vanfleteren.jazygit.core.repo.Stash stash) implements StashCmd {
 
         @Override
         public Operation operation() {

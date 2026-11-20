@@ -10,6 +10,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.AreaId;

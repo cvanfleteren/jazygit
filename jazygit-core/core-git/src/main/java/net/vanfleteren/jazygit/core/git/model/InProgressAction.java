@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.core.git.model;
 
+import net.vanfleteren.jazygit.core.repo.InProgress;
+
 /**
  * What can be done with an operation the repository is in the middle of, see {@link InProgress}.
  */

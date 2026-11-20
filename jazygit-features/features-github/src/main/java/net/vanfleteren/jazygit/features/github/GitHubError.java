@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github;
 
 import java.util.Locale;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 

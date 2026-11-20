@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * How a file is read whole while an area shows {@code content}: the diff of the file with the path {@code path},

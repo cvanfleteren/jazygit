@@ -15,15 +15,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.history.CliRebase;
 import net.vanfleteren.jazygit.core.git.history.Unfinished;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DeleteScope;
-import net.vanfleteren.jazygit.core.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.core.git.model.PushDefault;
 import net.vanfleteren.jazygit.core.git.model.PushMode;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.core.git.model.RemoteName;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
@@ -33,6 +28,11 @@ import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.process.SshAsking;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 
 /**
  * The {@link Remotes} of a repository: talks to the remotes through the {@code git} command line tool, with the

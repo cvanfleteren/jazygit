@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.commit.CommitError;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendMsg.Confirmed;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendMsg.Requested;

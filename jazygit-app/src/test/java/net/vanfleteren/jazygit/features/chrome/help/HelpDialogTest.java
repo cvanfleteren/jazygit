@@ -11,7 +11,7 @@ import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushMsg;

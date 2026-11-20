@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.ExpandMsg;
 import net.vanfleteren.jazygit.features.changes.diff.VersionMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;

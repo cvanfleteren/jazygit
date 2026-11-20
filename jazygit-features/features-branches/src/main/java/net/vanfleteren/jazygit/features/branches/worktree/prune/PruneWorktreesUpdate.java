@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.branches.worktree.prune;
 
-import net.vanfleteren.jazygit.core.git.model.Worktree;
+import net.vanfleteren.jazygit.core.repo.Worktree;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
 import net.vanfleteren.jazygit.features.branches.worktree.prune.PruneWorktreesMsg.Requested;
 import net.vanfleteren.jazygit.kernel.state.Model;

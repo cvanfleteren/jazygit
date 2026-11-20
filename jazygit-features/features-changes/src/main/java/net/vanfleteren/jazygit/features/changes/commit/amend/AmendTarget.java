@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.commit.amend;
 
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * The commit that is amended.

@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.AccessLevel;
 import lombok.With;
-import net.vanfleteren.jazygit.core.git.model.Commit;
+import net.vanfleteren.jazygit.core.repo.Commit;
 
 /**
  * Going through the summaries of earlier commits in the summary field of the commit dialog, like a shell's history:

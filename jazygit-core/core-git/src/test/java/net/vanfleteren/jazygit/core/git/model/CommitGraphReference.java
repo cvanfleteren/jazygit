@@ -2,6 +2,9 @@ package net.vanfleteren.jazygit.core.git.model;
 
 import io.vavr.collection.*;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.CommitGraph;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * {@link CommitGraph} as it was before it was made fast enough for thousands of commits: plain to read, and slow. The

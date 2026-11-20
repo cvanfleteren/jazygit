@@ -4,6 +4,12 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.Random;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.core.repo.Tracking;
+import net.vanfleteren.jazygit.core.repo.Upstream;
 
 /**
  * Model values for tests, with what a test does not care about left at a default: a branch that is no one's default,

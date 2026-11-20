@@ -1,23 +1,23 @@
 package net.vanfleteren.jazygit.core.git.branches;
 
-import static net.vanfleteren.jazygit.core.git.model.BranchRef.HEADS;
-import static net.vanfleteren.jazygit.core.git.model.BranchRef.REMOTES;
+import static net.vanfleteren.jazygit.core.repo.BranchRef.HEADS;
+import static net.vanfleteren.jazygit.core.repo.BranchRef.REMOTES;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.git.model.BaseCandidate;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * The branches a branch could be built on (ADR 143): every local branch and branch on {@code origin} counted against

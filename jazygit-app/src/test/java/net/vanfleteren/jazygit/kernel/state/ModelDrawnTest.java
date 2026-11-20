@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import io.vavr.collection.List;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.features.branches.worktree.prune.PruneWorktreesCmd;
 import net.vanfleteren.jazygit.kernel.state.load.LoadStatus;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;

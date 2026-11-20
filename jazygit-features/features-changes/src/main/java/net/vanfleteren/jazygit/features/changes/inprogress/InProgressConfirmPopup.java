@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.changes.inprogress;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.InProgress;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;
+import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.kernel.state.popup.ConfirmablePopup;
 
 /**

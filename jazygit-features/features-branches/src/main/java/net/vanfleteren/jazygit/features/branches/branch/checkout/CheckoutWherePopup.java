@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.branches.branch.checkout;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.Worktree;
+import net.vanfleteren.jazygit.core.repo.Worktree;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

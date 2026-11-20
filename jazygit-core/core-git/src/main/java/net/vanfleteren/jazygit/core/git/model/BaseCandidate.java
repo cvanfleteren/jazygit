@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.core.git.model;
 
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+
 /**
  * A branch that another one could be built on, with how their histories part (ADR 143): the other branch is
  * {@code ahead} and {@code behind} this one, as its title would say were this its base.

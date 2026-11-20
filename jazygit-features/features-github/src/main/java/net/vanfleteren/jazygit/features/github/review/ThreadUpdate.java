@@ -9,7 +9,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.git.model.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.features.github.browse.BrowseRemarkCmd;

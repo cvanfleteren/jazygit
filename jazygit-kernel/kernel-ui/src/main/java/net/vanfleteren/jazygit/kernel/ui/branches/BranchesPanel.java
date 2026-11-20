@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.time.Clock;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.PaneId;

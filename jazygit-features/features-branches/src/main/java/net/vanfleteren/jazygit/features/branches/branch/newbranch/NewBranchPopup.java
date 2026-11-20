@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.features.branches.branch.newbranch;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.git.model.BranchName;
-import net.vanfleteren.jazygit.core.git.model.BranchRef;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.core.git.model.Revision;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutRequest;
 import net.vanfleteren.jazygit.kernel.state.popup.TextPopup;
 

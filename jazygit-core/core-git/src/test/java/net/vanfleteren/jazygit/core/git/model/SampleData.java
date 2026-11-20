@@ -13,6 +13,12 @@ import net.vanfleteren.jazygit.core.git.files.StubStatus;
 import net.vanfleteren.jazygit.core.git.history.History;
 import net.vanfleteren.jazygit.core.git.history.StubHistory;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Fixed sample data used by tests, so they don't depend on the state of a real repository.

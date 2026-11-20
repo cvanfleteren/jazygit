@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.branches.worktree.add;
 
-import net.vanfleteren.jazygit.core.git.model.Branch;
-import net.vanfleteren.jazygit.core.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 
 /**
  * What is done to a local branch that follows a remote one before a new worktree checks it out (ADR 109).

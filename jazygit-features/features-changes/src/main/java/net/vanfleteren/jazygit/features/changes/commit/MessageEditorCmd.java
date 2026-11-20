@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.commit;
 
-import net.vanfleteren.jazygit.core.git.model.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;

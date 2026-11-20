@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.Set;
 import net.vanfleteren.jazygit.core.git.model.Blame;
-import net.vanfleteren.jazygit.core.git.model.Sha;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 
 /**

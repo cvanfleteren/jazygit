@@ -15,6 +15,7 @@ import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.kernel.state.*;

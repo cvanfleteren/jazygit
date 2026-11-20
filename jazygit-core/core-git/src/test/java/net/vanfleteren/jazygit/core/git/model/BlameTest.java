@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**

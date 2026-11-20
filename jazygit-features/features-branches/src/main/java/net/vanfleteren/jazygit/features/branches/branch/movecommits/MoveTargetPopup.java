@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.branches.branch.movecommits;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.git.model.Branch;
+import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

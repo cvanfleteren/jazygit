@@ -7,8 +7,6 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.BlameAt;
 import net.vanfleteren.jazygit.core.git.model.BlameOptions;
-import net.vanfleteren.jazygit.core.git.model.Revision;
-import net.vanfleteren.jazygit.core.git.model.Sha;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
@@ -16,6 +14,8 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.git.process.TempFiles;
+import net.vanfleteren.jazygit.core.repo.Revision;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Blame on a version of a file, through {@code git blame --porcelain} (ADR 147). A read is stopped after the 30
