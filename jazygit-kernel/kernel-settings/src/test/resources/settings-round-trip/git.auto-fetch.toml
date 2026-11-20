@@ -1,0 +1,42 @@
+# my settings
+future = true
+old-key = "kept"
+
+[ui]
+# the one I like
+theme = "darcula"
+repository-width = 40
+diff-syntax = false
+repository-heights = [20, 20, 20]
+animations = false
+diff-filters = ["java-imports"]
+other = 3
+
+[github]
+executable = "/opt/gh"
+
+[github.browsers."github.com"]
+# personal
+cvf = "firefox -P personal"
+
+[mine]
+x = [1, 2]
+
+[[editors]]
+# the IDE
+name = "IntelliJ"
+command = ["idea", "{dir}"]
+shortcut = "i"
+
+[[diff-filters]]
+id = "mine"
+name = "Generated sources"
+paths = ["**/generated/**"]
+
+[[agents]]
+# the main one
+name = "Claude"
+command = ["claude", "{prompt}"]
+terminal = true
+shortcut = "c"
+prompt = "Fix {failures}"
