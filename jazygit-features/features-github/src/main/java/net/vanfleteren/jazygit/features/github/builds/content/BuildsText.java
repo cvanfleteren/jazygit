@@ -18,6 +18,7 @@ import java.util.Comparator;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.Build.Outcome;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.Pipeline;
@@ -546,7 +547,7 @@ final class BuildsText {
             return build.origin()
                     .pullRequest()
                     .map(number -> "#" + number)
-                    .orElse(build.origin().branch())
+                    .orElse(build.origin().branch().map(BranchName::value))
                     .getOrElse("–");
         }
 

@@ -420,7 +420,8 @@ class BuildsTextTest {
     @Test
     void aLongBranchIsCutToTheWidestTheColumnOfWhatABuildRanForIs() {
         List<String> lines = drawnOnEveryBranch(
-                PUBLISH, new Build.Origin(Option.none(), Option.of("feature/a-long-branch"), Option.none()));
+                PUBLISH,
+                new Build.Origin(Option.none(), Option.of(new BranchName("feature/a-long-branch")), Option.none()));
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
         assertEquals("    for           commit   when           time  queued  vs median  title", lines.get(header));
