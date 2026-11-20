@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Column;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.util.function.Consumer;
@@ -16,19 +17,20 @@ import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
 import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
+import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
+import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.Pane;
 
 /**
  * The left column of the app: the status above the panes of the screen shown, which are the files, the branches, the
- * commits and the stashes of the repository, or its pull requests.
+ * commits and the stashes of the repository, or those of a screen a feature brings (ADR 168).
  */
 public final class LeftColumn {
 
@@ -48,7 +50,8 @@ public final class LeftColumn {
     private final BranchesPanel branchesPanel;
     private final LeftPane commitsPanel;
     private final LeftPane stashPanel;
-    private final List<PullRequestsPanel> pullRequestsPanels;
+    private final Screens screens;
+    private final Map<Screen, List<LeftPane>> screenPanes;
 
     /**
      * @param styleEngine     the active theme, which highlights the selected rows
@@ -57,6 +60,7 @@ public final class LeftColumn {
      * @param showBranchesTab moves the focus to the branches pane, and shows the list given in it
      * @param commits         makes the commits pane, which lives in a group of features (ADR 158)
      * @param stash           makes the stash pane, which lives in a group of features
+     * @param screens         the screens the left of the window shows, whose panes the features make
      */
     public LeftColumn(
             Consumer<Msg> dispatch,
@@ -65,7 +69,8 @@ public final class LeftColumn {
             Consumer<PaneId> openContent,
             Consumer<BranchesTab> showBranchesTab,
             LeftPane.Factory commits,
-            LeftPane.Factory stash) {
+            LeftPane.Factory stash,
+            Screens screens) {
         this.dispatch = dispatch;
         this.styleEngine = styleEngine;
         // How the active theme highlights the selected row of a pane, in use or not.
@@ -74,7 +79,9 @@ public final class LeftColumn {
         this.branchesPanel = new BranchesPanel(dispatch, showBranchesTab, clock, highlight);
         this.commitsPanel = commits.of(highlight);
         this.stashPanel = stash.of(highlight);
-        this.pullRequestsPanels = PullRequestsPanel.all(dispatch, openContent, highlight);
+        this.screens = screens;
+        this.screenPanes = screens.all()
+                .toLinkedMap(spec -> spec.screen(), spec -> spec.panes().of(dispatch, openContent, highlight));
     }
 
     /**
@@ -89,9 +96,9 @@ public final class LeftColumn {
         if (model.preferences().leftCollapsed(model.screen())) {
             return new Rendered(column(collapsed()), List.empty());
         }
-        List<Panel> shown = model.screen() == Screen.PULL_REQUESTS
-                ? pullRequestsPanels.map(pane -> pane.render(model, focus, inUse))
-                : repositoryPanes(model, focus, inUse);
+        List<Panel> shown = model.screen().equals(Screen.REPOSITORY)
+                ? repositoryPanes(model, focus, inUse)
+                : panesOf(model.screen()).map(pane -> pane.render(model, focus, inUse));
         List<Integer> heights = model.preferences().leftHeights(model.screen());
         List<Panel> panes = rows.fold(
                 () -> shown.init()
@@ -113,14 +120,17 @@ public final class LeftColumn {
 
     /**
      * What the panes highlight that the model, which they were last rendered from, does not know: the item the
-     * content panel shows the preview of, and whose files the files pane lists (ADR 141). On the pull requests screen, only the pane in use, {@code inUse}, says.
+     * content panel shows the preview of, and whose files the files pane lists (ADR 141). On a screen a feature brings,
+     * only the pane in use, {@code inUse}, says (ADR 168).
      */
     public List<Msg> selectionChanges(Model model, Option<PaneId> inUse) {
-        return model.screen() == Screen.PULL_REQUESTS
-                // The content panel shows the pull request highlighted in the pane in use.
-                ? pullRequestsPanels
-                        .filter(pane -> inUse.contains(pane.pane()))
-                        .flatMap(pane -> pane.selectionChange(model))
+        return !model.screen().equals(Screen.REPOSITORY)
+                // The content panel shows the item highlighted in the pane in use.
+                ? model.screen()
+                        .panes()
+                        .zip(panesOf(model.screen()))
+                        .filter(pane -> inUse.contains(pane._1))
+                        .flatMap(pane -> pane._2.selectionChange(model))
                 : List.of(
                                 branchesPanel.selectionChange(model),
                                 commitsPanel.selectionChange(model),
@@ -128,6 +138,13 @@ public final class LeftColumn {
                                 stashPanel.selectionChange(model),
                                 filesPanel.followChange(model, inUse, branchesPanel.followed(model)))
                         .flatMap(change -> change);
+    }
+
+    /**
+     * The panes of {@code screen}, a screen a feature brings, top to bottom.
+     */
+    private List<LeftPane> panesOf(Screen screen) {
+        return screenPanes.get(screen).getOrElse(List.empty());
     }
 
     /**
@@ -155,7 +172,7 @@ public final class LeftColumn {
      */
     private Panel status(Model model) {
         return StatusPanel.render(
-                model, Theme.spanStyles(styleEngine), screen -> dispatch.accept(new PrOverviewMsg.Chosen(screen)));
+                model, Theme.spanStyles(styleEngine), screens, screen -> dispatch.accept(new ScreenMsg.Shown(screen)));
     }
 
     /**

@@ -14,7 +14,6 @@ import net.vanfleteren.jazygit.kernel.state.preferences.Preferences.Dragged;
 import net.vanfleteren.jazygit.kernel.state.preferences.Preferences.DraggedHeights;
 import net.vanfleteren.jazygit.kernel.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
-import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
  * How wide the left column of each screen is, and how tall its panes are, which is kept for the next session. A width
@@ -59,7 +58,7 @@ public final class LayoutUpdate {
             case LayoutMsg.Settled(Screen screen) ->
                 model.preferences()
                         .dragged()
-                        .filter(drag -> drag.screen() == screen)
+                        .filter(drag -> drag.screen().equals(screen))
                         .map(drag -> keep(
                                 model.mapPreferences(preferences -> preferences.withDragged(Option.none())),
                                 screen,
@@ -74,7 +73,7 @@ public final class LayoutUpdate {
             case LayoutMsg.PaneSettled(Screen screen) ->
                 model.preferences()
                         .draggedHeights()
-                        .filter(drag -> drag.screen() == screen)
+                        .filter(drag -> drag.screen().equals(screen))
                         .map(drag -> keep(
                                 model.mapPreferences(preferences -> preferences.withDraggedHeights(Option.none())),
                                 model.preferences().keepingHeights(screen, drag.heights())))
@@ -127,7 +126,7 @@ public final class LayoutUpdate {
      * status; none when the content panel had it.
      */
     private static Option<Integer> focusedPane(Model model) {
-        List<PaneId> panes = Scopes.leftPanes(model.screen());
+        List<PaneId> panes = model.screen().panes();
         return model.shownPane().map(focus -> panes.indexWhere(focus::equals)).filter(pane -> pane >= 0);
     }
 
@@ -180,7 +179,7 @@ public final class LayoutUpdate {
         Model maximized = model.mapPreferences(preferences -> preferences.withMaximizedPane(screen, Option.of(pane)));
         return model.preferences().columnRows().flatMap(column -> {
             List<Integer> rows = LeftPanes.sized(model, screen, heights, column);
-            boolean stash = screen == Screen.REPOSITORY && pane == heights.size();
+            boolean stash = screen.equals(Screen.REPOSITORY) && pane == heights.size();
             return LeftPanes.maximized(maximized, screen, column)
                     .filter(shown -> !(stash && rows.get(pane) >= LeftPanes.stashRows(model))
                             && shown.get(pane) > rows.get(pane))
@@ -239,7 +238,7 @@ public final class LayoutUpdate {
         int commits = heights.size() - 1;
         return model.preferences()
                 .columnRows()
-                .filter(column -> screen == Screen.REPOSITORY && pane >= commits)
+                .filter(column -> screen.equals(Screen.REPOSITORY) && pane >= commits)
                 .map(column -> {
                     int stash = LeftPanes.sized(model, screen, heights, column).last();
                     int above = heights.take(commits).sum().intValue();

@@ -11,12 +11,14 @@ import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
+import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
 
 /**
  * A feature, as the app knows it: its actions, which bring its keys and its popups, what it shows in the content
  * panel, the settings it keeps, the sections it adds to the settings panel, what it does every so often, what it
- * answers of what happens in the kernel, and what it shows of the branches in the branches pane. Each feature package
+ * answers of what happens in the kernel, what it shows of the branches in the branches pane, and the screens it
+ * brings. Each feature package
  * declares one, as {@code XxxFeature.FEATURE}, and {@code Features.ALL} lists it; that is all a new feature changes
  * outside its package (ADR 127).
  *
@@ -33,6 +35,7 @@ import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
  * @param reactions   what it answers of what happens in the kernel, whichever part it keeps (ADR 158)
  * @param badges      what it shows of a branch in the branches pane, beside what git says (ADR 167)
  * @param groupings   the groups it makes of the local branches in the branches pane (ADR 167)
+ * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
  */
 public record Feature(
         List<FeatureAction> actions,
@@ -42,15 +45,18 @@ public record Feature(
         List<Timer> timers,
         List<Reaction> reactions,
         List<BranchBadges.Badge> badges,
-        List<BranchGroups.Grouping> groupings) {
+        List<BranchGroups.Grouping> groupings,
+        List<ScreenSpec> screens) {
 
     /**
      * The feature of {@code actions}, in that order, which shows nothing in the content panel of its own, has no
-     * settings, dispatches nothing every so often, answers nothing and shows nothing of the branches.
+     * settings, dispatches nothing every so often, answers nothing, shows nothing of the branches and brings no
+     * screen.
      */
     public static Feature of(FeatureAction... actions) {
         return new Feature(
                 List.of(actions),
+                List.empty(),
                 List.empty(),
                 List.empty(),
                 List.empty(),
@@ -72,7 +78,8 @@ public record Feature(
                 timers,
                 reactions,
                 badges,
-                groupings);
+                groupings,
+                screens);
     }
 
     /**
@@ -87,7 +94,8 @@ public record Feature(
                 timers,
                 reactions,
                 badges,
-                groupings);
+                groupings,
+                screens);
     }
 
     /**
@@ -102,7 +110,8 @@ public record Feature(
                 timers,
                 reactions,
                 badges,
-                groupings);
+                groupings,
+                screens);
     }
 
     /**
@@ -118,7 +127,8 @@ public record Feature(
                 timers.append(new Timer(interval, msg)),
                 reactions,
                 badges,
-                groupings);
+                groupings,
+                screens);
     }
 
     /**
@@ -127,7 +137,15 @@ public record Feature(
      */
     public Feature reacting(Reaction reaction) {
         return new Feature(
-                actions, contents, settingKeys, settings, timers, reactions.append(reaction), badges, groupings);
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions.append(reaction),
+                badges,
+                groupings,
+                screens);
     }
 
     /**
@@ -136,7 +154,7 @@ public record Feature(
      */
     public Feature badging(BranchBadges.Badge badge) {
         return new Feature(
-                actions, contents, settingKeys, settings, timers, reactions, badges.append(badge), groupings);
+                actions, contents, settingKeys, settings, timers, reactions, badges.append(badge), groupings, screens);
     }
 
     /**
@@ -145,7 +163,24 @@ public record Feature(
      */
     public Feature grouping(BranchGroups.Grouping grouping) {
         return new Feature(
-                actions, contents, settingKeys, settings, timers, reactions, badges, groupings.append(grouping));
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings.append(grouping),
+                screens);
+    }
+
+    /**
+     * This feature, also bringing {@code screen}, which the title of the status names after those of the features
+     * before it (ADR 168). The settings of its layout are kept as the feature keeps them, with {@link #keeping}.
+     */
+    public Feature screen(ScreenSpec screen) {
+        return new Feature(
+                actions, contents, settingKeys, settings, timers, reactions, badges, groupings, screens.append(screen));
     }
 
     /**

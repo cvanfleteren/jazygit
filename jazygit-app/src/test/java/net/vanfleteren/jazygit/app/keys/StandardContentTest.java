@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.DivergenceView;
 import net.vanfleteren.jazygit.kernel.state.view.FilesShown;
@@ -81,7 +82,7 @@ class StandardContentTest {
         assertEquals(List.of("BranchLogSource"), answering(model, Mirrored.BRANCHES));
         assertEquals(List.of("CommitSource"), answering(model, Mirrored.COMMITS));
         assertEquals(List.of("StashSource"), answering(model, Mirrored.STASH));
-        assertEquals(List.of("PullRequestSource"), answering(model, Mirrored.PULL_REQUESTS));
+        assertEquals(List.of("PullRequestSource"), answering(model, Mirrored.of(PrOverview.SCREEN)));
     }
 
     @Test
@@ -125,7 +126,7 @@ class StandardContentTest {
     @Test
     void noSourceOfAPaneAnswersForAnother() {
         List<Model> models = List.of(TestModels.loaded(), unchanged(), buildsOpen(), diverged(), branchCommitsOpen());
-        List<Mirrored> panes = List.of(Mirrored.values());
+        List<Mirrored> panes = Mirrored.REPOSITORY.append(Mirrored.of(PrOverview.SCREEN));
 
         models.forEach(model -> panes.forEach(pane -> assertEquals(
                 List.empty(),
@@ -137,12 +138,13 @@ class StandardContentTest {
      * The sources that may answer for {@code pane}.
      */
     private static List<String> ownSources(Mirrored pane) {
-        return switch (pane) {
-            case FILES -> List.of("CommitFilesSource", "UnchangedSource", "FileDiffsSource");
-            case BRANCHES -> List.of("DivergenceSource", "BranchCommitsSource", "BuildsSource", "BranchLogSource");
-            case COMMITS -> List.of("CommitSource");
-            case STASH -> List.of("StashSource");
-            case PULL_REQUESTS -> List.of("PullRequestSource");
+        return switch (pane.name()) {
+            case "files" -> List.of("CommitFilesSource", "UnchangedSource", "FileDiffsSource");
+            case "branches" -> List.of("DivergenceSource", "BranchCommitsSource", "BuildsSource", "BranchLogSource");
+            case "commits" -> List.of("CommitSource");
+            case "stash" -> List.of("StashSource");
+            case "pullRequests" -> List.of("PullRequestSource");
+            default -> List.empty();
         };
     }
 

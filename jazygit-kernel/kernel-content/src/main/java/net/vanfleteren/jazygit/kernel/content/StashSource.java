@@ -30,7 +30,7 @@ record StashSource() implements ContentSource {
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
-        return Option.when(pane == Mirrored.STASH, () -> stash(model));
+        return Option.when(pane.equals(Mirrored.STASH), () -> stash(model));
     }
 
     @Override

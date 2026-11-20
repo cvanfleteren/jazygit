@@ -26,7 +26,6 @@ import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
 import net.vanfleteren.jazygit.kernel.state.load.LoadStatus;
-import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
@@ -222,7 +221,7 @@ class FetchLineTest {
     void onThePullRequestsScreenSaysHowLongAgoTheyWereRead() {
         Model prs = TestModels.loaded()
                 .withNow(NOW)
-                .withScreen(Screen.PULL_REQUESTS)
+                .withScreen(PrOverview.SCREEN)
                 .mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", NOW)))
                 .withPrOverview(PrOverview.INITIAL.withFreshness(Freshness.NEVER
                         .succeeded("mine", NOW.minusSeconds(3 * 3600))

@@ -227,7 +227,7 @@ public class BranchesPanel {
      */
     public static List<ShownTime> shownTimes(Model model, BranchBadges badges) {
         BranchesTab tab = model.repoView().branches().tab();
-        if (model.screen() != Screen.REPOSITORY
+        if (!model.screen().equals(Screen.REPOSITORY)
                 || divergence(model).isDefined()
                 || model.repoView().branches().branchCommits().isDefined()) {
             return List.empty();
@@ -243,7 +243,7 @@ public class BranchesPanel {
      */
     public static boolean showsSpinner(Model model) {
         BranchesTab tab = model.repoView().branches().tab();
-        return model.screen() == Screen.REPOSITORY
+        return model.screen().equals(Screen.REPOSITORY)
                 && divergence(model).isEmpty()
                 && model.repoView().branches().branchCommits().isEmpty()
                 && model.jobs()

@@ -110,7 +110,7 @@ public record Preferences(
      * dragged to, else the width kept.
      */
     public int leftWidth(Screen screen) {
-        return dragged.filter(drag -> drag.screen() == screen)
+        return dragged.filter(drag -> drag.screen().equals(screen))
                 .map(Dragged::width)
                 .getOrElse(() -> keptWidth(screen));
     }
@@ -148,20 +148,14 @@ public record Preferences(
      * How wide the left column of {@code screen} is kept, in percent of the width.
      */
     public int keptWidth(Screen screen) {
-        return switch (screen) {
-            case REPOSITORY -> settings.repositoryWidth();
-            case PULL_REQUESTS -> settings.pullRequestsWidth();
-        };
+        return settings.get(screen.width());
     }
 
     /**
      * The settings with the left column of {@code screen} kept {@code width} wide.
      */
     public Settings keepingWidth(Screen screen, int width) {
-        return switch (screen) {
-            case REPOSITORY -> settings.withRepositoryWidth(width);
-            case PULL_REQUESTS -> settings.withPullRequestsWidth(width);
-        };
+        return settings.with(screen.width(), width);
     }
 
     /**
@@ -170,7 +164,7 @@ public record Preferences(
      */
     public List<Integer> leftHeights(Screen screen) {
         return draggedHeights
-                .filter(drag -> drag.screen() == screen)
+                .filter(drag -> drag.screen().equals(screen))
                 .map(DraggedHeights::heights)
                 .getOrElse(() -> keptHeights(screen));
     }
@@ -180,20 +174,14 @@ public record Preferences(
      * its height.
      */
     public List<Integer> keptHeights(Screen screen) {
-        return switch (screen) {
-            case REPOSITORY -> settings.repositoryHeights();
-            case PULL_REQUESTS -> settings.pullRequestsHeights();
-        };
+        return settings.get(screen.heights());
     }
 
     /**
      * The settings with the panes of the left column of {@code screen} kept {@code heights} tall.
      */
     public Settings keepingHeights(Screen screen, List<Integer> heights) {
-        return switch (screen) {
-            case REPOSITORY -> settings.withRepositoryHeights(heights);
-            case PULL_REQUESTS -> settings.withPullRequestsHeights(heights);
-        };
+        return settings.with(screen.heights(), heights);
     }
 
     /**

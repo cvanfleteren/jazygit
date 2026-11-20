@@ -30,7 +30,6 @@ import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownChanges;
 import net.vanfleteren.jazygit.kernel.ui.content.Tone;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import org.junit.jupiter.api.Test;
 
@@ -71,7 +70,7 @@ class ContentViewTest {
      */
     private static Model pullRequests(Option<Preview<PullRequestSummary, PullRequestPreview>> preview) {
         return TestModels.loaded()
-                .withScreen(Screen.PULL_REQUESTS)
+                .withScreen(PrOverview.SCREEN)
                 .withPrOverview(PrOverview.INITIAL
                         .withHighlighted(preview.map(Preview::key))
                         .withPreview(preview));
@@ -373,7 +372,7 @@ class ContentViewTest {
 
     @Test
     void withoutAHighlightedPullRequestThePullRequestsScreenSaysSo() {
-        Shown shown = ContentView.of(pullRequests(Option.none()), PullRequestsPanel.FIRST_PANE);
+        Shown shown = ContentView.of(pullRequests(Option.none()), PrOverview.SCREEN.first());
 
         assertEquals(dim("Pull request", "No pull request highlighted"), shown);
         assertEquals(List.empty(), shown.areas());
@@ -387,12 +386,12 @@ class ContentViewTest {
                 loading("Pull request"),
                 ContentView.of(
                         pullRequests(Option.of(new Preview<>(PULL_REQUEST, Loadable.loading()))),
-                        PullRequestsPanel.FIRST_PANE));
+                        PrOverview.SCREEN.first()));
         assertEquals(
                 new Shown.Message("Pull request", Placeholders.error(failure), Tone.ERROR),
                 ContentView.of(
                         pullRequests(Option.of(new Preview<>(PULL_REQUEST, new Loadable.Failed<>(failure)))),
-                        PullRequestsPanel.FIRST_PANE));
+                        PrOverview.SCREEN.first()));
     }
 
     @Test
@@ -405,13 +404,13 @@ class ContentViewTest {
                         "Pull request: owner/repo#42",
                         new PullRequestSource.Read(PULL_REQUEST, READ),
                         new PullRequestBody(PULL_REQUEST, READ)),
-                ContentView.of(read, PullRequestsPanel.FIRST_PANE));
+                ContentView.of(read, PrOverview.SCREEN.first()));
     }
 
     @Test
     void thePullRequestsScreenShowsThePullRequestWhicheverPaneHasTheFocus() {
         Model read = pullRequests(Option.of(new Preview<>(PULL_REQUEST, new Loadable.Loaded<>(READ))));
 
-        assertEquals(ContentView.of(read, PullRequestsPanel.FIRST_PANE), ContentView.of(read, FilesPanel.PANE));
+        assertEquals(ContentView.of(read, PrOverview.SCREEN.first()), ContentView.of(read, FilesPanel.PANE));
     }
 }

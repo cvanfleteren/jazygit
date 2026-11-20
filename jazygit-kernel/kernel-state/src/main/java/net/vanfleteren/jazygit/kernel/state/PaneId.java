@@ -9,6 +9,16 @@ package net.vanfleteren.jazygit.kernel.state;
 public record PaneId(String value) implements Focus.OnScreen {
 
     /**
+     * The pane of the files of the working tree, or of a commit or a stash, which the repository screen starts with.
+     */
+    public static final PaneId FILES = new PaneId("files");
+
+    /**
+     * The pane of the branches, the remote branches and the worktrees.
+     */
+    public static final PaneId BRANCHES = new PaneId("branches");
+
+    /**
      * The pane of the commits of HEAD, or of what a search of them found, which lives in a group of features: the
      * content panel and the focus name it by this id (ADR 158).
      */

@@ -31,7 +31,7 @@ record BranchLogSource() implements ContentSource {
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
-        return Option.when(pane == Mirrored.BRANCHES, () -> branchLog(model));
+        return Option.when(pane.equals(Mirrored.BRANCHES), () -> branchLog(model));
     }
 
     @Override

@@ -36,6 +36,7 @@ import net.vanfleteren.jazygit.features.github.stack.StackMsg;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.TimerMsg;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
@@ -62,7 +63,7 @@ class JazygitAppWiringTest {
 
             SettledPilot.of(testRunner, app.drawnAt::size).press('p', KeyModifiers.CTRL);
 
-            awaitModel(testRunner, app, model -> model.screen() == Screen.PULL_REQUESTS);
+            awaitModel(testRunner, app, model -> model.screen() == PrOverview.SCREEN);
         } finally {
             app.onStop();
         }

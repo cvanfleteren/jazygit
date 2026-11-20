@@ -30,7 +30,8 @@ import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
 import net.vanfleteren.jazygit.features.github.checks.ChecksAction;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
+import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ class KeymapTest {
     @Test
     void ctrlPSwitchesBetweenTheRepositoryAndThePullRequests() {
         assertEquals(
-                Option.of(new PrOverviewMsg.Toggled()),
+                Option.of(new ScreenMsg.Toggled(PrOverview.SCREEN)),
                 keymap.handleGlobal(KeyEvent.ofChar('p', dev.tamboui.tui.event.KeyModifiers.CTRL)));
         // Plain p is left to the panels.
         assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('p')));

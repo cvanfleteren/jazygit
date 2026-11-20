@@ -13,8 +13,9 @@ import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Jobs;
 import net.vanfleteren.jazygit.kernel.state.Label;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
+import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
@@ -127,22 +128,20 @@ public final class FetchLine {
     }
 
     /**
-     * How fresh what the screen shows is at the model's time: when the remotes were last fetched from on the repository
-     * screen, or the pull requests read on theirs, and that the last try failed when it did; blank before anything
-     * was tried.
+     * How fresh what the screen shows is at the model's time, as the screen says (ADR 168): when the remotes were last
+     * fetched from on the repository screen, or the pull requests read on theirs, and that the last try failed when it
+     * did; blank before anything was tried.
      */
     static String freshness(Model model) {
-        boolean pullRequests = model.screen() == Screen.PULL_REQUESTS;
-        Freshness freshness =
-                pullRequests ? model.prOverview().freshness() : model.jobs().lastFetch();
-        String kind = pullRequests ? "read" : "fetch";
+        ScreenSpec screen = Screens.standard().spec(model.screen());
+        Freshness freshness = screen.freshness().apply(model);
+        String key = screen.freshnessKey();
         return List.of(
                         freshness
                                 .read()
                                 .map(at -> Messages.get(
-                                        "status." + kind + ".ago",
-                                        TimeText.readAgo(Duration.between(at, model.now())))),
-                        Option.when(freshness.stale(), () -> Messages.get("status." + kind + ".failed")))
+                                        key + ".ago", TimeText.readAgo(Duration.between(at, model.now())))),
+                        Option.when(freshness.stale(), () -> Messages.get(key + ".failed")))
                 .flatMap(part -> part)
                 .mkString(SEPARATOR);
     }

@@ -66,3 +66,6 @@ written that the next one would undo:
 - ADR 158 and ADR 161 name the extension point that none had; they get a line "Amended by ADR 167".
 - The stack's actions are no longer in the branches feature: a build without `features-github` has no stack.
 - The review threads of the rich diff, which touch about 20 kernel files, stay for their own decision.
+
+Amended by ADR 168: GitHub's state can leave the kernel (step 6) once the pull requests screen is `features-github`'s,
+as the kernel no longer draws it.

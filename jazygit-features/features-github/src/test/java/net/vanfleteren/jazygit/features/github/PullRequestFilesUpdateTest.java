@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.BaseTip;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.github.*;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
@@ -78,7 +79,7 @@ class PullRequestFilesUpdateTest {
                 new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID));
         // A pull request closed without being merged shows its changes as it did while it was open.
         for (PullRequestDetails.State state : List.of(PullRequestDetails.State.OPEN, PullRequestDetails.State.CLOSED)) {
-            Model shown = showingCommits(state, true).withScreen(Screen.PULL_REQUESTS);
+            Model shown = showingCommits(state, true).withScreen(PrOverview.SCREEN);
 
             Next opened = Update.update(shown, new PullRequestMsg.FilesChosen());
 
@@ -391,7 +392,7 @@ class PullRequestFilesUpdateTest {
                 Option.none(),
                 Option.of(new GhCommit(BASE_OID)),
                 Option.of(new GhCommit(HEAD_OID)));
-        Model ofOwnerRepo = loaded().withScreen(Screen.PULL_REQUESTS)
+        Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
                 .withPrOverview(net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL.withRepositoryName(
                         Option.of("owner/repo")));
 
@@ -409,7 +410,7 @@ class PullRequestFilesUpdateTest {
 
     @Test
     void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestListedWithoutItsCommitsOnceItIsRead() {
-        Model ofOwnerRepo = loaded().withScreen(Screen.PULL_REQUESTS)
+        Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
                 .withPrOverview(net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL.withRepositoryName(
                         Option.of("owner/repo")));
 
@@ -420,7 +421,7 @@ class PullRequestFilesUpdateTest {
         PullRequestPopup loading =
                 requested.model().popup(PullRequestPopup.class).get();
         assertTrue(loading.filesWanted());
-        assertEquals(Screen.PULL_REQUESTS, requested.model().screen());
+        assertEquals(PrOverview.SCREEN, requested.model().screen());
         assertEquals(
                 List.of(new LoadPullRequestDetails(new PrNumber(42), lastRead(requested.model()))), requested.cmds());
 

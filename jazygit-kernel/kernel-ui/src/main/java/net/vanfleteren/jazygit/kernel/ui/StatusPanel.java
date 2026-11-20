@@ -27,11 +27,12 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.preferences.LeftPanes;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
+import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
 /**
  * Top-left panel showing the repository name and the current branch, and what the repository is in the middle
@@ -50,15 +51,16 @@ public final class StatusPanel {
     private StatusPanel() {}
 
     public static Panel render(Model model) {
-        return render(model, Theme.SpanStyles.NONE, screen -> {});
+        return render(model, Theme.SpanStyles.NONE, Screens.standard(), screen -> {});
     }
 
     /**
      * @param styles        the styles of the parts of the title
+     * @param screens       the screens the title names (ADR 168)
      * @param screenClicked called when the name of a screen in the title is clicked, with that screen
      */
-    public static Panel render(Model model, Theme.SpanStyles styles, Consumer<Screen> screenClicked) {
-        int unseen = model.prOverview().unseenCount();
+    public static Panel render(Model model, Theme.SpanStyles styles, Screens screens, Consumer<Screen> screenClicked) {
+        List<Name> names = names(model, screens);
         String branch = switch (model.repo().status()) {
             case Loadable.Loading<RepoStatus>() -> Placeholders.loading();
             case Loadable.Failed<RepoStatus>(Failure failure) -> Placeholders.error(failure);
@@ -83,20 +85,30 @@ public final class StatusPanel {
                                 repository.length(TextWidth.of(line)),
                                 text(label).addClass(Theme.Classes.IN_PROGRESS)))
                         .getOrElse(repository))
-                .title(title(model.screen(), unseen, styles))
+                .title(title(model.screen(), names, styles))
                 .length(HEIGHT);
-        return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event, unseen, screenClicked));
+        return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event, names, screenClicked));
     }
 
     /**
-     * Shows the screen whose name in the title of the panel, drawn in {@code area} with {@code unseen} new pull
-     * requests, is clicked. The title starts after the corner of the border.
+     * The names of {@code screens} in the title, as {@code model} has them, in their order.
      */
-    private static EventResult titleClick(Rect area, MouseEvent event, int unseen, Consumer<Screen> screenClicked) {
+    static List<Name> names(Model model, Screens screens) {
+        return screens.all()
+                .map(spec -> new Name(
+                        spec.screen(), Messages.get(spec.nameKey()), spec.mark().apply(model)));
+    }
+
+    /**
+     * Shows the screen whose name in the title of the panel, drawn in {@code area} as {@code names}, is clicked. The
+     * title starts after the corner of the border.
+     */
+    private static EventResult titleClick(
+            Rect area, MouseEvent event, List<Name> names, Consumer<Screen> screenClicked) {
         return Option.when(
                         event.kind() == MouseEventKind.PRESS && event.isLeftButton() && event.y() == area.top(),
                         event.x() - area.left() - 1)
-                .flatMap(column -> screenAt(column, unseen))
+                .flatMap(column -> screenAt(column, names))
                 .map(clicked -> {
                     screenClicked.accept(clicked);
                     return EventResult.HANDLED;
@@ -105,63 +117,36 @@ public final class StatusPanel {
     }
 
     /**
-     * The screen whose name in the title with {@code unseen} new pull requests is {@code column} cells from the
-     * start of the title, if any; the separators between them are none, and the count of the new ones is part of
-     * the name of the pull requests screen.
+     * The screen whose name in the title of {@code names} is {@code column} cells from the start of the title, if
+     * any; the separators between them are none, and what follows a name is part of it.
      */
-    static Option<Screen> screenAt(int column, int unseen) {
+    static Option<Screen> screenAt(int column, List<Name> names) {
         int separator = Span.raw(TITLE_SEPARATOR).width();
-        List<Screen> screens = List.of(Screen.values());
         // Where the name of each screen starts: after the names and separators before it.
-        List<Integer> starts =
-                screens.init().scanLeft(0, (start, screen) -> start + nameWidth(screen, unseen) + separator);
-        return screens.zip(starts)
-                .find(screen -> column >= screen._2 && column < screen._2 + nameWidth(screen._1, unseen))
-                .map(screen -> screen._1);
+        List<Integer> starts = names.init().scanLeft(0, (start, name) -> start + name.width() + separator);
+        return names.zip(starts)
+                .find(name -> column >= name._2 && column < name._2 + name._1.width())
+                .map(name -> name._1.screen());
     }
 
     /**
      * The title of the panel: the names of the screens, the one shown in bold and underlined, the others dimmed,
-     * as the lists in the title of the branches pane; with how many pull requests of the repository were opened
-     * and not seen yet after the name of their screen, in their own style, when there are any (ADR 29).
+     * as the lists in the title of the branches pane; with what follows the name of a screen in its own style, as
+     * how many pull requests of the repository were opened and not seen yet (ADR 29).
      */
-    static Line title(Screen shown, int unseen, Theme.SpanStyles styles) {
-        List<List<Span>> names = List.of(Screen.values())
-                .map(screen -> unseenCount(screen, unseen)
-                        .map(count -> Span.styled(count, styles.of(Theme.Classes.UNSEEN)))
+    static Line title(Screen shown, List<Name> names, Theme.SpanStyles styles) {
+        return Line.from(names.map(name -> name.mark()
+                        .map(mark -> mark.cssClass()
+                                .map(cssClass -> Span.styled(mark.text(), styles.of(cssClass)))
+                                .getOrElse(() -> Span.raw(mark.text())))
+                        .toList()
                         .prepend(
-                                screen == shown
-                                        ? screenName(screen).bold().underlined()
-                                        : screenName(screen).dim()));
-        return Line.from(names.intersperse(List.of(Span.raw(TITLE_SEPARATOR)))
+                                name.screen().equals(shown)
+                                        ? Span.raw(name.name()).bold().underlined()
+                                        : Span.raw(name.name()).dim()))
+                .intersperse(List.of(Span.raw(TITLE_SEPARATOR)))
                 .flatMap(spans -> spans)
                 .toJavaList());
-    }
-
-    /**
-     * How many pull requests were opened and not seen yet, after the name of {@code screen}: only after the one of
-     * the pull requests, and only when there are any.
-     */
-    private static List<String> unseenCount(Screen screen, int unseen) {
-        return screen == Screen.PULL_REQUESTS && unseen > 0
-                ? List.of(" " + PullRequestsPanel.UNSEEN_MARK + unseen)
-                : List.empty();
-    }
-
-    private static int nameWidth(Screen screen, int unseen) {
-        return screenName(screen).width()
-                + unseenCount(screen, unseen)
-                        .map(count -> Span.raw(count).width())
-                        .sum()
-                        .intValue();
-    }
-
-    private static Span screenName(Screen screen) {
-        return Span.raw(Messages.get(
-                switch (screen) {
-                    case REPOSITORY -> "screen.repository";
-                    case PULL_REQUESTS -> "screen.pullRequests";
-                }));
     }
 
     /**
@@ -208,5 +193,23 @@ public final class StatusPanel {
             case Head.OnBranch(BranchName branch, Option<Sha> tip) -> branch.value();
             case Head.Detached(Sha at) -> Messages.get("status.headDetached", at.shortSha());
         };
+    }
+
+    /**
+     * The name of a screen in the title.
+     *
+     * @param screen the screen
+     * @param name   its name
+     * @param mark   what follows it, if anything
+     */
+    record Name(Screen screen, String name, Option<LoadableList.Seg> mark) {
+
+        /**
+         * How many cells it takes, with what follows it.
+         */
+        int width() {
+            return Span.raw(name).width()
+                    + mark.map(seg -> Span.raw(seg.text()).width()).getOrElse(0);
+        }
     }
 }

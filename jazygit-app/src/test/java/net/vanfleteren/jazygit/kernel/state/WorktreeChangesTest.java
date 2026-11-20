@@ -18,9 +18,9 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Worktree;
 import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.load.LoadWorktreeChanges;
-import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
 import org.junit.jupiter.api.Test;
 
@@ -66,7 +66,7 @@ class WorktreeChangesTest {
 
     @Test
     void aTickDoesNotReadThemWhileThePullRequestsAreShown() {
-        Model pullRequests = onWorktreesTab(withWorktrees()).withScreen(Screen.PULL_REQUESTS);
+        Model pullRequests = onWorktreesTab(withWorktrees()).withScreen(PrOverview.SCREEN);
 
         assertFalse(Update.update(pullRequests, new TimerMsg.Tick())
                 .cmds()

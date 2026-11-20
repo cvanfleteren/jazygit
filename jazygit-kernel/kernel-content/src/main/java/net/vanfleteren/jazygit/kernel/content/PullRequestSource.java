@@ -7,12 +7,12 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 
 /**
@@ -25,11 +25,11 @@ record PullRequestSource() implements ContentSource {
      * It shows the pull request highlighted in whichever list of the pull requests screen is in use.
      */
     static final ContentArea AREA = new ContentArea(
-            AreaId.PULL_REQUEST, model -> model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE));
+            AreaId.PULL_REQUEST, model -> model.paneInUse(PrOverview.SCREEN).getOrElse(PrOverview.SCREEN.first()));
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
-        return Option.when(pane == Mirrored.PULL_REQUESTS, () -> pullRequest(model));
+        return Option.when(pane.equals(Mirrored.of(PrOverview.SCREEN)), () -> pullRequest(model));
     }
 
     @Override

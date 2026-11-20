@@ -113,13 +113,13 @@ public final class ContentView {
     }
 
     /**
-     * What the content panel mirrors: on the pull requests screen, its lists; else the pane {@code focus} is or
-     * belongs to; while a popup, or a pane the content does not mirror, has the focus, the pane, or the pane of the
-     * area, that had it before. Nothing has the focus before the first render.
+     * What the content panel mirrors: on a screen a feature brings, its panes (ADR 168); on the repository screen,
+     * the pane {@code focus} is or belongs to; while a popup, or a pane the content does not mirror, has the focus,
+     * the pane, or the pane of the area, that had it before. Nothing has the focus before the first render.
      */
     private static Mirrored mirrored(Model model, Option<Focus> focus, ContentSources sources) {
-        if (model.screen() == Screen.PULL_REQUESTS) {
-            return Mirrored.PULL_REQUESTS;
+        if (!model.screen().equals(Screen.REPOSITORY)) {
+            return Mirrored.of(model.screen());
         }
         return focus.flatMap(on -> mirrored(model, on, sources))
                 .orElse(() -> model.repoView().focusedPane().flatMap(kept -> mirrored(model, kept, sources)))

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import org.junit.jupiter.api.Test;
 
@@ -70,7 +71,7 @@ class PaneSlideTest {
 
     @Test
     void anotherScreenAnotherColumnOrNoAnimationsAreThereAtOnce() {
-        assertFalse(RESTING.toward(Screen.PULL_REQUESTS, 40, MAXIMIZED, BRANCHES_MAXIMIZED, true, NOW)
+        assertFalse(RESTING.toward(PrOverview.SCREEN, 40, MAXIMIZED, BRANCHES_MAXIMIZED, true, NOW)
                 .moving(NOW));
         assertFalse(RESTING.toward(Screen.REPOSITORY, 50, MAXIMIZED, List.of(3, 38, 3, 3), true, NOW)
                 .moving(NOW));

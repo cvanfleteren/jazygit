@@ -25,12 +25,14 @@ import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
+import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
 
@@ -62,8 +64,13 @@ class PrOverviewUpdateTest {
 
     private static final Instant READ_AT = Instant.parse("2026-10-17T12:00:00Z");
 
+    /**
+     * What the pull requests screen answers, as GitHub's feature declares it.
+     */
+    private static final Reactions SCREEN_SHOWN = new Reactions(List.of(PrOverviewUpdate::to));
+
     private static Next toggled(Model model) {
-        return Update.update(model, new PrOverviewMsg.Toggled());
+        return Update.update(model.withReactions(SCREEN_SHOWN), new ScreenMsg.Toggled(PrOverview.SCREEN));
     }
 
     private static PrOverviewMsg repositoryRead(PullRequestSummary... pullRequests) {
@@ -269,7 +276,7 @@ class PrOverviewUpdateTest {
     void showingThePullRequestsReadsThemAllAndShowingTheRepositoryAgainDoesNot() {
         Next shown = toggled(loaded());
 
-        assertEquals(Screen.PULL_REQUESTS, shown.model().screen());
+        assertEquals(PrOverview.SCREEN, shown.model().screen());
         assertEquals(BOTH_READS, shown.cmds());
 
         Next back = toggled(shown.model());
@@ -279,15 +286,15 @@ class PrOverviewUpdateTest {
 
     @Test
     void choosingAScreenShowsItAndChoosingTheOneShownDoesNothing() {
-        Next shown = Update.update(loaded(), new PrOverviewMsg.Chosen(Screen.PULL_REQUESTS));
-        assertEquals(Screen.PULL_REQUESTS, shown.model().screen());
+        Next shown = Update.update(loaded().withReactions(SCREEN_SHOWN), new ScreenMsg.Shown(PrOverview.SCREEN));
+        assertEquals(PrOverview.SCREEN, shown.model().screen());
         assertEquals(BOTH_READS, shown.cmds());
 
-        Next again = Update.update(shown.model(), new PrOverviewMsg.Chosen(Screen.PULL_REQUESTS));
+        Next again = Update.update(shown.model(), new ScreenMsg.Shown(PrOverview.SCREEN));
         assertEquals(shown.model(), again.model());
         assertEquals(List.empty(), again.cmds());
 
-        Next back = Update.update(shown.model(), new PrOverviewMsg.Chosen(Screen.REPOSITORY));
+        Next back = Update.update(shown.model(), new ScreenMsg.Shown(Screen.REPOSITORY));
         assertEquals(Screen.REPOSITORY, back.model().screen());
         assertEquals(List.empty(), back.cmds());
     }
@@ -378,7 +385,7 @@ class PrOverviewUpdateTest {
                 .model();
 
         assertEquals(Option.of(AreaId.PULL_REQUEST), inContent.shownPane());
-        assertEquals(Option.of(new PaneId("prAuthored")), inContent.prOverview().listPane());
+        assertEquals(Option.of(new PaneId("prAuthored")), inContent.paneInUse(PrOverview.SCREEN));
     }
 
     @Test

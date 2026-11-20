@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.ui.FetchLine;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
+import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 
 /**
@@ -34,7 +34,8 @@ final class ShownClocks {
                 .appendAll(ContentView.shownTimes(model))
                 .appendAll(BranchesPanel.shownTimes(model))
                 .appendAll(FilesPanel.shownTimes(model))
-                .appendAll(PullRequestsPanel.shownTimes(model));
+                // Those of a screen only while it is shown (ADR 168).
+                .appendAll(Screens.standard().spec(model.screen()).times().apply(model));
         Instant soonest = model.jobs().away() ? now.plus(Model.AWAY_CLOCK) : now;
         return ShownTime.next(shown, now).map(next -> next.isBefore(soonest) ? soonest : next);
     }

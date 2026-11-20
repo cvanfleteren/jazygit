@@ -52,7 +52,7 @@ public final class LeftPanes {
      */
     public static List<Integer> sized(Model model, Screen screen, List<Integer> heights, int column) {
         List<Integer> rows = rows(heights, column);
-        if (screen != Screen.REPOSITORY) {
+        if (!screen.equals(Screen.REPOSITORY)) {
             return rows;
         }
         int share = rows.last();

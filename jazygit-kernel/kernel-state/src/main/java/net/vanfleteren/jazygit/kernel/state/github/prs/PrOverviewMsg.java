@@ -11,7 +11,6 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 
 /**
  * What happens on the pull requests screen.
@@ -22,16 +21,6 @@ public sealed interface PrOverviewMsg extends Msg {
     default Update.Next apply(Model model) {
         return PrOverviewUpdate.update(model, this);
     }
-
-    /**
-     * The user asked to show the other screen.
-     */
-    record Toggled() implements PrOverviewMsg {}
-
-    /**
-     * The user asked to show {@code screen}, by clicking its name.
-     */
-    record Chosen(Screen screen) implements PrOverviewMsg {}
 
     /**
      * Periodic prompt to read the pull requests again: all of them while they are shown, else the ones of the

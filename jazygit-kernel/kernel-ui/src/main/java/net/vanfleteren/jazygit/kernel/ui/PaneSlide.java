@@ -53,7 +53,7 @@ public record PaneSlide(Screen screen, int column, Chosen chosen, List<Integer> 
      * stashes. On their way there already, they keep on their way.
      */
     public PaneSlide toward(Screen screen, int column, Chosen chosen, List<Integer> rows, boolean slide, Instant now) {
-        boolean same = screen == this.screen && column == this.column && rows.size() == to.size();
+        boolean same = screen.equals(this.screen) && column == this.column && rows.size() == to.size();
         if (same && rows.equals(to)) {
             return chosen.equals(this.chosen) ? this : new PaneSlide(screen, column, chosen, from, to, start);
         }

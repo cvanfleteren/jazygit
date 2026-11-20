@@ -3,10 +3,9 @@ package net.vanfleteren.jazygit.kernel.ui.keys;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
-import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Scope;
 
 /**
@@ -68,16 +67,17 @@ public final class Scopes {
      * The selected pull request that asks for the user's review, on the pull requests screen.
      */
     public static final Scope<PullRequestSummary> PR_REVIEW_REQUESTED =
-            new Scope<>("prReviewRequested", "panel.prReviewRequested.title");
+            new Scope<>(PrOverview.REVIEW_REQUESTED_PANE.value(), "panel.prReviewRequested.title");
     /**
      * The selected pull request the user opened, on the pull requests screen.
      */
-    public static final Scope<PullRequestSummary> PR_AUTHORED = new Scope<>("prAuthored", "panel.prAuthored.title");
+    public static final Scope<PullRequestSummary> PR_AUTHORED =
+            new Scope<>(PrOverview.AUTHORED_PANE.value(), "panel.prAuthored.title");
     /**
      * The selected pull request of the repository, on the pull requests screen.
      */
     public static final Scope<PullRequestSummary> PR_REPOSITORY =
-            new Scope<>("prRepository", "panel.prRepository.title");
+            new Scope<>(PrOverview.REPOSITORY_PANE.value(), "panel.prRepository.title");
     /**
      * The panes of the pull requests screen, top to bottom.
      */
@@ -90,15 +90,4 @@ public final class Scopes {
     public static final Scope<FailedBuild> FAILED_BUILD = new Scope<>("failedBuild", "panel.failedBuild.title");
 
     private Scopes() {}
-
-    /**
-     * The ids of the panes of the left column of {@code screen} under the status, top to bottom, in the order the view
-     * shows them; the keys that resize and maximize a pane find the focused one by it (ADR 92).
-     */
-    public static io.vavr.collection.List<PaneId> leftPanes(Screen screen) {
-        return switch (screen) {
-            case REPOSITORY -> io.vavr.collection.List.of(FILES.pane(), BRANCHES.pane(), COMMITS.pane(), STASH.pane());
-            case PULL_REQUESTS -> PULL_REQUESTS.map(Scope::pane);
-        };
-    }
 }

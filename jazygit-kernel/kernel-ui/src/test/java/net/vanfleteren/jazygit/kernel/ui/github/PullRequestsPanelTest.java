@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
-import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
@@ -72,7 +71,7 @@ class PullRequestsPanelTest {
 
     @Test
     void theTopPaneGetsTheFocusTheFirstTime() {
-        assertEquals(new PaneId("prRepository"), PullRequestsPanel.FIRST_PANE);
+        assertEquals(new PaneId("prRepository"), PrOverview.SCREEN.first());
     }
 
     @Test
@@ -96,15 +95,14 @@ class PullRequestsPanelTest {
     }
 
     @Test
-    void onTheirScreenThePanesAreWokenWhenTheAgeOfAPullRequestChanges() {
+    void thePanesAreWokenWhenTheAgeOfAPullRequestChanges() {
         // Updated at the epoch, 3m 20s before now: 3m until 40s later.
         Instant now = Instant.EPOCH.plusSeconds(3 * 60 + 20);
         Model shown = TestModels.loaded()
-                .withScreen(Screen.PULL_REQUESTS)
+                .withScreen(PrOverview.SCREEN)
                 .withPrOverview(PrOverview.INITIAL.withAuthored(
                         new Loadable.Loaded<>(new PullRequestList(List.of(pr(false)), 1))));
 
         assertEquals(Option.of(now.plusSeconds(40)), ShownTime.next(PullRequestsPanel.shownTimes(shown), now));
-        assertEquals(List.empty(), PullRequestsPanel.shownTimes(shown.withScreen(Screen.REPOSITORY)));
     }
 }
