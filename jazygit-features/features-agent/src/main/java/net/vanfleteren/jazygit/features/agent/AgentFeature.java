@@ -17,7 +17,7 @@ public final class AgentFeature {
     /**
      * The agents in the settings panel: a row that opens their list.
      */
-    static final SettingsSection SECTION =
+    public static final SettingsSection SECTION =
             SettingsSection.of("agent.settings.group", SettingsRows.list('i', "agent.settings.row", AgentForm.LIST));
 
     public static final Feature FEATURE =
