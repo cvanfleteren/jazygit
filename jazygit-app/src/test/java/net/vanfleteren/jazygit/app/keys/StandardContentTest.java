@@ -131,21 +131,25 @@ class StandardContentTest {
         models.forEach(model -> panes.forEach(pane -> assertEquals(
                 List.empty(),
                 answering(model, pane).filter(source -> !ownSources(pane).contains(source)),
-                pane.name())));
+                String.valueOf(pane))));
     }
 
     /**
      * The sources that may answer for {@code pane}.
      */
     private static List<String> ownSources(Mirrored pane) {
-        return switch (pane.name()) {
-            case "files" -> List.of("CommitFilesSource", "UnchangedSource", "FileDiffsSource");
-            case "branches" -> List.of("DivergenceSource", "BranchCommitsSource", "BuildsSource", "BranchLogSource");
-            case "commits" -> List.of("CommitSource");
-            case "stash" -> List.of("StashSource");
-            case "pullRequests" -> List.of("PullRequestSource");
-            default -> List.empty();
-        };
+        return io.vavr.collection.HashMap.of(
+                        Mirrored.FILES,
+                        List.of("CommitFilesSource", "UnchangedSource", "FileDiffsSource"),
+                        Mirrored.BRANCHES,
+                        List.of("DivergenceSource", "BranchCommitsSource", "BuildsSource", "BranchLogSource"),
+                        Mirrored.COMMITS,
+                        List.of("CommitSource"),
+                        Mirrored.STASH,
+                        List.of("StashSource"),
+                        Mirrored.of(PrOverview.SCREEN),
+                        List.of("PullRequestSource"))
+                .getOrElse(pane, List.empty());
     }
 
     /**

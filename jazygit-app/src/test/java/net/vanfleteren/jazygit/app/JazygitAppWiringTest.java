@@ -63,7 +63,7 @@ class JazygitAppWiringTest {
 
             SettledPilot.of(testRunner, app.drawnAt::size).press('p', KeyModifiers.CTRL);
 
-            awaitModel(testRunner, app, model -> model.screen() == PrOverview.SCREEN);
+            awaitModel(testRunner, app, model -> model.screen().equals(PrOverview.SCREEN));
         } finally {
             app.onStop();
         }

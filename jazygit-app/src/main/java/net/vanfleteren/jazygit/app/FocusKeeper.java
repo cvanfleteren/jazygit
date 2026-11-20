@@ -99,7 +99,7 @@ final class FocusKeeper {
         if (focus().isEmpty()) {
             lastFocus.forEach(this::moveTo);
         }
-        if (model.screen() != shownScreen) {
+        if (!model.screen().equals(shownScreen)) {
             shownScreen = model.screen();
             moveToPaneOf(model);
         }

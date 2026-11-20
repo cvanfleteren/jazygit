@@ -81,7 +81,7 @@ class ContentFoldTest {
     }
 
     private static Shown said(Mirrored pane) {
-        return new Shown.Message("mine", pane.name(), Tone.DIM);
+        return new Shown.Message("mine", String.valueOf(pane), Tone.DIM);
     }
 
     /**

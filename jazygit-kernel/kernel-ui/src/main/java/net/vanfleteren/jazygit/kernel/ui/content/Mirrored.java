@@ -23,11 +23,6 @@ public sealed interface Mirrored {
     List<Mirrored> REPOSITORY = List.of(FILES, BRANCHES, COMMITS, STASH);
 
     /**
-     * The id of what is mirrored, which tells it apart: that of the pane, or of the screen.
-     */
-    String name();
-
-    /**
      * The pane of the repository screen that is {@code pane}, if the content panel mirrors it.
      */
     static Option<Mirrored> of(PaneId pane) {
@@ -46,24 +41,12 @@ public sealed interface Mirrored {
      *
      * @param pane its id
      */
-    record Pane(PaneId pane) implements Mirrored {
-
-        @Override
-        public String name() {
-            return pane.value();
-        }
-    }
+    record Pane(PaneId pane) implements Mirrored {}
 
     /**
      * The panes of a screen a feature brings: the content panel shows the highlight of the one in use.
      *
      * @param screen the screen
      */
-    record Panes(Screen screen) implements Mirrored {
-
-        @Override
-        public String name() {
-            return screen.id();
-        }
-    }
+    record Panes(Screen screen) implements Mirrored {}
 }
