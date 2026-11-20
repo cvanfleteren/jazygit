@@ -1,8 +1,10 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.agent.settings;
 
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.settings.Program;
+import net.vanfleteren.jazygit.kernel.settings.Programs;
 
 /**
  * An agent the user set in the settings file, which a failed build is handed to (ADR 161).

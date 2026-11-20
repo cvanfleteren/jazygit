@@ -16,13 +16,22 @@ import java.util.regex.Pattern;
 public final class Programs {
 
     /**
+     * The key of a program's name in its table.
+     */
+    public static final String NAME = "name";
+    /**
+     * The key of whether a program is handed the terminal, in its table.
+     */
+    public static final String TERMINAL = "terminal";
+    /**
+     * The key of a program's shortcut in its table.
+     */
+    public static final String SHORTCUT = "shortcut";
+
+    /**
      * The letters a program without a shortcut gets, in this order, but those a shortcut takes.
      */
     static final List<Character> LETTERS = List.ofAll("123456789abcdefghijklmnopqrstuvwxyz".toCharArray());
-
-    static final String NAME = "name";
-    static final String TERMINAL = "terminal";
-    static final String SHORTCUT = "shortcut";
 
     /**
      * What opens the filter of a menu, which no shortcut can be.
@@ -36,7 +45,7 @@ public final class Programs {
      * {@link #LETTERS} that no shortcut takes, in their order. Past those, a program is left out; no user lists that
      * many.
      */
-    static <P extends Program> List<Tuple2<Character, P>> lettered(List<P> programs) {
+    public static <P extends Program> List<Tuple2<Character, P>> lettered(List<P> programs) {
         Set<Character> taken = programs.flatMap(Program::shortcut).toSet();
         return lettered(programs, LETTERS.filter(letter -> !taken.contains(letter)));
     }
@@ -71,7 +80,7 @@ public final class Programs {
     /**
      * {@code value}, if it is text that is not blank.
      */
-    static Option<String> text(Object value) {
+    public static Option<String> text(Object value) {
         return Option.of(value)
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
@@ -82,7 +91,7 @@ public final class Programs {
     /**
      * The command {@code value} is, if it is an array of text whose first word, the program, is not blank.
      */
-    static Option<List<String>> command(Object value) {
+    public static Option<List<String>> command(Object value) {
         return Option.of(value)
                 .filter(java.util.List.class::isInstance)
                 .map(array -> List.ofAll((java.util.List<?>) array))
@@ -94,14 +103,14 @@ public final class Programs {
     /**
      * Whether {@code value} is a {@code terminal} a program may have: none, or a boolean.
      */
-    static boolean validTerminal(Object value) {
+    public static boolean validTerminal(Object value) {
         return value == null || value instanceof Boolean;
     }
 
     /**
      * The shortcut {@code value} is, if it is one character that is not {@code /}, blank, or among {@code taken}.
      */
-    static Option<Character> shortcut(Object value, Set<Character> taken) {
+    public static Option<Character> shortcut(Object value, Set<Character> taken) {
         return Option.of(value)
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
@@ -113,7 +122,7 @@ public final class Programs {
     /**
      * The tables {@code value} holds, an array of tables as the settings file is read; none when it is no array.
      */
-    static Option<List<?>> tables(Object value) {
+    public static Option<List<?>> tables(Object value) {
         return Option.of(value)
                 .filter(java.util.List.class::isInstance)
                 .map(array -> List.ofAll((java.util.List<?>) array));

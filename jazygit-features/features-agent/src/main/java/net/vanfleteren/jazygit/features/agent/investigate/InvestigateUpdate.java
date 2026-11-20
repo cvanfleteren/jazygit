@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.agent.investigate;
 
 import net.vanfleteren.jazygit.core.git.model.Worktree;
-import net.vanfleteren.jazygit.kernel.settings.AgentProgram;
-import net.vanfleteren.jazygit.kernel.settings.Agents;
+import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
+import net.vanfleteren.jazygit.features.agent.settings.Agents;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
@@ -34,7 +34,7 @@ public final class InvestigateUpdate {
      * says why.
      */
     private static Next requested(Model model, FailedBuild build) {
-        Agents agents = model.preferences().settings().agents();
+        Agents agents = model.preferences().settings().get(Agents.SETTING);
         if (agents.isEmpty()) {
             return Next.of(model.fail(new InvestigateError.NoAgentSet()));
         }

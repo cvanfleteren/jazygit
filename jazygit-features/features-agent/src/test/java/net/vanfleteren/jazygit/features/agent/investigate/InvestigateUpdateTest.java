@@ -12,8 +12,8 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
-import net.vanfleteren.jazygit.kernel.settings.AgentProgram;
-import net.vanfleteren.jazygit.kernel.settings.Agents;
+import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
+import net.vanfleteren.jazygit.features.agent.settings.Agents;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
@@ -92,7 +92,7 @@ class InvestigateUpdateTest {
         return Update.update(branches, new LoadMsg.WorktreesLoaded(List.of(MAIN, LINKED)))
                 .model()
                 .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withAgents(new Agents(agents))));
+                        preferences.withSettings(preferences.settings().with(Agents.SETTING, new Agents(agents))));
     }
 
     @Test
@@ -198,8 +198,8 @@ class InvestigateUpdateTest {
     void beforeTheWorktreesAreReadItSaysSo() {
         Model unread = model(List.of(CLAUDE))
                 .mapRepo(repo -> repo.withWorktrees(Loadable.loading()))
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withAgents(new Agents(List.of(CLAUDE)))));
+                .mapPreferences(preferences -> preferences.withSettings(
+                        preferences.settings().with(Agents.SETTING, new Agents(List.of(CLAUDE)))));
 
         Next next = Update.update(unread, new InvestigateMsg.Requested(failed(MAIN_BRANCH)));
 

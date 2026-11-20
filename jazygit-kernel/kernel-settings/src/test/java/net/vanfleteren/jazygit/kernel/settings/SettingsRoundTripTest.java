@@ -105,9 +105,7 @@ class SettingsRoundTripTest {
                     List.empty(),
                     List.of("**/generated/**"),
                     Option.none(),
-                    false))))
-            .withAgents(new Agents(List.of(new AgentProgram(
-                    "Claude", List.of("claude", "{prompt}"), true, Option.some('c'), Option.some("Fix {failures}")))));
+                    false))));
 
     /**
      * A change to each setting the app writes, by the key it has in the file: to another value, to its default, or
@@ -147,10 +145,8 @@ class SettingsRoundTripTest {
 
     @Test
     void eachSettingTheAppWritesHasAChange() {
-        List<String> written = SettingKeys.KERNEL
-                .all()
-                .map(SettingKey::path)
-                .removeAll(List.of(Editors.KEY, FilterDefinitions.KEY, Agents.KEY));
+        List<String> written =
+                SettingKeys.KERNEL.all().map(SettingKey::path).removeAll(List.of(Editors.KEY, FilterDefinitions.KEY));
 
         assertEquals(written, CHANGES.keySet().toList());
     }
@@ -185,12 +181,7 @@ class SettingsRoundTripTest {
         SettingsFile file = usersFile();
         Settings read = file.load().settings();
 
-        file.save(
-                read,
-                Settings.DEFAULT
-                        .withEditors(read.editors())
-                        .withFilterDefinitions(read.filterDefinitions())
-                        .withAgents(read.agents()));
+        file.save(read, Settings.DEFAULT.withEditors(read.editors()).withFilterDefinitions(read.filterDefinitions()));
 
         assertWritten("back-to-default");
     }

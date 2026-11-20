@@ -29,8 +29,7 @@ public record SettingKeys(List<SettingKey<?>> all) {
             Settings.BROWSERS,
             Settings.EDITORS,
             Settings.DIFF_FILTERS,
-            Settings.FILTER_DEFINITIONS,
-            Settings.AGENTS));
+            Settings.FILTER_DEFINITIONS));
 
     /**
      * These keys, then {@code more}, as the app gathers the kernel's and each feature's.

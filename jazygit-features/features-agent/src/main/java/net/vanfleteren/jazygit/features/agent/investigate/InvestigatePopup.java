@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.features.agent.investigate;
 
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.kernel.settings.AgentProgram;
+import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 

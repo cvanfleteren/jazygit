@@ -148,15 +148,6 @@ public record Settings(Map<String, Held<?>> held) {
                 return new Decoded<>(Option.some(read.filters()), read.invalid());
             }));
     /**
-     * The agents a failed build can be handed to (ADR 161); as the editors.
-     */
-    public static final SettingKey<Agents> AGENTS =
-            SettingKey.userOwned(Agents.KEY, Agents.NONE, Codec.readOnly(value -> {
-                Agents.Read read = Agents.read(value);
-                return new Decoded<>(Option.some(read.agents()), read.invalid());
-            }));
-
-    /**
      * The value of {@code key}: its initial value while it is not held.
      */
     @SuppressWarnings("unchecked") // Only with() holds a value under a key's path, one of that key's type.
@@ -298,14 +289,6 @@ public record Settings(Map<String, Held<?>> held) {
 
     public Settings withFilterDefinitions(FilterDefinitions filters) {
         return with(FILTER_DEFINITIONS, filters);
-    }
-
-    public Agents agents() {
-        return get(AGENTS);
-    }
-
-    public Settings withAgents(Agents agents) {
-        return with(AGENTS, agents);
     }
 
     /**
