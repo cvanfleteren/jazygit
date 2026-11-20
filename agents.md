@@ -64,15 +64,22 @@ The updates, messages, popups and the model are pure. Pure code:
 ## Architecture direction: forge neutral, everything a plugin
 jazygit's kernel is to know about git, not about GitHub or any other forge (#588). It does not yet: `Model.gitHub`,
 `Env.gitHub`, `kernel.state.github` and the branch rows still name `core.gh` types. Add no more, and move them out when
-a change touches them. Forge-specific code (GitHub today; GitLab,
-Forgejo, Bitbucket later) lives in its own feature modules. Those modules talk to the rest of the app only through
-neutral models such as `FailedBuild`, a PR, or a review thread. A forge's own ids, CLI commands and URLs never become
-part of those models. Features are plugins: each one contributes its keybindings, actions on subjects, branch badges,
-settings keys and settings-panel sections through the `Feature` extension points. A feature never reaches into another
-feature or edits a kernel record to add itself. The failed-checks agent action is the reference pattern: a forge
-produces a neutral subject, and an action consumes it without knowing which forge produced it. When you add a feature,
-first ask which extension point it plugs into. If none fits, add a general one rather than a special case, and enforce
-the boundary through module dependencies, not just tests.
+a change touches them. Forge-specific code (GitHub today; GitLab, Forgejo, Bitbucket later) lives in its own feature
+modules, which talk to the rest of the app only through neutral models such as `FailedBuild`. Those models name no
+forge: their fields and types are neutral. A forge's ids, URLs and commands may travel through them only as opaque
+values that the forge side writes and nothing else interprets, as `FailedBuild`'s run, URL and `logs` do.
+
+Features are plugins, at compile time: each is listed in `Features.ALL`, never loaded at runtime, as the native image
+needs a closed world. Today a `Feature` contributes its actions, with their keys, and what it shows in the content
+panel (`ContentSource`); actions on another feature's subject go through a hosted key scope (`Keymap.host`, as
+`Scopes.FAILED_BUILD`); its state is a `Part` of its own (ADR 157). Branch badges, settings keys and settings-panel
+sections are planned extension points that do not exist yet. A feature uses only the features its module may depend
+on (ADR 159), and reaches anything else, such as a pane of a later group or a subject another feature produces, only
+through an extension point, as `features-agent` does (ADR 161). New feature state goes in the feature's own part, not
+in a new field of a kernel record. The failed-checks agent action is the reference pattern: a forge produces a neutral
+subject, and an action consumes it without knowing which forge produced it. When you add a feature, first ask which
+extension point it plugs into. If none fits, add a general one rather than a special case, and enforce the boundary
+through module dependencies, not just tests.
 
 ## UI conventions
 - An action that does not apply right now shows disabled, with the reason, in its menu or dialog; it stays visible.
