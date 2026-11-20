@@ -114,8 +114,10 @@ class HelpDialogTest {
         for (String scope : List.of(Scopes.FILES.id(), Scopes.BRANCHES.id(), Scopes.COMMITS.id(), Scopes.STASH.id())) {
             String screen = screen(scope);
             assertTrue(screen.contains("Global"), screen);
-            // The global keys are listed in the order of the features, and the first one fits the panel.
-            assertTrue(screen.contains("         esc Let go of the commit copied to cherry-pick"), screen);
+            // ? is the first global key listed, as it was before the features brought their own.
+            List<String> lines = List.of(screen.split("\n"));
+            int global = lines.indexWhere(line -> line.contains("Global"));
+            assertTrue(lines.get(global + 1).contains("? Show the keys of the panel"), screen);
         }
     }
 
