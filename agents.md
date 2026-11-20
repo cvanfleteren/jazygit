@@ -67,7 +67,9 @@ jazygit's kernel is to know about git, not about GitHub or any other forge (#588
 a change touches them. Forge-specific code (GitHub today; GitLab, Forgejo, Bitbucket later) lives in its own feature
 modules, which talk to the rest of the app only through neutral models such as `FailedBuild`. Those models name no
 forge: their fields and types are neutral. A forge's ids, URLs and commands may travel through them only as opaque
-values that the forge side writes and nothing else interprets, as `FailedBuild`'s run, URL and `logs` do.
+values that the forge side writes and nothing else interprets, as `FailedBuild`'s repository, URL and `logs` do; what
+only the forge needs, such as GitHub's workflow run, stays in its feature and is not carried (`FailedBuilds` turns it
+into `logs`).
 
 Features are plugins, at compile time: each is listed in `Features.ALL`, never loaded at runtime, as the native image
 needs a closed world. Today a `Feature` contributes its actions, with their keys, and what it shows in the content

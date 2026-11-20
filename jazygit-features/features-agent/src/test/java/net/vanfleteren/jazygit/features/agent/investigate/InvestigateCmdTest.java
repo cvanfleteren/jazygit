@@ -39,9 +39,9 @@ class InvestigateCmdTest {
             new BranchName("main"),
             Option.none(),
             Option.none(),
-            List.of(new FailedBuild.Job("verify", Option.of("401"), Option.none())),
+            List.of(new FailedBuild.Job("verify", Option.none())),
             false,
-            "gh run view 401 --log-failed");
+            "read the log of run 401");
 
     private static GitHub gitHub(Option<GhAccount> configured, Option<GhAccount> current) {
         return StubGitHub.of().withAccount(new StubAccount() {

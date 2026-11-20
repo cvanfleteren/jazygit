@@ -51,18 +51,17 @@ class InvestigateUpdateTest {
     private static final AgentProgram CODEX =
             new AgentProgram("Codex", List.of("codex"), false, Option.of('x'), Option.of("Fix {branch}: {failures}"));
 
-    private static final FailedBuild.Job VERIFY =
-            new FailedBuild.Job("verify", Option.of("401"), Option.of("https://ci/401"));
+    private static final FailedBuild.Job VERIFY = new FailedBuild.Job("verify", Option.of("https://ci/401"));
 
     private static FailedBuild build(BranchName branch, List<FailedBuild.Job> jobs, boolean running) {
         return new FailedBuild(
                 Option.of("o/r"),
                 branch,
                 Option.of("abc123"),
-                Option.of(12),
+                Option.of(new FailedBuild.ChangeRequest("merge request", 12)),
                 jobs,
                 running,
-                "gh run view 401 --log-failed --repo o/r");
+                "read the log of run 401 of o/r");
     }
 
     private static FailedBuild failed(BranchName branch) {
@@ -125,14 +124,15 @@ class InvestigateUpdateTest {
         assertEquals(Option.none(), chosen.model().popup());
     }
 
-    private static final ForgeAccount ALICE = new ForgeAccount("alice", "github.com", "put X=1 before each gh command");
+    private static final ForgeAccount ALICE =
+            new ForgeAccount("alice", "forge.example", "put X=1 before each forge command");
 
     @Test
     void jazygitsPromptTellsTheAgentWhichAccountToRunTheForgesProgramAsOutsideTheForgesData() {
         String prompt = Prompt.of(failed(MAIN_BRANCH), Option.none(), Option.of(ALICE));
 
-        String told = "This repository uses the account alice on github.com, which may not be the active one of the"
-                + " forge's program: put X=1 before each gh command.";
+        String told = "This repository uses the account alice on forge.example, which may not be the active one of the"
+                + " forge's program: put X=1 before each forge command.";
         assertTrue(prompt.contains(told), prompt);
         assertTrue(prompt.indexOf(told) < prompt.indexOf("<forge-data>"), prompt);
     }
@@ -145,8 +145,8 @@ class InvestigateUpdateTest {
     @Test
     void aPromptOfTheUserHasTheAccountAsAPlaceholderEmptyWithoutOne() {
         assertEquals(
-                "Fix. This repository uses the account alice on github.com, which may not be the active one of the"
-                        + " forge's program: put X=1 before each gh command.",
+                "Fix. This repository uses the account alice on forge.example, which may not be the active one of the"
+                        + " forge's program: put X=1 before each forge command.",
                 Prompt.of(failed(MAIN_BRANCH), Option.of("Fix. {account}"), Option.of(ALICE)));
         assertEquals("Fix. ", Prompt.of(failed(MAIN_BRANCH), Option.of("Fix. {account}"), Option.none()));
     }
@@ -231,12 +231,17 @@ class InvestigateUpdateTest {
     void jazygitsPromptFencesWhatTheForgeGaveAndSaysTheCommitMayNotBeCheckedOut() {
         String prompt = Prompt.of(failed(MAIN_BRANCH), Option.none(), Option.none());
 
-        assertTrue(prompt.contains("branch main of o/r (pull request #12)"), prompt);
+        assertTrue(prompt.contains("branch main of o/r (merge request #12)"), prompt);
         assertTrue(prompt.contains("may differ from what is checked out here"), prompt);
         assertTrue(
                 prompt.contains("<forge-data>\nFailed jobs:\n- verify (https://ci/401)\n\nHow to read their logs:\n"
-                        + "gh run view 401 --log-failed --repo o/r\n</forge-data>"),
+                        + "read the log of run 401 of o/r\n</forge-data>"),
                 prompt);
+    }
+
+    @Test
+    void thePlaceholderOfTheChangeRequestIsItsNumberAloneWhateverTheForgeCallsIt() {
+        assertEquals("PR 12", Prompt.of(failed(MAIN_BRANCH), Option.of("PR {pr}"), Option.none()));
     }
 
     @Test
