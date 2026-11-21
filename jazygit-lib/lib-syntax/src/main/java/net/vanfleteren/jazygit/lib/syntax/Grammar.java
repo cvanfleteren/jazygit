@@ -21,6 +21,7 @@ import lombok.With;
  *                      {@code then-y} is no keyword
  * @param properties    whether a name, or a path of names with points between them, followed by one {@code =} is a
  *                      property: Nix's {@code services.nginx.enable = true;} (ADR 169)
+ * @param variables     whether a name after {@code $} is a variable, and so no keyword, as PHP's {@code $list}
  */
 record Grammar(
         Mode mode,
@@ -31,7 +32,8 @@ record Grammar(
         List<Delimited> strings,
         @With boolean annotations,
         @With String nameChars,
-        @With boolean properties) {
+        @With boolean properties,
+        @With boolean variables) {
 
     Grammar {
         strings = strings.sortBy(string -> -string.open().length());
@@ -42,7 +44,8 @@ record Grammar(
      */
     static Grammar code(
             String keywords, List<String> lineComments, List<Delimited> blockComments, List<Delimited> strings) {
-        return new Grammar(Mode.CODE, words(keywords), false, lineComments, blockComments, strings, false, "", false);
+        return new Grammar(
+                Mode.CODE, words(keywords), false, lineComments, blockComments, strings, false, "", false, false);
     }
 
     /**
@@ -58,7 +61,8 @@ record Grammar(
                 strings,
                 annotations,
                 nameChars,
-                properties);
+                properties,
+                variables);
     }
 
     /**

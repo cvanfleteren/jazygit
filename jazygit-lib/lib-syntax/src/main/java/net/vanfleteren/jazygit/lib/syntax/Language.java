@@ -50,6 +50,28 @@ public enum Language {
             "kt kts",
             ""),
     /**
+     * PHP, whose keywords are matched ignoring case and whose strings go on over lines. The HTML around its
+     * {@code <?php} blocks is scanned as PHP. Not: heredocs, and an attribute ({@code #[Route]}) is a comment.
+     */
+    PHP(
+            Grammar.code(
+                            """
+                    abstract and array as break callable case catch class clone const continue declare default die do
+                    echo else elseif empty enddeclare endfor endforeach endif endswitch endwhile eval exit extends
+                    final finally fn for foreach function global goto if implements include include_once instanceof
+                    insteadof interface isset list match namespace new or parent print private protected public
+                    readonly require require_once return self static switch throw trait try unset use var while xor
+                    yield true false null
+                    """,
+                            List.of("//", "#"),
+                            List.of(comment("/*", "*/")),
+                            List.of(quoted("\"").overLines(), quoted("'").overLines()))
+                    .ignoringCase()
+                    .withVariables(true),
+            "",
+            "php phtml",
+            "php"),
+    /**
      * JavaScript and TypeScript, which has its keywords and some more.
      */
     JAVASCRIPT(
@@ -197,6 +219,7 @@ public enum Language {
                     List.of(raw("\"").overLines(), raw("'").overLines()),
                     false,
                     "",
+                    false,
                     false),
             "",
             "xml html htm xhtml svg xsd xsl xslt fxml iml plist csproj props targets",
@@ -211,6 +234,7 @@ public enum Language {
                     List.empty(),
                     false,
                     "",
+                    false,
                     false),
             "",
             "md markdown mdx",

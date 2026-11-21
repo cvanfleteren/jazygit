@@ -107,7 +107,9 @@ public final class Lexer {
                     return scan.token(at, path, Kind.PROPERTY);
                 }
             }
-            return end - at <= LONGEST_KEYWORD && grammar.keyword(line.substring(at, end))
+            return end - at <= LONGEST_KEYWORD
+                            && !(grammar.variables() && at > 0 && line.charAt(at - 1) == '$')
+                            && grammar.keyword(line.substring(at, end))
                     ? scan.token(at, end, Kind.KEYWORD)
                     : scan.to(end);
         } else if (c == '@' && grammar.annotations() && annotationStarts(scan)) {

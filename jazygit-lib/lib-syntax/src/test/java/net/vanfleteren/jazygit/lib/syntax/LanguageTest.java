@@ -14,6 +14,8 @@ class LanguageTest {
         "build.gradle.kts, KOTLIN",
         "web/app.tsx, JAVASCRIPT",
         "lib/index.MJS, JAVASCRIPT",
+        "src/Controller.php, PHP",
+        "templates/page.phtml, PHP",
         "tool.py, PYTHON",
         "main.go, GO",
         "src/lib.rs, RUST",
@@ -47,6 +49,7 @@ class LanguageTest {
         "#!/usr/bin/env python3, PYTHON",
         "#!/usr/bin/python3.12 -u, PYTHON",
         "#!/usr/bin/env -S node --no-warnings, JAVASCRIPT",
+        "#!/usr/bin/env php, PHP",
     })
     void knowsALanguageByItsShebang(String shebang, Language language) {
         assertEquals(Option.of(language), Language.of("bin/tool", Option.of(shebang)));

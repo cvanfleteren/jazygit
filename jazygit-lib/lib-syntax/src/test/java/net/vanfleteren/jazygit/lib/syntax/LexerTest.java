@@ -227,6 +227,43 @@ class LexerTest {
     }
 
     @Test
+    void phpKeywordsAreMatchedIgnoringCaseAndAVariableIsNone() {
+        assertEquals(
+                List.of("KEYWORD New", "STRING 'a'", "KEYWORD NULL", "COMMENT # b"),
+                tokens(Language.PHP, "$list = New Foo($class, 'a', NULL); # b"));
+    }
+
+    @Test
+    void enumIsNoKeywordInPhpAsItIsAClassNameAsOften() {
+        assertEquals(
+                List.of("KEYWORD final", "KEYWORD class", "KEYWORD extends"),
+                tokens(Language.PHP, "final class Status extends Enum {"));
+    }
+
+    @Test
+    void phpHasCommentsOfCAndStringsThatGoOnOverLines() {
+        Lexed open = line(Language.PHP, new Outside(), "$s = 'a /* no comment */");
+        Lexed closed = line(Language.PHP, open.state(), "b'; // c /* d */");
+
+        assertEquals(List.of("STRING 'a /* no comment */"), shown("$s = 'a /* no comment */", open));
+        assertEquals(List.of("STRING b'", "COMMENT // c /* d */"), shown("b'; // c /* d */", closed));
+        assertEquals(List.of("COMMENT /* e */", "KEYWORD echo"), tokens(Language.PHP, "/* e */ echo $x;"));
+    }
+
+    @Test
+    void aWordAfterADollarIsAVariableInPhp() {
+        assertEquals(List.of("KEYWORD echo", "COMMENT # x"), tokens(Language.PHP, "echo $done; # x"));
+    }
+
+    /**
+     * The rule of a word after {@code $} is one a language takes on: only PHP has it, and a shell is lexed as it was.
+     */
+    @Test
+    void aWordAfterADollarIsAVariableOnlyInALanguageThatSaysSo() {
+        assertEquals(List.of("KEYWORD done", "KEYWORD select"), tokens(Language.SHELL, "x=$done$select"));
+    }
+
+    @Test
     void sqlKeywordsAreMatchedIgnoringCase() {
         assertEquals(
                 List.of("KEYWORD SELECT", "KEYWORD from", "KEYWORD Where", "STRING 'x'", "COMMENT -- all"),
