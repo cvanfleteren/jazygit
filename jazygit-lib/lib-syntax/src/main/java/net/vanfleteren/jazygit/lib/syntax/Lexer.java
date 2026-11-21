@@ -87,7 +87,10 @@ public final class Lexer {
         int at = scan.at();
         char c = line.charAt(at);
         if (OPENINGS.indexOf(c) >= 0) {
-            Option<String> lineComment = grammar.lineComments().find(open -> scan.opens(open));
+            Option<String> lineComment = grammar.lineComments()
+                    .find(open -> grammar.hashAnywhere() && open.startsWith("#")
+                            ? line.startsWith(open, at)
+                            : scan.opens(open));
             if (lineComment.isDefined()) {
                 return scan.token(at, line.length(), Kind.COMMENT);
             }

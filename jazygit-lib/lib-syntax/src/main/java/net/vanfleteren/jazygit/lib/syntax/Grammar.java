@@ -22,6 +22,9 @@ import lombok.With;
  * @param properties    whether a name, or a path of names with points between them, followed by one {@code =} is a
  *                      property: Nix's {@code services.nginx.enable = true;} (ADR 169)
  * @param variables     whether a name after {@code $} is a variable, and so no keyword, as PHP's {@code $list}
+ * @param hashAnywhere  whether a comment that starts with {@code #} starts right after anything, not only after a
+ *                      space or at the start of the line, as R's {@code f(1)# note}; a shell's needs the space, as
+ *                      its {@code $#} is no comment
  */
 record Grammar(
         Mode mode,
@@ -33,7 +36,8 @@ record Grammar(
         @With boolean annotations,
         @With String nameChars,
         @With boolean properties,
-        @With boolean variables) {
+        @With boolean variables,
+        @With boolean hashAnywhere) {
 
     Grammar {
         strings = strings.sortBy(string -> -string.open().length());
@@ -45,7 +49,17 @@ record Grammar(
     static Grammar code(
             String keywords, List<String> lineComments, List<Delimited> blockComments, List<Delimited> strings) {
         return new Grammar(
-                Mode.CODE, words(keywords), false, lineComments, blockComments, strings, false, "", false, false);
+                Mode.CODE,
+                words(keywords),
+                false,
+                lineComments,
+                blockComments,
+                strings,
+                false,
+                "",
+                false,
+                false,
+                false);
     }
 
     /**
@@ -62,7 +76,8 @@ record Grammar(
                 annotations,
                 nameChars,
                 properties,
-                variables);
+                variables,
+                hashAnywhere);
     }
 
     /**
