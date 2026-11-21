@@ -218,7 +218,7 @@ public enum Language {
                             List.empty(),
                             List.of(comment("/*", "*/")),
                             List.of(quoted("\""), quoted("'")))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "css",
             ""),
@@ -235,7 +235,7 @@ public enum Language {
                             List.of("//"),
                             List.of(comment("/*", "*/")),
                             List.of(quoted("\""), quoted("'")))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "scss sass",
             ""),
