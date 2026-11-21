@@ -22,6 +22,7 @@
         <module>core-repo</module>
         <module>core-git</module>
         <module>core-gh</module>
+        <module>core-forgejo</module>
         <module>core-askpass</module>
     </modules>
 </project>

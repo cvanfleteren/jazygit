@@ -13,15 +13,18 @@ import io.vavr.Tuple2;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
+import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.lang.reflect.Field;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import org.junit.jupiter.api.Test;
 
 /**
- * Each feature package declares its {@link Feature} once, and {@link Features#ALL} lists it (ADR 127). The feature
- * packages are those of the groups of features (ADR 136): each package right under {@code changes}, {@code branches}
- * and {@code chrome}, and {@code github} and {@code agent} (ADR 161) as a whole.
+ * Each feature package declares its {@link Feature} once, and {@link Features} lists it (ADR 127): among the features
+ * it runs without {@code --without}, as {@link Features#ALL} leaves the forges out in this module's tests (ADR 173,
+ * 174). The feature packages are those of the groups of features (ADR 136): each package right under
+ * {@code changes}, {@code branches} and {@code chrome}, and {@code github}, {@code forgejo} (ADR 174) and
+ * {@code agent} (ADR 161) as a whole.
  */
 class FeaturesTest {
 
@@ -35,7 +38,7 @@ class FeaturesTest {
     /**
      * The groups that are one feature each.
      */
-    private static final List<String> WHOLE = List.of("github", "agent");
+    private static final List<String> WHOLE = List.of("github", "forgejo", "agent");
 
     /**
      * The top-level feature packages that are no feature: {@code layout} has only global keys, {@code start} has
@@ -85,10 +88,12 @@ class FeaturesTest {
     @Test
     void everyFeatureIsListedOnce() {
         List<Feature> features = declared().map(Tuple2::_2);
-        assertTrue(features.forAll(feature -> Features.ALL.count(listed ->
-                        listed == feature || listed.applying().isDefined() && listed.actions() == feature.actions())
+        // Every feature declared, as the app's tests run without GitHub (ADR 173).
+        List<Feature> listed = Features.running(Option.none());
+        assertTrue(features.forAll(feature -> listed.count(
+                        each -> each == feature || each.applying().isDefined() && each.actions() == feature.actions())
                 == 1));
-        assertEquals(features.size(), Features.ALL.size());
+        assertEquals(features.size(), listed.size());
     }
 
     @Test

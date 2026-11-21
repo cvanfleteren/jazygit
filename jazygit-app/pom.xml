@@ -35,6 +35,10 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
+            <artifactId>features-forgejo</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
             <artifactId>features-chrome</artifactId>
         </dependency>
         <dependency>
@@ -158,6 +162,18 @@
                     <compilerArgs>
                         <arg>-Aproject=${project.groupId}/${project.artifactId}</arg>
                     </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- The app's tests run without GitHub, as if it were deleted (ADR 173): GitHub's own tests of the
+                         whole app are in jazygit-github-app-tests, which runs with it. Without Forgejo too, so that no
+                         test asks a host on the network whether it is Forgejo (ADR 174). -->
+                    <systemPropertyVariables>
+                        <jazygit.without>github,forgejo</jazygit.without>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>

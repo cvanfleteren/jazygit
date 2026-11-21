@@ -39,6 +39,7 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `core-repo` | `repo`: what a repository is made of, as values that git and gh share: `Sha`, `BranchName`, `Commit`, `Branch`, `Upstream`, `Tag`, `Stash` (ADR 165). | vavr |
 | ↳ `core-git` | `git`, `git.model`: running git, and what it reports as values, as diffs, blame and the status. | repo, base, process, syntax |
 | ↳ `core-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, repo, json |
+| ↳ `core-forgejo` | `forgejo`: asking Forgejo's HTTP API with fj's token, and what it reports as values: a commit's combined status, which hosts are Forgejo (ADR 174). | repo, json |
 | ↳ `core-askpass` | `askpass`: lets ssh ask the user through jazygit: the socket, the helper ssh runs, its launcher (ADR 150). | process, git |
 | `jazygit-kernel` | The kernel: what every feature builds on. | lib, core |
 | ↳ `kernel-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
@@ -49,9 +50,10 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits` and `changes.panes.stash`, the commits and stash panes (ADR 158). | ui |
 | ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
 | ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds, and how gh runs in the settings panel; the only module of the application that names gh. Deleting it, with `core-gh`, leaves jazygit working, without GitHub (ADR 171). | branches, changes, gh |
+| ↳ `features-forgejo` | `forgejo.*`: how the last build of each branch on Forgejo went, as a badge in the branches pane (ADR 174); the only module of the application that names `core-forgejo`. Deleting it, with `core-forgejo`, leaves jazygit working, without Forgejo. | forgejo |
 | ↳ `features-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
 | ↳ `features-agent` | `agent.*`: handing a failed build to a coding agent (ADR 161); it knows no forge, and reaches the build only through the keys a forge's views host. | — |
-| `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `StandardContent`, `Features`). Builds the fat jar and the native image. | the four groups, content, askpass, TamboUI's backend, picocli |
+| `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `StandardContent`, `Features`). Builds the fat jar and the native image. | the groups of features, content, askpass, TamboUI's backend, picocli |
 | `jazygit-github-app-tests` | Tests only: the tests of the whole app with GitHub in it, run against the app's test-jar, so that the app's own tests pass without GitHub (ADR 171). | app, github |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, ui, JMH |
@@ -359,9 +361,10 @@ sequenceDiagram
   app's keymap): those are in `jazygit-app`, in the package of what they test, and those of them that need GitHub in
   `jazygit-github-app-tests`, as `XxxGitHubTest` beside the app's `XxxTest`. `kernel-state`, `kernel-ui`,
   `features-branches`, `features-github` and the app share their test helpers as test-jars.
-- **Without GitHub**: `scripts/without-github.sh` deletes `features-github`, `core-gh` and
-  `jazygit-github-app-tests` in a copy of the repository, with their lines in the poms and in `Features.ALL`, and
-  verifies what is left; CI runs it as the `without-github` job (ADR 171).
+- **Without a forge**: `ForgesDeletableTest` checks that nothing but a forge's modules (`features-github`, `core-gh`
+  and `jazygit-github-app-tests`; `features-forgejo` and `core-forgejo`) and one line of `Features.ALL` names it, in
+  the classes and the poms, and the app's own tests run without the forges (`jazygit.without`), so that deleting one
+  leaves an app that works (ADR 171, 173, 174).
 - **Update functions** are pure: build a `Model` (`TestModels`), apply a `Msg`, assert on the next model and its
   commands. No git involved.
 - **`ProgramTest`** runs the real loop with queue executors and `StubGit`.
