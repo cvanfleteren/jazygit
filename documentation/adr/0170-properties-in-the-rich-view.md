@@ -1,4 +1,4 @@
-# 169. Properties in the rich view
+# 170. Properties in the rich view
 
 Date: 2026-11-21
 

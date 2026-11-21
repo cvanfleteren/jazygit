@@ -242,7 +242,7 @@ public enum Language {
     /**
      * Nix, whose strings go on over lines. An indented string ({@code ''…''}) has no backslash escapes, but escapes
      * of its own: {@code ''$}, {@code '''}, and {@code ''\} before any character. Its names hold dashes and quotes
-     * ({@code foo-bar}, {@code x'}), and a name a value is given to is a property (ADR 169).
+     * ({@code foo-bar}, {@code x'}), and a name a value is given to is a property (ADR 170).
      */
     NIX(
             Grammar.code(

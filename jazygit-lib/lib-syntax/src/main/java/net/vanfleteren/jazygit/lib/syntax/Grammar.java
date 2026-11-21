@@ -20,7 +20,7 @@ import lombok.With;
  *                      {@code -} and {@code '} ({@code foo-bar}, {@code x'}), so that the {@code then} of
  *                      {@code then-y} is no keyword
  * @param properties    whether a name, or a path of names with points between them, followed by one {@code =} is a
- *                      property: Nix's {@code services.nginx.enable = true;} (ADR 169)
+ *                      property: Nix's {@code services.nginx.enable = true;} (ADR 170)
  * @param variables     whether a name after {@code $} is a variable, and so no keyword, as PHP's {@code $list}
  * @param hashAnywhere  whether a comment that starts with {@code #} starts right after anything, not only after a
  *                      space or at the start of the line, as R's {@code f(1)# note}; a shell's needs the space, as
