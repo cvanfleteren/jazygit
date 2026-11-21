@@ -88,22 +88,24 @@ record Grammar(
      * Text between {@code open} and {@code close}: a string, or a block comment.
      *
      * @param multiline whether it can go on over the next lines; one that cannot ends with its line
-     * @param escapes   whether a backslash escapes the character after it, so that it does not close it
+     * @param escapes   what escapes a character in it, so that it does not close it; the first that fits is taken
      */
-    record Delimited(String open, String close, boolean multiline, boolean escapes) {
+    record Delimited(String open, String close, boolean multiline, List<Escape> escapes) {
+
+        private static final List<Escape> BACKSLASH = List.of(new Escape("\\", ""));
 
         /**
          * A string on one line, that ends with the quote it starts with, in which a backslash escapes.
          */
         static Delimited quoted(String quote) {
-            return new Delimited(quote, quote, false, true);
+            return new Delimited(quote, quote, false, BACKSLASH);
         }
 
         /**
          * A string on one line, that ends with the quote it starts with, in which a backslash is just a backslash.
          */
         static Delimited raw(String quote) {
-            return new Delimited(quote, quote, false, false);
+            return new Delimited(quote, quote, false, List.empty());
         }
 
         /**
@@ -113,8 +115,69 @@ record Grammar(
             return new Delimited(open, close, true, escapes);
         }
 
+        /**
+         * This, escaped by {@code escapes} alone: Nix's {@code ''$}, {@code '''} and {@code ''\} in a string between
+         * {@code ''}, in which a backslash is just a backslash.
+         */
+        Delimited escapedBy(Escape... escapes) {
+            return new Delimited(open, close, multiline, List.of(escapes));
+        }
+
         static Delimited comment(String open, String close) {
-            return new Delimited(open, close, true, false);
+            return new Delimited(open, close, true, List.empty());
+        }
+
+        /**
+         * Where the first escape in {@code text} from {@code from} on starts, or -1 when there is none.
+         */
+        int escapeFrom(String text, int from) {
+            int first = -1;
+            for (Escape escape : escapes) {
+                int at = escape.from(text, from);
+                if (at >= 0 && (first < 0 || at < first)) {
+                    first = at;
+                }
+            }
+            return first;
+        }
+
+        /**
+         * Where the escape that starts at {@code at} in {@code text} ends, with the character it escapes.
+         */
+        int escapeEnd(String text, int at) {
+            return escapes.find(escape -> escape.at(text, at))
+                    .map(escape -> at + escape.prefix().length() + 1)
+                    .getOrElse(at + 1);
+        }
+    }
+
+    /**
+     * What escapes the one character after it: {@code prefix}, when that character is one of {@code escaped}, or any
+     * when {@code escaped} is empty. A loop rather than a stream, as it runs for each string of each line of a diff.
+     */
+    record Escape(String prefix, String escaped) {
+
+        /**
+         * Where the first of it in {@code text} from {@code from} on starts, or -1 when there is none.
+         */
+        int from(String text, int from) {
+            for (int at = text.indexOf(prefix, from); at >= 0; at = text.indexOf(prefix, at + 1)) {
+                if (escapes(text, at + prefix.length())) {
+                    return at;
+                }
+            }
+            return -1;
+        }
+
+        /**
+         * Whether it starts at {@code at} in {@code text}.
+         */
+        boolean at(String text, int at) {
+            return text.startsWith(prefix, at) && escapes(text, at + prefix.length());
+        }
+
+        private boolean escapes(String text, int next) {
+            return escaped.isEmpty() || next < text.length() && escaped.indexOf(text.charAt(next)) >= 0;
         }
     }
 }
