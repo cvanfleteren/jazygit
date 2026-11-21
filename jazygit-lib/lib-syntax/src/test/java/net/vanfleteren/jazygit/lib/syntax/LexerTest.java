@@ -148,8 +148,44 @@ class LexerTest {
     @Test
     void nixKnowsItsKeywordsCommentsAndStrings() {
         assertEquals(
-                List.of("KEYWORD let", "STRING \"x-${y}\"", "COMMENT /* a */", "KEYWORD in", "COMMENT # b"),
+                List.of(
+                        "KEYWORD let",
+                        "PROPERTY a",
+                        "STRING \"x-${y}\"",
+                        "COMMENT /* a */",
+                        "KEYWORD in",
+                        "COMMENT # b"),
                 tokens(Language.NIX, "let a = \"x-${y}\"; /* a */ in pkgs.hello # b"));
+    }
+
+    @Test
+    void aNameANixValueIsGivenToIsAPropertyWithThePointsOfItsPath() {
+        assertEquals(
+                List.of("PROPERTY services.nginx.enable", "KEYWORD true", "COMMENT # on"),
+                tokens(Language.NIX, "  services.nginx.enable = true; # on"));
+        assertEquals(
+                List.of("KEYWORD rec", "PROPERTY version", "STRING \"1.0\"", "PROPERTY src"),
+                tokens(Language.NIX, "rec { version=\"1.0\"; src = ./.; }"));
+    }
+
+    @Test
+    void aNameThatIsComparedOrOnlyReadIsNoProperty() {
+        assertEquals(List.of("KEYWORD if", "KEYWORD then"), tokens(Language.NIX, "if a == b then pkgs.hello.x"));
+        assertEquals(List.of("KEYWORD null"), tokens(Language.NIX, "{ lib, cfg ? null }: x"));
+    }
+
+    @Test
+    void aNixNameHoldsItsDashesAndQuotes() {
+        assertEquals(
+                List.of("PROPERTY foo-bar", "PROPERTY x'"),
+                tokens(Language.NIX, "{ foo-bar = inherit-x; x' = then-y; }"));
+    }
+
+    @Test
+    void aLanguageWithoutPropertiesHasNone() {
+        assertEquals(List.of("NUMBER 1"), tokens(Language.TOML, "name = 1"));
+        assertEquals(List.of("KEYWORD int", "NUMBER 1"), tokens(Language.JAVA, "int a = 1;"));
+        assertEquals(List.of("KEYWORD done"), tokens(Language.SHELL, "x-done"));
     }
 
     @Test

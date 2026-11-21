@@ -83,6 +83,20 @@ class ThemeTest {
     }
 
     @Test
+    void theGitHubThemesColourPropertiesAsGitHubColoursTheKeysOfAnObject() {
+        var engine = Theme.createEngine().get();
+        Theme.activate(engine, ThemeName.GITHUB_DARK);
+        assertEquals(
+                java.util.Optional.of(Color.hex("#7ee787")),
+                Theme.spanStyles(engine).of(Theme.Classes.SYNTAX_PROPERTY).fg());
+
+        Theme.activate(engine, ThemeName.GITHUB_LIGHT);
+        assertEquals(
+                java.util.Optional.of(Color.hex("#116329")),
+                Theme.spanStyles(engine).of(Theme.Classes.SYNTAX_PROPERTY).fg());
+    }
+
+    @Test
     void aThemeWithoutRulesForTheNumbersOfChangedLinesNumbersThemAsTheOthers() {
         var engine = Theme.createEngine().get();
         Theme.SpanStyles styles = Theme.spanStyles(engine);

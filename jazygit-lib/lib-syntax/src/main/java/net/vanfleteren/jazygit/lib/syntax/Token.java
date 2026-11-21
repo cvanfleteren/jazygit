@@ -24,6 +24,11 @@ public record Token(int start, int length, Kind kind) {
         /**
          * An annotation, or a decorator: {@code @Override}, {@code @lombok.Getter}.
          */
-        ANNOTATION
+        ANNOTATION,
+        /**
+         * A name a value is given to, with the points of its path: Nix's {@code services.nginx.enable = true;}
+         * (ADR 169).
+         */
+        PROPERTY
     }
 }
