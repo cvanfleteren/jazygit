@@ -35,6 +35,7 @@ public final class HttpForgejo implements Forgejo {
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final int OK = 200;
+    private static final int SERVER_ERROR = 500;
 
     private static final Decoder<CommitStatus.Status> STATUS = map3(
             optionalField("context", string()).map(context -> context.getOrElse("")),
@@ -85,7 +86,7 @@ public final class HttpForgejo implements Forgejo {
 
     /**
      * {@inheritDoc} What the host answered is kept; a host that could not be reached, as one behind a VPN that is not
-     * up yet, is asked again the next time.
+     * up yet, or whose server failed, is asked again the next time.
      */
     @Override
     public boolean isForgejo(ForgejoRepository repository) {
@@ -95,11 +96,24 @@ public final class HttpForgejo implements Forgejo {
         }
         Either<ForgejoError, String> version = get(repository, "/api/forgejo/v1/version")
                 .flatMap(body -> VERSION.parse(body).mapLeft(error -> new ForgejoError.Unreadable(error.toString())));
-        if (version.isLeft() && version.getLeft() instanceof ForgejoError.Unreachable) {
+        if (version.isLeft() && passing(version.getLeft())) {
             return false;
         }
         forgejo.put(repository.base(), version.isRight());
         return version.isRight();
+    }
+
+    /**
+     * Whether {@code error} may pass, so that what it says of the host is not kept: the host could not be reached, or
+     * its server failed (5xx), as a reverse proxy does while Forgejo restarts. A 4xx, as the 404 of a host that is not
+     * Forgejo, is the host's answer.
+     */
+    private static boolean passing(ForgejoError error) {
+        return switch (error) {
+            case ForgejoError.Unreachable unreachable -> true;
+            case ForgejoError.Refused(int status, String why) -> status >= SERVER_ERROR;
+            case ForgejoError.Unreadable unreadable -> false;
+        };
     }
 
     @Override

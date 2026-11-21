@@ -27,10 +27,10 @@ a short sha and no branch, and leaves out the statuses of other CIs.
   token, which is enough for a public repository. The token is sent only over https: a remote over plain HTTP is
   asked without it.
 - **A remote is on Forgejo when its host answers `/api/forgejo/v1/version`** over https. What a host answered is kept
-  for the repository's opening; a host that could not be reached, as one behind a VPN that is not up yet, is asked
-  again the next time. The host of an ssh remote is fj's alias for it, if fj has one, else the same host on the https
-  port: an `ssh://git@code.example.net:10022/owner/repo.git` remote is `https://code.example.net`, repository
-  `owner/repo`.
+  for the repository's opening; a host that could not be reached, as one behind a VPN that is not up yet, or whose
+  server failed (5xx, as a reverse proxy while Forgejo restarts), is asked again the next time. The host of an ssh
+  remote is fj's alias for it, if fj has one, else the same host on the https port: an
+  `ssh://git@code.example.net:10022/owner/repo.git` remote is `https://code.example.net`, repository `owner/repo`.
   Hosts known to be another forge (github.com, gitlab.com, bitbucket.org) are not asked. The feature is on with one
   remote on Forgejo.
 - **A branch shows how the builds of the tip of the branch it follows on Forgejo went**, a remote branch those of its

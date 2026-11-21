@@ -107,6 +107,23 @@ class HttpForgejoTest {
     }
 
     @Test
+    void aHostWhoseServerFailedIsAskedAgain() {
+        // A reverse proxy answers 502 while Forgejo restarts, then Forgejo answers.
+        AtomicInteger asked = new AtomicInteger();
+        server.removeContext("/api/forgejo/v1/version");
+        server.createContext("/api/forgejo/v1/version", exchange -> {
+            if (asked.getAndIncrement() == 0) {
+                answer(exchange, 502, "Bad Gateway");
+            } else {
+                answer(exchange, 200, "{\"version\":\"17.0.2\"}");
+            }
+        });
+        HttpForgejo forgejo = HttpForgejo.of(() -> FjKeys.NONE);
+        assertFalse(forgejo.isForgejo(repository("nix")));
+        assertTrue(forgejo.isForgejo(repository("nix")));
+    }
+
+    @Test
     void aHostThatCouldNotBeReachedIsAskedAgainOnceItCanBe() throws IOException {
         // A port nothing listens on yet, as a host behind a VPN that is not up.
         int port;
