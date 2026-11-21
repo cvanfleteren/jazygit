@@ -123,7 +123,10 @@ public final class BaseUpdate {
                 .exists(parent -> parent.contains(branch));
     }
 
+    // What is stated is composed once, not for each branch a sort compares.
     private static Predicate<BranchName> root(Model model) {
-        return name -> BranchBases.in(model).root(name, AheadUpdate.main(model));
+        BranchBases bases = BranchBases.in(model);
+        Option<BranchName> main = AheadUpdate.main(model);
+        return name -> bases.root(name, main);
     }
 }
