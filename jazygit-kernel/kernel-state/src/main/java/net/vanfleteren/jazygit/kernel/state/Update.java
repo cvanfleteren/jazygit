@@ -90,6 +90,10 @@ public final class Update {
     }
 
     private static Next handle(Model model, Msg msg) {
+        // What a feature sends is its own message, a timer's too, once it is on (ADR 171).
+        if (msg instanceof FeatureMsg.Owned(String feature, Msg owned)) {
+            return model.on(feature) ? handle(model, owned) : Next.of(model);
+        }
         if (msg instanceof Msg.Periodic periodic
                 && !periodic.on(model.preferences().settings())) {
             return model.jobs().away() && periodic.readOnReturn()

@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Duration;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import org.junit.jupiter.api.Test;
@@ -50,5 +52,46 @@ class FeatureUpdateTest {
         assertEquals(Screen.REPOSITORY, offAgain.screen());
         // Told it applies as it already does, nothing changes.
         assertEquals(on, Update.update(on, new FeatureMsg.Applies("f", true)).model());
+    }
+
+    @Test
+    void aTimerOfAFeatureIsKeptWhileAwayAsAnyTimerIs() {
+        Model away = Update.focused(loaded(), false).model();
+
+        Model ticked =
+                Update.update(away, new FeatureMsg.Owned("f", new Poll(true))).model();
+
+        assertEquals(Screen.REPOSITORY, ticked.screen());
+        assertTrue(ticked.jobs().missed().contains(new Poll(true)));
+    }
+
+    @Test
+    void aTimerOfAFeatureTurnedOffInTheSettingsDoesNothing() {
+        Model model = loaded();
+
+        assertEquals(
+                model,
+                Update.update(model, new FeatureMsg.Owned("f", new Poll(false))).model());
+    }
+
+    /**
+     * What a feature's timer sends: it shows the feature's screen, unless it is turned off in the settings.
+     */
+    private record Poll(boolean enabled) implements Msg.Periodic {
+
+        @Override
+        public Duration whileAway() {
+            return Duration.ofMinutes(5);
+        }
+
+        @Override
+        public boolean on(Settings settings) {
+            return enabled;
+        }
+
+        @Override
+        public Next apply(Model model) {
+            return Next.of(model.withScreen(OWN));
+        }
     }
 }
