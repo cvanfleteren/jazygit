@@ -478,13 +478,6 @@ public record Feature(
             Path cacheDir) {}
 
     /**
-     * What a feature runs against for a repository.
-     *
-     * @param services       what it runs against of its own, under its services
-     * @param gitCredentials the environment git runs with to talk to the remotes as the account the feature knows,
-     *                       if it knows one
-     */
-    /**
      * How a feature decides whether it applies to a repository (ADR 171).
      *
      * @param id     its id, by which the model keeps whether it is on
@@ -524,6 +517,13 @@ public record Feature(
         }
     }
 
+    /**
+     * What a feature runs against for a repository.
+     *
+     * @param services       what it runs against of its own, under its services
+     * @param gitCredentials the environment git runs with to talk to the remotes as the account the feature knows,
+     *                       if it knows one
+     */
     public record Contribution(Env.Services services, Option<Supplier<Map<String, String>>> gitCredentials) {
 
         public static final Contribution NONE = new Contribution(Env.Services.NONE, Option.none());
