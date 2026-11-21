@@ -27,6 +27,7 @@
           ./jazygit-kernel
           ./jazygit-features
           ./jazygit-app
+          ./jazygit-github-app-tests
         ];
       };
       jazygit = pkgs:

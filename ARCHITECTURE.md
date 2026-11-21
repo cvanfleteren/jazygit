@@ -42,16 +42,17 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `core-askpass` | `askpass`: lets ssh ask the user through jazygit: the socket, the helper ssh runs, its launcher (ADR 150). | process, git |
 | `jazygit-kernel` | The kernel: what every feature builds on. | lib, core |
 | ↳ `kernel-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
-| ↳ `kernel-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, a subpackage per part of the model, and `Part`, a part a feature keeps itself. | lens, image, settings, git, gh, json, yaml, xml |
+| ↳ `kernel-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, a subpackage per part of the model, and `Part`, a part a feature keeps itself. | lens, image, settings, git, json, yaml, xml |
 | ↳ `kernel-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), `ui.settings` (`SettingsSection`, a section of the settings panel), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
 | ↳ `kernel-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | kernel |
 | ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits` and `changes.panes.stash`, the commits and stash panes (ADR 158). | ui |
 | ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
-| ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds, and how gh runs in the settings panel. | branches, changes |
+| ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds, and how gh runs in the settings panel; the only module of the application that names gh. Deleting it, with `core-gh`, leaves jazygit working, without GitHub (ADR 171). | branches, changes, gh |
 | ↳ `features-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
 | ↳ `features-agent` | `agent.*`: handing a failed build to a coding agent (ADR 161); it knows no forge, and reaches the build only through the keys a forge's views host. | — |
 | `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `StandardContent`, `Features`). Builds the fat jar and the native image. | the four groups, content, askpass, TamboUI's backend, picocli |
+| `jazygit-github-app-tests` | Tests only: the tests of the whole app with GitHub in it, run against the app's test-jar, so that the app's own tests pass without GitHub (ADR 171). | app, github |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`, `AppRules`) and the bundle checks (`Bundles`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, ui, JMH |
 
@@ -151,14 +152,24 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   reads in its part. A pane lives in the group that owns most of what it shows, in its `panes` package, as
   `changes.panes.commits`; the app gives it to `LeftColumn` as a `LeftPane`, and its id is a `PaneId` constant. The
   search of the commits is the first that moved.
-- **The kernel names no forge** (ADR 167, 169): GitHub's state, its stores, its screen and its stack are
-  `features-github`'s. The kernel composes what the features state the branches are built on (`BranchBases`, from
+- **The kernel names no forge** (ADR 167, 169, 171): GitHub's state, its stores, its screen, its stack and its
+  review threads are `features-github`'s. The kernel composes what the features state the branches are built on (`BranchBases`, from
   each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as a read of GitHub gets
   its id then), and holds what a feature runs against of its own in the `Env` under an `Env.Service` the feature
   declares, as its stores. A notice of a feature is one of its own sealed set, saying itself as a phrase
-  (`Notice.Phrased`), as its errors do. `AppRules.theKernelNamesNoForge` keeps `kernel..` from `core.gh..`, but for
-  the review threads of the rich diff, which the kernel still draws, and the gh their loads run against and fail
-  with (`AppRules.REVIEW_THREADS`).
+  (`Notice.Phrased`), as its errors do (`Failure.Phrased`). `AppRules.theKernelNamesNoForge` keeps `kernel..` from
+  `core.gh..` and `features.github..`, without exception.
+- **Remarks are the kernel's** (ADR 171): the rich diff draws `RemarkThread`s of `Remark`s, on a `DiffSide`, which a
+  part states for the changes open through `Part.remarking` (`StatedRemarks`); GitHub's `github.remarks` part reads
+  the review threads of a pull request when its files open (`KernelEvent.ChangesOpened`) and states them. The keys of
+  a diff with remarks are on `Scopes.REMARKED_DIFF`, which the feature that states them binds.
+- **A feature is on or off for a repository** (ADR 171): besides its actions, content and settings, a `Feature`
+  declares what it builds to run against when a repository opens (`running`, a `Contribution` of services to the
+  `Env`), its spinners and clocks (`spinning`, `clocking`), and whether it applies (`applying`, a detection run when
+  the repository opens). `Feature.gated` keeps what a feature that is off would show or run out (`Model.on`,
+  `FeatureSwitches`; keys through `Keymap.owned`, screens through `Screen.feature`, legends through
+  `Legend.feature`), but for its section of the settings panel. GitHub applies with a remote on a GitHub host and
+  gh found; it reads its pull requests once it is switched on (`KernelEvent.Switched`).
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys`, a dialog or a feature's content runs git or gh.
@@ -252,8 +263,8 @@ classDiagram
 
 - **`Msg` applies itself.** Each feature has a sealed sub-interface (`RewordMsg`) whose `apply` delegates to that
   feature's update class (`RewordUpdate`), so adding a feature changes neither `Update` nor `Msg`.
-- **`Cmd` is immutable data** that runs itself against an `Env` (the `Git`, the `GitHub`, the stores, and what the
-  features run against of their own, each under its `Env.Service`) and folds the `Either`
+- **`Cmd` is immutable data** that runs itself against an `Env` (the `Git`, the stores, and what the features run
+  against of their own, each under its `Env.Service`, as GitHub's `GitHub`) and folds the `Either`
   it gets into a `Msg`, a failure through `failed(Failure)`.
 - **`Load`** reads part of the repository into the model as a `Loadable` (`Loading`, `Loaded`, `Failed`).
 - **`OperationCmd`** changes the repository. Its outcome is `OperationMsg.Succeeded`, `Stopped` (on conflicts) or
@@ -342,8 +353,12 @@ sequenceDiagram
 ## Testing
 
 - **The tests go with their module**, but for those that need what it cannot see (a feature's messages or text, the
-  app's keymap): those are in `jazygit-app`, in the package of what they test. `kernel-state`, `kernel-ui`,
-  `features-branches` and `features-github` share their test helpers as test-jars.
+  app's keymap): those are in `jazygit-app`, in the package of what they test, and those of them that need GitHub in
+  `jazygit-github-app-tests`, as `XxxGitHubTest` beside the app's `XxxTest`. `kernel-state`, `kernel-ui`,
+  `features-branches`, `features-github` and the app share their test helpers as test-jars.
+- **Without GitHub**: `scripts/without-github.sh` deletes `features-github`, `core-gh` and
+  `jazygit-github-app-tests` in a copy of the repository, with their lines in the poms and in `Features.ALL`, and
+  verifies what is left; CI runs it as the `without-github` job (ADR 171).
 - **Update functions** are pure: build a `Model` (`TestModels`), apply a `Msg`, assert on the next model and its
   commands. No git involved.
 - **`ProgramTest`** runs the real loop with queue executors and `StubGit`.

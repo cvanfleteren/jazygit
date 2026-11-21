@@ -164,3 +164,6 @@ many resolved threads it has too.
 Amended by ADR 60: replying to a thread, resolving it and starting one, with a cursor in the rich view.
 
 Amended by ADR 62: `Space` collapses or opens any thread or comment, and `t` is gone.
+
+Amended by ADR 171: the threads are the kernel's `RemarkThread`s, which GitHub's part states for the pull request
+shown; the kernel places and draws them.

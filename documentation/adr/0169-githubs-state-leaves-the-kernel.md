@@ -71,3 +71,6 @@ in `features-changes`, run gh from the `Env` and fail with `Failure.GitHub`.
   exception.
 - `Bundles` skips the names of services, as it skips those of parts.
 - ADR 162 and ADR 167 get a line "Amended by ADR 169".
+
+Amended by ADR 171: the review threads leave the kernel, and with them the exception of the rule: `Failure.GitHub`
+becomes GitHub's, through `Failure.Phrased`, and `Env.gitHub` a service of `features-github`'s.
