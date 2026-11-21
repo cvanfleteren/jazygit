@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.app;
 
 import dev.tamboui.css.engine.StyleEngine;
 import io.vavr.Lazy;
+import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -9,6 +10,7 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.app.cli.StartupCli;
 import net.vanfleteren.jazygit.app.cli.StartupOptions;
+import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.app.keys.StandardSettings;
 import net.vanfleteren.jazygit.core.askpass.AskpassHelper;
 import net.vanfleteren.jazygit.core.askpass.AskpassServer;
@@ -52,7 +54,30 @@ final class Launcher {
         });
         StartupCli.parse(args, new PrintWriter(System.out), new PrintWriter(System.err))
                 .peekLeft(exit -> System.exit(exit.code()))
-                .forEach(Launcher::start);
+                .forEach(options -> without(options.without())
+                        .peekLeft(problem -> {
+                            System.err.println(problem);
+                            System.exit(2);
+                        })
+                        .forEach(ids -> start(options)));
+    }
+
+    /**
+     * Runs the app without the features of {@code ids}, as if they were deleted ({@code --without}), or says why it
+     * cannot: an id that is no feature's, which would silently run it after all. Done before anything asks for
+     * {@link Features#ALL}, which reads them once; naming {@link Features#WITHOUT}, a constant, does not ask for it.
+     */
+    static Either<String, List<String>> without(List<String> ids) {
+        if (ids.nonEmpty()) {
+            System.setProperty(Features.WITHOUT, ids.mkString(","));
+        }
+        List<String> unknown = ids.reject(Features.ids()::contains);
+        return unknown.isEmpty()
+                ? Either.right(ids)
+                : Either.left(Messages.get(
+                        "app.without.unknown",
+                        unknown.mkString(", "),
+                        Features.ids().mkString(", ")));
     }
 
     private static void start(StartupOptions options) {

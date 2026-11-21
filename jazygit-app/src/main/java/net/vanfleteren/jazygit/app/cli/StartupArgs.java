@@ -37,4 +37,10 @@ interface StartupArgs {
 
     @Option(names = "--debug", descriptionKey = "debug")
     boolean debug();
+
+    /**
+     * The ids of the features to run without, as if they were deleted; {@code null} when none is given.
+     */
+    @Option(names = "--without", paramLabel = "FEATURE", split = ",", descriptionKey = "without")
+    String[] without();
 }

@@ -57,6 +57,20 @@ class StartupCliTest {
     }
 
     @Test
+    void withoutNamesTheFeaturesToRunWithout() {
+        assertEquals(
+                Either.right(new StartupOptions(Option.none(), Option.none(), false, List.of("github", "agent"))),
+                parse("--without", "github", "--without=agent"));
+    }
+
+    @Test
+    void withoutTakesSeveralSeparatedByCommas() {
+        assertEquals(
+                Either.right(new StartupOptions(Option.none(), Option.none(), false, List.of("github", "agent"))),
+                parse("--without=github,agent"));
+    }
+
+    @Test
     void anUnknownThemeExitsWithTheThemesThereAre() {
         assertEquals(Either.left(new StartupCli.Exit(2)), parse("--theme", "purple"));
         assertTrue(
