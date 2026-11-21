@@ -14,12 +14,4 @@ import net.vanfleteren.jazygit.kernel.settings.ThemeName;
  * @param without the ids of the features to run without, as if they were deleted, for testing and debugging: they
  *                are not even found, as GitHub when gh is on the path (ADR 171)
  */
-public record StartupOptions(Option<Path> path, Option<ThemeName> theme, boolean debug, List<String> without) {
-
-    /**
-     * Starting as {@code path}, {@code theme} and {@code debug} say, with every feature.
-     */
-    public StartupOptions(Option<Path> path, Option<ThemeName> theme, boolean debug) {
-        this(path, theme, debug, List.empty());
-    }
-}
+public record StartupOptions(Option<Path> path, Option<ThemeName> theme, boolean debug, List<String> without) {}
