@@ -26,13 +26,14 @@ import java.util.Optional;
 class SyntaxArchitectureTest {
 
     /**
-     * Lexing is pure: it uses the JDK and Vavr, and nothing else.
+     * Lexing is pure: it uses the JDK and Vavr, and nothing else. Lombok's annotations, as on the methods its
+     * {@code @With} writes, are allowed, as the models' rule allows them: nothing of Lombok runs.
      */
     @ArchTest
     static final ArchRule usesOnlyTheJdkAndVavr = classes()
             .should()
             .onlyDependOnClassesThat()
-            .resideInAnyPackage("java..", "io.vavr..", "net.vanfleteren.jazygit.lib.syntax..");
+            .resideInAnyPackage("java..", "io.vavr..", "lombok..", "net.vanfleteren.jazygit.lib.syntax..");
 
     /**
      * State is never kept in a static field.

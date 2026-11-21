@@ -29,7 +29,7 @@ public enum Language {
                             List.of("//"),
                             List.of(comment("/*", "*/")),
                             List.of(quoted("\"\"\"").overLines(), quoted("\""), quoted("'")))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "java",
             ""),
@@ -45,7 +45,7 @@ public enum Language {
                             List.of("//"),
                             List.of(comment("/*", "*/")),
                             List.of(raw("\"\"\"").overLines(), quoted("\""), quoted("'")))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "kt kts",
             ""),
@@ -63,7 +63,7 @@ public enum Language {
                             List.of("//"),
                             List.of(comment("/*", "*/")),
                             List.of(quoted("`").overLines(), quoted("\""), quoted("'")))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "js mjs cjs jsx ts mts cts tsx",
             "node deno bun"),
@@ -83,7 +83,7 @@ public enum Language {
                                             quoted("\""),
                                             quoted("'")),
                                     "r b f u R B F U rb rB Rb RB br bR Br BR fr fR Fr FR rf rF Rf RF"))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "py pyi pyw",
             "python"),
@@ -180,7 +180,7 @@ public enum Language {
                                     raw("''").overLines().escapedBy(new Escape("''\\", ""), new Escape("''", "$'")),
                                     quoted("\"").overLines()))
                     .withNameChars("-'")
-                    .withProperties(),
+                    .withProperties(true),
             "",
             "nix",
             ""),

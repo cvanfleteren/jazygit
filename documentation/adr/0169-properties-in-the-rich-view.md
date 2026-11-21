@@ -23,7 +23,7 @@ dash: it coloured only `bar` of `foo-bar`, and the `inherit` of `inherit-x` as a
 
 - A sixth kind of token, a property: a name a value is given to, with the points of its path, like
   `services.nginx.enable`. In Nix only, for now; a `Grammar` says whether its language has them
-  (`withProperties()`), as it says so of annotations.
+  (`withProperties(true)`), as it says so of annotations.
 - A name is a property when one `=` follows it, after spaces and tabs on the same line, and not `==`. A name of the
   path in quotes (`"foo-bar".x = 1;`) or interpolated (`${n}.x = 1;`) is a string or plain, and breaks the path: only
   the names after the last such one are coloured (`x`), those before it are not (the `foo` of `foo."bar".baz = 1;`).
@@ -42,7 +42,7 @@ dash: it coloured only `bar` of `foo-bar`, and the `inherit` of `inherit-x` as a
 - A property whose `=` is on the next line is not coloured, nor are the names after `inherit` and the arguments of a
   function.
 - The same rule fits the keys of TOML (`name = …`) and, with `:` in place of `=`, of YAML and JSON; a language takes
-  it on with `withProperties()`, which only Nix does here.
+  it on with `withProperties(true)`, which only Nix does here.
 - A theme has one more class to keep.
 
 Amends ADR 53, which coloured no names, and ADR 113, which added the fifth kind of token.

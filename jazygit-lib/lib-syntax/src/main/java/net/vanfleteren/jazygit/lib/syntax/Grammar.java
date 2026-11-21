@@ -4,6 +4,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import java.util.Locale;
+import lombok.With;
 
 /**
  * What the lexer needs to know of a language.
@@ -15,8 +16,11 @@ import java.util.Locale;
  * @param blockComments the comments that end where they say
  * @param strings       its kinds of strings, the longest openings first
  * @param annotations   whether a name after {@code @} is an annotation, or a decorator
- * @param nameChars     the characters a name holds after its first, besides letters, digits and underscores
- * @param properties    whether a name followed by one {@code =} is a property (ADR 169)
+ * @param nameChars     the characters a name holds after its first, besides letters, digits and underscores: Nix's
+ *                      {@code -} and {@code '} ({@code foo-bar}, {@code x'}), so that the {@code then} of
+ *                      {@code then-y} is no keyword
+ * @param properties    whether a name, or a path of names with points between them, followed by one {@code =} is a
+ *                      property: Nix's {@code services.nginx.enable = true;} (ADR 169)
  */
 record Grammar(
         Mode mode,
@@ -25,9 +29,9 @@ record Grammar(
         List<String> lineComments,
         List<Delimited> blockComments,
         List<Delimited> strings,
-        boolean annotations,
-        String nameChars,
-        boolean properties) {
+        @With boolean annotations,
+        @With String nameChars,
+        @With boolean properties) {
 
     Grammar {
         strings = strings.sortBy(string -> -string.open().length());
@@ -55,32 +59,6 @@ record Grammar(
                 annotations,
                 nameChars,
                 properties);
-    }
-
-    /**
-     * This grammar, in which a name after {@code @} is an annotation, or a decorator.
-     */
-    Grammar withAnnotations() {
-        return new Grammar(
-                mode, keywords, ignoreCase, lineComments, blockComments, strings, true, nameChars, properties);
-    }
-
-    /**
-     * This grammar, in which a name also holds {@code chars} after its first character: Nix's {@code foo-bar} and
-     * {@code x'}, so that the {@code then} of {@code then-y} is no keyword.
-     */
-    Grammar withNameChars(String chars) {
-        return new Grammar(
-                mode, keywords, ignoreCase, lineComments, blockComments, strings, annotations, chars, properties);
-    }
-
-    /**
-     * This grammar, in which a name, or a path of names with points between them, followed by one {@code =} is a
-     * property: Nix's {@code services.nginx.enable = true;} (ADR 169).
-     */
-    Grammar withProperties() {
-        return new Grammar(
-                mode, keywords, ignoreCase, lineComments, blockComments, strings, annotations, nameChars, true);
     }
 
     /**
