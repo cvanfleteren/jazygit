@@ -1,20 +1,20 @@
 package net.vanfleteren.jazygit.features.github;
 
-import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.features.github.state.GitHubState;
-import java.time.Instant;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
+import java.time.Instant;
 import net.vanfleteren.jazygit.features.github.prs.LoadMyPullRequests;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import org.junit.jupiter.api.Test;
