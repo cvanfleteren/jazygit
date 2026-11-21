@@ -223,9 +223,6 @@ public record GitHubState(
     }
 
     /**
-     * The open pull requests, as read last; none until they were read.
-     */
-    /**
      * What GitHub says the branches are built on (ADR 72, 169): by the branch an open pull request merges from, the
      * branch below it in its stack, else the base it merges into; and the protected branches, which are roots, as the
      * main branch is. All are branches as GitHub names them, so that this changes only when GitHub's answer does.
@@ -254,6 +251,9 @@ public record GitHubState(
                 .map(FromGitHub::branch);
     }
 
+    /**
+     * The open pull requests, as read last; none until they were read.
+     */
     private List<PullRequest> open() {
         return pullRequests.map(byBranch -> byBranch.values().toList()).getOrElse(List.empty());
     }
