@@ -34,6 +34,11 @@ final class RenderedVersion {
      */
     static final int GUTTER = 2;
 
+    /**
+     * The blank column a version rendered leaves on the right of its area, so its text does not run up to the border.
+     */
+    static final int MARGIN = 1;
+
     private static final String BAR = "▎";
 
     private RenderedVersion() {}
@@ -67,8 +72,7 @@ final class RenderedVersion {
             return tree(tree.get(), new RenderedFile(path, lines, fold, width, tinted, styles), changed, unchanged)
                     .prepend(header);
         }
-        Vector<RenderedMarkdown.Block> blocks = RenderedMarkdown.blocks(
-                        lines.map(DiffLine::text), Math.max(1, width - GUTTER), styles)
+        Vector<RenderedMarkdown.Block> blocks = RenderedMarkdown.blocks(lines.map(DiffLine::text), room(width), styles)
                 .toVector();
         Vector<Marked> body = blocks.zipWithIndex().flatMap(at -> {
             RenderedMarkdown.Block block = at._1();
@@ -132,7 +136,7 @@ final class RenderedVersion {
                         kind,
                         lines.map(DiffLine::text),
                         fold.read() == Expansion.Read.CUT,
-                        Math.max(1, width - GUTTER),
+                        room(width),
                         fold.nodes(),
                         styles)
                 .fold(
@@ -189,6 +193,14 @@ final class RenderedVersion {
                 .collect(Collectors.joining());
         return Marked.plain(
                 Line.from(Span.raw(" ".repeat(GUTTER) + blanks), RichDiff.styled("^", Theme.Classes.ERROR, styles)));
+    }
+
+    /**
+     * How wide the text of a version rendered {@code width} columns wide is drawn: its gutter on the left and its
+     * margin on the right left out, but a column at least.
+     */
+    private static int room(int width) {
+        return Math.max(1, width - GUTTER - MARGIN);
     }
 
     /**

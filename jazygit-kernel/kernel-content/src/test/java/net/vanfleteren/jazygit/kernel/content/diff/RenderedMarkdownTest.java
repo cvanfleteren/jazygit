@@ -130,6 +130,34 @@ class RenderedMarkdownTest {
     }
 
     @Test
+    void aVersionRenderedLeavesTheLastColumnOfItsAreaBlank() {
+        // Words of two letters and a blank fill the 38 columns after the gutter exactly, up to the border.
+        String paragraph = "ab ".repeat(30).strip();
+        ParsedDiff.ParsedFile whole =
+                ParsedDiff.of("""
+                        diff --git a/README.md b/README.md
+                        --- a/README.md
+                        +++ b/README.md
+                        @@ -1,1 +1,1 @@
+                         %s
+                        """.formatted(paragraph)).files().head();
+
+        List<String> rows = text(RichDiff.drawn(
+                                new Expansion.Folded(
+                                        new ParsedDiff(List.empty(), List.of(FileVersion.NEW.of(whole))),
+                                        HashMap.of("README.md", Expansion.Fold.of(FileVersion.NEW, false, 1, true))),
+                                Option.none(),
+                                Option.none(),
+                                RichDiff.Drawing.of(Theme.SpanStyles.NONE).withWidth(40))
+                        .lines())
+                .tail()
+                .map(String::stripTrailing);
+
+        assertTrue(rows.size() > 1, rows.toString());
+        assertTrue(rows.forAll(row -> row.length() <= 39), rows.toString());
+    }
+
+    @Test
     void aThemeThatTintsChangedLinesHasABarInTheColourOfTheirMarkerNotOfTheTint() {
         assertEquals(List.of(Optional.of(Color.LIGHT_GREEN)), bars(FileVersion.NEW));
         assertEquals(List.of(Optional.of(Color.LIGHT_RED)), bars(FileVersion.ORIGINAL));
