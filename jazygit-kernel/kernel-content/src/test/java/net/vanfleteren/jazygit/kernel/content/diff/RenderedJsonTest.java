@@ -98,6 +98,22 @@ class RenderedJsonTest {
     }
 
     @Test
+    void aVersionRenderedLeavesTheLastColumnOfItsAreaBlank() {
+        // Forty digits pack into rows 36 columns wide in the 38 after the gutter, but 33 wide in 37.
+        String json = "{\"n\": [" + List.fill(40, "1").mkString(", ") + "]}";
+        String diff = "diff --git a/a.json b/a.json\n--- a/a.json\n+++ b/a.json\n@@ -1,1 +1,1 @@\n " + json + "\n";
+
+        List<String> rows = drawnText(drawn(diff, FileVersion.NEW, false, HashMap.of("/n", true)))
+                .tail();
+
+        // The gutter, then the rows as packed one column narrower than the area after it.
+        assertEquals(
+                text(json, HashMap.of("/n", true), 40 - RenderedVersion.GUTTER - 1)
+                        .map(row -> ("  " + row).stripTrailing()),
+                rows);
+    }
+
+    @Test
     void anArrayOfRecordsIsATable() {
         List<String> rows = text("""
                 {"checks": [
