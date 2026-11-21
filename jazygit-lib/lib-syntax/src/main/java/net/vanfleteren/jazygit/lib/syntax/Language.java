@@ -166,6 +166,36 @@ public enum Language {
             "toml",
             ""),
     /**
+     * CSS, whose at-rules ({@code @media}) are its annotations. Its keywords are those that mean the same in every
+     * property, and {@code !important}: a word of a value, like {@code none}, is the name of a class as often.
+     */
+    CSS(
+            Grammar.code(
+                            "important inherit initial unset revert",
+                            List.empty(),
+                            List.of(comment("/*", "*/")),
+                            List.of(quoted("\""), quoted("'")))
+                    .withAnnotations(),
+            "",
+            "css",
+            ""),
+    /**
+     * Sass, in both its syntaxes: SCSS ({@code .scss}) and the indented one ({@code .sass}). It has the keywords of
+     * CSS and its own values, comments that run to the end of the line, and at-rules of its own ({@code @mixin},
+     * {@code @include}, {@code @if}, …) as annotations. Not: a {@code //} in an unquoted {@code url(…)}, which starts a
+     * comment here.
+     */
+    SASS(
+            Grammar.code(
+                            "important inherit initial unset revert true false null",
+                            List.of("//"),
+                            List.of(comment("/*", "*/")),
+                            List.of(quoted("\""), quoted("'")))
+                    .withAnnotations(),
+            "",
+            "scss sass",
+            ""),
+    /**
      * XML and HTML.
      */
     XML(
