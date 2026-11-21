@@ -161,6 +161,18 @@ class LexerTest {
     }
 
     @Test
+    void theEscapesOfANixIndentedStringDoNotEndIt() {
+        Lexed open = line(Language.NIX, new Outside(), "  buildPhase = ''");
+        String escaped = "    cp ''${HOME} '''x''' ''\\n if";
+        Lexed inside = line(Language.NIX, open.state(), escaped);
+
+        assertEquals(List.of("STRING " + escaped), shown(escaped, inside));
+        assertEquals(
+                List.of("STRING   ''", "KEYWORD inherit"),
+                shown("  ''; inherit x;", line(Language.NIX, inside.state(), "  ''; inherit x;")));
+    }
+
+    @Test
     void aNixStringGoesOnOverTheNextLines() {
         Lexed open = line(Language.NIX, new Outside(), "  description = \"one");
 

@@ -294,15 +294,16 @@ public final class Lexer {
          */
         Scan inside(int start, int from, Inside inside) {
             Delimited delimited = inside.delimited();
+            int step = delimited.escapeLength();
             // From each escape on to the next, until there is no escape before the first close; the close is only
             // looked for again once an escape has stepped past it, so a string of many escapes is read once.
             Option<Integer> end = Iterator.iterate(
-                            Tuple.of(
-                                    line.indexOf(delimited.close(), from),
-                                    delimited.escapes() ? line.indexOf('\\', from) : -1),
+                            Tuple.of(line.indexOf(delimited.close(), from), delimited.escapeFrom(line, from)),
                             found -> Tuple.of(
-                                    found._1 >= found._2 + 2 ? found._1 : line.indexOf(delimited.close(), found._2 + 2),
-                                    line.indexOf('\\', found._2 + 2)))
+                                    found._1 >= found._2 + step
+                                            ? found._1
+                                            : line.indexOf(delimited.close(), found._2 + step),
+                                    delimited.escapeFrom(line, found._2 + step)))
                     .find(found -> found._1 < 0 || found._2 < 0 || found._2 > found._1)
                     .map(found -> found._1)
                     .filter(close -> close >= 0)

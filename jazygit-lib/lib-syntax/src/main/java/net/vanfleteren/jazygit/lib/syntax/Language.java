@@ -166,15 +166,17 @@ public enum Language {
             "toml",
             ""),
     /**
-     * Nix, whose strings go on over lines. An indented string ({@code ''…''}) has no backslash escapes, and its own
-     * escapes ({@code '''}, {@code ''$}) end it early.
+     * Nix, whose strings go on over lines. An indented string ({@code ''…''}) has no backslash escapes, but escapes
+     * of its own: {@code ''$}, {@code '''} and {@code ''\}.
      */
     NIX(
             Grammar.code(
                     "assert else if in inherit let or rec then with true false null",
                     List.of("#"),
                     List.of(comment("/*", "*/")),
-                    List.of(raw("''").overLines(), quoted("\"").overLines())),
+                    List.of(
+                            raw("''").overLines().escapedBy("''", "$'\\"),
+                            quoted("\"").overLines())),
             "",
             "nix",
             ""),
@@ -279,7 +281,11 @@ public enum Language {
      */
     private static List<Delimited> prefixed(List<Delimited> strings, String prefixes) {
         return strings.appendAll(List.ofAll(Grammar.words(prefixes))
-                .flatMap(prefix -> strings.map(string ->
-                        new Delimited(prefix + string.open(), string.close(), string.multiline(), string.escapes()))));
+                .flatMap(prefix -> strings.map(string -> new Delimited(
+                        prefix + string.open(),
+                        string.close(),
+                        string.multiline(),
+                        string.escape(),
+                        string.escaped()))));
     }
 }
