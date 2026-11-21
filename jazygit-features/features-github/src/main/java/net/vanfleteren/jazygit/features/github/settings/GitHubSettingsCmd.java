@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.github.settings;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 
@@ -32,10 +33,10 @@ public sealed interface GitHubSettingsCmd extends Cmd {
         public Msg run(Env env) {
             Option<GhAccount> account = env.gitHub().account().current();
             return new GitHubSettingsMsg.GitHubRead(new GitHubSetup(
-                    env.gitHub().account().version(executable).mapLeft(Failure.GitHub::new),
+                    env.gitHub().account().version(executable).mapLeft(GitHubFailure::new),
                     GitHubAccount.host(env.git()),
                     env.git().config().local(GitHubAccount.USER_KEY).getOrElse(Option.none()),
-                    env.gitHub().account().logins().mapLeft(Failure.GitHub::new),
+                    env.gitHub().account().logins().mapLeft(GitHubFailure::new),
                     account,
                     account.flatMap(known -> env.gitHub().account().ghBrowser(known.host()))));
         }
@@ -66,7 +67,7 @@ public sealed interface GitHubSettingsCmd extends Cmd {
         public Msg run(Env env) {
             return new GitHubSettingsMsg.GhExecutableChecked(
                     executable,
-                    env.gitHub().account().version(executable.getOrElse("gh")).mapLeft(Failure.GitHub::new));
+                    env.gitHub().account().version(executable.getOrElse("gh")).mapLeft(GitHubFailure::new));
         }
 
         @Override

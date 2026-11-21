@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.state.GitHubAccount;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
@@ -194,7 +195,7 @@ class GitHubSettingsUpdateTest {
 
     @Test
     void aGhExecutableThatDoesNotRunIsNotUsed() {
-        Failure failure = new Failure.GitHub(new GhError.GhUnavailable(new java.io.IOException("no such file")));
+        Failure failure = new GitHubFailure(new GhError.GhUnavailable(new java.io.IOException("no such file")));
 
         Next next = Update.update(
                 TestModels.loaded()

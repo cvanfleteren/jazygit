@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -42,7 +43,7 @@ public sealed interface DeleteCommentCmd extends Cmd {
             return env.gitHub()
                     .reviews()
                     .deleteRemark(comment)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, this::succeeded);
         }
 

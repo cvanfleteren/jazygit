@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.github.prs;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -28,7 +29,7 @@ public record LoadMyPullRequests() implements Cmd {
         return env.gitHub()
                 .pullRequests()
                 .mine()
-                .mapLeft(Failure::of)
+                .mapLeft(GitHubFailure::of)
                 .fold(this::failed, read -> new PrOverviewMsg.MineLoaded(read));
     }
 

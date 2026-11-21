@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.Verdict;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.comment.CommentCmd;
 import net.vanfleteren.jazygit.features.github.compose.EditorFile;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -49,7 +50,7 @@ public sealed interface VerdictCmd extends Cmd {
             return env.gitHub()
                     .reviews()
                     .submit(pullRequest, verdict, body)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, this::succeeded);
         }
 

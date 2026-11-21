@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.checks.Checks;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -49,8 +50,8 @@ public record RerunCmd(RemoteBranch branch, List<RerunPlan.Run> runs) implements
                 this,
                 runs.zipWith(
                         done,
-                        (run, result) ->
-                                new Outcome(run, result.swap().map(Failure::of).toOption())),
+                        (run, result) -> new Outcome(
+                                run, result.swap().map(GitHubFailure::of).toOption())),
                 done.flatMap(result -> result.fold(GhFailure::commands, commands -> commands)));
     }
 

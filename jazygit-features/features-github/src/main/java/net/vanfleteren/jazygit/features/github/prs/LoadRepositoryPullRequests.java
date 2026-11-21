@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.github.prs;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.GitHubStores;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -29,7 +30,7 @@ public record LoadRepositoryPullRequests() implements GitHubState.ListRead {
         return env.gitHub()
                 .pullRequests()
                 .ofRepository()
-                .mapLeft(Failure::of)
+                .mapLeft(GitHubFailure::of)
                 .fold(
                         this::failed,
                         read -> new PrOverviewMsg.RepositoryLoaded(

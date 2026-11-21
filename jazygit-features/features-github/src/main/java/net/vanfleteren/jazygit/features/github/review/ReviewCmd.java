@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.compose.EditorFile;
 import net.vanfleteren.jazygit.features.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -71,19 +72,19 @@ public sealed interface ReviewCmd extends Cmd {
                     env.gitHub()
                             .reviews()
                             .reply(number, comment, body)
-                            .mapLeft(Failure::of)
+                            .mapLeft(GitHubFailure::of)
                             .fold(this::failed, this::succeeded);
                 case Target.Start(Sha commit, String path, var lines) ->
                     env.gitHub()
                             .reviews()
                             .startThread(number, new GhCommit(commit.value()), new NewReviewThread(path, lines, body))
-                            .mapLeft(Failure::of)
+                            .mapLeft(GitHubFailure::of)
                             .fold(this::failed, this::succeeded);
                 case Target.Edit(var ignored, ReviewThread.Comment.Id comment, String original) ->
                     env.gitHub()
                             .reviews()
                             .editRemark(comment, body)
-                            .mapLeft(Failure::of)
+                            .mapLeft(GitHubFailure::of)
                             .fold(
                                     this::failed,
                                     edited -> new ReviewMsg.CommentEdited(this, edited.body(), edited.commands()));
@@ -122,7 +123,7 @@ public sealed interface ReviewCmd extends Cmd {
             return env.gitHub()
                     .reviews()
                     .resolve(thread, resolved)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, this::succeeded);
         }
 

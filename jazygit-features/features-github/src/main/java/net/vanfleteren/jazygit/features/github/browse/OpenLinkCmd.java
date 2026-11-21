@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.github.browse;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.kernel.state.Env;
-import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
@@ -27,6 +27,6 @@ public record OpenLinkCmd(String url) implements OperationCmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub().account().openLink(url).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+        return env.gitHub().account().openLink(url).mapLeft(GitHubFailure::of).fold(this::failed, this::succeeded);
     }
 }

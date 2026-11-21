@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.kernel.ui.text;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
@@ -45,10 +44,7 @@ public final class ErrorText {
                 cleanupFailed
                         .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
                         .getOrElse(() -> of(error));
-            case Failure.GitHub(GhError error, var commands, var cleanupFailed) ->
-                cleanupFailed
-                        .map(cleanup -> Messages.get("error.cleanupFailed", of(error), of(cleanup)))
-                        .getOrElse(() -> of(error));
+            case Failure.Phrased phrased -> of(phrased.phrase());
             case Failure.Settings(SettingsProblem problem) -> of(problem);
             case Failure.Bug(Throwable cause) -> Messages.get("error.bug", reason(cause));
         };
@@ -56,27 +52,6 @@ public final class ErrorText {
 
     public static String of(SettingsProblem problem) {
         return of(SettingsError.said(problem));
-    }
-
-    public static String of(GhError error) {
-        return switch (error) {
-            case GhError.GhUnavailable(var cause) -> Messages.get("gh.notInstalled");
-            case GhError.TimedOut(String operation) -> Messages.get("gh.timedOut", operation);
-            case GhError.Interrupted(String operation) -> Messages.get("gh.interrupted", operation);
-            case GhError.TooMuchOutput(String operation) -> Messages.get("gh.tooMuchOutput", operation);
-            case GhError.CommandFailed(var explanation, int exitCode) ->
-                explanation.getOrElse(() -> Messages.get("gh.exitedWithCode", String.valueOf(exitCode)));
-            case GhError.UnexpectedOutput(String output) -> Messages.get("gh.unexpectedOutput", output);
-            case GhError.TooOld(String needed) -> Messages.get("gh.tooOld", needed);
-            case GhError.Gone() -> Messages.get("gh.gone");
-            case GhError.BrowserFailed(String browser, var exitCode) ->
-                exitCode.map(code -> Messages.get("gh.browserFailed", browser, String.valueOf(code)))
-                        .getOrElse(() -> Messages.get("gh.browserNotStarted", browser));
-            case GhError.NoBrowser() -> Messages.get("gh.noBrowser");
-            case GhError.FileFailed(var file, var cause) -> Messages.get("gh.fileFailed", file, reason(cause));
-            case GhError.TokenUnavailable(var account, GhError cause) ->
-                Messages.get("gh.tokenUnavailable", account.user(), account.host(), of(cause));
-        };
     }
 
     public static String of(GitError error) {

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.github.builds;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -28,7 +29,7 @@ public record LoadWorkflowRuns(String workflowId, Option<String> after) implemen
         return env.gitHub()
                 .checks()
                 .workflowRuns(workflowId, after)
-                .mapLeft(Failure::of)
+                .mapLeft(GitHubFailure::of)
                 .fold(this::failed, page -> new BuildsMsg.RunsRead(workflowId, after, page));
     }
 

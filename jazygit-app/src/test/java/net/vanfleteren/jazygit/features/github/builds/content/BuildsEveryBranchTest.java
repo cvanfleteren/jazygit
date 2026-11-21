@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
@@ -236,7 +237,7 @@ class BuildsEveryBranchTest {
         return ((Shown.Area) ContentViews.of(model, BranchesPanel.PANE)).title();
     }
 
-    private static final Failure TIMEOUT = Failure.of(new GhError.UnexpectedOutput("timeout"));
+    private static final Failure TIMEOUT = GitHubFailure.of(new GhError.UnexpectedOutput("timeout"));
 
     @Test
     void mOnEveryBranchReadsAgainFromWhereReadingTheRunsFailed() {

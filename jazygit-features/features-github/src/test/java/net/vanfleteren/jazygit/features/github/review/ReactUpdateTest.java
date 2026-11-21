@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -205,7 +206,7 @@ class ReactUpdateTest {
                 new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.ROCKET, true);
 
         Next failed = Update.update(
-                files(), new ReactMsg.ReactFailed(react, new Failure.GitHub(new GhError.Gone(), List.empty())));
+                files(), new ReactMsg.ReactFailed(react, new GitHubFailure(new GhError.Gone(), List.empty())));
 
         assertEquals(List.of("C1"), comments(failed.model(), "T1"));
         assertEquals(1, view(failed.model()).version());

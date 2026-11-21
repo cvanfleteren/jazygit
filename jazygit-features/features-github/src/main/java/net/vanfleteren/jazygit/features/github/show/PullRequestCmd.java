@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
@@ -83,7 +84,7 @@ public sealed interface PullRequestCmd extends Cmd {
             return env.gitHub()
                     .account()
                     .openPullRequest(number)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, this::succeeded);
         }
     }
@@ -105,7 +106,7 @@ public sealed interface PullRequestCmd extends Cmd {
             return env.gitHub()
                     .pullRequests()
                     .merge(number, head, method)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(
                             this::failed,
                             merging -> new PullRequestMsg.MergeAsked(this, merging.status(), merging.commands()));
@@ -167,7 +168,7 @@ public sealed interface PullRequestCmd extends Cmd {
             return env.gitHub()
                     .pullRequests()
                     .enableAutoMerge(pullRequest, method, head)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, this::succeeded);
         }
     }
@@ -189,7 +190,7 @@ public sealed interface PullRequestCmd extends Cmd {
             return env.gitHub()
                     .pullRequests()
                     .disableAutoMerge(pullRequest)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, this::succeeded);
         }
     }
@@ -214,7 +215,7 @@ public sealed interface PullRequestCmd extends Cmd {
             return env.gitHub()
                     .pullRequests()
                     .mergeStatus(number, id)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, status -> new PullRequestMsg.MergeChecked(number, id, status));
         }
 
@@ -239,7 +240,7 @@ public sealed interface PullRequestCmd extends Cmd {
             return env.gitHub()
                     .pullRequests()
                     .close(number)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, this::succeeded);
         }
     }
@@ -275,7 +276,7 @@ public sealed interface PullRequestCmd extends Cmd {
             return env.gitHub()
                     .pullRequests()
                     .setDraft(number, draft)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, this::succeeded);
         }
 
@@ -301,7 +302,7 @@ public sealed interface PullRequestCmd extends Cmd {
             return env.gitHub()
                     .pullRequests()
                     .details(number)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, details -> new PullRequestMsg.DetailsLoaded(number, read, details));
         }
 

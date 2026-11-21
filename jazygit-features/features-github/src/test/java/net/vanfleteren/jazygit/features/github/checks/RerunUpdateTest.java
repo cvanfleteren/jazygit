@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.state.BranchChecksMsg;
 import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.state.LoadBranchChecks;
@@ -324,7 +325,7 @@ class RerunUpdateTest {
                 new ChecksMsg.Rerun(
                         cmd,
                         List.of(
-                                new RerunCmd.Outcome(BUILD, Option.of(Failure.of(forbidden))),
+                                new RerunCmd.Outcome(BUILD, Option.of(GitHubFailure.of(forbidden))),
                                 new RerunCmd.Outcome(E2E, Option.none())),
                         List.of(POSTED, POSTED)),
                 cmd.run(env));

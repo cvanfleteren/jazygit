@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.features.github.checkout;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.kernel.state.Env;
-import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
@@ -37,7 +37,7 @@ public record CheckoutPullRequestCmd(PullRequestSummary pullRequest) implements 
         return env.gitHub()
                 .pullRequests()
                 .checkout(pullRequest.number())
-                .mapLeft(Failure::of)
+                .mapLeft(GitHubFailure::of)
                 .fold(this::failed, this::succeeded);
     }
 }

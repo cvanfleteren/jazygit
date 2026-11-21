@@ -2,24 +2,18 @@ package net.vanfleteren.jazygit.kernel.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.process.GhError;
-import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.kernel.settings.SettingsProblem;
 
 /**
- * Why a {@link Cmd} failed, as data: git or gh refused, the settings could not be kept, or there is a bug.
+ * Why a {@link Cmd} failed, as data: git or a feature refused, the settings could not be kept, or there is a bug.
  */
 public sealed interface Failure {
 
     static Failure of(GitFailure failure) {
         return new Git(failure.error(), failure.commands(), failure.cleanupFailed());
-    }
-
-    static Failure of(GhFailure failure) {
-        return new GitHub(failure.error(), failure.commands());
     }
 
     /**
@@ -30,31 +24,10 @@ public sealed interface Failure {
     }
 
     /**
-     * gh refused before any command ran.
-     */
-    static Failure of(GhError error) {
-        return new GitHub(error);
-    }
-
-    /**
      * The command lines that were executed before it failed, the failing one last; they belong in the
      * command log.
      */
     List<ExecutedCommand> commands();
-
-    /**
-     * Whether gh did not run as the account chosen for the repository could not be had.
-     */
-    default boolean accountUnavailable() {
-        return this instanceof GitHub(GhError.TokenUnavailable unavailable, var commands, var cleanupFailed);
-    }
-
-    /**
-     * Whether GitHub no longer has what gh acted on, as a comment someone deleted meanwhile.
-     */
-    default boolean gone() {
-        return this instanceof GitHub(GhError.Gone gone, var commands, var cleanupFailed);
-    }
 
     /**
      * Git failed.
@@ -69,19 +42,15 @@ public sealed interface Failure {
     }
 
     /**
-     * gh failed.
-     *
-     * @param cleanupFailed why cleaning up after the failure with git failed too, if it did
+     * A failure that says itself, as a feature's does: the kernel names none of them (ADR 171), as
+     * {@link net.vanfleteren.jazygit.kernel.state.operation.Notice.Phrased} says a notice (ADR 169).
      */
-    record GitHub(GhError error, List<ExecutedCommand> commands, Option<GitError> cleanupFailed) implements Failure {
+    non-sealed interface Phrased extends Failure {
 
-        public GitHub(GhError error) {
-            this(error, List.empty(), Option.none());
-        }
-
-        public GitHub(GhError error, List<ExecutedCommand> commands) {
-            this(error, commands, Option.none());
-        }
+        /**
+         * What it says to the user.
+         */
+        Phrase phrase();
     }
 
     /**

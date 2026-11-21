@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.github.state;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -30,7 +31,7 @@ public record LoadBranchCheckRuns(List<BranchName> branches) implements Cmd {
         return env.gitHub()
                 .checks()
                 .runs(branches.map(BranchName::value))
-                .mapLeft(Failure::of)
+                .mapLeft(GitHubFailure::of)
                 .fold(this::failed, runs -> new BranchChecksMsg.RunsLoaded(PendingChecks.of(runs)));
     }
 

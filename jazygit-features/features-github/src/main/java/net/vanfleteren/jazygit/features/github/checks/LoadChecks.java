@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.github.checks;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.state.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -26,7 +27,7 @@ public record LoadChecks(RemoteBranch branch) implements Cmd {
         return env.gitHub()
                 .checks()
                 .runs(List.of(branch.branch().value()))
-                .mapLeft(Failure::of)
+                .mapLeft(GitHubFailure::of)
                 .fold(this::failed, runs -> new ChecksMsg.Loaded(branch, PendingChecks.of(runs)));
     }
 

@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
@@ -19,7 +20,6 @@ import net.vanfleteren.jazygit.features.github.builds.LoadBuilds;
 import net.vanfleteren.jazygit.features.github.state.BranchChecksMsg;
 import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
-import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -190,7 +190,7 @@ class BuildsContentTest {
                         new BuildsMsg.Failed(
                                 BuildsFixtures.ORIGIN_MAIN,
                                 Option.of("c25"),
-                                Failure.of(new GhError.UnexpectedOutput("timeout"))))
+                                GitHubFailure.of(new GhError.UnexpectedOutput("timeout"))))
                 .model();
 
         Next again = Update.update(stopped, new BuildsMsg.MoreRequested());
@@ -311,7 +311,7 @@ class BuildsContentTest {
                         new BuildsMsg.Failed(
                                 BuildsFixtures.ORIGIN_MAIN,
                                 Option.none(),
-                                Failure.of(new GhError.UnexpectedOutput("timeout"))))
+                                GitHubFailure.of(new GhError.UnexpectedOutput("timeout"))))
                 .model();
 
         assertInstanceOf(
@@ -327,7 +327,7 @@ class BuildsContentTest {
                         new BuildsMsg.Failed(
                                 BuildsFixtures.ORIGIN_MAIN,
                                 Option.none(),
-                                Failure.of(new GhError.UnexpectedOutput("timeout"))))
+                                GitHubFailure.of(new GhError.UnexpectedOutput("timeout"))))
                 .model();
         assertEquals(
                 "Builds: main · last 0 commits · m to try again",
@@ -367,7 +367,7 @@ class BuildsContentTest {
                 new BuildsMsg.Failed(
                         BuildsFixtures.ORIGIN_MAIN,
                         Option.of("c25"),
-                        Failure.of(new GhError.UnexpectedOutput("timeout"))));
+                        GitHubFailure.of(new GhError.UnexpectedOutput("timeout"))));
 
         assertTrue(failed.cmds().isEmpty());
         assertEquals(

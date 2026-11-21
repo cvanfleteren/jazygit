@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -60,7 +61,7 @@ public sealed interface RemarksCmd extends Cmd {
             return env.gitHub()
                     .reviews()
                     .remarks(number)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, remarks -> new RemarksMsg.Loaded(number, remarks, settled, version));
         }
 
@@ -92,7 +93,7 @@ public sealed interface RemarksCmd extends Cmd {
             return env.gitHub()
                     .pullRequests()
                     .image(url)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(
                             this::failed,
                             bytes -> new RemarksMsg.PictureLoaded(

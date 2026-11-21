@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.LoadBranchChecks;
 import net.vanfleteren.jazygit.features.github.state.LoadProtectedBranches;
@@ -86,7 +87,7 @@ class PullRequestReadsTest {
 
     @Test
     void theAccountChosenForTheRepositoryNotBeingAvailableIsShownOnce() {
-        Failure unavailable = new Failure.GitHub(
+        Failure unavailable = new GitHubFailure(
                 new GhError.TokenUnavailable(
                         new GhAccount("github.com", "alice-work"),
                         new GhError.CommandFailed(Option.of("no oauth token found"), 1)),
