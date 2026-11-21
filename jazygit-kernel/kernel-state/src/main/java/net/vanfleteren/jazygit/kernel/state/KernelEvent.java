@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.kernel.state;
 
+import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+
 /**
  * What happened in the kernel that a feature may answer (ADR 158): a part it keeps answers the events while it is
  * kept, and a {@link Reactions.Reaction} it declares answers them always. An event is added when the first feature
@@ -30,4 +32,9 @@ public sealed interface KernelEvent {
      * A repository was opened, at the start of the app or once another was switched to: nothing was read of it yet.
      */
     record RepositoryOpened() implements KernelEvent {}
+
+    /**
+     * The user switched to {@code screen}, which was not shown: what it shows may be read again (ADR 168).
+     */
+    record ScreenShown(Screen screen) implements KernelEvent {}
 }

@@ -54,7 +54,7 @@ public record ColumnSlide(Screen screen, int width, int from, int to, Instant st
      * not chosen to take. On its way there already, it keeps on its way.
      */
     public ColumnSlide toward(Screen screen, int width, int columns, boolean slide, Instant now) {
-        if (!slide || screen != this.screen || width != this.width) {
+        if (!slide || !screen.equals(this.screen) || width != this.width) {
             return at(screen, width, columns);
         }
         return columns == to ? this : new ColumnSlide(screen, width, columnsAt(now), columns, now);

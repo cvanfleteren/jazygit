@@ -59,13 +59,11 @@ public record Settings(Map<String, Held<?>> held) {
     /**
      * The width of the left column of the repository screen.
      */
-    public static final SettingKey<Integer> REPOSITORY_WIDTH =
-            SettingKey.of("ui.repository-width", DEFAULT_WIDTH, Codec.whole(Settings::width, width -> width));
+    public static final SettingKey<Integer> REPOSITORY_WIDTH = leftWidth("ui.repository-width");
     /**
      * The width of the left column of the pull requests screen.
      */
-    public static final SettingKey<Integer> PULL_REQUESTS_WIDTH =
-            SettingKey.of("ui.pull-requests-width", DEFAULT_WIDTH, Codec.whole(Settings::width, width -> width));
+    public static final SettingKey<Integer> PULL_REQUESTS_WIDTH = leftWidth("ui.pull-requests-width");
     /**
      * The diff style; the default has become rich diffs.
      */
@@ -83,17 +81,13 @@ public record Settings(Map<String, Held<?>> held) {
      * The heights of the panes of the left column of the repository screen. The TOML writer writes a java.util list
      * as an array.
      */
-    public static final SettingKey<List<Integer>> REPOSITORY_HEIGHTS = SettingKey.of(
-            "ui.repository-heights",
-            DEFAULT_REPOSITORY_HEIGHTS,
-            Codec.whole(value -> heights(value, DEFAULT_REPOSITORY_HEIGHTS.size()), List::toJavaList));
+    public static final SettingKey<List<Integer>> REPOSITORY_HEIGHTS =
+            leftHeights("ui.repository-heights", DEFAULT_REPOSITORY_HEIGHTS);
     /**
      * The heights of the panes of the left column of the pull requests screen.
      */
-    public static final SettingKey<List<Integer>> PULL_REQUESTS_HEIGHTS = SettingKey.of(
-            "ui.pull-requests-heights",
-            DEFAULT_PULL_REQUESTS_HEIGHTS,
-            Codec.whole(value -> heights(value, DEFAULT_PULL_REQUESTS_HEIGHTS.size()), List::toJavaList));
+    public static final SettingKey<List<Integer>> PULL_REQUESTS_HEIGHTS =
+            leftHeights("ui.pull-requests-heights", DEFAULT_PULL_REQUESTS_HEIGHTS);
     /**
      * Whether what moves on the screen moves there smoothly (ADR 81).
      */
@@ -119,6 +113,23 @@ public record Settings(Map<String, Held<?>> held) {
                 FilterDefinitions.Read read = FilterDefinitions.read(value, false);
                 return new Decoded<>(Option.some(read.filters()), read.invalid());
             }));
+    /**
+     * The setting at {@code path} of how wide the left column of a screen is kept, in percent of the width: one the
+     * column may have, {@link #DEFAULT_WIDTH} until the user drags it (ADR 168).
+     */
+    public static SettingKey<Integer> leftWidth(String path) {
+        return SettingKey.of(path, DEFAULT_WIDTH, Codec.whole(Settings::width, width -> width));
+    }
+
+    /**
+     * The setting at {@code path} of how tall the panes of the left column of a screen are kept but the last, in
+     * percent of its height: as many as {@code initial} has, which they are until the user drags them (ADR 168). The
+     * TOML writer writes a java.util list as an array.
+     */
+    public static SettingKey<List<Integer>> leftHeights(String path, List<Integer> initial) {
+        return SettingKey.of(path, initial, Codec.whole(value -> heights(value, initial.size()), List::toJavaList));
+    }
+
     /**
      * The value of {@code key}: its initial value while it is not held.
      */

@@ -4,9 +4,6 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
-import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
 
 /**
@@ -44,8 +41,6 @@ public record PopupSlot(PopupView view, Function<Model, Focus.OnScreen> returnTo
      * to, and which the screen gets back when it is shown again.
      */
     public static Focus.OnScreen focusedPane(Model model) {
-        return model.shownPane()
-                .getOrElse(
-                        () -> model.screen() == Screen.PULL_REQUESTS ? PullRequestsPanel.FIRST_PANE : FilesPanel.PANE);
+        return model.shownPane().getOrElse(() -> model.screen().first());
     }
 }

@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import org.junit.jupiter.api.BeforeEach;
@@ -118,7 +119,7 @@ class BorderDragTest {
     void theDragKeepsTheScreenItStartedOn() {
         drag.handle(MouseEvent.press(MouseButton.LEFT, 29, 5), model);
 
-        drag.handle(MouseEvent.release(MouseButton.LEFT, 49, 5), model.withScreen(Screen.PULL_REQUESTS));
+        drag.handle(MouseEvent.release(MouseButton.LEFT, 49, 5), model.withScreen(PrOverview.SCREEN));
 
         assertEquals(
                 List.of(new LayoutMsg.Resized(Screen.REPOSITORY, 50), new LayoutMsg.Settled(Screen.REPOSITORY)),

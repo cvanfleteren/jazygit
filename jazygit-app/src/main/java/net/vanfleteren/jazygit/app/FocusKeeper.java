@@ -99,7 +99,7 @@ final class FocusKeeper {
         if (focus().isEmpty()) {
             lastFocus.forEach(this::moveTo);
         }
-        if (model.screen() != shownScreen) {
+        if (!model.screen().equals(shownScreen)) {
             shownScreen = model.screen();
             moveToPaneOf(model);
         }
@@ -144,7 +144,7 @@ final class FocusKeeper {
     private void leaveCollapsedColumn(Model model) {
         if (model.preferences().leftCollapsed(model.screen())) {
             focus().flatMap(focus -> focus instanceof PaneId pane
-                                    && Scopes.leftPanes(model.screen()).contains(pane)
+                                    && model.screen().panes().contains(pane)
                             ? contentPanel.areaOfPane(model, pane)
                             : Option.none())
                     .forEach(this::moveTo);

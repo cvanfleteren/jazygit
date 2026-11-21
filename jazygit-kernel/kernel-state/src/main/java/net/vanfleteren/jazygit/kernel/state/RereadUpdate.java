@@ -136,7 +136,7 @@ public final class RereadUpdate {
      */
     private static Option<Load> worktreeChanges(Model model) {
         List<String> others = model.repo().otherWorktrees();
-        boolean worktreesShown = model.screen() == Screen.REPOSITORY
+        boolean worktreesShown = model.screen().equals(Screen.REPOSITORY)
                 && model.repoView().branches().tab() == BranchesTab.WORKTREES;
         boolean loading = model.jobs().runs(LoadWorktreeChanges.class::isInstance);
         return Option.<Load>of(new LoadWorktreeChanges(others))

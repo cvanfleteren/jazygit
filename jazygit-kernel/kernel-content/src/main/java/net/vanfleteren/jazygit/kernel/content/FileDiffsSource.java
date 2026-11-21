@@ -37,7 +37,7 @@ record FileDiffsSource() implements ContentSource {
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
-        return Option.when(pane == Mirrored.FILES, () -> FileNote.noted(fileDiffs(model)));
+        return Option.when(pane.equals(Mirrored.FILES), () -> FileNote.noted(fileDiffs(model)));
     }
 
     @Override

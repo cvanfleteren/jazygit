@@ -10,7 +10,10 @@ import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.prs.LoadMyPullRequests;
 import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
+import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -38,6 +41,14 @@ class GitHubReactionsTest {
     @Test
     void anOperationThatChangedNothingThereReadsNothingFromGitHub() {
         assertEquals(List.of(), readsAfter(withTheFeature(), new KernelEvent.OperationDone(false)));
+    }
+
+    @Test
+    void showingThePullRequestsScreenReadsWhatItShowsAndShowingTheRepositoryDoesNot() {
+        // GitHub's feature declares the answer of its screen (ADR 168).
+        assertTrue(readsAfter(withTheFeature(), new KernelEvent.ScreenShown(PrOverview.SCREEN))
+                .containsAll(List.of(new LoadMyPullRequests(), PULL_REQUESTS)));
+        assertEquals(List.of(), readsAfter(withTheFeature(), new KernelEvent.ScreenShown(Screen.REPOSITORY)));
     }
 
     @Test

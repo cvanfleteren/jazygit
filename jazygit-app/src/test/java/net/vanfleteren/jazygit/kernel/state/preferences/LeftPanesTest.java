@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import org.junit.jupiter.api.Test;
 
@@ -102,7 +103,7 @@ class LeftPanesTest {
     @Test
     void theMaximizedPaneOfAnotherScreenIsNotShown() {
         Model model = withStashes(2)
-                .mapPreferences(preferences -> preferences.withMaximizedPane(Screen.PULL_REQUESTS, Option.of(0)));
+                .mapPreferences(preferences -> preferences.withMaximizedPane(PrOverview.SCREEN, Option.of(0)));
 
         assertEquals(List.of(25, 20, 48, 4), LeftPanes.shown(model, Screen.REPOSITORY, 100));
     }

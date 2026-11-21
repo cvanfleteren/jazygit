@@ -33,7 +33,7 @@ record CommitSource() implements ContentSource {
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
         return Option.when(
-                pane == Mirrored.COMMITS,
+                pane.equals(Mirrored.COMMITS),
                 () -> commit(
                         model,
                         AREA,

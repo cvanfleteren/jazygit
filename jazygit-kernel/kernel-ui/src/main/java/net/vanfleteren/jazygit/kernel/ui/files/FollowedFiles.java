@@ -32,7 +32,7 @@ final class FollowedFiles {
      * is a frame later, as {@code F} moves it into the files it opens.
      */
     static Option<Msg> change(Model model, Option<PaneId> inUse, Option<Followed> branches) {
-        if (model.screen() != Screen.REPOSITORY) {
+        if (!model.screen().equals(Screen.REPOSITORY)) {
             return Option.none();
         }
         return model.repoView()

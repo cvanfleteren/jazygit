@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
@@ -32,7 +33,6 @@ import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsPanel;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
@@ -257,21 +257,21 @@ class ContentPanelTest {
                 Instant.EPOCH,
                 "https://github.com/owner/repo/pull/42");
         Model read = TestModels.loaded()
-                .withScreen(Screen.PULL_REQUESTS)
+                .withScreen(PrOverview.SCREEN)
                 .withPrOverview(net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL
                         .withHighlighted(Option.of(pr))
                         .withPreview(Option.of(new Preview<>(
                                 pr,
                                 new Loadable.Loaded<>(
                                         new PullRequestPreview(new GhBranch("main"), "Why", "+fixed\n", false))))));
-        PaneId first = PullRequestsPanel.FIRST_PANE;
+        PaneId first = PrOverview.SCREEN.first();
         PaneId second = net.vanfleteren.jazygit.kernel.ui.keys.Scopes.PR_REVIEW_REQUESTED.pane();
 
         // Before a list had the focus, the pull request is that of the first list.
         assertEquals(Option.of(AreaId.PULL_REQUEST), content.areaOfPane(read, first));
         assertEquals(Option.none(), content.areaOfPane(read, second));
 
-        Model fromSecond = read.withPrOverview(read.prOverview().withListPane(Option.of(second)));
+        Model fromSecond = read.withShownPane(second);
         assertEquals(Option.of(AreaId.PULL_REQUEST), content.areaOfPane(fromSecond, second));
         assertEquals(Option.none(), content.areaOfPane(fromSecond, first));
         assertEquals(Option.of(second), content.paneOfArea(fromSecond, AreaId.PULL_REQUEST));

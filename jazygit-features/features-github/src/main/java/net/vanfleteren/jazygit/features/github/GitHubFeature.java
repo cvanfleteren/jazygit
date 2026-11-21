@@ -19,9 +19,13 @@ import net.vanfleteren.jazygit.features.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.features.github.stack.StackAction;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictAction;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewUpdate;
+import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
+import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsScreen;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -60,13 +64,15 @@ public final class GitHubFeature {
     /**
      * The shortcut that switches between the repository and the pull requests, wherever the focus is.
      */
-    private static final FeatureAction SCREEN = FeatureAction.ofKeys(keys -> keys.global(
-            Keymap.Global.Dispatching.ofCtrl('p', "github.help.global.screen", PrOverviewMsg.Toggled::new)));
+    private static final FeatureAction SCREEN =
+            FeatureAction.ofKeys(keys -> keys.global(Keymap.Global.Dispatching.ofCtrl(
+                    'p', "github.help.global.screen", () -> new ScreenMsg.Toggled(PrOverview.SCREEN))));
 
     /**
      * The operations, in the order their keys are listed in a panel, the builds of a branch in the content panel
      * (ADR 131), and how gh runs in the settings panel (ADR 163). It reads from GitHub as the timers say, and as what
-     * happens in the kernel makes it do, and shows how each branch is doing on GitHub in the branches pane (ADR 167).
+     * happens in the kernel makes it do, shows how each branch is doing on GitHub in the branches pane (ADR 167), and
+     * brings the screen of the pull requests (ADR 168).
      */
     public static final Feature FEATURE = Feature.of(
                     ShowPullRequestAction.ACTION,
@@ -91,8 +97,10 @@ public final class GitHubFeature {
             .every(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new)
             .every(STACK_CHECK_INTERVAL, StackMsg.Tick::new)
             .reacting(GitHubReactions::to)
+            .reacting(PrOverviewUpdate::to)
             .badging(GitHubBadge::of)
-            .grouping(StackGroups::of);
+            .grouping(StackGroups::of)
+            .screen(PullRequestsScreen.SPEC);
 
     private GitHubFeature() {}
 }

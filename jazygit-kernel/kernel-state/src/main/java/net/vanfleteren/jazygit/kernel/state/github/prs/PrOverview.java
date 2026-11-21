@@ -1,19 +1,21 @@
 package net.vanfleteren.jazygit.kernel.state.github.prs;
 
+import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
-import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
+import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 
 /**
@@ -30,10 +32,6 @@ import net.vanfleteren.jazygit.kernel.state.view.Preview;
  * @param freshness       when the pull requests were last read, and which reads failed the last time
  * @param highlighted     the pull request highlighted in the pane in use, once one is
  * @param preview         what the highlighted pull request says and changes, once one is highlighted
- * @param listPane        the id of the list that had the focus last, whose highlighted pull request the content
- *                        panel shows; none before one had it
- * @param focusedPane     the pane or area of the content panel of the screen that had the focus last, which it gets
- *                        back when the screen is shown again; none before one had it
  */
 @With
 public record PrOverview(
@@ -44,9 +42,32 @@ public record PrOverview(
         Option<UnseenPullRequests> unseen,
         Freshness freshness,
         Option<PullRequestSummary> highlighted,
-        Option<Preview<PullRequestSummary, PullRequestPreview>> preview,
-        Option<PaneId> listPane,
-        Option<Focus.OnScreen> focusedPane) {
+        Option<Preview<PullRequestSummary, PullRequestPreview>> preview) {
+
+    /**
+     * The pane of the open pull requests of the repository, which the screen starts with.
+     */
+    public static final PaneId REPOSITORY_PANE = new PaneId("prRepository");
+
+    /**
+     * The pane of the open pull requests that ask for the user's review.
+     */
+    public static final PaneId REVIEW_REQUESTED_PANE = new PaneId("prReviewRequested");
+
+    /**
+     * The pane of the open pull requests the user opened.
+     */
+    public static final PaneId AUTHORED_PANE = new PaneId("prAuthored");
+
+    /**
+     * The screen of the pull requests, top to bottom those of the repository, those that ask for the user's review
+     * and those they opened, which is still declared in the kernel (ADR 168, step 1).
+     */
+    public static final Screen SCREEN = new Screen(
+            "pullRequests",
+            List.of(REPOSITORY_PANE, REVIEW_REQUESTED_PANE, AUTHORED_PANE),
+            Settings.PULL_REQUESTS_WIDTH,
+            Settings.PULL_REQUESTS_HEIGHTS);
 
     public static final PrOverview INITIAL = new PrOverview(
             Loadable.loading(),
@@ -55,8 +76,6 @@ public record PrOverview(
             Option.none(),
             Option.none(),
             Freshness.NEVER,
-            Option.none(),
-            Option.none(),
             Option.none(),
             Option.none());
 

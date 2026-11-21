@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Jobs;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -21,8 +22,8 @@ import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 
 /**
- * The pull requests screen. Its transitions work on the {@link PrOverview} alone; only switching screens, and
- * whether the screen is shown, need the rest of the {@link Model}.
+ * The pull requests screen. Its transitions work on the {@link PrOverview} alone; only whether the screen is shown
+ * needs the rest of the {@link Model}.
  */
 public final class PrOverviewUpdate {
 
@@ -44,12 +45,7 @@ public final class PrOverviewUpdate {
 
     public static Next update(Model model, PrOverviewMsg msg) {
         return switch (msg) {
-            case PrOverviewMsg.Toggled() ->
-                reloadIfShown(Next.of(model.withScreen(model.screen().other())));
-            // The screen already shown stays as it is, without reading it again.
-            case PrOverviewMsg.Chosen(Screen screen) when screen == model.screen() -> Next.of(model);
-            case PrOverviewMsg.Chosen(Screen screen) -> reloadIfShown(Next.of(model.withScreen(screen)));
-            case PrOverviewMsg.Tick() when model.screen() != Screen.PULL_REQUESTS -> Next.of(model);
+            case PrOverviewMsg.Tick() when !model.screen().equals(PrOverview.SCREEN) -> Next.of(model);
             // The reads that keep failing wait longer the more they failed (ADR 58).
             case PrOverviewMsg.Tick() -> loaded(Next.of(model), TICKED.filter(load -> FailingRead.due(model, load)));
             // The pull requests of the repository are those of the branches too (ADR 58).
@@ -107,8 +103,7 @@ public final class PrOverviewUpdate {
                 Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.reload(preview))));
             case PrOverviewMsg.PreviewLoadFailed(PullRequestSummary key, Failure failure) ->
                 Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.failed(failure))));
-            case PrOverviewMsg.Toggled(), PrOverviewMsg.Tick(), PrOverviewMsg.UnseenKept() -> Step.of(overview);
-            case PrOverviewMsg.Chosen(Screen screen) -> Step.of(overview);
+            case PrOverviewMsg.Tick(), PrOverviewMsg.UnseenKept() -> Step.of(overview);
         };
     }
 
@@ -141,6 +136,16 @@ public final class PrOverviewUpdate {
     }
 
     /**
+     * What the pull requests screen answers of what happens in the kernel (ADR 168): what it shows is read again each
+     * time it is shown. GitHub's feature declares it.
+     */
+    public static Next to(Model model, KernelEvent event) {
+        return event instanceof KernelEvent.ScreenShown(Screen screen) && screen.equals(PrOverview.SCREEN)
+                ? reload(Next.of(model))
+                : Next.of(model);
+    }
+
+    /**
      * {@code next}, also reading the pull requests again, unless a read is still running.
      */
     public static Next reload(Next next) {
@@ -152,7 +157,7 @@ public final class PrOverviewUpdate {
      * GitHub.
      */
     public static Next reloadIfShown(Next next) {
-        return next.model().screen() == Screen.PULL_REQUESTS ? reload(next) : next;
+        return next.model().screen().equals(PrOverview.SCREEN) ? reload(next) : next;
     }
 
     /**

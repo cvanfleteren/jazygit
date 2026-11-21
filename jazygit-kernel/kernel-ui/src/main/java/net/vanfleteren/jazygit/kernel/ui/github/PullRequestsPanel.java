@@ -17,11 +17,11 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
-import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Scope;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -35,12 +35,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
  * One of the repository that was opened and not seen yet has a mark before its number (ADR 29). When more match than
  * were read, the title says how many.
  */
-public final class PullRequestsPanel {
-
-    /**
-     * The top pane, the one that gets the focus the first time the screen is shown.
-     */
-    public static final PaneId FIRST_PANE = Scopes.PR_REPOSITORY.pane();
+public final class PullRequestsPanel implements LeftPane {
 
     /**
      * What marks a pull request that was opened and not seen yet, in its row and in the name of the screen.
@@ -85,23 +80,21 @@ public final class PullRequestsPanel {
     }
 
     /**
-     * The times the panes of the pull requests show (ADR 124): how long ago each was updated, on their screen.
+     * The times the panes of the pull requests show while their screen is (ADR 124): how long ago each was updated.
      */
     public static List<ShownTime> shownTimes(Model model) {
         PrOverview overview = model.prOverview();
-        return model.screen() == Screen.PULL_REQUESTS
-                ? List.of(overview.reviewRequested(), overview.authored(), overview.repository())
-                        .flatMap(list -> list.toOption().toList())
-                        .flatMap(PullRequestList::pullRequests)
-                        .map(pr -> ShownTime.reading(now -> TimeText.age(Duration.between(pr.updatedAt(), now))))
-                : List.empty();
+        return List.of(overview.reviewRequested(), overview.authored(), overview.repository())
+                .flatMap(list -> list.toOption().toList())
+                .flatMap(PullRequestList::pullRequests)
+                .map(pr -> ShownTime.reading(now -> TimeText.age(Duration.between(pr.updatedAt(), now))));
     }
 
     /**
      * The panes of the pull requests screen, top to bottom: the ones of the repository, the ones that ask for the
      * user's review, and the ones they opened.
      */
-    public static List<PullRequestsPanel> all(
+    public static List<LeftPane> all(
             Consumer<Msg> dispatch, Consumer<PaneId> openPullRequest, Theme.Highlights highlights) {
         return List.of(
                 new PullRequestsPanel(
@@ -177,6 +170,7 @@ public final class PullRequestsPanel {
     /**
      * The pane, as the focus is on it.
      */
+    @Override
     public PaneId pane() {
         return scope.pane();
     }
@@ -185,6 +179,7 @@ public final class PullRequestsPanel {
      * @param focus what has the focus, if anything
      * @param inUse the left pane in use, whose highlighted row shows
      */
+    @Override
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         Loadable<PullRequestList> shown = pullRequests.apply(model.prOverview());
         return list.render(
@@ -218,6 +213,7 @@ public final class PullRequestsPanel {
     /**
      * The message to send when the highlighted pull request is not the one {@code model} has highlighted.
      */
+    @Override
     public Option<Msg> selectionChange(Model model) {
         return selected()
                 .filter(pr -> !model.prOverview().highlighted().contains(pr))

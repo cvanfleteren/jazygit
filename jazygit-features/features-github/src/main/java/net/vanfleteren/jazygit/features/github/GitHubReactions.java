@@ -26,7 +26,7 @@ final class GitHubReactions {
             // The pull requests, and the new ones among them (ADR 29), show from the start, not only once a fetch is
             // done (ADR 58).
             case KernelEvent.RepositoryOpened _ -> PullRequestsUpdate.load(Next.of(model));
-            case KernelEvent.LogRead _ -> Next.of(model);
+            case KernelEvent.LogRead _, KernelEvent.ScreenShown _ -> Next.of(model);
         };
     }
 }

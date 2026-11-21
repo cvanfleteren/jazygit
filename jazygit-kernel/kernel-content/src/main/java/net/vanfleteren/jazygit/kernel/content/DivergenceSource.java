@@ -24,7 +24,7 @@ record DivergenceSource() implements ContentSource {
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
-        if (pane != Mirrored.BRANCHES) {
+        if (!pane.equals(Mirrored.BRANCHES)) {
             return Option.none();
         }
         return model.repoView()

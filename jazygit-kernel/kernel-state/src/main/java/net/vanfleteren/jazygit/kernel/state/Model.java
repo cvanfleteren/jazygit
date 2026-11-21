@@ -39,9 +39,10 @@ import net.vanfleteren.jazygit.kernel.state.view.RepoView;
  *
  * @param repositoryName the name of the repository
  * @param screen         what the left of the screen shows
+ * @param screenFocus    where the focus was on each screen a feature brings, that was shown (ADR 168)
  * @param repo           what git reports about the repository
  * @param repoView       what the repository screen shows besides what git reports, and where its focus was
- * @param prOverview     what the pull requests screen shows, and where its focus was
+ * @param prOverview     what the pull requests screen shows
  * @param jobs           what runs in the background, and when the remotes were last fetched from
  * @param outcome        what the user is told about the operations: how the last one went, and the commands run
  * @param popup          the popup that is open, if any; only one can be
@@ -58,6 +59,7 @@ import net.vanfleteren.jazygit.kernel.state.view.RepoView;
 public record Model(
         String repositoryName,
         Screen screen,
+        Map<Screen, ScreenFocus> screenFocus,
         Repo repo,
         RepoView repoView,
         PrOverview prOverview,
@@ -83,6 +85,7 @@ public record Model(
         return new Model(
                 repositoryName,
                 Screen.REPOSITORY,
+                HashMap.empty(),
                 Repo.LOADING,
                 RepoView.INITIAL,
                 PrOverview.INITIAL,
@@ -125,24 +128,31 @@ public record Model(
      * it back to; none before one had it.
      */
     public Option<Focus.OnScreen> shownPane() {
-        return switch (screen) {
-            case REPOSITORY -> repoView.focusedPane();
-            case PULL_REQUESTS -> prOverview.focusedPane();
-        };
+        return screen.equals(Screen.REPOSITORY)
+                ? repoView.focusedPane()
+                : focusOn(screen).last();
+    }
+
+    /**
+     * The pane of {@code screen}, a screen a feature brings, that had the focus last, whose highlighted item the
+     * content panel shows; none before one had it (ADR 168).
+     */
+    public Option<PaneId> paneInUse(Screen screen) {
+        return focusOn(screen).pane();
+    }
+
+    private ScreenFocus focusOn(Screen screen) {
+        return screenFocus.get(screen).getOrElse(ScreenFocus.NONE);
     }
 
     /**
      * This model with {@code focus} as the pane or area of the screen shown that had the focus last.
      */
     public Model withShownPane(Focus.OnScreen focus) {
-        return switch (screen) {
-            // Which files the files pane lists for the pane that has the focus is the panes' to say (ADR 141).
-            case REPOSITORY -> withRepoView(repoView.withFocusedPane(Option.of(focus)));
-            case PULL_REQUESTS ->
-                withPrOverview(prOverview
-                        .withFocusedPane(Option.of(focus))
-                        .withListPane(focus instanceof PaneId pane ? Option.of(pane) : prOverview.listPane()));
-        };
+        // Which files the files pane lists for the pane that has the focus is the panes' to say (ADR 141).
+        return screen.equals(Screen.REPOSITORY)
+                ? withRepoView(repoView.withFocusedPane(Option.of(focus)))
+                : withScreenFocus(screenFocus.put(screen, focusOn(screen).on(focus, screen)));
     }
 
     /**

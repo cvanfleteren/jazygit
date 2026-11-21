@@ -53,6 +53,7 @@ import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.*;
 
@@ -165,7 +166,8 @@ public class JazygitApp extends ToolkitApp {
                 focus::openContent,
                 this::showBranchesTab,
                 highlights -> new CommitsPanel(dispatch, highlights),
-                highlights -> new StashPanel(dispatch, highlights));
+                highlights -> new StashPanel(dispatch, highlights),
+                Screens.standard());
         this.commandLogPanel = new CommandLogPanel(
                 Theme.spanStyles(styleEngine),
                 ZoneId.systemDefault(),

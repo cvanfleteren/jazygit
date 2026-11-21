@@ -39,7 +39,7 @@ record CommitFilesSource() implements ContentSource {
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
-        if (pane != Mirrored.FILES) {
+        if (!pane.equals(Mirrored.FILES)) {
             return Option.none();
         }
         return model.repoView().files().commitFiles().map(view -> FileNote.noted(commitFiles(model, view)));

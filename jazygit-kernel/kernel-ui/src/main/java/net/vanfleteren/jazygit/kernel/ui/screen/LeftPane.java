@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui;
+package net.vanfleteren.jazygit.kernel.ui.screen;
 
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.control.Option;
@@ -10,9 +10,14 @@ import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 
 /**
  * A pane of the left column that lives in a group of features (ADR 158), which the app gives the
- * {@link LeftColumn}.
+ * {@link net.vanfleteren.jazygit.kernel.ui.LeftColumn}.
  */
 public interface LeftPane {
+
+    /**
+     * The id of the pane, by which its screen lists it ({@code Screen.panes}) and the focus names it.
+     */
+    PaneId pane();
 
     /**
      * The pane as {@code model} shows it.

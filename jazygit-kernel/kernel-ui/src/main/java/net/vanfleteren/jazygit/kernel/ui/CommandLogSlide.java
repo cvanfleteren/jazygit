@@ -42,7 +42,7 @@ public record CommandLogSlide(Screen screen, int column, int from, int to, Insta
      * does when it changes width. On its way there already, it keeps on its way.
      */
     public CommandLogSlide toward(Screen screen, int column, int rows, boolean slide, Instant now) {
-        if (!slide || screen != this.screen || column != this.column) {
+        if (!slide || !screen.equals(this.screen) || column != this.column) {
             return at(screen, column, rows);
         }
         return rows == to ? this : new CommandLogSlide(screen, column, rowsAt(now), rows, now);

@@ -82,3 +82,6 @@ they keep; the events are `LogRead`, `OperationDone`, `Fetched` and `RepositoryO
 
 Amended by ADR 167: the branches pane is the first that another group of features draws in, through its typed key
 `BranchBadges`, which `features-github` fills with how a branch is doing on GitHub; a group of branches is its second.
+
+Amended by ADR 168: a screen is a feature's too: `Feature.screen` brings one, and the pull requests screen moves to
+`features-github`; the kernel keeps only the repository screen.

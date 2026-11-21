@@ -10,10 +10,10 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
-import net.vanfleteren.jazygit.kernel.ui.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
@@ -88,6 +88,14 @@ public final class StashPanel implements LeftPane {
      */
     public Option<Stash> selectedStash() {
         return list.selected(stashes -> stashes);
+    }
+
+    /**
+     * The id of the pane, by which its screen lists it.
+     */
+    @Override
+    public PaneId pane() {
+        return PANE;
     }
 
     /**

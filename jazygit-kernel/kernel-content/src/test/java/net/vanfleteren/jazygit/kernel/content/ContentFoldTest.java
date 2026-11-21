@@ -81,7 +81,7 @@ class ContentFoldTest {
     }
 
     private static Shown said(Mirrored pane) {
-        return new Shown.Message("mine", pane.name(), Tone.DIM);
+        return new Shown.Message("mine", String.valueOf(pane), Tone.DIM);
     }
 
     /**
@@ -91,7 +91,7 @@ class ContentFoldTest {
 
         @Override
         public Option<Shown> shown(Model model, Mirrored mirrored) {
-            return Option.when(mirrored == pane, () -> said(mirrored));
+            return Option.when(mirrored.equals(pane), () -> said(mirrored));
         }
 
         @Override
@@ -108,7 +108,7 @@ class ContentFoldTest {
         @Override
         public Option<Shown> shown(Model model, Mirrored mirrored) {
             return Option.when(
-                    mirrored == Mirrored.BRANCHES,
+                    mirrored.equals(Mirrored.BRANCHES),
                     () -> new Shown.Area(MINE, "mine", new FileNote.Note("mine"), new NoteBody("mine", Tone.DIM)));
         }
 
