@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.kernel.ui;
 /**
  * What a pane lets the features fill, declared by the pane beside itself (ADR 172), as a part of the model is declared
  * by its feature: the pane asks the {@link Fills} it is given for what the features give for the key, and knows no
- * feature. Two keys are the same when their names are.
+ * feature. Two keys are the same when their names and types are.
  *
  * @param name what it is known by, under the root of the module of its pane, as {@code changes.panes.commits.line}
  * @param type what the features give for it

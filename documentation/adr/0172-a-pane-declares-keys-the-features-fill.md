@@ -7,7 +7,7 @@ Date: 2026-11-21
 ADR 158 moved the search of the commits into `features-changes` (`changes.commit.search`), with its part, messages,
 update and load, and the commits pane into the same module (`changes.panes.commits`). The kernel names the search
 nowhere, but the pane still does: `CommitsPanel` reads `CommitSearchView.PART`, makes the search's messages for the
-line it is typed in and for Escape, and builds its title (with "(first 300)") and "No commits match". A feature that
+line it is typed in and for Escape, and builds its title (with "(first 3000)") and "No commits match". A feature that
 lists other commits in the pane, or opens another line above it, would edit the pane.
 
 ADR 158 said a group that draws in a pane of another fills "an extension point the pane declares beside itself, a
@@ -18,8 +18,8 @@ pane that lives in its group cannot declare such a field: `Feature` is in the ke
 ## Decision
 
 - **A pane declares its keys beside itself, as `PaneKey<T>`s**: a name and the type the features give for it, in
-  `kernel-ui` beside `Feature`. Two keys are the same when their names are. Their names are shaped as keys of a bundle
-  but name no text, as those of a part are; the bundle tests skip them.
+  `kernel-ui` beside `Feature`. Two keys are the same when their names and types are. Their names are shaped as keys
+  of a bundle but name no text, as those of a part are; the bundle tests skip them.
 - **A `Feature` fills a key with `filling(key, Model → Option<T>)`**, kept in one open value, `Fills`, in place of a
   field per key. Every filler has that shape, so `gated()` silences them all alike while the feature is off (ADR 171).
 - **The app gives a pane the fills of its features**, joined in the order of `Features.ALL` (`Features.FILLS`), through

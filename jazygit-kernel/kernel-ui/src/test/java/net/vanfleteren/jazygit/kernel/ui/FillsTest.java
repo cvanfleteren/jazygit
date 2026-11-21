@@ -42,9 +42,10 @@ class FillsTest {
     }
 
     @Test
-    void keysOfTheSameNameAreTheSameKey() {
+    void keysOfTheSameNameAndTypeAreTheSameKey() {
         Fills fills = Fills.NONE.with(KEY, model -> Option.of("filled"));
 
         assertEquals(Option.of("filled"), fills.of(PaneKey.of("test.key", String.class), MODEL));
+        assertEquals(Option.none(), fills.of(PaneKey.of("test.key", CharSequence.class), MODEL));
     }
 }
