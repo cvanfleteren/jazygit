@@ -163,7 +163,7 @@ class LexerTest {
     @Test
     void theEscapesOfANixIndentedStringDoNotEndIt() {
         Lexed open = line(Language.NIX, new Outside(), "  buildPhase = ''");
-        String escaped = "    cp ''${HOME} '''x''' ''\\n if";
+        String escaped = "    cp ''${HOME} '''x''' ''\\n ''\\'' if";
         Lexed inside = line(Language.NIX, open.state(), escaped);
 
         assertEquals(List.of("STRING " + escaped), shown(escaped, inside));
