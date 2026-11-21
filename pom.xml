@@ -120,6 +120,16 @@
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
+                <artifactId>core-forgejo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>features-forgejo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
                 <artifactId>core-askpass</artifactId>
                 <version>${project.version}</version>
             </dependency>

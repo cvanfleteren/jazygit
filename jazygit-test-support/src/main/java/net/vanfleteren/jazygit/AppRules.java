@@ -75,6 +75,7 @@ public final class AppRules {
         "..jazygit.features.changes..",
         "..jazygit.features.branches..",
         "..jazygit.features.github..",
+        "..jazygit.features.forgejo..",
         "..jazygit.features.chrome.."
     };
 
@@ -86,6 +87,7 @@ public final class AppRules {
         "..jazygit.features.changes..",
         "..jazygit.features.branches..",
         "..jazygit.features.github..",
+        "..jazygit.features.forgejo..",
         "..jazygit.features.chrome..",
         "..jazygit.kernel.settings..",
         "..jazygit.app.cli..",
@@ -100,6 +102,7 @@ public final class AppRules {
         "..jazygit.features.changes..",
         "..jazygit.features.branches..",
         "..jazygit.features.github..",
+        "..jazygit.features.forgejo..",
         "..jazygit.features.chrome..",
         "..jazygit.lib.lens.."
     };
@@ -180,7 +183,7 @@ public final class AppRules {
                     .and(not(simpleName("CliGitHub"))))
             .allowEmptyShould(true);
     /**
-     * The kernel names no forge (ADR 167, 169, 171): what GitHub reports, its screen, its stack, its errors and its
+     * The kernel names no forge (ADR 167, 169, 171, 174): what GitHub or Forgejo reports, its screen, its stack, its errors and its
      * review threads are {@code features-github}'s, which reaches the kernel through what the kernel declares, as a
      * part, a service of the environment or a hook. The remarks the kernel draws are its own.
      */
@@ -189,7 +192,11 @@ public final class AppRules {
             .that()
             .resideInAPackage("..jazygit.kernel..")
             .should()
-            .dependOnClassesThat(resideInAnyPackage("..jazygit.core.gh..", "..jazygit.features.github.."))
+            .dependOnClassesThat(resideInAnyPackage(
+                    "..jazygit.core.gh..",
+                    "..jazygit.features.github..",
+                    "..jazygit.core.forgejo..",
+                    "..jazygit.features.forgejo.."))
             .allowEmptyShould(true);
     /**
      * How gh is asked is the business of its roles (ADR 120): the GraphQL their queries share, and the process that
@@ -703,6 +710,8 @@ public final class AppRules {
                                 "java.nio.file..")
                         .and(not(resideInAPackage("..jazygit.kernel.ui.keys..")))
                         .and(not(named(Pattern.quote(MARKDOWN_IMAGE) + "(\\$.*)?"))))
+                // What asks Forgejo over HTTP (ADR 174); what it answers is values.
+                .or(resideInAPackage("..jazygit.core.forgejo").and(simpleNameStartingWith("Http")))
                 .or(JavaClass.Predicates.belongToAnyOf(Thread.class, ProcessBuilder.class, java.time.Clock.class))
                 .and(not(named(Pattern.quote(EXECUTED_COMMAND))))
                 .as("run git or gh, or show something");

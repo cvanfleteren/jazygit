@@ -356,9 +356,10 @@ sequenceDiagram
   app's keymap): those are in `jazygit-app`, in the package of what they test, and those of them that need GitHub in
   `jazygit-github-app-tests`, as `XxxGitHubTest` beside the app's `XxxTest`. `kernel-state`, `kernel-ui`,
   `features-branches`, `features-github` and the app share their test helpers as test-jars.
-- **Without GitHub**: `GitHubDeletableTest` checks that nothing but `features-github`, `core-gh`,
-  `jazygit-github-app-tests` and one line of `Features.ALL` names GitHub, in the classes and the poms, and the app's
-  own tests run without GitHub (`jazygit.without`), so that deleting those leaves an app that works (ADR 171, 173).
+- **Without a forge**: `ForgesDeletableTest` checks that nothing but a forge's modules (`features-github`, `core-gh`
+  and `jazygit-github-app-tests`; `features-forgejo` and `core-forgejo`) and one line of `Features.ALL` names it, in
+  the classes and the poms, and the app's own tests run without the forges (`jazygit.without`), so that deleting one
+  leaves an app that works (ADR 171, 173, 174).
 - **Update functions** are pure: build a `Model` (`TestModels`), apply a `Msg`, assert on the next model and its
   commands. No git involved.
 - **`ProgramTest`** runs the real loop with queue executors and `StubGit`.

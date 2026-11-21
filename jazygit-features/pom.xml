@@ -21,6 +21,7 @@
         <module>features-changes</module>
         <module>features-branches</module>
         <module>features-github</module>
+        <module>features-forgejo</module>
         <module>features-chrome</module>
         <module>features-agent</module>
     </modules>

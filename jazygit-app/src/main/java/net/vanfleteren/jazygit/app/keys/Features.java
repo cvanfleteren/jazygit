@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.features.chrome.error.ErrorFeature;
 import net.vanfleteren.jazygit.features.chrome.help.HelpFeature;
 import net.vanfleteren.jazygit.features.chrome.settings.SettingsFeature;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeFeature;
+import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
@@ -55,6 +56,7 @@ public final class Features {
                     BranchFeature.FEATURE,
                     ForceDeleteFeature.FEATURE,
                     GitHubFeature.FEATURE,
+                    ForgejoFeature.FEATURE,
                     AgentFeature.FEATURE,
                     WorktreeFeature.FEATURE,
                     FilesFeature.FEATURE,
