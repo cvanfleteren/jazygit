@@ -12,8 +12,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.repo.Commit;
@@ -25,6 +23,7 @@ import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownDiff;
+import net.vanfleteren.jazygit.kernel.ui.content.UnifiedLine;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.text.Rows;
@@ -41,10 +40,6 @@ public final class ContentText {
             DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
 
     private static final String MESSAGE_INDENT = "    ";
-    /**
-     * How the header lines of a diff start, before its first hunk.
-     */
-    private static final List<String> DIFF_HEADER_PREFIXES = List.of("+++", "---", "diff ", "index ");
 
     private ContentText() {}
 
@@ -152,19 +147,7 @@ public final class ContentText {
      * A line of a unified diff, colored by what it is: added, removed, a hunk header or a file header.
      */
     public static Line diffLine(String line, Theme.SpanStyles styles) {
-        return diffClass(line)
-                .map(cssClass -> Line.from(styled(line, cssClass, styles)))
-                .getOrElse(() -> Line.from(Span.raw(line)));
-    }
-
-    private static Option<String> diffClass(String line) {
-        return switch (line) {
-            case String l when DIFF_HEADER_PREFIXES.exists(l::startsWith) -> Option.of(Theme.Classes.DIFF_HEADER);
-            case String l when l.startsWith("+") -> Option.of(Theme.Classes.DIFF_ADDED);
-            case String l when l.startsWith("-") -> Option.of(Theme.Classes.DIFF_REMOVED);
-            case String l when l.startsWith("@@") -> Option.of(Theme.Classes.DIFF_HUNK);
-            default -> Option.none();
-        };
+        return UnifiedLine.of(line, styles);
     }
 
     /**
@@ -305,43 +288,5 @@ public final class ContentText {
 
     static Span styled(String text, String cssClass, Theme.SpanStyles styles) {
         return Span.styled(text, styles.of(cssClass));
-    }
-
-    /**
-     * Like a commit: a header with the pull request, who opened it, the branches it merges and when it changed,
-     * then its indented title and description, a {@code ---} line, and what it changes.
-     */
-    public static Text pullRequestText(PullRequestSummary pr, PullRequestPreview preview, Theme.SpanStyles styles) {
-        List<String> body = lines(preview.body());
-        return styledText(List.of(
-                        styled(
-                                Messages.get(
-                                        "content.pullRequest.header",
-                                        pr.repository(),
-                                        String.valueOf(pr.number().value())),
-                                Theme.Classes.SHA,
-                                styles),
-                        Span.raw(Messages.get("content.pullRequest.author", pr.author())),
-                        Span.raw(Messages.get(
-                                pr.fromFork() ? "content.pullRequest.forkBranches" : "content.pullRequest.branches",
-                                pr.headBranch().name(),
-                                preview.base().name())),
-                        Span.raw(Messages.get(
-                                "content.pullRequest.updated",
-                                COMMIT_DATE.format(pr.updatedAt().atZone(ZoneId.systemDefault())))),
-                        Span.raw(""),
-                        styled(MESSAGE_INDENT + pr.title(), Theme.Classes.BOLD, styles))
-                .map(Line::from)
-                .appendAll((body.isEmpty()
-                                ? List.<String>empty()
-                                : body.map(line -> line.isBlank() ? "" : MESSAGE_INDENT + line)
-                                        .prepend(""))
-                        .map(line -> Line.from(Span.raw(line))))
-                .append(Line.from(Span.raw("---")))
-                .appendAll(lines(
-                                preview.truncated()
-                                        ? preview.diff() + Messages.get("content.git.diff.truncated") + "\n"
-                                        : preview.diff())
-                        .map(line -> diffLine(line, styles))));
     }
 }

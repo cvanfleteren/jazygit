@@ -11,13 +11,13 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TerminalMsg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
 import org.junit.jupiter.api.Test;
 
@@ -68,8 +68,10 @@ class ShownClocksTest {
         Model listed = TestModels.loaded()
                 .withNow(NOW)
                 .mapRepoView(view -> view.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES)))
-                .withPrOverview(PrOverview.INITIAL.withAuthored(
-                        new Loadable.Loaded<>(new PullRequestList(List.of(updated), 1))));
+                .withPart(
+                        PrOverview.PART,
+                        PrOverview.INITIAL.withAuthored(
+                                new Loadable.Loaded<>(new PullRequestList(List.of(updated), 1))));
 
         assertEquals(Option.none(), ShownClocks.next(listed, NOW));
         assertEquals(Option.of(NOW.plusSeconds(40)), ShownClocks.next(listed.withScreen(PrOverview.SCREEN), NOW));

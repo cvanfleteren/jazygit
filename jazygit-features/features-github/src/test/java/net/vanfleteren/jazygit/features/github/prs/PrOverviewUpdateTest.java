@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.state.github.prs;
+package net.vanfleteren.jazygit.features.github.prs;
 
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.refused;
@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
 import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -160,8 +161,8 @@ class PrOverviewUpdateTest {
     void theFirstReadOfTheRepositoryHasNoneUnseenAndKeepsTheHighestNumber() {
         Next read = Update.update(loaded(), repositoryRead(NEW, OLD));
 
-        assertEquals(Option.of(unseen(2)), read.model().prOverview().unseen());
-        assertEquals(0, read.model().prOverview().unseenCount());
+        assertEquals(Option.of(unseen(2)), read.model().part(PrOverview.PART).unseen());
+        assertEquals(0, read.model().part(PrOverview.PART).unseenCount());
         assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(2))), read.cmds());
     }
 
@@ -172,10 +173,10 @@ class PrOverviewUpdateTest {
 
         Next read = readTwice(loaded(), List.of(OLD), List.of(fourth, third, OLD));
 
-        assertEquals(Option.of(unseen(4, 3)), read.model().prOverview().unseen());
-        assertEquals(1, read.model().prOverview().unseenCount());
-        assertTrue(read.model().prOverview().isUnseen(third));
-        assertFalse(read.model().prOverview().isUnseen(fourth));
+        assertEquals(Option.of(unseen(4, 3)), read.model().part(PrOverview.PART).unseen());
+        assertEquals(1, read.model().part(PrOverview.PART).unseenCount());
+        assertTrue(read.model().part(PrOverview.PART).isUnseen(third));
+        assertFalse(read.model().part(PrOverview.PART).isUnseen(fourth));
         assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(4, 3))), read.cmds());
     }
 
@@ -183,7 +184,7 @@ class PrOverviewUpdateTest {
     void anOldPullRequestThatIsReadForTheFirstTimeIsNotUnseen() {
         Next read = readTwice(loaded(), List.of(NEW), List.of(NEW, OLD));
 
-        assertEquals(Option.of(unseen(2)), read.model().prOverview().unseen());
+        assertEquals(Option.of(unseen(2)), read.model().part(PrOverview.PART).unseen());
         assertEquals(List.empty(), read.cmds());
     }
 
@@ -193,10 +194,10 @@ class PrOverviewUpdateTest {
 
         Model none = Update.update(loaded(), repositoryRead(Option.none(), Option.none(), 45))
                 .model();
-        assertEquals(Option.of(unseen(45)), none.prOverview().unseen());
+        assertEquals(Option.of(unseen(45)), none.part(PrOverview.PART).unseen());
 
         Next read = Update.update(none, repositoryRead(Option.none(), Option.none(), 45, reopened));
-        assertEquals(Option.of(unseen(45)), read.model().prOverview().unseen());
+        assertEquals(Option.of(unseen(45)), read.model().part(PrOverview.PART).unseen());
         assertEquals(List.empty(), read.cmds());
     }
 
@@ -211,22 +212,22 @@ class PrOverviewUpdateTest {
         Model again = Update.update(first, repositoryRead(Option.none(), Option.none(), 46, opened, reopened, fortieth))
                 .model();
 
-        assertEquals(Option.of(unseen(46, 46)), again.prOverview().unseen());
-        assertFalse(again.prOverview().isUnseen(reopened));
+        assertEquals(Option.of(unseen(46, 46)), again.part(PrOverview.PART).unseen());
+        assertFalse(again.part(PrOverview.PART).isUnseen(reopened));
     }
 
     @Test
     void whatWasKeptCountsUntilTheModelHasItsOwn() {
         Next read = Update.update(loaded(), repositoryRead(Option.none(), Option.of(unseen(1)), NEW, OLD));
 
-        assertEquals(Option.of(unseen(2, 2)), read.model().prOverview().unseen());
+        assertEquals(Option.of(unseen(2, 2)), read.model().part(PrOverview.PART).unseen());
 
         Model own = read.model();
         assertEquals(
                 Option.of(unseen(2, 2)),
                 Update.update(own, repositoryRead(Option.none(), Option.of(unseen(5)), NEW, OLD))
                         .model()
-                        .prOverview()
+                        .part(PrOverview.PART)
                         .unseen());
     }
 
@@ -237,7 +238,7 @@ class PrOverviewUpdateTest {
 
         Next closed = Update.update(unseenTwo, repositoryRead(OLD));
 
-        assertEquals(Option.of(unseen(2)), closed.model().prOverview().unseen());
+        assertEquals(Option.of(unseen(2)), closed.model().part(PrOverview.PART).unseen());
         assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(2))), closed.cmds());
     }
 
@@ -247,10 +248,10 @@ class PrOverviewUpdateTest {
                 .model();
 
         Next elsewhere = Update.update(unseenTwo, new PrOverviewMsg.Highlighted(pr("other/repo", 2, NEW.updatedAt())));
-        assertEquals(1, elsewhere.model().prOverview().unseenCount());
+        assertEquals(1, elsewhere.model().part(PrOverview.PART).unseenCount());
 
         Next seen = Update.update(unseenTwo, new PrOverviewMsg.Highlighted(NEW));
-        assertEquals(Option.of(unseen(2)), seen.model().prOverview().unseen());
+        assertEquals(Option.of(unseen(2)), seen.model().part(PrOverview.PART).unseen());
         assertEquals(
                 List.of(new LoadPullRequestPreview(NEW), new SaveUnseenPullRequests("Owner/Repo", unseen(2))),
                 seen.cmds());
@@ -268,7 +269,7 @@ class PrOverviewUpdateTest {
                 Option.of(unseen(2, 2)),
                 Update.update(unseenTwo, new PrOverviewMsg.RepositoryLoadFailed(refused("offline")))
                         .model()
-                        .prOverview()
+                        .part(PrOverview.PART)
                         .unseen());
     }
 
@@ -323,7 +324,7 @@ class PrOverviewUpdateTest {
                         new LoadRepositoryPullRequests(),
                         repositoryRead(OLD, NEW))
                 .model();
-        PrOverview read = model.prOverview();
+        PrOverview read = model.part(PrOverview.PART);
 
         assertEquals(new Loadable.Loaded<>(new PullRequestList(List.of(NEW, OLD), 2)), read.repository());
         assertTrue(model.jobs().runs(new LoadMyPullRequests()));
@@ -351,7 +352,7 @@ class PrOverviewUpdateTest {
                         new PrOverviewMsg.MineLoaded(new MyPullRequests(
                                 new PullRequestList(List.of(ELSEWHERE), 52), new PullRequestList(List.of(NEW), 1))))
                 .model()
-                .prOverview();
+                .part(PrOverview.PART);
 
         assertEquals(new Loadable.Loaded<>(new PullRequestList(List.of(ELSEWHERE), 52)), read.reviewRequested());
         assertEquals(new Loadable.Loaded<>(new PullRequestList(List.of(NEW), 1)), read.authored());
@@ -364,16 +365,16 @@ class PrOverviewUpdateTest {
 
         PrOverview failed = Update.update(shown, new PrOverviewMsg.MineLoadFailed(failure))
                 .model()
-                .prOverview();
+                .part(PrOverview.PART);
         assertInstanceOf(Loadable.Failed.class, failed.reviewRequested());
         assertInstanceOf(Loadable.Failed.class, failed.authored());
 
         Model read = Update.update(shown, repositoryRead(OLD)).model();
         assertEquals(
-                read.prOverview().repository(),
+                read.part(PrOverview.PART).repository(),
                 Update.update(read, new PrOverviewMsg.RepositoryLoadFailed(failure))
                         .model()
-                        .prOverview()
+                        .part(PrOverview.PART)
                         .repository());
     }
 
@@ -384,7 +385,7 @@ class PrOverviewUpdateTest {
         Model inContent = Update.update(authored, new ViewMsg.Focused(new AreaId("pull-request-preview")))
                 .model();
 
-        assertEquals(Option.of(AreaId.PULL_REQUEST), inContent.shownPane());
+        assertEquals(Option.of(PullRequestSource.AREA.id()), inContent.shownPane());
         assertEquals(Option.of(new PaneId("prAuthored")), inContent.paneInUse(PrOverview.SCREEN));
     }
 
@@ -407,7 +408,7 @@ class PrOverviewUpdateTest {
                 Option.of(NEW),
                 Update.update(loaded(), new PrOverviewMsg.Highlighted(NEW))
                         .model()
-                        .prOverview()
+                        .part(PrOverview.PART)
                         .highlighted());
     }
 
@@ -439,10 +440,10 @@ class PrOverviewUpdateTest {
 
         assertEquals(
                 new Loadable.Loaded<>(preview),
-                read.prOverview().preview().get().value());
+                read.part(PrOverview.PART).preview().get().value());
 
         Model next = Update.update(read, new PrOverviewMsg.Highlighted(OLD)).model();
-        assertEquals(NEW, next.prOverview().preview().get().shown().key());
+        assertEquals(NEW, next.part(PrOverview.PART).preview().get().shown().key());
     }
 
     @Test
@@ -460,12 +461,13 @@ class PrOverviewUpdateTest {
     void theFreshnessSaysWhenByTheClockTheyWereReadAndWhichReadFailedSince() {
         Model read = Update.update(toggled(loaded()).model().withNow(READ_AT), repositoryRead(OLD))
                 .model();
-        assertEquals(Option.of(READ_AT), read.prOverview().freshness().read());
-        assertFalse(read.prOverview().freshness().stale());
+        assertEquals(Option.of(READ_AT), read.part(PrOverview.PART).freshness().read());
+        assertFalse(read.part(PrOverview.PART).freshness().stale());
 
         Model failed = Update.update(read, new PrOverviewMsg.MineLoadFailed(refused("offline")))
                 .model();
-        assertEquals(Option.of(READ_AT), failed.prOverview().freshness().read());
-        assertTrue(failed.prOverview().freshness().stale());
+        assertEquals(
+                Option.of(READ_AT), failed.part(PrOverview.PART).freshness().read());
+        assertTrue(failed.part(PrOverview.PART).freshness().stale());
     }
 }

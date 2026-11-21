@@ -17,13 +17,13 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Jobs;
 import net.vanfleteren.jazygit.kernel.state.Label;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
 import net.vanfleteren.jazygit.kernel.state.load.LoadStatus;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
@@ -223,9 +223,11 @@ class FetchLineTest {
                 .withNow(NOW)
                 .withScreen(PrOverview.SCREEN)
                 .mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", NOW)))
-                .withPrOverview(PrOverview.INITIAL.withFreshness(Freshness.NEVER
-                        .succeeded("mine", NOW.minusSeconds(3 * 3600))
-                        .failed("repository")));
+                .withPart(
+                        PrOverview.PART,
+                        PrOverview.INITIAL.withFreshness(Freshness.NEVER
+                                .succeeded("mine", NOW.minusSeconds(3 * 3600))
+                                .failed("repository")));
 
         assertEquals("read 3h ago · last read failed", FetchLine.freshness(prs));
     }

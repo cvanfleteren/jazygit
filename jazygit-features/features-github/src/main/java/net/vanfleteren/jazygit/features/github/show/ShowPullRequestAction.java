@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.github.show;
 
+import net.vanfleteren.jazygit.features.github.prs.PrScopes;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -11,7 +12,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 public final class ShowPullRequestAction {
 
     public static final FeatureAction ACTION = new FeatureAction(
-            keys -> Scopes.PULL_REQUESTS.foldLeft(
+            keys -> PrScopes.ALL.foldLeft(
                     keys.add(
                                     Scopes.BRANCHES,
                                     Binding.onSelected(

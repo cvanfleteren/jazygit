@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.ReadT
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.RecordParent;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.RereadTitle;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg.*;
+import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.stack.StackPopups;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -221,7 +222,7 @@ public final class CreatePullRequestUpdate {
                         .getOrElse(succeeded));
         // A read that is still running may have missed it, so this one is started anyway. GitHub may have
         // changed the remote too, which a fetch brings in.
-        Next read = FetchUpdate.requested(PullRequestsUpdate.loadAnyway(done));
+        Next read = FetchUpdate.requested(PullRequestReads.loadAnyway(done));
         // Stacked once it is there: on the pull request of its base, as the dialog said (ADR 73).
         return cmd.stacking()
                 .flatMap(stacking -> pullRequest.map(pr -> stacking.cmd(pr.number())))

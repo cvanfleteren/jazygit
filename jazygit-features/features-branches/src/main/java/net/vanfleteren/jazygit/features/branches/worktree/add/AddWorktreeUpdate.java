@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
@@ -251,7 +252,7 @@ public final class AddWorktreeUpdate {
                 source instanceof WorktreeSource.PullRequest(var of) ? Option.of(of) : Option.none();
         Map<String, String> onGitHub = pullRequest
                 .map(PullRequestSummary::repository)
-                .orElse(() -> model.prOverview().repositoryName())
+                .orElse(() -> model.part(GitHubState.PART).repository())
                 .map(repository -> List.of(repository.split("/", 2)))
                 .filter(parts -> parts.size() == 2)
                 .<Map<String, String>>map(parts -> LinkedHashMap.of("owner", parts.get(0), "name", parts.get(1)))

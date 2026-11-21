@@ -39,11 +39,6 @@ public record Settings(Map<String, Held<?>> held) {
      * the left column; the stash takes what is left.
      */
     public static final List<Integer> DEFAULT_REPOSITORY_HEIGHTS = List.of(25, 20, 30);
-    /**
-     * How tall the first two pull requests panes are unless the user changed it, in percent of the height of the
-     * left column; the last takes what is left, which is about as much in a column under the status.
-     */
-    public static final List<Integer> DEFAULT_PULL_REQUESTS_HEIGHTS = List.of(32, 32);
 
     /**
      * The settings of a first session: each at its initial value.
@@ -60,10 +55,6 @@ public record Settings(Map<String, Held<?>> held) {
      * The width of the left column of the repository screen.
      */
     public static final SettingKey<Integer> REPOSITORY_WIDTH = leftWidth("ui.repository-width");
-    /**
-     * The width of the left column of the pull requests screen.
-     */
-    public static final SettingKey<Integer> PULL_REQUESTS_WIDTH = leftWidth("ui.pull-requests-width");
     /**
      * The diff style; the default has become rich diffs.
      */
@@ -83,11 +74,6 @@ public record Settings(Map<String, Held<?>> held) {
      */
     public static final SettingKey<List<Integer>> REPOSITORY_HEIGHTS =
             leftHeights("ui.repository-heights", DEFAULT_REPOSITORY_HEIGHTS);
-    /**
-     * The heights of the panes of the left column of the pull requests screen.
-     */
-    public static final SettingKey<List<Integer>> PULL_REQUESTS_HEIGHTS =
-            leftHeights("ui.pull-requests-heights", DEFAULT_PULL_REQUESTS_HEIGHTS);
     /**
      * Whether what moves on the screen moves there smoothly (ADR 81).
      */
@@ -162,14 +148,6 @@ public record Settings(Map<String, Held<?>> held) {
         return with(REPOSITORY_WIDTH, width);
     }
 
-    public int pullRequestsWidth() {
-        return get(PULL_REQUESTS_WIDTH);
-    }
-
-    public Settings withPullRequestsWidth(int width) {
-        return with(PULL_REQUESTS_WIDTH, width);
-    }
-
     public DiffStyle diffStyle() {
         return get(DIFF_STYLE);
     }
@@ -200,14 +178,6 @@ public record Settings(Map<String, Held<?>> held) {
 
     public Settings withRepositoryHeights(List<Integer> heights) {
         return with(REPOSITORY_HEIGHTS, heights);
-    }
-
-    public List<Integer> pullRequestsHeights() {
-        return get(PULL_REQUESTS_HEIGHTS);
-    }
-
-    public Settings withPullRequestsHeights(List<Integer> heights) {
-        return with(PULL_REQUESTS_HEIGHTS, heights);
     }
 
     public boolean animations() {

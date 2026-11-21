@@ -1,19 +1,16 @@
 package net.vanfleteren.jazygit.kernel.state.github;
 
-import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.kernel.state.GitHubBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.kernel.state.load.Load;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
 
 /**
- * Reading the open pull requests from GitHub, which the branches show, along with how the checks are doing on
- * the branches without one. It runs next to the other periodic reads, after each fetch, after each push and
- * after each change made on GitHub.
+ * What the branches take of what GitHub says of the pull requests: the protected branches, which they are built on,
+ * and the branches read again when GitHub says another base for one (ADR 72). GitHub's feature reads the open pull
+ * requests themselves, with how the checks are doing on the branches without one (ADR 168).
  */
 public final class PullRequestsUpdate {
 
@@ -21,19 +18,6 @@ public final class PullRequestsUpdate {
 
     public static Next update(Model model, PullRequestsMsg msg) {
         return switch (msg) {
-            case PullRequestsMsg.Refresh() -> load(Next.of(model));
-            case PullRequestsMsg.Loaded(List<PullRequest> pullRequests) ->
-                branchesAgain(
-                        model,
-                        GitHubReads.done(
-                                FailingRead.ran(
-                                        model.mapPart(
-                                                GitHubState.PART,
-                                                gitHub -> gitHub.withListed(pullRequests)
-                                                        .withPullRequestsFailure(Option.none())),
-                                        new LoadRepositoryPullRequests(),
-                                        false),
-                                new LoadRepositoryPullRequests()));
             case PullRequestsMsg.ProtectedLoaded(var branches) ->
                 branchesAgain(
                         model,
@@ -52,59 +36,23 @@ public final class PullRequestsUpdate {
             case PullRequestsMsg.ProtectedLoadFailed(var failure) ->
                 GitHubReads.done(
                         FailingRead.ran(model, new LoadProtectedBranches(), true), new LoadProtectedBranches());
-            // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
-            // That is no reason to bother the user until they ask for a pull request. The account they chose for
-            // the repository not being available is, once: gh is not run as another one.
-            case PullRequestsMsg.LoadFailed(var failure) -> {
-                Model failed = FailingRead.ran(
-                        model.mapPart(GitHubState.PART, gitHub -> gitHub.withPullRequestsFailure(Option.of(failure))),
-                        new LoadRepositoryPullRequests(),
-                        true);
-                yield GitHubReads.done(
-                        failure.accountUnavailable()
-                                        && !model.part(GitHubState.PART)
-                                                .pullRequestsFailure()
-                                                .contains(failure)
-                                ? failed.fail(new PullRequestsError.Unavailable(failure))
-                                : failed,
-                        new LoadRepositoryPullRequests());
-            }
         };
-    }
-
-    /**
-     * {@code next}, also reading the pull requests and the checks of the branches again; unless a read is still
-     * running, which gets the latest state already.
-     */
-    public static Next load(Next next) {
-        return BranchChecksUpdate.load(GitHubReads.load(protectedBranches(next), new LoadRepositoryPullRequests()));
-    }
-
-    /**
-     * {@code next}, also reading the pull requests and the checks of the branches again, as a timer asks: only those
-     * that do not keep failing ({@link FailingRead}), and unless a read is still running.
-     */
-    public static Next poll(Next next) {
-        return BranchChecksUpdate.poll(GitHubReads.poll(
-                unread(next) ? GitHubReads.poll(next, new LoadProtectedBranches()) : next,
-                new LoadRepositoryPullRequests()));
-    }
-
-    /**
-     * {@code next}, also reading the pull requests and the checks of the branches again, as something changed on
-     * GitHub: when a read is still running, which may have missed that, once it is done.
-     */
-    public static Next loadAnyway(Next next) {
-        return BranchChecksUpdate.loadAnyway(
-                GitHubReads.loadAnyway(protectedBranches(next), new LoadRepositoryPullRequests()));
     }
 
     /**
      * {@code next}, also reading the protected branches while they were not read yet: they seldom change, so they are
      * read once while jazygit runs (ADR 72).
      */
-    private static Next protectedBranches(Next next) {
+    public static Next protectedBranches(Next next) {
         return unread(next) ? GitHubReads.load(next, new LoadProtectedBranches()) : next;
+    }
+
+    /**
+     * {@code next}, also reading the protected branches while they were not read yet, as a timer asks: only when they
+     * do not keep failing ({@link FailingRead}).
+     */
+    public static Next pollProtectedBranches(Next next) {
+        return unread(next) ? GitHubReads.poll(next, new LoadProtectedBranches()) : next;
     }
 
     private static boolean unread(Next next) {
@@ -116,7 +64,7 @@ public final class PullRequestsUpdate {
      * {@code before}: their parents and how far each is from its base go by it (ADR 72). One that runs already reads
      * as GitHub said before, and the next tick reads them again.
      */
-    static Next branchesAgain(Model before, Next next) {
+    public static Next branchesAgain(Model before, Next next) {
         Load load = LoadBranches.current(next.model(), LoadBranches.LISTED);
         return GitHubBases.in(before).equals(GitHubBases.in(next.model()))
                         || next.model().jobs().runs(load)

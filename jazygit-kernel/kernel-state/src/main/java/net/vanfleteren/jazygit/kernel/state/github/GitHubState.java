@@ -21,7 +21,6 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Part;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 
 /**
  * What GitHub reports about the branches of the repository, which the branches pane shows.
@@ -53,6 +52,7 @@ import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequest
  *                            (ADR 58)
  * @param stackChange         a change made to the stacks that the pull requests read may not show yet, which they are
  *                            read again for until they do (ADR 73)
+ * @param repository          the repository on GitHub, as {@code owner/name}, once its pull requests were read
  */
 @With
 public record GitHubState(
@@ -68,7 +68,8 @@ public record GitHubState(
         long listRead,
         Map<PrNumber, Long> readsFrom,
         Map<Cmd, FailingRead> failing,
-        Option<StackChange> stackChange) {
+        Option<StackChange> stackChange,
+        Option<String> repository) {
 
     public static final GitHubState NOT_READ = new GitHubState(
             Option.none(),
@@ -83,6 +84,7 @@ public record GitHubState(
             0,
             HashMap.empty(),
             HashMap.empty(),
+            Option.none(),
             Option.none());
 
     /**
@@ -149,13 +151,11 @@ public record GitHubState(
     }
 
     /**
-     * The state once {@code cmds} started: a read of the open pull requests among them gets the id {@link #nextRead}
-     * (ADR 119).
+     * The state once {@code cmds} started: a read of the open pull requests among them, a {@link ListRead}, gets the id
+     * {@link #nextRead} (ADR 119).
      */
     public GitHubState withStarted(List<Cmd> cmds) {
-        return cmds.contains(new LoadRepositoryPullRequests())
-                ? withListRead(nextRead).withReadGivenOut()
-                : this;
+        return cmds.exists(ListRead.class::isInstance) ? withListRead(nextRead).withReadGivenOut() : this;
     }
 
     /**
@@ -322,4 +322,10 @@ public record GitHubState(
     public boolean mayBeOnGitHub(RemoteBranch remote) {
         return branchChecks.isEmpty() || onGitHub(remote);
     }
+
+    /**
+     * The read of the open pull requests of the repository, which GitHub's feature declares (ADR 168): one at a time
+     * runs, and each that starts gets an id (ADR 119).
+     */
+    public interface ListRead extends Cmd {}
 }

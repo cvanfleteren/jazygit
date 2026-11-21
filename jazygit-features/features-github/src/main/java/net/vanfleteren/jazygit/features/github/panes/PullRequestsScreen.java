@@ -1,8 +1,8 @@
-package net.vanfleteren.jazygit.kernel.ui.github;
+package net.vanfleteren.jazygit.features.github.panes;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
@@ -19,11 +19,11 @@ public final class PullRequestsScreen {
      */
     public static final ScreenSpec SPEC = new ScreenSpec(
             PrOverview.SCREEN,
-            "screen.pullRequests",
+            "github.screen.pullRequests",
             PullRequestsPanel::all,
             PullRequestsScreen::unseen,
-            model -> model.prOverview().freshness(),
-            "status.read",
+            model -> model.part(PrOverview.PART).freshness(),
+            "github.status.read",
             PullRequestsPanel::shownTimes);
 
     private PullRequestsScreen() {}
@@ -32,7 +32,7 @@ public final class PullRequestsScreen {
      * How many pull requests of the repository were opened and not seen yet, in their own style, when there are any.
      */
     static Option<LoadableList.Seg> unseen(Model model) {
-        int unseen = model.prOverview().unseenCount();
+        int unseen = model.part(PrOverview.PART).unseenCount();
         return Option.when(
                 unseen > 0,
                 () -> LoadableList.Seg.styled(" " + PullRequestsPanel.UNSEEN_MARK + unseen, Theme.Classes.UNSEEN));

@@ -21,7 +21,9 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.Msg;
 import org.junit.jupiter.api.Test;
 
 class GitHubStateTest {
@@ -89,7 +91,7 @@ class GitHubStateTest {
     void aReadOfTheOpenPullRequestsGetsTheIdOfTheNextRead() {
         GitHubState read = GitHubState.NOT_READ.withReadGivenOut();
 
-        GitHubState started = read.withStarted(List.of(new LoadRepositoryPullRequests()));
+        GitHubState started = read.withStarted(List.of(new ListRead()));
 
         assertEquals(1, started.listRead());
         assertEquals(2, started.nextRead());
@@ -110,13 +112,13 @@ class GitHubStateTest {
         // The list is read while the checks run; the dialog then reads them passing, and the merge fails anyway.
         GitHubState reading = GitHubState.NOT_READ
                 .withListed(List.of(PENDING_PR))
-                .withStarted(List.of(new LoadRepositoryPullRequests()))
+                .withStarted(List.of(new ListRead()))
                 .withReadGivenOut()
                 .withPullRequests(Option.of(HashMap.of(FEATURE, FEATURE_PR)));
         GitHubState failed = failed(reading);
 
         GitHubState stale = failed.withListed(List.of(PENDING_PR));
-        GitHubState again = stale.withStarted(List.of(new LoadRepositoryPullRequests()));
+        GitHubState again = stale.withStarted(List.of(new ListRead()));
 
         assertEquals(Option.of(CONFLICTS), stale.merge(new PrNumber(42)));
         assertEquals(Option.of(CONFLICTS), again.withListed(List.of(FEATURE_PR)).merge(new PrNumber(42)));
@@ -132,5 +134,21 @@ class GitHubStateTest {
 
         assertEquals(Option.of(CONFLICTS), failed.withRead(changed, after - 1).merge(new PrNumber(42)));
         assertEquals(Option.none(), failed.withRead(changed, after).merge(new PrNumber(42)));
+    }
+
+    /**
+     * A read of the open pull requests, as GitHub's feature declares one; it is never run here.
+     */
+    private record ListRead() implements GitHubState.ListRead {
+
+        @Override
+        public Msg run(Env env) {
+            return failed(new Failure.Bug(new IllegalStateException("not run")));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new Msg.Quit();
+        }
     }
 }

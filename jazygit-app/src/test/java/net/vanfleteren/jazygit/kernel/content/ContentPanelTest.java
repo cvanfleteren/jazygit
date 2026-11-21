@@ -20,12 +20,14 @@ import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.changes.panes.stash.StashPanel;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
+import net.vanfleteren.jazygit.features.github.prs.PrScopes;
+import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
@@ -258,23 +260,25 @@ class ContentPanelTest {
                 "https://github.com/owner/repo/pull/42");
         Model read = TestModels.loaded()
                 .withScreen(PrOverview.SCREEN)
-                .withPrOverview(net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL
-                        .withHighlighted(Option.of(pr))
-                        .withPreview(Option.of(new Preview<>(
-                                pr,
-                                new Loadable.Loaded<>(
-                                        new PullRequestPreview(new GhBranch("main"), "Why", "+fixed\n", false))))));
+                .withPart(
+                        PrOverview.PART,
+                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL
+                                .withHighlighted(Option.of(pr))
+                                .withPreview(Option.of(new Preview<>(
+                                        pr,
+                                        new Loadable.Loaded<>(new PullRequestPreview(
+                                                new GhBranch("main"), "Why", "+fixed\n", false))))));
         PaneId first = PrOverview.SCREEN.first();
-        PaneId second = net.vanfleteren.jazygit.kernel.ui.keys.Scopes.PR_REVIEW_REQUESTED.pane();
+        PaneId second = PrScopes.REVIEW_REQUESTED.pane();
 
         // Before a list had the focus, the pull request is that of the first list.
-        assertEquals(Option.of(AreaId.PULL_REQUEST), content.areaOfPane(read, first));
+        assertEquals(Option.of(PullRequestSource.AREA.id()), content.areaOfPane(read, first));
         assertEquals(Option.none(), content.areaOfPane(read, second));
 
         Model fromSecond = read.withShownPane(second);
-        assertEquals(Option.of(AreaId.PULL_REQUEST), content.areaOfPane(fromSecond, second));
+        assertEquals(Option.of(PullRequestSource.AREA.id()), content.areaOfPane(fromSecond, second));
         assertEquals(Option.none(), content.areaOfPane(fromSecond, first));
-        assertEquals(Option.of(second), content.paneOfArea(fromSecond, AreaId.PULL_REQUEST));
+        assertEquals(Option.of(second), content.paneOfArea(fromSecond, PullRequestSource.AREA.id()));
     }
 
     @Test

@@ -18,9 +18,13 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
@@ -78,8 +82,23 @@ public final class PullRequestFixtures {
 
     private PullRequestFixtures() {}
 
+    /**
+     * What the screen's update hands the branches once the open pull requests {@code pullRequests} of the repository
+     * were read (ADR 168).
+     */
+    public static Msg listed(List<PullRequest> pullRequests) {
+        return new Listed(pullRequests);
+    }
+
+    /**
+     * What the screen's update hands the branches once the open pull requests could not be read for {@code failure}.
+     */
+    public static Msg listFailed(Failure failure) {
+        return new ListFailed(failure);
+    }
+
     public static Model withPr() {
-        return Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
+        return Update.update(model(), PullRequestFixtures.listed(List.of(FEATURE_PR)))
                 .model();
     }
 
@@ -102,7 +121,7 @@ public final class PullRequestFixtures {
         // The default branch is listed last, to see it offered first.
         Model branches = localBranchesRead(loadedWithTheFeature(), List.of(RELEASE, PUSHED, UNPUSHED, AHEAD, MAIN))
                 .model();
-        return Update.update(branches, new PullRequestsMsg.Loaded(List.empty())).model();
+        return Update.update(branches, PullRequestFixtures.listed(List.empty())).model();
     }
 
     static BranchRef remote(String branch) {
@@ -146,5 +165,21 @@ public final class PullRequestFixtures {
                 Review.NONE,
                 Instant.EPOCH,
                 "https://github.com/" + repository + "/pull/" + number);
+    }
+
+    private record Listed(List<PullRequest> pullRequests) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return PullRequestReads.loaded(model, pullRequests, "owner/repo");
+        }
+    }
+
+    private record ListFailed(Failure failure) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return PullRequestReads.failed(model, failure);
+        }
     }
 }

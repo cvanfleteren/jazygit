@@ -14,7 +14,6 @@ public final class PanelSources {
      * it first, and the one that shows it otherwise last.
      */
     public static final List<ContentSource> ALL = List.of(
-            new PullRequestSource(),
             new CommitFilesSource(),
             new UnchangedSource(),
             new FileDiffsSource(),

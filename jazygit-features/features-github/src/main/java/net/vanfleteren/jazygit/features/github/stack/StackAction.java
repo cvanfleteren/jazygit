@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.features.github.prs.PrScopes;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
@@ -50,7 +51,7 @@ public final class StackAction {
                                 branch -> branch.<Msg>map(
                                         name -> new StackMsg.MenuRequested(Option.of(name), Option.none()))))
                 .add(Scopes.BRANCHES, Binding.always("S", "github.help.stacks.view", StackMsg.ViewToggled::new));
-        return Scopes.PULL_REQUESTS.foldLeft(
+        return PrScopes.ALL.foldLeft(
                 branches,
                 (added, scope) -> added.add(
                         scope,

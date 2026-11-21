@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+import net.vanfleteren.jazygit.kernel.state.preferences.TestScreens;
 import org.junit.jupiter.api.Test;
 
 class ColumnSlideTest {
@@ -130,7 +130,7 @@ class ColumnSlideTest {
 
     @Test
     void anotherScreenOrAScreenOfAnotherWidthDoesNotSlide() {
-        assertEquals(64, RESTING.toward(PrOverview.SCREEN, 160, 64, true, NOW).columnsAt(NOW));
+        assertEquals(64, RESTING.toward(TestScreens.OTHER, 160, 64, true, NOW).columnsAt(NOW));
         assertEquals(60, RESTING.toward(Screen.REPOSITORY, 200, 60, true, NOW).columnsAt(NOW));
     }
 }

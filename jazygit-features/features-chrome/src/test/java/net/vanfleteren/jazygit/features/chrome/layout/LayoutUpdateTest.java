@@ -18,11 +18,11 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.kernel.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+import net.vanfleteren.jazygit.kernel.state.preferences.TestScreens;
 import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
@@ -38,16 +38,16 @@ class LayoutUpdateTest {
         Settings wider = TestModels.PLAIN.settings().withRepositoryWidth(35);
         assertEquals(wider, next.model().preferences().settings());
         assertEquals(35, next.model().preferences().leftWidth(Screen.REPOSITORY));
-        assertEquals(30, next.model().preferences().leftWidth(PrOverview.SCREEN));
+        assertEquals(30, next.model().preferences().leftWidth(TestScreens.OTHER));
         assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), wider)), next.cmds());
     }
 
     @Test
     void eachScreenHasItsOwnWidth() {
-        Next next = Update.update(model.withScreen(PrOverview.SCREEN), new LayoutMsg.Stepped(-5));
+        Next next = Update.update(model.withScreen(TestScreens.OTHER), new LayoutMsg.Stepped(-5));
 
         assertEquals(
-                TestModels.PLAIN.settings().withPullRequestsWidth(25),
+                TestModels.PLAIN.settings().with(TestScreens.OTHER.width(), 25),
                 next.model().preferences().settings());
     }
 
@@ -70,7 +70,7 @@ class LayoutUpdateTest {
         Next next = Update.update(narrowest, new LayoutMsg.Stepped(-5));
 
         assertTrue(next.model().preferences().leftCollapsed(Screen.REPOSITORY));
-        assertFalse(next.model().preferences().leftCollapsed(PrOverview.SCREEN));
+        assertFalse(next.model().preferences().leftCollapsed(TestScreens.OTHER));
         assertEquals(
                 narrowest.preferences().settings(), next.model().preferences().settings());
         assertEquals(List.of(), next.cmds());
@@ -168,10 +168,10 @@ class LayoutUpdateTest {
 
     @Test
     void eachScreenHasItsOwnHeights() {
-        Model dragged = Update.update(model, new LayoutMsg.PaneResized(PrOverview.SCREEN, 1, 82))
+        Model dragged = Update.update(model, new LayoutMsg.PaneResized(TestScreens.OTHER, 1, 82))
                 .model();
 
-        assertEquals(List.of(32, 50), dragged.preferences().leftHeights(PrOverview.SCREEN));
+        assertEquals(List.of(32, 50), dragged.preferences().leftHeights(TestScreens.OTHER));
         assertEquals(Settings.DEFAULT_REPOSITORY_HEIGHTS, dragged.preferences().leftHeights(Screen.REPOSITORY));
         assertEquals(Next.of(dragged), Update.update(dragged, new LayoutMsg.PaneSettled(Screen.REPOSITORY)));
     }
@@ -189,7 +189,7 @@ class LayoutUpdateTest {
         Model dragged = Update.update(model, new LayoutMsg.Resized(Screen.REPOSITORY, 50))
                 .model();
 
-        assertEquals(Next.of(dragged), Update.update(dragged, new LayoutMsg.Settled(PrOverview.SCREEN)));
+        assertEquals(Next.of(dragged), Update.update(dragged, new LayoutMsg.Settled(TestScreens.OTHER)));
         assertEquals(Next.of(model), Update.update(model, new LayoutMsg.Settled(Screen.REPOSITORY)));
     }
 
@@ -418,7 +418,7 @@ class LayoutUpdateTest {
         Model maximized = toggled(focused(model, Scopes.COMMITS.id()));
 
         assertEquals(Option.of(2), maximized.preferences().maximizedPane(Screen.REPOSITORY));
-        assertEquals(Option.none(), maximized.preferences().maximizedPane(PrOverview.SCREEN));
+        assertEquals(Option.none(), maximized.preferences().maximizedPane(TestScreens.OTHER));
         // It stays maximized wherever the focus goes.
         assertEquals(
                 Option.of(2),
@@ -427,16 +427,16 @@ class LayoutUpdateTest {
     }
 
     @Test
-    void theKeysWorkOnTheFocusedPaneOfThePullRequestsScreen() {
-        Model reviewRequested = focused(model.withScreen(PrOverview.SCREEN), Scopes.PR_REVIEW_REQUESTED.id());
+    void theKeysWorkOnTheFocusedPaneOfAScreenAFeatureBrings() {
+        Model reviewRequested = focused(model.withScreen(TestScreens.OTHER), "middle");
 
         Next taller = Update.update(reviewRequested, new LayoutMsg.PaneStepped(5));
 
-        assertEquals(List.of(32, 37), taller.model().preferences().leftHeights(PrOverview.SCREEN));
+        assertEquals(List.of(32, 37), taller.model().preferences().leftHeights(TestScreens.OTHER));
         assertEquals(
                 Settings.DEFAULT_REPOSITORY_HEIGHTS,
                 taller.model().preferences().leftHeights(Screen.REPOSITORY));
-        assertEquals(Option.of(1), toggled(reviewRequested).preferences().maximizedPane(PrOverview.SCREEN));
+        assertEquals(Option.of(1), toggled(reviewRequested).preferences().maximizedPane(TestScreens.OTHER));
     }
 
     @Test
@@ -531,7 +531,7 @@ class LayoutUpdateTest {
     void expandedOpensTheCollapsedColumnOfItsScreenAtTheWidthKept() {
         Model collapsed = toggled(content(model));
 
-        Next other = Update.update(collapsed, new LayoutMsg.Expanded(PrOverview.SCREEN));
+        Next other = Update.update(collapsed, new LayoutMsg.Expanded(TestScreens.OTHER));
         Next expanded = Update.update(collapsed, new LayoutMsg.Expanded(Screen.REPOSITORY));
 
         assertTrue(other.model().preferences().leftCollapsed(Screen.REPOSITORY));

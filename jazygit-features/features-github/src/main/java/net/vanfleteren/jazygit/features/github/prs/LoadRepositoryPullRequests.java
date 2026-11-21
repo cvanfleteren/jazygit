@@ -1,17 +1,17 @@
-package net.vanfleteren.jazygit.kernel.state.github.prs;
+package net.vanfleteren.jazygit.features.github.prs;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Label;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 
 /**
  * Reads the open pull requests of the repository, forks included, and the unseen ones kept for it. It runs in the
  * background, as it talks to GitHub, and nobody waits for it.
  */
-public record LoadRepositoryPullRequests() implements Cmd {
+public record LoadRepositoryPullRequests() implements GitHubState.ListRead {
 
     @Override
     public Option<Label> label() {

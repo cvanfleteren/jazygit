@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.state.github.prs;
+package net.vanfleteren.jazygit.features.github.prs;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -7,6 +7,7 @@ import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.AppError;
@@ -14,6 +15,7 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
+import net.vanfleteren.jazygit.kernel.state.Part;
 import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
@@ -60,14 +62,24 @@ public record PrOverview(
     public static final PaneId AUTHORED_PANE = new PaneId("prAuthored");
 
     /**
-     * The screen of the pull requests, top to bottom those of the repository, those that ask for the user's review
-     * and those they opened, which is still declared in the kernel (ADR 168, step 1).
+     * How wide the left column of the screen is kept: under the same key in the settings file as before the screen
+     * was GitHub's feature's, so nothing needs migrating (ADR 168).
      */
-    public static final Screen SCREEN = new Screen(
-            "pullRequests",
-            List.of(REPOSITORY_PANE, REVIEW_REQUESTED_PANE, AUTHORED_PANE),
-            Settings.PULL_REQUESTS_WIDTH,
-            Settings.PULL_REQUESTS_HEIGHTS);
+    public static final SettingKey<Integer> WIDTH = Settings.leftWidth("ui.pull-requests-width");
+
+    /**
+     * How tall the first two panes of the screen are kept, unless the user changed it, in percent of the height of the
+     * left column; the last takes what is left, which is about as much in a column under the status.
+     */
+    public static final SettingKey<List<Integer>> HEIGHTS =
+            Settings.leftHeights("ui.pull-requests-heights", List.of(32, 32));
+
+    /**
+     * The screen of the pull requests, which GitHub's feature brings (ADR 168): top to bottom those of the repository,
+     * those that ask for the user's review and those they opened.
+     */
+    public static final Screen SCREEN =
+            new Screen("pullRequests", List.of(REPOSITORY_PANE, REVIEW_REQUESTED_PANE, AUTHORED_PANE), WIDTH, HEIGHTS);
 
     public static final PrOverview INITIAL = new PrOverview(
             Loadable.loading(),
@@ -78,6 +90,11 @@ public record PrOverview(
             Freshness.NEVER,
             Option.none(),
             Option.none());
+
+    /**
+     * Where the model keeps what the screen shows, as a part of GitHub's feature (ADR 157, ADR 168).
+     */
+    public static final Part<PrOverview> PART = Part.of("github.prs", INITIAL);
 
     /**
      * How many pull requests of the repository were opened and not seen yet.

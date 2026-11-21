@@ -14,11 +14,11 @@ import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutModels;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -37,15 +37,18 @@ class StatusPanelTest {
      */
     private static io.vavr.collection.List<StatusPanel.Name> names(int unseen) {
         Model model = TestModels.loaded()
-                .withPrOverview(PrOverview.INITIAL.withUnseen(Option.of(new UnseenPullRequests(
-                        unseen, io.vavr.collection.TreeSet.ofAll(io.vavr.collection.List.rangeClosed(1, unseen))))));
+                .withPart(
+                        PrOverview.PART,
+                        PrOverview.INITIAL.withUnseen(Option.of(new UnseenPullRequests(
+                                unseen,
+                                io.vavr.collection.TreeSet.ofAll(io.vavr.collection.List.rangeClosed(1, unseen))))));
         return StatusPanel.names(model, Screens.standard());
     }
 
     @Test
     void aClickOnTheNameOfAScreenInTheTitleTellsWhichOne() {
         int repository = Messages.get("screen.repository").length();
-        int pullRequests = Messages.get("screen.pullRequests").length();
+        int pullRequests = Messages.get("github.screen.pullRequests").length();
 
         assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(0, names(0)));
         assertEquals(Option.of(Screen.REPOSITORY), StatusPanel.screenAt(repository - 1, names(0)));
@@ -58,7 +61,7 @@ class StatusPanelTest {
 
     @Test
     void theNewPullRequestsAreCountedAfterTheNameOfTheirScreenAndAClickOnTheCountShowsIt() {
-        String pullRequests = Messages.get("screen.pullRequests");
+        String pullRequests = Messages.get("github.screen.pullRequests");
         int start = Messages.get("screen.repository").length() + 3;
 
         assertEquals(

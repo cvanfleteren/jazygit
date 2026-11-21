@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.lib.lens.Lens;
 
 /**
  * What the repository screen shows, apart from what git reports: what is highlighted in its panes, the previews
- * read for that, and where its focus was. It stays while the pull requests screen is shown. Each part is owned by the
+ * read for that, and where its focus was. It stays while another screen is shown. Each part is owned by the
  * pane or the feature that fills it, so that a feature changes only its own part.
  *
  * @param branches    what the branches pane shows

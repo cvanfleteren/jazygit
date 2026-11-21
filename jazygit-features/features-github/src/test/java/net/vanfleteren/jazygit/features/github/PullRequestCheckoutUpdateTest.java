@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestCmd;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestMsg;
 import net.vanfleteren.jazygit.features.github.checkout.PullRequestCheckout;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.*;
@@ -46,8 +47,10 @@ class PullRequestCheckoutUpdateTest {
     private static Model ofOwnerRepo(RepoStatus status) {
         return Update.update(loaded(), new LoadMsg.StatusLoaded(status))
                 .model()
-                .withPrOverview(net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL.withRepositoryName(
-                        Option.of("owner/repo")));
+                .withPart(
+                        PrOverview.PART,
+                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
+                                Option.of("owner/repo")));
     }
 
     @Test

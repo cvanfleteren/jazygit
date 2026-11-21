@@ -13,12 +13,13 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.OnGitHub;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.EditBody;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.SavePullRequest;
+import net.vanfleteren.jazygit.features.github.prs.PrOverviewUpdate;
+import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.PullRequestUpdate;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.*;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
@@ -166,7 +167,7 @@ public final class EditPullRequestUpdate {
                         .then(changed -> readUnder(changed, cmd.number()))
                 : failed;
         return edited && cmd.edit().base().isDefined()
-                ? PrOverviewUpdate.reloadIfShown(PullRequestsUpdate.loadAnyway(read))
+                ? PrOverviewUpdate.reloadIfShown(PullRequestReads.loadAnyway(read))
                 : read;
     }
 

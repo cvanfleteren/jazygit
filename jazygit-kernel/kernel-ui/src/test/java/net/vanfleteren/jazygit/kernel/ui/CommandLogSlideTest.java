@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+import net.vanfleteren.jazygit.kernel.state.preferences.TestScreens;
 import org.junit.jupiter.api.Test;
 
 class CommandLogSlideTest {
@@ -65,7 +65,7 @@ class CommandLogSlideTest {
 
     @Test
     void onAnotherScreenTheLogIsThereAtOnce() {
-        CommandLogSlide other = RESTING.toward(PrOverview.SCREEN, 40, 2, true, NOW);
+        CommandLogSlide other = RESTING.toward(TestScreens.OTHER, 40, 2, true, NOW);
 
         assertEquals(2, other.rowsAt(NOW));
         assertFalse(other.moving(NOW));

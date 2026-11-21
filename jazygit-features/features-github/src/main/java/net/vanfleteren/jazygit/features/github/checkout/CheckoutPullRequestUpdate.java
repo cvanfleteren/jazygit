@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.features.branches.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestMsg.Requested;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestMsg.WorktreeRequested;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -128,7 +129,7 @@ public final class CheckoutPullRequestUpdate {
      * Blocked while it is not known yet which repository this is, or when {@code pullRequest} is of another one.
      */
     private static Option<Readiness> ofThisRepository(Model model, PullRequestSummary pullRequest) {
-        return model.prOverview()
+        return model.part(PrOverview.PART)
                 .ofThisRepository(pullRequest)
                 .fold(
                         unknown -> Option.of(new Readiness.Blocked(unknown)),

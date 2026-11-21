@@ -31,13 +31,13 @@ import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg.BaseMoved;
 import net.vanfleteren.jazygit.features.github.create.NewPullRequestPopup;
+import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.*;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
@@ -468,7 +468,7 @@ class CreatePullRequestUpdateTest {
     @Test
     void aBaseIsMergedIntoUnderItsNameOnTheRemote() {
         Model branches = localBranchesRead(loaded(), List.of(PUSHED, DEV, MAIN)).model();
-        Model loaded = Update.update(branches, new PullRequestsMsg.Loaded(List.empty()))
+        Model loaded = Update.update(branches, PullRequestFixtures.listed(List.empty()))
                 .model();
         Model asked = Update.update(
                         loaded,

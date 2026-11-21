@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.features.github.prs.content.PullRequestBody;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
@@ -384,7 +385,7 @@ class PullRequestContentTest {
                 Instant.parse("2026-10-09T12:30:00Z"),
                 "https://github.com/owner/repo/pull/12");
 
-        List<String> lines = ContentText.pullRequestText(
+        List<String> lines = PullRequestBody.text(
                         pr,
                         new PullRequestPreview(new GhBranch("main"), "Why:\r\n\r\nit broke", "+fixed\n", false),
                         Theme.SpanStyles.NONE)
