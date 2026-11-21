@@ -153,12 +153,12 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   `changes.panes.commits`; the app gives it to `LeftColumn` as a `LeftPane`, and its id is a `PaneId` constant. The
   search of the commits is the first that moved.
 - **The kernel names no forge** (ADR 167, 169, 171): GitHub's state, its stores, its screen, its stack and its
-  review threads are `features-github`'s. The kernel composes what the features state the branches are built on (`BranchBases`, from
-  each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as a read of GitHub gets
-  its id then), and holds what a feature runs against of its own in the `Env` under an `Env.Service` the feature
-  declares, as its stores. A notice of a feature is one of its own sealed set, saying itself as a phrase
-  (`Notice.Phrased`), as its errors do (`Failure.Phrased`). `AppRules.theKernelNamesNoForge` keeps `kernel..` from
-  `core.gh..` and `features.github..`, without exception.
+  review threads are `features-github`'s. The kernel composes what the features state the branches are built on
+  (`BranchBases`, from each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as
+  a read of GitHub gets its id then), and holds what a feature runs against of its own in the `Env` under an
+  `Env.Service` the feature declares, as its stores. A notice of a feature is one of its own sealed set, saying itself
+  as a phrase (`Notice.Phrased`), as its errors do (`Failure.Phrased`). `AppRules.theKernelNamesNoForge` keeps
+  `kernel..` from `core.gh..` and `features.github..`, without exception.
 - **Remarks are the kernel's** (ADR 171): the rich diff draws `RemarkThread`s of `Remark`s, on a `DiffSide`, which a
   part states for the changes open through `Part.remarking` (`StatedRemarks`); GitHub's `github.remarks` part reads
   the review threads of a pull request when its files open (`KernelEvent.ChangesOpened`) and states them. The keys of
