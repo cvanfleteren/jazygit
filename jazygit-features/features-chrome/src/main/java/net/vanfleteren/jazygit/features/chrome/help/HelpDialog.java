@@ -23,9 +23,9 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestSymbols;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
+import net.vanfleteren.jazygit.kernel.ui.keys.Legends;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -54,7 +54,8 @@ public final class HelpDialog implements PopupView {
     private static final String DETAILS_SUFFIX = ".details";
 
     /**
-     * What the symbols in a panel mean, as the symbols and the message keys of their descriptions.
+     * What git's symbols in a panel mean, as the symbols and the message keys of their descriptions; the features add
+     * what theirs mean after them ({@link Legends}, ADR 168).
      */
     private static final Map<String, List<Tuple2<String, String>>> LEGENDS = HashMap.of(
             Scopes.BRANCHES.id(),
@@ -62,29 +63,7 @@ public final class HelpDialog implements PopupView {
                     Tuple.of(Messages.get("branches.gone"), "chrome.help.branches.legend.gone"),
                     Tuple.of("⇡2", "chrome.help.branches.legend.ahead"),
                     Tuple.of("⇣3", "chrome.help.branches.legend.behind"),
-                    Tuple.of(Messages.get("branches.worktree.short"), "chrome.help.branches.legend.worktree"),
-                    Tuple.of("#42", "chrome.help.branches.legend.pullRequest"),
-                    Tuple.of(
-                            texts(
-                                    PullRequestSymbols.PASSED,
-                                    PullRequestSymbols.FAILED,
-                                    PullRequestSymbols.RUNNING,
-                                    PullRequestSymbols.QUEUED),
-                            "chrome.help.branches.legend.checks"),
-                    Tuple.of(
-                            texts(
-                                    PullRequestSymbols.APPROVED,
-                                    PullRequestSymbols.CHANGES,
-                                    PullRequestSymbols.TO_REVIEW),
-                            "chrome.help.branches.legend.review"),
-                    Tuple.of(
-                            texts(
-                                    PullRequestSymbols.MERGING,
-                                    PullRequestSymbols.ENQUEUED,
-                                    PullRequestSymbols.MERGE_FAILED,
-                                    PullRequestSymbols.MERGED),
-                            "chrome.help.branches.legend.merge"),
-                    Tuple.of("2/4", "chrome.help.branches.legend.stack")));
+                    Tuple.of(Messages.get("branches.worktree.short"), "chrome.help.branches.legend.worktree")));
 
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;
@@ -115,17 +94,15 @@ public final class HelpDialog implements PopupView {
      * What the symbols of the panel {@code scopeId} mean, under a heading; nothing for a panel without any.
      */
     private static List<Row> legend(String scopeId) {
-        return LEGENDS.get(scopeId)
-                .map(symbols -> List.<Row>of(new Text(""), Text.heading("chrome.dialog.help.legend"))
-                        .appendAll(symbols.map(symbol -> new Text(line(symbol._1, symbol._2)))))
-                .getOrElse(List.empty());
-    }
-
-    /**
-     * The texts of {@code symbols}, a space apart.
-     */
-    private static String texts(PullRequestSymbols.Symbol... symbols) {
-        return List.of(symbols).map(PullRequestSymbols.Symbol::text).mkString(" ");
+        List<Tuple2<String, String>> symbols = LEGENDS.get(scopeId)
+                .getOrElse(List.empty())
+                .appendAll(Legends.standard()
+                        .of(scopeId)
+                        .map(legend -> Tuple.of(legend.symbols(), legend.descriptionKey())));
+        return symbols.isEmpty()
+                ? List.empty()
+                : List.<Row>of(new Text(""), Text.heading("chrome.dialog.help.legend"))
+                        .appendAll(symbols.map(symbol -> new Text(line(symbol._1, symbol._2))));
     }
 
     private static StyledElement<?> element(Row row) {

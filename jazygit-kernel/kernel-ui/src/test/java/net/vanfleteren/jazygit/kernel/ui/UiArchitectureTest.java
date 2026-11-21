@@ -55,7 +55,6 @@ class UiArchitectureTest {
                     "net.vanfleteren.jazygit.kernel.ui.branches..",
                     "net.vanfleteren.jazygit.kernel.ui.commits..",
                     "net.vanfleteren.jazygit.kernel.ui.files..",
-                    "net.vanfleteren.jazygit.kernel.ui.github..",
                     "net.vanfleteren.jazygit.kernel.ui.markdown..",
                     "net.vanfleteren.jazygit.kernel.ui.widgets..",
                     "net.vanfleteren.jazygit.kernel.ui.edit..");

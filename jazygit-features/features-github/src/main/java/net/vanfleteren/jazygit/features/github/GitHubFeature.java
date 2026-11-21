@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.github;
 
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
+import net.vanfleteren.jazygit.features.github.badges.BadgeLegend;
 import net.vanfleteren.jazygit.features.github.badges.GitHubBadge;
 import net.vanfleteren.jazygit.features.github.browse.BrowseAction;
 import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
@@ -30,6 +31,7 @@ import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
+import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 
 /**
  * The GitHub operations: showing a pull request and what is done from there, showing the checks and the builds of a branch,
@@ -72,8 +74,8 @@ public final class GitHubFeature {
     /**
      * The operations, in the order their keys are listed in a panel, the builds of a branch in the content panel
      * (ADR 131), and how gh runs in the settings panel (ADR 163). It reads from GitHub as the timers say, and as what
-     * happens in the kernel makes it do, shows how each branch is doing on GitHub in the branches pane (ADR 167), and
-     * brings the screen of the pull requests (ADR 168).
+     * happens in the kernel makes it do, shows how each branch is doing on GitHub in the branches pane (ADR 167), with
+     * what that means in its help, and brings the screen of the pull requests (ADR 168).
      */
     public static final Feature FEATURE = Feature.of(
                     ShowPullRequestAction.ACTION,
@@ -101,7 +103,8 @@ public final class GitHubFeature {
             .reacting(PrOverviewUpdate::to)
             .badging(GitHubBadge::of)
             .grouping(StackGroups::of)
-            .screen(PullRequestsScreen.SPEC);
+            .screen(PullRequestsScreen.SPEC)
+            .explaining(BadgeLegend.BRANCHES.toJavaArray(Legend[]::new));
 
     private GitHubFeature() {}
 }

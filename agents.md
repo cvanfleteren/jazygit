@@ -80,9 +80,11 @@ panel (`ContentSource`); actions on another feature's subject go through a hoste
 `SettingsSection`s (`Feature.settings`, through `withSettings`) (ADR 163); what it shows of a branch in the branches
 pane are `BranchBadges` (`Feature.badges`, through `badging`), and the groups it makes of the local branches there are
 `BranchGroups` (`Feature.groupings`, through `grouping`) (ADR 167); a screen it brings beside the repository's is a
-`ScreenSpec` (`Feature.screens`, through `screen`), whose `Screen` is an open value (ADR 168). A feature uses only the
-features its module may depend on (ADR 159), and reaches anything else, such as a pane of a later group or a subject
-another feature produces, only through an extension point, as `features-agent` does (ADR 161). New feature state goes
+`ScreenSpec` (`Feature.screens`, through `screen`), whose `Screen` is an open value, and what its symbols in a panel
+mean are `Legend`s (`Feature.legends`, through `explaining`), which the help lists after the panel's own (ADR 168).
+What a feature's dialogs and panes draw with lives in its `widgets` package. A feature uses only the features its
+module may depend on (ADR 159), and reaches anything else, such as a pane of a later group or a subject another
+feature produces, only through an extension point, as `features-agent` does (ADR 161). New feature state goes
 in the feature's own part, not in a new field of a kernel record. The failed-checks agent action is the reference
 pattern: a forge produces a neutral subject, and an action consumes it without knowing which forge produced it. When
 you add a feature, first ask which extension point it plugs into. If none fits, add a general one rather than a special

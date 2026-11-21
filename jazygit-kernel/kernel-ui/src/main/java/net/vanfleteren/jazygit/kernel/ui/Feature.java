@@ -11,16 +11,16 @@ import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
+import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
 
 /**
  * A feature, as the app knows it: its actions, which bring its keys and its popups, what it shows in the content
  * panel, the settings it keeps, the sections it adds to the settings panel, what it does every so often, what it
- * answers of what happens in the kernel, what it shows of the branches in the branches pane, and the screens it
- * brings. Each feature package
- * declares one, as {@code XxxFeature.FEATURE}, and {@code Features.ALL} lists it; that is all a new feature changes
- * outside its package (ADR 127).
+ * answers of what happens in the kernel, what it shows of the branches in the branches pane, the screens it brings,
+ * and what its symbols in a panel mean. Each feature package declares one, as {@code XxxFeature.FEATURE}, and
+ * {@code Features.ALL} lists it; that is all a new feature changes outside its package (ADR 127).
  *
  * <p>Making the standard keymap makes every feature, so a feature does not ask for {@code Keymap.standard()} while its
  * class is initialised.
@@ -36,6 +36,7 @@ import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
  * @param badges      what it shows of a branch in the branches pane, beside what git says (ADR 167)
  * @param groupings   the groups it makes of the local branches in the branches pane (ADR 167)
  * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
+ * @param legends     what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
  */
 public record Feature(
         List<FeatureAction> actions,
@@ -46,16 +47,18 @@ public record Feature(
         List<Reaction> reactions,
         List<BranchBadges.Badge> badges,
         List<BranchGroups.Grouping> groupings,
-        List<ScreenSpec> screens) {
+        List<ScreenSpec> screens,
+        List<Legend> legends) {
 
     /**
      * The feature of {@code actions}, in that order, which shows nothing in the content panel of its own, has no
-     * settings, dispatches nothing every so often, answers nothing, shows nothing of the branches and brings no
-     * screen.
+     * settings, dispatches nothing every so often, answers nothing, shows nothing of the branches, brings no screen
+     * and adds nothing to a legend.
      */
     public static Feature of(FeatureAction... actions) {
         return new Feature(
                 List.of(actions),
+                List.empty(),
                 List.empty(),
                 List.empty(),
                 List.empty(),
@@ -79,7 +82,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -95,7 +99,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -111,7 +116,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -128,7 +134,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -145,7 +152,8 @@ public record Feature(
                 reactions.append(reaction),
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -154,7 +162,16 @@ public record Feature(
      */
     public Feature badging(BranchBadges.Badge badge) {
         return new Feature(
-                actions, contents, settingKeys, settings, timers, reactions, badges.append(badge), groupings, screens);
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges.append(badge),
+                groupings,
+                screens,
+                legends);
     }
 
     /**
@@ -171,7 +188,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings.append(grouping),
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -180,7 +198,34 @@ public record Feature(
      */
     public Feature screen(ScreenSpec screen) {
         return new Feature(
-                actions, contents, settingKeys, settings, timers, reactions, badges, groupings, screens.append(screen));
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings,
+                screens.append(screen),
+                legends);
+    }
+
+    /**
+     * This feature, also saying what its symbols in a panel mean with {@code legends}, which the help of that panel
+     * lists after the panel's own and those of the features before it (ADR 168).
+     */
+    public Feature explaining(Legend... legends) {
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings,
+                screens,
+                this.legends.appendAll(List.of(legends)));
     }
 
     /**

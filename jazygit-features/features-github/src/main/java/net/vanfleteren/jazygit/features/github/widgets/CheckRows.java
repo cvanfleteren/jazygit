@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.github;
+package net.vanfleteren.jazygit.features.github.widgets;
 
 import static dev.tamboui.toolkit.Toolkit.text;
 
@@ -35,9 +35,9 @@ public final class CheckRows {
      */
     public static List<StyledElement<?>> counts(List<Check> all, Option<CheckTimes> times, Instant now) {
         return List.of(
-                        count(all, Checks.FAILING, "dialog.pullRequest.checks.failed"),
-                        count(all, Checks.PENDING, "dialog.pullRequest.checks.running"),
-                        count(all, Checks.PASSING, "dialog.pullRequest.checks.passed"),
+                        count(all, Checks.FAILING, "github.dialog.pullRequest.checks.failed"),
+                        count(all, Checks.PENDING, "github.dialog.pullRequest.checks.running"),
+                        count(all, Checks.PASSING, "github.dialog.pullRequest.checks.passed"),
                         CheckTimesText.together(eta(all, times), CheckSpan.current(all), learning(times), now)
                                 .map(together -> List.<StyledElement<?>>of(text(together))))
                 .flatMap(o -> o)
@@ -213,8 +213,8 @@ public final class CheckRows {
                         .flatMap(started -> run.completedAt()
                                 .map(completed -> CheckTimesText.duration(Duration.between(started, completed)))));
         return check.state() == Checks.FAILING
-                ? Option.of(duration.map(took -> Messages.get("checks.failedAfter", took))
-                        .getOrElse(() -> Messages.get("checks.failed")))
+                ? Option.of(duration.map(took -> Messages.get("github.checks.failedAfter", took))
+                        .getOrElse(() -> Messages.get("github.checks.failed")))
                 : duration;
     }
 
@@ -234,7 +234,7 @@ public final class CheckRows {
                     case Eta.Expected expected when expected.overdue(now) -> Theme.Classes.CHECKS_RUNNING;
                     case Eta.Expected expected -> Theme.Classes.CHECKS_PROGRESS;
                 };
-        String percent = Messages.get("dialog.checks.progress", String.valueOf(ProgressBar.percent(progress)));
+        String percent = Messages.get("github.dialog.checks.progress", String.valueOf(ProgressBar.percent(progress)));
         return ProgressBar.of(progress, width - 1 - PERCENT, done)
                 .append(text(" " + TextWidth.alignRight(percent, PERCENT)));
     }

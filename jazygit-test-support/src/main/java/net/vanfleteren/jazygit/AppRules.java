@@ -49,8 +49,9 @@ public final class AppRules {
     /**
      * The packages in which a feature keeps what it shows in the content panel, its source and its body, which are
      * views as its dialogs are (ADR 156): a {@code content} package in a feature, as {@code github.builds.content};
-     * and the panes a group of features draws, in its {@code panes} package, as {@code changes.panes.commits}
-     * (ADR 158).
+     * the panes a group of features draws, in its {@code panes} package, as {@code changes.panes.commits}
+     * (ADR 158); and what its dialogs and panes draw with, in its {@code widgets} package, as {@code github.widgets}
+     * (ADR 168).
      */
     static final String[] FEATURE_CONTENT = {
         "..jazygit.features.changes..content..",
@@ -60,7 +61,11 @@ public final class AppRules {
         "..jazygit.features.changes.panes..",
         "..jazygit.features.branches.panes..",
         "..jazygit.features.github.panes..",
-        "..jazygit.features.chrome.panes.."
+        "..jazygit.features.chrome.panes..",
+        "..jazygit.features.changes.widgets..",
+        "..jazygit.features.branches.widgets..",
+        "..jazygit.features.github.widgets..",
+        "..jazygit.features.chrome.widgets.."
     };
 
     /**
