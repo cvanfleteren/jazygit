@@ -13,6 +13,10 @@
       version = builtins.head (builtins.match
         ".*<artifactId>jazygit-parent</artifactId>[[:space:]]*<version>([^<]*)</version>.*"
         (builtins.readFile ./pom.xml));
+      # The version of the native plugin, which is also that of the reachability metadata it reads.
+      nativePluginVersion = builtins.head (builtins.match
+        ".*<native-maven-plugin.version>([^<]*)</native-maven-plugin.version>.*"
+        (builtins.readFile ./pom.xml));
       # Only what the build reads, so a change to the documentation or the acceptance tests doesn't rebuild it.
       src = with nixpkgs.lib.fileset; toSource {
         root = ./.;
@@ -36,9 +40,21 @@
           pname = "jazygit";
           inherit version src;
           # Changes with every dependency in the poms; .github/workflows/nix.yml puts the new one in a pull request.
-          mvnHash = "sha256-Vl+WXddgaQylVzp+N2IM8zWzfWKL9wP5iJjEDhGxBhk=";
+          mvnHash = "sha256-itJa+f1CxYg+TeW+b9lNkqWH5FRHLnrH2H7w7B+rrgE=";
           # The tests and checks run in CI; spotless would rewrite the sources it builds.
-          mvnParameters = "-T1 -Pnative -DskipTests -Dspotless.skip";
+          mvnParameters = "-Pnative -DskipTests -Dspotless.skip";
+          # Fetching the dependencies runs the same build, of which only the Maven repository is kept, so it skips the
+          # native image. The plugin only fetches the reachability metadata as it makes the image: that is fetched here.
+          # The dependency plugin is named in full: by its prefix, Maven would keep the plugin groups' metadata, which
+          # changes with every plugin released, and so would the hash.
+          mvnFetchExtraArgs = {
+            env.MAVEN_ARGS = "-DskipNativeBuild=true";
+            postBuild = ''
+              mvn $MAVEN_EXTRA_ARGS org.apache.maven.plugins:maven-dependency-plugin:3.11.0:get \
+                -Dmaven.repo.local=$out/.m2 \
+                -Dartifact=org.graalvm.buildtools:graalvm-reachability-metadata:${nativePluginVersion}:zip:repository
+            '';
+          };
           nativeBuildInputs = [ pkgs.makeWrapper ];
           installPhase = ''
             runHook preInstall
