@@ -274,6 +274,36 @@ class UpdateTest {
     }
 
     @Test
+    void theReactionsAreToldWhichCommandsStartedOnceTheyAreStampedAndWhatTheyMakeOfTheModelIsKept() {
+        Cmd refresh = new RefreshIndex();
+        java.util.List<List<Cmd>> told = new java.util.ArrayList<>();
+        java.util.List<Boolean> stampedFirst = new java.util.ArrayList<>();
+        Reactions.Reaction recording = new Reactions.Reaction() {
+            @Override
+            public Next to(Model model, KernelEvent event) {
+                return Next.of(model);
+            }
+
+            @Override
+            public Model started(Model model, List<Cmd> cmds) {
+                told.add(cmds);
+                stampedFirst.add(model.jobs().runs(refresh) && model.jobs().runs(LoadBranches.LISTED));
+                return model.withRepositoryName("told");
+            }
+        };
+        Model model = loaded().withReactions(new Reactions(List.of(recording)));
+
+        Step step = Update.step(
+                model,
+                asked -> new Next(asked, List.of(refresh, refresh, LoadBranches.LISTED)),
+                Instant.parse("2026-10-22T10:00:00Z"));
+
+        assertEquals(java.util.List.of(List.of(refresh, LoadBranches.LISTED)), told);
+        assertEquals(java.util.List.of(true), stampedFirst);
+        assertEquals("told", step.model().repositoryName());
+    }
+
+    @Test
     void theReactionsAreAskedWhenTheLogIsReadAgain() {
         Cmd marker = new RefreshIndex();
         Model model = loaded().withReactions(new Reactions(List.of(

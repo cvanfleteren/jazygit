@@ -1,5 +1,8 @@
 package net.vanfleteren.jazygit.features.github;
 
+import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import java.time.Instant;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,6 +33,31 @@ class GitHubReactionsTest {
 
     private static List<Cmd> readsAfter(Model model, KernelEvent event) {
         return Events.happened(Next.of(model), event).cmds();
+    }
+
+    @Test
+    void aReadOfTheOpenPullRequestsGetsTheIdOfAReadOfGitHubAsItStarts() {
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+        // Two reads given out before, so the id the read gets is no initial value.
+        Model model = withTheFeature()
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withReadGivenOut().withReadGivenOut());
+
+        GitHubState started = Update.step(model, asked -> new Next(asked, List.of(PULL_REQUESTS)), now)
+                .model()
+                .part(GitHubState.PART);
+
+        assertEquals(2, started.listRead());
+        assertEquals(3, started.nextRead());
+
+        // Another command gets no id of a read of GitHub.
+        GitHubState after = Update.step(
+                        model.withPart(GitHubState.PART, started),
+                        asked -> new Next(asked, List.of(new LoadMyPullRequests())),
+                        now)
+                .model()
+                .part(GitHubState.PART);
+        assertEquals(2, after.listRead());
+        assertEquals(3, after.nextRead());
     }
 
     @Test
