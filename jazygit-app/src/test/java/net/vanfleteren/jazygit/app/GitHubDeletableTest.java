@@ -136,6 +136,18 @@ class GitHubDeletableTest {
         assertEquals(List.empty(), naming);
     }
 
+    /**
+     * The app's tests prove it works without GitHub only if they run without it: the pom sets {@link Features#WITHOUT}.
+     * GitHub's id is spelled out, as naming {@code GitHubFeature.ID} would use GitHub.
+     */
+    @Test
+    void theAppsTestsRunWithoutGitHub() {
+        assertTrue(
+                Features.ALL.forAll(feature ->
+                        feature.applying().forAll(applying -> !applying.id().equals("github"))),
+                "jazygit-app's surefire sets " + Features.WITHOUT + " to github (ADR 173)");
+    }
+
     private static ArchCondition<JavaClass> useGitHubOnlyThroughItsFeature() {
         return new ArchCondition<>("use GitHub only by reading " + GITHUB_FEATURE + ".FEATURE") {
             @Override
