@@ -152,6 +152,9 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   reads in its part. A pane lives in the group that owns most of what it shows, in its `panes` package, as
   `changes.panes.commits`; the app gives it to `LeftColumn` as a `LeftPane`, and its id is a `PaneId` constant. The
   search of the commits is the first that moved.
+- **A pane declares keys the features fill** (ADR 172): a pane in a group names no feature; it declares `PaneKey`s
+  beside itself, as `CommitsPane.LINE` and `CommitsPane.LISTING`, which a `Feature` fills with `filling`, and the app
+  gives it the `Fills` of its features (`Features.FILLS`). For each key, the first feature that gives anything wins.
 - **The kernel names no forge** (ADR 167, 169, 171): GitHub's state, its stores, its screen, its stack and its
   review threads are `features-github`'s. The kernel composes what the features state the branches are built on
   (`BranchBases`, from each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as

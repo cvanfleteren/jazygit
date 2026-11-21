@@ -24,6 +24,7 @@ import java.time.ZoneId;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.app.askpass.PopupAsking;
 import net.vanfleteren.jazygit.app.askpass.SshPromptDialog;
+import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.core.askpass.AskpassServer;
 import net.vanfleteren.jazygit.core.git.branches.BatchSsh;
 import net.vanfleteren.jazygit.core.process.SshAsking;
@@ -165,7 +166,7 @@ public class JazygitApp extends ToolkitApp {
                 clock,
                 focus::openContent,
                 this::showBranchesTab,
-                highlights -> new CommitsPanel(dispatch, highlights),
+                highlights -> new CommitsPanel(dispatch, highlights, Features.FILLS),
                 highlights -> new StashPanel(dispatch, highlights),
                 Screens.standard());
         this.commandLogPanel = new CommandLogPanel(
