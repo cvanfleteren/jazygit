@@ -22,6 +22,8 @@ class LanguageTest {
         "include/list.h, C",
         "src/list.cpp, C",
         "run.sh, SHELL",
+        "analysis/model.R, R",
+        "R/utils.r, R",
         "schema.sql, SQL",
         "package.json, JSON",
         ".github/workflows/ci.yml, YAML",
@@ -40,7 +42,7 @@ class LanguageTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"home/.bashrc, SHELL", ".envrc, SHELL", "flake.lock, JSON", "Cargo.lock, TOML"})
+    @CsvSource({"home/.bashrc, SHELL", ".envrc, SHELL", "flake.lock, JSON", "Cargo.lock, TOML", "home/.Rprofile, R"})
     void knowsALanguageByTheNameOfAFileAsAWhole(String path, Language language) {
         assertEquals(Option.of(language), Language.of(path, Option.none()));
     }
@@ -53,6 +55,7 @@ class LanguageTest {
         "#!/usr/bin/python3.12 -u, PYTHON",
         "#!/usr/bin/env -S node --no-warnings, JAVASCRIPT",
         "#!/usr/bin/env php, PHP",
+        "#!/usr/bin/env Rscript, R",
     })
     void knowsALanguageByItsShebang(String shebang, Language language) {
         assertEquals(Option.of(language), Language.of("bin/tool", Option.of(shebang)));

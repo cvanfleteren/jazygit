@@ -173,6 +173,36 @@ class LexerTest {
     }
 
     @Test
+    void rKnowsItsKeywordsAndItsMissingValues() {
+        assertEquals(
+                List.of(
+                        "KEYWORD function",
+                        "KEYWORD if",
+                        "KEYWORD NA_real_",
+                        "KEYWORD else",
+                        "STRING 'none'",
+                        "COMMENT # done"),
+                tokens(Language.R, "f <- function(x) if (is.na(x)) NA_real_ else 'none' # done"));
+    }
+
+    @Test
+    void aHashStartsAnRCommentRightAfterCode() {
+        Lexed commented = line(Language.R, new Outside(), "x <- f(1)# it is \"odd");
+
+        assertEquals(List.of("NUMBER 1", "COMMENT # it is \"odd"), shown("x <- f(1)# it is \"odd", commented));
+        assertEquals(List.of("KEYWORD TRUE"), shown("y <- TRUE", line(Language.R, commented.state(), "y <- TRUE")));
+    }
+
+    @Test
+    void anRStringGoesOnOverTheNextLines() {
+        Lexed open = line(Language.R, new Outside(), "query <- \"SELECT *");
+
+        assertEquals(
+                List.of("STRING   FROM t\"", "KEYWORD TRUE"),
+                shown("  FROM t\", TRUE)", line(Language.R, open.state(), "  FROM t\", TRUE)")));
+    }
+
+    @Test
     void nixKnowsItsKeywordsCommentsAndStrings() {
         assertEquals(
                 List.of(

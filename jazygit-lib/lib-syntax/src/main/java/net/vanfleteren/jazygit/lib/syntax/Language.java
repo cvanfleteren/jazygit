@@ -153,6 +153,24 @@ public enum Language {
             ".bashrc .bash_profile .bash_login .bash_logout .profile .zshrc .zshenv .zprofile .zlogin .envrc PKGBUILD",
             "sh bash zsh ksh",
             "sh bash zsh ksh dash ash"),
+    /**
+     * R, whose strings go on over lines and whose {@code #} starts a comment right after code. Not: its raw strings
+     * ({@code r"(…)"}), nor a name between backticks; and a digit after a point in a name, as the {@code 2} of
+     * {@code model.2}, is a number.
+     */
+    R(
+            Grammar.code(
+                            """
+                    if else repeat while function for in next break TRUE FALSE NULL Inf NaN NA NA_integer_ NA_real_
+                    NA_character_ NA_complex_
+                    """,
+                            List.of("#"),
+                            List.empty(),
+                            List.of(quoted("\"").overLines(), quoted("'").overLines()))
+                    .withHashAnywhere(true),
+            ".Rprofile",
+            "r",
+            "Rscript"),
     SQL(
             Grammar.code("""
                     add all alter and any as asc begin between by case cascade check column commit constraint create
@@ -253,6 +271,7 @@ public enum Language {
                     false,
                     "",
                     false,
+                    false,
                     false),
             "",
             "xml html htm xhtml svg xsd xsl xslt fxml iml plist csproj props targets",
@@ -267,6 +286,7 @@ public enum Language {
                     List.empty(),
                     false,
                     "",
+                    false,
                     false,
                     false),
             "",
