@@ -15,10 +15,11 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Part;
+import net.vanfleteren.jazygit.kernel.state.StatedBases;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -63,8 +64,11 @@ class RebaseUpdateTest {
     void aRootHasNoBase() {
         assertEquals(Option.none(), popup(checkedOut(MAIN), MAIN).base());
 
+        // A branch a feature states is a root, as GitHub does of a protected one (ADR 169).
         Model develop = checkedOut(DEVELOP)
-                .mapPart(GitHubState.PART, gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.of(DEVELOP))));
+                .withPart(
+                        Part.of("test.bases", StatedBases.NONE).stating(bases -> bases),
+                        new StatedBases(HashMap.empty(), HashSet.of(DEVELOP), Option.none()));
         assertEquals(Option.none(), popup(develop, DEVELOP).base());
     }
 

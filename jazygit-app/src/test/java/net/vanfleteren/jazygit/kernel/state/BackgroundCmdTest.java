@@ -16,8 +16,8 @@ import net.vanfleteren.jazygit.features.github.prs.LoadMyPullRequests;
 import net.vanfleteren.jazygit.features.github.prs.LoadPullRequestPreview;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
-import net.vanfleteren.jazygit.kernel.state.github.CheckTimesCmd;
-import net.vanfleteren.jazygit.kernel.state.github.LoadBranchCheckRuns;
+import net.vanfleteren.jazygit.features.github.state.CheckTimesCmd;
+import net.vanfleteren.jazygit.features.github.state.LoadBranchCheckRuns;
 import org.junit.jupiter.api.Test;
 
 /**

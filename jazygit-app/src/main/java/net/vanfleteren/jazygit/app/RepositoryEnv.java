@@ -7,6 +7,8 @@ import net.vanfleteren.jazygit.core.git.CliGit;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.process.SshAsking;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
+import net.vanfleteren.jazygit.features.github.state.GitHubAccount;
+import net.vanfleteren.jazygit.features.github.state.GitHubStores;
 import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore;
 import net.vanfleteren.jazygit.kernel.settings.CollapsedStore;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
@@ -17,7 +19,6 @@ import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequestsStore;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Repositories;
 import net.vanfleteren.jazygit.kernel.state.Terminal;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubAccount;
 
 /**
  * What commands run against for a repository on disk: git and gh as the account configured for it.
@@ -45,26 +46,28 @@ final class RepositoryEnv {
         GhToken token = new GhToken(git.worktree(), GitHubSettings.gh(settings), () -> GitHubAccount.configured(git));
         // Without the token, git still talks to the remotes, as the credential helper's own account.
         return new Env(
-                CliGit.withCredentials(git, () -> token.environment().getOrElse(HashMap.empty()), ssh),
-                // The browser of an account is read as a link opens, so one set since holds (ADR 88).
-                CliGitHub.of(
-                        git.worktree(),
-                        GitHubSettings.gh(settings),
-                        token,
-                        () -> GitHubAccount.host(git),
-                        account -> store.load()
-                                .settings()
-                                .get(GitHubSettings.BROWSERS)
-                                .of(account.host(), account.user()),
-                        ssh,
-                        SettingsPaths.cacheDir()),
-                store,
-                recent,
-                unseen,
-                checkTimings,
-                collapsed,
-                repositories,
-                terminal);
+                        CliGit.withCredentials(git, () -> token.environment().getOrElse(HashMap.empty()), ssh),
+                        // The browser of an account is read as a link opens, so one set since holds (ADR 88).
+                        CliGitHub.of(
+                                git.worktree(),
+                                GitHubSettings.gh(settings),
+                                token,
+                                () -> GitHubAccount.host(git),
+                                account -> store.load()
+                                        .settings()
+                                        .get(GitHubSettings.BROWSERS)
+                                        .of(account.host(), account.user()),
+                                ssh,
+                                SettingsPaths.cacheDir()),
+                        store,
+                        recent,
+                        collapsed,
+                        repositories,
+                        terminal,
+                        Env.Services.NONE)
+                .with(GitHubStores.UNSEEN, unseen)
+                .with(GitHubStores.CHECK_TIMINGS, checkTimings)
+                .with(Env.FORGE_ACCOUNT, GitHubAccount.ON_FORGE);
     }
 
     /**
@@ -77,8 +80,8 @@ final class RepositoryEnv {
                 settings,
                 env.settings(),
                 env.recent(),
-                env.unseen(),
-                env.checkTimings(),
+                env.service(GitHubStores.UNSEEN),
+                env.service(GitHubStores.CHECK_TIMINGS),
                 env.collapsed(),
                 env.repositories(),
                 env.terminal(),

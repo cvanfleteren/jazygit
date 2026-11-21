@@ -5,7 +5,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
@@ -17,7 +16,6 @@ import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
@@ -244,26 +242,20 @@ public final class AddWorktreeUpdate {
     /**
      * What the variables of a template of where the worktree that checks out {@code source} starts out stand for,
      * but for {@code {repo}}, which {@link WorktreeTemplate#location} knows (ADR 134): those it has no value for are
-     * left out. The repository on GitHub is the one of a pull request, or else the one the pull requests were read
-     * for.
+     * left out. The repository on the host of the remotes is the one the source is of, as a pull request, or else
+     * the one the features name, as the one GitHub's pull requests were read for (ADR 169).
      */
     private static Map<String, String> values(Model model, WorktreeSource source) {
-        Option<PullRequestSummary> pullRequest =
-                source instanceof WorktreeSource.PullRequest(var of) ? Option.of(of) : Option.none();
-        Map<String, String> onGitHub = pullRequest
-                .map(PullRequestSummary::repository)
-                .orElse(() -> model.part(GitHubState.PART).repository())
+        Map<String, String> onHost = source.repository()
+                .orElse(() -> model.parts().repository())
                 .map(repository -> List.of(repository.split("/", 2)))
                 .filter(parts -> parts.size() == 2)
                 .<Map<String, String>>map(parts -> LinkedHashMap.of("owner", parts.get(0), "name", parts.get(1)))
                 .getOrElse(LinkedHashMap.empty());
         return LinkedHashMap.<String, String>of(
                         "branch", source.directory().value().replace('/', '-'))
-                .merge(onGitHub)
-                .merge(pullRequest
-                        .<Map<String, String>>map(of -> LinkedHashMap.of(
-                                "number", String.valueOf(of.number().value())))
-                        .getOrElse(LinkedHashMap.empty()));
+                .merge(onHost)
+                .merge(source.values());
     }
 
     /**

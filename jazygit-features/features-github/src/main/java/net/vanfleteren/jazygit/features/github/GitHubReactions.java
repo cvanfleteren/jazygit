@@ -1,8 +1,12 @@
 package net.vanfleteren.jazygit.features.github;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Reactions.Reaction;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 
 /**
@@ -10,6 +14,23 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
  * what GitHub has changed, or may have, and the first time once a repository is opened.
  */
 final class GitHubReactions {
+
+    /**
+     * The reaction: to what happens in the kernel, as {@link #to} answers it, and to the commands that start, among
+     * which a read of the open pull requests gets the id of a read of GitHub (ADR 119).
+     */
+    static final Reaction REACTION = new Reaction() {
+
+        @Override
+        public Next to(Model model, KernelEvent event) {
+            return GitHubReactions.to(model, event);
+        }
+
+        @Override
+        public Model started(Model model, List<Cmd> cmds) {
+            return model.mapPart(GitHubState.PART, gitHub -> gitHub.withStarted(cmds));
+        }
+    };
 
     private GitHubReactions() {}
 

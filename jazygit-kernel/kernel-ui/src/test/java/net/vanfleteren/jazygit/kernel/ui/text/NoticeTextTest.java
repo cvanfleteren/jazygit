@@ -3,10 +3,10 @@ package net.vanfleteren.jazygit.kernel.ui.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import org.junit.jupiter.api.Test;
 
@@ -47,11 +47,10 @@ class NoticeTextTest {
     }
 
     @Test
-    void aStackNotListedNamesItsPullRequestWithoutGroupingTheNumber() {
-        assertEquals(
-                "GitHub did not list the stack of #1234 in time, so it was not rebased: rebase it from the stack menu"
-                        + " (s) once it shows.",
-                NoticeText.of(new Notice.StackNotListed(new PrNumber(1234))));
+    void aNoticeOfAFeatureSaysItselfAsAPhrase() {
+        Notice.Phrased said = () -> Phrase.of("notice.copied", Phrase.count(3));
+
+        assertEquals(NoticeText.of(new Notice.Copied(3)), NoticeText.of(said));
     }
 
     @Test

@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.github.edit;
 
-import static net.vanfleteren.jazygit.kernel.state.TestModels.lastRead;
+import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.lastRead;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.refused;
 import static net.vanfleteren.jazygit.kernel.ui.text.ErrorTexts.errorText;
@@ -51,6 +51,7 @@ import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.AppError;
@@ -61,7 +62,6 @@ import net.vanfleteren.jazygit.kernel.state.Terminal;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import org.junit.jupiter.api.Test;
 

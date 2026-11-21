@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.github;
 
 import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.*;
+import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.lastRead;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.*;
-import static net.vanfleteren.jazygit.kernel.state.TestModels.lastRead;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,11 +30,12 @@ import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.features.github.state.*;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.BaseTip;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
@@ -393,10 +394,7 @@ class PullRequestFilesUpdateTest {
                 Option.of(new GhCommit(BASE_OID)),
                 Option.of(new GhCommit(HEAD_OID)));
         Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
-                .withPart(
-                        PrOverview.PART,
-                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
-                                Option.of("owner/repo")));
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(listed));
 
@@ -413,10 +411,7 @@ class PullRequestFilesUpdateTest {
     @Test
     void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestListedWithoutItsCommitsOnceItIsRead() {
         Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
-                .withPart(
-                        PrOverview.PART,
-                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
-                                Option.of("owner/repo")));
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
 
         Next requested =
                 Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(summary("owner/repo", 42)));
@@ -447,10 +442,8 @@ class PullRequestFilesUpdateTest {
     @Test
     void shiftFOnAPullRequestOfAnotherRepositoryOpensItInTheBrowser() {
         PullRequestSummary elsewhere = summary("other/repo");
-        Model ofOwnerRepo = loaded().withPart(
-                        PrOverview.PART,
-                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
-                                Option.of("owner/repo")));
+        Model ofOwnerRepo =
+                loaded().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(elsewhere));
 

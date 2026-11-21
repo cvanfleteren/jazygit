@@ -26,16 +26,10 @@ public record ReadWorktreeTemplate(WorktreeSource source, boolean switching) imp
      */
     public static final String KEY = "jazygit.newWorktreeTemplate";
 
-    /**
-     * The key of the git configuration that holds where a new worktree for a pull request starts out.
-     */
-    public static final String PULL_REQUEST_KEY = "jazygit.pullRequestWorktreeTemplate";
-
     @Override
     public Msg run(Env env) {
-        List<String> keys =
-                source instanceof WorktreeSource.PullRequest ? List.of(PULL_REQUEST_KEY, KEY) : List.of(KEY);
-        return read(keys.toStream()
+        return read(source.templateKeys()
+                .toStream()
                 .flatMap(key -> read(env, key))
                 .headOption()
                 .map(template -> WorktreeCmd.expandedHome(template, System.getProperty("user.home"))));

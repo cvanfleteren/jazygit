@@ -1,11 +1,12 @@
 package net.vanfleteren.jazygit.features.github.prs;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.features.github.state.GitHubStores;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Label;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 
 /**
  * Reads the open pull requests of the repository, forks included, and the unseen ones kept for it. It runs in the
@@ -32,7 +33,7 @@ public record LoadRepositoryPullRequests() implements GitHubState.ListRead {
                 .fold(
                         this::failed,
                         read -> new PrOverviewMsg.RepositoryLoaded(
-                                read, env.unseen().load(read.repository())));
+                                read, env.service(GitHubStores.UNSEEN).load(read.repository())));
     }
 
     @Override

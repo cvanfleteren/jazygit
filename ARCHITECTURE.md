@@ -117,7 +117,7 @@ Each box is a module (the core's modules hold a few); the arrows are its depende
 it reaches through them. `lens` and `image` are below `settings` and `state`, and left out.
 
 - **Inside a module the parts have no cycles either**: the features of a group (`ChangesArchitectureTest`, ...), the
-  subpackages of `state` (`diff`, `view`, `load`, `github`, `operation`, `popup`, `index`, `preferences`;
+  subpackages of `state` (`diff`, `view`, `load`, `operation`, `popup`, `index`, `preferences`;
   `state` itself uses them all, and they all use it, as the `Model` holds them), and those of `ui`.
 - **The subpackages of `ui` follow the panes**: the shell (`ui` itself: `LeftColumn`, the status and command log
   panels, `Feature`, `LeftPane`) → the panes (`branches`, `commits`: the rows of commits, `files`,
@@ -145,11 +145,20 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   share a name. What the panes and several features read stays a field of the `Model`.
 - **A feature's code lives in its feature's module** (ADR 158): where the kernel names a feature, that place becomes
   an extension point the feature fills, once it moves. A `Part` declares what the kernel asks of it: queries
-  (`rereading`, `knowingCommits`) and one `reacting` to a `KernelEvent`, asked only of the parts that are kept, in
-  the order of their names. `Targeted` and `LoadMsg.Read` are open, and `Target.inPart` keeps what a feature's load
+  (`rereading`, `knowingCommits`, `stating` what the branches are built on, `naming` the repository on the host of
+  the remotes) and one `reacting` to a `KernelEvent`, asked only of the parts that are kept, in the order of their
+  names. `Targeted` and `LoadMsg.Read` are open, and `Target.inPart` keeps what a feature's load
   reads in its part. A pane lives in the group that owns most of what it shows, in its `panes` package, as
   `changes.panes.commits`; the app gives it to `LeftColumn` as a `LeftPane`, and its id is a `PaneId` constant. The
   search of the commits is the first that moved.
+- **The kernel names no forge** (ADR 167, 169): GitHub's state, its stores, its screen and its stack are
+  `features-github`'s. The kernel composes what the features state the branches are built on (`BranchBases`, from
+  each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as a read of GitHub gets
+  its id then), and holds what a feature runs against of its own in the `Env` under an `Env.Service` the feature
+  declares, as its stores. A notice of a feature is one of its own sealed set, saying itself as a phrase
+  (`Notice.Phrased`), as its errors do. `AppRules.theKernelNamesNoForge` keeps `kernel..` from `core.gh..`, but for
+  the review threads of the rich diff, which the kernel still draws, and the gh their loads run against and fail
+  with (`AppRules.REVIEW_THREADS`).
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys`, a dialog or a feature's content runs git or gh.
@@ -243,7 +252,8 @@ classDiagram
 
 - **`Msg` applies itself.** Each feature has a sealed sub-interface (`RewordMsg`) whose `apply` delegates to that
   feature's update class (`RewordUpdate`), so adding a feature changes neither `Update` nor `Msg`.
-- **`Cmd` is immutable data** that runs itself against an `Env` (the `Git` and the `GitHub`) and folds the `Either`
+- **`Cmd` is immutable data** that runs itself against an `Env` (the `Git`, the `GitHub`, the stores, and what the
+  features run against of their own, each under its `Env.Service`) and folds the `Either`
   it gets into a `Msg`, a failure through `failed(Failure)`.
 - **`Load`** reads part of the repository into the model as a `Loadable` (`Loading`, `Loaded`, `Failed`).
 - **`OperationCmd`** changes the repository. Its outcome is `OperationMsg.Succeeded`, `Stopped` (on conflicts) or

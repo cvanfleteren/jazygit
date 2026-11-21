@@ -52,6 +52,22 @@ public record Parts(Map<String, Kept<?>> kept) {
     }
 
     /**
+     * What the parts kept state the branches are built on, in the order of their names, leaving out those that state
+     * nothing (ADR 169).
+     */
+    public List<StatedBases> stated() {
+        return kept.values().toList().map(Kept::bases).filter(bases -> !bases.equals(StatedBases.NONE));
+    }
+
+    /**
+     * The repository on the host of the remotes, as {@code owner/name}: as the first part kept that knows it names it,
+     * in the order of their names (ADR 169).
+     */
+    public Option<String> repository() {
+        return kept.values().toStream().flatMap(Kept::repository).headOption();
+    }
+
+    /**
      * What {@code model} becomes once each part it keeps answered {@code event}, in the order of their names. Each
      * one answers with its value as the parts before it left it, and not at all once they stopped keeping it.
      */
@@ -84,6 +100,14 @@ public record Parts(Map<String, Kept<?>> kept) {
 
         Update.Next reacting(Model model, KernelEvent event) {
             return part.hooks().reacting().to(model, value, event);
+        }
+
+        StatedBases bases() {
+            return part.hooks().states().bases(value);
+        }
+
+        Option<String> repository() {
+            return part.hooks().names().repository(value);
         }
     }
 }

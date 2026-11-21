@@ -27,8 +27,5 @@ class AgentArchitectureTest {
             .resideInAPackage("net.vanfleteren.jazygit.features.agent..")
             .should()
             .dependOnClassesThat()
-            .resideInAnyPackage(
-                    "net.vanfleteren.jazygit.core.gh..",
-                    "net.vanfleteren.jazygit.features.github..",
-                    "net.vanfleteren.jazygit.kernel.state.github..");
+            .resideInAnyPackage("net.vanfleteren.jazygit.core.gh..", "net.vanfleteren.jazygit.features.github..");
 }

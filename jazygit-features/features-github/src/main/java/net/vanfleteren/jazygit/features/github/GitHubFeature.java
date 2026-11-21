@@ -99,7 +99,7 @@ public final class GitHubFeature {
             .every(CheckTimings.READ_WHILE_PENDING, ChecksMsg.Tick::new)
             .every(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new)
             .every(STACK_CHECK_INTERVAL, StackMsg.Tick::new)
-            .reacting(GitHubReactions::to)
+            .reacting(GitHubReactions.REACTION)
             .reacting(PrOverviewUpdate::to)
             .badging(GitHubBadge::of)
             .grouping(StackGroups::of)

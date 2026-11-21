@@ -11,9 +11,9 @@ import net.vanfleteren.jazygit.features.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.CheckMerge;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.MergePullRequest;
+import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 
 /**

@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.features.github.settings;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
+import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.kernel.state.*;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 
 /**
  * The IO of the GitHub section of the settings panel.

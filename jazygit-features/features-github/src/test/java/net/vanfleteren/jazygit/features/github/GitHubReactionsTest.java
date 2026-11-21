@@ -5,13 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
+import java.time.Instant;
 import net.vanfleteren.jazygit.features.github.prs.LoadMyPullRequests;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,31 @@ class GitHubReactionsTest {
 
     private static List<Cmd> readsAfter(Model model, KernelEvent event) {
         return Events.happened(Next.of(model), event).cmds();
+    }
+
+    @Test
+    void aReadOfTheOpenPullRequestsGetsTheIdOfAReadOfGitHubAsItStarts() {
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+        // Two reads given out before, so the id the read gets is no initial value.
+        Model model = withTheFeature()
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withReadGivenOut().withReadGivenOut());
+
+        GitHubState started = Update.step(model, asked -> new Next(asked, List.of(PULL_REQUESTS)), now)
+                .model()
+                .part(GitHubState.PART);
+
+        assertEquals(2, started.listRead());
+        assertEquals(3, started.nextRead());
+
+        // Another command gets no id of a read of GitHub.
+        GitHubState after = Update.step(
+                        model.withPart(GitHubState.PART, started),
+                        asked -> new Next(asked, List.of(new LoadMyPullRequests())),
+                        now)
+                .model()
+                .part(GitHubState.PART);
+        assertEquals(2, after.listRead());
+        assertEquals(3, after.nextRead());
     }
 
     @Test

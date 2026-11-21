@@ -51,3 +51,5 @@ Handing the agent the token in its environment would make that work by itself, b
   that; only the prompt guards against it.
 - A push over SSH goes as the SSH key's account, whatever the agent is told; only HTTPS goes through gh's token.
 - The command log shows the prompt with `$(gh auth token …)` in it, not the token.
+
+Amended by ADR 169: the account is a service of the `Env`, `Env.FORGE_ACCOUNT`, which the app fills from GitHub's.

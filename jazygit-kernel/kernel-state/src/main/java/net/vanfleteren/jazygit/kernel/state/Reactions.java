@@ -26,11 +26,28 @@ public record Reactions(List<Reaction> all) {
     }
 
     /**
+     * What {@code model} becomes once {@code cmds}, which an update asked for, started, as each reaction makes of it,
+     * in order (ADR 169).
+     */
+    Model started(Model model, List<Cmd> cmds) {
+        return all.foldLeft(model, (told, reaction) -> reaction.started(told, cmds));
+    }
+
+    /**
      * What a feature does when {@code event} happened to {@code model}: nothing, or what changes the model and
      * the commands to run, which it answers with {@code Update.Next.of(model)} when the event is none of its concern.
      */
     @FunctionalInterface
     public interface Reaction {
         Update.Next to(Model model, KernelEvent event);
+
+        /**
+         * What {@code model} becomes once {@code cmds} started, as the ids they are given are known then: as a read
+         * of a forge, which is told apart from those before it by the id it gets as it starts (ADR 119, 169). It
+         * asks for nothing; by default, it changes nothing.
+         */
+        default Model started(Model model, List<Cmd> cmds) {
+            return model;
+        }
     }
 }

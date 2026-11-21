@@ -17,19 +17,19 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.features.github.state.LoadBranchChecks;
+import net.vanfleteren.jazygit.features.github.state.LoadProtectedBranches;
+import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
+import net.vanfleteren.jazygit.features.github.state.PullRequestsMsg;
+import net.vanfleteren.jazygit.kernel.state.BranchBases;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
-import net.vanfleteren.jazygit.kernel.state.GitHubBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
-import net.vanfleteren.jazygit.kernel.state.github.LoadBranchChecks;
-import net.vanfleteren.jazygit.kernel.state.github.LoadProtectedBranches;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsMsg;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
 import net.vanfleteren.jazygit.kernel.state.popup.ErrorPopup;
 import org.junit.jupiter.api.Test;
@@ -254,7 +254,7 @@ class PullRequestReadsTest {
 
         Next read = Update.update(loaded(), new Read(List.of(onA)));
         assertEquals(
-                List.of(new LoadBranches(GitHubBases.in(read.model()))),
+                List.of(new LoadBranches(BranchBases.in(read.model()))),
                 read.cmds().filter(LoadBranches.class::isInstance));
 
         Next same = Update.update(read.model(), new Read(List.of(onA)));
@@ -267,7 +267,7 @@ class PullRequestReadsTest {
                 TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new GhBranch("develop"))));
 
         assertEquals(
-                List.of(new LoadBranches(GitHubBases.in(read.model()))),
+                List.of(new LoadBranches(BranchBases.in(read.model()))),
                 read.cmds().filter(LoadBranches.class::isInstance));
     }
 

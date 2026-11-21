@@ -28,9 +28,9 @@ import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.Rerea
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.stack.StackPopups;
+import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;

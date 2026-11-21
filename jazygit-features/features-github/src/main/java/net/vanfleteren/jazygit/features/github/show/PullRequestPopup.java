@@ -12,12 +12,12 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
+import net.vanfleteren.jazygit.features.github.state.ChecksReached;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
-import net.vanfleteren.jazygit.kernel.state.github.ChecksReached;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
-import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

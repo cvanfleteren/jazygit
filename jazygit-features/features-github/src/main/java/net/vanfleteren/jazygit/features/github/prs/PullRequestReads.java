@@ -3,15 +3,15 @@ package net.vanfleteren.jazygit.features.github.prs;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
+import net.vanfleteren.jazygit.features.github.state.BranchChecksUpdate;
+import net.vanfleteren.jazygit.features.github.state.FailingRead;
+import net.vanfleteren.jazygit.features.github.state.GitHubReads;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
+import net.vanfleteren.jazygit.features.github.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.BranchChecksUpdate;
-import net.vanfleteren.jazygit.kernel.state.github.FailingRead;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubReads;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsUpdate;
 
 /**
  * Reading the open pull requests of the repository from GitHub, which the branches show and the pull requests screen

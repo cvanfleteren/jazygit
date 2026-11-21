@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.github;
 
 import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.*;
+import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.lastRead;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.*;
-import static net.vanfleteren.jazygit.kernel.state.TestModels.lastRead;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
@@ -23,13 +23,13 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
-import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.features.github.state.*;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
@@ -254,10 +254,8 @@ class PullRequestDetailsUpdateTest {
                 Instant.EPOCH,
                 "https://github.com/owner/repo/pull/9");
 
-        Model ofOwnerRepo = loaded().withPart(
-                        PrOverview.PART,
-                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
-                                Option.of("owner/repo")));
+        Model ofOwnerRepo =
+                loaded().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
 
         Next shown = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(summary));
 
@@ -292,10 +290,8 @@ class PullRequestDetailsUpdateTest {
                 Review.NONE,
                 Instant.EPOCH,
                 "https://github.com/other/repo/pull/3");
-        Model ofOwnerRepo = loaded().withPart(
-                        PrOverview.PART,
-                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
-                                Option.of("owner/repo")));
+        Model ofOwnerRepo =
+                loaded().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(elsewhere));
 

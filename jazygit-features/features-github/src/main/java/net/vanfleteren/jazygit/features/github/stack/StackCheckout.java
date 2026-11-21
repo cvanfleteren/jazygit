@@ -13,8 +13,8 @@ import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
+import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.github.FromGitHub;
 
 /**
  * Checking out a stack on GitHub (ADR 99): a local branch for each of its open pull requests, made or fast-forwarded

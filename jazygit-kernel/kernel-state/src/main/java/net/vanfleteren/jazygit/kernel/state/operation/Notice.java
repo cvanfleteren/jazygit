@@ -1,17 +1,26 @@
 package net.vanfleteren.jazygit.kernel.state.operation;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
 
 /**
  * What the user is told about how the last operation went, when that is no failure but still needs their
  * attention, as data; the view turns it into text.
  */
 public sealed interface Notice {
+
+    /**
+     * A notice of a feature, one of a sealed set of its own, as its errors are: the kernel only knows that it says
+     * itself as a phrase, so adding one changes nothing outside the feature (ADR 169).
+     */
+    non-sealed interface Phrased extends Notice {
+
+        Phrase phrase();
+    }
 
     /**
      * The operation stopped on conflicts, which the user resolves before going on.
@@ -38,12 +47,6 @@ public sealed interface Notice {
      * GitHub was still merging the pull request of {@code branch} after so long that it is no longer asked about.
      */
     record MergeStillPending(BranchName branch) implements Notice {}
-
-    /**
-     * The stack of pull request {@code pullRequest}, linked to be rebased, was not listed by GitHub after so long
-     * that it is no longer waited for: it was not rebased (ADR 74).
-     */
-    record StackNotListed(PrNumber pullRequest) implements Notice {}
 
     /**
      * Stack {@code stack} was ready to be rebased while another dialog was open, which it does not take the place of:

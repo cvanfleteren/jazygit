@@ -35,9 +35,7 @@ public record NewWorktreePopup(WorktreeSource source, String location, boolean s
      * The key of the git configuration that would set where it starts out: the one for pull requests, for one.
      */
     public String templateKey() {
-        return source instanceof WorktreeSource.PullRequest
-                ? ReadWorktreeTemplate.PULL_REQUEST_KEY
-                : ReadWorktreeTemplate.KEY;
+        return source.templateKeys().head();
     }
 
     @Override

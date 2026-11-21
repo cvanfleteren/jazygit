@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github;
 
 import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.*;
-import static net.vanfleteren.jazygit.kernel.state.TestModels.lastRead;
+import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.lastRead;
 import static net.vanfleteren.jazygit.kernel.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,12 +33,12 @@ import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.LoadPullReque
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.MergePullRequest;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import org.junit.jupiter.api.Test;
 
 /**

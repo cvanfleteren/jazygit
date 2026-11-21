@@ -26,6 +26,8 @@ import net.vanfleteren.jazygit.features.github.checks.ChecksUpdate;
 import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.features.github.comments.CommentsMsg;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestMsg;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
+import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictMsg;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.features.github.widgets.CheckRows;
@@ -34,8 +36,6 @@ import net.vanfleteren.jazygit.features.github.widgets.PullRequestSymbols.Symbol
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.state.github.CheckTimes;
-import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;

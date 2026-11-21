@@ -16,10 +16,10 @@ import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestMsg.Requested;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestMsg.WorktreeRequested;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
+import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.FromGitHub;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
@@ -42,7 +42,7 @@ public final class CheckoutPullRequestUpdate {
      * here stay here. Once added, the app switches to it without asking when {@code switching} (ADR 68).
      */
     static Next inWorktree(Model model, PullRequestSummary pullRequest, boolean switching) {
-        WorktreeSource source = new WorktreeSource.PullRequest(pullRequest);
+        WorktreeSource source = new PullRequestWorktree(pullRequest);
         return proceed(
                 model,
                 forWorktree(model, pullRequest, source),
@@ -129,8 +129,7 @@ public final class CheckoutPullRequestUpdate {
      * Blocked while it is not known yet which repository this is, or when {@code pullRequest} is of another one.
      */
     private static Option<Readiness> ofThisRepository(Model model, PullRequestSummary pullRequest) {
-        return model.part(PrOverview.PART)
-                .ofThisRepository(pullRequest)
+        return PrOverview.ofThisRepository(model, pullRequest)
                 .fold(
                         unknown -> Option.of(new Readiness.Blocked(unknown)),
                         ofThis -> Option.when(

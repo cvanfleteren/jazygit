@@ -34,14 +34,13 @@ import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd;
-import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Kind;
 import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Landing;
 import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Status;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import org.junit.jupiter.api.Test;
@@ -446,7 +445,7 @@ class CheckOutStackTest {
     }
 
     private static Model ofOwnerRepo(Model model) {
-        return model.withPart(PrOverview.PART, PrOverview.INITIAL.withRepositoryName(Option.of("owner/repo")));
+        return model.mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
     }
 
     @Test

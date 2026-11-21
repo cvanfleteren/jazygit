@@ -21,6 +21,8 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
 import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -30,8 +32,6 @@ import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
@@ -175,8 +175,8 @@ class PrOverviewUpdateTest {
 
         assertEquals(Option.of(unseen(4, 3)), read.model().part(PrOverview.PART).unseen());
         assertEquals(1, read.model().part(PrOverview.PART).unseenCount());
-        assertTrue(read.model().part(PrOverview.PART).isUnseen(third));
-        assertFalse(read.model().part(PrOverview.PART).isUnseen(fourth));
+        assertTrue(PrOverview.isUnseen(read.model(), third));
+        assertFalse(PrOverview.isUnseen(read.model(), fourth));
         assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(4, 3))), read.cmds());
     }
 
@@ -213,7 +213,7 @@ class PrOverviewUpdateTest {
                 .model();
 
         assertEquals(Option.of(unseen(46, 46)), again.part(PrOverview.PART).unseen());
-        assertFalse(again.part(PrOverview.PART).isUnseen(reopened));
+        assertFalse(PrOverview.isUnseen(again, reopened));
     }
 
     @Test
@@ -329,20 +329,21 @@ class PrOverviewUpdateTest {
         assertEquals(new Loadable.Loaded<>(new PullRequestList(List.of(NEW, OLD), 2)), read.repository());
         assertTrue(model.jobs().runs(new LoadMyPullRequests()));
         assertFalse(model.jobs().runs(new LoadRepositoryPullRequests()));
-        assertEquals(Either.right(true), read.ofThisRepository(NEW));
-        assertEquals(Either.right(false), read.ofThisRepository(ELSEWHERE));
+        assertEquals(Either.right(true), PrOverview.ofThisRepository(model, NEW));
+        assertEquals(Either.right(false), PrOverview.ofThisRepository(model, ELSEWHERE));
     }
 
     @Test
     void whetherAPullRequestIsOfTheRepositoryIsNotKnownWhileItsPullRequestsAreReadOrWhenThatFailed() {
         var failure = refused("gh: not logged in");
 
-        assertEquals(Either.left(new PullRequestsError.NotRead()), PrOverview.INITIAL.ofThisRepository(NEW));
+        assertEquals(
+                Either.left(new PullRequestsError.NotRead()), PrOverview.INITIAL.ofThisRepository(Option.none(), NEW));
         assertEquals(
                 Either.left(new PullRequestsError.Unavailable(failure)),
                 PrOverview.INITIAL
                         .withRepository(new Loadable.Failed<>(failure))
-                        .ofThisRepository(NEW));
+                        .ofThisRepository(Option.none(), NEW));
     }
 
     @Test
