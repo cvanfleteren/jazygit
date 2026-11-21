@@ -291,6 +291,28 @@ class LexerTest {
     }
 
     @Test
+    void rKnowsItsKeywordsAndItsMissingValues() {
+        assertEquals(
+                List.of(
+                        "KEYWORD function",
+                        "KEYWORD if",
+                        "KEYWORD NA_real_",
+                        "KEYWORD else",
+                        "STRING 'none'",
+                        "COMMENT # done"),
+                tokens(Language.R, "f <- function(x) if (is.na(x)) NA_real_ else 'none' # done"));
+    }
+
+    @Test
+    void anRStringGoesOnOverTheNextLines() {
+        Lexed open = line(Language.R, new Outside(), "query <- \"SELECT *");
+
+        assertEquals(
+                List.of("STRING   FROM t\"", "KEYWORD TRUE"),
+                shown("  FROM t\", TRUE)", line(Language.R, open.state(), "  FROM t\", TRUE)")));
+    }
+
+    @Test
     void sqlKeywordsAreMatchedIgnoringCase() {
         assertEquals(
                 List.of("KEYWORD SELECT", "KEYWORD from", "KEYWORD Where", "STRING 'x'", "COMMENT -- all"),

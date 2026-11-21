@@ -153,6 +153,21 @@ public enum Language {
             ".bashrc .bash_profile .bash_login .bash_logout .profile .zshrc .zshenv .zprofile .zlogin .envrc PKGBUILD",
             "sh bash zsh ksh",
             "sh bash zsh ksh dash ash"),
+    /**
+     * R, whose strings go on over lines. Not: its raw strings ({@code r"(…)"}), nor a name between backticks.
+     */
+    R(
+            Grammar.code(
+                    """
+                    if else repeat while function for in next break TRUE FALSE NULL Inf NaN NA NA_integer_ NA_real_
+                    NA_character_ NA_complex_
+                    """,
+                    List.of("#"),
+                    List.empty(),
+                    List.of(quoted("\"").overLines(), quoted("'").overLines())),
+            ".Rprofile",
+            "r",
+            "Rscript"),
     SQL(
             Grammar.code("""
                     add all alter and any as asc begin between by case cascade check column commit constraint create
