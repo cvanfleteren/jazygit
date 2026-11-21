@@ -168,7 +168,9 @@ public enum Language {
             ""),
     /**
      * CSS, whose at-rules ({@code @media}) are its annotations. Its keywords are those that mean the same in every
-     * property, and {@code !important}: a word of a value, like {@code none}, is the name of a class as often.
+     * property, and {@code !important}: a word of a value, like {@code none}, is the name of a class as often. Not: an
+     * at-rule right after an opening brace, as in {@code @supports (x){@media y}} or in nesting, which is taken for an
+     * inline tag of a doc comment ({@code {@link …}}, ADR 113) and not coloured.
      */
     CSS(
             Grammar.code(
