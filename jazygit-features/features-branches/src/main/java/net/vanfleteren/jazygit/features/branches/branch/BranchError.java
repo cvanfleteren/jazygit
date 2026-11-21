@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.features.branches.branch;
 
 import io.vavr.collection.List;
 import java.util.Locale;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
@@ -80,15 +79,18 @@ public sealed interface BranchError extends AppError {
     }
 
     /**
-     * Setting the base of {@code branch} was asked for, but its open pull request {@code number} says it is built on
-     * {@code base}, which comes before what is recorded (ADR 143): it is changed on GitHub.
+     * Setting the base of {@code branch} was asked for, but {@code by} states it is built on {@code base}, as its
+     * open pull request does on GitHub, which comes before what is recorded (ADR 143, 169): it is changed there.
      */
-    record BaseFromPullRequest(BranchName branch, PrNumber number, BranchName base) implements BranchError {
+    record BaseStated(BranchName branch, BranchName base, Phrase by) implements BranchError {
 
         @Override
         public Phrase phrase() {
             return Phrase.of(
-                    "branches.error.setBase.pullRequest", branch.value(), String.valueOf(number.value()), base.value());
+                    "branches.error.setBase.stated",
+                    Phrase.verbatim(branch.value()),
+                    by,
+                    Phrase.verbatim(base.value()));
         }
     }
 

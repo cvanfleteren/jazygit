@@ -1,13 +1,11 @@
 package net.vanfleteren.jazygit.features.branches.branch.rebase;
 
-import io.vavr.collection.HashSet;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.kernel.state.GitHubBases;
+import net.vanfleteren.jazygit.kernel.state.BranchBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
@@ -58,10 +56,7 @@ public final class RebaseUpdate {
      */
     static Option<BranchName> base(Model model, Branch branch) {
         Option<BranchName> main = AheadUpdate.main(model);
-        if (GitHubBases.root(
-                branch.name(),
-                main,
-                model.part(GitHubState.PART).protectedBranches().getOrElse(HashSet.empty()))) {
+        if (BranchBases.in(model).root(branch.name(), main)) {
             return Option.none();
         }
         return model.repo()

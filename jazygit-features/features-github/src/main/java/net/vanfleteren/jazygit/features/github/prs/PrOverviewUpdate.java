@@ -7,6 +7,8 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.features.github.state.FailingRead;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -15,7 +17,6 @@ import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.FailingRead;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 
@@ -60,7 +61,7 @@ public final class PrOverviewUpdate {
      * What {@code msg} does to {@code overview} at {@code now}, while {@code jobs} run, whatever the rest of the model
      * is.
      */
-    static Step update(PrOverview overview, PrOverviewMsg msg, Instant now, Jobs jobs) {
+    static Step update(PrOverview overview, PrOverviewMsg msg, Instant now, Jobs jobs, Option<String> repositoryName) {
         return switch (msg) {
             // What failed to read before is read again too.
             case PrOverviewMsg.Refresh() -> {
@@ -72,12 +73,11 @@ public final class PrOverviewUpdate {
             }
             case PrOverviewMsg.RepositoryLoaded(var read, var kept) -> {
                 PrOverview loaded = overview.withFreshness(overview.freshness().succeeded(REPOSITORY, now))
-                        .withRepository(overview.repository().reload(newestFirst(read.open())))
-                        .withRepositoryName(Option.of(read.repository()));
+                        .withRepository(overview.repository().reload(newestFirst(read.open())));
                 // What was kept is only of use until the model has its own.
                 Option<UnseenPullRequests> before = overview.unseen().orElse(kept);
                 UnseenPullRequests after = unseen(before, read);
-                yield kept(Step.of(loaded.withUnseen(Option.of(after))), before.contains(after));
+                yield kept(Step.of(loaded.withUnseen(Option.of(after))), before.contains(after), read.repository());
             }
             case PrOverviewMsg.RepositoryLoadFailed(Failure failure) ->
                 Step.of(overview.withFreshness(overview.freshness().failed(REPOSITORY))
@@ -96,7 +96,7 @@ public final class PrOverviewUpdate {
                 Step shown = overview.preview().exists(preview -> preview.key().equals(pullRequest))
                         ? Step.of(highlighted)
                         : preview(highlighted, pullRequest, List.empty());
-                yield seen(shown, pullRequest);
+                yield seen(shown, pullRequest, repositoryName);
             }
             case PrOverviewMsg.PreviewLoaded(PullRequestSummary key, var preview) ->
                 Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.reload(preview))));
@@ -111,7 +111,12 @@ public final class PrOverviewUpdate {
      */
     private static Next overview(Model model, PrOverviewMsg msg) {
         Model ran = readTold(model, msg);
-        Step step = update(ran.part(PrOverview.PART), msg, ran.now(), ran.jobs());
+        Step step = update(
+                ran.part(PrOverview.PART),
+                msg,
+                ran.now(),
+                ran.jobs(),
+                ran.part(GitHubState.PART).repository());
         return new Next(ran.withPart(PrOverview.PART, step.overview()), step.cmds());
     }
 
@@ -191,35 +196,36 @@ public final class PrOverviewUpdate {
     }
 
     /**
-     * {@code step}, with {@code pullRequest} seen, if it was not yet.
+     * {@code step}, with {@code pullRequest} seen, if it is of the repository, {@code repositoryName}, and was not seen
+     * yet.
      */
-    private static Step seen(Step step, PullRequestSummary pullRequest) {
+    private static Step seen(Step step, PullRequestSummary pullRequest, Option<String> repositoryName) {
         PrOverview overview = step.overview();
-        return overview.isUnseen(pullRequest)
+        return repositoryName.isDefined() && overview.isUnseen(repositoryName, pullRequest)
                 ? kept(
                         new Step(
                                 overview.withUnseen(overview.unseen()
                                         .map(unseen ->
                                                 unseen.seen(pullRequest.number().value()))),
                                 step.cmds()),
-                        false)
+                        false,
+                        repositoryName.get())
                 : step;
     }
 
     /**
-     * {@code step}, also keeping the unseen pull requests it has for the next session, unless they are kept
-     * {@code already}.
+     * {@code step}, also keeping the unseen pull requests it has of {@code repository} for the next session, unless
+     * they are kept {@code already}.
      */
-    private static Step kept(Step step, boolean already) {
+    private static Step kept(Step step, boolean already, String repository) {
         PrOverview overview = step.overview();
         return already
                 ? step
                 : new Step(
                         overview,
                         step.cmds()
-                                .appendAll(overview.repositoryName()
-                                        .flatMap(name -> overview.unseen()
-                                                .map(unseen -> new SaveUnseenPullRequests(name, unseen)))));
+                                .appendAll(overview.unseen()
+                                        .map(unseen -> new SaveUnseenPullRequests(repository, unseen))));
     }
 
     /**

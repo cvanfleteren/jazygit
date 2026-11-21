@@ -6,14 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
-import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
@@ -26,18 +27,33 @@ import org.junit.jupiter.api.Test;
 class NewWorktreeDialogTest {
 
     private static final WorktreeSource BRANCH = new WorktreeSource.Existing(new BranchName("feature"));
-    private static final WorktreeSource PULL_REQUEST = new WorktreeSource.PullRequest(new PullRequestSummary(
-            "octo/repo",
-            new PrNumber(9),
-            "Title",
-            "bob",
-            new GhBranch("patch-1"),
-            false,
-            false,
-            PullRequest.Checks.NONE,
-            PullRequest.Review.NONE,
-            Instant.EPOCH,
-            "https://github.com/octo/repo/pull/9"));
+    private static final WorktreeSource PULL_REQUEST = new Reviewed();
+
+    /**
+     * What another feature adds a worktree for, with a template of its own, as GitHub's pull requests (ADR 169).
+     */
+    private record Reviewed() implements WorktreeSource {
+
+        @Override
+        public String label() {
+            return "#9";
+        }
+
+        @Override
+        public BranchName directory() {
+            return new BranchName("patch-1");
+        }
+
+        @Override
+        public List<String> templateKeys() {
+            return List.of("jazygit.reviewWorktreeTemplate", ReadWorktreeTemplate.KEY);
+        }
+
+        @Override
+        public Either<Failure, List<ExecutedCommand>> add(Env env, Path path) {
+            return Either.right(List.empty());
+        }
+    }
 
     private static String screen(NewWorktreePopup popup) throws Exception {
         Model open = TestModels.loaded(SampleData.git()).openPopup(popup);
@@ -67,8 +83,7 @@ class NewWorktreeDialogTest {
         assertTrue(0 < input && input < closed && closed < box && box < text, screen);
 
         String forPullRequest = flat(screen(new NewWorktreePopup(PULL_REQUEST, "/repos/app-patch-1")));
-        assertTrue(
-                forPullRequest.contains("Set jazygit.pullRequestWorktreeTemplate in your git config"), forPullRequest);
+        assertTrue(forPullRequest.contains("Set jazygit.reviewWorktreeTemplate in your git config"), forPullRequest);
     }
 
     @Test

@@ -69,3 +69,6 @@ written that the next one would undo:
 
 Amended by ADR 168: GitHub's state can leave the kernel (step 6) once the pull requests screen is `features-github`'s,
 as the kernel no longer draws it.
+
+Amended by ADR 169: steps 6 and 7 are done there; the rule keeps the review threads of the rich diff as its exception
+until they get their own decision.

@@ -180,6 +180,28 @@ public final class AppRules {
                     .and(not(simpleName("CliGitHub"))))
             .allowEmptyShould(true);
     /**
+     * The types of {@code core.gh} the kernel still names, for the review threads of the rich diff, which it still
+     * draws (ADR 167, 169): what they are made of, the gh their loads run against, in the environment, and what those
+     * fail with. They go with the decision of their own the threads get; nothing else of GitHub is the kernel's.
+     */
+    static final String REVIEW_THREADS = Pattern.quote(ROOT + ".core.gh.")
+            + "(GitHub|process\\.(GhError|GhFailure)"
+            + "|model\\.(GhAccount|GhCommit|PrNumber|PullRequestDetails|Reaction|Reactions|ReviewRemarks|ReviewThread|ThreadsByPath))"
+            + "(\\$.*)?";
+
+    /**
+     * The kernel names no forge (ADR 167, 169): what GitHub reports, its screen, its stack and its errors are
+     * {@code features-github}'s, which reaches the kernel through what the kernel declares, as a part, a service of the
+     * environment or a hook. Only the review threads are left, as {@link #REVIEW_THREADS} lists them.
+     */
+    @ArchTest
+    static final ArchRule theKernelNamesNoForge = noClasses()
+            .that()
+            .resideInAPackage("..jazygit.kernel..")
+            .should()
+            .dependOnClassesThat(resideInAPackage("..jazygit.core.gh..").and(not(named(REVIEW_THREADS))))
+            .allowEmptyShould(true);
+    /**
      * How gh is asked is the business of its roles (ADR 120): the GraphQL their queries share, and the process that
      * runs gh. Of {@code gh.process} the application only sees the errors and the token.
      */

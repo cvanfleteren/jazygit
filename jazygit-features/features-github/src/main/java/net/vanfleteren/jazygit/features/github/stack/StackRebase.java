@@ -17,9 +17,9 @@ import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.StackLayer;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError.StackRefusal;
+import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.github.FromGitHub;
 
 /**
  * What rebasing a stack on GitHub takes (ADR 74): its base, and its open branches from the bottom up, each with what

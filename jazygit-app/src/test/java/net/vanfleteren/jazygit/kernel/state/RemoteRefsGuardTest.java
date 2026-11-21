@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestCmd;
+import net.vanfleteren.jazygit.features.github.checkout.PullRequestWorktree;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.PushFirst;
 import org.junit.jupiter.api.Test;
 
@@ -69,7 +70,7 @@ class RemoteRefsGuardTest {
                 "https://github.com/owner/repo/pull/9");
 
         assertEquals(GUARDED, new CheckoutPullRequestCmd(pullRequest).guard());
-        assertEquals(GUARDED, new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest), "../pr").guard());
+        assertEquals(GUARDED, new AddWorktreeCmd(new PullRequestWorktree(pullRequest), "../pr").guard());
     }
 
     @Test

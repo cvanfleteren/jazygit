@@ -2,22 +2,20 @@ package net.vanfleteren.jazygit.features.branches.worktree.add;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubConfig;
 import net.vanfleteren.jazygit.core.git.model.ConfigValue;
 import net.vanfleteren.jazygit.core.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Head;
@@ -28,10 +26,10 @@ import net.vanfleteren.jazygit.features.branches.branch.rename.RenameBranchPopup
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Part;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import org.junit.jupiter.api.Test;
 
@@ -43,19 +41,49 @@ class LocationTemplateTest {
     private static final BranchName LOGIN = new BranchName("feature/login");
     private static final WorktreeSource BRANCH = new WorktreeSource.Created(
             LOGIN, new NewBranchStart.From(new BranchRef.Local(new BranchName("main")), Option.none()));
-    private static final PullRequestSummary OWN = new PullRequestSummary(
-            "octo/repo",
-            new PrNumber(9),
-            "Title",
-            "bob",
-            new GhBranch("patch-1"),
-            false,
-            false,
-            PullRequest.Checks.NONE,
-            PullRequest.Review.NONE,
-            Instant.EPOCH,
-            "https://github.com/octo/repo/pull/9");
-    private static final WorktreeSource PULL_REQUEST = new WorktreeSource.PullRequest(OWN);
+    private static final String REVIEW_KEY = "jazygit.reviewWorktreeTemplate";
+    private static final WorktreeSource PULL_REQUEST = new Reviewed();
+
+    // The repository on the host of the remotes, as a feature names it, as GitHub's does (ADR 169).
+    private static final Part<Option<String>> NAMING =
+            Part.of("test.repository", Option.<String>none()).naming(name -> name);
+
+    /**
+     * What another feature adds a worktree for, with a template, a repository and a number of its own, as GitHub's
+     * pull request 9 of {@code octo/repo} on {@code patch-1} (ADR 169).
+     */
+    private record Reviewed() implements WorktreeSource {
+
+        @Override
+        public String label() {
+            return "#9";
+        }
+
+        @Override
+        public BranchName directory() {
+            return new BranchName("patch-1");
+        }
+
+        @Override
+        public List<String> templateKeys() {
+            return List.of(REVIEW_KEY, ReadWorktreeTemplate.KEY);
+        }
+
+        @Override
+        public Option<String> repository() {
+            return Option.of("octo/repo");
+        }
+
+        @Override
+        public Map<String, String> values() {
+            return LinkedHashMap.of("number", "9");
+        }
+
+        @Override
+        public Either<Failure, List<ExecutedCommand>> add(Env env, Path path) {
+            return Either.right(List.empty());
+        }
+    }
 
     /**
      * A repository whose main worktree is {@code /repos/app}, with {@code /repos/app-patch-1} taken by another.
@@ -147,16 +175,16 @@ class LocationTemplateTest {
     }
 
     @Test
-    void anyOtherWorktreeIsOfTheRepositoryThePullRequestsWereReadFor() {
+    void anyOtherWorktreeIsOfTheRepositoryTheFeaturesName() {
         Option<String> template = Option.of("{owner}-{name}-{branch}");
-        Model read = model().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("octo/repo")));
+        Model read = model().withPart(NAMING, Option.of("octo/repo"));
         assertEquals(
                 Option.of(new NewWorktreePopup(BRANCH, "/repos/octo-repo-feature-login", false, true)),
                 LocationAsked.located(AddWorktreeUpdate.ask(read, BRANCH), template)
                         .model()
                         .popup());
 
-        // Before they are read, or without gh, they are left as they are written.
+        // Before one names it, as before the pull requests are read, they are left as they are written.
         assertEquals(
                 Option.of(new NewWorktreePopup(BRANCH, "/repos/{owner}-{name}-feature-login", false, true)),
                 LocationAsked.located(AddWorktreeUpdate.ask(model(), BRANCH), template)
@@ -164,7 +192,7 @@ class LocationTemplateTest {
                         .popup());
 
         // So are they for a name that is not owner/name.
-        Model odd = model().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("repo")));
+        Model odd = model().withPart(NAMING, Option.of("repo"));
         assertEquals(
                 Option.of(new NewWorktreePopup(BRANCH, "/repos/{owner}-{name}-feature-login", false, true)),
                 LocationAsked.located(AddWorktreeUpdate.ask(odd, BRANCH), template)
@@ -198,17 +226,13 @@ class LocationTemplateTest {
     }
 
     @Test
-    void aPullRequestTakesItsOwnTemplateOrElseTheOneForEveryWorktree() {
+    void aSourceTakesItsOwnTemplateOrElseTheOneForEveryWorktree() {
         assertEquals(
                 Option.of("/reviews/{number}"),
-                read(
-                        PULL_REQUEST,
-                        config(ReadWorktreeTemplate.PULL_REQUEST_KEY, values("/reviews/{number}"), values("/all"))));
+                read(PULL_REQUEST, config(REVIEW_KEY, values("/reviews/{number}"), values("/all"))));
         assertEquals(Option.of("/all"), read(PULL_REQUEST, config(ReadWorktreeTemplate.KEY, values("/all"))));
-        // One of a branch does not take the template of a pull request.
-        assertEquals(
-                Option.none(),
-                read(BRANCH, config(ReadWorktreeTemplate.PULL_REQUEST_KEY, values("/reviews/{number}"))));
+        // One of a branch does not take the template of another source.
+        assertEquals(Option.none(), read(BRANCH, config(REVIEW_KEY, values("/reviews/{number}"))));
         assertEquals(Option.of("/all"), read(BRANCH, config(ReadWorktreeTemplate.KEY, values("/all"))));
     }
 
@@ -216,10 +240,8 @@ class LocationTemplateTest {
     void theValueThatHoldsIsTheLastGitReadsAndABlankOneIsNone() {
         assertEquals(Option.of("/local"), read(BRANCH, config(ReadWorktreeTemplate.KEY, values("/global", "/local"))));
         assertEquals(Option.none(), read(BRANCH, config(ReadWorktreeTemplate.KEY, values("/global", " "))));
-        // A blank one for pull requests gives way to the one for every worktree.
-        assertEquals(
-                Option.of("/all"),
-                read(PULL_REQUEST, config(ReadWorktreeTemplate.PULL_REQUEST_KEY, values(""), values("/all"))));
+        // A blank one of a source's own gives way to the one for every worktree.
+        assertEquals(Option.of("/all"), read(PULL_REQUEST, config(REVIEW_KEY, values(""), values("/all"))));
     }
 
     @Test

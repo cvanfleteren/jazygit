@@ -15,8 +15,9 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Part;
+import net.vanfleteren.jazygit.kernel.state.StatedBases;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -188,9 +189,9 @@ class LocalBranchesListTest {
         assertEquals(
                 Option.none(),
                 shownParent(withParent(FEAT_A)
-                        .mapPart(
-                                GitHubState.PART,
-                                gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.of(FEAT_A))))));
+                        .withPart(
+                                Part.of("test.bases", StatedBases.NONE).stating(bases -> bases),
+                                new StatedBases(HashMap.empty(), HashSet.of(FEAT_A), Option.none()))));
     }
 
     @Test

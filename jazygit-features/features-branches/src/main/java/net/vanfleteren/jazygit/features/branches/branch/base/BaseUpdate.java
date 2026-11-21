@@ -1,22 +1,19 @@
 package net.vanfleteren.jazygit.features.branches.branch.base;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.Comparator;
 import java.util.function.Predicate;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.git.model.BaseCandidate;
 import net.vanfleteren.jazygit.core.git.model.BaseCandidates;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.kernel.state.AppError;
-import net.vanfleteren.jazygit.kernel.state.GitHubBases;
+import net.vanfleteren.jazygit.kernel.state.BranchBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
@@ -42,8 +39,8 @@ public final class BaseUpdate {
 
     /**
      * Reads what {@code branch} could be built on, unless it cannot have a base it is told: the main branch and a
-     * protected one are roots (ADR 72), and the base of a branch with an open pull request is what GitHub says, which
-     * comes before what is recorded.
+     * protected one are roots (ADR 72), and the base a feature states, as GitHub's of a branch with an open pull
+     * request, comes before what is recorded (ADR 143, 169).
      */
     private static Next requested(Model model, BranchName name) {
         return model.idleBranch(name)
@@ -51,11 +48,10 @@ public final class BaseUpdate {
                     if (root(model).test(name)) {
                         return Next.of(model.fail(new BranchError.RootHasNoBase(name)));
                     }
-                    Option<PullRequest> pr = model.part(GitHubState.PART).pullRequest(branch);
-                    return GitHubBases.in(model)
-                            .fromPullRequest(branch)
-                            .flatMap(base -> pr.map(open -> Next.of(
-                                    model.fail(new BranchError.BaseFromPullRequest(name, open.number(), base)))))
+                    return BranchBases.in(model)
+                            .of(branch)
+                            .map(stated ->
+                                    Next.of(model.fail(new BranchError.BaseStated(name, stated.base(), stated.by()))))
                             .getOrElse(() -> Next.of(model.clearError(), new ReadBaseCandidates(name, branch.tip())));
                 })
                 .getOrElse(() -> Next.of(model));
@@ -128,9 +124,6 @@ public final class BaseUpdate {
     }
 
     private static Predicate<BranchName> root(Model model) {
-        return name -> GitHubBases.root(
-                name,
-                AheadUpdate.main(model),
-                model.part(GitHubState.PART).protectedBranches().getOrElse(HashSet.empty()));
+        return name -> BranchBases.in(model).root(name, AheadUpdate.main(model));
     }
 }

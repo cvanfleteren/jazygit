@@ -27,12 +27,12 @@ import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictPopup;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
@@ -91,7 +91,7 @@ public final class PullRequestUpdate {
      * as gh acts on this one; so is one while it is not known yet which repository this is, which does no harm.
      */
     private static Next summaryRequested(Model model, PullRequestSummary pullRequest) {
-        return model.part(PrOverview.PART).ofThisRepository(pullRequest).getOrElse(false)
+        return PrOverview.ofThisRepository(model, pullRequest).getOrElse(false)
                 ? show(
                         model,
                         FromGitHub.branch(pullRequest.headBranch()),
@@ -106,7 +106,7 @@ public final class PullRequestUpdate {
      * which only has those of this repository; one of another repository is opened in the browser.
      */
     private static Next summaryFilesRequested(Model model, PullRequestSummary pullRequest) {
-        return model.part(PrOverview.PART).ofThisRepository(pullRequest).getOrElse(false)
+        return PrOverview.ofThisRepository(model, pullRequest).getOrElse(false)
                 ? files(
                         model.clearError(),
                         FromGitHub.branch(pullRequest.headBranch()),

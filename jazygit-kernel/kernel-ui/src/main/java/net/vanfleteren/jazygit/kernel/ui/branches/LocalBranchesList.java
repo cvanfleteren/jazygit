@@ -133,7 +133,7 @@ class LocalBranchesList implements BranchesTabList {
      * have all the commits of that parent, which GitHub does not merge (ADR 73).
      */
     static Option<BranchName> shownParent(Model model, Branch branch, List<Group> groups) {
-        GitHubBases bases = GitHubBases.in(model);
+        BranchBases bases = BranchBases.in(model);
         return model.repo()
                 .parents()
                 .get(branch.name())

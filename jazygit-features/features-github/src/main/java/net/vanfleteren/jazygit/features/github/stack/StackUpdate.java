@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.features.github.stack;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -38,13 +37,13 @@ import net.vanfleteren.jazygit.features.github.stack.StackMsg.Tick;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.Toggled;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.TopChosen;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.UnstackChosen;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.features.github.state.StackChange;
 import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.BranchBases;
 import net.vanfleteren.jazygit.kernel.state.Failure;
-import net.vanfleteren.jazygit.kernel.state.GitHubBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
-import net.vanfleteren.jazygit.kernel.state.github.StackChange;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
@@ -310,8 +309,7 @@ public final class StackUpdate {
             return Next.of(model);
         }
         PullRequestStack stack = pullRequest.stack().get();
-        return model.part(PrOverview.PART)
-                .ofThisRepository(pullRequest)
+        return PrOverview.ofThisRepository(model, pullRequest)
                 .fold(
                         unknown -> Next.of(model.fail(unknown)),
                         ofThis -> ofThis
@@ -386,7 +384,7 @@ public final class StackUpdate {
                     }
                     // A rebase asked for when linking is not done: the user is told, to do it from the menu.
                     return change instanceof StackChange.Stacked stacked && stacked.rebase()
-                            ? Next.of(settled.inform(new Notice.StackNotListed(
+                            ? Next.of(settled.inform(new StackNotice.NotListed(
                                     stacked.pullRequests().head())))
                             : Next.of(settled);
                 })
@@ -495,10 +493,7 @@ public final class StackUpdate {
     }
 
     private static Predicate<BranchName> root(Model model) {
-        return name -> GitHubBases.root(
-                name,
-                AheadUpdate.main(model),
-                model.part(GitHubState.PART).protectedBranches().getOrElse(HashSet.empty()));
+        return name -> BranchBases.in(model).root(name, AheadUpdate.main(model));
     }
 
     /**

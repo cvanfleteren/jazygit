@@ -26,8 +26,9 @@ public final class Bundles {
     // A text shaped as a key, or as the start of one that the code finishes at run time.
     private static final Pattern KEY = Pattern.compile("[a-z][A-Za-z0-9]*+(\\.[A-Za-z0-9]++)++\\.?+");
     private static final Pattern LITERAL = Pattern.compile("\"((?:[^\"\\\\]++|\\\\.)*+)\"");
-    // The name a part of the model is kept under, which is shaped as a key but names no text (ADR 157).
-    private static final Pattern PART_NAME = Pattern.compile("Part\\.of\\(\\s*\"(?:[^\"\\\\]++|\\\\.)*+\"");
+    // The name a part of the model, or a service of the environment, is kept under, which is shaped as a key but
+    // names no text (ADR 157, 169).
+    private static final Pattern PART_NAME = Pattern.compile("(Part|Service)\\.of\\(\\s*\"(?:[^\"\\\\]++|\\\\.)*+\"");
 
     private Bundles() {}
 
@@ -151,7 +152,7 @@ public final class Bundles {
                 })
                 .get()
                 .flatMap(file ->
-                        List.ofAll(LITERAL.matcher(PART_NAME.matcher(read(file)).replaceAll("Part.of("))
+                        List.ofAll(LITERAL.matcher(PART_NAME.matcher(read(file)).replaceAll("$1.of("))
                                 .results()
                                 .map(found -> found.group(1))
                                 .toList()));

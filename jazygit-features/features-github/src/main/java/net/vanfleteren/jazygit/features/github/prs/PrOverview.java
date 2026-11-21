@@ -7,6 +7,8 @@ import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
@@ -14,9 +16,9 @@ import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
+import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.Part;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 
@@ -28,7 +30,6 @@ import net.vanfleteren.jazygit.kernel.state.view.Preview;
  * @param reviewRequested the open pull requests that ask for the user's review, in any repository
  * @param authored        the open pull requests the user opened, in any repository
  * @param repository      the open pull requests of the repository, forks included
- * @param repositoryName  the repository on GitHub, as {@code owner/name}, once its pull requests were read
  * @param unseen          the pull requests of the repository that were opened and not seen yet, once they were
  *                        read (ADR 29)
  * @param freshness       when the pull requests were last read, and which reads failed the last time
@@ -40,7 +41,6 @@ public record PrOverview(
         Loadable<PullRequestList> reviewRequested,
         Loadable<PullRequestList> authored,
         Loadable<PullRequestList> repository,
-        Option<String> repositoryName,
         Option<UnseenPullRequests> unseen,
         Freshness freshness,
         Option<PullRequestSummary> highlighted,
@@ -86,7 +86,6 @@ public record PrOverview(
             Loadable.loading(),
             Loadable.loading(),
             Option.none(),
-            Option.none(),
             Freshness.NEVER,
             Option.none(),
             Option.none());
@@ -104,20 +103,35 @@ public record PrOverview(
     }
 
     /**
-     * Whether {@code pullRequest} is of the repository, and was opened and not seen yet.
+     * Whether {@code pullRequest} is of the repository of {@code model}, and was opened and not seen yet.
      */
-    public boolean isUnseen(PullRequestSummary pullRequest) {
-        return ofThisRepository(pullRequest).getOrElse(false)
+    public static boolean isUnseen(Model model, PullRequestSummary pullRequest) {
+        return model.part(PART).isUnseen(model.part(GitHubState.PART).repository(), pullRequest);
+    }
+
+    /**
+     * Whether {@code pullRequest} is of the repository, {@code repositoryName}, and was opened and not seen yet.
+     */
+    public boolean isUnseen(Option<String> repositoryName, PullRequestSummary pullRequest) {
+        return ofThisRepository(repositoryName, pullRequest).getOrElse(false)
                 && unseen.exists(
                         read -> read.numbers().contains(pullRequest.number().value()));
     }
 
     /**
-     * Whether {@code pullRequest} is of the repository, wherever it is listed, once that is known: it is known once
-     * the pull requests of the repository were read, and why it is not known otherwise, as they are still being
-     * read or could not be.
+     * Whether {@code pullRequest} is of the repository of {@code model}, as {@link #ofThisRepository(Option,
+     * PullRequestSummary)} says: GitHub's state knows which one it is once its pull requests were read.
      */
-    public Either<AppError, Boolean> ofThisRepository(PullRequestSummary pullRequest) {
+    public static Either<AppError, Boolean> ofThisRepository(Model model, PullRequestSummary pullRequest) {
+        return model.part(PART).ofThisRepository(model.part(GitHubState.PART).repository(), pullRequest);
+    }
+
+    /**
+     * Whether {@code pullRequest} is of the repository, {@code repositoryName} as {@code owner/name}, wherever it is
+     * listed, once that is known: it is known once the pull requests of the repository were read, and why it is not
+     * known otherwise, as they are still being read or could not be.
+     */
+    public Either<AppError, Boolean> ofThisRepository(Option<String> repositoryName, PullRequestSummary pullRequest) {
         return repositoryName
                 .map(name -> Either.<AppError, Boolean>right(name.equalsIgnoreCase(pullRequest.repository())))
                 .getOrElse(() -> Either.left(

@@ -34,13 +34,13 @@ import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.stack.StackChoice.BaseChange;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.features.github.state.StackChange;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
-import net.vanfleteren.jazygit.kernel.state.github.StackChange;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.ui.text.ErrorTexts;
@@ -562,7 +562,7 @@ class MakeStackTest {
         assertEquals(List.empty(), given.cmds());
         assertEquals(Option.none(), given.model().part(GitHubState.PART).stackChange());
         Notice notice = given.model().outcome().notice().get();
-        assertEquals(new Notice.StackNotListed(new PrNumber(96)), notice);
+        assertEquals(new StackNotice.NotListed(new PrNumber(96)), notice);
         assertEquals(
                 "GitHub did not list the stack of #96 in time, so it was not rebased: rebase it from the stack menu"
                         + " (s) once it shows.",

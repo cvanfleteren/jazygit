@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.features.github;
 
 import static net.vanfleteren.jazygit.kernel.state.TestModels.*;
-import static net.vanfleteren.jazygit.kernel.state.TestModels.lastRead;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -21,11 +20,13 @@ import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.features.github.state.*;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
@@ -36,6 +37,14 @@ import net.vanfleteren.jazygit.kernel.state.view.*;
  * The branches and pull requests the pull request update tests share.
  */
 public final class PullRequestFixtures {
+
+    /**
+     * The id of the last read of the details of a pull request given out in {@code model}: the one a dialog that just
+     * started a read waits for (ADR 34).
+     */
+    public static long lastRead(Model model) {
+        return model.part(GitHubState.PART).nextRead() - 1;
+    }
 
     static final Branch MAIN = Fixtures.branch(
             new BranchName("main"),

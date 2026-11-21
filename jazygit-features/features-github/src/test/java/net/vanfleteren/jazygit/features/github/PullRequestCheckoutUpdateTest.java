@@ -20,18 +20,18 @@ import net.vanfleteren.jazygit.features.branches.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.LocationAsked;
 import net.vanfleteren.jazygit.features.branches.worktree.add.NewWorktreePopup;
-import net.vanfleteren.jazygit.features.branches.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestCmd;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestMsg;
 import net.vanfleteren.jazygit.features.github.checkout.PullRequestCheckout;
+import net.vanfleteren.jazygit.features.github.checkout.PullRequestWorktree;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
-import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.state.*;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
@@ -47,10 +47,7 @@ class PullRequestCheckoutUpdateTest {
     private static Model ofOwnerRepo(RepoStatus status) {
         return Update.update(loaded(), new LoadMsg.StatusLoaded(status))
                 .model()
-                .withPart(
-                        PrOverview.PART,
-                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
-                                Option.of("owner/repo")));
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
     }
 
     @Test
@@ -152,7 +149,7 @@ class PullRequestCheckoutUpdateTest {
                                 .followedBy(new CheckoutMsg.Placed(request)))),
                 Update.update(asked, new CheckoutMsg.MainChosen()).cmds());
         assertEquals(
-                Option.of(new NewWorktreePopup(new WorktreeSource.PullRequest(pr), "/repos/app-pr-9", true)),
+                Option.of(new NewWorktreePopup(new PullRequestWorktree(pr), "/repos/app-pr-9", true)),
                 LocationAsked.located(Update.update(asked, new CheckoutMsg.NewWorktreeChosen()))
                         .model()
                         .popup());
@@ -319,10 +316,10 @@ class PullRequestCheckoutUpdateTest {
 
         assertEquals(List.empty(), asked.cmds());
         assertEquals(
-                Option.of(new NewWorktreePopup(new WorktreeSource.PullRequest(fork), "/repos/app-pr-9")),
+                Option.of(new NewWorktreePopup(new PullRequestWorktree(fork), "/repos/app-pr-9")),
                 asked.model().popup());
         assertEquals(
-                List.of(new AddWorktreeCmd(new WorktreeSource.PullRequest(fork), "/repos/app-pr-9")),
+                List.of(new AddWorktreeCmd(new PullRequestWorktree(fork), "/repos/app-pr-9")),
                 Update.update(asked.model(), new PopupMsg.Confirmed(NewWorktreePopup.class))
                         .cmds());
 
@@ -331,7 +328,7 @@ class PullRequestCheckoutUpdateTest {
                 List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)));
         PullRequestSummary own = own("feature/login");
         assertEquals(
-                Option.of(new NewWorktreePopup(new WorktreeSource.PullRequest(own), "/repos/app-feature-login")),
+                Option.of(new NewWorktreePopup(new PullRequestWorktree(own), "/repos/app-feature-login")),
                 LocationAsked.located(Update.update(
                                 withMainWorktree(changed), new CheckoutPullRequestMsg.WorktreeRequested(own)))
                         .model()
@@ -406,7 +403,6 @@ class PullRequestCheckoutUpdateTest {
         // The branch gh gives one from a fork is not known up front, so nothing is busy for it.
         assertEquals(
                 Option.none(),
-                new AddWorktreeCmd(new WorktreeSource.PullRequest(summary("owner/repo")), "/repos/app-pr-9")
-                        .busyBranch());
+                new AddWorktreeCmd(new PullRequestWorktree(summary("owner/repo")), "/repos/app-pr-9").busyBranch());
     }
 }

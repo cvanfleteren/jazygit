@@ -6,11 +6,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import org.junit.jupiter.api.Test;
 
 /**

@@ -55,6 +55,20 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
     }
 
     /**
+     * This part, stating what the branches are built on as {@code stating} finds it in its value (ADR 169).
+     */
+    public Part<S> stating(States<S> stating) {
+        return new Part<>(name, initial, hooks.withStates(stating));
+    }
+
+    /**
+     * This part, naming the repository on the host of its remotes as {@code naming} finds it in its value (ADR 169).
+     */
+    public Part<S> naming(Names<S> naming) {
+        return new Part<>(name, initial, hooks.withNames(naming));
+    }
+
+    /**
      * Where this part sits in a model.
      */
     public Lens<Model, S> lens() {
@@ -86,17 +100,38 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
     }
 
     /**
-     * What the kernel asks of a part (ADR 158).
+     * What {@code value}, a part, states the branches are built on (ADR 169).
      */
-    public record Hooks<S>(Rereads<S> rereads, KnowsCommit<S> knowsCommit, Reacting<S> reacting) {
+    @FunctionalInterface
+    public interface States<S> {
+        StatedBases bases(S value);
+    }
+
+    /**
+     * The repository on the host of the remotes, as {@code owner/name}, if {@code value}, a part, knows it
+     * (ADR 169).
+     */
+    @FunctionalInterface
+    public interface Names<S> {
+        Option<String> repository(S value);
+    }
+
+    /**
+     * What the kernel asks of a part (ADR 158, 169).
+     */
+    public record Hooks<S>(
+            Rereads<S> rereads, KnowsCommit<S> knowsCommit, Reacting<S> reacting, States<S> states, Names<S> names) {
 
         private static final Hooks<Object> NONE = new Hooks<>(
                 (model, value) -> List.empty(),
                 (value, sha) -> Option.none(),
-                (model, value, event) -> Update.Next.of(model));
+                (model, value, event) -> Update.Next.of(model),
+                value -> StatedBases.NONE,
+                value -> Option.none());
 
         /**
-         * No hooks: the part reads nothing again, knows no commit and answers nothing.
+         * No hooks: the part reads nothing again, knows no commit, answers nothing, states no bases and names no
+         * repository.
          */
         @SuppressWarnings("unchecked") // None of them looks at the value.
         public static <S> Hooks<S> none() {
@@ -104,15 +139,23 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
         }
 
         Hooks<S> withRereads(Rereads<S> rereads) {
-            return new Hooks<>(rereads, knowsCommit, reacting);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
         }
 
         Hooks<S> withKnowsCommit(KnowsCommit<S> knowsCommit) {
-            return new Hooks<>(rereads, knowsCommit, reacting);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
         }
 
         Hooks<S> withReacting(Reacting<S> reacting) {
-            return new Hooks<>(rereads, knowsCommit, reacting);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
+        }
+
+        Hooks<S> withStates(States<S> states) {
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
+        }
+
+        Hooks<S> withNames(Names<S> names) {
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
         }
     }
 }

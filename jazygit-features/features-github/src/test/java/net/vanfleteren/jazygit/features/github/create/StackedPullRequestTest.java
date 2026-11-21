@@ -26,10 +26,10 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.Stacking;
 import net.vanfleteren.jazygit.features.github.stack.StackCmd;
+import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import org.junit.jupiter.api.Test;
 

@@ -7,14 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
-import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.git.model.BaseCandidate;
 import net.vanfleteren.jazygit.core.git.model.BaseCandidates;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
@@ -25,9 +21,11 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Part;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
+import net.vanfleteren.jazygit.kernel.state.StatedBases;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.popup.ErrorPopup;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +33,9 @@ import org.junit.jupiter.api.Test;
  * Setting the branch a branch is built on (ADR 143).
  */
 class BaseUpdateTest {
+    // A feature that states what the branches are built on, as GitHub's does from its pull requests (ADR 169).
+    private static final Part<StatedBases> STATING =
+            Part.of("test.bases", StatedBases.NONE).stating(bases -> bases);
 
     private static final BranchName MAIN = new BranchName("main");
     private static final BranchName STAGING = new BranchName("staging/sync");
@@ -97,22 +98,19 @@ class BaseUpdateTest {
     }
 
     @Test
-    void theBaseOfABranchWithAnOpenPullRequestIsChangedOnGitHub() {
-        PullRequest pr = new PullRequest(
-                new PrNumber(12),
-                new GhBranch(FEATURE.value()),
-                Option.of(new GhBranch(STAGING.value())),
-                false,
-                Checks.NONE,
-                Review.NONE,
-                Option.none(),
-                Option.none());
-        Model withPr = model().mapPart(GitHubState.PART, gitHub -> gitHub.withListed(List.of(pr)));
+    void theBaseAFeatureStatesIsChangedWhereItIsStated() {
+        Phrase by = Phrase.verbatim("its pull request #12");
+        Model stated = model().withPart(
+                        STATING,
+                        new StatedBases(
+                                HashMap.of(FEATURE, new StatedBases.Stated(STAGING, by)),
+                                HashSet.empty(),
+                                Option.none()));
 
-        Next next = Update.update(withPr, new BaseMsg.Requested(FEATURE));
+        Next next = Update.update(stated, new BaseMsg.Requested(FEATURE));
 
         assertEquals(List.empty(), next.cmds());
-        assertEquals(Option.of(new BranchError.BaseFromPullRequest(FEATURE, new PrNumber(12), STAGING)), error(next));
+        assertEquals(Option.of(new BranchError.BaseStated(FEATURE, STAGING, by)), error(next));
     }
 
     @Test

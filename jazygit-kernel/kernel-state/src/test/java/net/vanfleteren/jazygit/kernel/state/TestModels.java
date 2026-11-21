@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
-import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranchLog;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
@@ -95,14 +94,6 @@ public final class TestModels {
                 modelChanged,
                 () -> {},
                 STILL);
-    }
-
-    /**
-     * The id of the last read of the details of a pull request given out in {@code model}: the one a dialog that just
-     * started a read waits for (ADR 34).
-     */
-    public static long lastRead(Model model) {
-        return model.part(GitHubState.PART).nextRead() - 1;
     }
 
     /**

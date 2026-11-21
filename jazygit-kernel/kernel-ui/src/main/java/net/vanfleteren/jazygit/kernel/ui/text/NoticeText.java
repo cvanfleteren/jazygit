@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.kernel.ui.text;
 
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -24,8 +23,6 @@ public final class NoticeText {
                         + Messages.get("notice.moveStopped", branch.value(), oldest.shortSha(), target.value());
             case Notice.MergeEnqueued(var branch) -> Messages.get("notice.mergeEnqueued", branch.value());
             case Notice.MergeStillPending(var branch) -> Messages.get("notice.mergeStillPending", branch.value());
-            case Notice.StackNotListed(PrNumber pullRequest) ->
-                Messages.get("notice.stackNotListed", String.valueOf(pullRequest.value()));
             case Notice.StackNotAsked(int stack) -> Messages.get("notice.stackNotAsked", String.valueOf(stack));
             case Notice.BranchKept(var branch, int ahead, var upstream) ->
                 Messages.get("notice.branchKept", branch.value(), ahead, upstream.shortName());
@@ -37,6 +34,7 @@ public final class NoticeText {
             case Notice.CopyFailed() -> Messages.get("notice.copyFailed");
             case Notice.NoNextFile() -> Messages.get("notice.noNextFile");
             case Notice.NoPreviousFile() -> Messages.get("notice.noPreviousFile");
+            case Notice.Phrased phrased -> ErrorText.of(phrased.phrase());
         };
     }
 
