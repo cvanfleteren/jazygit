@@ -175,6 +175,9 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   `FeatureSwitches`; keys through `Keymap.owned`, screens through `Screen.feature`, legends through
   `Legend.feature`), but for its section of the settings panel. GitHub applies with a remote on a GitHub host and
   gh found; it reads its pull requests once it is switched on (`KernelEvent.Switched`).
+- **Each forge has its own pull-request dialogs, and binds the keys the other does** (ADR 175): features that are on
+  or off may bind one key in a scope, once each; it sends a `FeatureMsg.FirstOn`, which runs what the first of them
+  that is on sends, and the help lists it once.
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys`, a dialog or a feature's content runs git or gh.

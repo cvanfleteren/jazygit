@@ -81,6 +81,45 @@ class KeymapTest {
                 List.of(Option.none(), Option.of("f")), keymap.bindings("probe").map(Binding::feature));
     }
 
+    @Test
+    void featuresThatAreOnOrOffBindOneKeyAlikeAndItSendsWhatTheFirstOfThemThatIsOnSends() {
+        Probe other = new Probe("other");
+        Keymap keymap = Keymap.empty()
+                .owned("f", keys -> keys.add(SCOPE, Binding.always("a", "f.a", () -> ALWAYS)))
+                .owned("g", keys -> keys.add(SCOPE, Binding.always("a", "g.a", () -> other)));
+
+        assertEquals(
+                Option.of(new FeatureMsg.FirstOn(
+                        List.of(new FeatureMsg.Owned("f", ALWAYS), new FeatureMsg.Owned("g", other)))),
+                keymap.handle(SCOPE, KeyEvent.ofChar('a'), Option.of("one")));
+        assertEquals(List.of("f.a", "g.a"), keymap.bindings("probe").map(Binding::descriptionKey));
+    }
+
+    @Test
+    void aKeyOfAFeatureIsRefusedWhenTheKernelOrTheSameFeatureBindsIt() {
+        Binding<String> a = Binding.always("a", "probe.a", () -> ALWAYS);
+        Keymap kernel = Keymap.empty().add(SCOPE, a);
+        Keymap feature = Keymap.empty().owned("f", keys -> keys.add(SCOPE, a));
+
+        assertThrows(IllegalArgumentException.class, () -> kernel.owned("f", keys -> keys.add(SCOPE, a)));
+        assertThrows(IllegalArgumentException.class, () -> feature.add(SCOPE, a));
+        assertThrows(IllegalArgumentException.class, () -> feature.owned("f", keys -> keys.add(SCOPE, a)));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Keymap.empty().owned("f", keys -> keys.add(SCOPE, Binding.always("?", "f.q", () -> ALWAYS))));
+    }
+
+    @Test
+    void aKeyBoundAlikeThatSendsNothingForOneFeatureSendsWhatTheOtherSends() {
+        Keymap keymap = Keymap.empty()
+                .owned("f", keys -> keys.add(SCOPE, Binding.onSelected("a", "f.a", selected -> ALWAYS)))
+                .owned("g", keys -> keys.add(SCOPE, Binding.always("a", "g.a", () -> ALWAYS)));
+
+        assertEquals(
+                Option.of(new FeatureMsg.Owned("g", ALWAYS)),
+                keymap.handle(SCOPE, KeyEvent.ofChar('a'), Option.none()));
+    }
+
     private static final Scope<Integer> GUEST = new Scope<>("guest", "panel.guest.title");
 
     private static final Binding<Integer> ON_SUBJECT =

@@ -14,6 +14,8 @@ public final class FeatureUpdate {
     public static Next update(Model model, FeatureMsg msg) {
         return switch (msg) {
             case FeatureMsg.Owned(String feature, Msg owned) -> model.on(feature) ? owned.apply(model) : Next.of(model);
+            case FeatureMsg.FirstOn first ->
+                first.on(model).map(owned -> owned.msg().apply(model)).getOrElse(() -> Next.of(model));
             case FeatureMsg.Applies(String feature, boolean on) -> applies(model, feature, on);
         };
     }

@@ -47,23 +47,27 @@ public final class Keymap {
     private final List<Global> globals;
     private final Option<BiFunction<String, List<Option<Msg>>, Msg>> help;
     private final Map<String, List<Scope<?>>> guests;
+    // The feature whose keys are being added, if they are of one (ADR 171).
+    private final Option<String> owning;
 
     private Keymap(
             Map<String, Section> sections,
             List<Global> globals,
             Option<BiFunction<String, List<Option<Msg>>, Msg>> help,
-            Map<String, List<Scope<?>>> guests) {
+            Map<String, List<Scope<?>>> guests,
+            Option<String> owning) {
         this.sections = sections;
         this.globals = globals;
         this.help = help;
         this.guests = guests;
+        this.owning = owning;
     }
 
     /**
      * A keymap without keys, for the features to add theirs to, in which {@link #HELP_KEY} does nothing.
      */
     public static Keymap empty() {
-        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.none(), LinkedHashMap.empty());
+        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.none(), LinkedHashMap.empty(), Option.none());
     }
 
     /**
@@ -71,7 +75,7 @@ public final class Keymap {
      * what each of its keys would send. The keymap names no feature, the help included (ADR 136).
      */
     public static Keymap withHelp(BiFunction<String, List<Option<Msg>>, Msg> help) {
-        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.of(help), LinkedHashMap.empty());
+        return new Keymap(LinkedHashMap.empty(), List.empty(), Option.of(help), LinkedHashMap.empty(), Option.none());
     }
 
     /**
@@ -100,8 +104,10 @@ public final class Keymap {
      */
     @SafeVarargs
     public final <S> Keymap add(Scope<S> scope, Binding<S>... bindings) {
-        List<Binding<?>> all = own(scope.id()).appendAll(List.of(bindings));
-        Keymap added = new Keymap(sections.put(scope.id(), new Section(scope, all)), globals, help, guests);
+        List<Binding<?>> all = own(scope.id())
+                .appendAll(
+                        List.of(bindings).map(binding -> owning.map(binding::of).getOrElse(binding)));
+        Keymap added = new Keymap(sections.put(scope.id(), new Section(scope, all)), globals, help, guests, owning);
         // The scope's own keys, and those of every scope that hosts it, as its keys are theirs as well (ADR 161).
         added.requireOnce(scope.id());
         guests.filterValues(hosted -> hosted.exists(guest -> guest.id().equals(scope.id())))
@@ -121,21 +127,25 @@ public final class Keymap {
                 globals,
                 help,
                 guests.put(
-                        host.id(), guests.get(host.id()).getOrElse(List.empty()).append(guest)));
+                        host.id(), guests.get(host.id()).getOrElse(List.empty()).append(guest)),
+                owning);
         hosting.requireOnce(host.id());
         return hosting;
     }
 
     /**
      * Fails when a key of {@code scopeId}, with its guests, is bound twice: it would only do what it was bound to
-     * first, silently; the help key does nothing else.
+     * first, silently; the help key does nothing else. A key is bound by several features that are on or off for a
+     * repository, once each, as two forges do (ADR 175): the first of them that is on has it.
      */
     private void requireOnce(String scopeId) {
         Option<String> twice = bindings(scopeId)
-                .map(Binding::key)
-                .append(HELP_KEY)
-                .groupBy(key -> key)
-                .filterValues(keys -> keys.size() > 1)
+                .map(binding -> Tuple.of(binding.key(), binding.feature()))
+                .append(Tuple.of(HELP_KEY, Option.<String>none()))
+                .groupBy(key -> key._1())
+                .filterValues(keys -> keys.size() > 1
+                        && (keys.exists(key -> key._2().isEmpty())
+                                || keys.distinctBy(key -> key._2()).size() < keys.size()))
                 .keySet()
                 .headOption();
         Require.that(twice.isEmpty(), () -> "The key \"" + twice.get() + "\" is bound twice in " + scopeId);
@@ -146,24 +156,20 @@ public final class Keymap {
      * repository (ADR 171): what they send does something only while it is on, and the help lists them only then.
      */
     public Keymap owned(String feature, UnaryOperator<Keymap> adding) {
-        Keymap added = adding.apply(this);
-        return new Keymap(
-                added.sections.map((id, section) -> Tuple.of(
-                        id,
-                        new Section(
-                                section.scope(),
-                                section.bindings()
-                                        .map(binding -> own(id).contains(binding) ? binding : binding.of(feature))))),
-                added.globals.map(global -> globals.contains(global) ? global : Global.of(feature, global)),
-                added.help,
-                added.guests);
+        Keymap added = adding.apply(new Keymap(sections, globals, help, guests, Option.of(feature)));
+        return new Keymap(added.sections, added.globals, added.help, added.guests, owning);
     }
 
     /**
      * This keymap with the key {@code global} added.
      */
     public Keymap global(Global global) {
-        return new Keymap(sections, globals.append(global), help, guests);
+        return new Keymap(
+                sections,
+                globals.append(owning.map(feature -> Global.of(feature, global)).getOrElse(global)),
+                help,
+                guests,
+                owning);
     }
 
     /**
@@ -182,17 +188,28 @@ public final class Keymap {
         if (HELP_KEY.equals(name(event))) {
             return help.map(requested -> requested.apply(scope.id(), actions(scope, selection, subjects)));
         }
-        return sections.get(scope.id())
-                .flatMap(section -> section.bindings().find(binding -> binding.matches(event)))
-                .map(binding -> {
-                    @SuppressWarnings("unchecked")
-                    Binding<S> typed = (Binding<S>) binding;
-                    return typed.action().apply(selection);
-                })
-                .getOrElse(() -> guestsOf(scope.id())
+        List<Binding<?>> matching = own(scope.id()).filter(binding -> binding.matches(event));
+        return matching.isEmpty()
+                ? guestsOf(scope.id())
                         .iterator()
                         .flatMap(guest -> subject(guest, subjects).handled(this, event))
-                        .headOption());
+                        .headOption()
+                : sent(matching, selection);
+    }
+
+    /**
+     * What the key bound by {@code matching} sends for {@code selection}: what its binding sends, or, when features
+     * that are on or off bind it alike, what the first of them that is on sends (ADR 175).
+     */
+    private static <S> Option<Msg> sent(List<Binding<?>> matching, Option<S> selection) {
+        List<Msg> sent = matching.flatMap(binding -> {
+            @SuppressWarnings("unchecked")
+            Binding<S> typed = (Binding<S>) binding;
+            return typed.action().apply(selection);
+        });
+        return sent.size() > 1
+                ? Option.of(new FeatureMsg.FirstOn(sent.map(FeatureMsg.Owned.class::cast)))
+                : sent.headOption();
     }
 
     /**
@@ -470,13 +487,7 @@ public final class Keymap {
         }
 
         private Option<Msg> handled(Keymap keymap, KeyEvent event) {
-            return keymap.own(scope.id())
-                    .find(binding -> binding.matches(event))
-                    .flatMap(binding -> {
-                        @SuppressWarnings("unchecked")
-                        Binding<T> typed = (Binding<T>) binding;
-                        return typed.action().apply(subject);
-                    });
+            return sent(keymap.own(scope.id()).filter(binding -> binding.matches(event)), subject);
         }
 
         private List<Option<Msg>> actions(Keymap keymap) {
