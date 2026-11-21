@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
@@ -30,11 +31,13 @@ class FeatureGatedTest {
 
     private static final BranchRef MAIN = new BranchRef.Local(new BranchName("main"));
     private static final BranchBadges.Shown BADGE = new BranchBadges.Shown(List.empty(), now -> "badge");
+    private static final PaneKey<String> KEY = PaneKey.of("test.key", String.class);
 
     private static final Feature FEATURE = Feature.of()
             .every(Duration.ofMinutes(1), () -> new Probe("tick"))
             .reacting((model, event) -> Next.of(model, new Run("reacted")))
             .badging((model, branch) -> BADGE)
+            .filling(KEY, model -> Option.of("filled"))
             .spinning(model -> true)
             .applying("f", model -> new Run("detect"));
 
@@ -68,6 +71,15 @@ class FeatureGatedTest {
         assertSame(BranchBadges.Shown.NONE, gated.badges().head().of(off, MAIN));
         assertTrue(gated.spinning().test(on));
         assertFalse(gated.spinning().test(off));
+    }
+
+    @Test
+    void whileItIsOffItGivesNothingForTheKeysOfThePanes() {
+        Fills fills = FEATURE.gated().fills();
+        Model on = TestModels.loaded();
+
+        assertEquals(Option.of("filled"), fills.of(KEY, on));
+        assertEquals(Option.none(), fills.of(KEY, FeatureUpdate.off(on, "f")));
     }
 
     @Test

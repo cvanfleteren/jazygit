@@ -9,7 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
-import net.vanfleteren.jazygit.core.git.history.History;
+import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.core.git.model.CommitQuery;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
@@ -333,7 +333,7 @@ class CommitsPanelTest {
         Model model = TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))
                         .withAhead(new Loadable.Loaded<>(Option.of(ahead))));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             String shown = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE));
@@ -350,7 +350,7 @@ class CommitsPanelTest {
     void itsBottomBorderShowsWhereTheSelectionIsAndFollowsIt() throws Exception {
         List<Commit> log = List.of(commit("s2"), commit("s1"), commit("s0"));
         Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
@@ -374,7 +374,7 @@ class CommitsPanelTest {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
                 TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
@@ -396,7 +396,7 @@ class CommitsPanelTest {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
                 TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
@@ -415,7 +415,7 @@ class CommitsPanelTest {
     void theListScrollsAlongWithTheSelection() throws Exception {
         List<Commit> log = List.range(0, 80).map(i -> commit("s" + i));
         Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
@@ -438,7 +438,7 @@ class CommitsPanelTest {
     void clickingACommitHighlightsItAndFocusesThePane() throws Exception {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             // The border, s1, then s0.
@@ -463,25 +463,16 @@ class CommitsPanelTest {
     }
 
     @Test
-    void theTitleSaysWhatWasSearchedAndWhenThereWereMoreThanItLists() {
-        CommitSearch search = CommitSearch.loading("fix");
-
-        assertEquals("Commits: /fix", CommitsPanel.title(search));
-        assertEquals(
-                "Commits: /fix (first 3000)",
-                CommitsPanel.title(search.withResults(
-                        new Loadable.Loaded<>(List.range(0, History.MAX_COMMITS).map(i -> commit("s" + i))))));
-    }
-
-    @Test
     void theSearchIsTypedAboveTheListRunWithEnterAndClearedWithEscape() throws Exception {
         AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0"))))));
         java.util.List<Msg> sent = new java.util.ArrayList<>();
-        CommitsPanel panel = new CommitsPanel(msg -> {
-            sent.add(msg);
-            model.set(Update.update(model.get(), msg).model());
-        });
+        CommitsPanel panel = new CommitsPanel(
+                msg -> {
+                    sent.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                },
+                Features.FILLS);
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
@@ -526,10 +517,12 @@ class CommitsPanelTest {
         AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0"))))));
         java.util.List<Msg> sent = new java.util.ArrayList<>();
-        CommitsPanel panel = new CommitsPanel(msg -> {
-            sent.add(msg);
-            model.set(Update.update(model.get(), msg).model());
-        });
+        CommitsPanel panel = new CommitsPanel(
+                msg -> {
+                    sent.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                },
+                Features.FILLS);
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.PANE))) {
@@ -553,7 +546,7 @@ class CommitsPanelTest {
                         CommitSearchView.PART,
                         view -> view.withSearch(Option.of(
                                 CommitSearch.loading("nothing").withResults(new Loadable.Loaded<>(List.empty())))));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             assertTrue(RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE))
@@ -570,7 +563,7 @@ class CommitsPanelTest {
     void aCommitCopiedAfterThePaneWasDrawnStandsOut() {
         Model model = TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0")))));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
 
         panel.render(model, CommitsPanel.PANE);
         List<Option<String>> before = shaClasses(panel);
@@ -598,7 +591,7 @@ class CommitsPanelTest {
         Model found = listed.mapPart(
                 CommitSearchView.PART,
                 view -> view.withSearch(Option.of(CommitSearch.loading("a").withResults(log))));
-        CommitsPanel panel = new CommitsPanel(msg -> {});
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
 
         panel.render(listed, CommitsPanel.PANE);
         String first = panel.shownRows().head().text();
@@ -660,7 +653,7 @@ class CommitsPanelTest {
      */
     private static List<Msg> escaped(Model model) throws Exception {
         java.util.List<Msg> sent = new java.util.ArrayList<>();
-        CommitsPanel panel = new CommitsPanel(sent::add);
+        CommitsPanel panel = new CommitsPanel(sent::add, Features.FILLS);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             SettledPilot.focus(testRunner, CommitsPanel.ID);
             SettledPilot.of(testRunner).pause();

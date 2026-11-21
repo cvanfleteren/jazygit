@@ -72,3 +72,6 @@ as the kernel no longer draws it.
 
 Amended by ADR 169: steps 6 and 7 are done there; the rule keeps the review threads of the rich diff as its exception
 until they get their own decision.
+
+Amended by ADR 172: a pane that lives in its group declares its keys as `PaneKey`s, which `Feature` keeps in one
+open value; the badges and the groups stay fields until the branches pane moves.
