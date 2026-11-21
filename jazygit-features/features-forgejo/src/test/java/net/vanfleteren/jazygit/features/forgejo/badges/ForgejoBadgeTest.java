@@ -27,7 +27,8 @@ class ForgejoBadgeTest {
         return BuildsUpdateTest.model()
                 .withPart(
                         ForgejoBuilds.PART,
-                        new ForgejoBuilds(HashMap.of(MAIN, main, FEATURE, feature), HashSet.empty(), HashSet.empty()));
+                        ForgejoBuilds.NONE.read(
+                                List.empty(), HashMap.of(MAIN, main, FEATURE, feature), HashSet.empty()));
     }
 
     private static BranchBadges.Shown remote(Model model, String name) {

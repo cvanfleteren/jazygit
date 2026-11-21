@@ -3,7 +3,9 @@ package net.vanfleteren.jazygit.features.forgejo.builds;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
@@ -27,6 +29,7 @@ public class BuildsUpdateTest {
 
     private static final Instant TIME = Instant.parse("2026-11-21T10:00:00Z");
     private static final RemoteName ORIGIN = new RemoteName("origin");
+    private static final Set<RemoteName> NOWHERE = HashSet.empty();
 
     static Sha sha(char digit) {
         return new Sha(String.valueOf(digit).repeat(40));
@@ -85,7 +88,9 @@ public class BuildsUpdateTest {
         Model model = model();
         List<Tip> tips = BuildsUpdate.tips(model);
         Model read = new BuildsMsg.Read(
-                        tips, HashMap.of(sha('2'), CommitStatus.State.RUNNING, sha('1'), CommitStatus.State.PASSED))
+                        tips,
+                        HashMap.of(sha('2'), CommitStatus.State.RUNNING, sha('1'), CommitStatus.State.PASSED),
+                        NOWHERE)
                 .apply(BuildsUpdate.read(model).model())
                 .model();
         assertEquals(
@@ -95,12 +100,59 @@ public class BuildsUpdateTest {
     }
 
     @Test
-    void aTipThatCouldNotBeReadIsReadAgain() {
+    void aTipThatCouldNotBeReadIsReadAgainOnlyAfterAFetch() {
         Model model = model();
-        Model read = new BuildsMsg.Read(BuildsUpdate.tips(model), HashMap.empty())
+        List<Tip> tips = BuildsUpdate.tips(model);
+        Model read = new BuildsMsg.Read(tips, HashMap.empty(), NOWHERE)
                 .apply(BuildsUpdate.read(model).model())
                 .model();
-        assertEquals(BuildsUpdate.tips(model), reading(BuildsUpdate.read(read)));
+        // A read that failed, as a 404 for a private repository without a token, would fail again on every tick.
+        assertEquals(List.empty(), reading(BuildsUpdate.read(read)));
+        assertEquals(tips, reading(ForgejoReactions.to(read, new KernelEvent.Fetched())));
+    }
+
+    @Test
+    void tipsOnARemoteThatIsNotOnForgejoDoNotKeepThoseOnForgejoFromBeingRead() {
+        // A mirror on GitHub, whose 25 branches come before origin's.
+        RemoteName mirror = new RemoteName("github");
+        List<RemoteRef> mirrored = List.range(0, 25)
+                .map(i -> new RemoteRef(
+                        new RemoteBranch(mirror, new BranchName("b" + i)), new Sha(String.format("%040d", i)), TIME));
+        Model model = TestModels.remoteBranchesRead(TestModels.loaded(), mirrored.append(remote("main", sha('1'))))
+                .model();
+
+        Next first = BuildsUpdate.read(model);
+        List<Tip> asked = reading(first);
+        Model read = new BuildsMsg.Read(asked, HashMap.empty(), HashSet.of(mirror))
+                .apply(first.model())
+                .model();
+
+        assertEquals(List.of(new Tip(ORIGIN, sha('1'))), reading(BuildsUpdate.read(read)));
+    }
+
+    @Test
+    void aCommitOnForgejoAndOnAnotherRemoteIsReadOnForgejo() {
+        RemoteName mirror = new RemoteName("github");
+        RemoteRef mirrored = new RemoteRef(new RemoteBranch(mirror, new BranchName("main")), sha('1'), TIME);
+        Model model = TestModels.remoteBranchesRead(TestModels.loaded(), List.of(mirrored, remote("main", sha('1'))))
+                .model();
+        Model read = new BuildsMsg.Read(List.of(new Tip(mirror, sha('1'))), HashMap.empty(), HashSet.of(mirror))
+                .apply(model)
+                .model();
+
+        assertEquals(List.of(new Tip(ORIGIN, sha('1'))), BuildsUpdate.tips(read));
+        assertEquals(List.of(new Tip(ORIGIN, sha('1'))), reading(BuildsUpdate.read(read)));
+    }
+
+    @Test
+    void anotherRepositoryWhereForgejoIsOnStartsAfresh() {
+        Model model = new BuildsMsg.Read(
+                        List.of(new Tip(ORIGIN, sha('1'))), HashMap.of(sha('1'), CommitStatus.State.PASSED), NOWHERE)
+                .apply(model())
+                .model();
+        Next switched = ForgejoReactions.to(model, new KernelEvent.Switched(ForgejoFeature.ID, true));
+        assertEquals(BuildsUpdate.tips(model()), reading(switched));
+        assertEquals(Option.none(), switched.model().part(ForgejoBuilds.PART).state(sha('1')));
     }
 
     @Test
@@ -108,7 +160,9 @@ public class BuildsUpdateTest {
         Model model = model();
         List<Tip> tips = BuildsUpdate.tips(model);
         Model read = new BuildsMsg.Read(
-                        tips, HashMap.of(sha('2'), CommitStatus.State.FAILED, sha('1'), CommitStatus.State.PASSED))
+                        tips,
+                        HashMap.of(sha('2'), CommitStatus.State.FAILED, sha('1'), CommitStatus.State.PASSED),
+                        NOWHERE)
                 .apply(BuildsUpdate.read(model).model())
                 .model();
         assertEquals(List.empty(), reading(BuildsUpdate.read(read)));

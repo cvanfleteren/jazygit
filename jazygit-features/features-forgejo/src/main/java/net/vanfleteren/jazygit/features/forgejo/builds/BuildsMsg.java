@@ -2,7 +2,9 @@ package net.vanfleteren.jazygit.features.forgejo.builds;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -24,7 +26,8 @@ public sealed interface BuildsMsg extends Msg {
     record Tick() implements BuildsMsg {}
 
     /**
-     * {@code tips} were read: how the builds went of those that could be, {@code states}.
+     * {@code tips} were read: how the builds went of those that could be, {@code states}, and the remotes of them
+     * that are not on Forgejo, {@code elsewhere}.
      */
-    record Read(List<Tip> tips, Map<Sha, CommitStatus.State> states) implements BuildsMsg {}
+    record Read(List<Tip> tips, Map<Sha, CommitStatus.State> states, Set<RemoteName> elsewhere) implements BuildsMsg {}
 }

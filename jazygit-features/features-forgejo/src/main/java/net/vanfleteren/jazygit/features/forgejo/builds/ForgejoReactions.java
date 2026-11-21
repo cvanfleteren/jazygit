@@ -19,7 +19,9 @@ public final class ForgejoReactions {
     public static Next to(Model model, KernelEvent event) {
         return switch (event) {
             case KernelEvent.Switched(String feature, boolean on)
-            when feature.equals(ForgejoFeature.ID) && on -> BuildsUpdate.read(model);
+            // Afresh, as the repository may be another one, with other remotes under the same names.
+            when feature.equals(ForgejoFeature.ID) && on ->
+                BuildsUpdate.read(model.withPart(ForgejoBuilds.PART, ForgejoBuilds.NONE));
             // A build may have run again since a commit was read.
             case KernelEvent.Fetched _ -> BuildsUpdate.read(model.mapPart(ForgejoBuilds.PART, ForgejoBuilds::fetched));
             // A push brings a tip that was not read.

@@ -38,7 +38,12 @@ a short sha and no branch, and leaves out the statuses of other CIs.
   those pending are read, those of the local branches' upstreams first, at most 20 at a time; after each fetch, every
   commit shown is read again, so that a build run again shows. Not: reading all of them on a timer, as a commit's
   status rarely changes once its builds are done.
-- **A read that fails leaves the commit as not read**, and the log says why; the badge shows nothing for it.
+- **Only the tips of remotes on Forgejo are read**: a remote found not to be on Forgejo, as a mirror on GitHub, is
+  left out of what is read for as long as the repository is open, so its branches do not crowd out those on Forgejo
+  from the 20 read at a time. A commit on both is read on Forgejo.
+- **A read that fails is tried again only after the next fetch**, and the log says why; the badge shows nothing for
+  it meanwhile. Not: trying it again every 10 s, as a private repository without a token fails every time.
+- **Another repository on Forgejo starts afresh**, as its remotes may have the same names as those of the one before.
 - **Not yet**: the statuses of a commit one by one (`C`), the builds of a branch (`B`), pull requests, a setting for
   the token or the hosts.
 - **`jazygit-app`'s tests run without Forgejo too** (`jazygit.without=github,forgejo`), so that none of them asks a

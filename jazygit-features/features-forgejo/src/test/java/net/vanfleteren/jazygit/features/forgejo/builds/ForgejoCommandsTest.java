@@ -44,16 +44,18 @@ class ForgejoCommandsTest {
                 new Tip(new RemoteName("origin"), PASSED),
                 new Tip(new RemoteName("origin"), UNKNOWN),
                 new Tip(new RemoteName("gone"), PASSED));
+        // A remote that is gone is on no Forgejo.
         assertEquals(
-                new BuildsMsg.Read(tips, HashMap.of(PASSED, CommitStatus.State.PASSED)),
+                new BuildsMsg.Read(
+                        tips, HashMap.of(PASSED, CommitStatus.State.PASSED), HashSet.of(new RemoteName("gone"))),
                 new ReadBuilds(tips).run(FORGEJO.env(origin(REMOTE))));
     }
 
     @Test
-    void aRemoteThatIsNotOnForgejoIsNotAsked() {
+    void aRemoteThatIsNotOnForgejoIsNotAskedAndIsSaidToBeElsewhere() {
         List<Tip> tips = List.of(new Tip(new RemoteName("origin"), PASSED));
         assertEquals(
-                new BuildsMsg.Read(tips, HashMap.empty()),
+                new BuildsMsg.Read(tips, HashMap.empty(), HashSet.of(new RemoteName("origin"))),
                 new ReadBuilds(tips).run(FORGEJO.env(origin("https://elsewhere.example.net/cvf/nix.git"))));
     }
 }

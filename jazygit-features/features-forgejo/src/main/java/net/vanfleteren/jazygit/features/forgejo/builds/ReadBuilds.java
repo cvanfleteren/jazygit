@@ -2,8 +2,10 @@ package net.vanfleteren.jazygit.features.forgejo.builds;
 
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
@@ -31,12 +33,17 @@ public record ReadBuilds(List<Tip> tips) implements Cmd {
     public Msg run(Env env) {
         Forgejo forgejo = ForgejoServices.of(env);
         Map<RemoteName, String> urls = env.git().remotes().urls().getOrElse(HashMap::empty);
-        Map<Sha, CommitStatus.State> states = HashMap.ofEntries(tips.flatMap(tip -> urls.get(tip.remote())
-                .flatMap(forgejo::repository)
-                .filter(forgejo::isForgejo)
+        Map<RemoteName, Option<ForgejoRepository>> repositories = HashMap.ofEntries(tips.map(Tip::remote)
+                .distinct()
+                .map(remote -> Tuple.of(
+                        remote, urls.get(remote).flatMap(forgejo::repository).filter(forgejo::isForgejo))));
+        Map<Sha, CommitStatus.State> states = HashMap.ofEntries(tips.flatMap(tip -> repositories
+                .get(tip.remote())
+                .flatMap(repository -> repository)
                 .flatMap(repository -> status(forgejo, repository, tip))
                 .map(state -> Tuple.of(tip.sha(), state))));
-        return new BuildsMsg.Read(tips, states);
+        Set<RemoteName> elsewhere = repositories.filterValues(Option::isEmpty).keySet();
+        return new BuildsMsg.Read(tips, states, elsewhere);
     }
 
     private static Option<CommitStatus.State> status(Forgejo forgejo, ForgejoRepository repository, Tip tip) {
@@ -54,6 +61,6 @@ public record ReadBuilds(List<Tip> tips) implements Cmd {
 
     @Override
     public Msg failed(Failure failure) {
-        return new BuildsMsg.Read(tips, HashMap.empty());
+        return new BuildsMsg.Read(tips, HashMap.empty(), HashSet.empty());
     }
 }
