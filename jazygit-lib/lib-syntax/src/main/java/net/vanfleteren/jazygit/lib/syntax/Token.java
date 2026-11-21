@@ -27,7 +27,7 @@ public record Token(int start, int length, Kind kind) {
         ANNOTATION,
         /**
          * A name a value is given to, with the points of its path: Nix's {@code services.nginx.enable = true;}
-         * (ADR 169).
+         * (ADR 170).
          */
         PROPERTY
     }
