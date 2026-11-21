@@ -4,11 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.Landing;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Launch;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import org.junit.jupiter.api.Test;
 

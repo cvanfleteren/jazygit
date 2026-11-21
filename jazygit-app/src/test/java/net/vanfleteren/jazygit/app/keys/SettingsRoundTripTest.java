@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
 import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
@@ -125,14 +126,10 @@ class SettingsRoundTripTest {
     private static final Map<String, UnaryOperator<Settings>> CHANGES = LinkedHashMap.ofEntries(
             change(Settings.THEME.path(), settings -> settings.withTheme(ThemeName.LIGHT)),
             change(Settings.REPOSITORY_WIDTH.path(), settings -> settings.withRepositoryWidth(Settings.DEFAULT_WIDTH)),
-            change(Settings.PULL_REQUESTS_WIDTH.path(), settings -> settings.withPullRequestsWidth(50)),
             change(Settings.DIFF_STYLE.path(), settings -> settings.withDiffStyle(DiffStyle.PLAIN)),
             change(Settings.DIFF_SYNTAX.path(), settings -> settings.withDiffSyntax(true)),
             change(Settings.DIFF_WORDS.path(), settings -> settings.withDiffWords(false)),
             change(Settings.REPOSITORY_HEIGHTS.path(), settings -> settings.withRepositoryHeights(List.of(25, 25, 25))),
-            change(
-                    Settings.PULL_REQUESTS_HEIGHTS.path(),
-                    settings -> settings.withPullRequestsHeights(List.of(40, 30))),
             change(Settings.ANIMATIONS.path(), settings -> settings.withAnimations(true)),
             change(Settings.AUTO_REFRESH.path(), settings -> settings.withAutoRefresh(false)),
             // The last key of its table: the table goes too.
@@ -149,6 +146,9 @@ class SettingsRoundTripTest {
                             GitHubSettings.BROWSERS,
                             settings.get(GitHubSettings.BROWSERS)
                                     .with("github.com", "cvf-work", Option.some("firefox -P work")))),
+            // The layout of GitHub's screen, at the paths the kernel kept it at (ADR 168).
+            change(PrOverview.WIDTH.path(), settings -> settings.with(PrOverview.WIDTH, 50)),
+            change(PrOverview.HEIGHTS.path(), settings -> settings.with(PrOverview.HEIGHTS, List.of(40, 30))),
             change(
                     Agents.SETTING.path(),
                     settings -> settings.with(

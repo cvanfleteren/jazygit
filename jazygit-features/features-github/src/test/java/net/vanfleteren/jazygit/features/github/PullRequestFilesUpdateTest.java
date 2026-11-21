@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
@@ -34,7 +35,6 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.BaseTip;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.github.*;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
@@ -193,7 +193,7 @@ class PullRequestFilesUpdateTest {
                         "https://github.com/owner/repo/pull/42",
                         new GhCommit(BASE_OID),
                         new GhCommit(HEAD_OID))));
-        Model shown = Update.update(model(), new PullRequestsMsg.Loaded(List.of(listed)))
+        Model shown = Update.update(model(), PullRequestFixtures.listed(List.of(listed)))
                 .model();
 
         Next opened = Update.update(shown, new PullRequestMsg.FilesRequested(FEATURE));
@@ -220,7 +220,7 @@ class PullRequestFilesUpdateTest {
         for (Model shown : List.of(
                 withPr(),
                 localBranchesRead(loaded(), List.of(UNPUSHED, MAIN)).model(),
-                Update.update(model(), new PullRequestsMsg.LoadFailed(refused("gh: offline")))
+                Update.update(model(), PullRequestFixtures.listFailed(refused("gh: offline")))
                         .model())) {
             Next opened = Update.update(shown, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
 
@@ -250,7 +250,7 @@ class PullRequestFilesUpdateTest {
     void shiftFOnTheMainBranchWithAPullRequestShowsTheFilesOfThatAsOnAnyBranch() {
         PullRequest fromMain =
                 new PullRequest(new PrNumber(7), new GhBranch("main"), false, Checks.PASSING, Review.APPROVED);
-        Model shown = Update.update(model(), new PullRequestsMsg.Loaded(List.of(fromMain)))
+        Model shown = Update.update(model(), PullRequestFixtures.listed(List.of(fromMain)))
                 .model();
 
         Next requested = Update.update(shown, new PullRequestMsg.FilesRequested(MAIN.name()));
@@ -299,7 +299,7 @@ class PullRequestFilesUpdateTest {
     void theFilesAreNotShownWhenTheDialogOfAnotherPullRequestWasOpenedMeanwhile() {
         Model both = Update.update(
                         model(),
-                        new PullRequestsMsg.Loaded(List.of(
+                        PullRequestFixtures.listed(List.of(
                                 FEATURE_PR,
                                 new PullRequest(
                                         new PrNumber(43), new GhBranch("ahead"), false, Checks.PASSING, Review.NONE))))
@@ -364,7 +364,7 @@ class PullRequestFilesUpdateTest {
     void aBranchWithoutABaseHasNoFilesToShow() {
         Model alone = Update.update(
                         localBranchesRead(loaded(), List.of(UNPUSHED)).model(),
-                        new PullRequestsMsg.Loaded(List.empty()))
+                        PullRequestFixtures.listed(List.empty()))
                 .model();
 
         Next opened = Update.update(alone, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
@@ -393,8 +393,10 @@ class PullRequestFilesUpdateTest {
                 Option.of(new GhCommit(BASE_OID)),
                 Option.of(new GhCommit(HEAD_OID)));
         Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
-                .withPrOverview(net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL.withRepositoryName(
-                        Option.of("owner/repo")));
+                .withPart(
+                        PrOverview.PART,
+                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
+                                Option.of("owner/repo")));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(listed));
 
@@ -411,8 +413,10 @@ class PullRequestFilesUpdateTest {
     @Test
     void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestListedWithoutItsCommitsOnceItIsRead() {
         Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
-                .withPrOverview(net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL.withRepositoryName(
-                        Option.of("owner/repo")));
+                .withPart(
+                        PrOverview.PART,
+                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
+                                Option.of("owner/repo")));
 
         Next requested =
                 Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(summary("owner/repo", 42)));
@@ -443,8 +447,9 @@ class PullRequestFilesUpdateTest {
     @Test
     void shiftFOnAPullRequestOfAnotherRepositoryOpensItInTheBrowser() {
         PullRequestSummary elsewhere = summary("other/repo");
-        Model ofOwnerRepo = loaded().withPrOverview(
-                        net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL.withRepositoryName(
+        Model ofOwnerRepo = loaded().withPart(
+                        PrOverview.PART,
+                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
                                 Option.of("owner/repo")));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(elsewhere));

@@ -1,11 +1,9 @@
 package net.vanfleteren.jazygit.kernel.ui.keys;
 
-import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Scope;
 
 /**
@@ -63,26 +61,6 @@ public final class Scopes {
      */
     public static final Scope<Stash> STASH = new Scope<>("stash", "panel.stash.title");
 
-    /**
-     * The selected pull request that asks for the user's review, on the pull requests screen.
-     */
-    public static final Scope<PullRequestSummary> PR_REVIEW_REQUESTED =
-            new Scope<>(PrOverview.REVIEW_REQUESTED_PANE.value(), "panel.prReviewRequested.title");
-    /**
-     * The selected pull request the user opened, on the pull requests screen.
-     */
-    public static final Scope<PullRequestSummary> PR_AUTHORED =
-            new Scope<>(PrOverview.AUTHORED_PANE.value(), "panel.prAuthored.title");
-    /**
-     * The selected pull request of the repository, on the pull requests screen.
-     */
-    public static final Scope<PullRequestSummary> PR_REPOSITORY =
-            new Scope<>(PrOverview.REPOSITORY_PANE.value(), "panel.prRepository.title");
-    /**
-     * The panes of the pull requests screen, top to bottom.
-     */
-    public static final io.vavr.collection.List<Scope<PullRequestSummary>> PULL_REQUESTS =
-            io.vavr.collection.List.of(PR_REPOSITORY, PR_REVIEW_REQUESTED, PR_AUTHORED);
     /**
      * The keys of a failed build, which features add to the views of a forge that show one, as they host this scope
      * (ADR 161); a view gives it the failed build it shows.

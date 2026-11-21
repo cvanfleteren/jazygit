@@ -11,14 +11,14 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
  * for anyway, as something just changed on GitHub that the running one may have missed, it starts once that one is
  * done; else the running one is enough.
  */
-final class GitHubReads {
+public final class GitHubReads {
 
     private GitHubReads() {}
 
     /**
      * {@code next}, also running {@code read}, unless it runs already.
      */
-    static Next load(Next next, Cmd read) {
+    public static Next load(Next next, Cmd read) {
         return next.model().jobs().runs(read) ? next : start(next, read);
     }
 
@@ -26,14 +26,14 @@ final class GitHubReads {
      * {@code next}, also running {@code read} as a timer asks: unless it runs already, or keeps failing and has not
      * waited long enough since ({@link FailingRead}).
      */
-    static Next poll(Next next, Cmd read) {
+    public static Next poll(Next next, Cmd read) {
         return FailingRead.due(next.model(), read) ? load(next, read) : next;
     }
 
     /**
      * {@code next}, also running {@code read}; when it runs already, once it is done.
      */
-    static Next loadAnyway(Next next, Cmd read) {
+    public static Next loadAnyway(Next next, Cmd read) {
         return next.model().jobs().runs(read)
                 ? next.map(model -> model.mapPart(
                         GitHubState.PART,
@@ -45,7 +45,7 @@ final class GitHubReads {
      * {@code model}, with what {@code read} read in it, now that it is done; it runs again if it was asked for
      * meanwhile.
      */
-    static Next done(Model model, Cmd read) {
+    public static Next done(Model model, Cmd read) {
         Model done = model.mapPart(
                 GitHubState.PART, gitHub -> gitHub.withAgain(gitHub.again().remove(read)));
         return model.part(GitHubState.PART).again().contains(read) ? start(Next.of(done), read) : Next.of(done);

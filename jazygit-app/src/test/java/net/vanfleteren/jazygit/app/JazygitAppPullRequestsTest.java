@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.pullrequests.StubPullRequests;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
@@ -53,7 +54,7 @@ class JazygitAppPullRequestsTest {
             awaitModel(
                     testRunner,
                     app,
-                    model -> model.prOverview()
+                    model -> model.part(PrOverview.PART)
                             .preview()
                             .map(Preview::shown)
                             .exists(preview -> preview.value().toOption().isDefined()));
@@ -86,7 +87,7 @@ class JazygitAppPullRequestsTest {
             awaitModel(
                     testRunner,
                     app,
-                    model -> model.prOverview()
+                    model -> model.part(PrOverview.PART)
                             .preview()
                             .map(Preview::shown)
                             .exists(preview -> preview.value().toOption().isDefined()));

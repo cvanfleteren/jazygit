@@ -5,14 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.features.github.prs.LoadMyPullRequests;
+import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadMyPullRequests;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import org.junit.jupiter.api.Test;
 

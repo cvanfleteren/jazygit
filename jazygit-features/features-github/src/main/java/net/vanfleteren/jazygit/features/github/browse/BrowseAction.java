@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.github.browse;
 
+import net.vanfleteren.jazygit.features.github.prs.PrScopes;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -9,7 +10,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
  */
 public final class BrowseAction {
 
-    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> Scopes.PULL_REQUESTS.foldLeft(
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> PrScopes.ALL.foldLeft(
             keys.add(Scopes.BRANCHES, Binding.onSelected("O", "github.help.branches.browse", BrowseMsg.Requested::new))
                     .add(
                             Scopes.REMOTE_BRANCHES,

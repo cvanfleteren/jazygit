@@ -22,9 +22,8 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsScreen;
+import net.vanfleteren.jazygit.kernel.state.preferences.TestScreens;
 import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
@@ -48,11 +47,13 @@ class LeftColumnTest {
             tab -> {},
             highlights -> COMMITS,
             highlights -> STASH,
-            Screens.of(List.of(PullRequestsScreen.SPEC)));
+            Screens.of(List.of(spec(
+                    TestScreens.OTHER,
+                    (dispatch, open, highlights) -> TestScreens.OTHER.panes().map(LeftColumnTest::standIn)))));
 
     // The repository screen, and one a feature brings (ADR 168).
     static java.util.List<Screen> screens() {
-        return java.util.List.of(Screen.REPOSITORY, PrOverview.SCREEN);
+        return java.util.List.of(Screen.REPOSITORY, TestScreens.OTHER);
     }
 
     // The keys that resize and maximize a pane find the focused one by its place in the panes of its screen (ADR 92).

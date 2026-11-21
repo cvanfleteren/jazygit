@@ -55,7 +55,7 @@ class PushForPullRequestUpdateTest {
                 Option.of(new Upstream(new BranchRef.Remote(pushedAs), 0, 0)));
         Model model = Update.update(
                         localBranchesRead(loaded(), List.of(login, MAIN)).model(),
-                        new PullRequestsMsg.Loaded(List.empty()))
+                        PullRequestFixtures.listed(List.empty()))
                 .model();
 
         Next reading = Update.update(model, new CreatePullRequestMsg.ParentRead(login.name(), Option.none()));
@@ -106,7 +106,7 @@ class PushForPullRequestUpdateTest {
                 false,
                 Option.of(new Upstream(new BranchRef.Remote(upstream), 2, 1)));
         Model branches = localBranchesRead(loaded(), List.of(diverged, MAIN)).model();
-        Model starting = Update.update(branches, new PullRequestsMsg.Loaded(List.empty()))
+        Model starting = Update.update(branches, PullRequestFixtures.listed(List.empty()))
                 .model();
 
         Next refused = Update.update(starting, new PullRequestMsg.Requested(diverged.name()));

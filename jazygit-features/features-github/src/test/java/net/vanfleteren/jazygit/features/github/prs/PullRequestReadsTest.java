@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.state.github;
+package net.vanfleteren.jazygit.features.github.prs;
 
 import static net.vanfleteren.jazygit.kernel.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,19 +21,23 @@ import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.GitHubBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
+import net.vanfleteren.jazygit.kernel.state.github.LoadBranchChecks;
+import net.vanfleteren.jazygit.kernel.state.github.LoadProtectedBranches;
+import net.vanfleteren.jazygit.kernel.state.github.PullRequestsError;
+import net.vanfleteren.jazygit.kernel.state.github.PullRequestsMsg;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
 import net.vanfleteren.jazygit.kernel.state.popup.ErrorPopup;
 import org.junit.jupiter.api.Test;
 
 /**
- * Reading the open pull requests from GitHub.
+ * Reading the open pull requests from GitHub, which the branches show (ADR 168).
  */
-class PullRequestsUpdateTest {
+class PullRequestReadsTest {
 
     /**
      * The repository read, with the protected branches read too: they are read once, before the first pull requests.
@@ -52,14 +56,14 @@ class PullRequestsUpdateTest {
 
         assertEquals(
                 Option.of(FEATURE_PR),
-                Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(older, FEATURE_PR)))
+                Update.update(loaded(), new Read(List.of(older, FEATURE_PR)))
                         .model()
                         .part(GitHubState.PART)
                         .pullRequests()
                         .flatMap(open -> open.get(new BranchName("feature"))));
         assertEquals(
                 Option.of(FEATURE_PR),
-                Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR, older)))
+                Update.update(loaded(), new Read(List.of(FEATURE_PR, older)))
                         .model()
                         .part(GitHubState.PART)
                         .pullRequests()
@@ -68,11 +72,10 @@ class PullRequestsUpdateTest {
 
     @Test
     void failingToReadThePullRequestsKeepsTheOnesShownWithoutAnError() {
-        Model withPr = Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
-                .model();
+        Model withPr = Update.update(loaded(), new Read(List.of(FEATURE_PR))).model();
 
-        Model failed = Update.update(withPr, new PullRequestsMsg.LoadFailed(refused("gh: not logged in")))
-                .model();
+        Model failed =
+                Update.update(withPr, new Failed(refused("gh: not logged in"))).model();
 
         assertEquals(
                 withPr.part(GitHubState.PART).pullRequests(),
@@ -89,10 +92,8 @@ class PullRequestsUpdateTest {
                         new GhError.CommandFailed(Option.of("no oauth token found"), 1)),
                 List.empty());
 
-        Model failed = Update.update(loaded(), new PullRequestsMsg.LoadFailed(unavailable))
-                .model();
-        Model again = Update.update(
-                        failed.clearError().withoutPopup(ErrorPopup.class), new PullRequestsMsg.LoadFailed(unavailable))
+        Model failed = Update.update(loaded(), new Failed(unavailable)).model();
+        Model again = Update.update(failed.clearError().withoutPopup(ErrorPopup.class), new Failed(unavailable))
                 .model();
 
         assertEquals(
@@ -104,38 +105,32 @@ class PullRequestsUpdateTest {
 
     @Test
     void readingThePullRequestsAgainForgetsTheFailure() {
-        Model failed = Update.update(loaded(), new PullRequestsMsg.LoadFailed(refused("offline")))
-                .model();
+        Model failed = Update.update(loaded(), new Failed(refused("offline"))).model();
 
-        Model loaded =
-                Update.update(failed, new PullRequestsMsg.Loaded(List.empty())).model();
+        Model loaded = Update.update(failed, new Read(List.empty())).model();
 
         assertEquals(Option.none(), loaded.part(GitHubState.PART).pullRequestsFailure());
     }
 
     @Test
     void aReadOfThePullRequestsIsKeptWhileItRunsAndNotStartedTwice() {
-        Next reading = TestModels.stepped(loaded(), new PullRequestsMsg.Refresh());
+        Next reading = TestModels.stepped(loaded(), new Refresh());
         assertEquals(
                 HashSet.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
                 TestModels.runningCmds(reading.model()));
 
-        Next again = Update.update(reading.model(), new PullRequestsMsg.Refresh());
+        Next again = Update.update(reading.model(), new Refresh());
         assertEquals(List.empty(), again.cmds());
 
         assertEquals(
                 HashSet.of(new LoadBranchChecks()),
-                TestModels.runningCmds(TestModels.done(
-                                reading.model(),
-                                new LoadRepositoryPullRequests(),
-                                new PullRequestsMsg.Loaded(List.empty()))
-                        .model()));
+                TestModels.runningCmds(
+                        TestModels.done(reading.model(), new LoadRepositoryPullRequests(), new Read(List.empty()))
+                                .model()));
         assertEquals(
                 HashSet.of(new LoadBranchChecks()),
                 TestModels.runningCmds(TestModels.done(
-                                reading.model(),
-                                new LoadRepositoryPullRequests(),
-                                new PullRequestsMsg.LoadFailed(refused("offline")))
+                                reading.model(), new LoadRepositoryPullRequests(), new Failed(refused("offline")))
                         .model()));
     }
 
@@ -143,7 +138,7 @@ class PullRequestsUpdateTest {
     void refreshingReadsThePullRequests() {
         assertEquals(
                 List.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
-                Update.update(loaded(), new PullRequestsMsg.Refresh()).cmds());
+                Update.update(loaded(), new Refresh()).cmds());
         assertInstanceOf(
                 PrOverviewMsg.RepositoryLoaded.class,
                 new LoadRepositoryPullRequests().run(new Env(StubGit.of(), StubGitHub.of())));
@@ -151,18 +146,17 @@ class PullRequestsUpdateTest {
 
     @Test
     void aReadAskedForWhileOneRunsAsAChangeMayHaveBeenMissedStartsOnceThatOneIsDone() {
-        Next reading = TestModels.stepped(loaded(), new PullRequestsMsg.Refresh());
+        Next reading = TestModels.stepped(loaded(), new Refresh());
 
         // Asked for twice while the first runs, as after a push and then the creation of a pull request.
-        Next asked = PullRequestsUpdate.loadAnyway(PullRequestsUpdate.loadAnyway(Next.of(reading.model())));
+        Next asked = PullRequestReads.loadAnyway(PullRequestReads.loadAnyway(Next.of(reading.model())));
 
         assertEquals(List.empty(), asked.cmds());
         assertEquals(
                 HashSet.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
                 asked.model().part(GitHubState.PART).again());
 
-        Next done = TestModels.done(
-                asked.model(), new LoadRepositoryPullRequests(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)));
+        Next done = TestModels.done(asked.model(), new LoadRepositoryPullRequests(), new Read(List.of(FEATURE_PR)));
 
         assertEquals(List.of(new LoadRepositoryPullRequests()), done.cmds());
         assertEquals(
@@ -179,8 +173,7 @@ class PullRequestsUpdateTest {
                         .pullRequests()
                         .flatMap(open -> open.get(new BranchName("feature"))));
 
-        Next readAgain = TestModels.done(
-                done.model(), new LoadRepositoryPullRequests(), new PullRequestsMsg.Loaded(List.empty()));
+        Next readAgain = TestModels.done(done.model(), new LoadRepositoryPullRequests(), new Read(List.empty()));
 
         assertEquals(List.empty(), readAgain.cmds());
         assertEquals(
@@ -190,11 +183,10 @@ class PullRequestsUpdateTest {
 
     @Test
     void aReadThatFailsStillStartsTheOneAskedForMeanwhile() {
-        Model asked = PullRequestsUpdate.loadAnyway(TestModels.stepped(loaded(), new PullRequestsMsg.Refresh()))
+        Model asked = PullRequestReads.loadAnyway(TestModels.stepped(loaded(), new Refresh()))
                 .model();
 
-        Next failed = TestModels.done(
-                asked, new LoadRepositoryPullRequests(), new PullRequestsMsg.LoadFailed(refused("offline")));
+        Next failed = TestModels.done(asked, new LoadRepositoryPullRequests(), new Failed(refused("offline")));
 
         assertEquals(List.of(new LoadRepositoryPullRequests()), failed.cmds());
         assertEquals(
@@ -203,8 +195,20 @@ class PullRequestsUpdateTest {
     }
 
     @Test
+    void aReadKeepsTheRepositoryOnGitHubWhichAFailedReadLeavesAsItWas() {
+        // The templates of where a worktree starts out name it by its owner and name (ADR 134, ADR 168).
+        Model read = PullRequestReads.loaded(loaded(), List.of(FEATURE_PR), "octo/repo")
+                .model();
+        Model failed = PullRequestReads.failed(read, refused("offline")).model();
+
+        assertEquals(Option.none(), loaded().part(GitHubState.PART).repository());
+        assertEquals(Option.of("octo/repo"), read.part(GitHubState.PART).repository());
+        assertEquals(Option.of("octo/repo"), failed.part(GitHubState.PART).repository());
+    }
+
+    @Test
     void aReadAskedForAnywayWhileNoneRunsStartsRightAway() {
-        Next asked = PullRequestsUpdate.loadAnyway(Next.of(loaded()));
+        Next asked = PullRequestReads.loadAnyway(Next.of(loaded()));
 
         assertEquals(List.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()), asked.cmds());
         assertEquals(HashSet.empty(), asked.model().part(GitHubState.PART).again());
@@ -212,7 +216,7 @@ class PullRequestsUpdateTest {
 
     @Test
     void theProtectedBranchesAreReadOnceWithThePullRequests() {
-        Next first = Update.update(TestModels.loaded(), new PullRequestsMsg.Refresh());
+        Next first = Update.update(TestModels.loaded(), new Refresh());
         assertEquals(
                 List.of(new LoadProtectedBranches(), new LoadRepositoryPullRequests(), new LoadBranchChecks()),
                 first.cmds());
@@ -225,7 +229,7 @@ class PullRequestsUpdateTest {
                 read.part(GitHubState.PART).protectedBranches());
         assertEquals(
                 List.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
-                Update.update(read, new PullRequestsMsg.Refresh()).cmds());
+                Update.update(read, new Refresh()).cmds());
     }
 
     @Test
@@ -248,12 +252,12 @@ class PullRequestsUpdateTest {
                 Option.none(),
                 Option.none());
 
-        Next read = Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(onA)));
+        Next read = Update.update(loaded(), new Read(List.of(onA)));
         assertEquals(
                 List.of(new LoadBranches(GitHubBases.in(read.model()))),
                 read.cmds().filter(LoadBranches.class::isInstance));
 
-        Next same = Update.update(read.model(), new PullRequestsMsg.Loaded(List.of(onA)));
+        Next same = Update.update(read.model(), new Read(List.of(onA)));
         assertEquals(List.empty(), same.cmds().filter(LoadBranches.class::isInstance));
     }
 
@@ -265,5 +269,38 @@ class PullRequestsUpdateTest {
         assertEquals(
                 List.of(new LoadBranches(GitHubBases.in(read.model()))),
                 read.cmds().filter(LoadBranches.class::isInstance));
+    }
+
+    /**
+     * The open pull requests {@code pullRequests} were read, as the screen's update hands them to the branches.
+     */
+    private record Read(List<PullRequest> pullRequests) implements Msg {
+
+        @Override
+        public Next apply(Model model) {
+            return PullRequestReads.loaded(model, pullRequests, "owner/repo");
+        }
+    }
+
+    /**
+     * The open pull requests could not be read for {@code failure}.
+     */
+    private record Failed(Failure failure) implements Msg {
+
+        @Override
+        public Next apply(Model model) {
+            return PullRequestReads.failed(model, failure);
+        }
+    }
+
+    /**
+     * The pull requests are asked to be read again.
+     */
+    private record Refresh() implements Msg {
+
+        @Override
+        public Next apply(Model model) {
+            return PullRequestReads.load(Next.of(model));
+        }
     }
 }

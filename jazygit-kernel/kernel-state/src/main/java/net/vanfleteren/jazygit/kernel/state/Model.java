@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.kernel.state.diff.Filtering;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.diff.Version;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.index.IndexRefresh;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
@@ -42,7 +41,6 @@ import net.vanfleteren.jazygit.kernel.state.view.RepoView;
  * @param screenFocus    where the focus was on each screen a feature brings, that was shown (ADR 168)
  * @param repo           what git reports about the repository
  * @param repoView       what the repository screen shows besides what git reports, and where its focus was
- * @param prOverview     what the pull requests screen shows
  * @param jobs           what runs in the background, and when the remotes were last fetched from
  * @param outcome        what the user is told about the operations: how the last one went, and the commands run
  * @param popup          the popup that is open, if any; only one can be
@@ -62,7 +60,6 @@ public record Model(
         Map<Screen, ScreenFocus> screenFocus,
         Repo repo,
         RepoView repoView,
-        PrOverview prOverview,
         Jobs jobs,
         Outcome outcome,
         Option<Popup> popup,
@@ -88,7 +85,6 @@ public record Model(
                 HashMap.empty(),
                 Repo.LOADING,
                 RepoView.INITIAL,
-                PrOverview.INITIAL,
                 Jobs.IDLE,
                 Outcome.NONE,
                 Option.none(),

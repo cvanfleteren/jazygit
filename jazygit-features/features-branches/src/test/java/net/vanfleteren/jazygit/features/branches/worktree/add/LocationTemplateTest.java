@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import org.junit.jupiter.api.Test;
 
@@ -148,7 +149,7 @@ class LocationTemplateTest {
     @Test
     void anyOtherWorktreeIsOfTheRepositoryThePullRequestsWereReadFor() {
         Option<String> template = Option.of("{owner}-{name}-{branch}");
-        Model read = model().withPrOverview(model().prOverview().withRepositoryName(Option.of("octo/repo")));
+        Model read = model().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("octo/repo")));
         assertEquals(
                 Option.of(new NewWorktreePopup(BRANCH, "/repos/octo-repo-feature-login", false, true)),
                 LocationAsked.located(AddWorktreeUpdate.ask(read, BRANCH), template)
@@ -163,7 +164,7 @@ class LocationTemplateTest {
                         .popup());
 
         // So are they for a name that is not owner/name.
-        Model odd = model().withPrOverview(model().prOverview().withRepositoryName(Option.of("repo")));
+        Model odd = model().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("repo")));
         assertEquals(
                 Option.of(new NewWorktreePopup(BRANCH, "/repos/{owner}-{name}-feature-login", false, true)),
                 LocationAsked.located(AddWorktreeUpdate.ask(odd, BRANCH), template)

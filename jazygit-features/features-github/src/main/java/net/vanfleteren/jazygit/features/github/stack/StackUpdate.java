@@ -24,6 +24,8 @@ import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutRequest;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutUpdate;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
+import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.AddChosen;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.BottomChosen;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.Changed;
@@ -42,7 +44,6 @@ import net.vanfleteren.jazygit.kernel.state.GitHubBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsUpdate;
 import net.vanfleteren.jazygit.kernel.state.github.StackChange;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
@@ -185,7 +186,7 @@ public final class StackUpdate {
      */
     private static Next changeFailed(Model model, StackCmd cmd, Failure failure) {
         Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
-        return failure.commands().isEmpty() ? failed : PullRequestsUpdate.loadAnyway(failed);
+        return failure.commands().isEmpty() ? failed : PullRequestReads.loadAnyway(failed);
     }
 
     /**
@@ -309,7 +310,7 @@ public final class StackUpdate {
             return Next.of(model);
         }
         PullRequestStack stack = pullRequest.stack().get();
-        return model.prOverview()
+        return model.part(PrOverview.PART)
                 .ofThisRepository(pullRequest)
                 .fold(
                         unknown -> Next.of(model.fail(unknown)),
@@ -381,7 +382,7 @@ public final class StackUpdate {
                                 : Next.of(settled);
                     }
                     if (!model.now().isAfter(change.until())) {
-                        return PullRequestsUpdate.load(Next.of(model));
+                        return PullRequestReads.load(Next.of(model));
                     }
                     // A rebase asked for when linking is not done: the user is told, to do it from the menu.
                     return change instanceof StackChange.Stacked stacked && stacked.rebase()

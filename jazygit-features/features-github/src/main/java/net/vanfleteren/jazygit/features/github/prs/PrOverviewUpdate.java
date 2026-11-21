@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.state.github.prs;
+package net.vanfleteren.jazygit.features.github.prs;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -16,8 +16,6 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.FailingRead;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsMsg;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsUpdate;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 
@@ -50,9 +48,10 @@ public final class PrOverviewUpdate {
             case PrOverviewMsg.Tick() -> loaded(Next.of(model), TICKED.filter(load -> FailingRead.due(model, load)));
             // The pull requests of the repository are those of the branches too (ADR 58).
             case PrOverviewMsg.RepositoryLoaded(var read, var kept) ->
-                withBranches(overview(model, msg), new PullRequestsMsg.Loaded(read.ofBranches()));
+                overview(model, msg)
+                        .then(shown -> PullRequestReads.loaded(shown, read.ofBranches(), read.repository()));
             case PrOverviewMsg.RepositoryLoadFailed(var failure) ->
-                withBranches(overview(model, msg), new PullRequestsMsg.LoadFailed(failure));
+                overview(model, msg).then(failed -> PullRequestReads.failed(failed, failure));
             default -> overview(model, msg);
         };
     }
@@ -112,20 +111,13 @@ public final class PrOverviewUpdate {
      */
     private static Next overview(Model model, PrOverviewMsg msg) {
         Model ran = readTold(model, msg);
-        Step step = update(ran.prOverview(), msg, ran.now(), ran.jobs());
-        return new Next(ran.withPrOverview(step.overview()), step.cmds());
-    }
-
-    /**
-     * {@code next}, with what {@code read} tells of the pull requests of the branches too.
-     */
-    private static Next withBranches(Next next, PullRequestsMsg read) {
-        return next.then(model -> PullRequestsUpdate.update(model, read));
+        Step step = update(ran.part(PrOverview.PART), msg, ran.now(), ran.jobs());
+        return new Next(ran.withPart(PrOverview.PART, step.overview()), step.cmds());
     }
 
     /**
      * {@code model} knowing whether the read of the pull requests the user opened or is asked to review succeeded, if
-     * {@code msg} tells of it; that of those of the repository is told by the branches ({@link PullRequestsUpdate}).
+     * {@code msg} tells of it; that of those of the repository is told by the branches ({@link PullRequestReads}).
      */
     private static Model readTold(Model model, PrOverviewMsg msg) {
         return switch (msg) {

@@ -10,7 +10,13 @@ import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestActio
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestAction;
+import net.vanfleteren.jazygit.features.github.panes.PullRequestsScreen;
 import net.vanfleteren.jazygit.features.github.panes.StackGroups;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
+import net.vanfleteren.jazygit.features.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.features.github.prs.PrOverviewUpdate;
+import net.vanfleteren.jazygit.features.github.prs.PrScopes;
+import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
 import net.vanfleteren.jazygit.features.github.review.ReviewAction;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsDialogs;
@@ -19,16 +25,11 @@ import net.vanfleteren.jazygit.features.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.features.github.stack.StackAction;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictAction;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
-import net.vanfleteren.jazygit.kernel.ui.github.PullRequestsScreen;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
-import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
  * The GitHub operations: showing a pull request and what is done from there, showing the checks and the builds of a branch,
@@ -56,7 +57,7 @@ public final class GitHubFeature {
     /**
      * Reading the pull requests of the pull requests screen again.
      */
-    private static final FeatureAction REFRESH = FeatureAction.ofKeys(keys -> Scopes.PULL_REQUESTS.foldLeft(
+    private static final FeatureAction REFRESH = FeatureAction.ofKeys(keys -> PrScopes.ALL.foldLeft(
             keys,
             (added, scope) ->
                     added.add(scope, Binding.always("r", "github.help.prs.refresh", PrOverviewMsg.Refresh::new))));
@@ -87,8 +88,8 @@ public final class GitHubFeature {
                     ReviewAction.ACTION,
                     VerdictAction.ACTION,
                     FeatureAction.ofPopups(GitHubSettingsDialogs::popups))
-            .showing(new BuildsSource())
-            .keeping(GitHubSettings.GH_EXECUTABLE, GitHubSettings.BROWSERS)
+            .showing(new BuildsSource(), new PullRequestSource())
+            .keeping(GitHubSettings.GH_EXECUTABLE, GitHubSettings.BROWSERS, PrOverview.WIDTH, PrOverview.HEIGHTS)
             .withSettings(GitHubSettingsDialogs.SECTION)
             .every(OVERVIEW_INTERVAL, PrOverviewMsg.Tick::new)
             // The dialogs that list checks read them only while one is not done, or once a minute (ADR 34).

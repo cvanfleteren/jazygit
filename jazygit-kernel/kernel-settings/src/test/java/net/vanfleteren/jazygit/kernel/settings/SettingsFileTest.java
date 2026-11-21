@@ -225,11 +225,10 @@ class SettingsFileTest {
         write("""
                 [ui]
                 repository-width = 40
-                pull-requests-width = 55
                 """);
 
         assertEquals(
-                new Loaded(Settings.DEFAULT.withRepositoryWidth(40).withPullRequestsWidth(55), Option.none()),
+                new Loaded(Settings.DEFAULT.withRepositoryWidth(40), Option.none()),
                 settingsFile().load());
     }
 
@@ -238,15 +237,10 @@ class SettingsFileTest {
         write("""
                 [ui]
                 repository-heights = [30, 20, 25]
-                pull-requests-heights = [50, 25]
                 """);
 
         assertEquals(
-                new Loaded(
-                        Settings.DEFAULT
-                                .withRepositoryHeights(List.of(30, 20, 25))
-                                .withPullRequestsHeights(List.of(50, 25)),
-                        Option.none()),
+                new Loaded(Settings.DEFAULT.withRepositoryHeights(List.of(30, 20, 25)), Option.none()),
                 settingsFile().load());
     }
 
@@ -255,15 +249,19 @@ class SettingsFileTest {
         write("""
                 [ui]
                 repository-heights = [30, 20]
-                pull-requests-heights = [50, 45]
                 """);
+        Loaded wrongCount = settingsFile().load();
+        // The stash would get 5%.
+        write("""
+                [ui]
+                repository-heights = [50, 30, 15]
+                """);
+        Loaded tooShort = settingsFile().load();
 
-        assertEquals(
-                new Loaded(
-                        Settings.DEFAULT,
-                        Option.of(new SettingsProblem.Invalid(
-                                file(), List.of("ui.repository-heights", "ui.pull-requests-heights")))),
-                settingsFile().load());
+        Loaded invalid = new Loaded(
+                Settings.DEFAULT, Option.of(new SettingsProblem.Invalid(file(), List.of("ui.repository-heights"))));
+        assertEquals(invalid, wrongCount);
+        assertEquals(invalid, tooShort);
     }
 
     @Test
@@ -283,15 +281,18 @@ class SettingsFileTest {
         write("""
                 [ui]
                 repository-width = 90
-                pull-requests-width = 40.5
                 """);
+        Loaded outOfRange = settingsFile().load();
+        write("""
+                [ui]
+                repository-width = 40.5
+                """);
+        Loaded notWhole = settingsFile().load();
 
-        assertEquals(
-                new Loaded(
-                        Settings.DEFAULT,
-                        Option.of(new SettingsProblem.Invalid(
-                                file(), List.of("ui.repository-width", "ui.pull-requests-width")))),
-                settingsFile().load());
+        Loaded invalid = new Loaded(
+                Settings.DEFAULT, Option.of(new SettingsProblem.Invalid(file(), List.of("ui.repository-width"))));
+        assertEquals(invalid, outOfRange);
+        assertEquals(invalid, notWhole);
     }
 
     @Test
@@ -435,11 +436,11 @@ class SettingsFileTest {
 
     @Test
     void savingAWidthAndGoingBackToTheDefaultRemovesIt() throws IOException {
-        Settings wide = Settings.DEFAULT.withPullRequestsWidth(50);
+        Settings wide = Settings.DEFAULT.withRepositoryWidth(50);
         settingsFile().save(Settings.DEFAULT, wide);
 
         assertEquals(wide, settingsFile().load().settings());
-        assertFalse(Files.readString(file()).contains("repository-width"), Files.readString(file()));
+        assertFalse(Files.readString(file()).contains("repository-heights"), Files.readString(file()));
 
         settingsFile().save(wide, Settings.DEFAULT);
 

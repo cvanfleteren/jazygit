@@ -16,12 +16,10 @@ public record SettingKeys(List<SettingKey<?>> all) {
     public static final SettingKeys KERNEL = new SettingKeys(List.of(
             Settings.THEME,
             Settings.REPOSITORY_WIDTH,
-            Settings.PULL_REQUESTS_WIDTH,
             Settings.DIFF_STYLE,
             Settings.DIFF_SYNTAX,
             Settings.DIFF_WORDS,
             Settings.REPOSITORY_HEIGHTS,
-            Settings.PULL_REQUESTS_HEIGHTS,
             Settings.ANIMATIONS,
             Settings.AUTO_REFRESH,
             Settings.AUTO_FETCH,

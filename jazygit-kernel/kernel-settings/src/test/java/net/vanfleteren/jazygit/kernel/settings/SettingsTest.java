@@ -24,12 +24,10 @@ class SettingsTest {
     private static final Settings CHANGED = Settings.DEFAULT
             .withTheme(ThemeName.DARCULA)
             .withRepositoryWidth(40)
-            .withPullRequestsWidth(50)
             .withDiffStyle(DiffStyle.PLAIN)
             .withDiffSyntax(false)
             .withDiffWords(false)
             .withRepositoryHeights(List.of(20, 20, 20))
-            .withPullRequestsHeights(List.of(40, 30))
             .withAnimations(false)
             .withAutoRefresh(false)
             .withAutoFetch(false)

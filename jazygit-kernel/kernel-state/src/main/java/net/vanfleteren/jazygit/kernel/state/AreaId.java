@@ -56,11 +56,6 @@ public record AreaId(String value) implements Focus.OnScreen {
     public static final AreaId BRANCH_COMMIT = new AreaId("branch-commit");
 
     /**
-     * The area of the pull request highlighted in whichever list of the pull requests screen is in use.
-     */
-    public static final AreaId PULL_REQUEST = new AreaId("pull-request-preview");
-
-    /**
      * The area of the log of the branch highlighted in the branches pane.
      */
     public static final AreaId LOG = new AreaId("branch-log");

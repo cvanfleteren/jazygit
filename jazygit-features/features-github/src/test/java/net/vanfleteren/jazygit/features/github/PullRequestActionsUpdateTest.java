@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
@@ -43,7 +44,6 @@ import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.github.*;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
@@ -199,7 +199,7 @@ class PullRequestActionsUpdateTest {
 
         Next done = TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of(), mergingAtOnce())));
         Next earlierRead =
-                TestModels.done(done.model(), new LoadRepositoryPullRequests(), new PullRequestsMsg.Loaded(List.of()));
+                TestModels.done(done.model(), new LoadRepositoryPullRequests(), PullRequestFixtures.listed(List.of()));
 
         assertFalse(
                 done.cmds().contains(new LoadRepositoryPullRequests()),
@@ -349,7 +349,7 @@ class PullRequestActionsUpdateTest {
                 errorText(failed));
         assertEquals(
                 Option.of(new MergeStatus.Failed("Required status check \"build\" is failing")),
-                Update.update(failed, new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
+                Update.update(failed, PullRequestFixtures.listed(List.of(FEATURE_PR)))
                         .model()
                         .part(GitHubState.PART)
                         .merge(new PrNumber(42)));
@@ -361,7 +361,7 @@ class PullRequestActionsUpdateTest {
                 Option.none(),
                 Update.update(
                                 failed,
-                                new PullRequestsMsg.Loaded(List.of(new PullRequest(
+                                PullRequestFixtures.listed(List.of(new PullRequest(
                                         new PrNumber(42),
                                         new GhBranch("feature"),
                                         false,
@@ -405,7 +405,7 @@ class PullRequestActionsUpdateTest {
         PullRequest pending =
                 new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
         Model failed = askedFor(
-                Update.update(model(), new PullRequestsMsg.Loaded(List.of(pending)))
+                Update.update(model(), PullRequestFixtures.listed(List.of(pending)))
                         .model(),
                 "feature",
                 42,
@@ -413,13 +413,13 @@ class PullRequestActionsUpdateTest {
 
         assertEquals(
                 Option.of(new MergeStatus.Failed("Required status check \"build\" is expected")),
-                Update.update(failed, new PullRequestsMsg.Loaded(List.of(pending)))
+                Update.update(failed, PullRequestFixtures.listed(List.of(pending)))
                         .model()
                         .part(GitHubState.PART)
                         .merge(new PrNumber(42)));
         assertEquals(
                 Option.none(),
-                Update.update(failed, new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
+                Update.update(failed, PullRequestFixtures.listed(List.of(FEATURE_PR)))
                         .model()
                         .part(GitHubState.PART)
                         .merge(new PrNumber(42)));
@@ -439,7 +439,7 @@ class PullRequestActionsUpdateTest {
                         : pr);
 
         Model read =
-                Update.update(failed, new PullRequestsMsg.Loaded(bottomFixed)).model();
+                Update.update(failed, PullRequestFixtures.listed(bottomFixed)).model();
 
         assertEquals(Option.none(), read.part(GitHubState.PART).merge(new PrNumber(42)));
         assertEquals(Option.none(), read.part(GitHubState.PART).merge(new PrNumber(41)));
@@ -527,7 +527,7 @@ class PullRequestActionsUpdateTest {
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(stack(7, 2, 41, 42)));
-        return Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, top)))
+        return Update.update(model(), PullRequestFixtures.listed(List.of(bottom, top)))
                 .model();
     }
 
@@ -587,7 +587,7 @@ class PullRequestActionsUpdateTest {
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(stack(8, 1, 40, 44)));
-        Model stacked = Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, middle, top, other)))
+        Model stacked = Update.update(model(), PullRequestFixtures.listed(List.of(bottom, middle, top, other)))
                 .model();
 
         Model merging = asked(stacked);

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.github;
+package net.vanfleteren.jazygit.features.github.panes;
 
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
@@ -9,18 +9,19 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
+import net.vanfleteren.jazygit.features.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.features.github.prs.PrScopes;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.kernel.ui.github.PullRequestSymbols;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Scope;
-import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
@@ -73,7 +74,7 @@ public final class PullRequestsPanel implements LeftPane {
                                 pr -> pr.repository() + "#" + pr.number().value())
                         .apply(previous.pullRequests(), next.pullRequests(), selected),
                 highlights);
-        list.whenEmpty(Messages.get("prs.empty"));
+        list.whenEmpty(Messages.get("github.prs.empty"));
         list.onKey(event -> event.isConfirm()
                 ? selected().map(pr -> () -> openPullRequest.accept(scope.pane()))
                 : PaneKeys.sending(keymap.handle(scope, event, selected()), dispatch));
@@ -83,7 +84,7 @@ public final class PullRequestsPanel implements LeftPane {
      * The times the panes of the pull requests show while their screen is (ADR 124): how long ago each was updated.
      */
     public static List<ShownTime> shownTimes(Model model) {
-        PrOverview overview = model.prOverview();
+        PrOverview overview = model.part(PrOverview.PART);
         return List.of(overview.reviewRequested(), overview.authored(), overview.repository())
                 .flatMap(list -> list.toOption().toList())
                 .flatMap(PullRequestList::pullRequests)
@@ -98,16 +99,16 @@ public final class PullRequestsPanel implements LeftPane {
             Consumer<Msg> dispatch, Consumer<PaneId> openPullRequest, Theme.Highlights highlights) {
         return List.of(
                 new PullRequestsPanel(
-                        Scopes.PR_REPOSITORY, PrOverview::repository, false, dispatch, openPullRequest, highlights),
+                        PrScopes.REPOSITORY, PrOverview::repository, false, dispatch, openPullRequest, highlights),
                 new PullRequestsPanel(
-                        Scopes.PR_REVIEW_REQUESTED,
+                        PrScopes.REVIEW_REQUESTED,
                         PrOverview::reviewRequested,
                         true,
                         dispatch,
                         openPullRequest,
                         highlights),
                 new PullRequestsPanel(
-                        Scopes.PR_AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, highlights));
+                        PrScopes.AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, highlights));
     }
 
     /**
@@ -160,7 +161,7 @@ public final class PullRequestsPanel implements LeftPane {
                 .toOption()
                 .filter(PullRequestList::truncated)
                 .map(read -> Messages.get(
-                        "prs.truncated",
+                        "github.prs.truncated",
                         name,
                         String.valueOf(read.pullRequests().size()),
                         String.valueOf(read.total())))
@@ -181,7 +182,7 @@ public final class PullRequestsPanel implements LeftPane {
      */
     @Override
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
-        Loadable<PullRequestList> shown = pullRequests.apply(model.prOverview());
+        Loadable<PullRequestList> shown = pullRequests.apply(model.part(PrOverview.PART));
         return list.render(
                 shown,
                 read -> read.pullRequests()
@@ -191,13 +192,13 @@ public final class PullRequestsPanel implements LeftPane {
                                 anyRepository,
                                 // The numbers of the merges are of this repository.
                                 Option.when(
-                                                model.prOverview()
+                                                model.part(PrOverview.PART)
                                                         .ofThisRepository(pr)
                                                         .getOrElse(false),
                                                 () -> model.part(GitHubState.PART)
                                                         .merge(pr.number()))
                                         .flatMap(merge -> merge),
-                                model.prOverview().isUnseen(pr))),
+                                model.part(PrOverview.PART).isUnseen(pr))),
                 focus.contains(scope.pane()),
                 inUse.contains(scope.pane()),
                 Pane.title(title(Messages.get(scope.titleKey()), shown)));
@@ -216,7 +217,7 @@ public final class PullRequestsPanel implements LeftPane {
     @Override
     public Option<Msg> selectionChange(Model model) {
         return selected()
-                .filter(pr -> !model.prOverview().highlighted().contains(pr))
+                .filter(pr -> !model.part(PrOverview.PART).highlighted().contains(pr))
                 .map(PrOverviewMsg.Highlighted::new);
     }
 }

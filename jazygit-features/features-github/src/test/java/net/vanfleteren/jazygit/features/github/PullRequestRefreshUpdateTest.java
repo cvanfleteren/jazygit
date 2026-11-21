@@ -98,7 +98,7 @@ class PullRequestRefreshUpdateTest {
         // requests read again after the change list it as a draft.
         Model drafted = Update.update(
                         Update.update(drafting.model(), cmd.run(env())).model(),
-                        new PullRequestsMsg.Loaded(List.of(new PullRequest(
+                        PullRequestFixtures.listed(List.of(new PullRequest(
                                 new PrNumber(42), new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
                 .model();
         Model dropped = Update.update(
@@ -246,7 +246,7 @@ class PullRequestRefreshUpdateTest {
         // The pull requests read again after the change list it as a draft.
         Model listed = Update.update(
                         closed,
-                        new PullRequestsMsg.Loaded(List.of(new PullRequest(
+                        PullRequestFixtures.listed(List.of(new PullRequest(
                                 new PrNumber(42), new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
                 .model();
 

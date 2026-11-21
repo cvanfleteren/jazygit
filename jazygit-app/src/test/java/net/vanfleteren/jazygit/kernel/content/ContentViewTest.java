@@ -17,11 +17,13 @@ import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.changes.panes.stash.StashPanel;
 import net.vanfleteren.jazygit.features.chrome.help.HelpPopup;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
+import net.vanfleteren.jazygit.features.github.prs.content.PullRequestBody;
+import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
-import net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
@@ -71,9 +73,11 @@ class ContentViewTest {
     private static Model pullRequests(Option<Preview<PullRequestSummary, PullRequestPreview>> preview) {
         return TestModels.loaded()
                 .withScreen(PrOverview.SCREEN)
-                .withPrOverview(PrOverview.INITIAL
-                        .withHighlighted(preview.map(Preview::key))
-                        .withPreview(preview));
+                .withPart(
+                        PrOverview.PART,
+                        PrOverview.INITIAL
+                                .withHighlighted(preview.map(Preview::key))
+                                .withPreview(preview));
     }
 
     /**

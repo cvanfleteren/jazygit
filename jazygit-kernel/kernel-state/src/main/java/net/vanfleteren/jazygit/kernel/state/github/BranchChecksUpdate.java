@@ -89,7 +89,7 @@ public final class BranchChecksUpdate {
      * {@code next}, also reading the checks again; unless a read is still running, which gets the latest
      * state already.
      */
-    static Next load(Next next) {
+    public static Next load(Next next) {
         return GitHubReads.load(next, new LoadBranchChecks());
     }
 
@@ -97,7 +97,7 @@ public final class BranchChecksUpdate {
      * {@code next}, also reading the checks again as a timer asks: unless they keep failing ({@link FailingRead}), or a
      * read is still running.
      */
-    static Next poll(Next next) {
+    public static Next poll(Next next) {
         return GitHubReads.poll(next, new LoadBranchChecks());
     }
 

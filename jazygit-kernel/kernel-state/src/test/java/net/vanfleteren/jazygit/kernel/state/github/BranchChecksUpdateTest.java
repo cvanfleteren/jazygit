@@ -398,8 +398,7 @@ class BranchChecksUpdateTest {
 
     @Test
     void onlyABranchOnGitHubShowsItsPullRequest() {
-        Model model = Update.update(withChecks(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
-                .model();
+        Model model = withChecks().mapPart(GitHubState.PART, gitHub -> gitHub.withListed(List.of(FEATURE_PR)));
 
         assertEquals(Option.of(FEATURE_PR), model.part(GitHubState.PART).pullRequest(remote("origin", "feature")));
         assertEquals(Option.none(), model.part(GitHubState.PART).pullRequest(remote("fork", "feature")));
@@ -413,8 +412,7 @@ class BranchChecksUpdateTest {
 
     @Test
     void untilTheRemotesOnGitHubAreKnownALocalBranchShowsThePullRequestByName() {
-        Model model = Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
-                .model();
+        Model model = loaded().mapPart(GitHubState.PART, gitHub -> gitHub.withListed(List.of(FEATURE_PR)));
 
         assertEquals(
                 Option.of(FEATURE_PR),

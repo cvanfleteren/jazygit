@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
@@ -200,7 +201,7 @@ class PullRequestDetailsUpdateTest {
                 false,
                 Option.of(new Upstream(
                         new BranchRef.Remote(new RemoteBranch("origin", new BranchName("feature"))), 0, 0)));
-        Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
+        Model withPr = Update.update(model(), PullRequestFixtures.listed(List.of(FEATURE_PR)))
                 .model();
 
         assertEquals(Option.of(FEATURE_PR), withPr.part(GitHubState.PART).pullRequest(renamed));
@@ -218,7 +219,7 @@ class PullRequestDetailsUpdateTest {
                 false,
                 Option.of(new Upstream(
                         new BranchRef.Remote(new RemoteBranch("my/fork", new BranchName("feature"))), 0, 0)));
-        Model withPr = Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
+        Model withPr = Update.update(model(), PullRequestFixtures.listed(List.of(FEATURE_PR)))
                 .model();
 
         assertEquals(Option.of(FEATURE_PR), withPr.part(GitHubState.PART).pullRequest(onFork));
@@ -228,7 +229,7 @@ class PullRequestDetailsUpdateTest {
     void askingForAPullRequestAfterFailingToReadThemTellsWhy() {
         var failure = refused("gh: not logged in");
         Model failed =
-                Update.update(model(), new PullRequestsMsg.LoadFailed(failure)).model();
+                Update.update(model(), PullRequestFixtures.listFailed(failure)).model();
 
         Next asked = Update.update(failed, new PullRequestMsg.Requested(new BranchName("feature")));
 
@@ -253,8 +254,9 @@ class PullRequestDetailsUpdateTest {
                 Instant.EPOCH,
                 "https://github.com/owner/repo/pull/9");
 
-        Model ofOwnerRepo = loaded().withPrOverview(
-                        net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL.withRepositoryName(
+        Model ofOwnerRepo = loaded().withPart(
+                        PrOverview.PART,
+                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
                                 Option.of("owner/repo")));
 
         Next shown = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(summary));
@@ -290,8 +292,9 @@ class PullRequestDetailsUpdateTest {
                 Review.NONE,
                 Instant.EPOCH,
                 "https://github.com/other/repo/pull/3");
-        Model ofOwnerRepo = loaded().withPrOverview(
-                        net.vanfleteren.jazygit.kernel.state.github.prs.PrOverview.INITIAL.withRepositoryName(
+        Model ofOwnerRepo = loaded().withPart(
+                        PrOverview.PART,
+                        net.vanfleteren.jazygit.features.github.prs.PrOverview.INITIAL.withRepositoryName(
                                 Option.of("owner/repo")));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(elsewhere));

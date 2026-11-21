@@ -12,12 +12,12 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd;
+import net.vanfleteren.jazygit.features.github.prs.LoadMyPullRequests;
+import net.vanfleteren.jazygit.features.github.prs.LoadPullRequestPreview;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.kernel.state.github.CheckTimesCmd;
 import net.vanfleteren.jazygit.kernel.state.github.LoadBranchCheckRuns;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadMyPullRequests;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadPullRequestPreview;
 import org.junit.jupiter.api.Test;
 
 /**

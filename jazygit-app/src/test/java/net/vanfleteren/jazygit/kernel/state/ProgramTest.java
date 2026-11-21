@@ -81,13 +81,13 @@ import net.vanfleteren.jazygit.features.changes.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchMsg;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
+import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.Loadable.Failed;
 import net.vanfleteren.jazygit.kernel.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.LoadBranchChecks;
-import net.vanfleteren.jazygit.kernel.state.github.PullRequestsMsg;
-import net.vanfleteren.jazygit.kernel.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.kernel.state.load.Load;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranchLog;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
@@ -962,7 +962,8 @@ class ProgramTest {
         settleWithout(background);
         assertEquals(new Loaded<>(repo.status), program.model().repo().status());
 
-        program.dispatch(new PullRequestsMsg.Refresh());
+        // As a fetch makes GitHub's feature read them.
+        program.dispatch(model -> PullRequestReads.load(Update.Next.of(model)));
         settleWithout(background);
         assertEquals(true, program.model().jobs().runs(new LoadRepositoryPullRequests()));
         assertEquals(true, program.model().jobs().runs(new LoadBranchChecks()));
