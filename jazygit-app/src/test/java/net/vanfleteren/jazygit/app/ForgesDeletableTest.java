@@ -179,11 +179,15 @@ class ForgesDeletableTest {
 
     /**
      * The app's tests prove it works without the forge only if they run without it: the pom sets
-     * {@link Features#WITHOUT}.
+     * {@link Features#WITHOUT}. That the id spelled out in {@link #forges()} is still the forge's is checked too, else
+     * the pom would leave out nothing.
      */
     @ParameterizedTest
     @MethodSource("forges")
     void theAppsTestsRunWithoutTheForge(Forge forge) {
+        assertTrue(
+                Features.ids().contains(forge.id()),
+                forge.id() + " is " + forge.name() + "'s id, as the pom says (ADR 173, 174)");
         assertTrue(
                 Features.ALL.forAll(feature ->
                         feature.applying().forAll(applying -> !applying.id().equals(forge.id()))),
