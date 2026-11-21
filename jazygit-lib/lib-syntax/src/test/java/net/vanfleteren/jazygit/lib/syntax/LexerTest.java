@@ -227,6 +227,19 @@ class LexerTest {
     }
 
     @Test
+    void phpKeywordsAreMatchedIgnoringCaseAndAVariableIsNone() {
+        assertEquals(
+                List.of("KEYWORD New", "STRING 'a'", "KEYWORD NULL", "COMMENT # b"),
+                tokens(Language.PHP, "$list = New Foo($class, 'a', NULL); # b"));
+    }
+
+    @Test
+    void aWordAfterADollarIsNoKeyword() {
+        assertEquals(List.of("KEYWORD echo", "COMMENT # x"), tokens(Language.PHP, "echo $done; # x"));
+        assertEquals(List.of(), tokens(Language.SHELL, "x=$done$select"));
+    }
+
+    @Test
     void sqlKeywordsAreMatchedIgnoringCase() {
         assertEquals(
                 List.of("KEYWORD SELECT", "KEYWORD from", "KEYWORD Where", "STRING 'x'", "COMMENT -- all"),
