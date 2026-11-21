@@ -189,6 +189,39 @@ public enum Language {
             "toml",
             ""),
     /**
+     * CSS, whose at-rules ({@code @media}) are its annotations. Its keywords are those that mean the same in every
+     * property, and {@code !important}: a word of a value, like {@code none}, is the name of a class as often. Not: an
+     * at-rule right after an opening brace, as in {@code @supports (x){@media y}} or in nesting, which is taken for an
+     * inline tag of a doc comment ({@code {@link …}}, ADR 113) and not coloured.
+     */
+    CSS(
+            Grammar.code(
+                            "important inherit initial unset revert",
+                            List.empty(),
+                            List.of(comment("/*", "*/")),
+                            List.of(quoted("\""), quoted("'")))
+                    .withAnnotations(),
+            "",
+            "css",
+            ""),
+    /**
+     * Sass, in both its syntaxes: SCSS ({@code .scss}) and the indented one ({@code .sass}). It has the keywords of
+     * CSS and its own values, comments that run to the end of the line, and at-rules of its own ({@code @mixin},
+     * {@code @include}, {@code @if}, …) as annotations. Not: a {@code //} in an unquoted {@code url(…)}, which starts a
+     * comment here, and an at-rule right after an opening brace, as in {@code .a{@include b;}}, which is taken for an
+     * inline tag of a doc comment ({@code {@link …}}, ADR 113) and not coloured.
+     */
+    SASS(
+            Grammar.code(
+                            "important inherit initial unset revert true false null",
+                            List.of("//"),
+                            List.of(comment("/*", "*/")),
+                            List.of(quoted("\""), quoted("'")))
+                    .withAnnotations(),
+            "",
+            "scss sass",
+            ""),
+    /**
      * Nix, whose strings go on over lines. An indented string ({@code ''…''}) has no backslash escapes, but escapes
      * of its own: {@code ''$}, {@code '''}, and {@code ''\} before any character. Its names hold dashes and quotes
      * ({@code foo-bar}, {@code x'}), and a name a value is given to is a property (ADR 169).

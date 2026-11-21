@@ -146,6 +146,33 @@ class LexerTest {
     }
 
     @Test
+    void cssHasAtRulesNumbersWithUnitsKeywordsAndComments() {
+        assertEquals(
+                List.of(
+                        "ANNOTATION @media",
+                        "NUMBER 600px",
+                        "KEYWORD inherit",
+                        "KEYWORD important",
+                        "STRING \"a\"",
+                        "COMMENT /* x */"),
+                tokens(
+                        Language.CSS,
+                        "@media (max-width: 600px) { a { color: inherit !important; content: \"a\" } } /* x */"));
+    }
+
+    @Test
+    void twoSlashesStartNoCommentInCss() {
+        assertEquals(List.of(), tokens(Language.CSS, "  background: url(//cdn.example/x.png);"));
+    }
+
+    @Test
+    void sassHasItsAtRulesItsValuesAndCommentsToTheEndOfTheLine() {
+        assertEquals(
+                List.of("ANNOTATION @include", "NUMBER 2rem", "KEYWORD true", "COMMENT // big"),
+                tokens(Language.SASS, "  @include button($size: 2rem, $round: true); // big"));
+    }
+
+    @Test
     void nixKnowsItsKeywordsCommentsAndStrings() {
         assertEquals(
                 List.of(
