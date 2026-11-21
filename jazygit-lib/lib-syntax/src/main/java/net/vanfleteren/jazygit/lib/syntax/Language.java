@@ -184,7 +184,8 @@ public enum Language {
      * Sass, in both its syntaxes: SCSS ({@code .scss}) and the indented one ({@code .sass}). It has the keywords of
      * CSS and its own values, comments that run to the end of the line, and at-rules of its own ({@code @mixin},
      * {@code @include}, {@code @if}, …) as annotations. Not: a {@code //} in an unquoted {@code url(…)}, which starts a
-     * comment here.
+     * comment here, and an at-rule right after an opening brace, as in {@code .a{@include b;}}, which is taken for an
+     * inline tag of a doc comment ({@code {@link …}}, ADR 113) and not coloured.
      */
     SASS(
             Grammar.code(
