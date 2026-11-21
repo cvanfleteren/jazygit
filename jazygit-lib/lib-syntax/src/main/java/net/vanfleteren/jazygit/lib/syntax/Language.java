@@ -166,6 +166,19 @@ public enum Language {
             "toml",
             ""),
     /**
+     * Nix, whose strings go on over lines. An indented string ({@code ''…''}) has no backslash escapes, and its own
+     * escapes ({@code '''}, {@code ''$}) end it early.
+     */
+    NIX(
+            Grammar.code(
+                    "assert else if in inherit let or rec then with true false null",
+                    List.of("#"),
+                    List.of(comment("/*", "*/")),
+                    List.of(raw("''").overLines(), quoted("\"").overLines())),
+            "",
+            "nix",
+            ""),
+    /**
      * XML and HTML.
      */
     XML(

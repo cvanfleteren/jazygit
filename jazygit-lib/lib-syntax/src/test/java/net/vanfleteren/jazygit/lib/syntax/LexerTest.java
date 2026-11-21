@@ -146,6 +146,30 @@ class LexerTest {
     }
 
     @Test
+    void nixKnowsItsKeywordsCommentsAndStrings() {
+        assertEquals(
+                List.of("KEYWORD let", "STRING \"x-${y}\"", "COMMENT /* a */", "KEYWORD in", "COMMENT # b"),
+                tokens(Language.NIX, "let a = \"x-${y}\"; /* a */ in pkgs.hello # b"));
+    }
+
+    @Test
+    void aNixIndentedStringGoesOnOverTheNextLinesWithoutEscapes() {
+        Lexed open = line(Language.NIX, new Outside(), "  script = ''");
+        Lexed inside = line(Language.NIX, open.state(), "    echo \\'' if done");
+
+        assertEquals(List.of("STRING     echo \\''", "KEYWORD if"), shown("    echo \\'' if done", inside));
+    }
+
+    @Test
+    void aNixStringGoesOnOverTheNextLines() {
+        Lexed open = line(Language.NIX, new Outside(), "  description = \"one");
+
+        assertEquals(
+                List.of("STRING   two\"", "KEYWORD inherit"),
+                shown("  two\"; inherit x;", line(Language.NIX, open.state(), "  two\"; inherit x;")));
+    }
+
+    @Test
     void sqlKeywordsAreMatchedIgnoringCase() {
         assertEquals(
                 List.of("KEYWORD SELECT", "KEYWORD from", "KEYWORD Where", "STRING 'x'", "COMMENT -- all"),
