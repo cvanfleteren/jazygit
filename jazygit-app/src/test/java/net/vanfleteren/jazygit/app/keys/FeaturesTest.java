@@ -13,6 +13,7 @@ import io.vavr.Tuple2;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
+import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.lang.reflect.Field;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
@@ -85,10 +86,12 @@ class FeaturesTest {
     @Test
     void everyFeatureIsListedOnce() {
         List<Feature> features = declared().map(Tuple2::_2);
-        assertTrue(features.forAll(feature -> Features.ALL.count(listed ->
-                        listed == feature || listed.applying().isDefined() && listed.actions() == feature.actions())
+        // Every feature declared, as the app's tests run without GitHub (ADR 173).
+        List<Feature> listed = Features.running(Option.none());
+        assertTrue(features.forAll(feature -> listed.count(
+                        each -> each == feature || each.applying().isDefined() && each.actions() == feature.actions())
                 == 1));
-        assertEquals(features.size(), Features.ALL.size());
+        assertEquals(features.size(), listed.size());
     }
 
     @Test

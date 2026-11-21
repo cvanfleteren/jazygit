@@ -161,6 +161,17 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- The app's tests run without GitHub, as if it were deleted (ADR 173): GitHub's own tests of the
+                         whole app are in jazygit-github-app-tests, which runs with it. -->
+                    <systemPropertyVariables>
+                        <jazygit.without>github</jazygit.without>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>

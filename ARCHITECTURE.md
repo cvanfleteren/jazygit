@@ -356,9 +356,9 @@ sequenceDiagram
   app's keymap): those are in `jazygit-app`, in the package of what they test, and those of them that need GitHub in
   `jazygit-github-app-tests`, as `XxxGitHubTest` beside the app's `XxxTest`. `kernel-state`, `kernel-ui`,
   `features-branches`, `features-github` and the app share their test helpers as test-jars.
-- **Without GitHub**: `scripts/without-github.sh` deletes `features-github`, `core-gh` and
-  `jazygit-github-app-tests` in a copy of the repository, with their lines in the poms and in `Features.ALL`, and
-  verifies what is left; CI runs it as the `without-github` job (ADR 171).
+- **Without GitHub**: `GitHubDeletableTest` checks that nothing but `features-github`, `core-gh`,
+  `jazygit-github-app-tests` and one line of `Features.ALL` names GitHub, in the classes and the poms, and the app's
+  own tests run without GitHub (`jazygit.without`), so that deleting those leaves an app that works (ADR 171, 173).
 - **Update functions** are pure: build a `Model` (`TestModels`), apply a `Msg`, assert on the next model and its
   commands. No git involved.
 - **`ProgramTest`** runs the real loop with queue executors and `StubGit`.
