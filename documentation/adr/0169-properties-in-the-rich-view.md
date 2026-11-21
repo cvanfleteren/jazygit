@@ -25,7 +25,8 @@ dash: it coloured only `bar` of `foo-bar`, and the `inherit` of `inherit-x` as a
   `services.nginx.enable`. In Nix only, for now; a `Grammar` says whether its language has them
   (`withProperties()`), as it says so of annotations.
 - A name is a property when one `=` follows it, after spaces and tabs on the same line, and not `==`. A name of the
-  path in quotes (`"foo-bar".x = 1;`) is a string, and the rest of the path after it is not coloured.
+  path in quotes (`"foo-bar".x = 1;`) or interpolated (`${n}.x = 1;`) is a string or plain, and breaks the path: only
+  the names after the last such one are coloured (`x`), those before it are not (the `foo` of `foo."bar".baz = 1;`).
 - A `Grammar` says which characters its names hold besides letters, digits and underscores (`withNameChars`): `-` and
   `'` in Nix. A keyword is matched against the whole name, so the `then` of `then-y` is none.
 - The class `syntax-property`, set in every theme that colours syntax, in a colour none of its other tokens have. The

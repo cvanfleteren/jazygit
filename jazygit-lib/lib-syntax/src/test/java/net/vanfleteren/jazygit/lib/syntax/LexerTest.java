@@ -182,6 +182,15 @@ class LexerTest {
     }
 
     @Test
+    void aQuotedOrInterpolatedNameBreaksAPathAndOnlyTheNamesAfterItAreTheProperty() {
+        assertEquals(List.of("PROPERTY enable", "KEYWORD true"), tokens(Language.NIX, "${name}.enable = true;"));
+        assertEquals(
+                List.of("STRING \"foo-bar\"", "PROPERTY x", "NUMBER 1"), tokens(Language.NIX, "\"foo-bar\".x = 1;"));
+        assertEquals(
+                List.of("STRING \"bar\"", "PROPERTY baz", "NUMBER 1"), tokens(Language.NIX, "foo.\"bar\".baz = 1;"));
+    }
+
+    @Test
     void aLanguageWithoutPropertiesHasNone() {
         assertEquals(List.of("NUMBER 1"), tokens(Language.TOML, "name = 1"));
         assertEquals(List.of("KEYWORD int", "NUMBER 1"), tokens(Language.JAVA, "int a = 1;"));
