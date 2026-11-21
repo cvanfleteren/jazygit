@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.core.forgejo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
@@ -39,6 +41,16 @@ class ForgejoRepositoryTest {
         assertEquals(
                 Option.of(new ForgejoRepository("https://code.example.net:3000", "cvf", "nix")),
                 ForgejoRepository.of("https://cvf@code.example.net:3000/cvf/nix", NO_ALIASES));
+    }
+
+    @Test
+    void onlyAnHttpsHostIsSecureEnoughForAToken() {
+        assertTrue(ForgejoRepository.of("ssh://git@code.example.net:10022/cvf/nix.git", NO_ALIASES)
+                .get()
+                .secure());
+        assertFalse(ForgejoRepository.of("http://code.example.net/cvf/nix.git", NO_ALIASES)
+                .get()
+                .secure());
     }
 
     @Test

@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
@@ -49,11 +50,13 @@ public final class HttpForgejo implements Forgejo {
     private static final Decoder<String> VERSION = field("version", string());
 
     private final Supplier<FjKeys> keys;
+    private final Predicate<ForgejoRepository> trusted;
     private final Lazy<HttpClient> client;
     private final ConcurrentMap<String, Boolean> forgejo = new ConcurrentHashMap<>();
 
-    private HttpForgejo(Supplier<FjKeys> keys) {
+    private HttpForgejo(Supplier<FjKeys> keys, Predicate<ForgejoRepository> trusted) {
         this.keys = Lazy.of(keys);
+        this.trusted = trusted;
         this.client = Lazy.of(() -> HttpClient.newBuilder()
                 .connectTimeout(CONNECT_TIMEOUT)
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -61,10 +64,18 @@ public final class HttpForgejo implements Forgejo {
     }
 
     /**
-     * Forgejo with fj's keys from {@code keys}, read once, when first needed.
+     * Forgejo with fj's keys from {@code keys}, read once, when first needed. A token is sent only over https: a
+     * remote over plain HTTP is asked without one, which is enough for a public repository.
      */
     public static HttpForgejo of(Supplier<FjKeys> keys) {
-        return new HttpForgejo(keys);
+        return new HttpForgejo(keys, ForgejoRepository::secure);
+    }
+
+    /**
+     * As {@link #of}, but sending the token to the hosts {@code trusted} picks, for a test whose server is plain HTTP.
+     */
+    static HttpForgejo trusting(Supplier<FjKeys> keys, Predicate<ForgejoRepository> trusted) {
+        return new HttpForgejo(keys, trusted);
     }
 
     @Override
@@ -101,6 +112,7 @@ public final class HttpForgejo implements Forgejo {
                             .GET();
                     keys.get()
                             .token(repository.host())
+                            .filter(token -> trusted.test(repository))
                             .forEach(token -> request.header("Authorization", "token " + token));
                     return client.get()
                             .send(request.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));

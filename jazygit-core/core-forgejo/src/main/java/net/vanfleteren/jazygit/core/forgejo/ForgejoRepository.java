@@ -63,6 +63,13 @@ public record ForgejoRepository(String base, String owner, String name) {
     }
 
     /**
+     * Whether the host is asked over https, so that a token can be sent to it.
+     */
+    public boolean secure() {
+        return base.startsWith("https://");
+    }
+
+    /**
      * The host of the web interface, with its port when it has one: what fj keeps its token under.
      */
     public String host() {

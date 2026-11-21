@@ -100,7 +100,9 @@ class HttpForgejoTest {
     @Test
     void theStatusOfACommitIsReadWithFjsTokenForTheHost() {
         String host = base().substring("http://".length());
-        HttpForgejo forgejo = HttpForgejo.of(() -> new FjKeys(HashMap.of(host, "secret"), HashMap.empty()));
+        // This server is plain HTTP; it stands for one over https, where the token is sent.
+        HttpForgejo forgejo =
+                HttpForgejo.trusting(() -> new FjKeys(HashMap.of(host, "secret"), HashMap.empty()), repository -> true);
         assertEquals(
                 Either.right(new CommitStatus(
                         CommitStatus.State.FAILED,
@@ -108,6 +110,14 @@ class HttpForgejoTest {
                                 "check / check (push)", CommitStatus.State.FAILED, "Failing after 11m2s")))),
                 forgejo.status(repository("nix"), SHA));
         assertEquals(List.of("token secret"), List.ofAll(authorizations));
+    }
+
+    @Test
+    void fjsTokenIsNotSentOverPlainHttp() {
+        String host = base().substring("http://".length());
+        HttpForgejo.of(() -> new FjKeys(HashMap.of(host, "secret"), HashMap.empty()))
+                .status(repository("nix"), SHA);
+        assertEquals(List.of("null"), List.ofAll(authorizations));
     }
 
     @Test

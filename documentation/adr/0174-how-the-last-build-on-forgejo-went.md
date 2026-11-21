@@ -24,7 +24,8 @@ a short sha and no branch, and leaves out the statuses of other CIs.
 - **It talks to Forgejo's HTTP API with the JDK's client, not through fj**: fj cannot give the status of a commit.
   It uses fj's token for the host, read from fj's `keys.json` (`$XDG_DATA_HOME/forgejo-cli`, or
   `~/.local/share/forgejo-cli`), so that logging in with fj is all it takes, as with gh; without one it asks without a
-  token, which is enough for a public repository.
+  token, which is enough for a public repository. The token is sent only over https: a remote over plain HTTP is
+  asked without it.
 - **A remote is on Forgejo when its host answers `/api/forgejo/v1/version`** over https, once per host for the app's
   run. The host of an ssh remote is fj's alias for it, if fj has one, else the same host on the https port: an
   `ssh://git@code.example.net:10022/owner/repo.git` remote is `https://code.example.net`, repository `owner/repo`.
