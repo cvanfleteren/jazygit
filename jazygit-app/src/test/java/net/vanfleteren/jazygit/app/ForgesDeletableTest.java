@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
 import net.vanfleteren.jazygit.app.keys.Features;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.w3c.dom.Element;
@@ -53,11 +54,12 @@ class ForgesDeletableTest {
      * A forge that can be deleted.
      *
      * @param name      how its classes are named, as {@code GitHub} in {@code GitHubFeature}
+     * @param id        the id of its feature, which {@link Features#WITHOUT} names
      * @param packages  the packages of its classes
      * @param modules   its modules, by their artifact id
      * @param locations where its modules are, from the root of the repository
      */
-    record Forge(String name, List<String> packages, Set<String> modules, List<Path> locations) {
+    record Forge(String name, String id, List<String> packages, Set<String> modules, List<Path> locations) {
 
         String feature() {
             return "net.vanfleteren.jazygit." + packages.head() + "." + name + "Feature";
@@ -71,30 +73,33 @@ class ForgesDeletableTest {
             return "net\\.vanfleteren\\.jazygit\\.("
                     + packages.map(each -> each.replace(".", "\\.")).mkString("|") + ")(\\..*)?";
         }
-
-        @Override
-        public String toString() {
-            return name;
-        }
     }
 
-    static List<Forge> forges() {
+    /**
+     * The forges, each named by its name in the report. The ids are spelled out, as naming {@code GitHubFeature.ID}
+     * would use the forge.
+     */
+    static java.util.stream.Stream<Named<Forge>> forges() {
         return List.of(
-                new Forge(
-                        "GitHub",
-                        List.of("features.github", "core.gh"),
-                        HashSet.of("features-github", "core-gh", "jazygit-github-app-tests"),
-                        List.of(
-                                Path.of("jazygit-features", "features-github"),
-                                Path.of("jazygit-core", "core-gh"),
-                                Path.of("jazygit-github-app-tests"))),
-                new Forge(
-                        "Forgejo",
-                        List.of("features.forgejo", "core.forgejo"),
-                        HashSet.of("features-forgejo", "core-forgejo"),
-                        List.of(
-                                Path.of("jazygit-features", "features-forgejo"),
-                                Path.of("jazygit-core", "core-forgejo"))));
+                        new Forge(
+                                "GitHub",
+                                "github",
+                                List.of("features.github", "core.gh"),
+                                HashSet.of("features-github", "core-gh", "jazygit-github-app-tests"),
+                                List.of(
+                                        Path.of("jazygit-features", "features-github"),
+                                        Path.of("jazygit-core", "core-gh"),
+                                        Path.of("jazygit-github-app-tests"))),
+                        new Forge(
+                                "Forgejo",
+                                "forgejo",
+                                List.of("features.forgejo", "core.forgejo"),
+                                HashSet.of("features-forgejo", "core-forgejo"),
+                                List.of(
+                                        Path.of("jazygit-features", "features-forgejo"),
+                                        Path.of("jazygit-core", "core-forgejo"))))
+                .map(forge -> Named.of(forge.name(), forge))
+                .toJavaStream();
     }
 
     /**
@@ -155,7 +160,7 @@ class ForgesDeletableTest {
         assertTrue(poms.contains(ROOT.resolve("pom.xml")), "the poms are read from the root of the repository");
         List<String> wrong = poms.flatMap(pom -> namings(forge, pom)
                 .filter(naming -> !allowed(ROOT.relativize(pom), naming))
-                .map(naming -> ROOT.relativize(pom) + ": " + naming));
+                .map(naming -> ROOT.relativize(pom) + ": " + naming.path()));
         assertEquals(List.empty(), wrong);
     }
 
@@ -170,6 +175,19 @@ class ForgesDeletableTest {
                         .getOrElse(false))
                 .map(file -> ROOT.relativize(file).toString());
         assertEquals(List.empty(), naming);
+    }
+
+    /**
+     * The app's tests prove it works without the forge only if they run without it: the pom sets
+     * {@link Features#WITHOUT}.
+     */
+    @ParameterizedTest
+    @MethodSource("forges")
+    void theAppsTestsRunWithoutTheForge(Forge forge) {
+        assertTrue(
+                Features.ALL.forAll(feature ->
+                        feature.applying().forAll(applying -> !applying.id().equals(forge.id()))),
+                "jazygit-app's surefire sets " + Features.WITHOUT + " to name " + forge.id() + " (ADR 173, 174)");
     }
 
     private static ArchCondition<JavaClass> useOnlyThroughItsFeature(Forge forge) {
@@ -195,12 +213,14 @@ class ForgesDeletableTest {
     }
 
     /**
-     * Where a pom names one of a forge's modules: the element that names it, and that element's parent.
+     * Where a pom names one of a forge's modules: the element that names it, its parent and its grandparent.
      */
     private record Naming(String module, String element, String parent, String grandparent) {
 
-        @Override
-        public String toString() {
+        /**
+         * Where the naming is, as the failure of the test of the poms shows it.
+         */
+        String path() {
             return grandparent + "/" + parent + "/" + element + " " + module;
         }
     }

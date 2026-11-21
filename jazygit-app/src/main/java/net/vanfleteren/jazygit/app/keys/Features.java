@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
+import net.vanfleteren.jazygit.kernel.ui.Fills;
 
 /**
  * The features of the app, which the standard keymap, the popups, the timers and the reactions to the kernel are made of
@@ -82,6 +83,11 @@ public final class Features {
      * features.
      */
     public static final Reactions REACTIONS = new Reactions(ALL.flatMap(Feature::reactions));
+
+    /**
+     * What every feature gives for the keys of the panes, in the order of the features (ADR 172).
+     */
+    public static final Fills FILLS = ALL.map(Feature::fills).foldLeft(Fills.NONE, Fills::andThen);
 
     private Features() {}
 

@@ -58,6 +58,7 @@ import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
  * @param groupings   the groups it makes of the local branches in the branches pane (ADR 167)
  * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
  * @param legends     what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
+ * @param fills       what it gives for the keys of the panes, as the line above a list or what a pane lists (ADR 172)
  */
 public record Feature(
         List<FeatureAction> actions,
@@ -70,6 +71,7 @@ public record Feature(
         List<BranchGroups.Grouping> groupings,
         List<ScreenSpec> screens,
         List<Legend> legends,
+        Fills fills,
         Running running,
         Predicate<Model> spinning,
         Function<Model, List<ShownTime>> clocking,
@@ -92,6 +94,7 @@ public record Feature(
                 List.empty(),
                 List.empty(),
                 List.empty(),
+                Fills.NONE,
                 Running.NONE,
                 model -> false,
                 model -> List.empty(),
@@ -113,6 +116,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -134,6 +138,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -155,6 +160,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -177,6 +183,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -199,6 +206,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -221,6 +229,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -243,6 +252,30 @@ public record Feature(
                 groupings.append(grouping),
                 screens,
                 legends,
+                fills,
+                running,
+                spinning,
+                clocking,
+                applying);
+    }
+
+    /**
+     * This feature, also giving what {@code filler} makes of a model for {@code key} of a pane, after what the features
+     * before it give (ADR 172).
+     */
+    public <T> Feature filling(PaneKey<T> key, Function<Model, Option<T>> filler) {
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings,
+                screens,
+                legends,
+                fills.with(key, filler),
                 running,
                 spinning,
                 clocking,
@@ -265,6 +298,7 @@ public record Feature(
                 groupings,
                 screens.append(screen),
                 legends,
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -287,6 +321,7 @@ public record Feature(
                 groupings,
                 screens,
                 this.legends.appendAll(List.of(legends)),
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -309,6 +344,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -331,6 +367,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 before.or(spinning),
                 clocking,
@@ -354,6 +391,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 spinning,
                 model -> before.apply(model).appendAll(clocking.apply(model)),
@@ -386,6 +424,7 @@ public record Feature(
                 groupings,
                 screens,
                 legends,
+                fills,
                 running,
                 spinning,
                 clocking,
@@ -424,6 +463,7 @@ public record Feature(
                         (model, branches) -> model.on(id) ? grouping.of(model, branches) : List.empty()),
                 screens,
                 legends.map(legend -> legend.of(id)),
+                fills.gated(model -> model.on(id)),
                 running,
                 model -> model.on(id) && spinning.test(model),
                 model -> model.on(id) ? clocking.apply(model) : List.empty(),

@@ -8,7 +8,9 @@ import net.vanfleteren.jazygit.features.changes.commit.reset.ResetAction;
 import net.vanfleteren.jazygit.features.changes.commit.revert.RevertAction;
 import net.vanfleteren.jazygit.features.changes.commit.reword.RewordAction;
 import net.vanfleteren.jazygit.features.changes.commit.search.CommitSearchAction;
+import net.vanfleteren.jazygit.features.changes.commit.search.content.CommitSearchShown;
 import net.vanfleteren.jazygit.features.changes.commit.squash.SquashAction;
+import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPane;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 
 /**
@@ -18,18 +20,21 @@ import net.vanfleteren.jazygit.kernel.ui.Feature;
 public final class CommitFeature {
 
     /**
-     * The operations, in the order their keys are listed in a panel.
+     * The operations, in the order their keys are listed in a panel. The search shows its line and what it found in
+     * the commits pane, through its keys (ADR 172).
      */
     public static final Feature FEATURE = Feature.of(
-            CreateCommitAction.ACTION,
-            AmendAction.ACTION,
-            RewordAction.ACTION,
-            SquashAction.ACTION,
-            FixupAction.ACTION,
-            DropAction.ACTION,
-            RevertAction.ACTION,
-            ResetAction.ACTION,
-            CommitSearchAction.ACTION);
+                    CreateCommitAction.ACTION,
+                    AmendAction.ACTION,
+                    RewordAction.ACTION,
+                    SquashAction.ACTION,
+                    FixupAction.ACTION,
+                    DropAction.ACTION,
+                    RevertAction.ACTION,
+                    ResetAction.ACTION,
+                    CommitSearchAction.ACTION)
+            .filling(CommitsPane.LINE, CommitSearchShown::line)
+            .filling(CommitsPane.LISTING, CommitSearchShown::listing);
 
     private CommitFeature() {}
 }
