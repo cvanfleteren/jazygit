@@ -21,6 +21,9 @@ import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
  */
 public record PullRequestBody(PullRequestSummary pullRequest, PullRequestPreview preview) implements Body {
 
+    private static final DateTimeFormatter UPDATED =
+            DateTimeFormatter.ofPattern(Messages.get("github.content.pullRequest.datePattern"), Locale.ENGLISH);
+
     private static final String MESSAGE_INDENT = "    ";
 
     @Override
@@ -51,9 +54,7 @@ public record PullRequestBody(PullRequestSummary pullRequest, PullRequestPreview
                                 preview.base().name())),
                         Span.raw(Messages.get(
                                 "github.content.pullRequest.updated",
-                                DateTimeFormatter.ofPattern(
-                                                Messages.get("github.content.pullRequest.datePattern"), Locale.ENGLISH)
-                                        .format(pr.updatedAt().atZone(ZoneId.systemDefault())))),
+                                UPDATED.format(pr.updatedAt().atZone(ZoneId.systemDefault())))),
                         Span.raw(""),
                         Span.styled(MESSAGE_INDENT + pr.title(), styles.of(Theme.Classes.BOLD)))
                 .map(Line::from)

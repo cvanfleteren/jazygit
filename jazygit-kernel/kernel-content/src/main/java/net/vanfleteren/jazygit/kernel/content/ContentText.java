@@ -132,7 +132,7 @@ public final class ContentText {
                                             Messages.get("content.remarks.count", counts.get(file - 1)),
                                             Theme.Classes.DIFF_THREAD,
                                             styles))
-                            : diffLine(line, styles);
+                            : UnifiedLine.of(line, styles);
                     return Tuple.of(done._1().prepend(drawn), file);
                 })
                 ._1()
@@ -141,13 +141,6 @@ public final class ContentText {
 
     public static Text plainText(String content) {
         return styledText(lines(content).map(line -> Line.from(Span.raw(line))));
-    }
-
-    /**
-     * A line of a unified diff, colored by what it is: added, removed, a hunk header or a file header.
-     */
-    public static Line diffLine(String line, Theme.SpanStyles styles) {
-        return UnifiedLine.of(line, styles);
     }
 
     /**
@@ -257,7 +250,7 @@ public final class ContentText {
                 List<String> lines = lines(changes.text());
                 // Searched as git printed it, each line of a hunk without its prefix (ADR 126).
                 yield Drawn.plain(Rows.drawn(
-                        lines.map(line -> () -> diffLine(line, styles)),
+                        lines.map(line -> () -> UnifiedLine.of(line, styles)),
                         Rows.Source.ofDiff(lines).map(source -> () -> source)));
             }
             case RICH, SPLIT ->
