@@ -29,7 +29,7 @@ public enum Language {
                             List.of("//"),
                             List.of(comment("/*", "*/")),
                             List.of(quoted("\"\"\"").overLines(), quoted("\""), quoted("'")))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "java",
             ""),
@@ -45,7 +45,7 @@ public enum Language {
                             List.of("//"),
                             List.of(comment("/*", "*/")),
                             List.of(raw("\"\"\"").overLines(), quoted("\""), quoted("'")))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "kt kts",
             ""),
@@ -63,7 +63,7 @@ public enum Language {
                             List.of("//"),
                             List.of(comment("/*", "*/")),
                             List.of(quoted("`").overLines(), quoted("\""), quoted("'")))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "js mjs cjs jsx ts mts cts tsx",
             "node deno bun"),
@@ -83,7 +83,7 @@ public enum Language {
                                             quoted("\""),
                                             quoted("'")),
                                     "r b f u R B F U rb rB Rb RB br bR Br BR fr fR Fr FR rf rF Rf RF"))
-                    .withAnnotations(),
+                    .withAnnotations(true),
             "",
             "py pyi pyw",
             "python"),
@@ -168,16 +168,19 @@ public enum Language {
             ""),
     /**
      * Nix, whose strings go on over lines. An indented string ({@code ''…''}) has no backslash escapes, but escapes
-     * of its own: {@code ''$}, {@code '''}, and {@code ''\} before any character.
+     * of its own: {@code ''$}, {@code '''}, and {@code ''\} before any character. Its names hold dashes and quotes
+     * ({@code foo-bar}, {@code x'}), and a name a value is given to is a property (ADR 169).
      */
     NIX(
             Grammar.code(
-                    "assert else if in inherit let or rec then with true false null",
-                    List.of("#"),
-                    List.of(comment("/*", "*/")),
-                    List.of(
-                            raw("''").overLines().escapedBy(new Escape("''\\", ""), new Escape("''", "$'")),
-                            quoted("\"").overLines())),
+                            "assert else if in inherit let or rec then with true false null",
+                            List.of("#"),
+                            List.of(comment("/*", "*/")),
+                            List.of(
+                                    raw("''").overLines().escapedBy(new Escape("''\\", ""), new Escape("''", "$'")),
+                                    quoted("\"").overLines()))
+                    .withNameChars("-'")
+                    .withProperties(true),
             "",
             "nix",
             ""),
@@ -192,6 +195,8 @@ public enum Language {
                     List.empty(),
                     List.of(comment("<!--", "-->")),
                     List.of(raw("\"").overLines(), raw("'").overLines()),
+                    false,
+                    "",
                     false),
             "",
             "xml html htm xhtml svg xsd xsl xslt fxml iml plist csproj props targets",
@@ -204,6 +209,8 @@ public enum Language {
                     List.empty(),
                     List.of(comment("<!--", "-->")),
                     List.empty(),
+                    false,
+                    "",
                     false),
             "",
             "md markdown mdx",

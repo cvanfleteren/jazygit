@@ -280,6 +280,7 @@ public final class Theme {
         public static final String SYNTAX_COMMENT = "syntax-comment";
         public static final String SYNTAX_NUMBER = "syntax-number";
         public static final String SYNTAX_ANNOTATION = "syntax-annotation";
+        public static final String SYNTAX_PROPERTY = "syntax-property";
         public static final String SYNTAX_TEXT = "syntax-text";
         public static final String CURRENT_BRANCH = "current-branch";
         public static final String SHA = "sha";

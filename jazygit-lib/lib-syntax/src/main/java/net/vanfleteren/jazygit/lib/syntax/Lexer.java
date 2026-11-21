@@ -100,7 +100,13 @@ public final class Lexer {
         if (Character.isDigit(c) && !scan.afterWord()) {
             return scan.token(at, numberEnd(line, at), Kind.NUMBER);
         } else if (Character.isLetter(c) || c == '_') {
-            int end = first(line, at, i -> !wordPart(line.charAt(i)));
+            int end = nameEnd(grammar, line, at);
+            if (grammar.properties()) {
+                int path = pathEnd(grammar, line, end);
+                if (assigned(line, path)) {
+                    return scan.token(at, path, Kind.PROPERTY);
+                }
+            }
             return end - at <= LONGEST_KEYWORD && grammar.keyword(line.substring(at, end))
                     ? scan.token(at, end, Kind.KEYWORD)
                     : scan.to(end);
@@ -112,6 +118,34 @@ public final class Lexer {
                 line,
                 at + 1,
                 i -> wordPart(line.charAt(i)) || OPENINGS.indexOf(line.charAt(i)) >= 0 || line.charAt(i) == '@'));
+    }
+
+    /**
+     * Where the name that starts at {@code from} ends.
+     */
+    private static int nameEnd(Grammar grammar, String line, int from) {
+        return first(line, from, i -> !grammar.namePart(line.charAt(i)));
+    }
+
+    /**
+     * Where the path of names that goes on at {@code end}, the end of its first, ends: past each point followed by a
+     * name, like {@code services.nginx.enable}.
+     */
+    private static int pathEnd(Grammar grammar, String line, int end) {
+        int path = end;
+        while (path < line.length() && line.charAt(path) == '.' && nameStarts(line, path + 1)) {
+            path = nameEnd(grammar, line, path + 1);
+        }
+        return path;
+    }
+
+    /**
+     * Whether a value is given to the name that ends at {@code end}: one {@code =} follows it, after spaces, and not
+     * {@code ==}.
+     */
+    private static boolean assigned(String line, int end) {
+        int at = first(line, end, i -> line.charAt(i) != ' ' && line.charAt(i) != '\t');
+        return at < line.length() && line.charAt(at) == '=' && (at + 1 == line.length() || line.charAt(at + 1) != '=');
     }
 
     /**

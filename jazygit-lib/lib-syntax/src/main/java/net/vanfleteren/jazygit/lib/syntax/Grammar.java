@@ -4,6 +4,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import java.util.Locale;
+import lombok.With;
 
 /**
  * What the lexer needs to know of a language.
@@ -15,6 +16,11 @@ import java.util.Locale;
  * @param blockComments the comments that end where they say
  * @param strings       its kinds of strings, the longest openings first
  * @param annotations   whether a name after {@code @} is an annotation, or a decorator
+ * @param nameChars     the characters a name holds after its first, besides letters, digits and underscores: Nix's
+ *                      {@code -} and {@code '} ({@code foo-bar}, {@code x'}), so that the {@code then} of
+ *                      {@code then-y} is no keyword
+ * @param properties    whether a name, or a path of names with points between them, followed by one {@code =} is a
+ *                      property: Nix's {@code services.nginx.enable = true;} (ADR 169)
  */
 record Grammar(
         Mode mode,
@@ -23,7 +29,9 @@ record Grammar(
         List<String> lineComments,
         List<Delimited> blockComments,
         List<Delimited> strings,
-        boolean annotations) {
+        @With boolean annotations,
+        @With String nameChars,
+        @With boolean properties) {
 
     Grammar {
         strings = strings.sortBy(string -> -string.open().length());
@@ -34,7 +42,7 @@ record Grammar(
      */
     static Grammar code(
             String keywords, List<String> lineComments, List<Delimited> blockComments, List<Delimited> strings) {
-        return new Grammar(Mode.CODE, words(keywords), false, lineComments, blockComments, strings, false);
+        return new Grammar(Mode.CODE, words(keywords), false, lineComments, blockComments, strings, false, "", false);
     }
 
     /**
@@ -48,14 +56,16 @@ record Grammar(
                 lineComments,
                 blockComments,
                 strings,
-                annotations);
+                annotations,
+                nameChars,
+                properties);
     }
 
     /**
-     * This grammar, in which a name after {@code @} is an annotation, or a decorator.
+     * Whether {@code c} is part of a name after its first character.
      */
-    Grammar withAnnotations() {
-        return new Grammar(mode, keywords, ignoreCase, lineComments, blockComments, strings, true);
+    boolean namePart(char c) {
+        return Character.isLetterOrDigit(c) || c == '_' || nameChars.indexOf(c) >= 0;
     }
 
     /**

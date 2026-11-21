@@ -71,6 +71,7 @@ final class Pieces {
             case COMMENT -> Theme.Classes.SYNTAX_COMMENT;
             case NUMBER -> Theme.Classes.SYNTAX_NUMBER;
             case ANNOTATION -> Theme.Classes.SYNTAX_ANNOTATION;
+            case PROPERTY -> Theme.Classes.SYNTAX_PROPERTY;
         };
     }
 

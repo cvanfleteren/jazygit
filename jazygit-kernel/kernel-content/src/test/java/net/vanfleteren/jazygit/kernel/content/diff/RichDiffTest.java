@@ -770,6 +770,11 @@ class RichDiffTest {
         assertEquals(Theme.Classes.SYNTAX_ANNOTATION, Pieces.syntaxClass(Token.Kind.ANNOTATION));
     }
 
+    @Test
+    void aPropertyTakesTheColourOfProperties() {
+        assertEquals(Theme.Classes.SYNTAX_PROPERTY, Pieces.syntaxClass(Token.Kind.PROPERTY));
+    }
+
     private static final String STRING_CHANGED = """
             diff --git a/A.java b/A.java
             --- a/A.java
