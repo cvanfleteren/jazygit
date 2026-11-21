@@ -8,8 +8,10 @@ import net.vanfleteren.jazygit.features.github.browse.BrowseAction;
 import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
 import net.vanfleteren.jazygit.features.github.builds.content.BuildsSource;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestAction;
+import net.vanfleteren.jazygit.features.github.checks.ChecksDialog;
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.ShowChecksAction;
+import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestAction;
 import net.vanfleteren.jazygit.features.github.panes.PullRequestsScreen;
 import net.vanfleteren.jazygit.features.github.panes.StackGroups;
@@ -21,6 +23,7 @@ import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
 import net.vanfleteren.jazygit.features.github.review.ReviewAction;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsDialogs;
+import net.vanfleteren.jazygit.features.github.show.PullRequestDialog;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.features.github.stack.StackAction;
@@ -105,7 +108,14 @@ public final class GitHubFeature {
             .grouping(StackGroups::of)
             .screen(PullRequestsScreen.SPEC)
             .explaining(BadgeLegend.BRANCHES.toJavaArray(Legend[]::new))
-            .running(GitHubServices::running);
+            .running(GitHubServices::running)
+            // Its dialogs that read what GitHub has, and the times they show (ADR 124).
+            .spinning(ChecksDialog::showsSpinner)
+            .spinning(PullRequestDialog::showsSpinner)
+            .spinning(CommentsDialog::showsSpinner)
+            .clocking(ChecksDialog::shownTimes)
+            .clocking(PullRequestDialog::shownTimes)
+            .clocking(CommentsDialog::shownTimes);
 
     private GitHubFeature() {}
 }

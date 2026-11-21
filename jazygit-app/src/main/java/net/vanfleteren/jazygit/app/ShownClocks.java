@@ -3,9 +3,7 @@ package net.vanfleteren.jazygit.app;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.features.github.checks.ChecksDialog;
-import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
-import net.vanfleteren.jazygit.features.github.show.PullRequestDialog;
+import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.kernel.content.ContentView;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.ui.FetchLine;
@@ -26,10 +24,9 @@ final class ShownClocks {
      * {@link ShownTime#HORIZON}. While away, no sooner than {@link Model#AWAY_CLOCK} after {@code now}.
      */
     static Option<Instant> next(Model model, Instant now) {
-        // The dialogs first: what moves on every second keeps the others from looking far ahead.
-        List<ShownTime> shown = ChecksDialog.shownTimes(model)
-                .appendAll(PullRequestDialog.shownTimes(model))
-                .appendAll(CommentsDialog.shownTimes(model))
+        // The features' popups first: what moves on every second keeps the others from looking far ahead.
+        List<ShownTime> shown = Features.ALL
+                .flatMap(feature -> feature.clocking().apply(model))
                 .appendAll(FetchLine.shownTimes(model))
                 .appendAll(ContentView.shownTimes(model))
                 .appendAll(BranchesPanel.shownTimes(model))
