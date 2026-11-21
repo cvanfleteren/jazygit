@@ -120,7 +120,7 @@ class GitHubDeletableTest {
         assertTrue(poms.contains(ROOT.resolve("pom.xml")), "the poms are read from the root of the repository");
         List<String> wrong = poms.flatMap(pom -> namings(pom)
                 .filter(naming -> !allowed(ROOT.relativize(pom), naming))
-                .map(naming -> ROOT.relativize(pom) + ": " + naming));
+                .map(naming -> ROOT.relativize(pom) + ": " + naming.path()));
         assertEquals(List.empty(), wrong);
     }
 
@@ -173,12 +173,14 @@ class GitHubDeletableTest {
     }
 
     /**
-     * Where a pom names one of GitHub's modules: the element that names it, and that element's parent.
+     * Where a pom names one of GitHub's modules: the element that names it, its parent and its grandparent.
      */
     private record Naming(String module, String element, String parent, String grandparent) {
 
-        @Override
-        public String toString() {
+        /**
+         * Where the naming is, as the failure of the test of the poms shows it.
+         */
+        String path() {
             return grandparent + "/" + parent + "/" + element + " " + module;
         }
     }
