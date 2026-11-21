@@ -1,7 +1,8 @@
 name: Nix package
 
 # mvnHash in flake.nix is the hash of every Maven dependency and plugin, so it changes with the poms, and with the
-# Maven of the flake's nixpkgs. This puts the new one in a pull request, and checks the package still builds.
+# Maven of the flake's nixpkgs. This puts the new one in a pull request, and checks on main that the package still
+# builds.
 on:
   pull_request:
     paths:
@@ -57,5 +58,7 @@ jobs:
           git commit -m "The Maven dependencies of the flake have the hash $hash" flake.nix
           git push
 
+      # Five minutes, and it has never failed where the hash step passed, so a pull request leaves it to main.
       - name: Build the package
+        if: github.event_name != 'pull_request'
         run: nix build .#default
