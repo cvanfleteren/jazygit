@@ -234,9 +234,13 @@ class LexerTest {
     }
 
     @Test
-    void aWordAfterADollarIsNoKeyword() {
+    void aWordAfterADollarIsAVariableInPhp() {
         assertEquals(List.of("KEYWORD echo", "COMMENT # x"), tokens(Language.PHP, "echo $done; # x"));
-        assertEquals(List.of(), tokens(Language.SHELL, "x=$done$select"));
+    }
+
+    @Test
+    void aWordAfterADollarIsStillAKeywordInALanguageWithoutVariablesLikePhps() {
+        assertEquals(List.of("KEYWORD done", "KEYWORD select"), tokens(Language.SHELL, "x=$done$select"));
     }
 
     @Test

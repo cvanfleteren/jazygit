@@ -107,9 +107,8 @@ public final class Lexer {
                     return scan.token(at, path, Kind.PROPERTY);
                 }
             }
-            // A word right after a dollar is the name of a variable, as $list in PHP or $done in a shell.
             return end - at <= LONGEST_KEYWORD
-                            && !(at > 0 && line.charAt(at - 1) == '$')
+                            && !(grammar.variables() && at > 0 && line.charAt(at - 1) == '$')
                             && grammar.keyword(line.substring(at, end))
                     ? scan.token(at, end, Kind.KEYWORD)
                     : scan.to(end);

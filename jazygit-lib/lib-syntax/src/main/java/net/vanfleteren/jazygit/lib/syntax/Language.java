@@ -66,7 +66,8 @@ public enum Language {
                             List.of("//", "#"),
                             List.of(comment("/*", "*/")),
                             List.of(quoted("\"").overLines(), quoted("'").overLines()))
-                    .ignoringCase(),
+                    .ignoringCase()
+                    .withVariables(true),
             "",
             "php phtml",
             "php"),
@@ -218,6 +219,7 @@ public enum Language {
                     List.of(raw("\"").overLines(), raw("'").overLines()),
                     false,
                     "",
+                    false,
                     false),
             "",
             "xml html htm xhtml svg xsd xsl xslt fxml iml plist csproj props targets",
@@ -232,6 +234,7 @@ public enum Language {
                     List.empty(),
                     false,
                     "",
+                    false,
                     false),
             "",
             "md markdown mdx",
