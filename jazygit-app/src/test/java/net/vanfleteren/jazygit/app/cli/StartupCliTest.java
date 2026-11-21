@@ -19,41 +19,54 @@ class StartupCliTest {
     private final StringWriter out = new StringWriter();
     private final StringWriter err = new StringWriter();
 
+    private static StartupOptions options(Option<Path> path, Option<ThemeName> theme, boolean debug) {
+        return new StartupOptions(path, theme, debug, List.empty());
+    }
+
     private Either<StartupCli.Exit, StartupOptions> parse(String... args) {
         return StartupCli.parse(args, new PrintWriter(out), new PrintWriter(err));
     }
 
     @Test
     void withoutArgumentsTheCurrentDirectoryOpensInTheSavedTheme() {
-        assertEquals(Either.right(new StartupOptions(Option.none(), Option.none(), false)), parse());
+        assertEquals(Either.right(options(Option.none(), Option.none(), false)), parse());
     }
 
     @Test
     void aPathIsWhereToOpen() {
-        assertEquals(
-                Either.right(new StartupOptions(Option.of(Path.of("src/main")), Option.none(), false)),
-                parse("src/main"));
+        assertEquals(Either.right(options(Option.of(Path.of("src/main")), Option.none(), false)), parse("src/main"));
     }
 
     @ParameterizedTest
     @EnumSource(ThemeName.class)
     void everyThemeCanBeAskedForByItsName(ThemeName theme) {
-        assertEquals(
-                Either.right(new StartupOptions(Option.none(), Option.of(theme), false)), parse("--theme", theme.id()));
+        assertEquals(Either.right(options(Option.none(), Option.of(theme), false)), parse("--theme", theme.id()));
     }
 
     @Test
     void aPathAndATheme() {
         assertEquals(
-                Either.right(new StartupOptions(Option.of(Path.of("repo")), Option.of(ThemeName.LIGHT), false)),
+                Either.right(options(Option.of(Path.of("repo")), Option.of(ThemeName.LIGHT), false)),
                 parse("--theme=light", "repo"));
     }
 
     @Test
     void debugAsksForTheDebugLog() {
+        assertEquals(Either.right(options(Option.of(Path.of("repo")), Option.none(), true)), parse("--debug", "repo"));
+    }
+
+    @Test
+    void withoutNamesTheFeaturesToRunWithout() {
         assertEquals(
-                Either.right(new StartupOptions(Option.of(Path.of("repo")), Option.none(), true)),
-                parse("--debug", "repo"));
+                Either.right(new StartupOptions(Option.none(), Option.none(), false, List.of("github", "agent"))),
+                parse("--without", "github", "--without=agent"));
+    }
+
+    @Test
+    void withoutTakesSeveralSeparatedByCommas() {
+        assertEquals(
+                Either.right(new StartupOptions(Option.none(), Option.none(), false, List.of("github", "agent"))),
+                parse("--without=github,agent"));
     }
 
     @Test

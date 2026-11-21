@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.app.cli;
 
+import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -56,7 +57,11 @@ public final class StartupCli {
     }
 
     private static StartupOptions options(StartupArgs args) {
-        return new StartupOptions(Option.ofOptional(args.path()), Option.ofOptional(args.theme()), args.debug());
+        return new StartupOptions(
+                Option.ofOptional(args.path()),
+                Option.ofOptional(args.theme()),
+                args.debug(),
+                Option.of(args.without()).map(List::of).getOrElse(List.empty()));
     }
 
     /**

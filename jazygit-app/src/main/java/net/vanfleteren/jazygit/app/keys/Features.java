@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.app.keys;
 
+import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.features.agent.AgentFeature;
 import net.vanfleteren.jazygit.features.branches.branch.BranchFeature;
 import net.vanfleteren.jazygit.features.branches.forcedelete.ForceDeleteFeature;
@@ -33,10 +36,16 @@ import net.vanfleteren.jazygit.kernel.ui.Feature;
 public final class Features {
 
     /**
-     * Every feature, in the order their keys are listed in a panel; those with only popups come last. The order of the
-     * popups does not matter, as only one is open.
+     * The system property naming, separated by commas, the ids of the features the app runs without, as if they were
+     * deleted ({@code --without}): set before anything asks for {@link #ALL}, which is read once.
      */
-    public static final List<Feature> ALL = List.of(
+    public static final String WITHOUT = "jazygit.without";
+
+    /**
+     * Every feature there is, in the order their keys are listed in a panel; those with only popups come last. The
+     * order of the popups does not matter, as only one is open.
+     */
+    private static final List<Feature> DECLARED = List.of(
                     StageFeature.FEATURE,
                     CommitFeature.FEATURE,
                     CherryPickFeature.FEATURE,
@@ -62,10 +71,57 @@ public final class Features {
             .map(Feature::gated);
 
     /**
+     * Every feature the app runs with: those {@link #DECLARED}, but those {@link #WITHOUT} names.
+     */
+    public static final List<Feature> ALL = running(Option.of(System.getProperty(WITHOUT)));
+
+    /**
      * What every feature answers of what happens in the kernel, which the model holds (ADR 158), in the order of the
      * features.
      */
     public static final Reactions REACTIONS = new Reactions(ALL.flatMap(Feature::reactions));
 
     private Features() {}
+
+    /**
+     * The ids {@code --without} takes: those of the features that decide whether they apply to a repository.
+     */
+    public static Set<String> ids() {
+        return ids(DECLARED);
+    }
+
+    static Set<String> ids(List<Feature> features) {
+        return features.flatMap(feature -> feature.applying().map(Feature.Applying::id))
+                .toLinkedSet();
+    }
+
+    /**
+     * The features {@link #DECLARED}, but those {@code property} names, as {@link #WITHOUT} does.
+     */
+    static List<Feature> running(Option<String> property) {
+        return running(DECLARED, property);
+    }
+
+    /**
+     * {@code features}, but those {@code property} names, as {@link #WITHOUT} does.
+     */
+    static List<Feature> running(List<Feature> features, Option<String> property) {
+        return without(features, named(property));
+    }
+
+    /**
+     * The ids {@code property} names, as {@link #WITHOUT} does: separated by commas, around which spaces do not count.
+     */
+    public static Set<String> named(Option<String> property) {
+        return property.map(names ->
+                        LinkedHashSet.of(names.split(",")).map(String::strip).reject(String::isEmpty))
+                .getOrElse(LinkedHashSet.empty());
+    }
+
+    /**
+     * {@code features}, but those whose id is one of {@code ids}.
+     */
+    static List<Feature> without(List<Feature> features, Set<String> ids) {
+        return features.reject(feature -> feature.applying().exists(applying -> ids.contains(applying.id())));
+    }
 }

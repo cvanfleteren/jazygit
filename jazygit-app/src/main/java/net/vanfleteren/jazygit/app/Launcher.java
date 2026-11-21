@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.app;
 
 import dev.tamboui.css.engine.StyleEngine;
 import io.vavr.Lazy;
+import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -9,6 +11,7 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.app.cli.StartupCli;
 import net.vanfleteren.jazygit.app.cli.StartupOptions;
+import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.app.keys.StandardSettings;
 import net.vanfleteren.jazygit.core.askpass.AskpassHelper;
 import net.vanfleteren.jazygit.core.askpass.AskpassServer;
@@ -52,7 +55,39 @@ final class Launcher {
         });
         StartupCli.parse(args, new PrintWriter(System.out), new PrintWriter(System.err))
                 .peekLeft(exit -> System.exit(exit.code()))
-                .forEach(Launcher::start);
+                .forEach(options -> without(options.without())
+                        .toLeft(options)
+                        .peekLeft(problem -> {
+                            System.err.println(problem);
+                            System.exit(2);
+                        })
+                        .forEach(Launcher::start));
+    }
+
+    /**
+     * Runs the app without the features of {@code ids}, as if they were deleted ({@code --without}), or says why it
+     * cannot: a name that is no feature's, which would silently run it after all. The property is set first, as
+     * {@link Features#ids()} reads it, with the rest of {@link Features}, once; naming {@link Features#WITHOUT}, a
+     * constant, does not. What it names is checked, so also what {@code -Djazygit.without} gave.
+     */
+    static Option<String> without(List<String> ids) {
+        if (ids.nonEmpty()) {
+            System.setProperty(Features.WITHOUT, ids.mkString(","));
+        }
+        return without(Features.ids(), Features.named(Option.of(System.getProperty(Features.WITHOUT))));
+    }
+
+    /**
+     * Why the app cannot run without the features {@code named}, when one is none of those that can be left out,
+     * {@code leavable}.
+     */
+    static Option<String> without(Set<String> leavable, Set<String> named) {
+        Set<String> unknown = named.diff(leavable);
+        return Option.when(
+                unknown.nonEmpty(),
+                () -> leavable.isEmpty()
+                        ? Messages.get("app.without.none", unknown.mkString(", "))
+                        : Messages.get("app.without.unknown", unknown.mkString(", "), leavable.mkString(", ")));
     }
 
     private static void start(StartupOptions options) {
