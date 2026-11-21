@@ -195,6 +195,18 @@ class PullRequestReadsTest {
     }
 
     @Test
+    void aReadKeepsTheRepositoryOnGitHubWhichAFailedReadLeavesAsItWas() {
+        // The templates of where a worktree starts out name it by its owner and name (ADR 134, ADR 168).
+        Model read = PullRequestReads.loaded(loaded(), List.of(FEATURE_PR), "octo/repo")
+                .model();
+        Model failed = PullRequestReads.failed(read, refused("offline")).model();
+
+        assertEquals(Option.none(), loaded().part(GitHubState.PART).repository());
+        assertEquals(Option.of("octo/repo"), read.part(GitHubState.PART).repository());
+        assertEquals(Option.of("octo/repo"), failed.part(GitHubState.PART).repository());
+    }
+
+    @Test
     void aReadAskedForAnywayWhileNoneRunsStartsRightAway() {
         Next asked = PullRequestReads.loadAnyway(Next.of(loaded()));
 
