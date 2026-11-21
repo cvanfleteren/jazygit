@@ -22,11 +22,11 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
@@ -93,8 +93,8 @@ class PullRequestFilesUpdateTest {
             assertEquals(
                     List.of(
                             new LoadCommitFiles(of),
-                            new CommitFilesCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0),
-                            new CommitFilesCmd.LoadCollapsed("owner/repo", new PrNumber(42))),
+                            new RemarksCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0),
+                            new RemarksCmd.LoadCollapsed("owner/repo", new PrNumber(42))),
                     opened.cmds());
             assertTrue(opened.cmds().head().background());
         }
@@ -155,7 +155,7 @@ class PullRequestFilesUpdateTest {
         assertTrue(opened.cmds()
                 .containsAll(List.of(
                         new LoadCommitFiles(of),
-                        new CommitFilesCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0))));
+                        new RemarksCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0))));
     }
 
     @Test
@@ -208,8 +208,8 @@ class PullRequestFilesUpdateTest {
         assertEquals(
                 List.of(
                         new LoadCommitFiles(of),
-                        new CommitFilesCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0),
-                        new CommitFilesCmd.LoadCollapsed("owner/repo", new PrNumber(42))),
+                        new RemarksCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0),
+                        new RemarksCmd.LoadCollapsed("owner/repo", new PrNumber(42))),
                 opened.cmds());
     }
 

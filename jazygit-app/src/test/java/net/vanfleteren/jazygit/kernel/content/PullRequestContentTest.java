@@ -37,7 +37,7 @@ import org.junit.jupiter.api.Test;
  * A pull request in the content panel: its description and diff, the keys of the cursor of its diff, and the
  * ranges of lines a review comments on.
  */
-class PullRequestContentTest {
+public class PullRequestContentTest {
 
     @Test
     void theKeysOfTheDiffOfAPullRequestActOnItsCursor() throws Exception {
@@ -56,7 +56,7 @@ class PullRequestContentTest {
             SettledPilot.of(testRunner).pause();
             ViewMsg.ContentScrolled next = (ViewMsg.ContentScrolled) dispatched.getLast();
             Anchor onThread = new Anchor.Thread(
-                    new net.vanfleteren.jazygit.core.gh.model.ReviewThread.Id("T1"),
+                    new net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Id("T1"),
                     Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
             assertEquals(Option.of(onThread), next.to().cursor());
 
@@ -304,7 +304,7 @@ class PullRequestContentTest {
     static Model pullRequestDiff(String body, String diff) {
         Changes of = pullRequestChanges();
         CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
-        Model rich = TestModels.loaded()
+        Model rich = PullRequestContentTest.withGitHub()
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         Model open = Update.update(
@@ -324,6 +324,16 @@ class PullRequestContentTest {
                         new LoadMsg.CommitFileDiffLoaded(
                                 of, List.of(file), rich.preferences().diffOptions(), DiffText.of(diff)))
                 .model();
+    }
+
+    /**
+     * The sample model, with GitHub's feature answering what happens in the kernel, as it reads the review threads of
+     * the files of a pull request once they are opened (ADR 171).
+     */
+    public static Model withGitHub() {
+        return TestModels.loaded()
+                .withReactions(new net.vanfleteren.jazygit.kernel.state.Reactions(
+                        net.vanfleteren.jazygit.features.github.GitHubFeature.FEATURE.reactions()));
     }
 
     private static Changes pullRequestChanges() {
@@ -358,7 +368,7 @@ class PullRequestContentTest {
                         0,
                         new net.vanfleteren.jazygit.core.gh.model.ReviewThread.Id("T1"),
                         net.vanfleteren.jazygit.core.gh.model.ReviewThread.Rights.ALL);
-        return new net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg.RemarksLoaded(
+        return new net.vanfleteren.jazygit.features.github.remarks.RemarksMsg.Loaded(
                 new PrNumber(7),
                 new net.vanfleteren.jazygit.core.gh.model.ReviewRemarks(
                         net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State.OPEN,

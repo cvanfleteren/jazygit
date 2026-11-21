@@ -432,7 +432,7 @@ class ContentSearchTest {
     }
 
     private static final Anchor THREAD = new Anchor.Thread(
-            new net.vanfleteren.jazygit.core.gh.model.ReviewThread.Id("T1"),
+            new net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Id("T1"),
             Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
 
     /**

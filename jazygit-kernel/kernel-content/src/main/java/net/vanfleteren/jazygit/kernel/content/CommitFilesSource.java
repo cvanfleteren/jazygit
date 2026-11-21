@@ -4,7 +4,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
@@ -13,7 +12,9 @@ import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
 import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.state.view.UnchangedNode;
@@ -67,10 +68,10 @@ record CommitFilesSource() implements ContentSource {
         }
         // When only the files with review threads are listed and none is, nothing is highlighted (ADR 57).
         Option<Shown> nothingListed = FilesPanel.nothingListed(view.listed())
-                .filter(nothing -> !view.listedFiles().toOption().exists(List::nonEmpty))
-                .map(nothing -> Shown.whenLoaded(title, view.listedFiles(), listed -> Shown.dim(title, nothing)))
+                .filter(nothing -> !view.listedFiles(model).toOption().exists(List::nonEmpty))
+                .map(nothing -> Shown.whenLoaded(title, view.listedFiles(model), listed -> Shown.dim(title, nothing)))
                 // Nor when the filter hides all files listed (ADR 105).
-                .orElse(() -> view.listedFiles()
+                .orElse(() -> view.listedFiles(model)
                         .toOption()
                         .filter(listed -> FilesPanel.noneMatch(model, listed))
                         .map(listed -> Shown.dim(title, Messages.get("panel.files.noMatches"))));
@@ -129,38 +130,38 @@ record CommitFilesSource() implements ContentSource {
      * panel keeps its styled diff by, so it would style a diff without them again every minute.
      */
     private static Option<ShownRemarks> remarks(Model model, CommitFilesView view, List<CommitFile> files) {
-        return view.remarks().flatMap(remarks -> remarks(model, view, files, remarks));
+        return model.remarks(view.of()).flatMap(remarks -> remarks(model, view, files, remarks));
     }
 
     /**
-     * The review threads {@code remarks} as they are shown with the diff of {@code files}, as
+     * The remark threads {@code remarks} as they are shown with the diff of {@code files}, as
      * {@link #remarks(Model, CommitFilesView, List)} says.
      */
     private static Option<ShownRemarks> remarks(
-            Model model, CommitFilesView view, List<CommitFile> files, Loadable<ReviewRemarks> remarks) {
-        return switch (remarks) {
-            case Loadable.Loaded<ReviewRemarks>(ReviewRemarks read) ->
+            Model model, CommitFilesView view, List<CommitFile> files, StatedRemarks remarks) {
+        return switch (remarks.threads()) {
+            case Loadable.Loaded<List<RemarkThread>>(List<RemarkThread> read) ->
                 Option.of(new ShownRemarks(
-                        read.threads(),
-                        read.threads().exists(thread -> files.exists(file -> thread.isOn(file.path(), file.origin())))
+                        read,
+                        read.exists(thread -> files.exists(file -> thread.isOn(file.path(), file.origin())))
                                 ? model.now().truncatedTo(ChronoUnit.MINUTES)
                                 : Instant.EPOCH,
                         Option.none(),
-                        view.remarksAtItsCommits(),
+                        remarks.atItsCommits(),
                         view.collapsed(),
-                        view.sending(),
-                        view.deleting(),
-                        view.pictures().filterValues(Option::isDefined).mapValues(Option::get)));
-            case Loadable.Failed<ReviewRemarks>(Failure failure) ->
+                        remarks.sending(),
+                        remarks.deleting(),
+                        remarks.pictures().filterValues(Option::isDefined).mapValues(Option::get)));
+            case Loadable.Failed<List<RemarkThread>>(Failure failure) ->
                 Option.of(new ShownRemarks(
                         List.empty(),
                         Instant.EPOCH,
                         Option.of(failure),
                         true,
                         view.collapsed(),
-                        view.sending(),
-                        view.deleting()));
-            case Loadable.Loading<ReviewRemarks>() -> Option.none();
+                        remarks.sending(),
+                        remarks.deleting()));
+            case Loadable.Loading<List<RemarkThread>>() -> Option.none();
         };
     }
 

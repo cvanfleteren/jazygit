@@ -5,8 +5,6 @@ import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
 
 /**
  * Which review threads and comments are collapsed (ADR 62): by default a resolved thread, a thread whose first comment
@@ -27,19 +25,19 @@ public record Collapsed(Map<Collapsed.Key, Boolean> toggled) {
     /**
      * Whether {@code thread} is collapsed.
      */
-    public boolean thread(ReviewThread thread) {
+    public boolean thread(RemarkThread thread) {
         return byDefault(thread) != isFlipped(Key.of(thread.id()), byDefault(thread));
     }
 
-    private static boolean byDefault(ReviewThread thread) {
+    private static boolean byDefault(RemarkThread thread) {
         return thread.resolved()
-                || thread.comments().headOption().exists(first -> first.hidden().isDefined());
+                || thread.remarks().headOption().exists(first -> first.hidden().isDefined());
     }
 
     /**
      * Whether {@code comment}, one of an open thread but its first, is collapsed.
      */
-    public boolean comment(Comment comment) {
+    public boolean comment(Remark comment) {
         return comment.hidden().isDefined()
                 != isFlipped(Key.of(comment.id()), comment.hidden().isDefined());
     }
@@ -52,15 +50,15 @@ public record Collapsed(Map<Collapsed.Key, Boolean> toggled) {
      * The comments of {@code thread} that are a stop of the cursor of their own while it is open: all but its first,
      * which is the thread.
      */
-    public static List<Comment> replies(ReviewThread thread) {
-        return thread.comments().drop(1);
+    public static List<Remark> replies(RemarkThread thread) {
+        return thread.remarks().drop(1);
     }
 
     /**
      * These with the thread or the comment with the id {@code id}, one of {@code threads}, flipped; as they are when
      * it is none of them.
      */
-    public Collapsed flipped(Key id, List<ReviewThread> threads) {
+    public Collapsed flipped(Key id, List<RemarkThread> threads) {
         return defaults(threads)
                 .get(id)
                 .map(byDefault ->
@@ -73,7 +71,7 @@ public record Collapsed(Map<Collapsed.Key, Boolean> toggled) {
      * was flipped, as a thread resolved or unresolved, or a comment hidden, is as such a one starts, not flipped
      * against its new default (ADR 62). One not read stays.
      */
-    public Collapsed readAgain(List<ReviewThread> threads) {
+    public Collapsed readAgain(List<RemarkThread> threads) {
         Map<Key, Boolean> now = defaults(threads);
         return new Collapsed(toggled.filter((id, then) -> now.get(id).forAll(then::equals)));
     }
@@ -89,7 +87,7 @@ public record Collapsed(Map<Collapsed.Key, Boolean> toggled) {
      * Whether each of {@code threads}, and each of its comments that is a stop of its own, is collapsed by default, by
      * its id.
      */
-    private static Map<Key, Boolean> defaults(List<ReviewThread> threads) {
+    private static Map<Key, Boolean> defaults(List<RemarkThread> threads) {
         return threads.flatMap(thread -> replies(thread)
                         .map(comment ->
                                 Tuple.of(Key.of(comment.id()), comment.hidden().isDefined()))
@@ -109,14 +107,14 @@ public record Collapsed(Map<Collapsed.Key, Boolean> toggled) {
         /**
          * The key of the thread with the id {@code thread}.
          */
-        public static Key of(ReviewThread.Id thread) {
+        public static Key of(RemarkThread.Id thread) {
             return new Key(thread.value());
         }
 
         /**
          * The key of the comment with the id {@code comment}.
          */
-        public static Key of(Comment.Id comment) {
+        public static Key of(Remark.Id comment) {
             return new Key(comment.value());
         }
     }

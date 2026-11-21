@@ -264,11 +264,11 @@ class KeymapTest {
     void thePanelsListTheKeysOfTheFeaturesInTheOrderOfTheFeatures() {
         assertEquals(
                 List.of(
+                        "github.help.commitFiles.refresh",
                         "changes.help.commitFiles.filter",
                         "changes.help.commitFiles.close",
                         "changes.help.commitFiles.allFiles",
                         "changes.help.commitFiles.listed",
-                        "changes.help.commitFiles.refresh",
                         "changes.help.commitFiles.version",
                         "changes.help.commitFiles.render",
                         "changes.help.commitFiles.blame"),
@@ -306,7 +306,7 @@ class KeymapTest {
                         "changes.help.diff.search",
                         "changes.help.diff.goToLine",
                         "changes.help.diff.copy"),
-                descriptions(Scopes.PULL_REQUEST_DIFF).filter(key -> key.startsWith("changes.help.diff.")));
+                descriptions(Scopes.REMARKED_DIFF).filter(key -> key.startsWith("changes.help.diff.")));
         assertEquals(
                 List.of("changes.help.files.filter", "changes.help.files.allFiles", "changes.help.files.fetch"),
                 descriptions(Scopes.FILES)

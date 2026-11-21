@@ -99,14 +99,12 @@ public final class ContentView {
     }
 
     /**
-     * The times the content shows (ADR 124): how long ago the comments of the review threads in a diff were written,
+     * The times the content shows (ADR 124): how long ago the remarks of the threads in a diff were written,
      * which it takes to the minute of the clock ({@code CommitFilesSource}).
      */
     public static List<ShownTime> shownTimes(Model model) {
-        return model.repoView()
-                .files()
-                .commitFiles()
-                .filter(view -> !view.threads().isEmpty())
+        return model.remarks()
+                .filter(remarks -> !remarks.read().isEmpty())
                 .map(view -> ShownTime.reading(
                         now -> now.truncatedTo(ChronoUnit.MINUTES).toString()))
                 .toList();

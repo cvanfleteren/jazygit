@@ -10,6 +10,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
 import net.vanfleteren.jazygit.features.github.review.DeleteCommentCmd.DeleteComment;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -96,7 +97,8 @@ public final class DeleteCommentUpdate {
      * or something be sent for its thread, meanwhile. It says it is being deleted until GitHub answers.
      */
     private static Next confirmDelete(Model model, DeleteCommentPopup popup) {
-        Anchor on = new Anchor.Comment(popup.comment().id(), new Anchor.Thread(popup.thread(), Option.none()));
+        Anchor on = new Anchor.Remark(
+                FromGitHub.id(popup.comment().id()), new Anchor.Thread(FromGitHub.id(popup.thread()), Option.none()));
         return deletable(model, on)
                 .filterOrElse(found -> found.number().equals(popup.number()), found -> Why.NOT_READ)
                 .fold(

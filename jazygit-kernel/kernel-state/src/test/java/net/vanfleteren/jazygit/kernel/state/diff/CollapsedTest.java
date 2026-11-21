@@ -6,10 +6,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Subject;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -17,49 +14,42 @@ import org.junit.jupiter.api.Test;
  */
 class CollapsedTest {
 
-    private static Comment comment(String id, Option<String> hidden) {
-        return new Comment(
-                "bob",
-                Instant.EPOCH,
-                id,
-                hidden,
-                new ReviewThread.Comment.Id(id),
-                new ReviewThread.Comment.RestId("1"),
-                CommentRights.ALL);
+    private static Remark comment(String id, Option<String> hidden) {
+        return new Remark(new Remark.Id(id), "bob", Instant.EPOCH, id, hidden);
     }
 
-    private static ReviewThread thread(boolean resolved, Comment... comments) {
-        return new ReviewThread(
+    private static RemarkThread thread(boolean resolved, Remark... comments) {
+        return new RemarkThread(
+                new RemarkThread.Id("T"),
                 "a.txt",
-                DiffSide.gitHub(DiffSide.NEW),
-                Option.of(1),
                 Option.none(),
-                DiffSide.gitHub(DiffSide.NEW),
-                Option.of(1),
-                resolved,
-                false,
                 Subject.LINE,
-                List.of(comments),
+                Option.of(1),
+                DiffSide.NEW,
+                Option.none(),
+                Option.of(DiffSide.NEW),
+                Option.of(1),
+                false,
+                resolved,
                 0,
-                new ReviewThread.Id("T"),
-                ReviewThread.Rights.ALL);
+                List.of(comments));
     }
 
     @Test
     void aResolvedThreadAThreadWhoseFirstCommentIsHiddenAndAHiddenCommentAreCollapsedByDefault() {
-        Comment open = comment("A", Option.none());
-        Comment hidden = comment("H", Option.of("SPAM"));
+        Remark open = comment("A", Option.none());
+        Remark hidden = comment("H", Option.of("SPAM"));
 
         assertTrue(Collapsed.NONE.thread(thread(true, open)));
         assertTrue(Collapsed.NONE.thread(thread(false, hidden, open)));
         assertFalse(Collapsed.NONE.thread(thread(false, open, hidden)));
         assertTrue(Collapsed.NONE.comment(hidden));
         assertFalse(Collapsed.NONE.comment(open));
-        ReviewThread resolved = thread(true, open);
+        RemarkThread resolved = thread(true, open);
         assertFalse(Collapsed.NONE
                 .flipped(new Collapsed.Key("T"), List.of(resolved))
                 .thread(resolved));
-        ReviewThread replied = thread(false, hidden, open);
+        RemarkThread replied = thread(false, hidden, open);
         assertTrue(
                 Collapsed.NONE.flipped(new Collapsed.Key("A"), List.of(replied)).comment(open));
         assertEquals(
@@ -74,7 +64,7 @@ class CollapsedTest {
 
     @Test
     void eachIdFlippedIsKeptWithWhetherItWasCollapsedByDefault() {
-        ReviewThread resolved = thread(true, comment("A", Option.none()), comment("H", Option.of("SPAM")));
+        RemarkThread resolved = thread(true, comment("A", Option.none()), comment("H", Option.of("SPAM")));
 
         assertEquals(
                 new Collapsed(HashMap.of(new Collapsed.Key("T"), true, new Collapsed.Key("H"), true)),
@@ -85,7 +75,7 @@ class CollapsedTest {
 
     @Test
     void anIdFlippedAgainstAnotherDefaultThanItsOwnFlipsNothing() {
-        ReviewThread unresolved = thread(false, comment("A", Option.none()));
+        RemarkThread unresolved = thread(false, comment("A", Option.none()));
 
         // Opened while it was resolved, kept from an earlier session: unresolved since, it is open as it starts.
         Collapsed kept = new Collapsed(HashMap.of(new Collapsed.Key("T"), true));
@@ -97,10 +87,10 @@ class CollapsedTest {
 
     @Test
     void readAgainWhatChangedItsDefaultIsAsItStarts() {
-        Comment reply = comment("R", Option.none());
+        Remark reply = comment("R", Option.none());
         Collapsed flipped = new Collapsed(HashMap.of(
                 new Collapsed.Key("T"), false, new Collapsed.Key("R"), false, new Collapsed.Key("gone"), true));
-        ReviewThread before = thread(false, comment("A", Option.none()), reply);
+        RemarkThread before = thread(false, comment("A", Option.none()), reply);
 
         assertEquals(flipped, flipped.readAgain(List.of(before)));
         // Resolved, the thread is as a resolved one starts; its reply stays as it was.

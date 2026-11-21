@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.kernel.state;
 
+import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 
 /**
@@ -37,4 +38,11 @@ public sealed interface KernelEvent {
      * The user switched to {@code screen}, which was not shown: what it shows may be read again (ADR 168).
      */
     record ScreenShown(Screen screen) implements KernelEvent {}
+
+    /**
+     * The files of {@code changes} were opened to be listed, and are being read: what goes with them, as the remarks a
+     * forge has on them, may be read too (ADR 171). The kernel names no forge here: {@code changes} may be of a pull
+     * request, as it may be of a commit, but who has remarks on it is for the features to know.
+     */
+    record ChangesOpened(Changes changes) implements KernelEvent {}
 }

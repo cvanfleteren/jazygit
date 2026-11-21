@@ -13,8 +13,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
  */
 public final class CopyAction {
 
-    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> List.of(
-                    Scopes.DIFF, Scopes.PULL_REQUEST_DIFF)
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> List.of(Scopes.DIFF, Scopes.REMARKED_DIFF)
             .foldLeft(keys, (keymap, scope) -> keymap.add(scope, copy()))
             .add(
                     Scopes.DIFF,

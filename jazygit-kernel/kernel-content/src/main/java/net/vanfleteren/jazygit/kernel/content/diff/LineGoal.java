@@ -159,7 +159,7 @@ public sealed interface LineGoal {
             case Anchor.Filtered(String path, var _, var _) -> Option.some(path);
             case Anchor.Node(String path, var _, var _) -> Option.some(path);
             case Anchor.Thread(var _, Option<Anchor.OnLine> line) -> line.map(Anchor.OnLine::path);
-            case Anchor.Comment(var _, Anchor.Thread thread) -> path(thread);
+            case Anchor.Remark(var _, Anchor.Thread thread) -> path(thread);
         };
     }
 

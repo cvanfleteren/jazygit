@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.features.changes.diff.VersionMsg;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksMsg;
 import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.*;
@@ -187,7 +188,9 @@ class FilesContentViewTest {
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
         Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
+                        Update.update(
+                                        net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
+                                        new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(of, List.of(file)))
                 .model();
@@ -208,7 +211,7 @@ class FilesContentViewTest {
 
         Model none = Update.update(
                         unresolved,
-                        new CommitFilesMsg.RemarksLoaded(
+                        new RemarksMsg.Loaded(
                                 new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty()),
@@ -227,9 +230,7 @@ class FilesContentViewTest {
         assertEquals(
                 ContentViewFixtures.note("Files of #7", Placeholders.error(failure), Tone.ERROR),
                 ContentView.of(
-                        Update.update(
-                                        unresolved,
-                                        new CommitFilesMsg.RemarksFailed(new PrNumber(7), failure, HashSet.empty(), 0))
+                        Update.update(unresolved, new RemarksMsg.Failed(new PrNumber(7), failure, HashSet.empty(), 0))
                                 .model(),
                         FilesPanel.PANE));
     }

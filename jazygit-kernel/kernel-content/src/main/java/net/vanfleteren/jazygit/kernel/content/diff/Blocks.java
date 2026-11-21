@@ -4,9 +4,9 @@ import dev.tamboui.text.Line;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn.Mark;
 import net.vanfleteren.jazygit.kernel.ui.text.Rows;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -22,7 +22,7 @@ record Blocks(int indent, int width, RemarkLines.RemarkStyle style) {
      * sets them apart from what follows them in their file, if they are {@code followed} by anything.
      */
     List<Marked> threads(
-            List<ReviewThread> threads, Option<Anchor.OnLine> line, boolean followed, Theme.SpanStyles styles) {
+            List<RemarkThread> threads, Option<Anchor.OnLine> line, boolean followed, Theme.SpanStyles styles) {
         return marked(threads, line, RemarkLines.blocks(threads, indent, width, style, styles))
                 .appendAll(followed && !threads.isEmpty() ? List.of(Marked.plain(Line.from(""))) : List.empty());
     }
@@ -30,7 +30,7 @@ record Blocks(int indent, int width, RemarkLines.RemarkStyle style) {
     /**
      * The lines of {@code threads}, which cannot be placed, under a line that says so, each a stop of the cursor.
      */
-    List<Marked> unplaced(List<ReviewThread> threads, Theme.SpanStyles styles) {
+    List<Marked> unplaced(List<RemarkThread> threads, Theme.SpanStyles styles) {
         return threads.isEmpty()
                 ? List.empty()
                 : marked(threads, Option.none(), RemarkLines.unplacedBlocks(threads, indent, width, style, styles))
@@ -41,7 +41,7 @@ record Blocks(int indent, int width, RemarkLines.RemarkStyle style) {
      * The {@code blocks} of {@code threads}, with a blank line between two of them, the first line of each of their
      * parts the start of its stop, as {@link DiffStops#anchors} gives them (ADR 62).
      */
-    private List<Marked> marked(List<ReviewThread> threads, Option<Anchor.OnLine> line, List<List<List<Line>>> blocks) {
+    private List<Marked> marked(List<RemarkThread> threads, Option<Anchor.OnLine> line, List<List<List<Line>>> blocks) {
         return threads.zip(blocks)
                 .map(block -> DiffStops.anchors(block._1(), line, style.collapsed())
                         .zip(block._2())

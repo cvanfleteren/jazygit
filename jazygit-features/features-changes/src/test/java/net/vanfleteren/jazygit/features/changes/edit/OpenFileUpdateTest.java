@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubEditor;
@@ -34,6 +33,8 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
+import net.vanfleteren.jazygit.kernel.state.diff.Remark;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
@@ -182,8 +183,8 @@ class OpenFileUpdateTest {
 
     @Test
     void onAThreadOrACommentItOpensAtTheLineOfTheThread() {
-        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("t1"), Option.of(right(12)));
-        Anchor.Comment comment = new Anchor.Comment(new ReviewThread.Comment.Id("c2"), thread);
+        Anchor.Thread thread = new Anchor.Thread(new RemarkThread.Id("t1"), Option.of(right(12)));
+        Anchor.Remark comment = new Anchor.Remark(new Remark.Id("c2"), thread);
 
         assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 12)), opened(thread));
         assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 12)), opened(comment));
@@ -191,7 +192,7 @@ class OpenFileUpdateTest {
 
     @Test
     void aThreadOnNoLineHasNoFileToOpen() {
-        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("t1"), Option.none());
+        Anchor.Thread thread = new Anchor.Thread(new RemarkThread.Id("t1"), Option.none());
 
         assertEquals(Option.none(), EditUpdate.file(thread));
         assertEquals(List.empty(), opened(thread));

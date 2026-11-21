@@ -10,9 +10,11 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
-import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.features.github.browse.BrowseRemarkCmd;
+import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
+import net.vanfleteren.jazygit.features.github.remarks.PrFiles;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
@@ -68,17 +70,17 @@ public final class ThreadUpdate {
      * for the next session (ADR 63).
      */
     private static Next toggled(Model model, OnThread found, Anchor on) {
-        CommitFilesView view = found.view();
+        PrFiles view = found.view();
         Collapsed collapsed = view.collapsed()
                 .flipped(
-                        on instanceof Anchor.Comment(ReviewThread.Comment.Id id, var _)
+                        on instanceof Anchor.Remark(var id, var _)
                                 ? Collapsed.Key.of(id)
-                                : Collapsed.Key.of(found.thread().id()),
-                        view.threads());
+                                : Collapsed.Key.of(FromGitHub.id(found.thread().id())),
+                        view.remarkThreads());
         return new Next(
                 mapView(model, files -> files.withCollapsed(collapsed)),
                 view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
-                        ? List.of(new CommitFilesCmd.SaveCollapsed(
+                        ? List.of(new RemarksCmd.SaveCollapsed(
                                 commits.repository(), new PrNumber(commits.number()), collapsed.toggled(), model.now()))
                         : List.empty());
     }
@@ -87,7 +89,7 @@ public final class ThreadUpdate {
      * Where the pull request {@code view} lists the files of is on GitHub, on the comment the cursor {@code on} is on,
      * if any: the reply it names, or the first of its thread (ADR 85).
      */
-    private static Option<PullRequestLink> link(CommitFilesView view, Anchor on) {
+    private static Option<PullRequestLink> link(PrFiles view, Anchor on) {
         return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
                 ? Option.of(new PullRequestLink(
                         commits.host(),

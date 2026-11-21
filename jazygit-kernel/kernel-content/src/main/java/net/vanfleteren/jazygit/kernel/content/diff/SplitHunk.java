@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.LinePairs;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedLine;
@@ -20,6 +19,7 @@ import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.state.diff.PlacedRemarks.LineRemarks;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn.Mark;
 import net.vanfleteren.jazygit.kernel.ui.content.Halves;
 import net.vanfleteren.jazygit.kernel.ui.text.Rows;
@@ -146,14 +146,14 @@ record SplitHunk(FileSections.Lines file, int digits, int left, int right) imple
                 Option.some(width() + halves.overflow()),
                 () -> source(row, before, after),
                 Option.some(halves));
-        List<ReviewThread> threads = threadsOf(hunk, row);
+        List<RemarkThread> threads = threadsOf(hunk, row);
         return List.of(drawn)
                 .appendAll(notes(row, hunk))
                 .appendAll(
                         threads.isEmpty()
                                 ? List.empty()
                                 : List.of(DiffSide.OLD, DiffSide.NEW)
-                                        .map(side -> threads.filter(thread -> DiffSide.of(thread.side()) == side))
+                                        .map(side -> threads.filter(thread -> thread.side() == side))
                                         .filter(onSide -> !onSide.isEmpty())
                                         .flatMap(onSide -> threads(onSide, hunk, row))
                                         .appendAll(followed ? List.of(Marked.plain(Line.from(""))) : List.empty()));
@@ -187,7 +187,7 @@ record SplitHunk(FileSections.Lines file, int digits, int left, int right) imple
     /**
      * The threads on the lines of {@code row}, those on a context line once.
      */
-    private static List<ReviewThread> threadsOf(Hunk hunk, LinePairs.Row row) {
+    private static List<RemarkThread> threadsOf(Hunk hunk, LinePairs.Row row) {
         return row.left()
                 .toList()
                 .appendAll(row.right().filter(at -> !row.left().contains(at)))
@@ -198,8 +198,8 @@ record SplitHunk(FileSections.Lines file, int digits, int left, int right) imple
      * The lines of {@code threads}, all on one side, under the half of that side, as wide as it, the rule between
      * the halves kept beside them.
      */
-    private List<Marked> threads(List<ReviewThread> threads, Hunk hunk, LinePairs.Row row) {
-        DiffSide side = DiffSide.of(threads.head().side());
+    private List<Marked> threads(List<RemarkThread> threads, Hunk hunk, LinePairs.Row row) {
+        DiffSide side = threads.head().side();
         int gutter = digits + Gutter.END.length() + 2;
         int indent = side == DiffSide.OLD ? gutter : left + 1 + gutter;
         int end = side == DiffSide.OLD ? left - 1 : width() - 1;
@@ -280,7 +280,7 @@ record SplitHunk(FileSections.Lines file, int digits, int left, int right) imple
         List<Span> gutter = Gutter.spans(
                 numbers,
                 line.kind(),
-                remarks.threads().exists(thread -> DiffSide.of(thread.side()) == side),
+                remarks.threads().exists(thread -> thread.side() == side),
                 remarks.covered(),
                 styles);
         Option<Change> change = switch (line.kind()) {

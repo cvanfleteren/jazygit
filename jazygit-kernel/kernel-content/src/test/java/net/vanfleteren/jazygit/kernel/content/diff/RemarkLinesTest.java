@@ -15,12 +15,6 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.Reaction;
-import net.vanfleteren.jazygit.core.gh.model.Reactions;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.kernel.content.ContentText;
@@ -31,6 +25,9 @@ import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Collapsed;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
+import net.vanfleteren.jazygit.kernel.state.diff.Remark;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Subject;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownDiff;
 import net.vanfleteren.jazygit.kernel.ui.markdown.MarkdownImages;
@@ -58,36 +55,30 @@ class RemarkLinesTest {
              three
             """;
 
-    private static ReviewThread thread(int line, boolean resolved, String... bodies) {
+    private static RemarkThread thread(int line, boolean resolved, String... bodies) {
         return thread("a.txt", line, resolved, bodies);
     }
 
-    private static ReviewThread thread(String path, int line, boolean resolved, String... bodies) {
-        return new ReviewThread(
+    private static RemarkThread thread(String path, int line, boolean resolved, String... bodies) {
+        return new RemarkThread(
+                new RemarkThread.Id(path + line + String.join("", bodies)),
                 path,
-                DiffSide.gitHub(DiffSide.NEW),
-                Option.of(line),
                 Option.none(),
-                DiffSide.gitHub(DiffSide.NEW),
-                Option.of(line),
-                resolved,
-                false,
                 Subject.LINE,
-                List.of(bodies)
-                        .zipWithIndex((body, at) -> new Comment(
-                                "bob",
-                                NOW.minusSeconds(7200),
-                                body,
-                                Option.none(),
-                                new ReviewThread.Comment.Id("C" + at),
-                                new ReviewThread.Comment.RestId("1"),
-                                CommentRights.ALL)),
+                Option.of(line),
+                DiffSide.NEW,
+                Option.none(),
+                Option.of(DiffSide.NEW),
+                Option.of(line),
+                false,
+                resolved,
                 0,
-                new ReviewThread.Id(path + line + String.join("", bodies)),
-                ReviewThread.Rights.ALL);
+                List.of(bodies)
+                        .zipWithIndex((body, at) -> new Remark(
+                                new Remark.Id("C" + at), "bob", NOW.minusSeconds(7200), body, Option.none())));
     }
 
-    private static ShownRemarks shown(Collapsed collapsed, ReviewThread... threads) {
+    private static ShownRemarks shown(Collapsed collapsed, RemarkThread... threads) {
         return new ShownRemarks(
                 List.of(threads), NOW, Option.none(), true, collapsed, HashSet.empty(), HashSet.empty());
     }
@@ -114,28 +105,21 @@ class RemarkLinesTest {
             +int total = 43;
             """;
 
-    private static ReviewThread onLines(DiffSide startSide, int start, DiffSide side, int line) {
-        return new ReviewThread(
+    private static RemarkThread onLines(DiffSide startSide, int start, DiffSide side, int line) {
+        return new RemarkThread(
+                new RemarkThread.Id("T" + startSide + start + side + line),
                 "a.txt",
-                DiffSide.gitHub(side),
-                Option.of(line),
-                Option.when(startSide != side || start != line, start),
-                DiffSide.gitHub(startSide),
-                Option.of(line),
-                false,
-                false,
+                Option.none(),
                 Subject.LINE,
-                List.of(new Comment(
-                        "bob",
-                        NOW.minusSeconds(7200),
-                        "Why?",
-                        Option.none(),
-                        new ReviewThread.Comment.Id("C0"),
-                        new ReviewThread.Comment.RestId("1"),
-                        CommentRights.ALL)),
+                Option.of(line),
+                side,
+                Option.when(startSide != side || start != line, start),
+                Option.of(startSide),
+                Option.of(line),
+                false,
+                false,
                 0,
-                new ReviewThread.Id("T" + startSide + start + side + line),
-                ReviewThread.Rights.ALL);
+                List.of(new Remark(new Remark.Id("C0"), "bob", NOW.minusSeconds(7200), "Why?", Option.none())));
     }
 
     /**
@@ -314,7 +298,7 @@ class RemarkLinesTest {
     }
 
     private static List<String> drawnAlone(
-            ReviewThread thread, Collapsed collapsed, io.vavr.collection.Set<ReviewThread.Id> sending) {
+            RemarkThread thread, Collapsed collapsed, io.vavr.collection.Set<RemarkThread.Id> sending) {
         return text(RemarkLines.threads(
                         List.of(thread),
                         8,
@@ -326,8 +310,8 @@ class RemarkLinesTest {
 
     @Test
     void aThreadIsCollapsedOrOpenedAgainstItsDefaultAndSaysWhenSomethingIsSentForIt() {
-        ReviewThread resolved = thread(3, true, "Done");
-        ReviewThread open = thread(2, false, "Why?", "Because");
+        RemarkThread resolved = thread(3, true, "Done");
+        RemarkThread open = thread(2, false, "Why?", "Because");
         String indent = " ".repeat(8);
 
         assertTrue(drawnAlone(
@@ -364,7 +348,7 @@ class RemarkLinesTest {
 
     @Test
     void aCommentBeingDeletedSaysSoAfterItsHeaderAndACollapsedThreadAfterItsLineWhenItIsItsFirst() {
-        ReviewThread open = thread(2, false, "Why?", "Because");
+        RemarkThread open = thread(2, false, "Why?", "Because");
         String indent = " ".repeat(8);
         Collapsed closed = Collapsed.NONE.flipped(Collapsed.Key.of(open.id()), List.of(open));
 
@@ -373,7 +357,7 @@ class RemarkLinesTest {
                         8,
                         RemarkLines.MIN_WIDTH,
                         new RemarkLines.RemarkStyle(
-                                Collapsed.NONE, HashSet.empty(), HashSet.of(new Comment.Id("C1")), NOW),
+                                Collapsed.NONE, HashSet.empty(), HashSet.of(new Remark.Id("C1")), NOW),
                         Theme.SpanStyles.NONE))
                 .map(String::stripTrailing);
         assertTrue(deleting.contains(indent + "┣━ bob · 2h ago · deleting…"), deleting.toString());
@@ -386,14 +370,14 @@ class RemarkLinesTest {
                                 8,
                                 RemarkLines.MIN_WIDTH,
                                 new RemarkLines.RemarkStyle(
-                                        closed, HashSet.empty(), HashSet.of(new Comment.Id("C0")), NOW),
+                                        closed, HashSet.empty(), HashSet.of(new Remark.Id("C0")), NOW),
                                 Theme.SpanStyles.NONE))
                         .map(String::stripTrailing));
     }
 
     @Test
     void aCommentButTheFirstIsCollapsedToItsHeaderAndItsFirstLine() {
-        ReviewThread open = thread(2, false, "Why?", "Because\n\nreally");
+        RemarkThread open = thread(2, false, "Why?", "Because\n\nreally");
         String indent = " ".repeat(8);
 
         assertEquals(
@@ -412,29 +396,23 @@ class RemarkLinesTest {
 
     @Test
     void aHiddenCommentIsCollapsedUntilItIsOpened() {
-        ReviewThread thread = thread(2, false, "Why?");
-        ReviewThread hidden = new ReviewThread(
+        RemarkThread thread = thread(2, false, "Why?");
+        RemarkThread hidden = new RemarkThread(
+                thread.id(),
                 thread.path(),
-                thread.side(),
+                Option.none(),
+                thread.subject(),
                 thread.line(),
+                thread.side(),
                 thread.startLine(),
                 thread.startSide(),
                 thread.originalLine(),
                 false,
                 false,
-                thread.subject(),
-                thread.comments()
-                        .append(new Comment(
-                                "carol",
-                                NOW.minusSeconds(7200),
-                                "Buy now",
-                                Option.of("SPAM"),
-                                new ReviewThread.Comment.Id("H"),
-                                new ReviewThread.Comment.RestId("2"),
-                                CommentRights.ALL)),
                 2,
-                thread.id(),
-                thread.rights());
+                thread.remarks()
+                        .append(new Remark(
+                                new Remark.Id("H"), "carol", NOW.minusSeconds(7200), "Buy now", Option.of("spam"))));
         String indent = " ".repeat(8);
 
         List<String> collapsed = drawnAlone(hidden, Collapsed.NONE, HashSet.empty());
@@ -453,7 +431,7 @@ class RemarkLinesTest {
 
     @Test
     void aResolvedThreadIsOneLineUntilItIsOpened() {
-        ReviewThread resolved = thread(3, true, "Done\n\nmore");
+        RemarkThread resolved = thread(3, true, "Done\n\nmore");
 
         assertTrue(rich(shown(Collapsed.NONE, resolved)).contains(" ".repeat(8) + "━━ ✓ resolved · bob: Done"));
         assertEquals(
@@ -472,48 +450,34 @@ class RemarkLinesTest {
 
     @Test
     void aThreadOnSeveralLinesMarksThemAndOneThatCannotBePlacedEndsItsFile() {
-        ReviewThread several = new ReviewThread(
+        RemarkThread several = new RemarkThread(
+                new RemarkThread.Id("T"),
                 "a.txt",
-                DiffSide.gitHub(DiffSide.NEW),
+                Option.none(),
+                Subject.LINE,
                 Option.of(3),
+                DiffSide.NEW,
                 Option.of(1),
-                DiffSide.gitHub(DiffSide.NEW),
+                Option.of(DiffSide.NEW),
                 Option.of(3),
                 false,
                 false,
-                Subject.LINE,
-                List.of(new Comment(
-                        "",
-                        NOW,
-                        "All of it",
-                        Option.none(),
-                        new ReviewThread.Comment.Id("C"),
-                        new ReviewThread.Comment.RestId("1"),
-                        CommentRights.ALL)),
                 2,
-                new ReviewThread.Id("T"),
-                ReviewThread.Rights.ALL);
-        ReviewThread outdated = new ReviewThread(
+                List.of(new Remark(new Remark.Id("C"), "", NOW, "All of it", Option.none())));
+        RemarkThread outdated = new RemarkThread(
+                new RemarkThread.Id("T"),
                 "a.txt",
-                DiffSide.gitHub(DiffSide.NEW),
                 Option.none(),
-                Option.none(),
-                DiffSide.gitHub(DiffSide.NEW),
-                Option.of(40),
-                false,
-                true,
                 Subject.LINE,
-                List.of(new Comment(
-                        "carol",
-                        NOW,
-                        "Old",
-                        Option.of("OUTDATED"),
-                        new ReviewThread.Comment.Id("C"),
-                        new ReviewThread.Comment.RestId("1"),
-                        CommentRights.ALL)),
+                Option.none(),
+                DiffSide.NEW,
+                Option.none(),
+                Option.of(DiffSide.NEW),
+                Option.of(40),
+                true,
+                false,
                 0,
-                new ReviewThread.Id("T"),
-                ReviewThread.Rights.ALL);
+                List.of(new Remark(new Remark.Id("C"), "carol", NOW, "Old", Option.of("outdated"))));
 
         List<String> lines = rich(shown(Collapsed.NONE, several, outdated));
 
@@ -597,27 +561,21 @@ class RemarkLinesTest {
 
     @Test
     void aThreadAboutAWholeFileGoesUnderItsBar() {
-        ReviewThread onFile = new ReviewThread(
+        RemarkThread onFile = new RemarkThread(
+                new RemarkThread.Id("T"),
                 "a.txt",
-                DiffSide.gitHub(DiffSide.NEW),
                 Option.none(),
-                Option.none(),
-                DiffSide.gitHub(DiffSide.NEW),
-                Option.none(),
-                false,
-                false,
                 Subject.FILE,
-                List.of(new Comment(
-                        "bob",
-                        NOW.minusSeconds(7200),
-                        "Split this file",
-                        Option.none(),
-                        new ReviewThread.Comment.Id("C"),
-                        new ReviewThread.Comment.RestId("1"),
-                        CommentRights.ALL)),
+                Option.none(),
+                DiffSide.NEW,
+                Option.none(),
+                Option.of(DiffSide.NEW),
+                Option.none(),
+                false,
+                false,
                 0,
-                new ReviewThread.Id("T"),
-                ReviewThread.Rights.ALL);
+                List.of(new Remark(
+                        new Remark.Id("C"), "bob", NOW.minusSeconds(7200), "Split this file", Option.none())));
 
         List<String> lines = rich(shown(Collapsed.NONE, onFile));
 
@@ -629,27 +587,20 @@ class RemarkLinesTest {
 
     @Test
     void aThreadWhoseFirstCommentIsHiddenShowsItInFullOnceItIsOpened() {
-        ReviewThread hidden = new ReviewThread(
+        RemarkThread hidden = new RemarkThread(
+                new RemarkThread.Id("T"),
                 "a.txt",
-                DiffSide.gitHub(DiffSide.NEW),
-                Option.of(2),
                 Option.none(),
-                DiffSide.gitHub(DiffSide.NEW),
+                Subject.LINE,
+                Option.of(2),
+                DiffSide.NEW,
+                Option.none(),
+                Option.of(DiffSide.NEW),
                 Option.of(2),
                 false,
                 false,
-                Subject.LINE,
-                List.of(new Comment(
-                        "carol",
-                        NOW,
-                        "Off topic",
-                        Option.of("OFF_TOPIC"),
-                        new ReviewThread.Comment.Id("C"),
-                        new ReviewThread.Comment.RestId("1"),
-                        CommentRights.ALL)),
                 0,
-                new ReviewThread.Id("T"),
-                ReviewThread.Rights.ALL);
+                List.of(new Remark(new Remark.Id("C"), "carol", NOW, "Off topic", Option.of("off-topic"))));
 
         // Its first comment hidden, the thread is collapsed, and says why in place of its first line (ADR 62).
         List<String> collapsed = rich(shown(Collapsed.NONE, hidden));
@@ -897,9 +848,9 @@ class RemarkLinesTest {
 
     @Test
     void theCursorStopsOnEachBarLineThreadAndCommentInTheOrderTheyAreDrawn() {
-        ReviewThread first = thread(2, false, "a");
-        ReviewThread second = thread(2, false, "b", "c");
-        ReviewThread outdated = thread("a.txt", 40, false, "old");
+        RemarkThread first = thread(2, false, "a");
+        RemarkThread second = thread(2, false, "b", "c");
+        RemarkThread outdated = thread("a.txt", 40, false, "old");
         ShownRemarks remarks = shown(Collapsed.NONE, first, second, outdated);
 
         Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
@@ -915,7 +866,7 @@ class RemarkLinesTest {
                         two,
                         new Anchor.Thread(first.id(), Option.of(two)),
                         replied,
-                        new Anchor.Comment(new ReviewThread.Comment.Id("C1"), replied),
+                        new Anchor.Remark(new Remark.Id("C1"), replied),
                         new Anchor.OnLine("a.txt", DiffSide.NEW, 3),
                         new Anchor.Gap("a.txt", 4, Option.none()),
                         new Anchor.Thread(outdated.id(), Option.none())),
@@ -933,11 +884,11 @@ class RemarkLinesTest {
                 lines.get(threads.head().row() + threads.head().mark().lines()).isBlank());
         // A comment but the first starts its own stop, which ends its thread after the last (ADR 62).
         Drawn.Stop comment = drawn.stops()
-                .find(stop -> stop.mark().anchor() instanceof Anchor.Comment)
+                .find(stop -> stop.mark().anchor() instanceof Anchor.Remark)
                 .get();
         assertEquals(
-                new Anchor.Comment(
-                        new ReviewThread.Comment.Id("C1"),
+                new Anchor.Remark(
+                        new Remark.Id("C1"),
                         new Anchor.Thread(second.id(), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)))),
                 comment.mark().anchor());
         assertTrue(lines.get(comment.row()).contains("┣━ bob"), lines.mkString("\n"));
@@ -947,40 +898,26 @@ class RemarkLinesTest {
     @Test
     void theStopsDrawnFollowHowTheThreadsAndCommentsAreCollapsed() {
         String indent = " ".repeat(8);
-        ReviewThread replied = thread(2, false, "a", "b", "c");
-        ReviewThread collapsed = thread(3, false, "d", "e");
-        ReviewThread plain = thread(1, false, "f", "g");
-        ReviewThread hidden = new ReviewThread(
+        RemarkThread replied = thread(2, false, "a", "b", "c");
+        RemarkThread collapsed = thread(3, false, "d", "e");
+        RemarkThread plain = thread(1, false, "f", "g");
+        RemarkThread hidden = new RemarkThread(
+                plain.id(),
                 plain.path(),
-                plain.side(),
+                Option.none(),
+                plain.subject(),
                 plain.line(),
+                plain.side(),
                 plain.startLine(),
                 plain.startSide(),
                 plain.originalLine(),
                 false,
                 false,
-                plain.subject(),
-                List.of(
-                        new Comment(
-                                "carol",
-                                NOW,
-                                "Spam",
-                                Option.of("SPAM"),
-                                new ReviewThread.Comment.Id("H"),
-                                new ReviewThread.Comment.RestId("1"),
-                                CommentRights.ALL),
-                        new Comment(
-                                "bob",
-                                NOW,
-                                "g",
-                                Option.none(),
-                                new ReviewThread.Comment.Id("G"),
-                                new ReviewThread.Comment.RestId("2"),
-                                CommentRights.ALL)),
                 0,
-                plain.id(),
-                plain.rights());
-        ReviewThread resolved = thread("a.txt", 40, true, "h", "i");
+                List.of(
+                        new Remark(new Remark.Id("H"), "carol", NOW, "Spam", Option.of("spam")),
+                        new Remark(new Remark.Id("G"), "bob", NOW, "g", Option.none())));
+        RemarkThread resolved = thread("a.txt", 40, true, "h", "i");
         // A reply collapsed, an unresolved thread collapsed, a thread whose first comment is hidden opened, and a
         // resolved one as it starts.
         Collapsed flipped = new Collapsed(io.vavr.collection.HashMap.of(
@@ -1004,12 +941,12 @@ class RemarkLinesTest {
                         new Anchor.File("a.txt"),
                         one,
                         opened,
-                        new Anchor.Comment(new ReviewThread.Comment.Id("G"), opened),
+                        new Anchor.Remark(new Remark.Id("G"), opened),
                         new Anchor.OnLine("a.txt", DiffSide.OLD, 2),
                         two,
                         open,
-                        new Anchor.Comment(new ReviewThread.Comment.Id("C1"), open),
-                        new Anchor.Comment(new ReviewThread.Comment.Id("C2"), open),
+                        new Anchor.Remark(new Remark.Id("C1"), open),
+                        new Anchor.Remark(new Remark.Id("C2"), open),
                         three,
                         new Anchor.Thread(collapsed.id(), Option.of(three)),
                         new Anchor.Gap("a.txt", 4, Option.none()),
@@ -1018,7 +955,7 @@ class RemarkLinesTest {
         assertEquals(
                 3,
                 drawn.stops()
-                        .filter(stop -> stop.mark().anchor() instanceof Anchor.Comment)
+                        .filter(stop -> stop.mark().anchor() instanceof Anchor.Remark)
                         .size());
         // Every line of each thread is drawn, in the stop it starts in.
         List<String> lines = text(drawn.lines()).map(String::stripTrailing);
@@ -1082,11 +1019,15 @@ class RemarkLinesTest {
 
     @Test
     void theReactionsToACommentAreALineUnderItsText() {
-        ReviewThread plain = thread(2, false, "Why?");
-        ReviewThread reacted = plain.withComments(plain.comments()
-                .map(comment -> comment.withReactions(new Reactions(List.of(
-                        new Reactions.Group(Reaction.THUMBS_UP, 2, true),
-                        new Reactions.Group(Reaction.EYES, 1, false))))));
+        RemarkThread plain = thread(2, false, "Why?");
+        RemarkThread reacted = plain.withRemarks(plain.remarks()
+                .map(comment -> new Remark(
+                        comment.id(),
+                        comment.author(),
+                        comment.at(),
+                        comment.body(),
+                        comment.hidden(),
+                        List.of(new Remark.Reaction("👍", 2, true), new Remark.Reaction("👀", 1, false)))));
         String indent = " ".repeat(8);
 
         List<String> lines = text(RemarkLines.threads(

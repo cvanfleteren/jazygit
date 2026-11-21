@@ -11,12 +11,10 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Locale;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.core.gh.model.Reactions;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.kernel.state.diff.Collapsed;
+import net.vanfleteren.jazygit.kernel.state.diff.Remark;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.markdown.MarkdownImages;
 import net.vanfleteren.jazygit.kernel.ui.markdown.MarkdownLines;
@@ -60,7 +58,7 @@ final class RemarkLines {
      * blank line between two of them.
      */
     static List<Line> threads(
-            List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
+            List<RemarkThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
         return blocks(threads, indent, width, style, styles)
                 .map(parts -> parts.flatMap(Function.identity()))
                 .intersperse(List.of(Line.from("")))
@@ -73,7 +71,7 @@ final class RemarkLines {
      * open, as {@link net.vanfleteren.jazygit.kernel.state.diff.DiffStops#anchors} gives them.
      */
     static List<List<List<Line>>> blocks(
-            List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
+            List<RemarkThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
         return threads.map(thread -> thread(thread, indent, width, true, style, styles));
     }
 
@@ -82,7 +80,7 @@ final class RemarkLines {
      * that says which line it was made on, and whether it is outdated, with a blank line between two of them.
      */
     static List<Line> unplaced(
-            List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
+            List<RemarkThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
         return threads.isEmpty()
                 ? List.empty()
                 : unplacedBlocks(threads, indent, width, style, styles)
@@ -106,7 +104,7 @@ final class RemarkLines {
      * without the blank lines between them, in parts as {@link #blocks} gives them.
      */
     static List<List<List<Line>>> unplacedBlocks(
-            List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
+            List<RemarkThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
         Span margin = Span.raw(" ".repeat(indent));
         return threads.map(thread -> {
             List<List<Line>> parts = thread(thread, indent, width, false, style, styles);
@@ -123,7 +121,7 @@ final class RemarkLines {
     /**
      * Which line {@code thread} was made on, and whether it is outdated.
      */
-    private static String madeOn(ReviewThread thread) {
+    private static String madeOn(RemarkThread thread) {
         String line = thread.line()
                 .orElse(thread::originalLine)
                 .map(number -> Messages.get("content.remarks.line", String.valueOf(number)))
@@ -138,7 +136,7 @@ final class RemarkLines {
      * ends the rule of the line above it, or has a rule of its own.
      */
     private static List<List<Line>> thread(
-            ReviewThread thread, int indent, int width, boolean top, RemarkStyle style, Theme.SpanStyles styles) {
+            RemarkThread thread, int indent, int width, boolean top, RemarkStyle style, Theme.SpanStyles styles) {
         Span margin = Span.raw(" ".repeat(indent));
         List<Span> rule = List.of(margin, styled(RULE, Theme.Classes.DIFF_THREAD, styles));
         int text = text(indent, width);
@@ -149,7 +147,7 @@ final class RemarkLines {
         if (style.collapsed().thread(thread)) {
             // Collapsed, it is its first comment, which may be being deleted (ADR 64).
             List<Span> deleting =
-                    thread.comments().headOption().exists(style::deletes) ? List.of(deleting(styles)) : List.empty();
+                    thread.remarks().headOption().exists(style::deletes) ? List.of(deleting(styles)) : List.empty();
             return List.of(List.of(Line.from(List.of(
                             margin,
                             styled((top ? ALONE : BOTTOM) + " ", Theme.Classes.DIFF_THREAD, styles),
@@ -161,7 +159,7 @@ final class RemarkLines {
                     .appendAll(deleting)
                     .toJavaList())));
         }
-        List<List<Line>> comments = thread.comments()
+        List<List<Line>> comments = thread.remarks()
                 .zipWithIndex()
                 .map(comment -> comment(
                         comment._1,
@@ -201,27 +199,26 @@ final class RemarkLines {
      * What the one line of a collapsed {@code thread} says: that it is resolved, or how many comments it has, then who
      * wrote its first comment, and its first line, or why it is hidden.
      */
-    private static String collapsed(ReviewThread thread) {
-        String first = thread.comments().headOption().map(RemarkLines::shortly).getOrElse("");
-        String author = thread.comments()
+    private static String collapsed(RemarkThread thread) {
+        String first = thread.remarks().headOption().map(RemarkLines::shortly).getOrElse("");
+        String author = thread.remarks()
                 .headOption()
                 .map(comment -> author(comment.author()))
                 .getOrElse("");
         return thread.resolved()
                 ? Messages.get("content.remarks.resolved", author, first)
-                : Messages.get("content.remarks.collapsed", thread.comments().size() + thread.more(), author, first);
+                : Messages.get("content.remarks.collapsed", thread.remarks().size() + thread.more(), author, first);
     }
 
     /**
      * {@code comment} in one line: its first line, or why it is hidden.
      */
-    private static String shortly(Comment comment) {
+    private static String shortly(Remark comment) {
         return comment.hidden().map(RemarkLines::hidden).getOrElse(() -> firstLine(comment));
     }
 
     private static String hidden(String reason) {
-        return Messages.get(
-                "content.remarks.hidden", reason.toLowerCase(Locale.ROOT).replace('_', '-'));
+        return Messages.get("content.remarks.hidden", reason);
     }
 
     /**
@@ -231,7 +228,7 @@ final class RemarkLines {
      * written is told at the time of {@code style}, and that it is being deleted after it (ADR 64).
      */
     private static List<Line> comment(
-            Comment comment,
+            Remark comment,
             List<Span> branch,
             List<Span> rule,
             int text,
@@ -268,18 +265,17 @@ final class RemarkLines {
      * The reactions given to a comment, on a line of their own under its text after {@code rule}: each with how often,
      * those the viewer gave standing out from the others (ADR 86). No line when nobody reacted.
      */
-    private static List<Line> reactions(Reactions reactions, List<Span> rule, Theme.SpanStyles styles) {
-        return reactions.groups().isEmpty()
+    private static List<Line> reactions(List<Remark.Reaction> reactions, List<Span> rule, Theme.SpanStyles styles) {
+        return reactions.isEmpty()
                 ? List.empty()
                 : List.of(Line.from(rule.appendAll(reactions
-                                .groups()
                                 .zipWithIndex()
-                                .flatMap(group -> List.of(
-                                                Span.raw(group._2() == 0 ? "" : "  "),
+                                .flatMap(reaction -> List.of(
+                                                Span.raw(reaction._2() == 0 ? "" : "  "),
                                                 styled(
-                                                        group._1().reaction().emoji() + " "
-                                                                + group._1().count(),
-                                                        group._1().viewer()
+                                                        reaction._1().emoji() + " "
+                                                                + reaction._1().count(),
+                                                        reaction._1().given()
                                                                 ? Theme.Classes.DIFF_THREAD_AUTHOR
                                                                 : Theme.Classes.DIM,
                                                         styles))
@@ -290,7 +286,7 @@ final class RemarkLines {
     /**
      * The first line of {@code comment} with text, without its HTML comments and with its images as text that says so.
      */
-    private static String firstLine(Comment comment) {
+    private static String firstLine(Remark comment) {
         return Iterator.ofAll(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(comment.body()))
                         .lines()
                         .iterator())
@@ -360,8 +356,8 @@ final class RemarkLines {
      */
     record RemarkStyle(
             Collapsed collapsed,
-            Set<ReviewThread.Id> sending,
-            Set<Comment.Id> deleting,
+            Set<RemarkThread.Id> sending,
+            Set<Remark.Id> deleting,
             Instant now,
             Map<String, Picture> pictures) {
 
@@ -369,21 +365,21 @@ final class RemarkLines {
             this(Collapsed.NONE, HashSet.empty(), HashSet.empty(), now);
         }
 
-        RemarkStyle(Collapsed collapsed, Set<ReviewThread.Id> sending, Set<Comment.Id> deleting, Instant now) {
+        RemarkStyle(Collapsed collapsed, Set<RemarkThread.Id> sending, Set<Remark.Id> deleting, Instant now) {
             this(collapsed, sending, deleting, now, HashMap.empty());
         }
 
         /**
          * Whether something is sent for {@code thread}.
          */
-        boolean sends(ReviewThread thread) {
+        boolean sends(RemarkThread thread) {
             return sending.contains(thread.id());
         }
 
         /**
          * Whether {@code comment} is being deleted.
          */
-        boolean deletes(Comment comment) {
+        boolean deletes(Remark comment) {
             return deleting.contains(comment.id());
         }
     }

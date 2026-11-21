@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.github.review;
 
-import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
+import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.loadedWithTheFeature;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashSet;
@@ -24,9 +24,15 @@ import net.vanfleteren.jazygit.core.git.model.Folding;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
+import net.vanfleteren.jazygit.features.github.remarks.PrFiles;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksMsg;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksState;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
+import net.vanfleteren.jazygit.kernel.state.diff.Remark;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -97,7 +103,7 @@ final class ReviewFixtures {
     }
 
     static Anchor.OnLine line(Side side, int number) {
-        return new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.kernel.state.diff.DiffSide.of(side), number);
+        return new Anchor.OnLine("a.txt", FromGitHub.side(side), number);
     }
 
     static Model files(PullRequestDetails.State state, String head) {
@@ -106,11 +112,12 @@ final class ReviewFixtures {
 
     static Model files(PullRequestDetails.State state, String head, List<ReviewThread> threads) {
         Model opened = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
+                        loadedWithTheFeature(),
+                        new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
                 .model();
         Model read = Update.update(
                         opened,
-                        new CommitFilesMsg.RemarksLoaded(
+                        new RemarksMsg.Loaded(
                                 new PrNumber(7),
                                 new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(BASE), threads),
                                 HashSet.empty(),
@@ -139,11 +146,11 @@ final class ReviewFixtures {
     }
 
     static Anchor onThread(String id) {
-        return new Anchor.Thread(new ReviewThread.Id(id), Option.of(line(Side.RIGHT, 2)));
+        return new Anchor.Thread(new RemarkThread.Id(id), Option.of(line(Side.RIGHT, 2)));
     }
 
-    static CommitFilesView view(Model model) {
-        return model.repoView().files().commitFiles().get();
+    static PrFiles view(Model model) {
+        return RemarksState.files(model).get();
     }
 
     static Option<AppError> error(Model model) {
@@ -155,8 +162,8 @@ final class ReviewFixtures {
                 PullRequestDetails.State.OPEN, GhCommit.parse(HEAD), GhCommit.parse(BASE), List.of(OPEN, SETTLED));
     }
 
-    static CommitFilesMsg.RemarksLoaded readAgain(Set<ReviewThread.Id> settled, ReviewThread... threads) {
-        return new CommitFilesMsg.RemarksLoaded(
+    static RemarksMsg.Loaded readAgain(Set<ReviewThread.Id> settled, ReviewThread... threads) {
+        return new RemarksMsg.Loaded(
                 new PrNumber(7),
                 new ReviewRemarks(
                         PullRequestDetails.State.OPEN, GhCommit.parse(HEAD), GhCommit.parse(BASE), List.of(threads)),
@@ -193,7 +200,7 @@ final class ReviewFixtures {
     }
 
     static Anchor onComment(String comment, String thread) {
-        return new Anchor.Comment(new ReviewThread.Comment.Id(comment), (Anchor.Thread) onThread(thread));
+        return new Anchor.Remark(new Remark.Id(comment), (Anchor.Thread) onThread(thread));
     }
 
     static List<String> comments(Model model, String thread) {
@@ -217,9 +224,10 @@ final class ReviewFixtures {
      * {@code model} with each comment of its threads giving the viewer {@code rights}.
      */
     static Model withRights(Model model, CommentRights rights) {
-        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
-                .map(view -> view.withRemarks(view.remarks()
-                        .map(remarks -> remarks.map(read -> new ReviewRemarks(
+        return RemarksState.mapOpen(
+                model,
+                view -> view.withRemarks(view.remarks()
+                        .map(read -> new ReviewRemarks(
                                 read.state(),
                                 read.head(),
                                 read.base(),
@@ -245,7 +253,7 @@ final class ReviewFixtures {
                                                                 rights)),
                                                 thread.more(),
                                                 thread.id(),
-                                                thread.rights()))))))))));
+                                                thread.rights()))))));
     }
 
     /**

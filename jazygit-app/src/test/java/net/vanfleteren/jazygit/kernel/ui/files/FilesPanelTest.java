@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -382,7 +383,9 @@ class FilesPanelTest {
                 new BaseTip(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))), new Sha("bbbb")),
                 new Sha("aaaa"));
         Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
+                        Update.update(
+                                        net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
+                                        new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(of, List.of(new CommitFile("b.txt", ChangeType.ADDED))))
                 .model();
@@ -428,7 +431,9 @@ class FilesPanelTest {
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
+                        Update.update(
+                                        net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
+                                        new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(
                                 of,
@@ -439,7 +444,7 @@ class FilesPanelTest {
         // git sees a rename where GitHub sees a file deleted and one added: a remark on the old file has its path.
         Model read = Update.update(
                         open,
-                        new CommitFilesMsg.RemarksLoaded(
+                        new RemarksMsg.Loaded(
                                 new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.MERGED,
@@ -469,7 +474,9 @@ class FilesPanelTest {
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
+                        Update.update(
+                                        net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
+                                        new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(
                                 of,
@@ -481,7 +488,7 @@ class FilesPanelTest {
         Model unresolved = Update.update(
                         Update.update(
                                         open,
-                                        new CommitFilesMsg.RemarksLoaded(
+                                        new RemarksMsg.Loaded(
                                                 new PrNumber(7),
                                                 new ReviewRemarks(
                                                         PullRequestDetails.State.OPEN,
@@ -499,7 +506,7 @@ class FilesPanelTest {
                 Update.update(unresolved, new CommitFilesMsg.ListedCycled()).model();
         Model none = Update.update(
                         unresolved,
-                        new CommitFilesMsg.RemarksLoaded(
+                        new RemarksMsg.Loaded(
                                 new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.OPEN,
@@ -536,7 +543,9 @@ class FilesPanelTest {
     void aHighlightedFileLeftOutOfTheFilesWithRemarksMovesTheHighlightToTheNearestRowListed() throws Exception {
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
-        Model opened = Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
+        Model opened = Update.update(
+                        net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
+                        new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                 .model();
         Model loaded = Update.update(
                         opened,
@@ -548,7 +557,7 @@ class FilesPanelTest {
         Model reading = Update.update(loaded, new CommitFilesMsg.ListedCycled()).model();
         Model read = Update.update(
                         loaded,
-                        new CommitFilesMsg.RemarksLoaded(
+                        new RemarksMsg.Loaded(
                                 new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.OPEN,
@@ -584,10 +593,10 @@ class FilesPanelTest {
     private static ReviewThread remark(String path, DiffSide side, boolean resolved) {
         return new ReviewThread(
                 path,
-                DiffSide.gitHub(side),
+                net.vanfleteren.jazygit.features.github.remarks.FromGitHub.side(side),
                 Option.of(1),
                 Option.none(),
-                DiffSide.gitHub(side),
+                net.vanfleteren.jazygit.features.github.remarks.FromGitHub.side(side),
                 Option.of(1),
                 resolved,
                 false,

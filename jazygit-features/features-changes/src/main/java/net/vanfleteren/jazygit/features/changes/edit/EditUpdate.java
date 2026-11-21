@@ -67,7 +67,7 @@ public final class EditUpdate {
             case Anchor.Filtered filtered -> Option.of(filtered.path());
             case Anchor.Node node -> Option.of(node.path());
             case Anchor.Thread thread -> thread.line().map(Anchor.OnLine::path);
-            case Anchor.Comment comment -> file(comment.thread());
+            case Anchor.Remark comment -> file(comment.thread());
         };
     }
 
@@ -87,7 +87,7 @@ public final class EditUpdate {
             case Anchor.Node node -> line(model, at, node.line());
             case Anchor.Thread thread ->
                 thread.line().map(on -> line(model, at, on)).getOrElse(1);
-            case Anchor.Comment comment -> line(model, at, comment.thread());
+            case Anchor.Remark comment -> line(model, at, comment.thread());
             case Anchor.Lead lead -> 1;
             case Anchor.File file -> 1;
         };

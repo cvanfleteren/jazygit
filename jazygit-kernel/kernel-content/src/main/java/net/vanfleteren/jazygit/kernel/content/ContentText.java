@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Stash;
@@ -21,6 +20,7 @@ import net.vanfleteren.jazygit.kernel.content.diff.ShownRemarks;
 import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownDiff;
 import net.vanfleteren.jazygit.kernel.ui.content.UnifiedLine;
@@ -115,7 +115,7 @@ public final class ContentText {
      * The plain diff, each line that starts a file followed by how many of {@code threads} are on that file, if any
      * are, and that the rich view shows them.
      */
-    private static List<Line> counted(ShownDiff diff, List<ReviewThread> threads, Theme.SpanStyles styles) {
+    private static List<Line> counted(ShownDiff diff, List<RemarkThread> threads, Theme.SpanStyles styles) {
         Vector<Integer> counts = diff.parsed()
                 .diff()
                 .files()

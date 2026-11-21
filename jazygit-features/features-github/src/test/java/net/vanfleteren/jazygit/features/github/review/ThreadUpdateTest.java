@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github.review;
 
+import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.loadedWithTheFeature;
 import static net.vanfleteren.jazygit.features.github.review.ReviewFixtures.*;
-import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashMap;
@@ -13,12 +13,15 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
-import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.browse.BrowseRemarkCmd;
+import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksMsg;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
+import net.vanfleteren.jazygit.kernel.state.diff.Remark;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
@@ -37,10 +40,8 @@ class ThreadUpdateTest {
         assertEquals(
                 List.of(new BrowseRemarkCmd(new PullRequestLink(
                         "", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("2"))))),
-                Update.update(
-                                files(),
-                                new ThreadMsg.OpenAsked(at(new Anchor.Comment(
-                                        new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1")))))
+                Update.update(files(), new ThreadMsg.OpenAsked(at(new Anchor.Remark(new Remark.Id("R1"), (Anchor.Thread)
+                                onThread("T1")))))
                         .cmds());
         assertEquals(
                 List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", new PrNumber(7), Option.none()))),
@@ -67,7 +68,7 @@ class ThreadUpdateTest {
         assertEquals(
                 new Collapsed(HashMap.of(new Collapsed.Key("T2"), true)),
                 view(opened).collapsed());
-        assertFalse(view(opened).collapsed().thread(SETTLED));
+        assertFalse(view(opened).collapsed().thread(FromGitHub.thread(SETTLED)));
 
         Model closed = Update.update(opened, new ThreadMsg.ThreadToggled(at(onThread("T2"))))
                 .model();
@@ -76,11 +77,10 @@ class ThreadUpdateTest {
         // An unresolved thread is collapsed too, and a comment on its own, by its id (ADR 62).
         Model collapsed = Update.update(files(), new ThreadMsg.ThreadToggled(at(onThread("T1"))))
                 .model();
-        assertTrue(view(collapsed).collapsed().thread(OPEN));
+        assertTrue(view(collapsed).collapsed().thread(FromGitHub.thread(OPEN)));
         Model comment = Update.update(
-                        files(),
-                        new ThreadMsg.ThreadToggled(at(
-                                new Anchor.Comment(new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1")))))
+                        files(), new ThreadMsg.ThreadToggled(at(new Anchor.Remark(new Remark.Id("R1"), (Anchor.Thread)
+                                onThread("T1")))))
                 .model();
         assertEquals(
                 new Collapsed(HashMap.of(new Collapsed.Key("R1"), false)),
@@ -107,14 +107,14 @@ class ThreadUpdateTest {
 
         // With whether each was collapsed by default, and when it was flipped (ADR 63).
         assertEquals(
-                List.of(new CommitFilesCmd.SaveCollapsed(
+                List.of(new RemarksCmd.SaveCollapsed(
                         "owner/repo",
                         new PrNumber(7),
                         HashMap.of(new Collapsed.Key("T2"), true),
                         opened.model().now())),
                 opened.cmds());
         assertEquals(
-                List.of(new CommitFilesCmd.SaveCollapsed(
+                List.of(new RemarksCmd.SaveCollapsed(
                         "owner/repo",
                         new PrNumber(7),
                         HashMap.empty(),
@@ -126,7 +126,7 @@ class ThreadUpdateTest {
     @Test
     void whatWasCollapsedOrOpenedInAnEarlierSessionIsAsItWasUnlessItsDefaultChangedSince() {
         // T2 opened while resolved, R1 collapsed, and T1 opened while resolved, which it is no longer.
-        CommitFilesMsg.CollapsedLoaded kept = new CommitFilesMsg.CollapsedLoaded(
+        RemarksMsg.CollapsedLoaded kept = new RemarksMsg.CollapsedLoaded(
                 new PrNumber(7),
                 HashMap.of(
                         new Collapsed.Key("T2"), true, new Collapsed.Key("R1"), false, new Collapsed.Key("T1"), true));
@@ -134,12 +134,13 @@ class ThreadUpdateTest {
 
         Model read = Update.update(files(), kept).model();
         assertEquals(expected, view(read).collapsed());
-        assertFalse(view(read).collapsed().thread(SETTLED));
-        assertFalse(view(read).collapsed().thread(OPEN));
+        assertFalse(view(read).collapsed().thread(FromGitHub.thread(SETTLED)));
+        assertFalse(view(read).collapsed().thread(FromGitHub.thread(OPEN)));
 
         // Kept before the threads are read, it is the same once they are.
         Model opened = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
+                        loadedWithTheFeature(),
+                        new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
                 .model();
         Model early = Update.update(opened, kept).model();
         assertEquals(
@@ -151,6 +152,6 @@ class ThreadUpdateTest {
         // What was flipped in this session wins.
         Model collapsed = Update.update(files(), new ThreadMsg.ThreadToggled(at(onThread("T1"))))
                 .model();
-        assertTrue(view(Update.update(collapsed, kept).model()).collapsed().thread(OPEN));
+        assertTrue(view(Update.update(collapsed, kept).model()).collapsed().thread(FromGitHub.thread(OPEN)));
     }
 }

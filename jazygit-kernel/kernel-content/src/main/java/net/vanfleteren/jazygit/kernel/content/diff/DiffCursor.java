@@ -510,7 +510,7 @@ public record DiffCursor(
                 })
                 : switch (on.mark().anchor()) {
                     case Anchor.Lead ignored -> lines;
-                    case Anchor.Thread _, Anchor.Comment _ ->
+                    case Anchor.Thread _, Anchor.Remark _ ->
                         List.range(
                                         first,
                                         Math.min(lines.size(), first + on.mark().lines()))

@@ -68,8 +68,7 @@ class DiffBodyTest {
 
     @Test
     void onlyADiffWithReviewRemarksTakesTheKeysThatCommentOnIt() {
-        assertEquals(
-                Scopes.PULL_REQUEST_DIFF, new DiffBody(changes(DiffStyle.RICH), Option.of(NO_REMARKS)).cursorKeys());
+        assertEquals(Scopes.REMARKED_DIFF, new DiffBody(changes(DiffStyle.RICH), Option.of(NO_REMARKS)).cursorKeys());
         assertEquals(Scopes.DIFF, new DiffBody(changes(DiffStyle.RICH)).cursorKeys());
     }
 }

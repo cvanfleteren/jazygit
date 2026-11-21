@@ -6,9 +6,10 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.diff.Collapsed;
+import net.vanfleteren.jazygit.kernel.state.diff.Remark;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.lib.image.Picture;
 
 /**
@@ -26,23 +27,23 @@ import net.vanfleteren.jazygit.lib.image.Picture;
  * @param pictures the pictures of the images of the threads that were read, by where they are (ADR 84)
  */
 public record ShownRemarks(
-        List<ReviewThread> threads,
+        List<RemarkThread> threads,
         Instant now,
         Option<Failure> failed,
         boolean onLines,
         Collapsed collapsed,
-        Set<ReviewThread.Id> sending,
-        Set<ReviewThread.Comment.Id> deleting,
+        Set<RemarkThread.Id> sending,
+        Set<Remark.Id> deleting,
         Map<String, Picture> pictures) {
 
     public ShownRemarks(
-            List<ReviewThread> threads,
+            List<RemarkThread> threads,
             Instant now,
             Option<Failure> failed,
             boolean onLines,
             Collapsed collapsed,
-            Set<ReviewThread.Id> sending,
-            Set<ReviewThread.Comment.Id> deleting) {
+            Set<RemarkThread.Id> sending,
+            Set<Remark.Id> deleting) {
         this(threads, now, failed, onLines, collapsed, sending, deleting, HashMap.empty());
     }
 }

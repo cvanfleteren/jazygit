@@ -12,9 +12,9 @@ import net.vanfleteren.jazygit.core.gh.model.Reaction;
 import net.vanfleteren.jazygit.core.gh.model.Reactions;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
-import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ class ReactUpdateTest {
                 view(chosen.model()).reacting());
 
         Next reacted = Update.update(chosen.model(), new ReactMsg.Reacted(react, List.empty()));
-        assertFalse(reacted.cmds().exists(cmd -> cmd instanceof CommitFilesCmd.LoadReviewRemarks));
+        assertFalse(reacted.cmds().exists(cmd -> cmd instanceof RemarksCmd.LoadReviewRemarks));
         assertEquals(
                 new Reactions(List.of(new Reactions.Group(Reaction.EYES, 1, true))), reactions(reacted.model(), "R1"));
         assertEquals(HashSet.empty(), view(reacted.model()).reacting());
@@ -210,6 +210,6 @@ class ReactUpdateTest {
         assertEquals(List.of("C1"), comments(failed.model(), "T1"));
         assertEquals(1, view(failed.model()).version());
         assertTrue(error(failed.model()).isDefined());
-        assertFalse(failed.cmds().exists(cmd -> cmd instanceof CommitFilesCmd.LoadReviewRemarks));
+        assertFalse(failed.cmds().exists(cmd -> cmd instanceof RemarksCmd.LoadReviewRemarks));
     }
 }

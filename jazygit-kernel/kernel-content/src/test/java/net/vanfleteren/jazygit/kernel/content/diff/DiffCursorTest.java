@@ -9,11 +9,12 @@ import dev.tamboui.text.Span;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.content.TextWindow;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
+import net.vanfleteren.jazygit.kernel.state.diff.Remark;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.content.Halves;
 import net.vanfleteren.jazygit.kernel.ui.text.Rows;
@@ -28,7 +29,7 @@ class DiffCursorTest {
     private static final Anchor FILE = new Anchor.File("a.txt");
     private static final Anchor ONE = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
     private static final Anchor THREAD =
-            new Anchor.Thread(new ReviewThread.Id("T"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
+            new Anchor.Thread(new RemarkThread.Id("T"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
     private static final Anchor TWO = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
     private static final Anchor THREE = new Anchor.OnLine("a.txt", DiffSide.NEW, 3);
 
@@ -38,9 +39,9 @@ class DiffCursorTest {
             stop(LEAD, 3, 0), stop(FILE, 1, 3), line(ONE, 4), stop(THREAD, 10, 5), line(TWO, 15), line(THREE, 16));
 
     private static final Anchor FIRST =
-            new Anchor.Thread(new ReviewThread.Id("T1"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
+            new Anchor.Thread(new RemarkThread.Id("T1"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
     private static final Anchor LAST =
-            new Anchor.Thread(new ReviewThread.Id("T2"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)));
+            new Anchor.Thread(new RemarkThread.Id("T2"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)));
 
     // A bar, line 1 and its thread, line 2 and its thread, and line 3: 6 lines, all on one screen.
     private static final Vector<Drawn.Stop> TWO_THREADS = Vector.of(
@@ -206,7 +207,7 @@ class DiffCursorTest {
 
     @Test
     void aCommentIsAStopThatTheNextAndThePreviousThreadGoFrom() {
-        Anchor reply = new Anchor.Comment(new ReviewThread.Comment.Id("R"), (Anchor.Thread) FIRST);
+        Anchor reply = new Anchor.Remark(new Remark.Id("R"), (Anchor.Thread) FIRST);
         Vector<Drawn.Stop> stops = Vector.of(
                 stop(FILE, 1, 0),
                 line(ONE, 1),

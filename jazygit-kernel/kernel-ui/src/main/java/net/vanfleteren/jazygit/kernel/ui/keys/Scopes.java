@@ -22,10 +22,9 @@ public final class Scopes {
     public static final Scope<FileTree<CommitFile>> COMMIT_FILES =
             new Scope<>("commitFiles", "panel.commitFiles.title");
     /**
-     * The cursor of the diff of a pull request's files, while the content panel has the focus on it (ADR 60).
+     * The cursor of a diff a part states remarks for, as a forge does for the files of a pull request, while the content panel has the focus on it (ADR 60, 171).
      */
-    public static final Scope<DiffCursorAt> PULL_REQUEST_DIFF =
-            new Scope<>("pullRequestDiff", "panel.pullRequestDiff.title");
+    public static final Scope<DiffCursorAt> REMARKED_DIFF = new Scope<>("remarkedDiff", "panel.remarkedDiff.title");
     /**
      * The cursor of a rich diff, while the content panel has the focus on it: its keys expand the lines a marker
      * leaves out (ADR 77).

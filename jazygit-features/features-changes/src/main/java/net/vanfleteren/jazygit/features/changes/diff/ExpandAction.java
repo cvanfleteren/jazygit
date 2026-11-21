@@ -15,15 +15,14 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
  */
 public final class ExpandAction {
 
-    public static final FeatureAction ACTION =
-            FeatureAction.ofKeys(keys -> List.of(Scopes.DIFF, Scopes.PULL_REQUEST_DIFF)
-                    .foldLeft(
-                            keys,
-                            (keymap, scope) -> keymap.add(
-                                    scope,
-                                    onGap("]", "changes.help.diff.expandDown", ExpandMsg.Toward.DOWN),
-                                    onGap("[", "changes.help.diff.expandUp", ExpandMsg.Toward.UP),
-                                    enter())));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> List.of(Scopes.DIFF, Scopes.REMARKED_DIFF)
+            .foldLeft(
+                    keys,
+                    (keymap, scope) -> keymap.add(
+                            scope,
+                            onGap("]", "changes.help.diff.expandDown", ExpandMsg.Toward.DOWN),
+                            onGap("[", "changes.help.diff.expandUp", ExpandMsg.Toward.UP),
+                            enter())));
 
     private ExpandAction() {}
 

@@ -6,9 +6,13 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
+import net.vanfleteren.jazygit.features.github.remarks.PrFiles;
+import net.vanfleteren.jazygit.features.github.remarks.PrRemarks;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd.LoadReviewRemarks;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksState;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
@@ -37,8 +41,8 @@ final class ReviewLookup {
                 .flatMap(view -> OnThread.of(view, on))
                 .flatMap(OnThread::notSending)
                 .filterOrElse(
-                        found -> on instanceof Anchor.Comment
-                                || !found.view().collapsed().thread(found.thread())
+                        found -> on instanceof Anchor.Remark
+                                || !found.view().collapsed().thread(FromGitHub.thread(found.thread()))
                                 || found.thread().comments().size()
                                                 + found.thread().more()
                                         == 1,
@@ -55,19 +59,20 @@ final class ReviewLookup {
      */
     static Next gone(Model model, PrNumber number, ReviewThread.Id thread, ReviewThread.Comment.Id comment) {
         Model deleted = mapPullRequest(model, number, view -> view.withoutComment(comment));
-        boolean unread = pullRequestFiles(deleted)
-                .filter(view -> view.pullRequest().contains(number))
-                .exists(view -> view.threads()
-                        .exists(each ->
-                                each.id().equals(thread) && each.comments().isEmpty()));
-        return unread ? Next.of(deleted, LoadReviewRemarks.after(deleted, number, HashSet.empty())) : Next.of(deleted);
+        Option<PrFiles> files =
+                pullRequestFiles(deleted).filter(view -> view.number().equals(number));
+        Model collapsed = files.map(view -> RemarksState.mapView(
+                        deleted, open -> open.withCollapsed(open.collapsed().readAgain(view.remarkThreads()))))
+                .getOrElse(deleted);
+        boolean unread = files.exists(view -> view.threads()
+                .exists(each -> each.id().equals(thread) && each.comments().isEmpty()));
+        return unread
+                ? Next.of(collapsed, LoadReviewRemarks.after(collapsed, number, HashSet.empty()))
+                : Next.of(collapsed);
     }
 
-    static Option<CommitFilesView> pullRequestFiles(Model model) {
-        return model.repoView()
-                .files()
-                .commitFiles()
-                .filter(view -> view.pullRequest().isDefined());
+    static Option<PrFiles> pullRequestFiles(Model model) {
+        return RemarksState.files(model);
     }
 
     static Model refused(Model model, Why why) {
@@ -75,14 +80,14 @@ final class ReviewLookup {
     }
 
     static Model mapView(Model model, Function<CommitFilesView, CommitFilesView> f) {
-        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(
-                files.commitFiles().map(view -> view.pullRequest().isDefined() ? f.apply(view) : view))));
+        return RemarksState.mapView(model, f);
     }
 
     /**
-     * {@code model} with the files of pull request {@code number} as {@code f} makes them, while they are listed.
+     * {@code model} with the review threads of pull request {@code number} as {@code f} makes them, while they are
+     * kept.
      */
-    static Model mapPullRequest(Model model, PrNumber number, Function<CommitFilesView, CommitFilesView> f) {
-        return mapView(model, view -> view.pullRequest().contains(number) ? f.apply(view) : view);
+    static Model mapPullRequest(Model model, PrNumber number, Function<PrRemarks, PrRemarks> f) {
+        return RemarksState.mapPullRequest(model, number, f);
     }
 }

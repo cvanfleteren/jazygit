@@ -6,13 +6,11 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
-import net.vanfleteren.jazygit.core.gh.model.ThreadsByPath;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Subject;
 
 /**
  * The review threads of a pull request placed in a parsed diff of some of the files it changes (ADR 55): each after
@@ -32,7 +30,7 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * goes under its bar. One that cannot be placed, outdated or on a line the diff does not show, is listed at the end
      * of its file. A thread of a file the diff does not have is left out: it is shown with the diff of its own file.
      */
-    public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads) {
+    public static PlacedRemarks place(UnifiedDiff diff, List<RemarkThread> threads) {
         return place(diff, threads, true);
     }
 
@@ -41,8 +39,8 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * {@code onLines}: when they were read at other commits than the diff, their lines number other lines, and they
      * are listed at the end of their file (ADR 55).
      */
-    public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads, boolean onLines) {
-        ThreadsByPath byPath = ThreadsByPath.of(threads);
+    public static PlacedRemarks place(UnifiedDiff diff, List<RemarkThread> threads, boolean onLines) {
+        RemarksByPath byPath = RemarksByPath.of(threads);
         return new PlacedRemarks(diff.files().map(file -> file(file, byPath.on(file.path(), file.origin()), onLines)));
     }
 
@@ -53,7 +51,7 @@ public record PlacedRemarks(List<FileRemarks> files) {
         return files.forAll(FileRemarks::isEmpty);
     }
 
-    private static FileRemarks file(FileDiff file, List<ReviewThread> threads, boolean placeable) {
+    private static FileRemarks file(FileDiff file, List<RemarkThread> threads, boolean placeable) {
         // Most files of a diff have no thread: those need nothing worked out for their lines.
         if (threads.isEmpty()) {
             return new FileRemarks(
@@ -65,10 +63,10 @@ public record PlacedRemarks(List<FileRemarks> files) {
                 .scanLeft(0, (start, hunk) -> start + hunk.lines().size())
                 .init()
                 .toVector();
-        List<ReviewThread> onLines = threads.filter(thread -> thread.subject() == Subject.LINE);
-        List<Tuple2<ReviewThread, Option<Integer>>> found = onLines.map(thread -> Tuple.of(
-                thread, placeable ? at(lines, thread.line(), DiffSide.of(thread.side())) : Option.<Integer>none()));
-        Map<Integer, List<ReviewThread>> after = found.flatMap(
+        List<RemarkThread> onLines = threads.filter(thread -> thread.subject() == Subject.LINE);
+        List<Tuple2<RemarkThread, Option<Integer>>> found = onLines.map(thread ->
+                Tuple.of(thread, placeable ? at(lines, thread.line(), thread.side()) : Option.<Integer>none()));
+        Map<Integer, List<RemarkThread>> after = found.flatMap(
                         placed -> placed._2().map(at -> Tuple.of(at, placed._1())))
                 .groupBy(Tuple2::_1)
                 .mapValues(placed -> placed.map(Tuple2::_2));
@@ -77,16 +75,9 @@ public record PlacedRemarks(List<FileRemarks> files) {
                 .flatMap(last -> placed._1()
                         .startLine()
                         .map(start -> Tuple.of(
-                                at(
-                                                lines,
-                                                Option.of(start),
-                                                DiffSide.of(placed._1().startSide()))
+                                at(lines, Option.of(start), placed._1().firstSide())
                                         .getOrElse(() -> firstAfter(
-                                                file,
-                                                starts,
-                                                start,
-                                                DiffSide.of(placed._1().startSide()),
-                                                last)),
+                                                file, starts, start, placed._1().firstSide(), last)),
                                 last))));
         Vector<Boolean> covered = spans.isEmpty() ? Vector.empty() : covered(spans, lines.size());
         return new FileRemarks(
@@ -143,7 +134,7 @@ public record PlacedRemarks(List<FileRemarks> files) {
                 .map(open -> open > 0);
     }
 
-    private static LineRemarks remarks(List<ReviewThread> threads, boolean covered) {
+    private static LineRemarks remarks(List<RemarkThread> threads, boolean covered) {
         return threads.isEmpty() && !covered ? NONE : new LineRemarks(threads, covered);
     }
 
@@ -161,7 +152,7 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * @param lines    for each hunk, for each of its lines, the threads after it
      * @param unplaced the threads that cannot be placed, which go at the end of the file
      */
-    public record FileRemarks(List<ReviewThread> onFile, List<List<LineRemarks>> lines, List<ReviewThread> unplaced) {
+    public record FileRemarks(List<RemarkThread> onFile, List<List<LineRemarks>> lines, List<RemarkThread> unplaced) {
 
         /**
          * Whether no thread is on the file.
@@ -179,5 +170,5 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * @param threads the threads that end on it, which go after it
      * @param covered whether a thread on several lines that is placed covers it, before its last
      */
-    public record LineRemarks(List<ReviewThread> threads, boolean covered) {}
+    public record LineRemarks(List<RemarkThread> threads, boolean covered) {}
 }

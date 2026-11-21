@@ -30,7 +30,6 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
@@ -38,6 +37,8 @@ import net.vanfleteren.jazygit.features.github.comment.CommentCmd;
 import net.vanfleteren.jazygit.features.github.compose.ComposeCmd.OpenInEditor;
 import net.vanfleteren.jazygit.features.github.compose.ComposeMsg;
 import net.vanfleteren.jazygit.features.github.compose.EditorFile;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd.LoadReviewRemarks;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.state.Reading;
@@ -98,13 +99,13 @@ class VerdictUpdateTest {
         String head = "a".repeat(40);
         String base = "b".repeat(40);
         Model opened = Update.update(
-                        loaded(),
+                        net.vanfleteren.jazygit.features.github.PullRequestFixtures.loadedWithTheFeature(),
                         new CommitFilesMsg.Opened(
                                 new Changes.OfPullRequest(
                                         new PullRequestCommits(7, "owner/repo", "", new Sha(base), new Sha(head))),
                                 Scopes.BRANCHES.pane()))
                 .model();
-        return Update.update(opened, new CommitFilesMsg.RemarksLoaded(new PrNumber(7), remarks, HashSet.empty(), 0))
+        return Update.update(opened, new RemarksMsg.Loaded(new PrNumber(7), remarks, HashSet.empty(), 0))
                 .model();
     }
 

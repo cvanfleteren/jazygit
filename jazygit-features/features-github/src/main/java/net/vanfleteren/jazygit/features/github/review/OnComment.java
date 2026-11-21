@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.features.github.review;
 
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.features.github.remarks.PrFiles;
 
 /**
  * A comment of a review thread the cursor is on, with its thread and the files of the pull request it is of.
@@ -15,7 +15,7 @@ record OnComment(OnThread on, ReviewThread.Comment comment) {
     /**
      * The files of the pull request, as they are listed.
      */
-    CommitFilesView view() {
+    PrFiles view() {
         return on.view();
     }
 

@@ -28,7 +28,7 @@ public final class VersionAction {
      * {@code keys} with those of the rich diff and the diff of a pull request's files, acting where the cursor is.
      */
     private static Keymap diff(Keymap keys) {
-        return List.of(Scopes.DIFF, Scopes.PULL_REQUEST_DIFF)
+        return List.of(Scopes.DIFF, Scopes.REMARKED_DIFF)
                 .foldLeft(
                         keys,
                         (keymap, scope) -> keymap.add(
