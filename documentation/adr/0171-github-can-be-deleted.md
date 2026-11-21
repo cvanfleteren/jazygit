@@ -84,3 +84,6 @@ It is built in one step: only the end of it has to work.
   popups and dialogs.
 - The settings files keep their names and places, so nothing needs migrating.
 - ADR 55, 60, 62, 63, 158 and 169 get a line "Amended by ADR 171".
+
+Amended by ADR 173: an architecture test, and the app's tests run without GitHub, prove it in place of
+`scripts/without-github.sh` and its job.
