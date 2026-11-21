@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.files.StubEditor;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.compose.ComposeCmd.OpenInEditor;
 import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
@@ -78,7 +79,8 @@ class ComposeUpdateTest {
     }
 
     private static Env env(Git git, Terminal terminal) {
-        return new Env(git, StubGitHub.of(), SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
+        return new Env(git, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal)
+                .with(GitHubServices.GH, StubGitHub.of());
     }
 
     @Test

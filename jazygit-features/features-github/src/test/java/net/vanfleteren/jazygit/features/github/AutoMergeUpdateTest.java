@@ -190,14 +190,16 @@ class AutoMergeUpdateTest {
         Model shown = showing(details(BLOCKED));
         EnableAutoMerge cmd =
                 new EnableAutoMerge(FEATURE, new PrNumber(42), "PR_42", MergeMethod.SQUASH, Option.of(HEAD));
-        Env refusing = new Env(StubGit.of(), StubGitHub.of().withPullRequests(new StubPullRequests() {
-            @Override
-            public Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(
-                    String pullRequest, MergeMethod method, Option<GhCommit> head) {
-                return Either.left(new GhFailure(
-                        new GhError.CommandFailed(Option.of("Pull request is in clean status"), 1), List.empty()));
-            }
-        }));
+        Env refusing = new Env(StubGit.of())
+                .with(GitHubServices.GH, StubGitHub.of().withPullRequests(new StubPullRequests() {
+                    @Override
+                    public Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(
+                            String pullRequest, MergeMethod method, Option<GhCommit> head) {
+                        return Either.left(new GhFailure(
+                                new GhError.CommandFailed(Option.of("Pull request is in clean status"), 1),
+                                List.empty()));
+                    }
+                }));
 
         Next done = TestModels.done(TestModels.running(shown, cmd), cmd, cmd.run(refusing));
 

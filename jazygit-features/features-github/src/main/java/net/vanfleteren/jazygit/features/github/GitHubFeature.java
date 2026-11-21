@@ -104,7 +104,8 @@ public final class GitHubFeature {
             .badging(GitHubBadge::of)
             .grouping(StackGroups::of)
             .screen(PullRequestsScreen.SPEC)
-            .explaining(BadgeLegend.BRANCHES.toJavaArray(Legend[]::new));
+            .explaining(BadgeLegend.BRANCHES.toJavaArray(Legend[]::new))
+            .running(GitHubServices::running);
 
     private GitHubFeature() {}
 }

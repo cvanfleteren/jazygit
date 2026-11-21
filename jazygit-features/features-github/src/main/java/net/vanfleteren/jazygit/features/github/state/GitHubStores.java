@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.features.github.state;
 
-import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore;
-import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequestsStore;
+import net.vanfleteren.jazygit.features.github.remarks.CollapsedStore;
 import net.vanfleteren.jazygit.kernel.state.Env;
 
 /**
@@ -21,6 +20,11 @@ public final class GitHubStores {
      */
     public static final Env.Service<CheckTimingsStore> CHECK_TIMINGS =
             Env.Service.of("github.checkTimings", CheckTimingsStore.NONE);
+
+    /**
+     * Where the review threads and comments collapsed or opened are kept (ADR 63).
+     */
+    public static final Env.Service<CollapsedStore> COLLAPSED = Env.Service.of("github.collapsed", CollapsedStore.NONE);
 
     private GitHubStores() {}
 }

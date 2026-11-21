@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.settings.SettingsFile;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
@@ -40,7 +41,8 @@ class JazygitAppAgentsTest {
                 theme = "darcula"
                 """);
         SettingsFile file = new SettingsFile(config, StandardSettings.keys());
-        TestApp app = new TestApp(new Env(SampleData.git(), StubGitHub.of(), file), file.load());
+        TestApp app =
+                new TestApp(new Env(SampleData.git(), file).with(GitHubServices.GH, StubGitHub.of()), file.load());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);

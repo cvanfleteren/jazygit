@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.vavr.control.Either;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.history.StubHistory;
@@ -37,19 +36,15 @@ class ForcePushCheckTest {
 
     @Test
     void asksAboutTheRemoteTrackingBranchOfTheUpstream() {
-        assertEquals(
-                new PushMsg.ForceChecked(CHECK.popup(), true),
-                CHECK.run(new Env(history(Either.right(true)), StubGitHub.of())));
-        assertEquals(
-                new PushMsg.ForceChecked(CHECK.popup(), false),
-                CHECK.run(new Env(history(Either.right(false)), StubGitHub.of())));
+        assertEquals(new PushMsg.ForceChecked(CHECK.popup(), true), CHECK.run(new Env(history(Either.right(true)))));
+        assertEquals(new PushMsg.ForceChecked(CHECK.popup(), false), CHECK.run(new Env(history(Either.right(false)))));
     }
 
     @Test
     void aFailingGitIsReportedForTheBranch() {
         PushMsg.ForceCheckFailed failed = assertInstanceOf(
                 PushMsg.ForceCheckFailed.class,
-                CHECK.run(new Env(history(Either.left(new GitError.CommandFailed("boom", 1))), StubGitHub.of())));
+                CHECK.run(new Env(history(Either.left(new GitError.CommandFailed("boom", 1))))));
 
         assertEquals(FEATURE, failed.branch());
     }

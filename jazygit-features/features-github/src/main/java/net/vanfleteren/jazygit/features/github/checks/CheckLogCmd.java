@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.github.checks;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
@@ -36,7 +37,7 @@ public record CheckLogCmd(String repository, String name, CheckRun run) implemen
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub()
+        return GitHubServices.of(env)
                 .checks()
                 .jobLog(repository, run.runId(), run.runAttempt(), run.id())
                 .fold(

@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubDiffs;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.FileAt;
 import net.vanfleteren.jazygit.features.github.builds.LoadBuilds;
@@ -152,8 +153,7 @@ class BuildsWorkflowsTest {
     @Test
     void readingTheWorkflowsReadsTheFileAndThoseItCallsAtTheCommit() {
         String sha = "abcdef0123456789abcdef0123456789abcdef01";
-        Env env = new Env(
-                StubGit.of().withDiffs(new StubDiffs() {
+        Env env = new Env(StubGit.of().withDiffs(new StubDiffs() {
                     @Override
                     public Either<GitError, String> treeText(Sha at, String path) {
                         return at.value().equals(sha) && path.equals(".github/workflows/publish.yml")
@@ -162,8 +162,8 @@ class BuildsWorkflowsTest {
                                         ? Either.right("jobs:\n  test: {}\n")
                                         : Either.left(new GitError.Unreadable(path, "not there"));
                     }
-                }),
-                StubGitHub.of());
+                }))
+                .with(GitHubServices.GH, StubGitHub.of());
 
         BuildsMsg.WorkflowsRead read = (BuildsMsg.WorkflowsRead)
                 new ReadWorkflows(new FileAt(new Sha(sha), ".github/workflows/publish.yml")).run(env);
@@ -184,7 +184,7 @@ class BuildsWorkflowsTest {
         // The head commit of a pull request merged and deleted since is not fetched; GitHub still has it (ADR 138).
         String sha = "abcdef0123456789abcdef0123456789abcdef01";
         ArrayList<String> asked = new ArrayList<>();
-        Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
+        Env env = new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
             @Override
             public Either<GhError, String> workflowFile(Sha at, String path) {
                 asked.add(path);
@@ -213,14 +213,13 @@ class BuildsWorkflowsTest {
     @Test
     void aWorkflowGitHasIsNotAskedOfGitHub() {
         String sha = "abcdef0123456789abcdef0123456789abcdef01";
-        Env env = new Env(
-                StubGit.of().withDiffs(new StubDiffs() {
+        Env env = new Env(StubGit.of().withDiffs(new StubDiffs() {
                     @Override
                     public Either<GitError, String> treeText(Sha at, String path) {
                         return Either.right("jobs:\n  test: {}\n");
                     }
-                }),
-                StubGitHub.of().withChecks(new StubChecks() {
+                }))
+                .with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
                     @Override
                     public Either<GhError, String> workflowFile(Sha at, String path) {
                         throw new AssertionError("asked GitHub for " + path);
@@ -238,7 +237,7 @@ class BuildsWorkflowsTest {
 
     @Test
     void aWorkflowThatCannotBeReadIsNone() {
-        Env env = new Env(StubGit.of(), StubGitHub.of());
+        Env env = new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of());
         FileAt file = new FileAt(new Sha("abcdef0123456789abcdef0123456789abcdef01"), ".github/workflows/gone.yml");
 
         assertEquals(new BuildsMsg.WorkflowsRead(HashMap.of(file, Option.none())), new ReadWorkflows(file).run(env));
@@ -248,7 +247,7 @@ class BuildsWorkflowsTest {
     void aWorkflowGitHubFailsToGiveIsNoneTillTheBuildsShowAgain() {
         // Read once a view, as the builds and the runs are: not asked again on every update while GitHub cannot be
         // reached (ADR 138).
-        Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
+        Env env = new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
             @Override
             public Either<GhError, String> workflowFile(Sha at, String path) {
                 return Either.left(new GhError.TimedOut("api"));

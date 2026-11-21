@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
@@ -322,7 +323,7 @@ class BuildsEveryBranchTest {
 
     @Test
     void theRunsAndTheWorkflowsAreReadFromGitHub() {
-        Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
+        Env env = new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
             @Override
             public Either<GhError, Option<WorkflowRunsPage>> workflowRuns(String id, Option<String> after) {
                 return Either.right(Option.of(new WorkflowRunsPage(List.of(MINE), 1, Option.none())));

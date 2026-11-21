@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
 
@@ -23,7 +24,7 @@ public final class GitHubAccount {
      * {@link Env#FORGE_ACCOUNT} (ADR 162, 169): from gh's configuration of the repository.
      */
     public static final Env.AccountOnForge ON_FORGE =
-            env -> env.gitHub().account().configured().map(GitHubAccount::forge);
+            env -> GitHubServices.of(env).account().configured().map(GitHubAccount::forge);
 
     private GitHubAccount() {}
 

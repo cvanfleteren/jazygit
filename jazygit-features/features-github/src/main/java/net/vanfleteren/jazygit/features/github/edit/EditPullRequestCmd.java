@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -79,12 +80,13 @@ public sealed interface EditPullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            Either<GhFailure, List<ExecutedCommand>> saved =
-                    edit.changes() ? env.gitHub().pullRequests().edit(number, edit) : Either.right(List.empty());
+            Either<GhFailure, List<ExecutedCommand>> saved = edit.changes()
+                    ? GitHubServices.of(env).pullRequests().edit(number, edit)
+                    : Either.right(List.empty());
             return saved.mapLeft(GitHubFailure::of)
                     .fold(
                             this::failed,
-                            edited -> draft.map(drafting -> env.gitHub()
+                            edited -> draft.map(drafting -> GitHubServices.of(env)
                                             .pullRequests()
                                             .setDraft(number, drafting)
                                             .fold(

@@ -20,6 +20,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -45,7 +46,7 @@ final class TestApp extends JazygitApp {
     final AtomicInteger quits = new AtomicInteger();
 
     TestApp() {
-        this(new Env(SampleData.git(), StubGitHub.of()));
+        this(new Env(SampleData.git()).with(GitHubServices.GH, StubGitHub.of()));
     }
 
     TestApp(Env env) {

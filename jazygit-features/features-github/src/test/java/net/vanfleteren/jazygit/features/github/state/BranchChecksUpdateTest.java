@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.BranchBases;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -101,8 +102,7 @@ class BranchChecksUpdateTest {
     @Test
     void theChecksAreReadOnTheRemotesThatPointAtTheGitHubRepository() {
         Msg msg = new LoadBranchChecks()
-                .run(new Env(
-                        StubGit.of().withRemotes(new StubRemotes() {
+                .run(new Env(StubGit.of().withRemotes(new StubRemotes() {
                             @Override
                             public Either<GitError, Map<RemoteName, String>> urls() {
                                 return Either.right(HashMap.of(
@@ -114,8 +114,8 @@ class BranchChecksUpdateTest {
                                                 "https://github.com/owner/repo")
                                         .mapKeys(RemoteName::new));
                             }
-                        }),
-                        StubGitHub.of().withChecks(new StubChecks() {
+                        }))
+                        .with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
                             @Override
                             public Either<GhError, BranchChecks> ofBranches() {
                                 return Either.right(new BranchChecks(

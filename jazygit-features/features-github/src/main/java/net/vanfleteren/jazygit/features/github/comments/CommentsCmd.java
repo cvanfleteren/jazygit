@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.github.comments;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -26,7 +27,7 @@ public sealed interface CommentsCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .reviews()
                     .conversation(number)
                     .mapLeft(GitHubFailure::of)

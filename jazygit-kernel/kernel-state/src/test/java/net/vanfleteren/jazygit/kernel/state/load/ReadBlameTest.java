@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.history.StubHistory;
 import net.vanfleteren.jazygit.core.git.model.Blame;
@@ -111,16 +110,14 @@ class ReadBlameTest {
     @Test
     void theFirstRevisionGitCanBlameTheFileAtWins() {
         Blame found = Blame.uncommitted(1, "a.txt");
-        Env env = new Env(
-                StubGit.of().withHistory(new StubHistory() {
-                    @Override
-                    public Either<GitError, Blame> blame(BlameAt at, BlameOptions options) {
-                        return at instanceof BlameAt.InCommit(var sha, int parent, var path) && parent == 3
-                                ? Either.right(found)
-                                : Either.left(new GitError.UnexpectedOutput("fatal: no such path"));
-                    }
-                }),
-                StubGitHub.of());
+        Env env = new Env(StubGit.of().withHistory(new StubHistory() {
+            @Override
+            public Either<GitError, Blame> blame(BlameAt at, BlameOptions options) {
+                return at instanceof BlameAt.InCommit(var sha, int parent, var path) && parent == 3
+                        ? Either.right(found)
+                        : Either.left(new GitError.UnexpectedOutput("fatal: no such path"));
+            }
+        }));
         ReadBlame read = new ReadBlame(
                 new AreaId("area"),
                 file(new Source.OfStash(SHA, ADDED)),

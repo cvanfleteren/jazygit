@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.BranchChecksMsg;
 import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.state.LoadBranchChecks;
@@ -312,7 +313,7 @@ class RerunUpdateTest {
     void eachRunIsAskedToRunAgainAndOneRefusedDoesNotStopTheOthers() {
         GhFailure forbidden = new GhFailure(new GhError.TimedOut("rerun"), List.of(POSTED));
         java.util.List<Long> asked = new java.util.ArrayList<>();
-        Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
+        Env env = new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
             @Override
             public Either<GhFailure, List<ExecutedCommand>> rerunFailedJobs(long runId) {
                 asked.add(runId);

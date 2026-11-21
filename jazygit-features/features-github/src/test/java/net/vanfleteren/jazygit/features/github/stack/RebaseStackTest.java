@@ -44,6 +44,7 @@ import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError.StackRefusal;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitPopup;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -205,7 +206,8 @@ class RebaseStackTest {
     void aBranchBehindWhatSomeoneElsePushedIsPulledFirst() {
         StackRebase rebase = plan(behindOrigin(), ENTRIES).get();
 
-        Msg read = new StackRebaseCmd.ReadStack(rebase).run(new Env(everHad(false), StubGitHub.of()));
+        Msg read = new StackRebaseCmd.ReadStack(rebase)
+                .run(new Env(everHad(false)).with(GitHubServices.GH, StubGitHub.of()));
 
         assertEquals(new StackMsg.StackBehindRemote(12, D, new RemoteBranch("origin", D)), read);
         assertEquals(
@@ -220,7 +222,8 @@ class RebaseStackTest {
 
         assertInstanceOf(
                 StackMsg.StackRead.class,
-                new StackRebaseCmd.ReadStack(rebase).run(new Env(everHad(true), StubGitHub.of())));
+                new StackRebaseCmd.ReadStack(rebase)
+                        .run(new Env(everHad(true)).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     // As model, with feat/d on origin at originD too.
@@ -247,7 +250,8 @@ class RebaseStackTest {
         Model model = withOriginD(new Sha("d2d2"));
         StackRebase rebase = plan(model, ENTRIES).get();
 
-        Msg read = new StackRebaseCmd.ReadStack(rebase).run(new Env(everHad(false), StubGitHub.of()));
+        Msg read = new StackRebaseCmd.ReadStack(rebase)
+                .run(new Env(everHad(false)).with(GitHubServices.GH, StubGitHub.of()));
 
         assertEquals(new StackMsg.StackBehindRemote(12, D, new RemoteBranch("origin", D)), read);
         assertEquals(
@@ -528,7 +532,7 @@ class RebaseStackTest {
                 new StackRebaseCmd.RebaseStack(plan(MODEL, ENTRIES).get(), List.empty(), true);
         java.util.List<List<Tuple2<BranchName, BranchName>>> pushed = new java.util.ArrayList<>();
 
-        Msg done = cmd.run(new Env(pushingInto(pushed), StubGitHub.of()));
+        Msg done = cmd.run(new Env(pushingInto(pushed)).with(GitHubServices.GH, StubGitHub.of()));
 
         assertInstanceOf(OperationMsg.Succeeded.class, done);
         assertEquals(java.util.List.of(List.of(Tuple.of(C, C), Tuple.of(D, D))), pushed);
@@ -563,7 +567,7 @@ class RebaseStackTest {
                 new StackRebaseCmd.RebaseStack(plan(MODEL, ENTRIES).get(), List.empty(), false);
         java.util.List<List<Tuple2<BranchName, BranchName>>> pushed = new java.util.ArrayList<>();
 
-        cmd.run(new Env(pushingInto(pushed), StubGitHub.of()));
+        cmd.run(new Env(pushingInto(pushed)).with(GitHubServices.GH, StubGitHub.of()));
 
         assertEquals(java.util.List.of(), pushed);
         assertEquals(false, cmd.changesForge());
@@ -582,7 +586,8 @@ class RebaseStackTest {
             }
         });
 
-        assertInstanceOf(OperationMsg.Stopped.class, cmd.run(new Env(stopping, StubGitHub.of())));
+        assertInstanceOf(
+                OperationMsg.Stopped.class, cmd.run(new Env(stopping).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test

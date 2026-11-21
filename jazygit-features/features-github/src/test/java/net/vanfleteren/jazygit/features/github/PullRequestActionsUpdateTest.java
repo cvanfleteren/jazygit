@@ -197,7 +197,8 @@ class PullRequestActionsUpdateTest {
         // The running read started before the merge, and would list the pull request as still open.
         Model merging = TestModels.running(withPr(), cmd, new LoadRepositoryPullRequests());
 
-        Next done = TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of(), mergingAtOnce())));
+        Next done =
+                TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, mergingAtOnce())));
         Next earlierRead =
                 TestModels.done(done.model(), new LoadRepositoryPullRequests(), PullRequestFixtures.listed(List.of()));
 
@@ -214,7 +215,8 @@ class PullRequestActionsUpdateTest {
         MergePullRequest cmd = new MergePullRequest(FEATURE, new PrNumber(42), Option.none(), MergeMethod.MERGE);
         Model merging = TestModels.running(withPr(), cmd);
 
-        Next done = TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of(), mergingAtOnce())));
+        Next done =
+                TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, mergingAtOnce())));
 
         assertEquals(
                 Option.of(FEATURE_PR),
@@ -629,7 +631,7 @@ class PullRequestActionsUpdateTest {
             }
         });
 
-        Next failed = Update.update(merging.model(), cmd.run(new Env(StubGit.of(), refusing)));
+        Next failed = Update.update(merging.model(), cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, refusing)));
 
         // The pull request dialog stays closed; the error comes up in its own popup.
         assertEquals(Option.none(), failed.model().popup(PullRequestPopup.class));

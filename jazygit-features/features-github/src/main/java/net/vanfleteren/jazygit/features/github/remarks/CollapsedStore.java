@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.github.remarks;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;

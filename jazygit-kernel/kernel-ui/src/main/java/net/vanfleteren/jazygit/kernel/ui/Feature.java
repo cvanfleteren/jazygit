@@ -1,10 +1,21 @@
 package net.vanfleteren.jazygit.kernel.ui;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.control.Option;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.core.git.Git;
+import net.vanfleteren.jazygit.core.process.SshAsking;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
+import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Reactions.Reaction;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
@@ -14,6 +25,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
+import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 
 /**
  * A feature, as the app knows it: its actions, which bring its keys and its popups, what it shows in the content
@@ -48,7 +60,10 @@ public record Feature(
         List<BranchBadges.Badge> badges,
         List<BranchGroups.Grouping> groupings,
         List<ScreenSpec> screens,
-        List<Legend> legends) {
+        List<Legend> legends,
+        Running running,
+        Predicate<Model> spinning,
+        Function<Model, List<ShownTime>> clocking) {
 
     /**
      * The feature of {@code actions}, in that order, which shows nothing in the content panel of its own, has no
@@ -66,7 +81,10 @@ public record Feature(
                 List.empty(),
                 List.empty(),
                 List.empty(),
-                List.empty());
+                List.empty(),
+                Running.NONE,
+                model -> false,
+                model -> List.empty());
     }
 
     /**
@@ -83,7 +101,10 @@ public record Feature(
                 badges,
                 groupings,
                 screens,
-                legends);
+                legends,
+                running,
+                spinning,
+                clocking);
     }
 
     /**
@@ -100,7 +121,10 @@ public record Feature(
                 badges,
                 groupings,
                 screens,
-                legends);
+                legends,
+                running,
+                spinning,
+                clocking);
     }
 
     /**
@@ -117,7 +141,10 @@ public record Feature(
                 badges,
                 groupings,
                 screens,
-                legends);
+                legends,
+                running,
+                spinning,
+                clocking);
     }
 
     /**
@@ -135,7 +162,10 @@ public record Feature(
                 badges,
                 groupings,
                 screens,
-                legends);
+                legends,
+                running,
+                spinning,
+                clocking);
     }
 
     /**
@@ -153,7 +183,10 @@ public record Feature(
                 badges,
                 groupings,
                 screens,
-                legends);
+                legends,
+                running,
+                spinning,
+                clocking);
     }
 
     /**
@@ -171,7 +204,10 @@ public record Feature(
                 badges.append(badge),
                 groupings,
                 screens,
-                legends);
+                legends,
+                running,
+                spinning,
+                clocking);
     }
 
     /**
@@ -189,7 +225,10 @@ public record Feature(
                 badges,
                 groupings.append(grouping),
                 screens,
-                legends);
+                legends,
+                running,
+                spinning,
+                clocking);
     }
 
     /**
@@ -207,7 +246,10 @@ public record Feature(
                 badges,
                 groupings,
                 screens.append(screen),
-                legends);
+                legends,
+                running,
+                spinning,
+                clocking);
     }
 
     /**
@@ -225,7 +267,74 @@ public record Feature(
                 badges,
                 groupings,
                 screens,
-                this.legends.appendAll(List.of(legends)));
+                this.legends.appendAll(List.of(legends)),
+                running,
+                spinning,
+                clocking);
+    }
+
+    /**
+     * This feature, building what it runs against with {@code running} once a repository is opened, and again for
+     * each one opened after it (ADR 171).
+     */
+    public Feature running(Running running) {
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings,
+                screens,
+                legends,
+                running,
+                spinning,
+                clocking);
+    }
+
+    /**
+     * This feature, also keeping the spinner turning while {@code spinning} says one of its views shows one (ADR 171).
+     */
+    public Feature spinning(Predicate<Model> spinning) {
+        Predicate<Model> before = this.spinning;
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings,
+                screens,
+                legends,
+                running,
+                before.or(spinning),
+                clocking);
+    }
+
+    /**
+     * This feature, also waking the app when a time {@code clocking} says one of its popups shows changes, as a
+     * screen does (ADR 124, 168, 171).
+     */
+    public Feature clocking(Function<Model, List<ShownTime>> clocking) {
+        Function<Model, List<ShownTime>> before = this.clocking;
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings,
+                screens,
+                legends,
+                running,
+                spinning,
+                model -> before.apply(model).appendAll(clocking.apply(model)));
     }
 
     /**
@@ -246,4 +355,51 @@ public record Feature(
      * Dispatches what {@code msg} makes every {@code interval}.
      */
     public record Timer(Duration interval, Supplier<Msg> msg) {}
+
+    /**
+     * What a feature builds to run against once a repository is opened (ADR 171): the services of the {@link Env},
+     * and the credentials git runs with, as a forge's token.
+     */
+    @FunctionalInterface
+    public interface Running {
+
+        /**
+         * A feature that builds nothing.
+         */
+        Running NONE = opening -> Contribution.NONE;
+
+        Contribution of(RepositoryOpening opening);
+    }
+
+    /**
+     * What a feature is given to build what it runs against, once a repository is opened.
+     *
+     * @param git          the repository, as git reads it
+     * @param settings     the settings of the session
+     * @param store        where the settings are kept, read again where a feature needs what was saved since
+     * @param ssh          how ssh, run for what the user starts, may ask the user (ADR 150)
+     * @param stateFile    the file of what jazygit keeps by itself of all repositories at once
+     * @param repositories the directory where what is kept for each repository is, by its directory
+     * @param cacheDir     the directory where what is only cached is kept
+     */
+    public record RepositoryOpening(
+            Git git,
+            Settings settings,
+            SettingsStore store,
+            SshAsking ssh,
+            Path stateFile,
+            Path repositories,
+            Path cacheDir) {}
+
+    /**
+     * What a feature runs against for a repository.
+     *
+     * @param services       what it runs against of its own, under its services
+     * @param gitCredentials the environment git runs with to talk to the remotes as the account the feature knows,
+     *                       if it knows one
+     */
+    public record Contribution(Env.Services services, Option<Supplier<Map<String, String>>> gitCredentials) {
+
+        public static final Contribution NONE = new Contribution(Env.Services.NONE, Option.none());
+    }
 }

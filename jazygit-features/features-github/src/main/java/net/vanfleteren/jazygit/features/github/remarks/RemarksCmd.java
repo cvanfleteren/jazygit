@@ -7,6 +7,8 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
+import net.vanfleteren.jazygit.features.github.state.GitHubStores;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -58,7 +60,7 @@ public sealed interface RemarksCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .reviews()
                     .remarks(number)
                     .mapLeft(GitHubFailure::of)
@@ -90,7 +92,7 @@ public sealed interface RemarksCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .pullRequests()
                     .image(url)
                     .mapLeft(GitHubFailure::of)
@@ -115,7 +117,10 @@ public sealed interface RemarksCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return new RemarksMsg.CollapsedLoaded(
-                    number, env.collapsed().load(repository, number.value()).mapKeys(Collapsed.Key::new));
+                    number,
+                    env.service(GitHubStores.COLLAPSED)
+                            .load(repository, number.value())
+                            .mapKeys(Collapsed.Key::new));
         }
 
         // Nothing kept is as nothing flipped.
@@ -135,7 +140,7 @@ public sealed interface RemarksCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            env.collapsed()
+            env.service(GitHubStores.COLLAPSED)
                     .save(repository, number.value(), flipped.mapKeys(Collapsed.Key::value), at)
                     .onFailure(failed -> LoggerFactory.getLogger(SaveCollapsed.class)
                             .debug("The review threads collapsed or opened could not be kept", failed));

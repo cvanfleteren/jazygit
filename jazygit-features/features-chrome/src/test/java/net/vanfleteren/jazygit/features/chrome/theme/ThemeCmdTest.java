@@ -6,7 +6,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubConfig;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
@@ -22,15 +21,13 @@ import org.junit.jupiter.api.Test;
 class ThemeCmdTest {
 
     private final java.util.List<String> done = new ArrayList<>();
-    private final Env env = new Env(
-            StubGit.of().withConfig(new StubConfig() {
-                @Override
-                public Either<GitFailure, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
-                    done.add(key + "=" + value.getOrElse("<unset>"));
-                    return Either.right(List.empty());
-                }
-            }),
-            StubGitHub.of());
+    private final Env env = new Env(StubGit.of().withConfig(new StubConfig() {
+        @Override
+        public Either<GitFailure, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
+            done.add(key + "=" + value.getOrElse("<unset>"));
+            return Either.right(List.empty());
+        }
+    }));
 
     @Test
     void aThemeIsKeptByItsId() {

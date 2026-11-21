@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.branch.merge.MergeCmd;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TerminalMsg;
@@ -131,6 +132,6 @@ class IndexRefreshUpdateTest {
     }
 
     private static Env env(Git git) {
-        return new Env(git, StubGitHub.of());
+        return new Env(git).with(GitHubServices.GH, StubGitHub.of());
     }
 }

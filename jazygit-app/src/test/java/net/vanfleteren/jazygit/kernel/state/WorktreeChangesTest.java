@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Worktree;
 import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
@@ -121,7 +122,7 @@ class WorktreeChangesTest {
         assertTrue(load.background());
         assertEquals(
                 new LoadMsg.WorktreeChangesLoaded(load.worktrees(), HashMap.of(LINKED.toString(), true)),
-                load.run(new Env(git, StubGitHub.of())));
+                load.run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test

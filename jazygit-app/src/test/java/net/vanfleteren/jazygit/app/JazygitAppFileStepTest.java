@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
@@ -89,7 +90,7 @@ class JazygitAppFileStepTest {
     @Test
     void inTheRichStyleJMovesToTheNextFileToo() throws Exception {
         TestApp app = new TestApp(
-                new Env(SampleData.git(), StubGitHub.of()),
+                new Env(SampleData.git()).with(GitHubServices.GH, StubGitHub.of()),
                 new SettingsStore.Loaded(Settings.DEFAULT.withDiffStyle(DiffStyle.RICH), Option.none()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
@@ -181,7 +182,7 @@ class JazygitAppFileStepTest {
 
     @Test
     void amongAllFilesTheWalkGoesOnThroughABinaryFileAndTheContentOfAFileWithoutChanges() throws Exception {
-        TestApp app = new TestApp(new Env(allFiles(), StubGitHub.of()));
+        TestApp app = new TestApp(new Env(allFiles()).with(GitHubServices.GH, StubGitHub.of()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
@@ -227,7 +228,7 @@ class JazygitAppFileStepTest {
 
     @Test
     void inTheFilesOfACommitJMovesToItsNextFile() throws Exception {
-        TestApp app = new TestApp(new Env(withCommitFiles(), StubGitHub.of()));
+        TestApp app = new TestApp(new Env(withCommitFiles()).with(GitHubServices.GH, StubGitHub.of()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
@@ -272,7 +273,7 @@ class JazygitAppFileStepTest {
     @Test
     void jStepsPastTheFilesWhoseChangesTheDiffFiltersHideAll() throws Exception {
         TestApp app = new TestApp(
-                new Env(withImportsOnly(), StubGitHub.of()),
+                new Env(withImportsOnly()).with(GitHubServices.GH, StubGitHub.of()),
                 new SettingsStore.Loaded(
                         Settings.DEFAULT.withDiffStyle(DiffStyle.RICH).withDiffFilters(List.of("java-imports")),
                         Option.none()));
@@ -318,7 +319,7 @@ class JazygitAppFileStepTest {
     @Test
     void kRunFromTheHelpMovesToThePreviousFileAndTheDiffGetsTheFocusBack() throws Exception {
         TestApp app = new TestApp(
-                new Env(SampleData.git(), StubGitHub.of()),
+                new Env(SampleData.git()).with(GitHubServices.GH, StubGitHub.of()),
                 new SettingsStore.Loaded(Settings.DEFAULT.withDiffStyle(DiffStyle.RICH), Option.none()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);

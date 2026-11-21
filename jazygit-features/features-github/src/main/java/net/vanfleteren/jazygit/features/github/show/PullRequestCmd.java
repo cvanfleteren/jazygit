@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
@@ -81,7 +82,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .account()
                     .openPullRequest(number)
                     .mapLeft(GitHubFailure::of)
@@ -103,7 +104,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .pullRequests()
                     .merge(number, head, method)
                     .mapLeft(GitHubFailure::of)
@@ -165,7 +166,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .pullRequests()
                     .enableAutoMerge(pullRequest, method, head)
                     .mapLeft(GitHubFailure::of)
@@ -187,7 +188,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .pullRequests()
                     .disableAutoMerge(pullRequest)
                     .mapLeft(GitHubFailure::of)
@@ -212,7 +213,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .pullRequests()
                     .mergeStatus(number, id)
                     .mapLeft(GitHubFailure::of)
@@ -237,7 +238,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .pullRequests()
                     .close(number)
                     .mapLeft(GitHubFailure::of)
@@ -273,7 +274,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .pullRequests()
                     .setDraft(number, draft)
                     .mapLeft(GitHubFailure::of)
@@ -299,7 +300,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .pullRequests()
                     .details(number)
                     .mapLeft(GitHubFailure::of)

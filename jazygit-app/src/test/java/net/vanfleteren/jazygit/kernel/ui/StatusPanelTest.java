@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutModels;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
-import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
+import net.vanfleteren.jazygit.features.github.state.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;

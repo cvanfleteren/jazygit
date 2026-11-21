@@ -8,7 +8,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubBranches;
@@ -292,7 +291,7 @@ class RemoteWorktreeUpdateTest {
                         return Either.right(List.empty());
                     }
                 });
-        Env env = new Env(git, StubGitHub.of());
+        Env env = new Env(git);
 
         new AddWorktreeCmd(new WorktreeSource.Existing(MINE, new CatchUp.FastForward(ORIGIN_FEAT)), "/repos/app-mine")
                 .run(env);

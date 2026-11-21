@@ -22,7 +22,7 @@ class FormerStateTest {
     }
 
     @Test
-    void theCheckTimingsAndTheUnseenPullRequestsAreDeletedAndTheRecentRepositoriesKept() throws IOException {
+    void theFileAndTheKeyAreDeletedAndTheRestKept() throws IOException {
         Path timings = SettingsPaths.formerCheckTimingsFile(state());
         Files.createDirectories(state().getParent());
         Files.writeString(timings, "[repo.\"owner/repo\"]\n");
@@ -35,7 +35,8 @@ class FormerStateTest {
                 numbers = []
                 """);
 
-        assertTrue(FormerState.forget(state()).isSuccess());
+        assertTrue(FormerState.forget(state(), "unseen-pull-requests", SettingsPaths.formerCheckTimingsFile(state()))
+                .isSuccess());
 
         assertFalse(Files.exists(timings));
         assertFalse(Files.exists(timings.resolveSibling("check-timings.toml.lock")));
@@ -48,7 +49,8 @@ class FormerStateTest {
         Files.createDirectories(state().getParent());
         Files.writeString(state(), "recent-repositories = [\"/repos/a\"]\n");
 
-        assertTrue(FormerState.forget(state()).isSuccess());
+        assertTrue(FormerState.forget(state(), "unseen-pull-requests", SettingsPaths.formerCheckTimingsFile(state()))
+                .isSuccess());
 
         assertEquals("recent-repositories = [\"/repos/a\"]\n", Files.readString(state()));
         assertFalse(Files.exists(state().resolveSibling("state.toml.lock")));
@@ -56,7 +58,8 @@ class FormerStateTest {
 
     @Test
     void nothingThereIsNothingToDo() {
-        assertTrue(FormerState.forget(state()).isSuccess());
+        assertTrue(FormerState.forget(state(), "unseen-pull-requests", SettingsPaths.formerCheckTimingsFile(state()))
+                .isSuccess());
         assertFalse(Files.exists(state()));
     }
 }

@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubDiffs;
 import net.vanfleteren.jazygit.core.git.files.StubStashes;
@@ -69,7 +68,7 @@ class ReadWholeFileTest {
     private static String read(Source source) {
         ReadWholeFile read = new ReadWholeFile(
                 new AreaId("area"), new ScrolledContent.Diff(DiffText.of("")), source, "a.txt", DiffOptions.DEFAULT);
-        LoadMsg.WholeFileRead msg = (LoadMsg.WholeFileRead) read.run(new Env(git(), StubGitHub.of()));
+        LoadMsg.WholeFileRead msg = (LoadMsg.WholeFileRead) read.run(new Env(git()));
         assertEquals(read, msg.cmd());
         return msg.whole().text();
     }

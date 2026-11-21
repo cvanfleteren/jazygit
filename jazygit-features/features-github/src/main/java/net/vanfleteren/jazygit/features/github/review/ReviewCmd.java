@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.compose.EditorFile;
 import net.vanfleteren.jazygit.features.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -69,19 +70,19 @@ public sealed interface ReviewCmd extends Cmd {
         public Msg run(Env env) {
             return switch (target) {
                 case Target.Reply(var ignored, ReviewThread.Comment.RestId comment) ->
-                    env.gitHub()
+                    GitHubServices.of(env)
                             .reviews()
                             .reply(number, comment, body)
                             .mapLeft(GitHubFailure::of)
                             .fold(this::failed, this::succeeded);
                 case Target.Start(Sha commit, String path, var lines) ->
-                    env.gitHub()
+                    GitHubServices.of(env)
                             .reviews()
                             .startThread(number, new GhCommit(commit.value()), new NewReviewThread(path, lines, body))
                             .mapLeft(GitHubFailure::of)
                             .fold(this::failed, this::succeeded);
                 case Target.Edit(var ignored, ReviewThread.Comment.Id comment, String original) ->
-                    env.gitHub()
+                    GitHubServices.of(env)
                             .reviews()
                             .editRemark(comment, body)
                             .mapLeft(GitHubFailure::of)
@@ -120,7 +121,7 @@ public sealed interface ReviewCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .reviews()
                     .resolve(thread, resolved)
                     .mapLeft(GitHubFailure::of)

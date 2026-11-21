@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
@@ -306,7 +307,9 @@ class MakeStackTest {
         assertEquals("2 pull requests stay open, unlinked.", StackDialogs.unstacked(popup));
         assertEquals(
                 List.of("gh", "api", "--method", "POST", "repos/{owner}/{repo}/stacks/12/unstack"),
-                ((StackMsg.Changed) popup.confirm().get().run(new Env(StubGit.of(), StubGitHub.of())))
+                ((StackMsg.Changed) popup.confirm()
+                                .get()
+                                .run(new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of())))
                         .commands()
                         .head()
                         .commandLine());
@@ -447,7 +450,7 @@ class MakeStackTest {
                 List.of(new PrNumber(96), new PrNumber(97), new PrNumber(98)),
                 Option.none());
 
-        Msg done = cmd.run(new Env(StubGit.of(), StubGitHub.of()));
+        Msg done = cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of()));
 
         assertEquals(
                 List.of(
@@ -483,7 +486,7 @@ class MakeStackTest {
             }
         });
 
-        Msg done = cmd.run(new Env(StubGit.of(), refusing));
+        Msg done = cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, refusing));
 
         StackMsg.ChangeFailed failed = (StackMsg.ChangeFailed) done;
         assertEquals(

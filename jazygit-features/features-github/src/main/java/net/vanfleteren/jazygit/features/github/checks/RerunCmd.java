@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -44,7 +45,7 @@ public record RerunCmd(RemoteBranch branch, List<RerunPlan.Run> runs) implements
 
     @Override
     public Msg run(Env env) {
-        Checks checks = env.gitHub().checks();
+        Checks checks = GitHubServices.of(env).checks();
         List<Either<GhFailure, List<ExecutedCommand>>> done = runs.map(run -> checks.rerunFailedJobs(run.runId()));
         return new ChecksMsg.Rerun(
                 this,

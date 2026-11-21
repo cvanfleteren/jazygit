@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
@@ -164,7 +163,7 @@ class AheadUpdateTest {
         assertEquals(
                 new LoadMsg.AheadLoaded(
                         load, Option.of(new Ahead(FEATURE_TIP, origin("main"), List.empty(), false, Option.none()))),
-                load.run(new Env(StubGit.of(), StubGitHub.of())));
+                load.run(new Env(StubGit.of())));
     }
 
     @Test

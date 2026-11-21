@@ -24,7 +24,6 @@ import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
-import org.slf4j.LoggerFactory;
 
 /**
  * Starts jazygit: reads the command line, opens the repository to show, and runs {@link JazygitApp} on it.
@@ -93,9 +92,6 @@ final class Launcher {
                             directory -> RepositoryIdentity.read(directory).map(RepositoryIdentity::commonDir));
                     SettingsStore settings = new SettingsFile(SettingsPaths.configFile(), StandardSettings.keys());
                     SettingsStore.Loaded loaded = settings.load();
-                    FormerState.forget(SettingsPaths.stateFile())
-                            .onFailure(failed -> LoggerFactory.getLogger(Launcher.class)
-                                    .debug("What was kept for all repositories at once could not be deleted", failed));
                     return open(start, recent, loaded, options.theme(), engine)
                             .map(opened -> opened.map(git -> {
                                 recent.opened(git.worktree()).onFailure(BugLog::log);
@@ -104,9 +100,6 @@ final class Launcher {
                                         loaded.settings(),
                                         settings,
                                         recent,
-                                        new UnseenPullRequestsFile(SettingsPaths.repositories()),
-                                        new CheckTimingsFile(SettingsPaths.repositories()),
-                                        new CollapsedFile(SettingsPaths.repositories()),
                                         Repositories.NONE,
                                         Terminal.NONE,
                                         askpass.get());

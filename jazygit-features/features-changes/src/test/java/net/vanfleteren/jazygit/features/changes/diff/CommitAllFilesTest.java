@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.concurrent.atomic.AtomicInteger;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubDiffs;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
@@ -231,7 +230,6 @@ class CommitAllFilesTest {
                 return Either.right(DiffText.of(""));
             }
         };
-        return TestModels.program(
-                new Env(StubGit.of().withDiffs(diffs), StubGitHub.of()), Runnable::run, Runnable::run, Runnable::run);
+        return TestModels.program(new Env(StubGit.of().withDiffs(diffs)), Runnable::run, Runnable::run, Runnable::run);
     }
 }

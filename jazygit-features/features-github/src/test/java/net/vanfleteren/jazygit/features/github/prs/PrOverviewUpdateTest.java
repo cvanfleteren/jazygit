@@ -23,7 +23,7 @@ import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
-import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
+import net.vanfleteren.jazygit.features.github.state.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;

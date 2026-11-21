@@ -7,7 +7,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.concurrent.Executor;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.*;
@@ -110,7 +109,7 @@ public final class TestModels {
      * The model after all of the repository's data has been loaded.
      */
     public static Model loaded(Git git) {
-        return program(new Env(git, StubGitHub.of()), Runnable::run, Runnable::run, Runnable::run)
+        return program(new Env(git), Runnable::run, Runnable::run, Runnable::run)
                 .model();
     }
 
@@ -118,7 +117,7 @@ public final class TestModels {
      * The model after all of the repository's data, and the log of {@code branch}, has been loaded.
      */
     public static Model loaded(Git git, String branch) {
-        Program program = program(new Env(git, StubGitHub.of()), Runnable::run, Runnable::run, Runnable::run);
+        Program program = program(new Env(git), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName(branch))));
         return program.model();
     }
@@ -204,7 +203,7 @@ public final class TestModels {
      * The model after all of the repository's data, and the diff of {@code files}, has been loaded.
      */
     public static Model withFilesSelected(Git git, io.vavr.collection.List<FileEntry> files) {
-        Program program = program(new Env(git, StubGitHub.of()), Runnable::run, Runnable::run, Runnable::run);
+        Program program = program(new Env(git), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.FilesSelected(files));
         return program.model();
     }

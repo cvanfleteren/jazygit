@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.github.prs;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -34,7 +35,7 @@ public record LoadPullRequestPreview(PullRequestSummary key) implements Cmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub()
+        return GitHubServices.of(env)
                 .pullRequests()
                 .preview(key.url())
                 .mapLeft(GitHubFailure::of)

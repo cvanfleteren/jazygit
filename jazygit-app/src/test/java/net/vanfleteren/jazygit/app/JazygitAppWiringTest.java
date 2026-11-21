@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.features.changes.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.chrome.help.HelpPopup;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.prs.PrOverviewMsg;
@@ -301,7 +302,7 @@ class JazygitAppWiringTest {
     @Test
     void theStatusIsReadAgainWithoutInput() throws Exception {
         AtomicInteger reads = new AtomicInteger();
-        TestApp app = new TestApp(new Env(new CountsStatus(reads).git(), StubGitHub.of()));
+        TestApp app = new TestApp(new Env(new CountsStatus(reads).git()).with(GitHubServices.GH, StubGitHub.of()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             int started = reads.get();

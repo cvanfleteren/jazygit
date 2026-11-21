@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
@@ -70,8 +71,7 @@ class JazygitAppBuildsTest {
                 true,
                 true,
                 Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", MAIN)), 0, 0)));
-        return new Env(
-                SampleData.git()
+        return new Env(SampleData.git()
                         .withBranches(new StubBranches() {
                             @Override
                             public Either<GitError, List<Branch>> local() {
@@ -85,8 +85,8 @@ class JazygitAppBuildsTest {
                                 return Either.right(
                                         HashMap.of(new RemoteName("origin"), "https://github.com/owner/repo.git"));
                             }
-                        }),
-                StubGitHub.of().withChecks(new StubChecks() {
+                        }))
+                .with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
                     @Override
                     public Either<GhError, Option<BuildsPage>> builds(String branch, Option<String> after) {
                         return Either.right(Option.of(

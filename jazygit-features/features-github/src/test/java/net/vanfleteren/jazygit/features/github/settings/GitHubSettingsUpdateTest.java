@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.GitHubAccount;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
@@ -316,8 +317,7 @@ class GitHubSettingsUpdateTest {
 
     @Test
     void readingHowGhIsSetUp() {
-        Env env = new Env(
-                StubGit.of()
+        Env env = new Env(StubGit.of()
                         .withConfig(new StubConfig() {
                             @Override
                             public Either<GitError, Option<String>> local(String key) {
@@ -330,8 +330,8 @@ class GitHubSettingsUpdateTest {
                                 return Either.right(
                                         HashMap.of(new RemoteName("origin"), "git@github.com:team/repo.git"));
                             }
-                        }),
-                StubGitHub.of().withAccount(new StubAccount() {
+                        }))
+                .with(GitHubServices.GH, StubGitHub.of().withAccount(new StubAccount() {
                     @Override
                     public Either<GhError, List<GhLogin>> logins() {
                         return Either.right(SETUP.logins().get());
@@ -355,20 +355,21 @@ class GitHubSettingsUpdateTest {
     void settingTheAccountConfiguresItAndShowsTheRepositoryAgain() {
         java.util.List<String> done = new ArrayList<>();
         Env env = new Env(
-                StubGit.of(Path.of("/repos/a")).withConfig(new StubConfig() {
-                    @Override
-                    public Either<GitFailure, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
-                        done.add(key + "=" + value.getOrElse("<unset>"));
-                        return Either.right(List.empty());
-                    }
-                }),
-                StubGitHub.of(),
-                SettingsStore.NONE,
-                RecentRepositories.NONE,
-                (directory, landing) -> {
-                    done.add("reopened " + directory + " on " + landing.branchesTab());
-                    return Either.right(directory);
-                });
+                        StubGit.of(Path.of("/repos/a")).withConfig(new StubConfig() {
+                            @Override
+                            public Either<GitFailure, List<ExecutedCommand>> setLocal(
+                                    String key, Option<String> value) {
+                                done.add(key + "=" + value.getOrElse("<unset>"));
+                                return Either.right(List.empty());
+                            }
+                        }),
+                        SettingsStore.NONE,
+                        RecentRepositories.NONE,
+                        (directory, landing) -> {
+                            done.add("reopened " + directory + " on " + landing.branchesTab());
+                            return Either.right(directory);
+                        })
+                .with(GitHubServices.GH, StubGitHub.of());
 
         Msg set = new GitHubSettingsCmd.SetAccount(
                         Option.of("alice-work"), new Landing(BranchesTab.REMOTE, Option.none()))

@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.features.branches.worktree.add.ReadWorktreeTemplate;
 import net.vanfleteren.jazygit.features.branches.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 import net.vanfleteren.jazygit.kernel.state.Cmd.Guard;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -91,7 +92,7 @@ public record PullRequestWorktree(PullRequestSummary pullRequest) implements Wor
         return git.worktrees()
                 .addDetached(path, new Revision.Head())
                 .mapLeft(Failure::of)
-                .flatMap(added -> env.gitHub()
+                .flatMap(added -> GitHubServices.of(env)
                         .pullRequests()
                         .checkout(pullRequest.number(), path)
                         .map(added::appendAll)

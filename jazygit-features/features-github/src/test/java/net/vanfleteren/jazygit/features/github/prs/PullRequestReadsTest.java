@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.LoadBranchChecks;
 import net.vanfleteren.jazygit.features.github.state.LoadProtectedBranches;
@@ -142,7 +143,7 @@ class PullRequestReadsTest {
                 Update.update(loaded(), new Refresh()).cmds());
         assertInstanceOf(
                 PrOverviewMsg.RepositoryLoaded.class,
-                new LoadRepositoryPullRequests().run(new Env(StubGit.of(), StubGitHub.of())));
+                new LoadRepositoryPullRequests().run(new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test

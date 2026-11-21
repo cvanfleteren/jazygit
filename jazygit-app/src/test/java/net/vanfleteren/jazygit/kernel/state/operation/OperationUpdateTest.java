@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.features.branches.branch.merge.MergeCmd;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.features.branches.branch.rebase.RebaseCmd;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.state.LoadBranchChecks;
 import net.vanfleteren.jazygit.features.github.state.LoadProtectedBranches;
@@ -139,7 +140,7 @@ class OperationUpdateTest {
             }
         });
 
-        Msg msg = Program.perform(new Env(throwing, StubGitHub.of()), PUSH);
+        Msg msg = Program.perform(new Env(throwing).with(GitHubServices.GH, StubGitHub.of()), PUSH);
 
         OperationMsg.Failed failed = assertInstanceOf(OperationMsg.Failed.class, msg);
         assertInstanceOf(Failure.Bug.class, failed.failure());
@@ -159,7 +160,7 @@ class OperationUpdateTest {
         });
         java.util.List<Throwable> bugs = new java.util.ArrayList<>();
 
-        Msg msg = Program.perform(new Env(throwing, StubGitHub.of()), PUSH, bugs::add);
+        Msg msg = Program.perform(new Env(throwing).with(GitHubServices.GH, StubGitHub.of()), PUSH, bugs::add);
 
         assertInstanceOf(
                 Failure.Bug.class,
@@ -184,7 +185,7 @@ class OperationUpdateTest {
             }
         });
 
-        Msg msg = Program.perform(new Env(stopping, StubGitHub.of()), MERGE);
+        Msg msg = Program.perform(new Env(stopping).with(GitHubServices.GH, StubGitHub.of()), MERGE);
 
         assertEquals(
                 new OperationMsg.Stopped(

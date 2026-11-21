@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -226,13 +225,7 @@ class CopyUpdateTest {
     }
 
     private static Env env(Terminal terminal) {
-        return new Env(
-                StubGit.of(),
-                StubGitHub.of(),
-                SettingsStore.NONE,
-                RecentRepositories.NONE,
-                Repositories.NONE,
-                terminal);
+        return new Env(StubGit.of(), SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 
     private static String line(int number) {

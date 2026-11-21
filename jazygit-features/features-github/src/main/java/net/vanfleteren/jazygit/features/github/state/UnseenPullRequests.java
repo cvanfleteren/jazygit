@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.github.state;
 
 import io.vavr.collection.SortedSet;
 import io.vavr.collection.TreeSet;

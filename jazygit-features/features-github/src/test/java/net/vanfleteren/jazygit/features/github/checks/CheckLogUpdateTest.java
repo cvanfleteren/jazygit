@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.changes.edit.EditCmd;
 import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.features.changes.edit.OpenFileCmd;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.BranchChecksMsg;
 import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.state.PendingChecks;
@@ -212,7 +213,7 @@ class CheckLogUpdateTest {
     @Test
     void theLogIsReadOfItsRunAttemptAndJob() {
         java.util.List<java.util.List<Object>> asked = new java.util.ArrayList<>();
-        Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
+        Env env = new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
             @Override
             public Either<GhFailure, JobLog> jobLog(String repository, long runId, int attempt, long jobId) {
                 asked.add(java.util.List.of(repository, runId, attempt, jobId));
@@ -229,7 +230,8 @@ class CheckLogUpdateTest {
     void aLogGitHubDoesNotGiveIsAFailedOperation() {
         CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
 
-        assertInstanceOf(OperationMsg.Failed.class, cmd.run(new Env(StubGit.of(), StubGitHub.of())));
+        assertInstanceOf(
+                OperationMsg.Failed.class, cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test

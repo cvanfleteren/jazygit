@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.pullrequests.StubPullRequests;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -42,7 +43,8 @@ class JazygitAppPullRequestsTest {
 
     @Test
     void enterMovesTheFocusToTheHighlightedPullRequestAndALetterDoesWhatTheKeymapSays() throws Exception {
-        TestApp app = new TestApp(new Env(SampleData.git(), StubGitHub.of().withPullRequests(new ReviewRequested())));
+        TestApp app = new TestApp(new Env(SampleData.git())
+                .with(GitHubServices.GH, StubGitHub.of().withPullRequests(new ReviewRequested())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
@@ -78,7 +80,8 @@ class JazygitAppPullRequestsTest {
 
     @Test
     void qAndCtrlCDoNotQuitFromTheMarkdownDialog() throws Exception {
-        TestApp app = new TestApp(new Env(SampleData.git(), StubGitHub.of().withPullRequests(new ReviewRequested())));
+        TestApp app = new TestApp(new Env(SampleData.git())
+                .with(GitHubServices.GH, StubGitHub.of().withPullRequests(new ReviewRequested())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);

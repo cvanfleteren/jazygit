@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.github.state;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -9,8 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.function.UnaryOperator;
-import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore.Kept;
-import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore.Run;
+import net.vanfleteren.jazygit.features.github.state.CheckTimingsStore.Kept;
+import net.vanfleteren.jazygit.features.github.state.CheckTimingsStore.Run;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

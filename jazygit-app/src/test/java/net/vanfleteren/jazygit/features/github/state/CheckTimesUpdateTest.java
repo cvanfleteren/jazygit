@@ -33,12 +33,12 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.core.git.StubGit;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.state.CheckTimesCmd.RecordCheckTimes;
 import net.vanfleteren.jazygit.features.github.state.CheckTimesCmd.TopUpCheckTimes;
-import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore;
-import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore.Kept;
-import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore.Run;
+import net.vanfleteren.jazygit.features.github.state.CheckTimingsStore.Kept;
+import net.vanfleteren.jazygit.features.github.state.CheckTimingsStore.Run;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -107,7 +107,7 @@ class CheckTimesUpdateTest {
     }
 
     private static Env env(CheckTimingsStore store) {
-        return new Env(StubGit.of(), StubGitHub.of()).with(GitHubStores.CHECK_TIMINGS, store);
+        return new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of()).with(GitHubStores.CHECK_TIMINGS, store);
     }
 
     /**
@@ -286,7 +286,8 @@ class CheckTimesUpdateTest {
         // What the other jazygit learned when it topped up.
         Run learned = new Run("Build/verify", 9, 100, 110, "push", other);
         AtomicReference<Kept> file = new AtomicReference<>(new Kept(List.of(learned), Option.of(other)));
-        Env env = new Env(StubGit.of(), StubGitHub.of().withChecks(new StubChecks() {
+        Env env = new Env(StubGit.of())
+                .with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
                     @Override
                     public Either<GhError, RecentChecks> recent() {
                         throw new AssertionError("read from GitHub again");
