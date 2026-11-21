@@ -1,6 +1,7 @@
 """GitHub applies to a repository only with a remote on GitHub and gh found (ADR 171): otherwise nothing of it shows,
 but its section in the settings."""
 
+import re
 from pathlib import Path
 
 # What GitHub shows when it applies: its screen, named in the status panel, and a key of the branches pane in the
@@ -78,3 +79,24 @@ def assert_no_github(ui):
     assert BRANCH_KEY not in help_of_branches(ui)
     assert "GitHub" in settings_text(ui)
     assert SCREEN not in ui.app.text()
+
+
+def test_github_shows_once_gh_is_set_in_the_settings(repo, origin, gh, env, tmp_path, jazygit):
+    pushed(repo)
+    config = Path(env["XDG_CONFIG_HOME"]) / "jazygit" / "config.toml"
+    config.write_text(config.read_text() + f'\n[github]\nexecutable = "{tmp_path / "no-gh"}"\n')
+    ui = jazygit()
+    ui.caught_up()
+    assert SCREEN not in ui.app.text()
+
+    # Set empty, gh is the one on the PATH, which works: the repository is shown again, and GitHub found.
+    ui.app.press("ctrl+s")
+    ui.app.wait_for("gh executable")
+    key = re.search(r"\((\w)\) gh executable", ui.app.text()).group(1)
+    ui.app.press(key)
+    ui.app.wait_for("gh executable (empty for gh on the PATH)")
+    ui.app.press(*["backspace"] * len(str(tmp_path / "no-gh")))
+    ui.app.press("enter")
+
+    ui.app.wait_for(SCREEN)
+    assert BRANCH_KEY in help_of_branches(ui)
