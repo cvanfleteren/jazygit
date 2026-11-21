@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.diff;
 
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
@@ -17,6 +18,12 @@ public sealed interface CommitFilesMsg extends Msg {
      * The user asked for the files {@code of} changed, from the pane {@code pane}.
      */
     record Opened(Changes of, PaneId pane) implements CommitFilesMsg {}
+
+    /**
+     * The user asked for the files the branch {@code branch} changes: those a part knows of it, as its pull request's,
+     * else those against its base (ADR 61, 171).
+     */
+    record BranchFilesRequested(BranchName branch) implements CommitFilesMsg {}
 
     /**
      * The user closed the files of the commit or the stash, to see the files of the working tree again.

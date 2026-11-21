@@ -45,6 +45,11 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 public final class GitHubFeature {
 
     /**
+     * The id of the feature, by which it is on or off for a repository (ADR 171).
+     */
+    public static final String ID = "github";
+
+    /**
      * How often the pull requests screen reads what GitHub has again.
      */
     private static final Duration OVERVIEW_INTERVAL = Duration.ofMinutes(1);
@@ -115,7 +120,9 @@ public final class GitHubFeature {
             .spinning(CommentsDialog::showsSpinner)
             .clocking(ChecksDialog::shownTimes)
             .clocking(PullRequestDialog::shownTimes)
-            .clocking(CommentsDialog::shownTimes);
+            .clocking(CommentsDialog::shownTimes)
+            // On with a remote on GitHub and gh found (ADR 171).
+            .applying(ID, DetectGitHub::in);
 
     private GitHubFeature() {}
 }

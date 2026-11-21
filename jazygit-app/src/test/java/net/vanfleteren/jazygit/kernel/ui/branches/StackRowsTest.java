@@ -167,7 +167,8 @@ class StackRowsTest {
     @Test
     void enterOnAHeaderOpensOrClosesTheStackAndTheKeysOfABranchDoNothingThere() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(
+                msg -> dispatched.add(net.vanfleteren.jazygit.app.GitHubKeys.unwrapped(msg)), tab -> {});
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(OPEN, BranchesPanel.PANE))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(OPEN, BranchesPanel.PANE));
@@ -186,7 +187,8 @@ class StackRowsTest {
     @Test
     void aHighlightedHeaderStaysHighlightedAsTheStackClosesAndOpens() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(
+                msg -> dispatched.add(net.vanfleteren.jazygit.app.GitHubKeys.unwrapped(msg)), tab -> {});
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(OPEN, BranchesPanel.PANE))) {
             SettledPilot.focus(testRunner, BranchesPanel.ID);
             RenderedText.of(testRunner, () -> panel.render(OPEN, BranchesPanel.PANE));
@@ -205,7 +207,8 @@ class StackRowsTest {
     @Test
     void afterACheckoutOfABranchInAClosedStackItsHeaderIsHighlighted() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(
+                msg -> dispatched.add(net.vanfleteren.jazygit.app.GitHubKeys.unwrapped(msg)), tab -> {});
         Model before = closed(OPEN);
         Model after = closed(model(FEAT_A, List.of(FEAT_A, MAIN, FEAT_B)));
         Option<Msg> shown;

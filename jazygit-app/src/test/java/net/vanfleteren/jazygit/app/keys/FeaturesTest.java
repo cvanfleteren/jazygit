@@ -85,7 +85,9 @@ class FeaturesTest {
     @Test
     void everyFeatureIsListedOnce() {
         List<Feature> features = declared().map(Tuple2::_2);
-        assertTrue(features.forAll(feature -> Features.ALL.count(listed -> listed == feature) == 1));
+        assertTrue(features.forAll(feature -> Features.ALL.count(listed ->
+                        listed == feature || listed.applying().isDefined() && listed.actions() == feature.actions())
+                == 1));
         assertEquals(features.size(), Features.ALL.size());
     }
 

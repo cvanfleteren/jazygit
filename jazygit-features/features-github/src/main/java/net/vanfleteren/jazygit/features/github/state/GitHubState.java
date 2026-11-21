@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.gh.timing.Eta;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Part;
@@ -95,8 +96,12 @@ public record GitHubState(
      * Where the model keeps what GitHub reports, as a part (ADR 157) rather than a field the model names: not kept until
      * something was read, so a model that never read from GitHub keeps nothing of it.
      */
-    public static final Part<GitHubState> PART =
-            Part.of("github.state", NOT_READ).stating(GitHubState::bases).naming(GitHubState::repository);
+    public static final Part<GitHubState> PART = Part.of("github.state", NOT_READ)
+            .stating(GitHubState::bases)
+            .naming(GitHubState::repository)
+            // F on a branch with a pull request lists the files of that (ADR 61, 171).
+            .listingFiles((state, branch) ->
+                    state.pullRequest(branch).map(pullRequest -> new PullRequestMsg.FilesRequested(branch.name())));
 
     /**
      * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one

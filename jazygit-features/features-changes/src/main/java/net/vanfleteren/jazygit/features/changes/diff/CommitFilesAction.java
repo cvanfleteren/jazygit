@@ -35,6 +35,10 @@ public final class CommitFilesAction {
                             "changes.help.commits.files",
                             commit -> new CommitFilesMsg.Opened(
                                     new Changes.OfCommit(commit.sha()), Scopes.BRANCHES.pane())))
+            // The files of a branch, as a part knows them, as its pull request's, else against its base (ADR 61, 171).
+            .add(
+                    Scopes.BRANCHES,
+                    Binding.onSelected("F", "changes.help.branches.files", CommitFilesMsg.BranchFilesRequested::new))
             .add(
                     Scopes.STASH,
                     Binding.onSelected(

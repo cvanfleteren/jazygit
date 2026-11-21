@@ -37,27 +37,29 @@ public final class Features {
      * popups does not matter, as only one is open.
      */
     public static final List<Feature> ALL = List.of(
-            StageFeature.FEATURE,
-            CommitFeature.FEATURE,
-            CherryPickFeature.FEATURE,
-            DiscardFeature.FEATURE,
-            EditFeature.FEATURE,
-            StashFeature.FEATURE,
-            BranchFeature.FEATURE,
-            ForceDeleteFeature.FEATURE,
-            GitHubFeature.FEATURE,
-            AgentFeature.FEATURE,
-            WorktreeFeature.FEATURE,
-            FilesFeature.FEATURE,
-            FetchFeature.FEATURE,
-            DiffFeature.FEATURE,
-            CopyFeature.FEATURE,
-            ThemeFeature.FEATURE,
-            RecentReposFeature.FEATURE,
-            SettingsFeature.FEATURE,
-            InProgressFeature.FEATURE,
-            HelpFeature.FEATURE,
-            ErrorFeature.FEATURE);
+                    StageFeature.FEATURE,
+                    CommitFeature.FEATURE,
+                    CherryPickFeature.FEATURE,
+                    DiscardFeature.FEATURE,
+                    EditFeature.FEATURE,
+                    StashFeature.FEATURE,
+                    BranchFeature.FEATURE,
+                    ForceDeleteFeature.FEATURE,
+                    GitHubFeature.FEATURE,
+                    AgentFeature.FEATURE,
+                    WorktreeFeature.FEATURE,
+                    FilesFeature.FEATURE,
+                    FetchFeature.FEATURE,
+                    DiffFeature.FEATURE,
+                    CopyFeature.FEATURE,
+                    ThemeFeature.FEATURE,
+                    RecentReposFeature.FEATURE,
+                    SettingsFeature.FEATURE,
+                    InProgressFeature.FEATURE,
+                    HelpFeature.FEATURE,
+                    ErrorFeature.FEATURE)
+            // As the app runs them: a feature that is off for a repository shows and runs nothing (ADR 171).
+            .map(Feature::gated);
 
     /**
      * What every feature answers of what happens in the kernel, which the model holds (ADR 158), in the order of the

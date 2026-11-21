@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.kernel.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
@@ -79,6 +80,14 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
     }
 
     /**
+     * This part, showing the files of a branch as {@code listing} finds in its value, in place of those the branch
+     * changes against its base: those of its pull request (ADR 61, 171).
+     */
+    public Part<S> listingFiles(ListsFiles<S> listing) {
+        return new Part<>(name, initial, hooks.withListsFiles(listing));
+    }
+
+    /**
      * Where this part sits in a model.
      */
     public Lens<Model, S> lens() {
@@ -135,6 +144,15 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
     }
 
     /**
+     * What shows the files of {@code branch} in place of those it changes against its base, if {@code value}, a part,
+     * knows other changes of it, as its pull request (ADR 171).
+     */
+    @FunctionalInterface
+    public interface ListsFiles<S> {
+        Option<Msg> files(S value, Branch branch);
+    }
+
+    /**
      * What the kernel asks of a part (ADR 158, 169, 171).
      */
     public record Hooks<S>(
@@ -143,7 +161,8 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
             Reacting<S> reacting,
             States<S> states,
             Names<S> names,
-            Remarking<S> remarking) {
+            Remarking<S> remarking,
+            ListsFiles<S> listsFiles) {
 
         private static final Hooks<Object> NONE = new Hooks<>(
                 (model, value) -> List.empty(),
@@ -151,7 +170,8 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
                 (model, value, event) -> Update.Next.of(model),
                 value -> StatedBases.NONE,
                 value -> Option.none(),
-                (value, changes) -> Option.none());
+                (value, changes) -> Option.none(),
+                (value, branch) -> Option.none());
 
         /**
          * No hooks: the part reads nothing again, knows no commit, answers nothing, states no bases, names no
@@ -163,27 +183,31 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
         }
 
         Hooks<S> withRereads(Rereads<S> rereads) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
 
         Hooks<S> withKnowsCommit(KnowsCommit<S> knowsCommit) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
 
         Hooks<S> withReacting(Reacting<S> reacting) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
 
         Hooks<S> withStates(States<S> states) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
 
         Hooks<S> withNames(Names<S> names) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
 
         Hooks<S> withRemarking(Remarking<S> remarking) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+        }
+
+        Hooks<S> withListsFiles(ListsFiles<S> listsFiles) {
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
     }
 }

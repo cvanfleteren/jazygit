@@ -42,7 +42,11 @@ public class PullRequestContentTest {
     @Test
     void theKeysOfTheDiffOfAPullRequestActOnItsCursor() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        ContentPanel reviewing = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> dispatched.add(net.vanfleteren.jazygit.app.GitHubKeys.unwrapped(msg)));
         Model model = pullRequestDiff();
         AreaId area = reviewing.areaOfPane(model, FilesPanel.PANE).get();
 
@@ -87,7 +91,11 @@ public class PullRequestContentTest {
     @Test
     void inTheDiffOfAPullRequestYCopiesAndVStaysTheKeyOfTheReview() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        ContentPanel reviewing = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> dispatched.add(net.vanfleteren.jazygit.app.GitHubKeys.unwrapped(msg)));
         Model model = pullRequestDiff();
         AreaId area = reviewing.areaOfPane(model, FilesPanel.PANE).get();
         Anchor.OnLine line = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
@@ -132,7 +140,7 @@ public class PullRequestContentTest {
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
                 pullRequestDiff("Wrap it:\n\n```suggestion\n" + "0123456789" + "x".repeat(300) + "\n```"));
         ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
-            dispatched.add(msg);
+            dispatched.add(net.vanfleteren.jazygit.app.GitHubKeys.unwrapped(msg));
             model.set(Update.update(model.get(), msg).model());
         });
         AreaId area = reviewing.areaOfPane(model.get(), FilesPanel.PANE).get();
@@ -170,7 +178,7 @@ public class PullRequestContentTest {
                 },
                 id -> {},
                 msg -> {
-                    dispatched.add(msg);
+                    dispatched.add(net.vanfleteren.jazygit.app.GitHubKeys.unwrapped(msg));
                     model.set(Update.update(model.get(), msg).model());
                 });
         AreaId area = reviewing.areaOfPane(model.get(), FilesPanel.PANE).get();

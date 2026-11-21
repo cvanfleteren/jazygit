@@ -45,4 +45,10 @@ public sealed interface KernelEvent {
      * request, as it may be of a commit, but who has remarks on it is for the features to know.
      */
     record ChangesOpened(Changes changes) implements KernelEvent {}
+
+    /**
+     * The feature {@code feature} was switched on for the repository when {@code on}, else off, as it found out
+     * whether it applies (ADR 171): once on, it reads what it shows.
+     */
+    record Switched(String feature, boolean on) implements KernelEvent {}
 }

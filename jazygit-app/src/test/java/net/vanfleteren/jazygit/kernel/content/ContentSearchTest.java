@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.kernel.content;
 
+import static net.vanfleteren.jazygit.app.GitHubKeys.github;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -17,6 +18,7 @@ import net.vanfleteren.jazygit.features.github.builds.BuildsView;
 import net.vanfleteren.jazygit.features.github.builds.content.BuildsPickTest;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
+import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
@@ -407,7 +409,7 @@ class ContentSearchTest {
             driven.screen(testRunner);
             driven.type(testRunner, "?");
             List<Option<Msg>> before = driven.help().actions();
-            assertEquals(Option.of(new BuildsMsg.BuildStepped(1)), before.get(keys.indexOf("n")));
+            assertEquals(Option.of(github(new BuildsMsg.BuildStepped(1))), before.get(keys.indexOf("n")));
             driven.type(testRunner, "n");
             assertEquals(1, stepped(driven));
 
@@ -498,7 +500,7 @@ class ContentSearchTest {
             this.focused = focused;
             model = new AtomicReference<>(start);
             panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
-                dispatched.add(msg);
+                dispatched.add(msg instanceof FeatureMsg.Owned(var feature, Msg owned) ? owned : msg);
                 model.set(Update.update(model.get(), msg).model());
             });
         }

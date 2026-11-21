@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.github.stack;
 
+import static net.vanfleteren.jazygit.app.GitHubKeys.github;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.HashSet;
@@ -40,9 +41,9 @@ class StackUpdateTest {
     void theKeysOfAHeaderToggleItsStackAndOpenItsMenu() {
         assertEquals(
                 List.of(
-                        Option.of(new StackMsg.Toggled(12)),
-                        Option.of(new StackMsg.MenuRequested(Option.none(), Option.of(12))),
-                        Option.of(new StackMsg.ViewToggled())),
+                        Option.of(github(new StackMsg.Toggled(12))),
+                        Option.of(github(new StackMsg.MenuRequested(Option.none(), Option.of(12)))),
+                        Option.of(github(new StackMsg.ViewToggled()))),
                 Keymap.standard().actions(StackAction.STACKS, Option.of(12)));
     }
 
@@ -70,6 +71,6 @@ class StackUpdateTest {
                 true,
                 Keymap.standard()
                         .actions(Scopes.BRANCHES, Option.none())
-                        .contains(Option.of(new StackMsg.ViewToggled())));
+                        .contains(Option.of(github(new StackMsg.ViewToggled()))));
     }
 }

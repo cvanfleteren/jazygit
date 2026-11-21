@@ -91,13 +91,15 @@ public final class HelpDialog implements PopupView {
     }
 
     /**
-     * What the symbols of the panel {@code scopeId} mean, under a heading; nothing for a panel without any.
+     * What the symbols of the panel {@code scopeId} mean, under a heading; nothing for a panel without any. Those of a
+     * feature that is off in {@code model} are left out (ADR 171).
      */
-    private static List<Row> legend(String scopeId) {
+    private static List<Row> legend(Model model, String scopeId) {
         List<Tuple2<String, String>> symbols = LEGENDS.get(scopeId)
                 .getOrElse(List.empty())
                 .appendAll(Legends.standard()
                         .of(scopeId)
+                        .filter(legend -> legend.feature().forAll(model::on))
                         .map(legend -> Tuple.of(legend.symbols(), legend.descriptionKey())));
         return symbols.isEmpty()
                 ? List.empty()
@@ -142,11 +144,11 @@ public final class HelpDialog implements PopupView {
     public Option<Element> render(Model model) {
         return model.popup(HelpPopup.class)
                 .filter(popup -> keymap.titleKey(popup.scopeId()).isDefined())
-                .map(popup -> render(popup, model.listCursor()));
+                .map(popup -> render(model, popup, model.listCursor()));
     }
 
-    private Element render(HelpPopup popup, ListCursor cursor) {
-        List<Row> rows = rows(popup);
+    private Element render(Model model, HelpPopup popup, ListCursor cursor) {
+        List<Row> rows = rows(model, popup);
         // Until the user moves, the first key is highlighted; the help has no filter.
         FilteredCursor<Row> view = FilteredCursor.of(filter -> rows, Key.class::isInstance, cursor);
         list.elements(rows.map(HelpDialog::element).toJavaArray(StyledElement[]::new))
@@ -171,18 +173,21 @@ public final class HelpDialog implements PopupView {
     }
 
     /**
-     * The keys of the panel of {@code popup} and what they mean, then the global keys.
+     * The keys of the panel of {@code popup} and what they mean, then the global keys; those of a feature that is off
+     * in {@code model} are left out (ADR 171).
      */
-    private List<Row> rows(HelpPopup popup) {
+    private List<Row> rows(Model model, HelpPopup popup) {
         List<Keymap.Binding<?>> bindings = keymap.bindings(popup.scopeId());
         // A help opened without the actions of the keys runs none of them.
         List<Option<Msg>> actions = popup.actions().padTo(bindings.size(), Option.none());
-        return bindings.zipWith(actions, (binding, action) ->
-                        (Row) new Key(binding.label(), binding.descriptionKey(), binding::matches, action))
-                .appendAll(legend(popup.scopeId()))
+        return bindings.zip(actions)
+                .filter(key -> key._1().feature().forAll(model::on))
+                .map(key -> (Row) new Key(key._1().label(), key._1().descriptionKey(), key._1()::matches, key._2()))
+                .appendAll(legend(model, popup.scopeId()))
                 .append(new Text(""))
                 .append(Text.heading("chrome.dialog.help.global"))
                 .appendAll(keymap.globals()
+                        .filter(global -> global.feature().forAll(model::on))
                         .map(global -> new Key(
                                 global.label(),
                                 global.descriptionKey(),

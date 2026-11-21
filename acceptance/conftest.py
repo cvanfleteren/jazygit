@@ -196,14 +196,21 @@ def repo(tmp_path, env) -> Git:
 
 
 @pytest.fixture
-def origin(tmp_path, env, repo) -> Git:
+def origin(tmp_path, env, repo, request) -> Git:
     """An empty bare repository, the remote origin of the repository; push to it to give the branches an
-    upstream."""
+    upstream. With the fake gh, origin is on GitHub, so that GitHub applies to the repository (ADR 171), and git
+    goes to the bare repository in its place."""
     path = tmp_path / "origin.git"
     path.mkdir()
     git = Git(path, env)
     git("init", "--bare", "--initial-branch=main")
-    repo("remote", "add", "origin", str(path))
+    if "gh" in request.fixturenames:
+        # Named as the bare repository is, <directory>/origin, which the tests take the repository's name from.
+        on_github = f"https://github.com/{path.parent.name}/origin.git"
+        repo("config", f"url.{path}.insteadOf", on_github)
+        repo("remote", "add", "origin", on_github)
+    else:
+        repo("remote", "add", "origin", str(path))
     return git
 
 

@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.app.keys;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
+import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +19,15 @@ class StandardBadgesTest {
 
     @Test
     void theyHaveGitHubsBadge() {
-        assertTrue(BranchBadges.standard().badges().containsAll(GitHubFeature.FEATURE.badges()));
+        assertEquals(
+                Features.ALL.flatMap(Feature::badges), BranchBadges.standard().badges());
+        assertEquals(
+                GitHubFeature.FEATURE.badges().size(),
+                Features.ALL
+                        .find(feature -> feature.applying().isDefined())
+                        .get()
+                        .badges()
+                        .size());
         assertTrue(GitHubFeature.FEATURE.badges().nonEmpty());
     }
 }

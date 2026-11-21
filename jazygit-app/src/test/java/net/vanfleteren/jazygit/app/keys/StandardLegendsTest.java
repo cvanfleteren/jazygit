@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.features.github.badges.BadgeLegend;
 import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 import net.vanfleteren.jazygit.kernel.ui.keys.Legends;
@@ -22,7 +23,9 @@ class StandardLegendsTest {
 
     @Test
     void gitHubSaysWhatItsSymbolsInTheBranchesPaneMean() {
-        assertEquals(BadgeLegend.BRANCHES, Legends.standard().of(Scopes.BRANCHES.id()));
+        assertEquals(
+                BadgeLegend.BRANCHES.map(legend -> legend.of(GitHubFeature.ID)),
+                Legends.standard().of(Scopes.BRANCHES.id()));
         assertEquals(
                 List.of(
                         "github.help.branches.legend.pullRequest",

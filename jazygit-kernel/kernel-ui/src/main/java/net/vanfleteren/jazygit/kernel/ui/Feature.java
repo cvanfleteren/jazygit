@@ -9,18 +9,27 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.process.SshAsking;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
+import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
+import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Reactions.Reaction;
+import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups;
+import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
+import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
+import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
@@ -63,7 +72,8 @@ public record Feature(
         List<Legend> legends,
         Running running,
         Predicate<Model> spinning,
-        Function<Model, List<ShownTime>> clocking) {
+        Function<Model, List<ShownTime>> clocking,
+        Option<Applying> applying) {
 
     /**
      * The feature of {@code actions}, in that order, which shows nothing in the content panel of its own, has no
@@ -84,7 +94,8 @@ public record Feature(
                 List.empty(),
                 Running.NONE,
                 model -> false,
-                model -> List.empty());
+                model -> List.empty(),
+                Option.none());
     }
 
     /**
@@ -104,7 +115,8 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -124,7 +136,8 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -144,7 +157,8 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -165,7 +179,8 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -186,7 +201,8 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -207,7 +223,8 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -228,7 +245,8 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -249,7 +267,8 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -270,7 +289,8 @@ public record Feature(
                 this.legends.appendAll(List.of(legends)),
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -291,7 +311,8 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -312,7 +333,8 @@ public record Feature(
                 legends,
                 running,
                 before.or(spinning),
-                clocking);
+                clocking,
+                applying);
     }
 
     /**
@@ -334,14 +356,78 @@ public record Feature(
                 legends,
                 running,
                 spinning,
-                model -> before.apply(model).appendAll(clocking.apply(model)));
+                model -> before.apply(model).appendAll(clocking.apply(model)),
+                applying);
     }
 
     /**
      * {@code keys} with the keys of this feature added, in the order of its actions.
      */
     public Keymap keys(Keymap keys) {
-        return actions.foldLeft(keys, (keymap, action) -> action.keys().apply(keymap));
+        UnaryOperator<Keymap> adding = given ->
+                actions.foldLeft(given, (keymap, action) -> action.keys().apply(keymap));
+        return applying.map(feature -> keys.owned(feature.id(), adding)).getOrElse(() -> adding.apply(keys));
+    }
+
+    /**
+     * This feature, on for a repository only once {@code detect} found it applies to it (ADR 171): {@code detect}
+     * answers with {@code FeatureMsg.Applies} of {@code id}. It is asked once a repository is opened; until it answers,
+     * the feature is off.
+     */
+    public Feature applying(String id, Function<Model, Cmd> detect) {
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings,
+                screens,
+                legends,
+                running,
+                spinning,
+                clocking,
+                Option.of(new Applying(id, detect)));
+    }
+
+    /**
+     * This feature as the app runs it (ADR 171): when it is on or off for a repository, nothing of it shows or runs
+     * while it is off, but its settings; it is off from the opening of a repository until it found it applies. A
+     * feature that decides nothing is as it is.
+     */
+    public Feature gated() {
+        return applying.map(this::gated).getOrElse(this);
+    }
+
+    private Feature gated(Applying applying) {
+        String id = applying.id();
+        Reaction detecting = (model, event) -> event instanceof KernelEvent.RepositoryOpened
+                ? new Update.Next(
+                        FeatureUpdate.off(model, id), List.of(applying.detect().apply(model)))
+                : Update.Next.of(model);
+        return new Feature(
+                actions,
+                contents.map(source -> (ContentSource) new GatedSource(id, source)),
+                settingKeys,
+                settings,
+                timers.map(timer -> new Timer(
+                        timer.interval(),
+                        () -> new FeatureMsg.Owned(id, timer.msg().get()))),
+                reactions
+                        .map(reaction -> (Reaction) new GatedReaction(id, reaction))
+                        .prepend(detecting),
+                badges.map(badge -> (BranchBadges.Badge)
+                        (model, branch) -> model.on(id) ? badge.of(model, branch) : BranchBadges.Shown.NONE),
+                groupings.map(grouping -> (BranchGroups.Grouping)
+                        (model, branches) -> model.on(id) ? grouping.of(model, branches) : List.empty()),
+                screens,
+                legends.map(legend -> legend.of(id)),
+                running,
+                model -> model.on(id) && spinning.test(model),
+                model -> model.on(id) ? clocking.apply(model) : List.empty(),
+                Option.of(applying));
     }
 
     /**
@@ -398,6 +484,46 @@ public record Feature(
      * @param gitCredentials the environment git runs with to talk to the remotes as the account the feature knows,
      *                       if it knows one
      */
+    /**
+     * How a feature decides whether it applies to a repository (ADR 171).
+     *
+     * @param id     its id, by which the model keeps whether it is on
+     * @param detect what finds out in a model, and answers with {@code FeatureMsg.Applies} of {@code id}
+     */
+    public record Applying(String id, Function<Model, Cmd> detect) {}
+
+    /**
+     * {@code source}, of the feature {@code id}, which shows nothing while that is off.
+     */
+    public record GatedSource(String id, ContentSource source) implements ContentSource {
+
+        @Override
+        public Option<Shown> shown(Model model, Mirrored pane) {
+            return model.on(id) ? source.shown(model, pane) : Option.none();
+        }
+
+        @Override
+        public List<ContentArea> areas() {
+            return source.areas();
+        }
+    }
+
+    /**
+     * {@code reaction}, which answers nothing while the feature {@code id} is off.
+     */
+    private record GatedReaction(String id, Reaction reaction) implements Reaction {
+
+        @Override
+        public Update.Next to(Model model, KernelEvent event) {
+            return model.on(id) ? reaction.to(model, event) : Update.Next.of(model);
+        }
+
+        @Override
+        public Model started(Model model, List<Cmd> cmds) {
+            return model.on(id) ? reaction.started(model, cmds) : model;
+        }
+    }
+
     public record Contribution(Env.Services services, Option<Supplier<Map<String, String>>> gitCredentials) {
 
         public static final Contribution NONE = new Contribution(Env.Services.NONE, Option.none());

@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.kernel.state.view.DivergenceView;
 import net.vanfleteren.jazygit.kernel.state.view.FilesShown;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.state.view.UnchangedNode;
+import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
@@ -54,7 +55,9 @@ class StandardContentTest {
     }
 
     private static String name(ContentSource source) {
-        return source.getClass().getSimpleName();
+        return (source instanceof Feature.GatedSource(var feature, ContentSource gated) ? gated : source)
+                .getClass()
+                .getSimpleName();
     }
 
     @Test

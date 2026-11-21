@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.app.keys;
 
+import static net.vanfleteren.jazygit.app.GitHubKeys.github;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.tui.event.KeyCode;
@@ -51,7 +52,7 @@ class KeymapTest {
     @Test
     void ctrlPSwitchesBetweenTheRepositoryAndThePullRequests() {
         assertEquals(
-                Option.of(new ScreenMsg.Toggled(PrOverview.SCREEN)),
+                Option.of(github(new ScreenMsg.Toggled(PrOverview.SCREEN))),
                 keymap.handleGlobal(KeyEvent.ofChar('p', dev.tamboui.tui.event.KeyModifiers.CTRL)));
         // Plain p is left to the panels.
         assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('p')));
@@ -173,11 +174,11 @@ class KeymapTest {
     @Test
     void shiftOOpensTheBranchOnGitHub() {
         assertEquals(
-                Option.of(new BrowseMsg.Requested(new BranchName("x"))),
+                Option.of(github(new BrowseMsg.Requested(new BranchName("x")))),
                 keymap.handle(Scopes.BRANCHES, KeyEvent.ofChar('O'), Option.of(new BranchName("x"))));
         RemoteBranch remote = new RemoteBranch("origin", new BranchName("x"));
         assertEquals(
-                Option.of(new BrowseMsg.RemoteRequested(remote)),
+                Option.of(github(new BrowseMsg.RemoteRequested(remote))),
                 keymap.handle(Scopes.REMOTE_BRANCHES, KeyEvent.ofChar('O'), Option.of(remote)));
     }
 

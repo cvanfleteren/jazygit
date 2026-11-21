@@ -46,6 +46,7 @@ public final class CommitFilesUpdate {
                                         ? view.withListed(view.listed().next())
                                         : view)))));
             case CommitFilesMsg.Moved(Changes from, Changes to) -> moved(model, from, to);
+            case CommitFilesMsg.BranchFilesRequested(BranchName branch) -> branchFiles(model, branch);
             case CommitFilesMsg.AllToggled() -> allToggled(model);
         };
     }
@@ -131,6 +132,19 @@ public final class CommitFilesUpdate {
                             reads ? List.<Cmd>of(new LoadCommitTree(view.of())) : List.empty());
                 })
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * The files of {@code branch}: as a part knows them, as those of its pull request, else against its base. An
+     * error shown before goes, as the files are asked for anew.
+     */
+    private static Next branchFiles(Model model, BranchName branch) {
+        Model cleared = model.clearError();
+        return cleared.repo()
+                .branch(branch)
+                .flatMap(known -> cleared.parts().files(known))
+                .map(files -> files.apply(cleared))
+                .getOrElse(() -> againstBase(cleared, branch));
     }
 
     /**

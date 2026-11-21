@@ -43,7 +43,7 @@ class JazygitAppPullRequestsTest {
 
     @Test
     void enterMovesTheFocusToTheHighlightedPullRequestAndALetterDoesWhatTheKeymapSays() throws Exception {
-        TestApp app = new TestApp(new Env(SampleData.git())
+        TestApp app = new TestApp(new Env(GitHubKeys.onGitHub(SampleData.git()))
                 .with(GitHubServices.GH, StubGitHub.of().withPullRequests(new ReviewRequested())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
@@ -80,7 +80,7 @@ class JazygitAppPullRequestsTest {
 
     @Test
     void qAndCtrlCDoNotQuitFromTheMarkdownDialog() throws Exception {
-        TestApp app = new TestApp(new Env(SampleData.git())
+        TestApp app = new TestApp(new Env(GitHubKeys.onGitHub(SampleData.git()))
                 .with(GitHubServices.GH, StubGitHub.of().withPullRequests(new ReviewRequested())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);

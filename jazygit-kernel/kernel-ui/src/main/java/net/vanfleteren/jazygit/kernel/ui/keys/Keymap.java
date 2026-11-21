@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.kernel.ui.keys;
 import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.Tuple;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -12,6 +13,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -136,6 +139,24 @@ public final class Keymap {
                 .keySet()
                 .headOption();
         Require.that(twice.isEmpty(), () -> "The key \"" + twice.get() + "\" is bound twice in " + scopeId);
+    }
+
+    /**
+     * This keymap with the keys {@code adding} adds, of the feature {@code feature}, which is on or off for a
+     * repository (ADR 171): what they send does something only while it is on, and the help lists them only then.
+     */
+    public Keymap owned(String feature, UnaryOperator<Keymap> adding) {
+        Keymap added = adding.apply(this);
+        return new Keymap(
+                added.sections.map((id, section) -> Tuple.of(
+                        id,
+                        new Section(
+                                section.scope(),
+                                section.bindings()
+                                        .map(binding -> own(id).contains(binding) ? binding : binding.of(feature))))),
+                added.globals.map(global -> globals.contains(global) ? global : Global.of(feature, global)),
+                added.help,
+                added.guests);
     }
 
     /**
@@ -266,6 +287,25 @@ public final class Keymap {
         Msg action();
 
         /**
+         * {@code global}, of the feature {@code feature}: what it sends does something only while that is on
+         * (ADR 171).
+         */
+        static Global of(String feature, Global global) {
+            return new Dispatching(
+                    global.label(),
+                    global.descriptionKey(),
+                    event -> global.handle(event).isDefined(),
+                    () -> new FeatureMsg.Owned(feature, global.action()));
+        }
+
+        /**
+         * The feature the key is of, when it is on or off for a repository.
+         */
+        default Option<String> feature() {
+            return action() instanceof FeatureMsg.Owned(String feature, var msg) ? Option.of(feature) : Option.none();
+        }
+
+        /**
          * A key that sends {@code msg}.
          *
          * @param matches whether an event is this key
@@ -344,9 +384,30 @@ public final class Keymap {
      *                       with {@code ctrl+} and {@code alt+} when those must be held, as in {@code ctrl+x}
      * @param descriptionKey the message key of what the key does
      * @param action         the message to send for the key, given the selection if there is one
+     * @param feature        the id of the feature that added it, when it is on or off for a repository: what it sends
+     *                       does nothing while it is off, and the help leaves it out (ADR 171)
      * @param <S>            what is selected in the panel
      */
-    public record Binding<S>(String key, String descriptionKey, Function<Option<S>, Option<Msg>> action) {
+    public record Binding<S>(
+            String key, String descriptionKey, Function<Option<S>, Option<Msg>> action, Option<String> feature) {
+
+        /**
+         * A key of the kernel, or of a feature that is always on.
+         */
+        public Binding(String key, String descriptionKey, Function<Option<S>, Option<Msg>> action) {
+            this(key, descriptionKey, action, Option.none());
+        }
+
+        /**
+         * This key, of the feature {@code feature}: what it sends does something only while that is on.
+         */
+        Binding<S> of(String feature) {
+            return new Binding<>(
+                    key,
+                    descriptionKey,
+                    selection -> action.apply(selection).map(msg -> (Msg) new FeatureMsg.Owned(feature, msg)),
+                    Option.of(feature));
+        }
 
         /**
          * A key that acts on the selection, and does nothing when nothing is selected.

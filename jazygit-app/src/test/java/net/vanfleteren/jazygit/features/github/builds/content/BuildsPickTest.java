@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.github.builds.content;
 
+import static net.vanfleteren.jazygit.app.GitHubKeys.github;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.tui.event.KeyEvent;
@@ -36,28 +37,28 @@ public class BuildsPickTest {
         Keymap keys = Keymap.standard();
 
         assertEquals(
-                Option.of(new BuildsMsg.Stepped(1)),
+                Option.of(github(new BuildsMsg.Stepped(1))),
                 keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar(']'), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.Stepped(-1)),
+                Option.of(github(new BuildsMsg.Stepped(-1))),
                 keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('['), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.PickRequested()),
+                Option.of(github(new BuildsMsg.PickRequested())),
                 keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('w'), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.Closed()),
+                Option.of(github(new BuildsMsg.Closed())),
                 keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('B'), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.AllToggled()),
+                Option.of(github(new BuildsMsg.AllToggled())),
                 keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('a'), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.WindowRequested()),
+                Option.of(github(new BuildsMsg.WindowRequested())),
                 keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('c'), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.BuildStepped(1)),
+                Option.of(github(new BuildsMsg.BuildStepped(1))),
                 keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('n'), Option.none()));
         assertEquals(
-                Option.of(new BuildsMsg.BuildStepped(-1)),
+                Option.of(github(new BuildsMsg.BuildStepped(-1))),
                 keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('N'), Option.none()));
     }
 
@@ -334,7 +335,7 @@ public class BuildsPickTest {
         assertEquals(Option.none(), keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('n'), searching));
         assertEquals(Option.none(), keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('N'), searching));
         assertEquals(
-                Option.of(new BuildsMsg.BuildStepped(1)),
+                Option.of(github(new BuildsMsg.BuildStepped(1))),
                 keys.handle(BuildsAction.SCOPE, KeyEvent.ofChar('n'), Option.of(new BuildsAt(false))));
     }
 

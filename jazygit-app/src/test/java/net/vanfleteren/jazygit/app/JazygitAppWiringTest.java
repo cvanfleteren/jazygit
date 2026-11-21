@@ -37,6 +37,8 @@ import net.vanfleteren.jazygit.features.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg;
 import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
+import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TimerMsg;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
@@ -57,7 +59,7 @@ class JazygitAppWiringTest {
 
     @Test
     void aGlobalKeyWorksWhereverTheFocusIs() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
@@ -72,7 +74,7 @@ class JazygitAppWiringTest {
 
     @Test
     void shiftFOnTheMainBranchListsAllItsFilesAndGivesThemTheFocus() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             awaitModel(testRunner, app, model -> AheadUpdate.main(model).isDefined());
@@ -110,7 +112,7 @@ class JazygitAppWiringTest {
 
     @Test
     void theFilesFollowTheHighlightedCommitAndEnterAndEscapeGoInAndBack() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             awaitModel(
@@ -149,7 +151,7 @@ class JazygitAppWiringTest {
 
     @Test
     void theFilesEnterOpenedStayThroughOtherListsUntilEscapeInTheirList() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             awaitModel(
@@ -196,7 +198,7 @@ class JazygitAppWiringTest {
 
     @Test
     void escapeInTheWorkingTreeTheLockedBranchesFollowGoesBackAndLetsGo() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             awaitModel(testRunner, app, model -> AheadUpdate.main(model).isDefined());
@@ -233,7 +235,7 @@ class JazygitAppWiringTest {
 
     @Test
     void backToTheListChosenFromTheHelpGoesBackAsEscapeDoes() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             awaitModel(
@@ -271,7 +273,7 @@ class JazygitAppWiringTest {
 
     @Test
     void theWindowIsTitledAfterTheRepository() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
 
@@ -295,14 +297,24 @@ class JazygitAppWiringTest {
                         Tuple.of(Duration.ofSeconds(2), PullRequestMsg.MergeTick.class),
                         Tuple.of(Duration.ofSeconds(2), StackMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class)),
-                Timers.ALL.map(
-                        timer -> Tuple.of(timer.interval(), timer.msg().get().getClass())));
+                Timers.ALL.map(timer ->
+                        Tuple.of(timer.interval(), owned(timer.msg().get()).getClass())));
+        // GitHub's run only while it is on (ADR 171).
+        org.junit.jupiter.api.Assertions.assertTrue(Timers.ALL
+                        .filter(timer -> timer.msg().get() instanceof FeatureMsg.Owned)
+                        .size()
+                == 5);
+    }
+
+    private static Object owned(Msg msg) {
+        return msg instanceof FeatureMsg.Owned(var feature, Msg owned) ? owned : msg;
     }
 
     @Test
     void theStatusIsReadAgainWithoutInput() throws Exception {
         AtomicInteger reads = new AtomicInteger();
-        TestApp app = new TestApp(new Env(new CountsStatus(reads).git()).with(GitHubServices.GH, StubGitHub.of()));
+        TestApp app = new TestApp(
+                new Env(GitHubKeys.onGitHub(new CountsStatus(reads).git())).with(GitHubServices.GH, StubGitHub.of()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             int started = reads.get();
@@ -315,7 +327,7 @@ class JazygitAppWiringTest {
 
     @Test
     void tabMovesTheFocusBetweenTheFieldsOfAnOpenPopup() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
@@ -340,7 +352,7 @@ class JazygitAppWiringTest {
 
     @Test
     void qAndCtrlCDoNotQuitFromAListDialog() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
@@ -363,7 +375,7 @@ class JazygitAppWiringTest {
 
     @Test
     void ctrlCInTheCommitDialogKeepsTheTypedMessage() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
@@ -399,7 +411,7 @@ class JazygitAppWiringTest {
 
     @Test
     void theGlobalKeysDoNothingWhileAPopupIsOpen() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
@@ -427,7 +439,7 @@ class JazygitAppWiringTest {
 
     @Test
     void qInTheHelpDialogStillQuits() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
@@ -446,7 +458,7 @@ class JazygitAppWiringTest {
 
     @Test
     void qQuitsWhenNoPopupIsOpen() throws Exception {
-        TestApp app = new TestApp();
+        TestApp app = new TestApp(GitHubKeys.env());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
