@@ -6,10 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.control.Either;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
+import net.vanfleteren.jazygit.core.git.StubGit;
+import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
+import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
+import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import org.junit.jupiter.api.Test;
 
@@ -49,6 +56,19 @@ class ForgejoCommandsTest {
                 new BuildsMsg.Read(
                         tips, HashMap.of(PASSED, CommitStatus.State.PASSED), HashSet.of(new RemoteName("gone"))),
                 new ReadBuilds(tips).run(FORGEJO.env(origin(REMOTE))));
+    }
+
+    @Test
+    void remotesThatCouldNotBeListedAreNotSaidToBeElsewhere() {
+        List<Tip> tips = List.of(new Tip(new RemoteName("origin"), PASSED));
+        Env env = new Env(StubGit.of().withRemotes(new StubRemotes() {
+                    @Override
+                    public Either<GitError, Map<RemoteName, String>> urls() {
+                        return Either.left(new GitError.TimedOut("remote", Path.of(".")));
+                    }
+                }))
+                .with(ForgejoServices.FORGEJO, FORGEJO);
+        assertEquals(new BuildsMsg.Read(tips, HashMap.empty(), HashSet.empty()), new ReadBuilds(tips).run(env));
     }
 
     @Test

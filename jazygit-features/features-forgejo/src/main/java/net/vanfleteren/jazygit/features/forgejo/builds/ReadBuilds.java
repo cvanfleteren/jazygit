@@ -32,7 +32,15 @@ public record ReadBuilds(List<Tip> tips) implements Cmd {
     @Override
     public Msg run(Env env) {
         Forgejo forgejo = ForgejoServices.of(env);
-        Map<RemoteName, String> urls = env.git().remotes().urls().getOrElse(HashMap::empty);
+        // Remotes that could not be listed are not known to be elsewhere: the tips are read again after a fetch.
+        return env.git()
+                .remotes()
+                .urls()
+                .map(urls -> read(forgejo, urls))
+                .getOrElse(() -> new BuildsMsg.Read(tips, HashMap.empty(), HashSet.empty()));
+    }
+
+    private BuildsMsg.Read read(Forgejo forgejo, Map<RemoteName, String> urls) {
         Map<RemoteName, Option<ForgejoRepository>> repositories = HashMap.ofEntries(tips.map(Tip::remote)
                 .distinct()
                 .map(remote -> Tuple.of(
