@@ -8,17 +8,13 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
-import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Divergence;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
-import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
-import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -61,58 +57,8 @@ class StandardContentTest {
     }
 
     @Test
-    void theAppAsksTheSourcesOfTheFeaturesBeforeTheContentPanelsOwn() {
-        assertEquals(
-                List.of(
-                        "BuildsSource",
-                        "PullRequestSource",
-                        "CommitFilesSource",
-                        "UnchangedSource",
-                        "FileDiffsSource",
-                        "DivergenceSource",
-                        "BranchCommitsSource",
-                        "BranchLogSource",
-                        "CommitSource",
-                        "StashSource"),
-                SOURCES.sources().map(StandardContentTest::name));
-    }
-
-    @Test
-    void eachPaneHasOneSourceOfItsOwn() {
-        Model model = TestModels.loaded();
-
-        assertEquals(List.of("FileDiffsSource"), answering(model, Mirrored.FILES));
-        assertEquals(List.of("BranchLogSource"), answering(model, Mirrored.BRANCHES));
-        assertEquals(List.of("CommitSource"), answering(model, Mirrored.COMMITS));
-        assertEquals(List.of("StashSource"), answering(model, Mirrored.STASH));
-        assertEquals(List.of("PullRequestSource"), answering(model, Mirrored.of(PrOverview.SCREEN)));
-    }
-
-    @Test
     void aFileWithoutChangesComesBeforeTheDiffsOfTheFiles() {
         assertEquals(List.of("UnchangedSource", "FileDiffsSource"), answering(unchanged(), Mirrored.FILES));
-    }
-
-    @Test
-    void theBuildsOfABranchComeBeforeItsLog() {
-        assertEquals(List.of("BuildsSource", "BranchLogSource"), answering(buildsOpen(), Mirrored.BRANCHES));
-    }
-
-    /**
-     * The builds are the GitHub feature's, asked before the content panel's own sources, yet a divergence or the
-     * commits of a branch opened over them still show in their place, as before the builds left the content panel.
-     */
-    @Test
-    void whatIsOpenedOverTheBuildsComesBeforeThem() {
-        Model builds = buildsOpen();
-        Model diverged = builds.mapRepoView(repoView -> repoView.mapBranches(branches ->
-                branches.withDivergence(diverged().repoView().branches().divergence())));
-        Model commits = builds.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withBranchCommits(
-                branchCommitsOpen().repoView().branches().branchCommits())));
-
-        assertEquals("DivergenceSource", answering(diverged, Mirrored.BRANCHES).head());
-        assertEquals(
-                "BranchCommitsSource", answering(commits, Mirrored.BRANCHES).head());
     }
 
     @Test
@@ -126,35 +72,6 @@ class StandardContentTest {
                 List.of("BranchCommitsSource", "BranchLogSource"), answering(branchCommitsOpen(), Mirrored.BRANCHES));
     }
 
-    @Test
-    void noSourceOfAPaneAnswersForAnother() {
-        List<Model> models = List.of(TestModels.loaded(), unchanged(), buildsOpen(), diverged(), branchCommitsOpen());
-        List<Mirrored> panes = Mirrored.REPOSITORY.append(Mirrored.of(PrOverview.SCREEN));
-
-        models.forEach(model -> panes.forEach(pane -> assertEquals(
-                List.empty(),
-                answering(model, pane).filter(source -> !ownSources(pane).contains(source)),
-                String.valueOf(pane))));
-    }
-
-    /**
-     * The sources that may answer for {@code pane}.
-     */
-    private static List<String> ownSources(Mirrored pane) {
-        return io.vavr.collection.HashMap.of(
-                        Mirrored.FILES,
-                        List.of("CommitFilesSource", "UnchangedSource", "FileDiffsSource"),
-                        Mirrored.BRANCHES,
-                        List.of("DivergenceSource", "BranchCommitsSource", "BuildsSource", "BranchLogSource"),
-                        Mirrored.COMMITS,
-                        List.of("CommitSource"),
-                        Mirrored.STASH,
-                        List.of("StashSource"),
-                        Mirrored.of(PrOverview.SCREEN),
-                        List.of("PullRequestSource"))
-                .getOrElse(pane, List.empty());
-    }
-
     /**
      * The files pane showing a file without changes, as all files are shown.
      */
@@ -164,31 +81,6 @@ class StandardContentTest {
                         .mapFiles(files -> files.withUnchanged(Option.of(new UnchangedNode.File(new Preview<>(
                                 "README.md",
                                 new Loadable.Loaded<>(new FileContent.Text(DiffText.of("# Title\n")))))))));
-    }
-
-    /**
-     * The branch {@code main}, which follows {@code origin/main}, highlighted with its log read, and its builds
-     * opened with {@code B} (ADR 131).
-     */
-    private static Model buildsOpen() {
-        RemoteBranch originMain = new RemoteBranch("origin", MAIN);
-        Branch main = Fixtures.branch(
-                MAIN,
-                false,
-                new Sha("abc"),
-                Instant.EPOCH,
-                true,
-                false,
-                Option.of(new Upstream(new BranchRef.Remote(originMain), 0, 0)));
-        Model read =
-                TestModels.localBranchesRead(TestModels.loaded(), List.of(main)).model();
-        BranchRef ref = new BranchRef.Local(MAIN);
-        Model logRead = Update.update(
-                        Update.update(read, new SelectionMsg.BranchSelected(ref))
-                                .model(),
-                        TestModels.branchLogLoaded(ref, List.empty()))
-                .model();
-        return Update.update(logRead, new BuildsMsg.Toggled(MAIN)).model();
     }
 
     /**

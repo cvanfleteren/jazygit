@@ -27,7 +27,6 @@ import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
-import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -36,8 +35,11 @@ import org.junit.jupiter.api.Test;
 class HelpDialogTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
+
     private final java.util.List<Msg> dispatched = new ArrayList<>();
+
     private final CursorFeedback cursor = new CursorFeedback(dispatched::add);
+
     private final HelpDialog dialog = new HelpDialog(cursor);
 
     private static Model open(String topic) {
@@ -83,33 +85,6 @@ class HelpDialogTest {
         assertTrue(screen.contains("       space Checkout branch"), screen);
         assertTrue(screen.contains("           n New branch…"), screen);
         assertTrue(screen.contains("           d Delete branch…"), screen);
-    }
-
-    @Test
-    void theDescriptionsOfTheLegendLineUpWhateverTheWidthOfTheSymbols() throws Exception {
-        List<String> lines = List.of(screen(Scopes.BRANCHES.id()).split("\n"));
-        // The symbols in front of the descriptions differ in width: #42 takes three columns, those of the checks
-        // seven and those of the review five.
-        List<Integer> columns = List.of("Pull request (dim: draft)", "CI passed", "Approved / changes")
-                .map(description -> {
-                    String line = lines.find(text -> text.contains(description)).get();
-                    return TextWidth.of(line.substring(0, line.indexOf(description)));
-                });
-        assertEquals(1, columns.distinct().size(), columns.toString());
-    }
-
-    @Test
-    void theLegendSaysWhatGitsSymbolsMeanThenWhatTheFeaturesAdd() throws Exception {
-        List<String> lines = List.of(screen(Scopes.BRANCHES.id()).split("\n"));
-        // features-chrome keeps git's, and GitHub adds what its badges mean (ADR 168).
-        List<Integer> rows = List.of(
-                        "Its upstream was deleted",
-                        "Checked out in another worktree",
-                        "Pull request (dim: draft)",
-                        "Where its pull request sits in its stack")
-                .map(description -> lines.indexWhere(line -> line.contains(description)));
-        assertEquals(rows.sorted(), rows, rows.toString());
-        assertFalse(rows.contains(-1), rows.toString());
     }
 
     @Test

@@ -10,18 +10,12 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd;
-import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Jobs;
-import net.vanfleteren.jazygit.kernel.state.Label;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
@@ -169,33 +163,6 @@ class FetchLineTest {
         assertEquals(spinner + "Fe… +1", rendered(model, now, TextWidth.of(" · " + spinner + "Fe… +1")));
     }
 
-    @Test
-    void theLabelsOfCommandsAndOperations() {
-        assertEquals("Working…", FetchLine.labelText(Label.WORKING));
-        assertEquals(
-                "Fetching origin",
-                FetchLine.labelText(new FetchCmd.Fetch(new RemoteName("origin"), List.empty())
-                        .label()
-                        .get()));
-        assertEquals("Reading pull request #12345", FetchLine.labelText(Label.of("state.work.pullRequest", "12345")));
-        BranchName feature = new BranchName("feature");
-        BranchRef base = new BranchRef.Local(new BranchName("main"));
-        assertEquals(
-                "Reading the title of feature",
-                FetchLine.labelText(new CreatePullRequestCmd.ReadTitle(
-                                feature, new RemoteBranch("origin", feature), List.empty(), base)
-                        .label()
-                        .get()));
-        assertEquals(
-                "Reading the title of feature",
-                FetchLine.labelText(new CreatePullRequestCmd.RereadTitle(feature, new BranchName("main"), base)
-                        .label()
-                        .get()));
-        assertEquals(
-                "Push feature",
-                FetchLine.labelText(Label.of("state.work.operation", Label.of("branches.log.title.push"), "feature")));
-    }
-
     private static final Instant NOW = Instant.parse("2026-10-17T12:00:00Z");
 
     @Test
@@ -215,21 +182,6 @@ class FetchLineTest {
         assertEquals(
                 "last fetch failed",
                 FetchLine.freshness(model.mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.failed("origin")))));
-    }
-
-    @Test
-    void onThePullRequestsScreenSaysHowLongAgoTheyWereRead() {
-        Model prs = TestModels.loaded()
-                .withNow(NOW)
-                .withScreen(PrOverview.SCREEN)
-                .mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", NOW)))
-                .withPart(
-                        PrOverview.PART,
-                        PrOverview.INITIAL.withFreshness(Freshness.NEVER
-                                .succeeded("mine", NOW.minusSeconds(3 * 3600))
-                                .failed("repository")));
-
-        assertEquals("read 3h ago · last read failed", FetchLine.freshness(prs));
     }
 
     @Test

@@ -21,7 +21,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.Branches;
@@ -81,11 +80,6 @@ import net.vanfleteren.jazygit.features.changes.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchMsg;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
-import net.vanfleteren.jazygit.features.github.GitHubServices;
-import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
-import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
-import net.vanfleteren.jazygit.features.github.state.GitHubState;
-import net.vanfleteren.jazygit.features.github.state.LoadBranchChecks;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.Loadable.Failed;
 import net.vanfleteren.jazygit.kernel.state.Loadable.Loaded;
@@ -349,11 +343,14 @@ class ProgramTest {
     }
 
     private final FakeRepo repo = new FakeRepo();
+
     private final Queue<Runnable> io = new ArrayDeque<>();
+
     private final Queue<Runnable> ui = new ArrayDeque<>();
+
     private final Queue<Runnable> background = new ArrayDeque<>();
-    private final Program program =
-            program(new Env(repo.git()).with(GitHubServices.GH, StubGitHub.of()), io::add, background::add, ui::add);
+
+    private final Program program = program(new Env(repo.git()), io::add, background::add, ui::add);
 
     @Test
     void initialLoadFillsTheModel() {
@@ -372,12 +369,8 @@ class ProgramTest {
     @Test
     void aMessageThatChangesTheModelSaysSoAndOneThatDoesNotSaysNothing() {
         AtomicInteger changes = new AtomicInteger();
-        Program told = program(
-                new Env(repo.git()).with(GitHubServices.GH, StubGitHub.of()),
-                Runnable::run,
-                Runnable::run,
-                Runnable::run,
-                changes::incrementAndGet);
+        Program told =
+                program(new Env(repo.git()), Runnable::run, Runnable::run, Runnable::run, changes::incrementAndGet);
         told.dispatch(new ViewMsg.Focused(new PaneId("commits")));
         int focused = changes.get();
 
@@ -392,12 +385,7 @@ class ProgramTest {
     void loadsThatBringNothingNewDoNotSayTheModelChanged() {
         AtomicInteger changes = new AtomicInteger();
         Queue<Runnable> queued = new ArrayDeque<>();
-        Program told = program(
-                new Env(repo.git()).with(GitHubServices.GH, StubGitHub.of()),
-                queued::add,
-                queued::add,
-                queued::add,
-                changes::incrementAndGet);
+        Program told = program(new Env(repo.git()), queued::add, queued::add, queued::add, changes::incrementAndGet);
         told.dispatch(new TimerMsg.Tick());
         drain(queued);
         int loaded = changes.get();
@@ -904,8 +892,7 @@ class ProgramTest {
         ExecutorService background = Executors.newFixedThreadPool(2);
         try {
             // The messages the commands answer with are not handled: only which commands ran counts.
-            Program guarding =
-                    program(new Env(repo.git()).with(GitHubServices.GH, StubGitHub.of()), io, background, task -> {});
+            Program guarding = program(new Env(repo.git()), io, background, task -> {});
             java.util.List<String> ran = new CopyOnWriteArrayList<>();
             CountDownLatch fetched = new CountDownLatch(1);
             CountDownLatch done = new CountDownLatch(0);
@@ -934,8 +921,7 @@ class ProgramTest {
         ExecutorService io = Executors.newSingleThreadExecutor();
         ExecutorService background = Executors.newFixedThreadPool(2);
         try {
-            Program guarding =
-                    program(new Env(repo.git()).with(GitHubServices.GH, StubGitHub.of()), io, background, task -> {});
+            Program guarding = program(new Env(repo.git()), io, background, task -> {});
             java.util.List<String> ran = new CopyOnWriteArrayList<>();
             CountDownLatch fetched = new CountDownLatch(1);
             Option<Cmd.Guard> remoteRefs = Option.of(Cmd.Guard.REMOTE_REFS);
@@ -966,32 +952,13 @@ class ProgramTest {
     }
 
     @Test
-    void gitIsReadOnTheIoExecutorAndGitHubInTheBackground() {
-        settleWithout(background);
-        assertEquals(new Loaded<>(repo.status), program.model().repo().status());
-
-        // As a fetch makes GitHub's feature read them.
-        program.dispatch(model -> PullRequestReads.load(Update.Next.of(model)));
-        settleWithout(background);
-        assertEquals(true, program.model().jobs().runs(new LoadRepositoryPullRequests()));
-        assertEquals(true, program.model().jobs().runs(new LoadBranchChecks()));
-
-        settleWithout(io);
-        assertEquals(false, program.model().jobs().runs(new LoadRepositoryPullRequests()));
-        assertEquals(false, program.model().jobs().runs(new LoadBranchChecks()));
-        assertEquals(
-                Option.of(HashMap.empty()),
-                program.model().part(GitHubState.PART).pullRequests());
-    }
-
-    @Test
     void theModelIsToldTheTimeOfEachMessageAndDrawsNothingForTheTimeAlone() {
         Instant start = Instant.parse("2026-10-26T10:00:00Z");
         MovingClock clock = new MovingClock(start);
         AtomicInteger changes = new AtomicInteger();
         Queue<Runnable> queued = new ArrayDeque<>();
         Program timed = Program.start(
-                new Env(repo.git()).with(GitHubServices.GH, StubGitHub.of()),
+                new Env(repo.git()),
                 SettingsStore.Loaded.DEFAULT,
                 Option.none(),
                 RepositoryTheme.NONE,
@@ -1046,7 +1013,7 @@ class ProgramTest {
         MovingClock clock = new MovingClock(start);
         Queue<Runnable> queued = new ArrayDeque<>();
         Program timed = Program.start(
-                new Env(repo.git()).with(GitHubServices.GH, StubGitHub.of()),
+                new Env(repo.git()),
                 SettingsStore.Loaded.DEFAULT,
                 Option.none(),
                 RepositoryTheme.NONE,

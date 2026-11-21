@@ -23,6 +23,7 @@
         <module>jazygit-kernel</module>
         <module>jazygit-features</module>
         <module>jazygit-app</module>
+        <module>jazygit-github-app-tests</module>
     </modules>
 
     <properties>

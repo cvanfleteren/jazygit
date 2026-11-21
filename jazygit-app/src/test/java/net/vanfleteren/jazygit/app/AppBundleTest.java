@@ -25,7 +25,9 @@ class AppBundleTest {
             "github.dialog.review.titleEdit");
 
     private static final List<String> ROOTS =
-            List.of("ui", "state", "content", "changes", "branches", "github", "chrome", "app");
+            // GitHub's, unless it was deleted (ADR 171).
+            List.of("ui", "state", "content", "changes", "branches", "github", "chrome", "app")
+                    .filter(Bundles::exists);
 
     @Test
     void everyKeyStartsWithTheRootOfTheModule() {

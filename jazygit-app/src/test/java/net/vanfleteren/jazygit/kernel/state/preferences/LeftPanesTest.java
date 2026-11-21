@@ -8,7 +8,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Stash;
 import net.vanfleteren.jazygit.features.chrome.layout.LayoutMsg;
-import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -103,7 +102,13 @@ class LeftPanesTest {
     @Test
     void theMaximizedPaneOfAnotherScreenIsNotShown() {
         Model model = withStashes(2)
-                .mapPreferences(preferences -> preferences.withMaximizedPane(PrOverview.SCREEN, Option.of(0)));
+                .mapPreferences(preferences -> preferences.withMaximizedPane(
+                        new Screen(
+                                "other",
+                                List.of(new net.vanfleteren.jazygit.kernel.state.PaneId("other")),
+                                Screen.REPOSITORY.width(),
+                                Screen.REPOSITORY.heights()),
+                        Option.of(0)));
 
         assertEquals(List.of(25, 20, 48, 4), LeftPanes.shown(model, Screen.REPOSITORY, 100));
     }

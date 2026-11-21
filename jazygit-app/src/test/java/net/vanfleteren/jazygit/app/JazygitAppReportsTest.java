@@ -20,7 +20,6 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.Branches;
@@ -40,7 +39,6 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.chrome.help.HelpDialog;
-import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
@@ -249,7 +247,7 @@ class JazygitAppReportsTest {
     @Test
     void theSpinnerOfABusyBranchTurnsWithoutInput() throws Exception {
         CountDownLatch pulled = new CountDownLatch(1);
-        TestApp app = new TestApp(new Env(new PullsSlowly(pulled).git()).with(GitHubServices.GH, StubGitHub.of()));
+        TestApp app = new TestApp(new Env(new PullsSlowly(pulled).git()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);

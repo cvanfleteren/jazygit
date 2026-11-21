@@ -38,10 +38,6 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>core-gh</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.vanfleteren</groupId>
             <artifactId>lib-json</artifactId>
         </dependency>
         <dependency>
@@ -68,12 +64,6 @@
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>core-git</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.vanfleteren</groupId>
-            <artifactId>core-gh</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

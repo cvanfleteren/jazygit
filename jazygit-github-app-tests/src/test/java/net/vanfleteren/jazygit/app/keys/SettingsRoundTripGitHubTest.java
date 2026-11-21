@@ -37,14 +37,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * The settings file, byte for byte, with the keys the app gathers (ADR 163): a user's file is read as it was, and a
- * change to one setting writes exactly what it wrote before. This holds the settings to their file while their code is
- * reshaped.
- *
- * <p>The files written are kept in {@code src/test/resources/settings-round-trip}. When a change to what is written
- * is wanted, run this test with {@code -Dsettings.round-trip.update=true} to write them again, and review the diff.
+ * The tests of SettingsRoundTripTest with GitHub in the app (ADR 171).
  */
-class SettingsRoundTripTest {
+class SettingsRoundTripGitHubTest {
 
     /**
      * A user's file: comments, keys the app does not know, settings away from their default and at it, and the lists
@@ -249,7 +244,8 @@ class SettingsRoundTripTest {
     }
 
     private static String expected(String resource) throws IOException {
-        try (InputStream in = SettingsRoundTripTest.class.getResourceAsStream("/settings-round-trip/" + resource)) {
+        try (InputStream in =
+                SettingsRoundTripGitHubTest.class.getResourceAsStream("/settings-round-trip/" + resource)) {
             return in == null ? "(no " + resource + ")" : new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
