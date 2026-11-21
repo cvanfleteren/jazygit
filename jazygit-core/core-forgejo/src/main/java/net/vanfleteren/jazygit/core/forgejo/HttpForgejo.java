@@ -83,14 +83,23 @@ public final class HttpForgejo implements Forgejo {
         return ForgejoRepository.of(remoteUrl, keys.get().aliases());
     }
 
+    /**
+     * {@inheritDoc} What the host answered is kept; a host that could not be reached, as one behind a VPN that is not
+     * up yet, is asked again the next time.
+     */
     @Override
     public boolean isForgejo(ForgejoRepository repository) {
-        return forgejo.computeIfAbsent(
-                repository.base(),
-                base -> get(repository, "/api/forgejo/v1/version")
-                        .flatMap(body ->
-                                VERSION.parse(body).mapLeft(error -> new ForgejoError.Unreadable(error.toString())))
-                        .isRight());
+        Boolean known = forgejo.get(repository.base());
+        if (known != null) {
+            return known;
+        }
+        Either<ForgejoError, String> version = get(repository, "/api/forgejo/v1/version")
+                .flatMap(body -> VERSION.parse(body).mapLeft(error -> new ForgejoError.Unreadable(error.toString())));
+        if (version.isLeft() && version.getLeft() instanceof ForgejoError.Unreachable) {
+            return false;
+        }
+        forgejo.put(repository.base(), version.isRight());
+        return version.isRight();
     }
 
     @Override

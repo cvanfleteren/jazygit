@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,6 +42,7 @@ class HttpForgejoTest {
 
     private HttpServer server;
     private final AtomicInteger versionAsked = new AtomicInteger();
+    private final AtomicInteger notFound = new AtomicInteger();
     private final ConcurrentLinkedQueue<String> authorizations = new ConcurrentLinkedQueue<>();
 
     @BeforeEach
@@ -57,7 +59,10 @@ class HttpForgejoTest {
         server.createContext(
                 "/api/v1/repos/cvf/empty/commits/" + SHA.value() + "/status",
                 exchange -> answer(exchange, 200, NO_STATUS));
-        server.createContext("/", exchange -> answer(exchange, 404, "{\"message\":\"The target couldn't be found.\"}"));
+        server.createContext("/", exchange -> {
+            notFound.incrementAndGet();
+            answer(exchange, 404, "{\"message\":\"The target couldn't be found.\"}");
+        });
         server.start();
     }
 
@@ -92,9 +97,34 @@ class HttpForgejoTest {
     }
 
     @Test
-    void aHostThatDoesNotAnswerItIsNot() {
+    void aHostThatDoesNotAnswerItIsNotAndIsAskedOnce() {
         server.removeContext("/api/forgejo/v1/version");
-        assertFalse(HttpForgejo.of(() -> FjKeys.NONE).isForgejo(repository("nix")));
+        HttpForgejo forgejo = HttpForgejo.of(() -> FjKeys.NONE);
+        assertFalse(forgejo.isForgejo(repository("nix")));
+        // Its answer stands: it is not asked again.
+        assertFalse(forgejo.isForgejo(repository("nix")));
+        assertEquals(1, notFound.get());
+    }
+
+    @Test
+    void aHostThatCouldNotBeReachedIsAskedAgainOnceItCanBe() throws IOException {
+        // A port nothing listens on yet, as a host behind a VPN that is not up.
+        int port;
+        try (ServerSocket free = new ServerSocket(0, 0, InetAddress.getLoopbackAddress())) {
+            port = free.getLocalPort();
+        }
+        ForgejoRepository later = new ForgejoRepository("http://127.0.0.1:" + port, "cvf", "nix");
+        HttpForgejo forgejo = HttpForgejo.of(() -> FjKeys.NONE);
+        assertFalse(forgejo.isForgejo(later));
+
+        HttpServer up = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
+        up.createContext("/api/forgejo/v1/version", exchange -> answer(exchange, 200, "{\"version\":\"17.0.2\"}"));
+        up.start();
+        try {
+            assertTrue(forgejo.isForgejo(later));
+        } finally {
+            up.stop(0);
+        }
     }
 
     @Test

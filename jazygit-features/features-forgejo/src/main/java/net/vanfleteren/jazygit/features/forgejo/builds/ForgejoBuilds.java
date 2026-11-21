@@ -82,9 +82,11 @@ public record ForgejoBuilds(
     }
 
     /**
-     * These builds, with every commit read so far to be read again, and those that failed to be tried again.
+     * These builds, with every commit read so far to be read again, and those that failed and the remotes found not
+     * to be on Forgejo to be tried again: a host that could not be reached, as one behind a VPN that was not up, may
+     * be reached now; one that answered is not asked again (ADR 174).
      */
     public ForgejoBuilds fetched() {
-        return new ForgejoBuilds(states, states.keySet(), reading, HashSet.empty(), elsewhere);
+        return new ForgejoBuilds(states, states.keySet(), reading, HashSet.empty(), HashSet.empty());
     }
 }

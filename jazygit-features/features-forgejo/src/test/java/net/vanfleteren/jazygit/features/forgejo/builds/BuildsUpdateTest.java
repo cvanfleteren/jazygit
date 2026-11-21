@@ -112,6 +112,20 @@ public class BuildsUpdateTest {
     }
 
     @Test
+    void aFetchPutsBackARemoteFoundNotToBeOnForgejo() {
+        Model model = model();
+        List<Tip> tips = BuildsUpdate.tips(model);
+        // Its host could not be reached, as one behind a VPN that was not up yet.
+        Model read = new BuildsMsg.Read(tips, HashMap.empty(), HashSet.of(ORIGIN))
+                .apply(BuildsUpdate.read(model).model())
+                .model();
+        assertEquals(List.empty(), BuildsUpdate.tips(read));
+
+        Next fetched = ForgejoReactions.to(read, new KernelEvent.Fetched());
+        assertEquals(tips, reading(fetched));
+    }
+
+    @Test
     void tipsOnARemoteThatIsNotOnForgejoDoNotKeepThoseOnForgejoFromBeingRead() {
         // A mirror on GitHub, whose 25 branches come before origin's.
         RemoteName mirror = new RemoteName("github");

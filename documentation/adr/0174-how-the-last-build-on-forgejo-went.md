@@ -26,9 +26,11 @@ a short sha and no branch, and leaves out the statuses of other CIs.
   `~/.local/share/forgejo-cli`), so that logging in with fj is all it takes, as with gh; without one it asks without a
   token, which is enough for a public repository. The token is sent only over https: a remote over plain HTTP is
   asked without it.
-- **A remote is on Forgejo when its host answers `/api/forgejo/v1/version`** over https, once per host for the app's
-  run. The host of an ssh remote is fj's alias for it, if fj has one, else the same host on the https port: an
-  `ssh://git@code.example.net:10022/owner/repo.git` remote is `https://code.example.net`, repository `owner/repo`.
+- **A remote is on Forgejo when its host answers `/api/forgejo/v1/version`** over https. What a host answered is kept
+  for the repository's opening; a host that could not be reached, as one behind a VPN that is not up yet, is asked
+  again the next time. The host of an ssh remote is fj's alias for it, if fj has one, else the same host on the https
+  port: an `ssh://git@code.example.net:10022/owner/repo.git` remote is `https://code.example.net`, repository
+  `owner/repo`.
   Hosts known to be another forge (github.com, gitlab.com, bitbucket.org) are not asked. The feature is on with one
   remote on Forgejo.
 - **A branch shows how the builds of the tip of the branch it follows on Forgejo went**, a remote branch those of its
@@ -40,8 +42,9 @@ a short sha and no branch, and leaves out the statuses of other CIs.
   commit shown is read again, so that a build run again shows. Not: reading all of them on a timer, as a commit's
   status rarely changes once its builds are done.
 - **Only the tips of remotes on Forgejo are read**: a remote found not to be on Forgejo, as a mirror on GitHub, is
-  left out of what is read for as long as the repository is open, so its branches do not crowd out those on Forgejo
-  from the 20 read at a time. A commit on both is read on Forgejo.
+  left out of what is read until the next fetch, so its branches do not crowd out those on Forgejo from the 20 read
+  at a time. A commit on both is read on Forgejo. After a fetch its host is asked again only if it could not be
+  reached before; one that answered is not.
 - **A read that fails is tried again only after the next fetch**, and the log says why; the badge shows nothing for
   it meanwhile. Not: trying it again every 10 s, as a private repository without a token fails every time.
 - **Another repository on Forgejo starts afresh**, as its remotes may have the same names as those of the one before.
@@ -58,5 +61,9 @@ a short sha and no branch, and leaves out the statuses of other CIs.
 - A repository on Forgejo shows how its branches build, with no setup beyond `fj auth login` for a private one.
 - Opening a repository asks each host of its remotes once whether it is Forgejo; a host that does not answer takes
   the time of a connect timeout, in the background.
+- Whether Forgejo applies is found out once, as the repository opens (ADR 171): when no host of its remotes can be
+  reached then, as with a VPN that is not up yet, the feature stays off until the repository is opened again, even
+  once the host can be reached. Asking again, say after a fetch, would have the kernel ask a feature that is off to
+  detect again, which changes ADR 171 for every forge, GitHub too; it is left for a decision of its own.
 - The symbols of the checks are drawn the same in both forges' badges.
 - A native image needs the JDK's HTTP client and TLS; the Nix build checks it.
