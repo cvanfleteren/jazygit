@@ -10,10 +10,10 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.state.diff.Rendered;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
@@ -292,11 +292,11 @@ class RenderedYamlTest {
         assertEquals(
                 List.of(
                         new Anchor.File("a.yml"),
-                        new Anchor.Node("a.yml", "/run", new Anchor.OnLine("a.yml", Side.RIGHT, 1)),
-                        new Anchor.Node("a.yml", "/run/0", new Anchor.OnLine("a.yml", Side.RIGHT, 2)),
-                        new Anchor.Node("a.yml", "/run/1", new Anchor.OnLine("a.yml", Side.RIGHT, 3)),
-                        new Anchor.Node("a.yml", "/run/2", new Anchor.OnLine("a.yml", Side.RIGHT, 4)),
-                        new Anchor.Node("a.yml", "/next", new Anchor.OnLine("a.yml", Side.RIGHT, 5))),
+                        new Anchor.Node("a.yml", "/run", new Anchor.OnLine("a.yml", DiffSide.NEW, 1)),
+                        new Anchor.Node("a.yml", "/run/0", new Anchor.OnLine("a.yml", DiffSide.NEW, 2)),
+                        new Anchor.Node("a.yml", "/run/1", new Anchor.OnLine("a.yml", DiffSide.NEW, 3)),
+                        new Anchor.Node("a.yml", "/run/2", new Anchor.OnLine("a.yml", DiffSide.NEW, 4)),
+                        new Anchor.Node("a.yml", "/next", new Anchor.OnLine("a.yml", DiffSide.NEW, 5))),
                 drawn.stops().map(stop -> stop.mark().anchor()));
     }
 

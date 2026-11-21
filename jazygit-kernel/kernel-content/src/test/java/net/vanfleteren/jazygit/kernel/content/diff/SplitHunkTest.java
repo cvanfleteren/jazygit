@@ -9,9 +9,9 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -63,21 +63,21 @@ class SplitHunkTest {
         assertEquals(
                 List.of(
                         new Anchor.File("DiffStyle.java"),
-                        new Anchor.OnLine("DiffStyle.java", Side.LEFT, 1),
-                        new Anchor.OnLine("DiffStyle.java", Side.RIGHT, 1),
-                        new Anchor.OnLine("DiffStyle.java", Side.LEFT, 2),
-                        new Anchor.OnLine("DiffStyle.java", Side.RIGHT, 2),
-                        new Anchor.OnLine("DiffStyle.java", Side.RIGHT, 3),
-                        new Anchor.OnLine("DiffStyle.java", Side.LEFT, 3),
-                        new Anchor.OnLine("DiffStyle.java", Side.RIGHT, 4),
-                        new Anchor.OnLine("DiffStyle.java", Side.LEFT, 4),
+                        new Anchor.OnLine("DiffStyle.java", DiffSide.OLD, 1),
+                        new Anchor.OnLine("DiffStyle.java", DiffSide.NEW, 1),
+                        new Anchor.OnLine("DiffStyle.java", DiffSide.OLD, 2),
+                        new Anchor.OnLine("DiffStyle.java", DiffSide.NEW, 2),
+                        new Anchor.OnLine("DiffStyle.java", DiffSide.NEW, 3),
+                        new Anchor.OnLine("DiffStyle.java", DiffSide.OLD, 3),
+                        new Anchor.OnLine("DiffStyle.java", DiffSide.NEW, 4),
+                        new Anchor.OnLine("DiffStyle.java", DiffSide.OLD, 4),
                         new Anchor.Gap("DiffStyle.java", 6, Option.none())),
                 drawn.stops().map(stop -> stop.mark().anchor()));
         // Both halves of a row start on it, each on its side.
         assertEquals(
                 List.of(1, 1, 2, 2, 3, 4, 4, 5), drawn.stops().tail().init().map(Drawn.Stop::row));
         assertEquals(
-                List.of(Side.LEFT, Side.RIGHT),
+                List.of(DiffSide.OLD, DiffSide.NEW),
                 drawn.stops().drop(1).take(2).flatMap(stop -> stop.mark().side()));
     }
 
@@ -92,8 +92,8 @@ class SplitHunkTest {
                         .withWidth(AREA));
 
         assertTrue(unified.stops()
-                .exists(stop -> stop.mark().is(new Anchor.OnLine("DiffStyle.java", Side.LEFT, 1))
-                        && stop.mark().anchor().equals(new Anchor.OnLine("DiffStyle.java", Side.RIGHT, 1))));
+                .exists(stop -> stop.mark().is(new Anchor.OnLine("DiffStyle.java", DiffSide.OLD, 1))
+                        && stop.mark().anchor().equals(new Anchor.OnLine("DiffStyle.java", DiffSide.NEW, 1))));
     }
 
     @Test

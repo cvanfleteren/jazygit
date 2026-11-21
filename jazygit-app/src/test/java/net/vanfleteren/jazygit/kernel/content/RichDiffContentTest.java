@@ -8,7 +8,6 @@ import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
@@ -16,6 +15,7 @@ import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
@@ -68,8 +68,8 @@ class RichDiffContentTest {
                         .filter(ViewMsg.ContentScrolled.class::isInstance)
                         .map(msg -> ((ViewMsg.ContentScrolled) msg).to().cursor())
                         .containsAll(List.of(
-                                Option.of(new Anchor.OnLine("schema.sql", ReviewThread.Side.LEFT, 2)),
-                                Option.of(new Anchor.OnLine("schema.sql", ReviewThread.Side.RIGHT, 2)))),
+                                Option.of(new Anchor.OnLine("schema.sql", DiffSide.OLD, 2)),
+                                Option.of(new Anchor.OnLine("schema.sql", DiffSide.NEW, 2)))),
                 List.ofAll(dispatched)
                         .filter(ViewMsg.ContentScrolled.class::isInstance)
                         .map(msg -> ((ViewMsg.ContentScrolled) msg).to().cursor())
@@ -188,12 +188,12 @@ class RichDiffContentTest {
         Option<Anchor> bar = Option.of(new Anchor.File("b.sql"));
         assertTrue(kept.contains(bar), kept.toString());
         assertEquals(
-                Option.of(new Anchor.OnLine("b.sql", ReviewThread.Side.LEFT, 1)),
+                Option.of(new Anchor.OnLine("b.sql", DiffSide.OLD, 1)),
                 kept.get(kept.indexOf(bar) + 1),
                 kept.toString());
         // In the other diff, its first line on the new side.
         assertEquals(
-                Option.of(Option.of(new Anchor.OnLine("a.sql", ReviewThread.Side.RIGHT, 1))),
+                Option.of(Option.of(new Anchor.OnLine("a.sql", DiffSide.NEW, 1))),
                 anew.find(cursor -> cursor.exists(Anchor.OnLine.class::isInstance)),
                 anew.toString());
     }
@@ -424,8 +424,7 @@ class RichDiffContentTest {
             SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, beta);
             ViewMsg.ContentScrolled clicked = (ViewMsg.ContentScrolled) dispatched.getLast();
             assertEquals(
-                    Option.of(new Anchor.OnLine(
-                            "a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, 2)),
+                    Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)),
                     clicked.to().cursor());
             assertEquals(0, clicked.to().row());
 

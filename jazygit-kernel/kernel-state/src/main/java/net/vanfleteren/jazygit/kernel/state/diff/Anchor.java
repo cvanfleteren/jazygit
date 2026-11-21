@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.core.git.model.HiddenHunks.Ranges;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
@@ -20,8 +19,8 @@ public sealed interface Anchor {
      */
     static Option<OnLine> of(String path, DiffLine line) {
         return switch (line.kind()) {
-            case REMOVED -> line.oldNumber().map(number -> new OnLine(path, Side.LEFT, number));
-            case ADDED, CONTEXT -> line.newNumber().map(number -> new OnLine(path, Side.RIGHT, number));
+            case REMOVED -> line.oldNumber().map(number -> new OnLine(path, DiffSide.OLD, number));
+            case ADDED, CONTEXT -> line.newNumber().map(number -> new OnLine(path, DiffSide.NEW, number));
             case NOTE -> Option.none();
         };
     }
@@ -39,7 +38,7 @@ public sealed interface Anchor {
     /**
      * The line with the number {@code number} on {@code side} of the file with the path {@code path}.
      */
-    record OnLine(String path, Side side, int number) implements Anchor {}
+    record OnLine(String path, DiffSide side, int number) implements Anchor {}
 
     /**
      * A marker of lines the file with the path {@code path} leaves out between its hunks, or around them: those of the

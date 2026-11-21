@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.features.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
@@ -187,8 +188,8 @@ public final class ReviewUpdate {
             CommitFilesView view, DiffCursorAt at, Sha commit, Vector<DiffLines.Line> range) {
         Anchor.OnLine first = range.head().anchor();
         Anchor.OnLine last = range.last().anchor();
-        Option<NewReviewThread.Lines> lines =
-                Option.of(new NewReviewThread.Lines(first.side(), first.number(), last.side(), last.number()));
+        Option<NewReviewThread.Lines> lines = Option.of(new NewReviewThread.Lines(
+                DiffSide.gitHub(first.side()), first.number(), DiffSide.gitHub(last.side()), last.number()));
         return popup(
                 view,
                 at,
@@ -274,9 +275,9 @@ public final class ReviewUpdate {
                         .between(
                                 new Anchor.OnLine(
                                         thread.path(),
-                                        thread.startSide(),
+                                        DiffSide.of(thread.startSide()),
                                         thread.startLine().getOrElse(line)),
-                                new Anchor.OnLine(thread.path(), thread.side(), line)))
+                                new Anchor.OnLine(thread.path(), DiffSide.of(thread.side()), line)))
                 .map(ReviewUpdate::quoted)
                 .getOrElse(List.empty());
     }
@@ -352,7 +353,7 @@ public final class ReviewUpdate {
      */
     private static Option<Anchor.OnLine> lastLine(Target target) {
         return target instanceof Target.Start(var ignored, String path, Option<NewReviewThread.Lines> lines)
-                ? lines.map(on -> new Anchor.OnLine(path, on.side(), on.line()))
+                ? lines.map(on -> new Anchor.OnLine(path, DiffSide.of(on.side()), on.line()))
                 : Option.none();
     }
 

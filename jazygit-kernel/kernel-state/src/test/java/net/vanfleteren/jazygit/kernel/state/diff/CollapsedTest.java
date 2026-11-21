@@ -9,7 +9,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import org.junit.jupiter.api.Test;
 
@@ -32,10 +31,10 @@ class CollapsedTest {
     private static ReviewThread thread(boolean resolved, Comment... comments) {
         return new ReviewThread(
                 "a.txt",
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(1),
                 Option.none(),
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(1),
                 resolved,
                 false,

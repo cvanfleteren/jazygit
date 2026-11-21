@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.kernel.content.diff.RichDiff;
 import net.vanfleteren.jazygit.kernel.content.diff.ShownRemarks;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
@@ -70,8 +70,8 @@ public class ReviewedDiffBenchmark {
         List<ReviewThread> all = List.range(0, threads).map(ReviewedDiffBenchmark::thread);
         remarks = new ShownRemarks(
                 all, Instant.EPOCH, Option.none(), true, Collapsed.NONE, HashSet.empty(), HashSet.empty());
-        first = new Anchor.OnLine("src/F99.java", Side.RIGHT, 1 + 3 * 40 + 6);
-        last = new Anchor.OnLine("src/F99.java", Side.RIGHT, 1 + 3 * 40 + 8);
+        first = new Anchor.OnLine("src/F99.java", DiffSide.NEW, 1 + 3 * 40 + 6);
+        last = new Anchor.OnLine("src/F99.java", DiffSide.NEW, 1 + 3 * 40 + 8);
     }
 
     /**
@@ -114,10 +114,10 @@ public class ReviewedDiffBenchmark {
         Option<Integer> on = subject == Subject.FILE || outdated ? Option.none() : Option.some(line);
         return new ReviewThread(
                 "src/F%d.java".formatted(file),
-                left ? Side.LEFT : Side.RIGHT,
+                left ? DiffSide.OLD : DiffSide.NEW,
                 on,
                 i % 3 == 0 ? on.map(number -> number - 2) : Option.none(),
-                left ? Side.LEFT : Side.RIGHT,
+                left ? DiffSide.OLD : DiffSide.NEW,
                 Option.some(line),
                 false,
                 outdated,

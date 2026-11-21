@@ -50,7 +50,7 @@ public final class DiffStops {
                 stops.find(stop ->
                                 stop instanceof Anchor.Thread(ReviewThread.Id other, var ignored) && other.equals(id))
                         .orElse(() -> line.flatMap(on -> nearest(stops, on)));
-            case Anchor.OnLine(String path, ReviewThread.Side side, int number) ->
+            case Anchor.OnLine(String path, DiffSide side, int number) ->
                 stops.find(at::equals)
                         .orElse(() -> stops.filter(stop -> stop instanceof Anchor.OnLine(var p, var s, var ignored)
                                         && p.equals(path)
@@ -63,7 +63,7 @@ public final class DiffStops {
                         .orElse(() -> stops.filter(
                                         stop -> stop instanceof Anchor.Gap(var p, var f, var u) && p.equals(path))
                                 .minBy(stop -> Math.abs(((Anchor.Gap) stop).from() - from)))
-                        .orElse(() -> nearest(stops, new Anchor.OnLine(path, ReviewThread.Side.RIGHT, from)));
+                        .orElse(() -> nearest(stops, new Anchor.OnLine(path, DiffSide.NEW, from)));
             // A marker of hunks filters hide is found by its first hunk, which moves into another marker as those
             // around it are opened or closed: opened, it stays on the marker kept above them, which hides them again.
             case Anchor.Filtered(String path, var hunks, var opened) ->
@@ -75,9 +75,7 @@ public final class DiffStops {
                         .orElse(() -> nearest(
                                 stops,
                                 new Anchor.OnLine(
-                                        path,
-                                        ReviewThread.Side.RIGHT,
-                                        hunks.head().newStart())));
+                                        path, DiffSide.NEW, hunks.head().newStart())));
             case Anchor.Node(String path, String pointer, Anchor.OnLine line) ->
                 stops.find(stop -> stop instanceof Anchor.Node(var p, var o, var ignored)
                                 && p.equals(path)

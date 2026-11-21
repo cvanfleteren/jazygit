@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.diff.BaseTip;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.FileFilter;
@@ -445,9 +446,9 @@ class FilesPanelTest {
                                         Option.none(),
                                         Option.none(),
                                         List.of(
-                                                remark("old.txt", ReviewThread.Side.LEFT, false),
-                                                remark("new.txt", ReviewThread.Side.RIGHT, false),
-                                                remark("b.txt", ReviewThread.Side.RIGHT, true))),
+                                                remark("old.txt", DiffSide.OLD, false),
+                                                remark("new.txt", DiffSide.NEW, false),
+                                                remark("b.txt", DiffSide.NEW, true))),
                                 HashSet.empty(),
                                 0))
                 .model();
@@ -487,8 +488,8 @@ class FilesPanelTest {
                                                         Option.none(),
                                                         Option.none(),
                                                         List.of(
-                                                                remark("dir/open.txt", ReviewThread.Side.RIGHT, false),
-                                                                remark("done.txt", ReviewThread.Side.RIGHT, true))),
+                                                                remark("dir/open.txt", DiffSide.NEW, false),
+                                                                remark("done.txt", DiffSide.NEW, true))),
                                                 HashSet.empty(),
                                                 0))
                                 .model(),
@@ -504,7 +505,7 @@ class FilesPanelTest {
                                         PullRequestDetails.State.OPEN,
                                         Option.none(),
                                         Option.none(),
-                                        List.of(remark("done.txt", ReviewThread.Side.RIGHT, true))),
+                                        List.of(remark("done.txt", DiffSide.NEW, true))),
                                 HashSet.empty(),
                                 0))
                 .model();
@@ -554,8 +555,8 @@ class FilesPanelTest {
                                         Option.none(),
                                         Option.none(),
                                         List.of(
-                                                remark("dir/a.txt", ReviewThread.Side.RIGHT, false),
-                                                remark("dir/d.txt", ReviewThread.Side.RIGHT, false))),
+                                                remark("dir/a.txt", DiffSide.NEW, false),
+                                                remark("dir/d.txt", DiffSide.NEW, false))),
                                 HashSet.empty(),
                                 0))
                 .model();
@@ -580,13 +581,13 @@ class FilesPanelTest {
         }
     }
 
-    private static ReviewThread remark(String path, ReviewThread.Side side, boolean resolved) {
+    private static ReviewThread remark(String path, DiffSide side, boolean resolved) {
         return new ReviewThread(
                 path,
-                side,
+                DiffSide.gitHub(side),
                 Option.of(1),
                 Option.none(),
-                side,
+                DiffSide.gitHub(side),
                 Option.of(1),
                 resolved,
                 false,

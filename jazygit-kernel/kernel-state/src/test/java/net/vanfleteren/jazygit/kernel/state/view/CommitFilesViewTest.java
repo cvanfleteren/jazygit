@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView.Listed;
 import org.junit.jupiter.api.Test;
 
@@ -135,10 +136,10 @@ class CommitFilesViewTest {
     private static ReviewThread thread(String path, boolean resolved) {
         return new ReviewThread(
                 path,
-                ReviewThread.Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(1),
                 Option.none(),
-                ReviewThread.Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(1),
                 resolved,
                 false,

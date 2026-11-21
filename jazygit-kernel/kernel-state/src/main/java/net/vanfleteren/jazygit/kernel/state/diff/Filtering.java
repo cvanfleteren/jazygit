@@ -129,7 +129,9 @@ public record Filtering(
         return thread.line()
                 .exists(last -> hunk.lines().exists(line -> {
                     Option<Integer> number =
-                            thread.side() == ReviewThread.Side.LEFT ? line.oldNumber() : line.newNumber();
+                            thread.side() == net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.LEFT
+                                    ? line.oldNumber()
+                                    : line.newNumber();
                     int first = thread.startLine().getOrElse(last);
                     return line.kind() != DiffLine.Kind.NOTE
                             && number.exists(at -> at >= Math.min(first, last) && at <= Math.max(first, last));

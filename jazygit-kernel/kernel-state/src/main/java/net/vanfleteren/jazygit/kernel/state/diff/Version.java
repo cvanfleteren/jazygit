@@ -7,7 +7,6 @@ import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
@@ -318,7 +317,7 @@ public record Version(
      */
     public Anchor moved(Anchor at, Option<FileVersion> to) {
         Anchor line = at instanceof Anchor.Gap(String gapPath, int from, var until) && gapPath.equals(path)
-                ? new Anchor.OnLine(path, Side.RIGHT, from)
+                ? new Anchor.OnLine(path, DiffSide.NEW, from)
                 : at;
         if (!(line instanceof Anchor.OnLine on) || !on.path().equals(path) || to.isEmpty()) {
             return at;

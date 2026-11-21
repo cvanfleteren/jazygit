@@ -9,7 +9,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor.OnLine;
 import org.junit.jupiter.api.Test;
@@ -23,17 +22,17 @@ class DiffStopsTest {
     private static final Anchor A = new Anchor.File("a.txt");
     private static final Anchor B = new Anchor.File("b.png");
 
-    private static OnLine line(Side side, int number) {
+    private static OnLine line(DiffSide side, int number) {
         return new OnLine("a.txt", side, number);
     }
 
     private static ReviewThread thread(String id, Subject subject, Option<Integer> line) {
         return new ReviewThread(
                 "a.txt",
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 line,
                 Option.none(),
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 line,
                 false,
                 false,
@@ -56,16 +55,16 @@ class DiffStopsTest {
     private static final List<Anchor> STOPS = List.of(
             LEAD,
             A,
-            line(Side.RIGHT, 1),
-            line(Side.LEFT, 2),
-            line(Side.RIGHT, 2),
-            line(Side.RIGHT, 3),
-            line(Side.RIGHT, 10),
+            line(DiffSide.NEW, 1),
+            line(DiffSide.OLD, 2),
+            line(DiffSide.NEW, 2),
+            line(DiffSide.NEW, 3),
+            line(DiffSide.NEW, 10),
             B);
 
     @Test
     void anAnchorThatIsAStopIsItsOwnStop() {
-        assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(STOPS, line(Side.LEFT, 2)));
+        assertEquals(Option.of(line(DiffSide.OLD, 2)), DiffStops.nearest(STOPS, line(DiffSide.OLD, 2)));
         assertEquals(Option.of(B), DiffStops.nearest(STOPS, B));
     }
 
@@ -73,37 +72,38 @@ class DiffStopsTest {
     void aMarkerThatIsGoneGoesToTheMarkerOfItsFileThatStartsClosestElseToTheLineWhereItStarted() {
         Anchor.Gap above = new Anchor.Gap("a.txt", 4, Option.of(10));
         Anchor.Gap after = new Anchor.Gap("a.txt", 11, Option.none());
-        List<Anchor> stops = List.of(A, line(Side.RIGHT, 3), above, line(Side.RIGHT, 10), after, B);
+        List<Anchor> stops = List.of(A, line(DiffSide.NEW, 3), above, line(DiffSide.NEW, 10), after, B);
 
         // Expanding ten lines down from the hunk above moves where the marker starts.
         assertEquals(Option.of(above), DiffStops.nearest(stops, new Anchor.Gap("a.txt", 1, Option.of(10))));
         assertEquals(Option.of(after), DiffStops.nearest(stops, new Anchor.Gap("a.txt", 14, Option.none())));
         // Expanding all of it leaves no marker: the cursor goes to the line where it started.
         assertEquals(
-                Option.of(line(Side.RIGHT, 10)), DiffStops.nearest(STOPS, new Anchor.Gap("a.txt", 8, Option.of(10))));
+                Option.of(line(DiffSide.NEW, 10)), DiffStops.nearest(STOPS, new Anchor.Gap("a.txt", 8, Option.of(10))));
     }
 
     @Test
     void aLineThatIsGoneGoesToTheClosestOfItsSideElseToItsFileElseToTheFirst() {
-        assertEquals(Option.of(line(Side.RIGHT, 10)), DiffStops.nearest(STOPS, line(Side.RIGHT, 8)));
-        assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(STOPS, line(Side.LEFT, 40)));
-        assertEquals(Option.of(B), DiffStops.nearest(STOPS, new OnLine("b.png", Side.RIGHT, 1)));
-        assertEquals(Option.of(LEAD), DiffStops.nearest(STOPS, new OnLine("c.txt", Side.RIGHT, 1)));
+        assertEquals(Option.of(line(DiffSide.NEW, 10)), DiffStops.nearest(STOPS, line(DiffSide.NEW, 8)));
+        assertEquals(Option.of(line(DiffSide.OLD, 2)), DiffStops.nearest(STOPS, line(DiffSide.OLD, 40)));
+        assertEquals(Option.of(B), DiffStops.nearest(STOPS, new OnLine("b.png", DiffSide.NEW, 1)));
+        assertEquals(Option.of(LEAD), DiffStops.nearest(STOPS, new OnLine("c.txt", DiffSide.NEW, 1)));
         assertEquals(Option.of(LEAD), DiffStops.nearest(STOPS, new Anchor.File("c.txt")));
     }
 
     @Test
     void aThreadIsFoundByItsIdWhereverItIsElseItGoesToItsLine() {
         Seq<Anchor> stops =
-                STOPS.insert(6, new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 3))));
+                STOPS.insert(6, new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(DiffSide.NEW, 3))));
 
         assertEquals(
-                Option.of(new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 3)))),
-                DiffStops.nearest(stops, new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 2)))));
-        assertEquals(
-                Option.of(line(Side.RIGHT, 2)),
+                Option.of(new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(DiffSide.NEW, 3)))),
                 DiffStops.nearest(
-                        stops, new Anchor.Thread(new ReviewThread.Id("gone"), Option.of(line(Side.RIGHT, 2)))));
+                        stops, new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(DiffSide.NEW, 2)))));
+        assertEquals(
+                Option.of(line(DiffSide.NEW, 2)),
+                DiffStops.nearest(
+                        stops, new Anchor.Thread(new ReviewThread.Id("gone"), Option.of(line(DiffSide.NEW, 2)))));
         assertEquals(
                 Option.of(LEAD),
                 DiffStops.nearest(stops, new Anchor.Thread(new ReviewThread.Id("gone"), Option.none())));
@@ -150,7 +150,7 @@ class DiffStopsTest {
 
     @Test
     void eachCommentOfAnOpenThreadButItsFirstIsAStopOfItsOwn() {
-        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 2)));
+        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(DiffSide.NEW, 2)));
         List<Anchor> threads = List.of(
                 thread,
                 new Anchor.Comment(new ReviewThread.Comment.Id("R1"), thread),
@@ -182,7 +182,7 @@ class DiffStopsTest {
 
     @Test
     void aCommentIsFoundByItsIdElseItGoesToItsThread() {
-        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 2)));
+        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(DiffSide.NEW, 2)));
         Seq<Anchor> open = STOPS.insertAll(
                 5,
                 List.of(
@@ -202,7 +202,7 @@ class DiffStopsTest {
                 Option.of(thread),
                 DiffStops.nearest(collapsed, new Anchor.Comment(new ReviewThread.Comment.Id("R2"), thread)));
         assertEquals(
-                Option.of(line(Side.RIGHT, 2)),
+                Option.of(line(DiffSide.NEW, 2)),
                 DiffStops.nearest(
                         open,
                         new Anchor.Comment(
@@ -212,30 +212,30 @@ class DiffStopsTest {
 
     @Test
     void aRowOfJsonRenderedIsFoundByItsPathElseAtTheClosestNodeItIsInElseAsItsLine() {
-        Anchor.Node jobs = new Anchor.Node("a.txt", "/jobs", line(Side.RIGHT, 2));
-        Anchor.Node build = new Anchor.Node("a.txt", "/jobs/0", line(Side.RIGHT, 3));
+        Anchor.Node jobs = new Anchor.Node("a.txt", "/jobs", line(DiffSide.NEW, 2));
+        Anchor.Node build = new Anchor.Node("a.txt", "/jobs/0", line(DiffSide.NEW, 3));
         List<Anchor> stops = List.of(A, jobs, build);
 
         // The original draws the same node from another line.
         assertEquals(
-                Option.of(build), DiffStops.nearest(stops, new Anchor.Node("a.txt", "/jobs/0", line(Side.LEFT, 9))));
+                Option.of(build), DiffStops.nearest(stops, new Anchor.Node("a.txt", "/jobs/0", line(DiffSide.OLD, 9))));
         // A node closed over it.
         assertEquals(
                 Option.of(jobs),
-                DiffStops.nearest(List.of(A, jobs), new Anchor.Node("a.txt", "/jobs/0/steps", line(Side.RIGHT, 5))));
+                DiffStops.nearest(List.of(A, jobs), new Anchor.Node("a.txt", "/jobs/0/steps", line(DiffSide.NEW, 5))));
         // Not the node /job, whose path only starts as /jobs does: the row drawn from the closest line.
-        Anchor.Node job = new Anchor.Node("a.txt", "/job", line(Side.RIGHT, 1));
-        Anchor.Node close = new Anchor.Node("a.txt", "/x", line(Side.RIGHT, 3));
+        Anchor.Node job = new Anchor.Node("a.txt", "/job", line(DiffSide.NEW, 1));
+        Anchor.Node close = new Anchor.Node("a.txt", "/x", line(DiffSide.NEW, 3));
         assertEquals(Option.of(close), DiffStops.nearest(List.of(A, job, close), build));
     }
 
     @Test
     void aLineGoesToTheFirstRowOfJsonRenderedDrawnFromTheClosestLine() {
-        Anchor.Node first = new Anchor.Node("a.txt", "/a", line(Side.RIGHT, 2));
-        Anchor.Node second = new Anchor.Node("a.txt", "/b", line(Side.RIGHT, 2));
-        Anchor.Node far = new Anchor.Node("a.txt", "/c", line(Side.RIGHT, 9));
+        Anchor.Node first = new Anchor.Node("a.txt", "/a", line(DiffSide.NEW, 2));
+        Anchor.Node second = new Anchor.Node("a.txt", "/b", line(DiffSide.NEW, 2));
+        Anchor.Node far = new Anchor.Node("a.txt", "/c", line(DiffSide.NEW, 9));
 
-        assertEquals(Option.of(first), DiffStops.nearest(List.of(A, first, second, far), line(Side.RIGHT, 4)));
+        assertEquals(Option.of(first), DiffStops.nearest(List.of(A, first, second, far), line(DiffSide.NEW, 4)));
     }
 
     @Test

@@ -4,8 +4,8 @@ import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 
 /**
@@ -23,7 +23,7 @@ public sealed interface LineGoal {
      * Where line {@code number} is, in what has the cursor {@code stops}, the cursor on the stop at {@code at}, and the
      * lines of a version rendered drawn at {@code places} (ADR 103), numbered in the file of {@code side}.
      */
-    static LineGoal of(Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, int at, Side side, int number) {
+    static LineGoal of(Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, int at, DiffSide side, int number) {
         return pathAt(stops, at)
                 .flatMap(path -> List.of(side, other(side))
                         .find(those -> hasLines(stops, places, path, those))
@@ -40,14 +40,15 @@ public sealed interface LineGoal {
      */
     static boolean numbered(Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, int at) {
         return pathAt(stops, at)
-                .exists(path -> hasLines(stops, places, path, Side.RIGHT) || hasLines(stops, places, path, Side.LEFT));
+                .exists(path ->
+                        hasLines(stops, places, path, DiffSide.NEW) || hasLines(stops, places, path, DiffSide.OLD));
     }
 
     /**
      * The line of a diff or a version shown as source: the stop of the line, else the lines around it shown when a
      * marker of the new file leaves it out, else the closest line.
      */
-    private static LineGoal onStops(Vector<Drawn.Stop> stops, String path, Side side, int number) {
+    private static LineGoal onStops(Vector<Drawn.Stop> stops, String path, DiffSide side, int number) {
         Vector<NumberedRow> lines = stops.zipWithIndex(
                         (stop, index) -> number(stop.mark(), path, side).map(its -> new NumberedRow(its, index)))
                 .flatMap(line -> line);
@@ -64,12 +65,12 @@ public sealed interface LineGoal {
                 .map(Anchor.Filtered.class::cast)
                 .find(marker -> !marker.opened()
                         && marker.path().equals(path)
-                        && marker.hunks().exists(hunk -> hunk.has(side == Side.LEFT, number)));
+                        && marker.hunks().exists(hunk -> hunk.has(side == DiffSide.OLD, number)));
         if (filtered.isDefined()) {
             return new Hidden(new Anchor.OnLine(path, side, number), filtered.get(), closest.row());
         }
         Option<Anchor.Gap> hidden = Option.when(
-                        side == Side.RIGHT,
+                        side == DiffSide.NEW,
                         () -> stops.iterator()
                                 .map(stop -> stop.mark().anchor())
                                 .filter(Anchor.Gap.class::isInstance)
@@ -94,7 +95,7 @@ public sealed interface LineGoal {
      * The line of a version rendered: the first row of the block or node drawn from it, else from the last line
      * before it that is drawn, as one in a closed node, else from the first.
      */
-    private static LineGoal inRow(Vector<Drawn.Place> places, String path, Side side, int number) {
+    private static LineGoal inRow(Vector<Drawn.Place> places, String path, DiffSide side, int number) {
         Vector<NumberedRow> lines =
                 places.flatMap(place -> line(place.anchor(), path, side).map(its -> new NumberedRow(its, place.row())));
         return lines.find(line -> line.number() == number)
@@ -111,15 +112,15 @@ public sealed interface LineGoal {
      * The number of the line of a stop {@code mark} in the file with the path {@code path} on {@code side}: by its
      * anchor, or for a context line by its other anchor (ADR 139).
      */
-    private static Option<Integer> number(Drawn.Mark mark, String path, Side side) {
+    private static Option<Integer> number(Drawn.Mark mark, String path, DiffSide side) {
         return line(mark.anchor(), path, side).orElse(() -> mark.also().flatMap(also -> line(also, path, side)));
     }
 
     /**
      * The number of the line {@code anchor} is, if it is one of the file with the path {@code path} on {@code side}.
      */
-    private static Option<Integer> line(Anchor anchor, String path, Side side) {
-        return anchor instanceof Anchor.OnLine(String its, Side on, int number) && its.equals(path) && on == side
+    private static Option<Integer> line(Anchor anchor, String path, DiffSide side) {
+        return anchor instanceof Anchor.OnLine(String its, DiffSide on, int number) && its.equals(path) && on == side
                 ? Option.some(number)
                 : Option.none();
     }
@@ -127,7 +128,7 @@ public sealed interface LineGoal {
     /**
      * Whether the file with the path {@code path} has a line on {@code side} among {@code stops} or {@code places}.
      */
-    private static boolean hasLines(Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, String path, Side side) {
+    private static boolean hasLines(Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, String path, DiffSide side) {
         return places.isEmpty()
                 ? stops.exists(stop -> number(stop.mark(), path, side).isDefined())
                 : places.exists(place -> line(place.anchor(), path, side).isDefined());
@@ -162,8 +163,8 @@ public sealed interface LineGoal {
         };
     }
 
-    private static Side other(Side side) {
-        return side == Side.LEFT ? Side.RIGHT : Side.LEFT;
+    private static DiffSide other(DiffSide side) {
+        return side == DiffSide.OLD ? DiffSide.NEW : DiffSide.OLD;
     }
 
     /**

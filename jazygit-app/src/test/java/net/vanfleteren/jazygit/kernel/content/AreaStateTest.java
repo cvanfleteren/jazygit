@@ -11,7 +11,6 @@ import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
@@ -23,6 +22,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.ContentSearchMsg;
@@ -162,7 +162,7 @@ class AreaStateTest {
         assertEquals(new LineNumberMsg.Closed(), pressed.sent().get(0));
         ViewMsg.ContentScrolled moved = (ViewMsg.ContentScrolled) pressed.sent().get(1);
         assertEquals(
-                Option.of(new Anchor.OnLine("a.txt", ReviewThread.Side.RIGHT, 3)),
+                Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 3)),
                 moved.to().cursor());
     }
 

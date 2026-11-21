@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
@@ -56,8 +57,7 @@ class PullRequestContentTest {
             ViewMsg.ContentScrolled next = (ViewMsg.ContentScrolled) dispatched.getLast();
             Anchor onThread = new Anchor.Thread(
                     new net.vanfleteren.jazygit.core.gh.model.ReviewThread.Id("T1"),
-                    Option.of(new Anchor.OnLine(
-                            "a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, 1)));
+                    Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
             assertEquals(Option.of(onThread), next.to().cursor());
 
             drawn.set(Update.update(model, next).model());
@@ -77,7 +77,7 @@ class PullRequestContentTest {
             SettledPilot.of(testRunner).press('c');
             SettledPilot.of(testRunner).pause();
             assertEquals(
-                    new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, 1),
+                    new Anchor.OnLine("a.txt", DiffSide.NEW, 1),
                     ((net.vanfleteren.jazygit.features.github.review.ReviewMsg.StartAsked) dispatched.getLast())
                             .at()
                             .cursor());
@@ -90,8 +90,7 @@ class PullRequestContentTest {
         ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
         Model model = pullRequestDiff();
         AreaId area = reviewing.areaOfPane(model, FilesPanel.PANE).get();
-        Anchor.OnLine line =
-                new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, 1);
+        Anchor.OnLine line = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
 
         java.util.concurrent.atomic.AtomicReference<Model> drawn =
                 new java.util.concurrent.atomic.AtomicReference<>(model);

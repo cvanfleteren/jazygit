@@ -97,7 +97,7 @@ final class ReviewFixtures {
     }
 
     static Anchor.OnLine line(Side side, int number) {
-        return new Anchor.OnLine("a.txt", side, number);
+        return new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.kernel.state.diff.DiffSide.of(side), number);
     }
 
     static Model files(PullRequestDetails.State state, String head) {

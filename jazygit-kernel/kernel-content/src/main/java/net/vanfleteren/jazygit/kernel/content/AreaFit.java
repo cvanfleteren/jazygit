@@ -5,7 +5,6 @@ import static net.vanfleteren.jazygit.kernel.content.TextWindow.windowed;
 
 import dev.tamboui.text.Text;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.content.AreaState.Columns;
 import net.vanfleteren.jazygit.kernel.content.AreaState.GoToLine;
 import net.vanfleteren.jazygit.kernel.content.AreaState.Search;
@@ -16,6 +15,7 @@ import net.vanfleteren.jazygit.kernel.content.diff.RichDiff;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
@@ -82,10 +82,10 @@ final class AreaFit {
                 before.styled().filter(drawn -> drawn.theme() == theme && was.sameChanges(content));
         // The new file's side in a diff shown anew, else where it was. Kept by the area, as it is not where the cursor
         // is but where it goes.
-        ReviewThread.Side side = before.cursor()
+        DiffSide side = before.cursor()
                 .filter(ignored -> was.equals(content))
                 .map(DiffCursor::side)
-                .getOrElse(ReviewThread.Side.RIGHT);
+                .getOrElse(DiffSide.NEW);
         Body body = showing.shown().body();
         // A version rendered, or the builds, are drawn as wide as the area, which it learns while it draws (ADR 80,
         // 103, 131).
@@ -248,6 +248,5 @@ final class AreaFit {
      * @param near        the stop the cursor was on, which the stops of the cursor and the range are looked for from
      * @param side        the side of the split view the cursor keeps to while it is on no half (ADR 139)
      */
-    private record Restyled(
-            Option<Styled> last, Option<Styled> sameChanges, Styled current, int near, ReviewThread.Side side) {}
+    private record Restyled(Option<Styled> last, Option<Styled> sameChanges, Styled current, int near, DiffSide side) {}
 }

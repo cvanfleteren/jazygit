@@ -8,12 +8,12 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
 import java.util.function.BiFunction;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.content.AreaState.Wanted;
 import net.vanfleteren.jazygit.kernel.content.diff.DiffCursor;
 import net.vanfleteren.jazygit.kernel.content.diff.LineGoal;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.view.LineNumberMsg;
 import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
@@ -60,8 +60,7 @@ final class AreaLines {
     static AreaState arrived(AreaState state, Styled shown) {
         Option<Wanted> asked = state.line().wanted();
         Option<LineGoal> goal = asked.flatMap(wanted -> state.cursor()
-                .map(on ->
-                        LineGoal.of(shown.stops(), shown.places(), on.stop(), ReviewThread.Side.RIGHT, wanted.line())));
+                .map(on -> LineGoal.of(shown.stops(), shown.places(), on.stop(), DiffSide.NEW, wanted.line())));
         AreaState waiting = state.withLine(
                 state.line().withWanted(asked.filter(ignored -> goal.exists(LineGoal.Hidden.class::isInstance))));
         return goal.flatMap(reached -> reached instanceof LineGoal.OnStop(var _, boolean exact, int at) && !exact
@@ -122,9 +121,7 @@ final class AreaLines {
      * of the cursor in the split view, in the old file in the original, else in the new file.
      */
     private static Reaction toLine(AreaState before, Viewport view, DiffCursor on, Styled shown, int line) {
-        ReviewThread.Side side = before.original()
-                ? ReviewThread.Side.LEFT
-                : shown.split().split() ? on.side() : ReviewThread.Side.RIGHT;
+        DiffSide side = before.original() ? DiffSide.OLD : shown.split().split() ? on.side() : DiffSide.NEW;
         AreaState state = before.withMatch(Option.none());
         return switch (LineGoal.of(shown.stops(), shown.places(), on.stop(), side, line)) {
             case LineGoal.OnStop(int index, boolean exact, int at) -> {

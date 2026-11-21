@@ -7,9 +7,9 @@ import dev.tamboui.text.Span;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
 import java.util.function.BiFunction;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.content.diff.DiffCursor;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Found;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.view.ContentSearchMsg;
@@ -188,13 +188,13 @@ final class AreaSearch {
     /**
      * The side of the split view {@code hit} is in (ADR 139); none in a row that is not split.
      */
-    private static Option<ReviewThread.Side> sideOf(AreaState state, SearchHits.Hit hit) {
+    private static Option<DiffSide> sideOf(AreaState state, SearchHits.Hit hit) {
         return state.styled()
                 .flatMap(shown -> shown.split().halvesOf(hit.row()).map(cut -> {
                     String text = shown.lines().get(hit.row()).rawContent();
                     return Span.raw(text.substring(0, shown.from(hit))).width() < cut.rule()
-                            ? ReviewThread.Side.LEFT
-                            : ReviewThread.Side.RIGHT;
+                            ? DiffSide.OLD
+                            : DiffSide.NEW;
                 }));
     }
 

@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -17,6 +16,7 @@ import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.view.FilesShown;
@@ -86,7 +86,7 @@ class UnchangedContentTest {
         Model shown = showing("README.md", new FileContent.Text(DiffText.of(README)));
         ScrolledContent.Unchanged file = new ScrolledContent.Unchanged("README.md", DiffText.of(README));
         AreaId area = UnchangedSource.AREA.id();
-        Anchor line = new Anchor.OnLine("README.md", ReviewThread.Side.RIGHT, 1);
+        Anchor line = new Anchor.OnLine("README.md", DiffSide.NEW, 1);
         DiffCursorAt at = new DiffCursorAt(
                 area,
                 new Scrolled(file, 0, 0, Option.of(line), Option.none()),

@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops.HunkAt;
@@ -87,15 +86,15 @@ public record DiffLines(Vector<Line> lines) {
         /**
          * Whether the line shows on {@code side} of the split view: a context line on both.
          */
-        boolean on(ReviewThread.Side side) {
+        boolean on(DiffSide side) {
             return line.kind() == DiffLine.Kind.CONTEXT || anchor.side() == side;
         }
 
         /**
          * The line with its anchor on {@code side}: a context line on the left by its number in the old file.
          */
-        Line onSide(ReviewThread.Side side) {
-            return side == ReviewThread.Side.LEFT ? left().map(this::as).getOrElse(this) : this;
+        Line onSide(DiffSide side) {
+            return side == DiffSide.OLD ? left().map(this::as).getOrElse(this) : this;
         }
 
         /**
@@ -108,7 +107,7 @@ public record DiffLines(Vector<Line> lines) {
         private Option<Anchor.OnLine> left() {
             return Option.when(line.kind() == DiffLine.Kind.CONTEXT, line::oldNumber)
                     .flatMap(number -> number)
-                    .map(number -> new Anchor.OnLine(anchor.path(), ReviewThread.Side.LEFT, number));
+                    .map(number -> new Anchor.OnLine(anchor.path(), DiffSide.OLD, number));
         }
     }
 }

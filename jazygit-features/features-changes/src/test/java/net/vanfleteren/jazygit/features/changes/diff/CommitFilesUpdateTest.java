@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.load.LoadCommitFileDiff;
 import net.vanfleteren.jazygit.kernel.state.load.LoadCommitFiles;
 import net.vanfleteren.jazygit.kernel.state.load.LoadCommitTree;
@@ -259,10 +260,10 @@ class CommitFilesUpdateTest {
     private static final Changes PULL_REQUEST = new Changes.OfPullRequest(COMMITS);
     private static final ReviewThread THREAD = new ReviewThread(
             "a.txt",
-            ReviewThread.Side.RIGHT,
+            DiffSide.gitHub(DiffSide.NEW),
             Option.of(1),
             Option.none(),
-            ReviewThread.Side.RIGHT,
+            DiffSide.gitHub(DiffSide.NEW),
             Option.of(1),
             false,
             false,

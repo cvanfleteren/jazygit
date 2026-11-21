@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubEditor;
@@ -34,6 +33,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
@@ -137,7 +137,7 @@ class OpenFileUpdateTest {
 
     @Test
     void aRemovedLineOpensWhereItWasInTheNewFile() {
-        Anchor.OnLine removed = new Anchor.OnLine("a.txt", Side.LEFT, 10);
+        Anchor.OnLine removed = new Anchor.OnLine("a.txt", DiffSide.OLD, 10);
 
         assertEquals(
                 List.of(new OpenFileCmd(NVIM, "a.txt", 10)),
@@ -147,14 +147,14 @@ class OpenFileUpdateTest {
     @Test
     void aContextLineOnTheLeftOfTheSplitViewOpensAtItsOwnLineOfTheNewFile() {
         // A context line is a stop on the left by its number in the old file (ADR 139); here the same as in the new.
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), opened(new Anchor.OnLine("a.txt", Side.LEFT, 9)));
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), opened(new Anchor.OnLine("a.txt", DiffSide.OLD, 9)));
     }
 
     @Test
     void aRemovedLineAtTheEndOfTheFileOpensAtTheLastLineBeforeIt() {
         DiffText removedLast = DiffText.of(
                 "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1,3 +1,2 @@\n one\n two\n-three\n");
-        Anchor.OnLine three = new Anchor.OnLine("a.txt", Side.LEFT, 3);
+        Anchor.OnLine three = new Anchor.OnLine("a.txt", DiffSide.OLD, 3);
 
         assertEquals(
                 List.of(new OpenFileCmd(NVIM, "a.txt", 2)),
@@ -262,7 +262,7 @@ class OpenFileUpdateTest {
     }
 
     private static Anchor.OnLine right(int number) {
-        return new Anchor.OnLine("a.txt", Side.RIGHT, number);
+        return new Anchor.OnLine("a.txt", DiffSide.NEW, number);
     }
 
     private static Env env(Git git, Terminal terminal) {

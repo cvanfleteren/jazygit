@@ -20,7 +20,6 @@ import net.vanfleteren.jazygit.core.gh.model.Reaction;
 import net.vanfleteren.jazygit.core.gh.model.Reactions;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
@@ -30,6 +29,7 @@ import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Collapsed;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownDiff;
@@ -65,10 +65,10 @@ class RemarkLinesTest {
     private static ReviewThread thread(String path, int line, boolean resolved, String... bodies) {
         return new ReviewThread(
                 path,
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(line),
                 Option.none(),
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(line),
                 resolved,
                 false,
@@ -114,13 +114,13 @@ class RemarkLinesTest {
             +int total = 43;
             """;
 
-    private static ReviewThread onLines(Side startSide, int start, Side side, int line) {
+    private static ReviewThread onLines(DiffSide startSide, int start, DiffSide side, int line) {
         return new ReviewThread(
                 "a.txt",
-                side,
+                DiffSide.gitHub(side),
                 Option.of(line),
                 Option.when(startSide != side || start != line, start),
-                startSide,
+                DiffSide.gitHub(startSide),
                 Option.of(line),
                 false,
                 false,
@@ -149,7 +149,7 @@ class RemarkLinesTest {
     void inTheSplitViewAThreadGoesUnderItsRowInTheHalfOfItsSide() {
         Drawn drawn = RichDiff.drawn(
                 Expansion.Folded.of(ParsedDiff.of(PAIRS)),
-                Option.of(shown(Collapsed.NONE, onLines(Side.RIGHT, 1, Side.RIGHT, 1))),
+                Option.of(shown(Collapsed.NONE, onLines(DiffSide.NEW, 1, DiffSide.NEW, 1))),
                 Option.none(),
                 RichDiff.Drawing.of(Theme.SpanStyles.NONE)
                         .withHighlights(HashSet.of(RichDiff.Highlight.WORDS))
@@ -167,7 +167,7 @@ class RemarkLinesTest {
         assertTrue(lines.get(1).contains("│1 ● + int count = 42;"), lines.get(1));
         // Its stop is on the right side, which j keeps to there.
         assertEquals(
-                Option.of(Side.RIGHT),
+                Option.of(DiffSide.NEW),
                 drawn.stops()
                         .find(stop -> stop.mark().anchor() instanceof Anchor.Thread)
                         .flatMap(stop -> stop.mark().side()));
@@ -175,7 +175,7 @@ class RemarkLinesTest {
 
     @Test
     void aThreadOnALineOfAPairGoesAfterThePair() {
-        List<String> lines = rich(PAIRS, shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.LEFT, 1)));
+        List<String> lines = rich(PAIRS, shown(Collapsed.NONE, onLines(DiffSide.OLD, 1, DiffSide.OLD, 1)));
 
         String indent = " ".repeat(8);
         assertEquals(
@@ -197,7 +197,10 @@ class RemarkLinesTest {
     void theThreadsOnBothLinesOfAPairFollowItOneAfterTheOther() {
         List<String> lines = rich(
                 PAIRS,
-                shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.LEFT, 1), onLines(Side.RIGHT, 1, Side.RIGHT, 1)));
+                shown(
+                        Collapsed.NONE,
+                        onLines(DiffSide.OLD, 1, DiffSide.OLD, 1),
+                        onLines(DiffSide.NEW, 1, DiffSide.NEW, 1)));
 
         String indent = " ".repeat(8);
         assertEquals(
@@ -221,7 +224,7 @@ class RemarkLinesTest {
 
     @Test
     void theThreadsOnTheLastPairOfAFileAreSetApartOnlyFromWhatFollowsThem() {
-        ShownRemarks remarks = shown(Collapsed.NONE, onLines(Side.LEFT, 2, Side.LEFT, 2));
+        ShownRemarks remarks = shown(Collapsed.NONE, onLines(DiffSide.OLD, 2, DiffSide.OLD, 2));
         String indent = " ".repeat(8);
         List<String> pair = List.of(
                 " modified  a.txt",
@@ -252,7 +255,7 @@ class RemarkLinesTest {
 
     @Test
     void aBlockAThreadOnSeveralLinesCoversIsShownAsGitGivesIt() {
-        List<String> lines = rich(PAIRS, shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.RIGHT, 1)));
+        List<String> lines = rich(PAIRS, shown(Collapsed.NONE, onLines(DiffSide.OLD, 1, DiffSide.NEW, 1)));
 
         assertEquals(
                 List.of(
@@ -471,10 +474,10 @@ class RemarkLinesTest {
     void aThreadOnSeveralLinesMarksThemAndOneThatCannotBePlacedEndsItsFile() {
         ReviewThread several = new ReviewThread(
                 "a.txt",
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(3),
                 Option.of(1),
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(3),
                 false,
                 false,
@@ -492,10 +495,10 @@ class RemarkLinesTest {
                 ReviewThread.Rights.ALL);
         ReviewThread outdated = new ReviewThread(
                 "a.txt",
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.none(),
                 Option.none(),
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(40),
                 false,
                 true,
@@ -596,10 +599,10 @@ class RemarkLinesTest {
     void aThreadAboutAWholeFileGoesUnderItsBar() {
         ReviewThread onFile = new ReviewThread(
                 "a.txt",
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.none(),
                 Option.none(),
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.none(),
                 false,
                 false,
@@ -628,10 +631,10 @@ class RemarkLinesTest {
     void aThreadWhoseFirstCommentIsHiddenShowsItInFullOnceItIsOpened() {
         ReviewThread hidden = new ReviewThread(
                 "a.txt",
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(2),
                 Option.none(),
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.of(2),
                 false,
                 false,
@@ -902,18 +905,18 @@ class RemarkLinesTest {
         Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
 
         // Nothing comes before the file, so there is no lead.
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
         Anchor.Thread replied = new Anchor.Thread(second.id(), Option.of(two));
         assertEquals(
                 List.of(
                         new Anchor.File("a.txt"),
-                        new Anchor.OnLine("a.txt", Side.RIGHT, 1),
-                        new Anchor.OnLine("a.txt", Side.LEFT, 2),
+                        new Anchor.OnLine("a.txt", DiffSide.NEW, 1),
+                        new Anchor.OnLine("a.txt", DiffSide.OLD, 2),
                         two,
                         new Anchor.Thread(first.id(), Option.of(two)),
                         replied,
                         new Anchor.Comment(new ReviewThread.Comment.Id("C1"), replied),
-                        new Anchor.OnLine("a.txt", Side.RIGHT, 3),
+                        new Anchor.OnLine("a.txt", DiffSide.NEW, 3),
                         new Anchor.Gap("a.txt", 4, Option.none()),
                         new Anchor.Thread(outdated.id(), Option.none())),
                 drawn.stops().map(stop -> stop.mark().anchor()));
@@ -935,7 +938,7 @@ class RemarkLinesTest {
         assertEquals(
                 new Anchor.Comment(
                         new ReviewThread.Comment.Id("C1"),
-                        new Anchor.Thread(second.id(), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)))),
+                        new Anchor.Thread(second.id(), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)))),
                 comment.mark().anchor());
         assertTrue(lines.get(comment.row()).contains("┣━ bob"), lines.mkString("\n"));
         assertTrue(lines.get(comment.row() + comment.mark().lines() - 1).contains("┗━"));
@@ -991,9 +994,9 @@ class RemarkLinesTest {
 
         Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
 
-        Anchor.OnLine one = new Anchor.OnLine("a.txt", Side.RIGHT, 1);
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
-        Anchor.OnLine three = new Anchor.OnLine("a.txt", Side.RIGHT, 3);
+        Anchor.OnLine one = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
+        Anchor.OnLine three = new Anchor.OnLine("a.txt", DiffSide.NEW, 3);
         Anchor.Thread opened = new Anchor.Thread(hidden.id(), Option.of(one));
         Anchor.Thread open = new Anchor.Thread(replied.id(), Option.of(two));
         assertEquals(
@@ -1002,7 +1005,7 @@ class RemarkLinesTest {
                         one,
                         opened,
                         new Anchor.Comment(new ReviewThread.Comment.Id("G"), opened),
-                        new Anchor.OnLine("a.txt", Side.LEFT, 2),
+                        new Anchor.OnLine("a.txt", DiffSide.OLD, 2),
                         two,
                         open,
                         new Anchor.Comment(new ReviewThread.Comment.Id("C1"), open),

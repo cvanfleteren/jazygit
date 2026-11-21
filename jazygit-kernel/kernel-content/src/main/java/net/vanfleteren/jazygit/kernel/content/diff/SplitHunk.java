@@ -8,7 +8,6 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.LinePairs;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedLine;
@@ -18,6 +17,7 @@ import net.vanfleteren.jazygit.kernel.content.diff.RichDiff.Change;
 import net.vanfleteren.jazygit.kernel.content.diff.RichDiff.Highlight;
 import net.vanfleteren.jazygit.kernel.content.diff.RichDiff.Pending;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.state.diff.PlacedRemarks.LineRemarks;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn.Mark;
@@ -131,14 +131,14 @@ record SplitHunk(FileSections.Lines file, int digits, int left, int right) imple
      * {@code followed} by in the file.
      */
     private List<Marked> row(LinePairs.Row row, Hunk hunk, boolean followed) {
-        Half before = row.left().map(at -> half(hunk, at, Side.LEFT)).getOrElse(() -> blank(left));
-        Half after = row.right().map(at -> half(hunk, at, Side.RIGHT)).getOrElse(() -> blank(right));
+        Half before = row.left().map(at -> half(hunk, at, DiffSide.OLD)).getOrElse(() -> blank(left));
+        Half after = row.right().map(at -> half(hunk, at, DiffSide.NEW)).getOrElse(() -> blank(right));
         Halves halves = halves(before, after);
         int rule = halves.rule();
         List<Mark> marks = row.left()
-                .flatMap(at -> stop(hunk, at, Side.LEFT, 0, rule))
+                .flatMap(at -> stop(hunk, at, DiffSide.OLD, 0, rule))
                 .toList()
-                .appendAll(row.right().flatMap(at -> stop(hunk, at, Side.RIGHT, rule + 1, TO_THE_END)));
+                .appendAll(row.right().flatMap(at -> stop(hunk, at, DiffSide.NEW, rule + 1, TO_THE_END)));
         Marked drawn = new Marked.Split(
                 () -> joined(before, after),
                 marks,
@@ -152,8 +152,8 @@ record SplitHunk(FileSections.Lines file, int digits, int left, int right) imple
                 .appendAll(
                         threads.isEmpty()
                                 ? List.empty()
-                                : List.of(Side.LEFT, Side.RIGHT)
-                                        .map(side -> threads.filter(thread -> thread.side() == side))
+                                : List.of(DiffSide.OLD, DiffSide.NEW)
+                                        .map(side -> threads.filter(thread -> DiffSide.of(thread.side()) == side))
                                         .filter(onSide -> !onSide.isEmpty())
                                         .flatMap(onSide -> threads(onSide, hunk, row))
                                         .appendAll(followed ? List.of(Marked.plain(Line.from(""))) : List.empty()));
@@ -199,11 +199,11 @@ record SplitHunk(FileSections.Lines file, int digits, int left, int right) imple
      * the halves kept beside them.
      */
     private List<Marked> threads(List<ReviewThread> threads, Hunk hunk, LinePairs.Row row) {
-        Side side = threads.head().side();
+        DiffSide side = DiffSide.of(threads.head().side());
         int gutter = digits + Gutter.END.length() + 2;
-        int indent = side == Side.LEFT ? gutter : left + 1 + gutter;
-        int end = side == Side.LEFT ? left - 1 : width() - 1;
-        Option<Integer> on = side == Side.LEFT ? row.left() : row.right();
+        int indent = side == DiffSide.OLD ? gutter : left + 1 + gutter;
+        int end = side == DiffSide.OLD ? left - 1 : width() - 1;
+        Option<Integer> on = side == DiffSide.OLD ? row.left() : row.right();
         Option<Anchor.OnLine> line =
                 on.flatMap(at -> Anchor.of(file.path(), hunk.lines().get(at).line()));
         return new Blocks(indent, Math.max(indent + 20, end), file.style())
@@ -271,16 +271,16 @@ record SplitHunk(FileSections.Lines file, int digits, int left, int right) imple
     /**
      * The half of the line at {@code at} of {@code hunk} on {@code side}: its gutter and marker, then its code.
      */
-    private Half half(Hunk hunk, int at, Side side) {
+    private Half half(Hunk hunk, int at, DiffSide side) {
         ParsedLine parsed = hunk.lines().get(at);
         DiffLine line = parsed.line();
         Theme.SpanStyles styles = styles();
-        String numbers = Gutter.number(side == Side.LEFT ? line.oldNumber() : line.newNumber(), digits);
+        String numbers = Gutter.number(side == DiffSide.OLD ? line.oldNumber() : line.newNumber(), digits);
         LineRemarks remarks = hunk.remarks().get(at);
         List<Span> gutter = Gutter.spans(
                 numbers,
                 line.kind(),
-                remarks.threads().exists(thread -> thread.side() == side),
+                remarks.threads().exists(thread -> DiffSide.of(thread.side()) == side),
                 remarks.covered(),
                 styles);
         Option<Change> change = switch (line.kind()) {
@@ -348,9 +348,9 @@ record SplitHunk(FileSections.Lines file, int digits, int left, int right) imple
      * The stop of the line at {@code at} of {@code hunk} on {@code side}, its tint {@code width} columns from
      * {@code column}: a context line on the left by its number in the old file.
      */
-    private Option<Mark> stop(Hunk hunk, int at, Side side, int column, int width) {
+    private Option<Mark> stop(Hunk hunk, int at, DiffSide side, int column, int width) {
         DiffLine line = hunk.lines().get(at).line();
-        Option<Anchor> anchor = side == Side.LEFT && line.kind() == DiffLine.Kind.CONTEXT
+        Option<Anchor> anchor = side == DiffSide.OLD && line.kind() == DiffLine.Kind.CONTEXT
                 ? RichDiff.leftOfContext(file.path(), line)
                 : Anchor.of(file.path(), line).map(on -> on);
         return anchor.map(

@@ -17,11 +17,11 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
@@ -299,12 +299,12 @@ class RichDiffTest {
                 text(drawn.lines()).map(String::stripTrailing));
         assertEquals(
                 List.of(
-                        new Anchor.OnLine("pom.xml", Side.LEFT, 44),
-                        new Anchor.OnLine("pom.xml", Side.RIGHT, 44),
-                        new Anchor.OnLine("pom.xml", Side.LEFT, 45),
-                        new Anchor.OnLine("pom.xml", Side.RIGHT, 45),
-                        new Anchor.OnLine("pom.xml", Side.LEFT, 46),
-                        new Anchor.OnLine("pom.xml", Side.RIGHT, 46)),
+                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 44),
+                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 44),
+                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 45),
+                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 45),
+                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 46),
+                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 46)),
                 drawn.stops()
                         .map(stop -> stop.mark().anchor())
                         .filter(anchor ->

@@ -8,7 +8,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.kernel.state.diff.PlacedRemarks.FileRemarks;
@@ -33,18 +32,18 @@ class PlacedRemarksTest {
              three
             """);
 
-    private static ReviewThread thread(String path, Side side, Option<Integer> line, Option<Integer> start) {
+    private static ReviewThread thread(String path, DiffSide side, Option<Integer> line, Option<Integer> start) {
         return thread(path, side, line, start, side);
     }
 
     private static ReviewThread thread(
-            String path, Side side, Option<Integer> line, Option<Integer> start, Side startSide) {
+            String path, DiffSide side, Option<Integer> line, Option<Integer> start, DiffSide startSide) {
         return new ReviewThread(
                 path,
-                side,
+                DiffSide.gitHub(side),
                 line,
                 start,
-                startSide,
+                DiffSide.gitHub(startSide),
                 line,
                 false,
                 line.isEmpty(),
@@ -62,7 +61,7 @@ class PlacedRemarksTest {
                 ReviewThread.Rights.ALL);
     }
 
-    private static ReviewThread onLine(Side side, int line) {
+    private static ReviewThread onLine(DiffSide side, int line) {
         return thread("a.txt", side, Option.of(line), Option.none());
     }
 
@@ -72,9 +71,9 @@ class PlacedRemarksTest {
 
     @Test
     void aThreadGoesAfterTheLineWithItsNumberOnItsSide() {
-        ReviewThread added = onLine(Side.RIGHT, 2);
-        ReviewThread removed = onLine(Side.LEFT, 2);
-        ReviewThread context = onLine(Side.LEFT, 3);
+        ReviewThread added = onLine(DiffSide.NEW, 2);
+        ReviewThread removed = onLine(DiffSide.OLD, 2);
+        ReviewThread context = onLine(DiffSide.OLD, 3);
 
         PlacedRemarks placed = PlacedRemarks.place(DIFF, List.of(added, removed, context));
 
@@ -85,7 +84,7 @@ class PlacedRemarksTest {
 
     @Test
     void aThreadOnSeveralLinesGoesAfterItsLastAndCoversTheOthers() {
-        ReviewThread several = thread("a.txt", Side.RIGHT, Option.of(3), Option.of(1));
+        ReviewThread several = thread("a.txt", DiffSide.NEW, Option.of(3), Option.of(1));
 
         PlacedRemarks placed = PlacedRemarks.place(DIFF, List.of(several));
 
@@ -99,7 +98,7 @@ class PlacedRemarksTest {
     @Test
     void aThreadThatStartsOnTheOtherSideCoversFromThere() {
         // From the removed line two of the old file to line three of the new one.
-        ReviewThread across = thread("a.txt", Side.RIGHT, Option.of(3), Option.of(2), Side.LEFT);
+        ReviewThread across = thread("a.txt", DiffSide.NEW, Option.of(3), Option.of(2), DiffSide.OLD);
 
         PlacedRemarks placed = PlacedRemarks.place(DIFF, List.of(across));
 
@@ -122,8 +121,9 @@ class PlacedRemarksTest {
                 +SIXTEEN
                  seventeen
                 """);
-        ReviewThread fromBefore = thread("a.txt", Side.RIGHT, Option.of(17), Option.of(5));
-        ReviewThread fromBeforeOnTheOtherSide = thread("a.txt", Side.RIGHT, Option.of(17), Option.of(5), Side.LEFT);
+        ReviewThread fromBefore = thread("a.txt", DiffSide.NEW, Option.of(17), Option.of(5));
+        ReviewThread fromBeforeOnTheOtherSide =
+                thread("a.txt", DiffSide.NEW, Option.of(17), Option.of(5), DiffSide.OLD);
 
         for (ReviewThread thread : List.of(fromBefore, fromBeforeOnTheOtherSide)) {
             FileRemarks file =
@@ -157,7 +157,7 @@ class PlacedRemarksTest {
                 -thirty-six
                 +THIRTY-SIX
                 """);
-        ReviewThread fromTheGap = thread("a.txt", Side.RIGHT, Option.of(36), Option.of(10));
+        ReviewThread fromTheGap = thread("a.txt", DiffSide.NEW, Option.of(36), Option.of(10));
 
         FileRemarks file = PlacedRemarks.place(cut, List.of(fromTheGap)).files().head();
 
@@ -169,7 +169,7 @@ class PlacedRemarksTest {
 
     @Test
     void aThreadOnOneLineCoversNothing() {
-        assertTrue(PlacedRemarks.place(DIFF, List.of(onLine(Side.RIGHT, 3)))
+        assertTrue(PlacedRemarks.place(DIFF, List.of(onLine(DiffSide.NEW, 3)))
                 .files()
                 .head()
                 .lines()
@@ -179,7 +179,7 @@ class PlacedRemarksTest {
 
     @Test
     void aThreadOnSeveralLinesThatCannotBePlacedCoversNothing() {
-        ReviewThread beyond = thread("a.txt", Side.RIGHT, Option.of(40), Option.of(1));
+        ReviewThread beyond = thread("a.txt", DiffSide.NEW, Option.of(40), Option.of(1));
 
         FileRemarks file = PlacedRemarks.place(DIFF, List.of(beyond)).files().head();
 
@@ -189,8 +189,8 @@ class PlacedRemarksTest {
 
     @Test
     void anOutdatedThreadAndOneOnALineTheDiffDoesNotShowAreListedAtTheEndOfTheirFile() {
-        ReviewThread outdated = thread("a.txt", Side.RIGHT, Option.none(), Option.none());
-        ReviewThread elsewhere = onLine(Side.RIGHT, 40);
+        ReviewThread outdated = thread("a.txt", DiffSide.NEW, Option.none(), Option.none());
+        ReviewThread elsewhere = onLine(DiffSide.NEW, 40);
 
         FileRemarks file =
                 PlacedRemarks.place(DIFF, List.of(outdated, elsewhere)).files().head();
@@ -203,10 +203,10 @@ class PlacedRemarksTest {
     void aThreadAboutAWholeFileGoesUnderItsBar() {
         ReviewThread onFile = new ReviewThread(
                 "a.txt",
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.none(),
                 Option.none(),
-                Side.RIGHT,
+                DiffSide.gitHub(DiffSide.NEW),
                 Option.none(),
                 false,
                 false,
@@ -235,16 +235,17 @@ class PlacedRemarksTest {
                 -x
                 +y
                 """);
-        ReviewThread byNew = thread("new.txt", Side.RIGHT, Option.of(1), Option.none());
-        ReviewThread byOld = thread("old.txt", Side.LEFT, Option.of(1), Option.none());
+        ReviewThread byNew = thread("new.txt", DiffSide.NEW, Option.of(1), Option.none());
+        ReviewThread byOld = thread("old.txt", DiffSide.OLD, Option.of(1), Option.none());
 
-        PlacedRemarks placed = PlacedRemarks.place(renamed, List.of(byNew, byOld, onLine(Side.RIGHT, 1)));
+        PlacedRemarks placed = PlacedRemarks.place(renamed, List.of(byNew, byOld, onLine(DiffSide.NEW, 1)));
 
         assertEquals(
                 List.of(List.of(byOld), List.of(byNew)),
                 placed.files().head().lines().head().map(LineRemarks::threads));
         assertEquals(List.empty(), placed.files().head().unplaced());
-        assertTrue(PlacedRemarks.place(renamed, List.of(onLine(Side.RIGHT, 1))).isEmpty());
+        assertTrue(
+                PlacedRemarks.place(renamed, List.of(onLine(DiffSide.NEW, 1))).isEmpty());
     }
 
     @Test
@@ -261,9 +262,9 @@ class PlacedRemarksTest {
                 +y
                 """);
         // Outdated, so all three are listed at the end of the file, where they share one list.
-        ReviewThread firstByOld = thread("old.txt", Side.LEFT, Option.none(), Option.none());
-        ReviewThread byNew = thread("new.txt", Side.RIGHT, Option.none(), Option.none());
-        ReviewThread secondByOld = thread("old.txt", Side.RIGHT, Option.none(), Option.none());
+        ReviewThread firstByOld = thread("old.txt", DiffSide.OLD, Option.none(), Option.none());
+        ReviewThread byNew = thread("new.txt", DiffSide.NEW, Option.none(), Option.none());
+        ReviewThread secondByOld = thread("old.txt", DiffSide.NEW, Option.none(), Option.none());
 
         FileRemarks file = PlacedRemarks.place(renamed, List.of(firstByOld, byNew, secondByOld))
                 .files()
@@ -285,8 +286,8 @@ class PlacedRemarksTest {
                 -x
                 +y
                 """);
-        ReviewThread left = thread("new.txt", Side.LEFT, Option.of(1), Option.none());
-        ReviewThread right = thread("new.txt", Side.RIGHT, Option.of(1), Option.none());
+        ReviewThread left = thread("new.txt", DiffSide.OLD, Option.of(1), Option.none());
+        ReviewThread right = thread("new.txt", DiffSide.NEW, Option.of(1), Option.none());
 
         PlacedRemarks placed = PlacedRemarks.place(renamed, List.of(left, right));
 
@@ -308,7 +309,7 @@ class PlacedRemarksTest {
                 -x
                 -y
                 """);
-        ReviewThread left = thread("gone.txt", Side.LEFT, Option.of(2), Option.none());
+        ReviewThread left = thread("gone.txt", DiffSide.OLD, Option.of(2), Option.none());
 
         PlacedRemarks placed = PlacedRemarks.place(deleted, List.of(left));
 

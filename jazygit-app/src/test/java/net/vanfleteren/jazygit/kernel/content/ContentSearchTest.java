@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Found;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
@@ -432,7 +433,7 @@ class ContentSearchTest {
 
     private static final Anchor THREAD = new Anchor.Thread(
             new net.vanfleteren.jazygit.core.gh.model.ReviewThread.Id("T1"),
-            Option.of(new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, 1)));
+            Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
 
     /**
      * The diff of a pull request's files, of one added line {@code a} with a thread on it that asks "Why?".
@@ -448,7 +449,7 @@ class ContentSearchTest {
     }
 
     private static Anchor onNew(int line) {
-        return new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, line);
+        return new Anchor.OnLine("a.txt", DiffSide.NEW, line);
     }
 
     private static Model commit(DiffStyle style) {
