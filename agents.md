@@ -13,8 +13,9 @@ The ArchUnit tests (`*ArchitectureTest`) enforce these rules; a build that break
 - A feature package with keys or popups declares them as `XxxFeature.FEATURE`, a `Feature` of its actions, and is
   wired in by one line in `Features.ALL`, in the order its keys are to be listed in a panel; neither `Popups` nor
   `app.keys.Standard` names a feature (`FeaturesTest`, ADR 127).
-- A feature lives in its group of features: `changes`, `branches`, `github` or `chrome`, a module each (ADR 136). A
-  group uses only the groups below it (`branches` uses `changes`), never one beside or above it.
+- A feature lives in its group of features: `changes`, `branches`, `github`, `forgejo` or `chrome`, a module each
+  (ADR 136). A group uses only the groups below it (`branches` uses `changes`), never one beside or above it; the
+  forges, `github` and `forgejo`, do not use each other, so that either can be deleted (ADR 171, 174).
 - An `XxxUpdate` is a final class with a private constructor and only static methods and static fields: it is only
   functions.
 - Updates make commands; only `Program` (and `StartApp`, for the start screen) runs them through `Cmd.run` or `perform`.
