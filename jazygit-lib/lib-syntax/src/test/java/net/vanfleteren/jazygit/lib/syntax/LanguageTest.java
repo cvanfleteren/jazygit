@@ -27,6 +27,8 @@ class LanguageTest {
         "web/site.css, CSS",
         "styles/_buttons.scss, SASS",
         "styles/main.sass, SASS",
+        "flake.nix, NIX",
+        "nix/module.NIX, NIX",
         "pom.xml, XML",
         "site/index.html, XML",
         "README.md, MARKDOWN",
@@ -54,7 +56,13 @@ class LanguageTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"bin/tool, #!/usr/bin/env ruby", "Makefile, all: build", "notes.txt, plain", ".gitignore, target/"})
+    @CsvSource({
+        "bin/tool, #!/usr/bin/env ruby",
+        "bin/tool, #!/usr/bin/env nix-shell",
+        "Makefile, all: build",
+        "notes.txt, plain",
+        ".gitignore, target/",
+    })
     void knowsNoLanguageOfAnotherFile(String path, String firstLine) {
         assertEquals(Option.none(), Language.of(path, Option.of(firstLine)));
     }

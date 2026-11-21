@@ -297,12 +297,13 @@ public final class Lexer {
             // From each escape on to the next, until there is no escape before the first close; the close is only
             // looked for again once an escape has stepped past it, so a string of many escapes is read once.
             Option<Integer> end = Iterator.iterate(
-                            Tuple.of(
-                                    line.indexOf(delimited.close(), from),
-                                    delimited.escapes() ? line.indexOf('\\', from) : -1),
-                            found -> Tuple.of(
-                                    found._1 >= found._2 + 2 ? found._1 : line.indexOf(delimited.close(), found._2 + 2),
-                                    line.indexOf('\\', found._2 + 2)))
+                            Tuple.of(line.indexOf(delimited.close(), from), delimited.escapeFrom(line, from)),
+                            found -> {
+                                int past = delimited.escapeEnd(line, found._2);
+                                return Tuple.of(
+                                        found._1 >= past ? found._1 : line.indexOf(delimited.close(), past),
+                                        delimited.escapeFrom(line, past));
+                            })
                     .find(found -> found._1 < 0 || found._2 < 0 || found._2 > found._1)
                     .map(found -> found._1)
                     .filter(close -> close >= 0)

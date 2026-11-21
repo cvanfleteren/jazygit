@@ -10,6 +10,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.Locale;
 import net.vanfleteren.jazygit.lib.syntax.Grammar.Delimited;
+import net.vanfleteren.jazygit.lib.syntax.Grammar.Escape;
 import net.vanfleteren.jazygit.lib.syntax.Grammar.Mode;
 
 /**
@@ -194,6 +195,21 @@ public enum Language {
                     .withAnnotations(),
             "",
             "scss sass",
+            ""),
+    /**
+     * Nix, whose strings go on over lines. An indented string ({@code ''…''}) has no backslash escapes, but escapes
+     * of its own: {@code ''$}, {@code '''}, and {@code ''\} before any character.
+     */
+    NIX(
+            Grammar.code(
+                    "assert else if in inherit let or rec then with true false null",
+                    List.of("#"),
+                    List.of(comment("/*", "*/")),
+                    List.of(
+                            raw("''").overLines().escapedBy(new Escape("''\\", ""), new Escape("''", "$'")),
+                            quoted("\"").overLines())),
+            "",
+            "nix",
             ""),
     /**
      * XML and HTML.
