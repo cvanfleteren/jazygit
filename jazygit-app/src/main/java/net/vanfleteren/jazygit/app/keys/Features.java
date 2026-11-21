@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.app.keys;
 
-import io.vavr.collection.HashSet;
+import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
@@ -73,9 +73,7 @@ public final class Features {
     /**
      * Every feature the app runs with: those {@link #DECLARED}, but those {@link #WITHOUT} names.
      */
-    public static final List<Feature> ALL = without(
-            DECLARED,
-            Option.of(System.getProperty(WITHOUT)).map(Features::named).getOrElse(HashSet.empty()));
+    public static final List<Feature> ALL = running(Option.of(System.getProperty(WITHOUT)));
 
     /**
      * What every feature answers of what happens in the kernel, which the model holds (ADR 158), in the order of the
@@ -98,13 +96,32 @@ public final class Features {
     }
 
     /**
+     * The features {@link #DECLARED}, but those {@code property} names, as {@link #WITHOUT} does.
+     */
+    static List<Feature> running(Option<String> property) {
+        return running(DECLARED, property);
+    }
+
+    /**
+     * {@code features}, but those {@code property} names, as {@link #WITHOUT} does.
+     */
+    static List<Feature> running(List<Feature> features, Option<String> property) {
+        return without(features, named(property));
+    }
+
+    /**
+     * The ids {@code property} names, as {@link #WITHOUT} does: separated by commas, around which spaces do not count.
+     */
+    public static Set<String> named(Option<String> property) {
+        return property.map(names ->
+                        LinkedHashSet.of(names.split(",")).map(String::strip).reject(String::isEmpty))
+                .getOrElse(LinkedHashSet.empty());
+    }
+
+    /**
      * {@code features}, but those whose id is one of {@code ids}.
      */
     static List<Feature> without(List<Feature> features, Set<String> ids) {
         return features.reject(feature -> feature.applying().exists(applying -> ids.contains(applying.id())));
-    }
-
-    private static Set<String> named(String property) {
-        return HashSet.of(property.split(",")).map(String::strip).reject(String::isEmpty);
     }
 }

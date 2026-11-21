@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import org.junit.jupiter.api.Test;
 
@@ -43,5 +44,30 @@ class FeaturesWithoutTest {
     @Test
     void severalCanBeLeftOut() {
         assertEquals(List.of(ALWAYS), Features.without(FEATURES, HashSet.of("forge", "agent")));
+    }
+
+    @Test
+    void withoutThePropertyEveryFeatureRuns() {
+        assertEquals(FEATURES, Features.running(FEATURES, Option.none()));
+    }
+
+    @Test
+    void thePropertyNamesTheFeaturesLeftOut() {
+        assertEquals(List.of(ALWAYS), Features.running(FEATURES, Option.of("forge,agent")));
+    }
+
+    @Test
+    void thePropertyIgnoresSpacesAndEmptyNames() {
+        assertEquals(List.of(ALWAYS, AGENT), Features.running(FEATURES, Option.of(" forge , ,")));
+    }
+
+    @Test
+    void anEmptyPropertyLeavesNothingOut() {
+        assertEquals(FEATURES, Features.running(FEATURES, Option.of("")));
+    }
+
+    @Test
+    void theNamesAreReadInTheirOrder() {
+        assertEquals(LinkedHashSet.of("forge", "agent"), Features.named(Option.of(" forge ,agent,,forge")));
     }
 }
