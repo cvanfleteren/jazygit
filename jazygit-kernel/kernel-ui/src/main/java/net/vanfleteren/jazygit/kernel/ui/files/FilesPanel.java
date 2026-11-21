@@ -12,9 +12,6 @@ import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ThreadsByPath;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.repo.*;
@@ -22,6 +19,9 @@ import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarksByPath;
+import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
@@ -82,8 +82,8 @@ public class FilesPanel {
     private Option<Counted> counted = Option.none();
     // The filter of the tree shown, as last rendered (ADR 105).
     private Option<FileFilter> filter = Option.none();
-    // The review threads of the pull request whose files are listed, by their path, as last rendered (ADR 55).
-    private ThreadsByPath threads = ThreadsByPath.of(List.empty());
+    // The remark threads stated for the files listed, by their path, as last rendered (ADR 55, 171).
+    private RemarksByPath threads = RemarksByPath.of(List.empty());
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -237,8 +237,8 @@ public class FilesPanel {
         if (!changed(file.entry())) {
             return Toolkit.text("  " + file.name());
         }
-        List<ReviewThread> on = threads.on(file.entry().path(), file.entry().origin());
-        int resolved = on.count(ReviewThread::resolved);
+        List<RemarkThread> on = threads.on(file.entry().path(), file.entry().origin());
+        int resolved = on.count(RemarkThread::resolved);
         return Toolkit.row(List.<StyledElement<?>>of(
                         Toolkit.text(file.entry().type().marker()).addClass(Theme.Classes.STAGED),
                         Toolkit.text(" " + name(file)))
@@ -351,7 +351,7 @@ public class FilesPanel {
         return model.repoView()
                 .files()
                 .commitFiles()
-                .map(this::commitSelectionChange)
+                .map(view -> commitSelectionChange(model, view))
                 .getOrElse(() -> workingSelectionChange(model));
     }
 
@@ -359,10 +359,10 @@ public class FilesPanel {
      * The message to send when the node highlighted in the files of a commit is not the one the content panel shows:
      * its diff, or, among all files of the commit, the file or the directory it did not change (ADR 128).
      */
-    private Option<Msg> commitSelectionChange(CommitFilesView view) {
+    private Option<Msg> commitSelectionChange(Model model, CommitFilesView view) {
         // While they are read, the files listed before may still be listed in their place: nothing of these is
         // highlighted yet.
-        if (view.listedFiles() instanceof Loadable.Loading<List<CommitFile>>) {
+        if (view.listedFiles(model) instanceof Loadable.Loading<List<CommitFile>>) {
             return Option.none();
         }
         Option<FileTree<CommitFile>> selected = commitTreeOf(view).selected();
@@ -536,11 +536,7 @@ public class FilesPanel {
         focused = focus.contains(PANE);
         held = false;
         boolean active = inUse.contains(PANE);
-        threads = ThreadsByPath.of(model.repoView()
-                .files()
-                .commitFiles()
-                .map(CommitFilesView::threads)
-                .getOrElse(List.empty()));
+        threads = RemarksByPath.of(model.remarks().map(StatedRemarks::read).getOrElse(List.empty()));
         filter = FileFilterUpdate.shown(model);
         locked = model.repoView().files().locked().isDefined();
         Option<String> shown = FileFilter.shown(filter);
@@ -554,9 +550,10 @@ public class FilesPanel {
                 // The files of a commit opened from a line blamed on it start on the file of the line (ADR 147).
                 .peek(view -> commitTreeOf(view).wanting(view.of(), view.wanted()))
                 .map(view -> Pane.bordered(
-                        view.ended()
-                                        .map(state -> Messages.get(
-                                                state == PullRequestDetails.State.MERGED
+                        model.remarks(view.of())
+                                        .flatMap(StatedRemarks::ended)
+                                        .map(ended -> Messages.get(
+                                                ended == StatedRemarks.Ended.MERGED
                                                         ? "panel.commitFiles.titleForMerged"
                                                         : "panel.commitFiles.titleForClosed",
                                                 changesName(model, view.of())))
@@ -576,12 +573,12 @@ public class FilesPanel {
                                                 Option.of(Messages.get("panel.commitFiles.held", count))),
                                         Option.none()))
                                 .getOrElse(() -> commitTreeOf(view)
-                                        .render(view.of(), view.listedFiles(), active, placeholder(view), shown))),
+                                        .render(view.of(), view.listedFiles(model), active, placeholder(view), shown))),
                         focused,
                         commitTreeOf(view).selectedRow(),
                         view.held().isDefined()
                                 ? Option.none()
-                                : commitTreeOf(view).count(view.listedFiles())))
+                                : commitTreeOf(view).count(view.listedFiles(model))))
                 .orElse(() -> model.repoView().files().unlisted().map(none -> unlisted(none.why(), lockedTitle(model))))
                 .getOrElse(() -> {
                     boolean all = model.repoView().files().shown().all();

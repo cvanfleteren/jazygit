@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 
 /**
  * Where the cursor of a rich diff stops (ADR 60): what comes before its first file, then for each file its bar, the
@@ -20,12 +19,12 @@ public final class DiffStops {
      * The anchors of the stops of {@code thread}, after {@code line} if it is: the thread, then each of its comments
      * but the first while it is not {@code collapsed} (ADR 62).
      */
-    public static List<Anchor> anchors(ReviewThread thread, Option<Anchor.OnLine> line, Collapsed collapsed) {
+    public static List<Anchor> anchors(RemarkThread thread, Option<Anchor.OnLine> line, Collapsed collapsed) {
         Anchor.Thread anchor = new Anchor.Thread(thread.id(), line);
         return collapsed.thread(thread)
                 ? List.of(anchor)
                 : Collapsed.replies(thread)
-                        .<Anchor>map(comment -> new Anchor.Comment(comment.id(), anchor))
+                        .<Anchor>map(comment -> new Anchor.Remark(comment.id(), anchor))
                         .prepend(anchor);
     }
 
@@ -42,15 +41,14 @@ public final class DiffStops {
      */
     public static Option<Anchor> nearest(Seq<Anchor> stops, Anchor at) {
         Option<Anchor> found = switch (at) {
-            case Anchor.Comment(ReviewThread.Comment.Id id, Anchor.Thread thread) ->
-                stops.find(stop -> stop instanceof Anchor.Comment(ReviewThread.Comment.Id other, var ignored)
-                                && other.equals(id))
+            case Anchor.Remark(Remark.Id id, Anchor.Thread thread) ->
+                stops.find(stop -> stop instanceof Anchor.Remark(Remark.Id other, var ignored) && other.equals(id))
                         .orElse(() -> nearest(stops, thread));
-            case Anchor.Thread(ReviewThread.Id id, Option<Anchor.OnLine> line) ->
+            case Anchor.Thread(RemarkThread.Id id, Option<Anchor.OnLine> line) ->
                 stops.find(stop ->
-                                stop instanceof Anchor.Thread(ReviewThread.Id other, var ignored) && other.equals(id))
+                                stop instanceof Anchor.Thread(RemarkThread.Id other, var ignored) && other.equals(id))
                         .orElse(() -> line.flatMap(on -> nearest(stops, on)));
-            case Anchor.OnLine(String path, ReviewThread.Side side, int number) ->
+            case Anchor.OnLine(String path, DiffSide side, int number) ->
                 stops.find(at::equals)
                         .orElse(() -> stops.filter(stop -> stop instanceof Anchor.OnLine(var p, var s, var ignored)
                                         && p.equals(path)
@@ -63,7 +61,7 @@ public final class DiffStops {
                         .orElse(() -> stops.filter(
                                         stop -> stop instanceof Anchor.Gap(var p, var f, var u) && p.equals(path))
                                 .minBy(stop -> Math.abs(((Anchor.Gap) stop).from() - from)))
-                        .orElse(() -> nearest(stops, new Anchor.OnLine(path, ReviewThread.Side.RIGHT, from)));
+                        .orElse(() -> nearest(stops, new Anchor.OnLine(path, DiffSide.NEW, from)));
             // A marker of hunks filters hide is found by its first hunk, which moves into another marker as those
             // around it are opened or closed: opened, it stays on the marker kept above them, which hides them again.
             case Anchor.Filtered(String path, var hunks, var opened) ->
@@ -75,9 +73,7 @@ public final class DiffStops {
                         .orElse(() -> nearest(
                                 stops,
                                 new Anchor.OnLine(
-                                        path,
-                                        ReviewThread.Side.RIGHT,
-                                        hunks.head().newStart())));
+                                        path, DiffSide.NEW, hunks.head().newStart())));
             case Anchor.Node(String path, String pointer, Anchor.OnLine line) ->
                 stops.find(stop -> stop instanceof Anchor.Node(var p, var o, var ignored)
                                 && p.equals(path)

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.github;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksUpdate;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
@@ -11,7 +12,7 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 
 /**
  * What GitHub's pull requests and checks do when something happens in the kernel (ADR 158): they are read again as
- * what GitHub has changed, or may have, and the first time once a repository is opened.
+ * what GitHub has changed, or may have, and the first time once GitHub is found to apply to the repository opened.
  */
 final class GitHubReactions {
 
@@ -45,8 +46,12 @@ final class GitHubReactions {
             // As what GitHub has changes on its own, after each fetch; only those reads that do not keep failing.
             case KernelEvent.Fetched _ -> PullRequestReads.poll(Next.of(model));
             // The pull requests, and the new ones among them (ADR 29), show from the start, not only once a fetch is
-            // done (ADR 58).
-            case KernelEvent.RepositoryOpened _ -> PullRequestReads.load(Next.of(model));
+            // done (ADR 58): from the moment GitHub is found to apply to the repository (ADR 171).
+            case KernelEvent.Switched(String feature, boolean on)
+            when feature.equals(GitHubFeature.ID) && on -> PullRequestReads.load(Next.of(model));
+            case KernelEvent.Switched _, KernelEvent.RepositoryOpened _ -> Next.of(model);
+            // The review threads of a pull request whose files were opened, and those collapsed (ADR 55, 63, 171).
+            case KernelEvent.ChangesOpened(var changes) -> RemarksUpdate.opened(model, changes);
             case KernelEvent.LogRead _, KernelEvent.ScreenShown _ -> Next.of(model);
         };
     }

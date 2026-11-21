@@ -6,13 +6,13 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.kernel.content.diff.ShownRemarks;
 import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Collapsed;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownChanges;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownDiff;
@@ -59,15 +59,16 @@ class DiffBodyTest {
     void theHunkOfARangeIsFoundInTheDiffWithoutDrawingIt() {
         DiffBody body = new DiffBody(changes(DiffStyle.RICH));
 
-        assertEquals(Option.of(new DiffStops.HunkAt(0, 0)), body.markedHunk(new Anchor.OnLine("a.txt", Side.LEFT, 2)));
-        assertEquals(Option.of(new DiffStops.HunkAt(1, 0)), body.markedHunk(new Anchor.OnLine("b.txt", Side.RIGHT, 2)));
-        assertEquals(Option.none(), body.markedHunk(new Anchor.OnLine("c.txt", Side.RIGHT, 2)));
+        assertEquals(
+                Option.of(new DiffStops.HunkAt(0, 0)), body.markedHunk(new Anchor.OnLine("a.txt", DiffSide.OLD, 2)));
+        assertEquals(
+                Option.of(new DiffStops.HunkAt(1, 0)), body.markedHunk(new Anchor.OnLine("b.txt", DiffSide.NEW, 2)));
+        assertEquals(Option.none(), body.markedHunk(new Anchor.OnLine("c.txt", DiffSide.NEW, 2)));
     }
 
     @Test
     void onlyADiffWithReviewRemarksTakesTheKeysThatCommentOnIt() {
-        assertEquals(
-                Scopes.PULL_REQUEST_DIFF, new DiffBody(changes(DiffStyle.RICH), Option.of(NO_REMARKS)).cursorKeys());
+        assertEquals(Scopes.REMARKED_DIFF, new DiffBody(changes(DiffStyle.RICH), Option.of(NO_REMARKS)).cursorKeys());
         assertEquals(Scopes.DIFF, new DiffBody(changes(DiffStyle.RICH)).cursorKeys());
     }
 }

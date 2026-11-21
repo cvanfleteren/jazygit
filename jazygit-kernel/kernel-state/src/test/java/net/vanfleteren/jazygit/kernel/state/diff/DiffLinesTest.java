@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor.OnLine;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops.HunkAt;
@@ -33,7 +32,7 @@ class DiffLinesTest {
             Binary files a/b.png and b/b.png differ
             """));
 
-    private static OnLine line(Side side, int number) {
+    private static OnLine line(DiffSide side, int number) {
         return new OnLine("a.txt", side, number);
     }
 
@@ -41,11 +40,11 @@ class DiffLinesTest {
     void eachLineOfEachHunkInOrderWithItsHunkAndNoNote() {
         assertEquals(
                 List.of(
-                        line(Side.RIGHT, 1),
-                        line(Side.LEFT, 2),
-                        line(Side.RIGHT, 2),
-                        line(Side.RIGHT, 3),
-                        line(Side.RIGHT, 10)),
+                        line(DiffSide.NEW, 1),
+                        line(DiffSide.OLD, 2),
+                        line(DiffSide.NEW, 2),
+                        line(DiffSide.NEW, 3),
+                        line(DiffSide.NEW, 10)),
                 LINES.lines().map(DiffLines.Line::anchor).toList());
         assertEquals(
                 List.of(new HunkAt(0, 0), new HunkAt(0, 0), new HunkAt(0, 0), new HunkAt(0, 0), new HunkAt(0, 1)),
@@ -55,27 +54,27 @@ class DiffLinesTest {
 
     @Test
     void aRangeRunsInTheOrderOfTheDiffWhicheverEndComesFirst() {
-        List<OnLine> range = List.of(line(Side.LEFT, 2), line(Side.RIGHT, 2), line(Side.RIGHT, 3));
+        List<OnLine> range = List.of(line(DiffSide.OLD, 2), line(DiffSide.NEW, 2), line(DiffSide.NEW, 3));
 
         assertEquals(
                 Option.of(range),
-                LINES.between(line(Side.LEFT, 2), line(Side.RIGHT, 3))
+                LINES.between(line(DiffSide.OLD, 2), line(DiffSide.NEW, 3))
                         .map(lines -> lines.map(DiffLines.Line::anchor).toList()));
         assertEquals(
                 Option.of(range),
-                LINES.between(line(Side.RIGHT, 3), line(Side.LEFT, 2))
+                LINES.between(line(DiffSide.NEW, 3), line(DiffSide.OLD, 2))
                         .map(lines -> lines.map(DiffLines.Line::anchor).toList()));
         assertEquals(
-                Option.of(List.of(line(Side.RIGHT, 10))),
-                LINES.between(line(Side.RIGHT, 10), line(Side.RIGHT, 10))
+                Option.of(List.of(line(DiffSide.NEW, 10))),
+                LINES.between(line(DiffSide.NEW, 10), line(DiffSide.NEW, 10))
                         .map(lines -> lines.map(DiffLines.Line::anchor).toList()));
     }
 
     @Test
     void aContextLineIsFoundByItsNumberInTheOldFileOnTheLeftAndKeepsThatAnchor() {
         assertEquals(
-                Option.of(List.of(line(Side.LEFT, 1), line(Side.LEFT, 2))),
-                LINES.between(line(Side.LEFT, 1), line(Side.LEFT, 2))
+                Option.of(List.of(line(DiffSide.OLD, 1), line(DiffSide.OLD, 2))),
+                LINES.between(line(DiffSide.OLD, 1), line(DiffSide.OLD, 2))
                         .map(lines -> lines.map(DiffLines.Line::anchor).toList()));
     }
 
@@ -84,24 +83,25 @@ class DiffLinesTest {
         // From line 1 to line 3 of the new file: the removed line between them is on the other side.
         assertEquals(
                 Option.of(List.of("one", "TWO", "three")),
-                LINES.between(line(Side.RIGHT, 1), line(Side.RIGHT, 3), true)
+                LINES.between(line(DiffSide.NEW, 1), line(DiffSide.NEW, 3), true)
                         .map(lines -> lines.map(held -> held.line().text()).toList()));
         // On the left, the context lines by their numbers in the old file.
         assertEquals(
-                Option.of(List.of(line(Side.LEFT, 1), line(Side.LEFT, 2), line(Side.LEFT, 3))),
-                LINES.between(line(Side.LEFT, 1), line(Side.LEFT, 3), true)
+                Option.of(List.of(line(DiffSide.OLD, 1), line(DiffSide.OLD, 2), line(DiffSide.OLD, 3))),
+                LINES.between(line(DiffSide.OLD, 1), line(DiffSide.OLD, 3), true)
                         .map(lines -> lines.map(DiffLines.Line::anchor).toList()));
         // The unified view holds every line between them, as it shows them.
         assertEquals(
                 Option.of(List.of("one", "two", "TWO", "three")),
-                LINES.between(line(Side.RIGHT, 1), line(Side.RIGHT, 3), false)
+                LINES.between(line(DiffSide.NEW, 1), line(DiffSide.NEW, 3), false)
                         .map(lines -> lines.map(held -> held.line().text()).toList()));
     }
 
     @Test
     void noRangeUnlessBothEndsAreLines() {
-        assertEquals(Option.none(), LINES.between(line(Side.LEFT, 2), line(Side.LEFT, 40)));
-        assertEquals(Option.none(), LINES.between(new OnLine("b.png", Side.RIGHT, 1), line(Side.LEFT, 2)));
-        assertEquals(Option.none(), new DiffLines(Vector.empty()).between(line(Side.LEFT, 2), line(Side.LEFT, 2)));
+        assertEquals(Option.none(), LINES.between(line(DiffSide.OLD, 2), line(DiffSide.OLD, 40)));
+        assertEquals(Option.none(), LINES.between(new OnLine("b.png", DiffSide.NEW, 1), line(DiffSide.OLD, 2)));
+        assertEquals(
+                Option.none(), new DiffLines(Vector.empty()).between(line(DiffSide.OLD, 2), line(DiffSide.OLD, 2)));
     }
 }

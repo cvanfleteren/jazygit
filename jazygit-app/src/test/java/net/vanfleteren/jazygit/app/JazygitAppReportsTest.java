@@ -20,7 +20,6 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.Branches;
@@ -248,7 +247,7 @@ class JazygitAppReportsTest {
     @Test
     void theSpinnerOfABusyBranchTurnsWithoutInput() throws Exception {
         CountDownLatch pulled = new CountDownLatch(1);
-        TestApp app = new TestApp(new Env(new PullsSlowly(pulled).git(), StubGitHub.of()));
+        TestApp app = new TestApp(new Env(new PullsSlowly(pulled).git()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);

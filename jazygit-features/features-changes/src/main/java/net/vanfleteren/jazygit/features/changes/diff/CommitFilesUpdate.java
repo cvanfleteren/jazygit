@@ -1,21 +1,13 @@
 package net.vanfleteren.jazygit.features.changes.diff;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
-import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import java.util.function.Function;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
-import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.BaseBranchError;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
+import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
@@ -28,19 +20,14 @@ import net.vanfleteren.jazygit.kernel.state.load.LoadCommitTree;
 import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.kernel.state.view.FilesLock;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
-import net.vanfleteren.jazygit.kernel.ui.markdown.MarkdownImage;
 
 /**
  * Listing the files a commit, a stash, a pull request or a branch changed in the files pane, in place of the changed files of
  * the working tree, and going back to those (ADR 44). The view moves the focus: into the files pane when they are
- * listed, and back to the pane they were opened from when they are closed. The files of a pull request come with its
- * review threads, which are read again when asked, and shown open or not (ADR 55), and can list only the files that
- * have some (ADR 57).
+ * listed, and back to the pane they were opened from when they are closed. The files of a change a part states remarks for
+ * can list only the files that have some (ADR 57, 171).
  */
 public final class CommitFilesUpdate {
-
-    // The most images of the review threads of a pull request that are read to be shown (ADR 84).
-    private static final int MAX_PICTURES = 20;
 
     private CommitFilesUpdate() {}
 
@@ -51,43 +38,16 @@ public final class CommitFilesUpdate {
             // follow the list with the focus again (ADR 149).
             case CommitFilesMsg.Closed() ->
                 Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withLocked(Option.none()))));
-            case CommitFilesMsg.RemarksLoaded(PrNumber number, var remarks, var settled, int version) ->
-                remarksRead(model, number, remarks, settled, version);
-            // The review threads read before stay shown; what was sent is done with all the same. A failed read
-            // older than they are changes nothing they show either (ADR 64).
-            case CommitFilesMsg.RemarksFailed(PrNumber number, var failure, var settled, int version) ->
-                Next.of(mapPullRequest(
-                        model,
-                        number,
-                        view -> view.withRemarks(Option.of(view.remarks()
-                                        .filter(remarks -> remarks.toOption().isDefined())
-                                        .getOrElse(() -> new Loadable.Failed<>(failure))))
-                                .withSending(view.sending().removeAll(settled))));
+            // Only the files of a change that a part states remarks for are listed by them (ADR 57, 171).
             case CommitFilesMsg.ListedCycled() ->
                 Next.of(model.mapRepoView(repoView ->
                         repoView.mapFiles(files -> files.withCommitFiles(files.commitFiles()
-                                .map(view -> view.remarks().isDefined()
+                                .map(view -> model.remarks(view.of()).isDefined()
                                         ? view.withListed(view.listed().next())
                                         : view)))));
-            // Those flipped before the threads are read are as they start until then (ADR 63).
-            case CommitFilesMsg.CollapsedLoaded(PrNumber number, var kept) ->
-                Next.of(mapPullRequest(
-                        model,
-                        number,
-                        view -> view.withCollapsed(view.collapsed().with(kept).readAgain(view.threads()))));
-            case CommitFilesMsg.CollapsedKept() -> Next.of(model);
+            case CommitFilesMsg.Moved(Changes from, Changes to) -> moved(model, from, to);
+            case CommitFilesMsg.BranchFilesRequested(BranchName branch) -> branchFiles(model, branch);
             case CommitFilesMsg.AllToggled() -> allToggled(model);
-            case CommitFilesMsg.PictureLoaded(PrNumber number, String url, var picture) ->
-                Next.of(mapPullRequest(
-                        model, number, view -> view.withPictures(view.pictures().put(url, picture))));
-            case CommitFilesMsg.RemarksRefreshed() ->
-                new Next(
-                        model,
-                        List.narrow(model.repoView()
-                                .files()
-                                .commitFiles()
-                                .toList()
-                                .flatMap(CommitFilesUpdate::remarksLoad)));
         };
     }
 
@@ -115,16 +75,42 @@ public final class CommitFilesUpdate {
     }
 
     /**
-     * Shows {@code view}, reading its files, and what goes with them: the review threads of a pull request and those
-     * collapsed, and all files of its commit when it lists them.
+     * Shows {@code view}, reading its files, and all files of its commit when it lists them; the features are told the
+     * files were opened, so that what goes with them is read too, as the remarks a forge has on them (ADR 171).
      */
     private static Next open(Model model, CommitFilesView view) {
-        return new Next(
-                model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(view)))),
-                List.<Cmd>of(LoadCommitFiles.of(view))
-                        .appendAll(treeLoad(view))
-                        .appendAll(remarksLoad(view))
-                        .appendAll(collapsedLoad(view)));
+        return Events.happened(
+                new Next(
+                        model.mapRepoView(
+                                repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(view)))),
+                        List.<Cmd>of(LoadCommitFiles.of(view)).appendAll(treeLoad(view))),
+                new KernelEvent.ChangesOpened(view.of()));
+    }
+
+    /**
+     * The files of {@code from}, while they are listed, as those of {@code to} in their place, as a pull request that
+     * moved on to other commits since its files were read: they are read anew, and what is listed, collapsed and
+     * filtered of them stays, and whether all files are listed, read anew at the commit they end at (ADR 55, 105, 128).
+     * The features are not told they were opened: what goes with them is what they had.
+     */
+    private static Next moved(Model model, Changes from, Changes to) {
+        return model.repoView()
+                .files()
+                .commitFiles()
+                .filter(view -> view.of().equals(from))
+                .map(view -> {
+                    CommitFilesView again = CommitFilesView.of(to, view.pane(), view.listedIn())
+                            .withListed(view.listed())
+                            .withCollapsed(view.collapsed())
+                            .withFilter(view.filter())
+                            .withAllFiles(view.allFiles())
+                            .withTree(Option.when(view.allFiles(), Loadable::loading));
+                    return new Next(
+                            model.mapRepoView(
+                                    repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(again)))),
+                            List.<Cmd>of(LoadCommitFiles.of(again)).appendAll(treeLoad(again)));
+                })
+                .getOrElse(() -> Next.of(model));
     }
 
     /**
@@ -146,6 +132,19 @@ public final class CommitFilesUpdate {
                             reads ? List.<Cmd>of(new LoadCommitTree(view.of())) : List.empty());
                 })
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * The files of {@code branch}: as a part knows them, as those of its pull request, else against its base. An
+     * error shown before goes, as the files are asked for anew.
+     */
+    private static Next branchFiles(Model model, BranchName branch) {
+        Model cleared = model.clearError();
+        return cleared.repo()
+                .branch(branch)
+                .flatMap(known -> cleared.parts().files(known))
+                .map(files -> files.apply(cleared))
+                .getOrElse(() -> againstBase(cleared, branch));
     }
 
     /**
@@ -184,127 +183,5 @@ public final class CommitFilesUpdate {
         return Option.when(
                 view.allFiles() && view.tree().exists(tree -> tree instanceof Loadable.Loading<?>),
                 () -> new LoadCommitTree(view.of()));
-    }
-
-    /**
-     * The review threads of the pull request whose files are listed, if they are, read at the version they are at.
-     */
-    private static Option<CommitFilesCmd.LoadReviewRemarks> remarksLoad(CommitFilesView view) {
-        return view.pullRequest()
-                .map(number -> new CommitFilesCmd.LoadReviewRemarks(number, HashSet.empty(), view.version()));
-    }
-
-    /**
-     * The review threads and comments of the pull request whose files are listed, if they are, collapsed or opened in
-     * an earlier session (ADR 63).
-     */
-    private static Option<CommitFilesCmd.LoadCollapsed> collapsedLoad(CommitFilesView view) {
-        return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
-                ? Option.of(new CommitFilesCmd.LoadCollapsed(commits.repository(), new PrNumber(commits.number())))
-                : Option.none();
-    }
-
-    /**
-     * {@code remarks} read for pull request {@code number}, while its files are listed, after what was sent for the
-     * threads {@code settled}. When its head or its base moved on since its files were read, they are read again, at
-     * the commits they are at now: the threads are of those. Read at an older {@code version} than they are at now, as
-     * before a comment was deleted, they are dropped, and read again for the threads {@code settled} (ADR 64).
-     */
-    private static Next remarksRead(
-            Model model, PrNumber number, ReviewRemarks remarks, Set<ReviewThread.Id> settled, int version) {
-        return model.repoView()
-                .files()
-                .commitFiles()
-                .filter(view -> view.pullRequest().contains(number))
-                .map(view -> {
-                    if (version < view.version()) {
-                        return Next.of(model, new CommitFilesCmd.LoadReviewRemarks(number, settled, view.version()));
-                    }
-                    // What was sent for a thread shows in what is read after it; a read started before it was
-                    // sent may not show it, so the thread still takes no key until then (ADR 60). A thread resolved
-                    // or unresolved is then as such a one starts (ADR 62).
-                    CommitFilesView read = view.withRemarks(Option.of(new Loadable.Loaded<>(remarks)))
-                            .withSending(view.sending().removeAll(settled))
-                            .withCollapsed(view.collapsed().readAgain(remarks.threads()));
-                    return moved(read, remarks)
-                            .map(commits -> {
-                                CommitFilesView again = CommitFilesView.of(
-                                                new Changes.OfPullRequest(commits), view.pane(), view.listedIn())
-                                        .withRemarks(read.remarks())
-                                        .withListed(view.listed())
-                                        .withCollapsed(read.collapsed())
-                                        .withSending(read.sending())
-                                        .withDeleting(read.deleting())
-                                        .withReacting(read.reacting())
-                                        .withVersion(read.version())
-                                        .withPictures(read.pictures())
-                                        // The same pull request, read again: its filter stays (ADR 105), and so
-                                        // does whether all its files are listed, read anew at its head (ADR 128).
-                                        .withFilter(read.filter())
-                                        .withAllFiles(read.allFiles())
-                                        .withTree(Option.when(read.allFiles(), Loadable::loading));
-                                return pictures(
-                                        model.mapRepoView(repoView ->
-                                                repoView.mapFiles(files -> files.withCommitFiles(Option.of(again)))),
-                                        again,
-                                        number,
-                                        List.<Cmd>of(LoadCommitFiles.of(again)).appendAll(treeLoad(again)));
-                            })
-                            .getOrElse(() -> pictures(
-                                    model.mapRepoView(repoView ->
-                                            repoView.mapFiles(files -> files.withCommitFiles(Option.of(read)))),
-                                    read,
-                                    number,
-                                    List.empty()));
-                })
-                .getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * {@code cmds}, and reads the images of the review threads of pull request {@code number}, which {@code view}
-     * lists the files of in {@code model}, that are not read or being read yet, up to {@link #MAX_PICTURES} of them,
-     * to show them (ADR 84).
-     */
-    private static Next pictures(Model model, CommitFilesView view, PrNumber number, List<Cmd> cmds) {
-        // Lazily, so that the comments are parsed only until there are enough images.
-        List<String> urls = view.threads()
-                .iterator()
-                .flatMap(ReviewThread::comments)
-                .flatMap(comment -> MarkdownImage.onGitHub(comment.body()))
-                .distinct()
-                .filter(url -> !view.pictures().containsKey(url))
-                .take(Math.max(0, MAX_PICTURES - view.pictures().size()))
-                .toList();
-        return new Next(
-                mapPullRequest(
-                        model,
-                        number,
-                        open -> open.withPictures(
-                                urls.foldLeft(open.pictures(), (pictures, url) -> pictures.put(url, Option.none())))),
-                cmds.appendAll(urls.map(url -> new CommitFilesCmd.LoadPicture(number, url))));
-    }
-
-    /**
-     * The commits of the pull request {@code view} lists the files of, as {@code remarks} were read at, when they are
-     * others than its files were read at, while it is open: a merged or closed one stays at the commits it was read at.
-     */
-    private static Option<PullRequestCommits> moved(CommitFilesView view, ReviewRemarks remarks) {
-        return remarks.state() == PullRequestDetails.State.OPEN
-                        && view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
-                ? sha(remarks.base())
-                        .flatMap(base -> sha(remarks.head())
-                                .map(head -> new PullRequestCommits(
-                                        commits.number(), commits.repository(), commits.host(), base, head)))
-                        .filter(read -> !read.equals(commits))
-                : Option.none();
-    }
-
-    private static Option<Sha> sha(Option<GhCommit> commit) {
-        return commit.flatMap(read -> Sha.parse(read.oid()));
-    }
-
-    private static Model mapPullRequest(Model model, PrNumber number, Function<CommitFilesView, CommitFilesView> f) {
-        return model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withCommitFiles(
-                files.commitFiles().map(view -> view.pullRequest().contains(number) ? f.apply(view) : view))));
     }
 }

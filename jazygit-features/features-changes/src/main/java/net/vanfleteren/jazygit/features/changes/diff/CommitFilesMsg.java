@@ -1,19 +1,11 @@
 package net.vanfleteren.jazygit.features.changes.diff;
 
-import io.vavr.collection.Map;
-import io.vavr.collection.Set;
-import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
-import net.vanfleteren.jazygit.kernel.state.diff.Collapsed;
-import net.vanfleteren.jazygit.lib.image.Picture;
 
 public sealed interface CommitFilesMsg extends Msg {
 
@@ -28,33 +20,19 @@ public sealed interface CommitFilesMsg extends Msg {
     record Opened(Changes of, PaneId pane) implements CommitFilesMsg {}
 
     /**
+     * The user asked for the files the branch {@code branch} changes: those a part knows of it, as its pull request's,
+     * else those against its base (ADR 61, 171).
+     */
+    record BranchFilesRequested(BranchName branch) implements CommitFilesMsg {}
+
+    /**
      * The user closed the files of the commit or the stash, to see the files of the working tree again.
      */
     record Closed() implements CommitFilesMsg {}
 
     /**
-     * The review threads of pull request {@code number} were read (ADR 55), after what was sent for the threads
-     * {@code settled} (ADR 60), by a read started at {@code version} of them (ADR 64).
-     */
-    record RemarksLoaded(PrNumber number, ReviewRemarks remarks, Set<ReviewThread.Id> settled, int version)
-            implements CommitFilesMsg {}
-
-    /**
-     * Reading the review threads of pull request {@code number} failed, after what was sent for the threads
-     * {@code settled}, by a read started at {@code version} of them (ADR 64).
-     */
-    record RemarksFailed(PrNumber number, Failure failure, Set<ReviewThread.Id> settled, int version)
-            implements CommitFilesMsg {}
-
-    /**
-     * The image at {@code url}, in a review thread of pull request {@code number}, was read as {@code picture}, or
-     * could not be (ADR 84).
-     */
-    record PictureLoaded(PrNumber number, String url, Option<Picture> picture) implements CommitFilesMsg {}
-
-    /**
-     * The user asked to list the next of the files of a pull request: all of them, those with an unresolved review
-     * thread, or those with any (ADR 57).
+     * The user asked to list the next of the files of a change with remarks: all of them, those with an unresolved
+     * remark thread, or those with any (ADR 57).
      */
     record ListedCycled() implements CommitFilesMsg {}
 
@@ -64,19 +42,8 @@ public sealed interface CommitFilesMsg extends Msg {
     record AllToggled() implements CommitFilesMsg {}
 
     /**
-     * The user asked to read the review threads of the pull request again.
+     * The files of {@code from}, while they are listed, are to be listed as those of {@code to}, as a pull request that
+     * moved on to other commits since its files were read (ADR 55).
      */
-    record RemarksRefreshed() implements CommitFilesMsg {}
-
-    /**
-     * The review threads and comments of pull request {@code number} collapsed or opened against their default in an
-     * earlier session were read, each with whether it was collapsed by default then (ADR 63).
-     */
-    record CollapsedLoaded(PrNumber number, Map<Collapsed.Key, Boolean> kept) implements CommitFilesMsg {}
-
-    /**
-     * The review threads and comments collapsed or opened were kept for the next session, or that failed: nothing
-     * changes.
-     */
-    record CollapsedKept() implements CommitFilesMsg {}
+    record Moved(Changes from, Changes to) implements CommitFilesMsg {}
 }

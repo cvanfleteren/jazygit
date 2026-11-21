@@ -35,6 +35,10 @@ public final class CommitFilesAction {
                             "changes.help.commits.files",
                             commit -> new CommitFilesMsg.Opened(
                                     new Changes.OfCommit(commit.sha()), Scopes.BRANCHES.pane())))
+            // The files of a branch, as a part knows them, as its pull request's, else against its base (ADR 61, 171).
+            .add(
+                    Scopes.BRANCHES,
+                    Binding.onSelected("F", "changes.help.branches.files", CommitFilesMsg.BranchFilesRequested::new))
             .add(
                     Scopes.STASH,
                     Binding.onSelected(
@@ -44,17 +48,14 @@ public final class CommitFilesAction {
             .add(
                     Scopes.COMMIT_FILES,
                     Binding.always(Keymap.ESCAPE, "changes.help.commitFiles.close", CommitFilesMsg.Closed::new))
-            // The review threads of a pull request (ADR 55); nothing for a commit or a stash.
             // All files of the commit the files end at (ADR 128), as `a` lists those of the working tree (ADR 108).
             .add(
                     Scopes.COMMIT_FILES,
                     Binding.always("a", "changes.help.commitFiles.allFiles", CommitFilesMsg.AllToggled::new))
+            // Which files are listed, by the remarks a part states for them (ADR 57, 171).
             .add(
                     Scopes.COMMIT_FILES,
-                    Binding.always("c", "changes.help.commitFiles.listed", CommitFilesMsg.ListedCycled::new))
-            .add(
-                    Scopes.COMMIT_FILES,
-                    Binding.always("R", "changes.help.commitFiles.refresh", CommitFilesMsg.RemarksRefreshed::new)));
+                    Binding.always("c", "changes.help.commitFiles.listed", CommitFilesMsg.ListedCycled::new)));
 
     private CommitFilesAction() {}
 }

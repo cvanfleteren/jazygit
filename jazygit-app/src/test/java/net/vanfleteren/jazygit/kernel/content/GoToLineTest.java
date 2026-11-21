@@ -9,7 +9,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -26,6 +25,7 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.load.ReadWholeFile;
@@ -274,13 +274,13 @@ class GoToLineTest {
             driven.type(testRunner, "[:19");
             driven.press(testRunner, KeyCode.ENTER);
             assertEquals(
-                    Option.of(new Anchor.OnLine("a.txt", Side.LEFT, 19)),
+                    Option.of(new Anchor.OnLine("a.txt", DiffSide.OLD, 19)),
                     driven.lastScrolled().cursor());
 
             driven.type(testRunner, ":5");
             driven.press(testRunner, KeyCode.ENTER);
             assertEquals(
-                    Option.of(new Anchor.OnLine("a.txt", Side.LEFT, 17)),
+                    Option.of(new Anchor.OnLine("a.txt", DiffSide.OLD, 17)),
                     driven.lastScrolled().cursor());
             assertTrue(driven.screen(testRunner).contains("line 5 is not shown · at 17"), driven.screen(testRunner));
             assertTrue(List.ofAll(driven.dispatched)
@@ -328,7 +328,7 @@ class GoToLineTest {
             driven.type(testRunner, ":20");
             driven.press(testRunner, KeyCode.ENTER);
             assertEquals(
-                    Option.of(new Anchor.OnLine("a.txt", Side.LEFT, 20)),
+                    Option.of(new Anchor.OnLine("a.txt", DiffSide.OLD, 20)),
                     driven.lastScrolled().cursor());
         }
     }
@@ -395,13 +395,13 @@ class GoToLineTest {
             Option<Anchor> cursor = driven.lastScrolled().cursor();
             assertTrue(
                     cursor.exists(on -> on instanceof Anchor.Node node
-                            && node.line().equals(new Anchor.OnLine("data.json", Side.RIGHT, 31))),
+                            && node.line().equals(new Anchor.OnLine("data.json", DiffSide.NEW, 31))),
                     cursor.toString());
         }
     }
 
     private static Anchor onNew(int line) {
-        return new Anchor.OnLine("a.txt", Side.RIGHT, line);
+        return new Anchor.OnLine("a.txt", DiffSide.NEW, line);
     }
 
     /**

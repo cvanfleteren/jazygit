@@ -95,6 +95,7 @@ public final class StatusPanel {
      */
     static List<Name> names(Model model, Screens screens) {
         return screens.all()
+                .filter(spec -> spec.screen().shown(model))
                 .map(spec -> new Name(
                         spec.screen(), Messages.get(spec.nameKey()), spec.mark().apply(model)));
     }

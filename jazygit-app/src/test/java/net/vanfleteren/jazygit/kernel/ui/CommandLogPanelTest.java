@@ -21,9 +21,9 @@ import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutModels;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
+import net.vanfleteren.jazygit.features.branches.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.features.changes.commit.create.CreateCommitCmd;
 import net.vanfleteren.jazygit.features.changes.stage.StageCmd;
-import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.operation.LogEntry;
@@ -344,8 +344,9 @@ class CommandLogPanelTest {
     void withTheFocusATitleWrapsUnderItself() throws Exception {
         CommandLogPanel panel = new CommandLogPanel(Theme.SpanStyles.NONE, ZoneOffset.UTC, id -> {}, () -> {});
         Model model = TestModels.withLog(
-                TestModels.loaded(SampleData.git()), entry(PullRequestCmd.DRAFT_PR, executed("gh pr ready --undo 7")));
-        // 22 columns inside the borders: 13 after the time for "Convert pull request to draft".
+                TestModels.loaded(SampleData.git()),
+                entry(RemoveWorktreeCmd.REMOVE_WORKTREE_AND_BRANCH, executed("git worktree rm x")));
+        // 22 columns inside the borders: 13 after the time for "Remove worktree and delete branch".
         Option<CommandLogPanel.Room> room = Option.of(new CommandLogPanel.Room(40, 24));
         int rows = panel.focusedHeight(model, room);
 
@@ -353,10 +354,10 @@ class CommandLogPanelTest {
                 ToolkitTestRunner.runTest(() -> panel.render(model, rows, rows, room, true, true))) {
             String screen =
                     RenderedText.ofSize(testRunner, () -> panel.render(model, rows, rows, room, true, true), 24, rows);
-            assertTrue(screen.contains("14:32:05 Convert pull"), screen);
-            assertTrue(screen.contains("         request to"), screen);
-            assertTrue(screen.contains("         draft"), screen);
-            assertTrue(screen.contains("gh pr ready --undo 7"), screen);
+            assertTrue(screen.contains("14:32:05 Remove"), screen);
+            assertTrue(screen.contains("         worktree and"), screen);
+            assertTrue(screen.contains("         delete branch"), screen);
+            assertTrue(screen.contains("git worktree rm x"), screen);
 
             SettledPilot.of(testRunner).quit();
         }

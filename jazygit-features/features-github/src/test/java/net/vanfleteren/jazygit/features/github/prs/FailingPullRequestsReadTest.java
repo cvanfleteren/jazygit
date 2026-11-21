@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -19,7 +20,7 @@ import org.junit.jupiter.api.Test;
  */
 class FailingPullRequestsReadTest {
 
-    private static final Failure FAILURE = new Failure.GitHub(new GhError.CommandFailed(
+    private static final Failure FAILURE = new GitHubFailure(new GhError.CommandFailed(
             io.vavr.control.Option.of("none of the git remotes point to a known GitHub host"), 1));
 
     @Test

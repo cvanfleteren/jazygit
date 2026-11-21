@@ -2,8 +2,9 @@ package net.vanfleteren.jazygit.features.github.browse;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestLink;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
-import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
@@ -26,6 +27,10 @@ public record BrowseRemarkCmd(PullRequestLink link) implements OperationCmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub().account().openInBrowser(link).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+        return GitHubServices.of(env)
+                .account()
+                .openInBrowser(link)
+                .mapLeft(GitHubFailure::of)
+                .fold(this::failed, this::succeeded);
     }
 }

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -59,6 +60,25 @@ class KeymapTest {
                     Option.of(new Probe("selected one")), keymap.handle(SCOPE, KeyEvent.ofChar('x'), Option.of("one")));
             assertEquals(Option.none(), keymap.handle(SCOPE, KeyEvent.ofChar('x'), Option.none()));
         }
+    }
+
+    @Test
+    void theKeysAFeatureAddsAreItsOwnAndThoseBeforeStayAsTheyAre() {
+        Keymap keymap = Keymap.empty()
+                .add(SCOPE, ON_SELECTED)
+                .owned(
+                        "f",
+                        keys -> keys.add(SCOPE, Binding.always("a", "probe.a", () -> ALWAYS))
+                                .global(Keymap.Global.Dispatching.ofChar('g', "probe.g", () -> ALWAYS)));
+
+        assertEquals(
+                Option.of(new Probe("selected one")), keymap.handle(SCOPE, KeyEvent.ofChar('x'), Option.of("one")));
+        assertEquals(
+                Option.of(new FeatureMsg.Owned("f", ALWAYS)),
+                keymap.handle(SCOPE, KeyEvent.ofChar('a'), Option.of("one")));
+        assertEquals(Option.of(new FeatureMsg.Owned("f", ALWAYS)), keymap.handleGlobal(KeyEvent.ofChar('g')));
+        assertEquals(
+                List.of(Option.none(), Option.of("f")), keymap.bindings("probe").map(Binding::feature));
     }
 
     private static final Scope<Integer> GUEST = new Scope<>("guest", "panel.guest.title");

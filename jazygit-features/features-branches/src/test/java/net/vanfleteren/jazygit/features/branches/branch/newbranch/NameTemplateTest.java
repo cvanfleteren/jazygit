@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubConfig;
 import net.vanfleteren.jazygit.core.git.model.ConfigValue;
@@ -31,14 +30,12 @@ class NameTemplateTest {
     private static final NewBranchPopup ASKING = new NewBranchPopup(MAIN);
 
     private static Env config(Either<GitError, List<ConfigValue>> values) {
-        return new Env(
-                StubGit.of().withConfig(new StubConfig() {
-                    @Override
-                    public Either<GitError, List<ConfigValue>> all(String key) {
-                        return key.equals(ReadNameTemplate.KEY) ? values : Either.right(List.empty());
-                    }
-                }),
-                StubGitHub.of());
+        return new Env(StubGit.of().withConfig(new StubConfig() {
+            @Override
+            public Either<GitError, List<ConfigValue>> all(String key) {
+                return key.equals(ReadNameTemplate.KEY) ? values : Either.right(List.empty());
+            }
+        }));
     }
 
     private static ConfigValue value(String value) {

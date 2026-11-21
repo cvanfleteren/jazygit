@@ -39,8 +39,8 @@ class PartNamesTest {
     }
 
     @Test
-    void theBuildsAreAPart() {
-        assertTrue(declared().exists(part -> part.name().equals("github.builds")));
+    void theSwitchesOfTheFeaturesAreAPart() {
+        assertTrue(declared().exists(part -> part.name().equals("kernel.features")));
     }
 
     @Test

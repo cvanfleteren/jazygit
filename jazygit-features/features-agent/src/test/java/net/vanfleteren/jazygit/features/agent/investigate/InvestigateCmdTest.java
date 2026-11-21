@@ -7,7 +7,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubEditor;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
@@ -41,16 +40,13 @@ class InvestigateCmdTest {
 
     private static java.util.List<List<String>> launched(Option<ForgeAccount> account) {
         java.util.List<List<String>> launched = new ArrayList<>();
-        Env env = new Env(
-                        StubGit.of().withEditor(new StubEditor() {
-                            @Override
-                            public Either<GitFailure, List<ExecutedCommand>> launch(
-                                    Path directory, List<String> commandLine) {
-                                launched.add(commandLine);
-                                return Either.right(List.of(new ExecutedCommand(commandLine)));
-                            }
-                        }),
-                        StubGitHub.of())
+        Env env = new Env(StubGit.of().withEditor(new StubEditor() {
+                    @Override
+                    public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
+                        launched.add(commandLine);
+                        return Either.right(List.of(new ExecutedCommand(commandLine)));
+                    }
+                }))
                 .with(Env.FORGE_ACCOUNT, any -> account);
         new InvestigateCmd(AGENT, "/repos/app", BUILD).run(env);
         return launched;

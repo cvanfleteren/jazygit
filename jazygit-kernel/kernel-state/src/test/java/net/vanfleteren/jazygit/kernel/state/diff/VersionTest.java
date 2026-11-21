@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
@@ -79,13 +78,13 @@ class VersionTest {
         Version version = version(Option.of(FileVersion.ORIGINAL), new Loadable.Loaded<>(WHOLE));
 
         assertEquals(
-                new Anchor.OnLine("a.txt", Side.LEFT, 3),
-                version.moved(new Anchor.OnLine("a.txt", Side.RIGHT, 4), Option.of(FileVersion.ORIGINAL)));
+                new Anchor.OnLine("a.txt", DiffSide.OLD, 3),
+                version.moved(new Anchor.OnLine("a.txt", DiffSide.NEW, 4), Option.of(FileVersion.ORIGINAL)));
         // A line in both stays, and what is no line, or of another file, too.
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
         assertEquals(two, version.moved(two, Option.of(FileVersion.ORIGINAL)));
         assertEquals(new Anchor.File("a.txt"), version.moved(new Anchor.File("a.txt"), Option.of(FileVersion.NEW)));
-        Anchor.OnLine other = new Anchor.OnLine("b.txt", Side.LEFT, 1);
+        Anchor.OnLine other = new Anchor.OnLine("b.txt", DiffSide.OLD, 1);
         assertEquals(other, version.moved(other, Option.of(FileVersion.NEW)));
     }
 
@@ -94,7 +93,7 @@ class VersionTest {
         Version version = version(Option.of(FileVersion.NEW), new Loadable.Loaded<>(WHOLE));
 
         assertEquals(
-                new Anchor.OnLine("a.txt", Side.RIGHT, 1),
+                new Anchor.OnLine("a.txt", DiffSide.NEW, 1),
                 version.moved(new Anchor.Gap("a.txt", 1, Option.of(2)), Option.of(FileVersion.NEW)));
     }
 

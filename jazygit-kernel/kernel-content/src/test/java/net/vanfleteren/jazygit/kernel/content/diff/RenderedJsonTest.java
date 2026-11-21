@@ -10,10 +10,10 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.state.diff.Rendered;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
@@ -339,10 +339,10 @@ class RenderedJsonTest {
         assertEquals(
                 List.of(
                         new Anchor.File("a.json"),
-                        new Anchor.Node("a.json", "/few", new Anchor.OnLine("a.json", Side.RIGHT, 2)),
-                        new Anchor.Node("a.json", "/few/a", new Anchor.OnLine("a.json", Side.RIGHT, 3)),
-                        new Anchor.Node("a.json", "/few/b", new Anchor.OnLine("a.json", Side.RIGHT, 4)),
-                        new Anchor.Node("a.json", "/n", new Anchor.OnLine("a.json", Side.RIGHT, 6))),
+                        new Anchor.Node("a.json", "/few", new Anchor.OnLine("a.json", DiffSide.NEW, 2)),
+                        new Anchor.Node("a.json", "/few/a", new Anchor.OnLine("a.json", DiffSide.NEW, 3)),
+                        new Anchor.Node("a.json", "/few/b", new Anchor.OnLine("a.json", DiffSide.NEW, 4)),
+                        new Anchor.Node("a.json", "/n", new Anchor.OnLine("a.json", DiffSide.NEW, 6))),
                 drawn.stops().map(stop -> stop.mark().anchor()));
     }
 

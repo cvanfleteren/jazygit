@@ -7,11 +7,12 @@ import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
+import net.vanfleteren.jazygit.features.github.state.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
-import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
@@ -78,8 +79,12 @@ public record PrOverview(
      * The screen of the pull requests, which GitHub's feature brings (ADR 168): top to bottom those of the repository,
      * those that ask for the user's review and those they opened.
      */
-    public static final Screen SCREEN =
-            new Screen("pullRequests", List.of(REPOSITORY_PANE, REVIEW_REQUESTED_PANE, AUTHORED_PANE), WIDTH, HEIGHTS);
+    public static final Screen SCREEN = new Screen(
+            "pullRequests",
+            List.of(REPOSITORY_PANE, REVIEW_REQUESTED_PANE, AUTHORED_PANE),
+            WIDTH,
+            HEIGHTS,
+            Option.of(GitHubFeature.ID));
 
     public static final PrOverview INITIAL = new PrOverview(
             Loadable.loading(),

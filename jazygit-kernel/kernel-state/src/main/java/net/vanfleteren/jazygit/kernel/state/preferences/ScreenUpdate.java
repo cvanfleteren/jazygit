@@ -22,10 +22,11 @@ public final class ScreenUpdate {
     }
 
     /**
-     * {@code model} showing {@code screen}; the screen already shown stays as it is, without being read again.
+     * {@code model} showing {@code screen}; the screen already shown stays as it is, without being read again. A
+     * screen of a feature that is off is not shown (ADR 171).
      */
     private static Next shown(Model model, Screen screen) {
-        return model.screen().equals(screen)
+        return model.screen().equals(screen) || !screen.shown(model)
                 ? Next.of(model)
                 : Events.happened(Next.of(model.withScreen(screen)), new KernelEvent.ScreenShown(screen));
     }

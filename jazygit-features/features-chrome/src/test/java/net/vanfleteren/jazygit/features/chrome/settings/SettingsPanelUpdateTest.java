@@ -12,7 +12,6 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubEditor;
@@ -246,7 +245,7 @@ class SettingsPanelUpdateTest {
     }
 
     private static Env env(Git git, SettingsStore settings, Terminal terminal) {
-        return new Env(git, StubGitHub.of(), settings, RecentRepositories.NONE, Repositories.NONE, terminal);
+        return new Env(git, settings, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 
     @Test

@@ -68,10 +68,6 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>core-gh</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.vanfleteren</groupId>
             <artifactId>core-askpass</artifactId>
         </dependency>
         <dependency>
@@ -115,19 +111,7 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>features-github</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.vanfleteren</groupId>
             <artifactId>core-git</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.vanfleteren</groupId>
-            <artifactId>core-gh</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
@@ -195,6 +179,14 @@
                         </manifest>
                     </archive>
                 </configuration>
+                <!-- The app the tests drive, shared with the tests of the app with GitHub in it (ADR 171). -->
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

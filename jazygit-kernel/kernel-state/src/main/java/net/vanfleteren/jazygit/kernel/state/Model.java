@@ -6,16 +6,17 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.UnaryOperator;
 import lombok.With;
-import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffLines;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.state.diff.Filtering;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
 import net.vanfleteren.jazygit.kernel.state.diff.Version;
 import net.vanfleteren.jazygit.kernel.state.index.IndexRefresh;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
@@ -29,7 +30,6 @@ import net.vanfleteren.jazygit.kernel.state.popup.SshPromptPopup;
 import net.vanfleteren.jazygit.kernel.state.preferences.Preferences;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.BranchCommitsView;
-import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.kernel.state.view.ContentSearch;
 import net.vanfleteren.jazygit.kernel.state.view.RepoView;
 
@@ -103,6 +103,13 @@ public record Model(
      */
     public <S> S part(Part<S> part) {
         return parts.get(part);
+    }
+
+    /**
+     * Whether the feature {@code feature} is on for the repository (ADR 171): one that decides nothing is.
+     */
+    public boolean on(String feature) {
+        return part(FeatureSwitches.PART).on(feature);
     }
 
     /**
@@ -270,23 +277,32 @@ public record Model(
     }
 
     /**
+     * The remarks a part states for the files listed, if any part states some for them (ADR 171): the one place the
+     * kernel reads them.
+     */
+    public Option<StatedRemarks> remarks() {
+        return repoView.files().commitFiles().flatMap(view -> remarks(view.of()));
+    }
+
+    /**
+     * The remarks a part states for {@code changes}, if any part states some (ADR 171).
+     */
+    public Option<StatedRemarks> remarks(Changes changes) {
+        return parts.remarks(changes);
+    }
+
+    /**
      * What the diff filters hide of the diff {@code content} the area with the id {@code area} shows (ADR 144): with
-     * the filters enabled, unless the diff is drawn plain, the hunks opened in that area, and the review threads on a
-     * pull request's files, whose hunks show; switched off for the session, they hide nothing, but are counted.
+     * the filters enabled, unless the diff is drawn plain, the hunks opened in that area, and the remark threads stated
+     * for the files listed, whose hunks show; switched off for the session, they hide nothing, but are counted.
      */
     public Filtering filtering(AreaId area, ScrolledContent content) {
         List<DiffFilter> filters = preferences.diffFilters().enabledFilters();
         if (filters.isEmpty() || !preferences.settings().diffStyle().rich()) {
             return Filtering.NONE;
         }
-        List<ReviewThread> threads = content instanceof ScrolledContent.FileChanges
-                ? repoView.files()
-                        .commitFiles()
-                        .filter(CommitFilesView::remarksAtItsCommits)
-                        .flatMap(CommitFilesView::remarks)
-                        .flatMap(Loadable::toOption)
-                        .map(ReviewRemarks::threads)
-                        .getOrElse(List.empty())
+        List<RemarkThread> threads = content instanceof ScrolledContent.FileChanges
+                ? remarks().map(StatedRemarks::onLines).getOrElse(List.empty())
                 : List.empty();
         return new Filtering(
                 filters,

@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.features.chrome.layout.LayoutMsg;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemePopup;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeScope;
-import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -119,7 +118,13 @@ class BorderDragTest {
     void theDragKeepsTheScreenItStartedOn() {
         drag.handle(MouseEvent.press(MouseButton.LEFT, 29, 5), model);
 
-        drag.handle(MouseEvent.release(MouseButton.LEFT, 49, 5), model.withScreen(PrOverview.SCREEN));
+        drag.handle(
+                MouseEvent.release(MouseButton.LEFT, 49, 5),
+                model.withScreen(new net.vanfleteren.jazygit.kernel.state.preferences.Screen(
+                        "other",
+                        io.vavr.collection.List.of(new net.vanfleteren.jazygit.kernel.state.PaneId("other")),
+                        net.vanfleteren.jazygit.kernel.state.preferences.Screen.REPOSITORY.width(),
+                        net.vanfleteren.jazygit.kernel.state.preferences.Screen.REPOSITORY.heights())));
 
         assertEquals(
                 List.of(new LayoutMsg.Resized(Screen.REPOSITORY, 50), new LayoutMsg.Settled(Screen.REPOSITORY)),

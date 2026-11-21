@@ -85,3 +85,7 @@ Amended by ADR 167: the branches pane is the first that another group of feature
 
 Amended by ADR 168: a screen is a feature's too: `Feature.screen` brings one, and the pull requests screen moves to
 `features-github`; the kernel keeps only the repository screen.
+
+Amended by ADR 171: a feature is on or off for a repository, as it decides, and nothing of one that is off shows or
+runs but its settings; a feature builds what it runs against, its spinners, its clocks and the remarks of a change
+through hooks of the kernel, so that deleting GitHub's modules leaves jazygit working.

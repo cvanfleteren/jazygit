@@ -112,7 +112,7 @@ public final class PullRequestFixtures {
     }
 
     static Env env() {
-        return new Env(StubGit.of(), StubGitHub.of());
+        return new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of());
     }
 
     /**

@@ -6,8 +6,8 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn.Mark;
 import net.vanfleteren.jazygit.kernel.ui.content.Halves;
@@ -51,7 +51,7 @@ sealed interface Marked permits Marked.Unified, Marked.Split {
     /**
      * This line with its stops on {@code side} (ADR 139).
      */
-    Marked onSide(ReviewThread.Side side);
+    Marked onSide(DiffSide side);
 
     /**
      * This line as a row of the split view: one without halves is as wide as the area, and pinned (ADR 139).
@@ -139,7 +139,7 @@ sealed interface Marked permits Marked.Unified, Marked.Split {
         }
 
         @Override
-        public Unified onSide(ReviewThread.Side side) {
+        public Unified onSide(DiffSide side) {
             return new Unified(line, marks.map(mark -> mark.onSide(side)), places, width, source, kept);
         }
 
@@ -182,7 +182,7 @@ sealed interface Marked permits Marked.Unified, Marked.Split {
         }
 
         @Override
-        public Split onSide(ReviewThread.Side side) {
+        public Split onSide(DiffSide side) {
             return new Split(line, marks.map(mark -> mark.onSide(side)), places, width, source, halves);
         }
 

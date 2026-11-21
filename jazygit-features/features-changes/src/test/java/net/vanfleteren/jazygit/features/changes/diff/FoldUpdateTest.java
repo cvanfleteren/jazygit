@@ -7,7 +7,6 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -18,6 +17,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.diff.Version;
@@ -42,11 +42,11 @@ class FoldUpdateTest {
             + "   },\n"
             + "   \"many\": [" + List.range(0, 25).mkString(", ") + "]\n"
             + " }\n");
-    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.json", Side.RIGHT, 3);
+    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.json", DiffSide.NEW, 3);
     private static final Anchor.Node FEW =
-            new Anchor.Node("a.json", "/few", new Anchor.OnLine("a.json", Side.RIGHT, 2));
+            new Anchor.Node("a.json", "/few", new Anchor.OnLine("a.json", DiffSide.NEW, 2));
     private static final Anchor.Node MANY =
-            new Anchor.Node("a.json", "/many", new Anchor.OnLine("a.json", Side.RIGHT, 6));
+            new Anchor.Node("a.json", "/many", new Anchor.OnLine("a.json", DiffSide.NEW, 6));
     private static final DiffText MANIFESTS = DiffText.of("diff --git a/a.yml b/a.yml\n--- a/a.yml\n+++ b/a.yml\n"
             + "@@ -1,6 +1,6 @@\n"
             + " kind: Job\n"
@@ -57,7 +57,7 @@ class FoldUpdateTest {
             + " kind: Service\n"
             + " port: 80\n");
     private static final Anchor.Node RUN =
-            new Anchor.Node("a.yml", "/0/run", new Anchor.OnLine("a.yml", Side.RIGHT, 2));
+            new Anchor.Node("a.yml", "/0/run", new Anchor.OnLine("a.yml", DiffSide.NEW, 2));
 
     @Test
     void enterClosesAnOpenNode() {
@@ -125,13 +125,13 @@ class FoldUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new Anchor.OnLine("a.json", Side.RIGHT, 6)),
+                Option.of(new Anchor.OnLine("a.json", DiffSide.NEW, 6)),
                 source.scrolled().get(AREA).flatMap(Scrolled::cursor));
     }
 
     @Test
     void aBlockOfYamlAndADocumentFoldAsANodeOfJsonDoes() {
-        Model yaml = rendered(MANIFESTS, new Anchor.OnLine("a.yml", Side.RIGHT, 3));
+        Model yaml = rendered(MANIFESTS, new Anchor.OnLine("a.yml", DiffSide.NEW, 3));
 
         Model folded =
                 Update.update(yaml, new FoldMsg.Toggled(at(RUN, MANIFESTS))).model();
@@ -152,8 +152,8 @@ class FoldUpdateTest {
                 + "+    <dependency><id>b</id></dependency>\n"
                 + "   </dependencies>\n"
                 + " </project>\n");
-        Anchor.Node project = new Anchor.Node("a.xml", "/project", new Anchor.OnLine("a.xml", Side.RIGHT, 1));
-        Model xml = rendered(pom, new Anchor.OnLine("a.xml", Side.RIGHT, 3));
+        Anchor.Node project = new Anchor.Node("a.xml", "/project", new Anchor.OnLine("a.xml", DiffSide.NEW, 1));
+        Model xml = rendered(pom, new Anchor.OnLine("a.xml", DiffSide.NEW, 3));
 
         Model closed =
                 Update.update(xml, new FoldMsg.AllToggled(at(project, pom))).model();

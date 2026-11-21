@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
@@ -25,6 +24,7 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.diff.Version;
@@ -55,9 +55,9 @@ class VersionUpdateTest {
     private static final ScrolledContent CONTENT = new ScrolledContent.StashChanges(STASH, CHANGES);
     private static final Source SOURCE =
             new Source.OfStash(STASH, new CommitFile("a.txt", ChangeType.MODIFIED, Option.none()));
-    private static final Anchor.OnLine REMOVED = new Anchor.OnLine("a.txt", Side.LEFT, 10);
-    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.txt", Side.RIGHT, 10);
-    private static final Anchor.OnLine TWO = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+    private static final Anchor.OnLine REMOVED = new Anchor.OnLine("a.txt", DiffSide.OLD, 10);
+    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.txt", DiffSide.NEW, 10);
+    private static final Anchor.OnLine TWO = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
     private static final String STAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-two\n+Two\n";
     private static final String UNSTAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-Two\n+TWO\n";
     /**
@@ -99,7 +99,7 @@ class VersionUpdateTest {
         assertEquals(List.of(), original.cmds());
         assertEquals(Option.of(FileVersion.ORIGINAL), version(original.model()).flatMap(Version::showing));
         // An added line goes to the line after its block in the original, numbered on the right as a context line.
-        Anchor.OnLine after = new Anchor.OnLine("a.txt", Side.RIGHT, 11);
+        Anchor.OnLine after = new Anchor.OnLine("a.txt", DiffSide.NEW, 11);
         assertEquals(Option.of(after), original.model().scrolled().get(AREA).flatMap(Scrolled::cursor));
 
         Next diff = Update.update(original.model(), new VersionMsg.Cycled(at(after)));
@@ -203,7 +203,7 @@ class VersionUpdateTest {
                                 DIRTY.files(), model.preferences().diffOptions(), new Diffs("", unstaged.text())))
                 .model();
         ScrolledContent shown = new ScrolledContent.Diff(unstaged);
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
         DiffCursorAt at = new DiffCursorAt(
                 new AreaId("diff-unstaged"),
                 new Scrolled(shown, 0, 0, Option.of(two), Option.none()),

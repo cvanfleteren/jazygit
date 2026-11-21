@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.features.changes.edit;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -11,6 +10,7 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffLines;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 
 /**
@@ -67,7 +67,7 @@ public final class EditUpdate {
             case Anchor.Filtered filtered -> Option.of(filtered.path());
             case Anchor.Node node -> Option.of(node.path());
             case Anchor.Thread thread -> thread.line().map(Anchor.OnLine::path);
-            case Anchor.Comment comment -> file(comment.thread());
+            case Anchor.Remark comment -> file(comment.thread());
         };
     }
 
@@ -78,7 +78,7 @@ public final class EditUpdate {
      */
     private static int line(Model model, DiffCursorAt at, Anchor cursor) {
         return switch (cursor) {
-            case Anchor.OnLine on when on.side() == Side.RIGHT -> on.number();
+            case Anchor.OnLine on when on.side() == DiffSide.NEW -> on.number();
             case Anchor.OnLine on ->
                 removed(model.diffLines(at, at.at().content().richDiff()), on);
             case Anchor.Gap gap -> gap.from();
@@ -87,7 +87,7 @@ public final class EditUpdate {
             case Anchor.Node node -> line(model, at, node.line());
             case Anchor.Thread thread ->
                 thread.line().map(on -> line(model, at, on)).getOrElse(1);
-            case Anchor.Comment comment -> line(model, at, comment.thread());
+            case Anchor.Remark comment -> line(model, at, comment.thread());
             case Anchor.Lead lead -> 1;
             case Anchor.File file -> 1;
         };

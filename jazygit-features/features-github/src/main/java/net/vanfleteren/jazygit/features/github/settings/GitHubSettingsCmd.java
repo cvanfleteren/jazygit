@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.features.github.settings;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 
@@ -30,14 +32,14 @@ public sealed interface GitHubSettingsCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            Option<GhAccount> account = env.gitHub().account().current();
+            Option<GhAccount> account = GitHubServices.of(env).account().current();
             return new GitHubSettingsMsg.GitHubRead(new GitHubSetup(
-                    env.gitHub().account().version(executable).mapLeft(Failure.GitHub::new),
+                    GitHubServices.of(env).account().version(executable).mapLeft(GitHubFailure::new),
                     GitHubAccount.host(env.git()),
                     env.git().config().local(GitHubAccount.USER_KEY).getOrElse(Option.none()),
-                    env.gitHub().account().logins().mapLeft(Failure.GitHub::new),
+                    GitHubServices.of(env).account().logins().mapLeft(GitHubFailure::new),
                     account,
-                    account.flatMap(known -> env.gitHub().account().ghBrowser(known.host()))));
+                    account.flatMap(known -> GitHubServices.of(env).account().ghBrowser(known.host()))));
         }
 
         @Override
@@ -66,7 +68,10 @@ public sealed interface GitHubSettingsCmd extends Cmd {
         public Msg run(Env env) {
             return new GitHubSettingsMsg.GhExecutableChecked(
                     executable,
-                    env.gitHub().account().version(executable.getOrElse("gh")).mapLeft(Failure.GitHub::new));
+                    GitHubServices.of(env)
+                            .account()
+                            .version(executable.getOrElse("gh"))
+                            .mapLeft(GitHubFailure::new));
         }
 
         @Override

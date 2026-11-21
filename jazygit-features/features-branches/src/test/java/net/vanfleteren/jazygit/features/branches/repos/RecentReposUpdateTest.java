@@ -12,7 +12,6 @@ import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -36,7 +35,7 @@ class RecentReposUpdateTest {
     Path dir;
 
     private static Env env(Path current, RecentRepositories recent, Repositories repositories) {
-        return new Env(StubGit.of(current), StubGitHub.of(), SettingsStore.NONE, recent, repositories);
+        return new Env(StubGit.of(current), SettingsStore.NONE, recent, repositories);
     }
 
     private Path repo(String name) throws Exception {

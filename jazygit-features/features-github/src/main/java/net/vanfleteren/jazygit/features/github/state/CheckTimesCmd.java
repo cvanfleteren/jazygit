@@ -6,8 +6,10 @@ import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
-import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore.Kept;
-import net.vanfleteren.jazygit.kernel.settings.CheckTimingsStore.Run;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
+import net.vanfleteren.jazygit.features.github.state.CheckTimingsStore.Kept;
+import net.vanfleteren.jazygit.features.github.state.CheckTimingsStore.Run;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -116,10 +118,10 @@ public sealed interface CheckTimesCmd extends Cmd {
         }
 
         private Msg topUp(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .checks()
                     .recent()
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, recent -> new CheckTimesMsg.ToppedUp(repository, recent));
         }
 

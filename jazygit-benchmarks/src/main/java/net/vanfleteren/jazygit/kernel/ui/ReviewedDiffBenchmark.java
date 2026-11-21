@@ -9,19 +9,19 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.bench.WordDiffBenchmark.Shape;
-import net.vanfleteren.jazygit.kernel.content.diff.RichDiff;
-import net.vanfleteren.jazygit.kernel.content.diff.ShownRemarks;
-import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.kernel.content.diff.RichDiff;
+import net.vanfleteren.jazygit.kernel.content.diff.ShownRemarks;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Collapsed;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffLines;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.state.diff.PlacedRemarks;
+import net.vanfleteren.jazygit.kernel.state.diff.Remark;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Subject;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -67,11 +67,11 @@ public class ReviewedDiffBenchmark {
     @Setup
     public void setUp() {
         parsed = DiffText.of(Shape.CODE.diff()).parsed();
-        List<ReviewThread> all = List.range(0, threads).map(ReviewedDiffBenchmark::thread);
+        List<RemarkThread> all = List.range(0, threads).map(ReviewedDiffBenchmark::thread);
         remarks = new ShownRemarks(
                 all, Instant.EPOCH, Option.none(), true, Collapsed.NONE, HashSet.empty(), HashSet.empty());
-        first = new Anchor.OnLine("src/F99.java", Side.RIGHT, 1 + 3 * 40 + 6);
-        last = new Anchor.OnLine("src/F99.java", Side.RIGHT, 1 + 3 * 40 + 8);
+        first = new Anchor.OnLine("src/F99.java", DiffSide.NEW, 1 + 3 * 40 + 6);
+        last = new Anchor.OnLine("src/F99.java", DiffSide.NEW, 1 + 3 * 40 + 8);
     }
 
     /**
@@ -104,7 +104,7 @@ public class ReviewedDiffBenchmark {
      * or a removed one on the left; every third on the two lines before it too, every 25th about its whole file and
      * every 40th outdated. Each has a reply.
      */
-    private static ReviewThread thread(int i) {
+    private static RemarkThread thread(int i) {
         int file = i % 100;
         int start = 1 + (i / 100 % 4) * 40;
         boolean left = i % 2 == 1;
@@ -112,30 +112,29 @@ public class ReviewedDiffBenchmark {
         Subject subject = i % 25 == 0 ? Subject.FILE : Subject.LINE;
         boolean outdated = i % 40 == 1;
         Option<Integer> on = subject == Subject.FILE || outdated ? Option.none() : Option.some(line);
-        return new ReviewThread(
+        DiffSide side = left ? DiffSide.OLD : DiffSide.NEW;
+        return new RemarkThread(
+                new RemarkThread.Id("thread" + i),
                 "src/F%d.java".formatted(file),
-                left ? Side.LEFT : Side.RIGHT,
-                on,
-                i % 3 == 0 ? on.map(number -> number - 2) : Option.none(),
-                left ? Side.LEFT : Side.RIGHT,
-                Option.some(line),
-                false,
-                outdated,
+                Option.none(),
                 subject,
-                List.of(comment(i, 0), comment(i, 1)),
+                on,
+                side,
+                i % 3 == 0 ? on.map(number -> number - 2) : Option.none(),
+                Option.none(),
+                Option.some(line),
+                outdated,
+                false,
                 0,
-                new ReviewThread.Id("thread" + i),
-                ReviewThread.Rights.ALL);
+                List.of(remark(i, 0), remark(i, 1)));
     }
 
-    private static ReviewThread.Comment comment(int thread, int index) {
-        return new ReviewThread.Comment(
+    private static Remark remark(int thread, int index) {
+        return new Remark(
+                new Remark.Id("comment" + thread + "-" + index),
                 "someone",
                 Instant.EPOCH,
                 "A remark on this line, number %d of thread %d.".formatted(index, thread),
-                Option.none(),
-                new ReviewThread.Comment.Id("comment" + thread + "-" + index),
-                new ReviewThread.Comment.RestId(String.valueOf(thread * 10 + index)),
-                CommentRights.ALL);
+                Option.none());
     }
 }

@@ -34,6 +34,17 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
+        <!-- gh is GitHub's alone: no other module but the tests of the app with GitHub names it (ADR 171). -->
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>core-gh</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>core-gh</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

@@ -85,9 +85,13 @@ class GitHubReactionsTest {
     }
 
     @Test
-    void theOpeningOfARepositoryMakesThePullRequestsBeReadFromTheStart() {
-        assertTrue(
-                readsAfter(withTheFeature(), new KernelEvent.RepositoryOpened()).contains(PULL_REQUESTS));
+    void gitHubFoundToApplyMakesThePullRequestsBeReadFromTheStart() {
+        assertTrue(readsAfter(withTheFeature(), new KernelEvent.Switched(GitHubFeature.ID, true))
+                .contains(PULL_REQUESTS));
+        // Not before: until it is found to apply, GitHub is off (ADR 171).
+        assertEquals(List.of(), readsAfter(withTheFeature(), new KernelEvent.RepositoryOpened()));
+        assertEquals(List.of(), readsAfter(withTheFeature(), new KernelEvent.Switched(GitHubFeature.ID, false)));
+        assertEquals(List.of(), readsAfter(withTheFeature(), new KernelEvent.Switched("other", true)));
     }
 
     @Test

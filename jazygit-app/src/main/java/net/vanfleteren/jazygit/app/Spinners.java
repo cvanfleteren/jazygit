@@ -1,9 +1,7 @@
 package net.vanfleteren.jazygit.app;
 
 import java.time.Instant;
-import net.vanfleteren.jazygit.features.github.checks.ChecksDialog;
-import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
-import net.vanfleteren.jazygit.features.github.show.PullRequestDialog;
+import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.ui.FetchLine;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
@@ -20,9 +18,7 @@ final class Spinners {
      */
     static boolean shown(Model model, Instant now) {
         return BranchesPanel.showsSpinner(model)
-                || CommentsDialog.showsSpinner(model)
-                || PullRequestDialog.showsSpinner(model)
-                || ChecksDialog.showsSpinner(model)
+                || Features.ALL.exists(feature -> feature.spinning().test(model))
                 || FetchLine.showsSpinner(model, now);
     }
 }

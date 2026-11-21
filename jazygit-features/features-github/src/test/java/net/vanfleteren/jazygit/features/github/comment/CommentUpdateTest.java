@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.comment.CommentCmd.AddComment;
 import net.vanfleteren.jazygit.features.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.features.github.comments.CommentsPopup;
@@ -80,7 +81,8 @@ class CommentUpdateTest {
     }
 
     private static Env env(Git git, GitHub gitHub, Terminal terminal) {
-        return new Env(git, gitHub, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
+        return new Env(git, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal)
+                .with(GitHubServices.GH, gitHub);
     }
 
     @Test

@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.account.StubAccount;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.git.StubGit;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
 import org.junit.jupiter.api.Test;
@@ -49,10 +50,12 @@ class GitHubAccountTest {
 
         assertEquals(
                 Option.of(GitHubAccount.forge(alice)),
-                GitHubAccount.ON_FORGE.of(new Env(StubGit.of(), gitHub(Option.of(alice), Option.of(alice)))));
+                GitHubAccount.ON_FORGE.of(
+                        new Env(StubGit.of()).with(GitHubServices.GH, gitHub(Option.of(alice), Option.of(alice)))));
         assertEquals(
                 Option.none(),
-                GitHubAccount.ON_FORGE.of(new Env(StubGit.of(), gitHub(Option.none(), Option.of(active)))));
+                GitHubAccount.ON_FORGE.of(
+                        new Env(StubGit.of()).with(GitHubServices.GH, gitHub(Option.none(), Option.of(active)))));
     }
 
     private static GitHub gitHub(Option<GhAccount> configured, Option<GhAccount> current) {

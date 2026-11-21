@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github.prs;
 
 import net.vanfleteren.jazygit.features.github.state.GitHubStores;
-import net.vanfleteren.jazygit.kernel.settings.UnseenPullRequests;
+import net.vanfleteren.jazygit.features.github.state.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;

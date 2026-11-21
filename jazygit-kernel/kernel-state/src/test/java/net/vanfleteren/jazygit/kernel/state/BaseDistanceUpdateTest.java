@@ -9,7 +9,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubBranches;
@@ -59,7 +58,7 @@ class BaseDistanceUpdateTest {
                         LoadBranches.LISTED,
                         READ,
                         Option.of(new LoadMsg.Bases(PARENTS, HashMap.of(FEATURE, DISTANCE)))),
-                LoadBranches.LISTED.run(new Env(git, StubGitHub.of())));
+                LoadBranches.LISTED.run(new Env(git)));
     }
 
     @Test
@@ -88,7 +87,7 @@ class BaseDistanceUpdateTest {
         assertEquals(
                 new LoadMsg.BranchesLoaded(
                         load, READ, Option.of(new LoadMsg.Bases(HashMap.empty(), HashMap.of(FEATURE, DISTANCE)))),
-                load.run(new Env(git, StubGitHub.of())));
+                load.run(new Env(git)));
     }
 
     @Test
@@ -107,7 +106,7 @@ class BaseDistanceUpdateTest {
 
         assertEquals(
                 new LoadMsg.BranchesLoaded(LoadBranches.LISTED, READ, Option.none()),
-                LoadBranches.LISTED.run(new Env(git, StubGitHub.of())));
+                LoadBranches.LISTED.run(new Env(git)));
     }
 
     @Test

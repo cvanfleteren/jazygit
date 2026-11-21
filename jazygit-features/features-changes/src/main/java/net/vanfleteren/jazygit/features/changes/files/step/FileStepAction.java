@@ -15,14 +15,13 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
  */
 public final class FileStepAction {
 
-    public static final FeatureAction ACTION =
-            FeatureAction.ofKeys(keys -> List.of(Scopes.DIFF, Scopes.PULL_REQUEST_DIFF)
-                    .foldLeft(
-                            keys,
-                            (keymap, scope) -> keymap.add(
-                                    scope,
-                                    step("J", "changes.help.diff.nextFile", Step.NEXT),
-                                    step("K", "changes.help.diff.previousFile", Step.PREVIOUS))));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> List.of(Scopes.DIFF, Scopes.REMARKED_DIFF)
+            .foldLeft(
+                    keys,
+                    (keymap, scope) -> keymap.add(
+                            scope,
+                            step("J", "changes.help.diff.nextFile", Step.NEXT),
+                            step("K", "changes.help.diff.previousFile", Step.PREVIOUS))));
 
     private FileStepAction() {}
 

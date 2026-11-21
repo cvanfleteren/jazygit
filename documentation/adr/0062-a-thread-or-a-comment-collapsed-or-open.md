@@ -74,3 +74,5 @@ The cursor stops on each thread as one stop (ADR 60), so a key on a comment of i
 
 Amended by ADR 63: the ids flipped are kept per pull request in a file of the repository, for 30 days, not only as long
 as the tree is open.
+
+Amended by ADR 171: the kernel collapses the threads and comments; GitHub keeps which are flipped between sessions.

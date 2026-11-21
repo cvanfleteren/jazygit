@@ -2,8 +2,6 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.core.git.model.HiddenHunks.Ranges;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
@@ -20,8 +18,8 @@ public sealed interface Anchor {
      */
     static Option<OnLine> of(String path, DiffLine line) {
         return switch (line.kind()) {
-            case REMOVED -> line.oldNumber().map(number -> new OnLine(path, Side.LEFT, number));
-            case ADDED, CONTEXT -> line.newNumber().map(number -> new OnLine(path, Side.RIGHT, number));
+            case REMOVED -> line.oldNumber().map(number -> new OnLine(path, DiffSide.OLD, number));
+            case ADDED, CONTEXT -> line.newNumber().map(number -> new OnLine(path, DiffSide.NEW, number));
             case NOTE -> Option.none();
         };
     }
@@ -39,7 +37,7 @@ public sealed interface Anchor {
     /**
      * The line with the number {@code number} on {@code side} of the file with the path {@code path}.
      */
-    record OnLine(String path, Side side, int number) implements Anchor {}
+    record OnLine(String path, DiffSide side, int number) implements Anchor {}
 
     /**
      * A marker of lines the file with the path {@code path} leaves out between its hunks, or around them: those of the
@@ -73,15 +71,15 @@ public sealed interface Anchor {
     record Node(String path, String pointer, OnLine line) implements Anchor {}
 
     /**
-     * The review thread with the id {@code id}, which was after {@code line} when the anchor was made, if after one:
+     * The remark thread with the id {@code id}, which was after {@code line} when the anchor was made, if after one:
      * where the cursor goes when the thread is gone. It is found again by its id, wherever it is now
      * ({@link DiffStops#nearest}).
      */
-    record Thread(ReviewThread.Id id, Option<OnLine> line) implements Anchor {}
+    record Thread(RemarkThread.Id id, Option<OnLine> line) implements Anchor {}
 
     /**
-     * The comment with the id {@code id} of an open thread, but its first, which is the thread (ADR 62). It is found
+     * The remark with the id {@code id} of an open thread, but its first, which is the thread (ADR 62). It is found
      * again by its id; when it is gone, as when its thread is collapsed, the cursor goes to its {@code thread}.
      */
-    record Comment(ReviewThread.Comment.Id id, Thread thread) implements Anchor {}
+    record Remark(net.vanfleteren.jazygit.kernel.state.diff.Remark.Id id, Thread thread) implements Anchor {}
 }

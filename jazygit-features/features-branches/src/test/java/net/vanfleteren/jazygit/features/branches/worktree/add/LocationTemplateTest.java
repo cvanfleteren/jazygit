@@ -8,7 +8,6 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubConfig;
 import net.vanfleteren.jazygit.core.git.model.ConfigValue;
@@ -112,14 +111,12 @@ class LocationTemplateTest {
 
     private static Env config(
             String key, Either<GitError, List<ConfigValue>> values, Either<GitError, List<ConfigValue>> others) {
-        return new Env(
-                StubGit.of().withConfig(new StubConfig() {
-                    @Override
-                    public Either<GitError, List<ConfigValue>> all(String asked) {
-                        return asked.equals(key) ? values : others;
-                    }
-                }),
-                StubGitHub.of());
+        return new Env(StubGit.of().withConfig(new StubConfig() {
+            @Override
+            public Either<GitError, List<ConfigValue>> all(String asked) {
+                return asked.equals(key) ? values : others;
+            }
+        }));
     }
 
     private static Either<GitError, List<ConfigValue>> values(String... values) {

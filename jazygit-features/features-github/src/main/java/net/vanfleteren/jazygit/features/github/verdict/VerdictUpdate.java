@@ -10,10 +10,12 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.Verdict;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
-import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.features.github.compose.ComposeUpdate;
+import net.vanfleteren.jazygit.features.github.remarks.PrFiles;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd.LoadReviewRemarks;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksState;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.PullRequestUpdate;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
@@ -25,7 +27,6 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
-import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
 
 /**
  * Approving a pull request, or asking for changes (ADR 100), from its dialog or from the diff of its files. Only an
@@ -95,17 +96,14 @@ public final class VerdictUpdate {
      * tell how it may be reviewed.
      */
     private static Either<Why, VerdictPopup> fromDiff(Model model) {
-        return model.repoView()
-                .files()
-                .commitFiles()
-                .filter(view -> view.pullRequest().isDefined())
+        return RemarksState.files(model)
                 .flatMap(view ->
                         view.remarks().flatMap(remarks -> remarks.toOption()).map(remarks -> Tuple.of(view, remarks)))
                 .toEither(Why.NOT_READ)
                 .flatMap(found -> fromRemarks(found._1(), found._2()));
     }
 
-    private static Either<Why, VerdictPopup> fromRemarks(CommitFilesView view, ReviewRemarks remarks) {
+    private static Either<Why, VerdictPopup> fromRemarks(PrFiles view, ReviewRemarks remarks) {
         Reviewing reviewing = remarks.reviewing();
         return mayReview(remarks.state(), reviewing)
                 .filterOrElse(may -> !reviewing.pending(), may -> Why.PENDING_REVIEW)

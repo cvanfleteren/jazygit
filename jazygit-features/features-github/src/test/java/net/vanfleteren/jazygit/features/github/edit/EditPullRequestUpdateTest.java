@@ -44,6 +44,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.PullRequestFixtures;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.EditBody;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestCmd.SavePullRequest;
@@ -129,7 +130,8 @@ class EditPullRequestUpdateTest {
     }
 
     private static Env env(Git git, GitHub gitHub, Terminal terminal) {
-        return new Env(git, gitHub, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
+        return new Env(git, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal)
+                .with(GitHubServices.GH, gitHub);
     }
 
     private static Env env(GitHub gitHub) {

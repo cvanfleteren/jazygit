@@ -10,7 +10,6 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubBranches;
@@ -98,7 +97,7 @@ class ForceDeleteTest {
     }
 
     private static Env env(Git git) {
-        return new Env(git, StubGitHub.of());
+        return new Env(git);
     }
 
     @Test

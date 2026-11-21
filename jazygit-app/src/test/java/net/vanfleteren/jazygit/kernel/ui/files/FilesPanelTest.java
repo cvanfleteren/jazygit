@@ -7,16 +7,10 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.pilot.Pilot;
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.concurrent.atomic.AtomicReference;
-import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
-import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.Status;
@@ -30,7 +24,6 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.diff.BaseTip;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
@@ -50,7 +43,9 @@ import org.junit.jupiter.api.Test;
 class FilesPanelTest {
 
     private static final Changes COMMIT = new Changes.OfCommit(new Sha("aaaa"));
+
     private static final String MODEL = "core/src/main/java/model";
+
     private static final List<CommitFile> MODEL_AND_TEST = List.of(
             new CommitFile(MODEL + "/WordDiff.java", ChangeType.MODIFIED),
             new CommitFile("core/src/test/java/model/WordDiffTest.java", ChangeType.MODIFIED));
@@ -375,26 +370,6 @@ class FilesPanelTest {
     }
 
     @Test
-    void theFilesOfABranchNameTheBaseTheyAreComparedWith() throws Exception {
-        Changes of = new Changes.OfBranch(
-                new BranchName("feature"),
-                new BaseTip(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))), new Sha("bbbb")),
-                new Sha("aaaa"));
-        Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
-                                .model(),
-                        new LoadMsg.CommitFilesLoaded(of, List.of(new CommitFile("b.txt", ChangeType.ADDED))))
-                .model();
-
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, FilesPanel.PANE))) {
-            String files = RenderedText.ofLarge(testRunner, () -> panel.render(open, FilesPanel.PANE));
-            assertTrue(files.contains("Files of feature · vs origin/main"), files);
-
-            SettledPilot.of(testRunner).quit();
-        }
-    }
-
-    @Test
     void theFilesOfACommitShowInPlaceOfThoseOfTheWorkingTreeUntilTheyClose() throws Exception {
         Model model = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("work.txt", ChangeType.MODIFIED))));
         Changes of = new Changes.OfCommit(new Sha("aaaa"));
@@ -420,188 +395,6 @@ class FilesPanelTest {
 
             SettledPilot.of(testRunner).quit();
         }
-    }
-
-    @Test
-    void theFilesOfAPullRequestCountTheirUnresolvedRemarksByEitherPathOfARename() throws Exception {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
-        Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
-                                .model(),
-                        new LoadMsg.CommitFilesLoaded(
-                                of,
-                                List.of(
-                                        new CommitFile("new.txt", ChangeType.RENAMED, Option.of("old.txt")),
-                                        new CommitFile("b.txt", ChangeType.MODIFIED))))
-                .model();
-        // git sees a rename where GitHub sees a file deleted and one added: a remark on the old file has its path.
-        Model read = Update.update(
-                        open,
-                        new CommitFilesMsg.RemarksLoaded(
-                                new PrNumber(7),
-                                new ReviewRemarks(
-                                        PullRequestDetails.State.MERGED,
-                                        Option.none(),
-                                        Option.none(),
-                                        List.of(
-                                                remark("old.txt", ReviewThread.Side.LEFT, false),
-                                                remark("new.txt", ReviewThread.Side.RIGHT, false),
-                                                remark("b.txt", ReviewThread.Side.RIGHT, true))),
-                                HashSet.empty(),
-                                0))
-                .model();
-
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, FilesPanel.PANE))) {
-            String files = RenderedText.ofLarge(testRunner, () -> panel.render(read, FilesPanel.PANE));
-            assertTrue(files.contains("Files of #7 · merged"), files);
-            assertTrue(files.contains("R old.txt -> new.txt 💬2"), files);
-            assertTrue(files.contains("M b.txt ✓1"), files);
-            assertFalse(files.contains("b.txt 💬"), files);
-
-            SettledPilot.of(testRunner).quit();
-        }
-    }
-
-    @Test
-    void theFilesOfAPullRequestCanBeListedOnlyWhenTheyHaveRemarks() throws Exception {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
-        Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
-                                .model(),
-                        new LoadMsg.CommitFilesLoaded(
-                                of,
-                                List.of(
-                                        new CommitFile("dir/open.txt", ChangeType.MODIFIED),
-                                        new CommitFile("done.txt", ChangeType.MODIFIED),
-                                        new CommitFile("quiet.txt", ChangeType.MODIFIED))))
-                .model();
-        Model unresolved = Update.update(
-                        Update.update(
-                                        open,
-                                        new CommitFilesMsg.RemarksLoaded(
-                                                new PrNumber(7),
-                                                new ReviewRemarks(
-                                                        PullRequestDetails.State.OPEN,
-                                                        Option.none(),
-                                                        Option.none(),
-                                                        List.of(
-                                                                remark("dir/open.txt", ReviewThread.Side.RIGHT, false),
-                                                                remark("done.txt", ReviewThread.Side.RIGHT, true))),
-                                                HashSet.empty(),
-                                                0))
-                                .model(),
-                        new CommitFilesMsg.ListedCycled())
-                .model();
-        Model remarked =
-                Update.update(unresolved, new CommitFilesMsg.ListedCycled()).model();
-        Model none = Update.update(
-                        unresolved,
-                        new CommitFilesMsg.RemarksLoaded(
-                                new PrNumber(7),
-                                new ReviewRemarks(
-                                        PullRequestDetails.State.OPEN,
-                                        Option.none(),
-                                        Option.none(),
-                                        List.of(remark("done.txt", ReviewThread.Side.RIGHT, true))),
-                                HashSet.empty(),
-                                0))
-                .model();
-
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> panel.render(unresolved, FilesPanel.PANE))) {
-            String files = RenderedText.ofLarge(testRunner, () -> panel.render(unresolved, FilesPanel.PANE));
-            assertTrue(files.contains("Files of #7 · unresolved remarks"), files);
-            assertTrue(files.contains("dir"), files);
-            assertTrue(files.contains("open.txt 💬1"), files);
-            assertFalse(files.contains("done.txt"), files);
-            assertFalse(files.contains("quiet.txt"), files);
-
-            files = RenderedText.ofLarge(testRunner, () -> panel.render(remarked, FilesPanel.PANE));
-            assertTrue(files.contains("Files of #7 · with remarks"), files);
-            assertTrue(files.contains("done.txt ✓1"), files);
-            assertFalse(files.contains("quiet.txt"), files);
-
-            files = RenderedText.ofLarge(testRunner, () -> panel.render(none, FilesPanel.PANE));
-            assertTrue(files.contains("No file has unresolved remarks"), files);
-            assertFalse(files.contains("done.txt"), files);
-
-            SettledPilot.of(testRunner).quit();
-        }
-    }
-
-    @Test
-    void aHighlightedFileLeftOutOfTheFilesWithRemarksMovesTheHighlightToTheNearestRowListed() throws Exception {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
-        Model opened = Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
-                .model();
-        Model loaded = Update.update(
-                        opened,
-                        new LoadMsg.CommitFilesLoaded(
-                                of,
-                                List.of("a", "b", "c", "d")
-                                        .map(name -> new CommitFile("dir/" + name + ".txt", ChangeType.MODIFIED))))
-                .model();
-        Model reading = Update.update(loaded, new CommitFilesMsg.ListedCycled()).model();
-        Model read = Update.update(
-                        loaded,
-                        new CommitFilesMsg.RemarksLoaded(
-                                new PrNumber(7),
-                                new ReviewRemarks(
-                                        PullRequestDetails.State.OPEN,
-                                        Option.none(),
-                                        Option.none(),
-                                        List.of(
-                                                remark("dir/a.txt", ReviewThread.Side.RIGHT, false),
-                                                remark("dir/d.txt", ReviewThread.Side.RIGHT, false))),
-                                HashSet.empty(),
-                                0))
-                .model();
-        Model unresolved =
-                Update.update(read, new CommitFilesMsg.ListedCycled()).model();
-
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.PANE))) {
-            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.PANE));
-            String files = RenderedText.ofLarge(testRunner, () -> panel.render(reading, FilesPanel.PANE));
-            assertTrue(files.contains("Reading the remarks…"), files);
-
-            RenderedText.of(testRunner, () -> panel.render(read, FilesPanel.PANE));
-            // The root, dir, then its files: b.txt, between a.txt and d.txt, which have remarks.
-            panel.commitTree().selected(3);
-            RenderedText.of(testRunner, () -> panel.render(read, FilesPanel.PANE));
-            assertEquals("dir/b.txt", highlighted(panel));
-
-            RenderedText.of(testRunner, () -> panel.render(unresolved, FilesPanel.PANE));
-            assertEquals("dir/a.txt", highlighted(panel));
-
-            SettledPilot.of(testRunner).quit();
-        }
-    }
-
-    private static ReviewThread remark(String path, ReviewThread.Side side, boolean resolved) {
-        return new ReviewThread(
-                path,
-                side,
-                Option.of(1),
-                Option.none(),
-                side,
-                Option.of(1),
-                resolved,
-                false,
-                ReviewThread.Subject.LINE,
-                List.of(new ReviewThread.Comment(
-                        "bob",
-                        java.time.Instant.EPOCH,
-                        "Hm",
-                        Option.none(),
-                        new ReviewThread.Comment.Id("C"),
-                        new ReviewThread.Comment.RestId("1"),
-                        CommentRights.ALL)),
-                0,
-                new ReviewThread.Id("T"),
-                ReviewThread.Rights.ALL);
     }
 
     @Test

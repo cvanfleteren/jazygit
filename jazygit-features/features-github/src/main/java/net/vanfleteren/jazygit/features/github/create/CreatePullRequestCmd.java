@@ -20,6 +20,8 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.BranchCmd;
 import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.OnGitHub;
 import net.vanfleteren.jazygit.features.github.stack.StackCmd;
 import net.vanfleteren.jazygit.kernel.state.*;
@@ -300,10 +302,10 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub()
+            return GitHubServices.of(env)
                     .pullRequests()
                     .create(OnGitHub.branch(head), OnGitHub.branch(base), pullRequest)
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(
                             this::failed,
                             created -> new CreatePullRequestMsg.Created(

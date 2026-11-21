@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
@@ -28,16 +27,15 @@ class PushCmdTest {
 
     @Test
     void aPushThatPushDefaultRefusesSaysSoRatherThanFailing() {
-        Msg msg = PUSH.run(new Env(pushFailingWith(new GitError.PushRefused("simple", DEVELOP)), StubGitHub.of()));
+        Msg msg = PUSH.run(new Env(pushFailingWith(new GitError.PushRefused("simple", DEVELOP))));
 
         assertEquals(new PushMsg.Refused(PUSH, new SetUpstreamPopup.Refusal("simple", DEVELOP), List.empty()), msg);
     }
 
     @Test
     void anyOtherFailureOfAPushFailsIt() {
-        Msg msg = PUSH.run(new Env(
-                pushFailingWith(new GitError.CommandFailed(io.vavr.control.Option.none(), 1, "rejected")),
-                StubGitHub.of()));
+        Msg msg = PUSH.run(
+                new Env(pushFailingWith(new GitError.CommandFailed(io.vavr.control.Option.none(), 1, "rejected"))));
 
         assertInstanceOf(OperationMsg.Failed.class, msg);
     }

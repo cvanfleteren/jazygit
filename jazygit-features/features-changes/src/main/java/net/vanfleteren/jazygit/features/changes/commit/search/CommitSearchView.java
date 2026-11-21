@@ -32,7 +32,9 @@ public record CommitSearchView(Option<String> line, Option<CommitSearch> search)
                 case KernelEvent.OperationDone _,
                         KernelEvent.Fetched _,
                         KernelEvent.RepositoryOpened _,
-                        KernelEvent.ScreenShown _ -> Next.of(model);
+                        KernelEvent.ScreenShown _,
+                        KernelEvent.ChangesOpened _,
+                        KernelEvent.Switched _ -> Next.of(model);
             });
 
     /**

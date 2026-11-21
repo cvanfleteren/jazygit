@@ -9,7 +9,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.BlameAt;
 import net.vanfleteren.jazygit.core.git.model.BlameOptions;
@@ -31,6 +30,7 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.diff.Version;
@@ -58,7 +58,7 @@ class BlameUpdateTest {
     private static final DiffText CHANGES = DiffText.of(HEADER + "@@ -1,3 +1,3 @@\n one\n-two\n+Two\n three\n");
     private static final DiffText WHOLE = CHANGES;
     private static final ScrolledContent CONTENT = new ScrolledContent.StashChanges(STASH, CHANGES);
-    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
     private static final Blame BLAME = Blame.uncommitted(3, "a.txt");
     private static final String STAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-two\n+Two\n";
     private static final String UNSTAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-Two\n+TWO\n";
@@ -453,7 +453,7 @@ class BlameUpdateTest {
      */
     private static DiffCursorAt staged(Model model) {
         ScrolledContent content = new ScrolledContent.Diff(DiffText.of(STAGED_CHANGE));
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
         return new DiffCursorAt(
                 AreaId.STAGED,
                 model.scrolled(AreaId.STAGED, content),
@@ -494,7 +494,7 @@ class BlameUpdateTest {
     }
 
     private static DiffCursorAt onLine(int number) {
-        Anchor.OnLine line = new Anchor.OnLine("a.txt", Side.RIGHT, number);
+        Anchor.OnLine line = new Anchor.OnLine("a.txt", DiffSide.NEW, number);
         return new DiffCursorAt(
                 AREA,
                 new Scrolled(CONTENT, 0, 0, Option.of(line), Option.none()),

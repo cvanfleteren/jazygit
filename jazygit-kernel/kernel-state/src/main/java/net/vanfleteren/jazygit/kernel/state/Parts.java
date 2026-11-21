@@ -4,8 +4,11 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.TreeMap;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.kernel.state.diff.Changes;
+import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
 import net.vanfleteren.jazygit.kernel.state.load.Targeted;
 
 /**
@@ -68,6 +71,22 @@ public record Parts(Map<String, Kept<?>> kept) {
     }
 
     /**
+     * The remarks of {@code changes}, as the first part kept that states any for them states them, in the order of
+     * their names (ADR 171).
+     */
+    public Option<StatedRemarks> remarks(Changes changes) {
+        return kept.values().toStream().flatMap(part -> part.remarks(changes)).headOption();
+    }
+
+    /**
+     * What shows the files of {@code branch} in place of those it changes against its base, as the first part kept
+     * that knows other changes of it says, in the order of their names (ADR 171).
+     */
+    public Option<Msg> files(Branch branch) {
+        return kept.values().toStream().flatMap(part -> part.files(branch)).headOption();
+    }
+
+    /**
      * What {@code model} becomes once each part it keeps answered {@code event}, in the order of their names. Each
      * one answers with its value as the parts before it left it, and not at all once they stopped keeping it.
      */
@@ -108,6 +127,14 @@ public record Parts(Map<String, Kept<?>> kept) {
 
         Option<String> repository() {
             return part.hooks().names().repository(value);
+        }
+
+        Option<StatedRemarks> remarks(Changes changes) {
+            return part.hooks().remarking().remarks(value, changes);
+        }
+
+        Option<Msg> files(Branch branch) {
+            return part.hooks().listsFiles().files(value, branch);
         }
     }
 }

@@ -11,7 +11,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubBranches;
@@ -182,7 +181,7 @@ class RenameBranchTest {
                 });
         RenameBranchCmd cmd = new RenameBranchCmd(FEATURE, TOPIC, Option.of(ORIGIN_FEATURE));
 
-        Msg done = cmd.run(new Env(git, StubGitHub.of()));
+        Msg done = cmd.run(new Env(git));
 
         assertEquals(java.util.List.of("rename feature topic", "rename origin/feature for topic"), ran);
         assertEquals(

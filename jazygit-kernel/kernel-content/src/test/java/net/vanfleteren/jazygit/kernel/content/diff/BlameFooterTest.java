@@ -6,7 +6,6 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
@@ -15,6 +14,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Blames;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.diff.Version;
 import net.vanfleteren.jazygit.kernel.state.diff.WholeFile;
@@ -40,10 +40,10 @@ class BlameFooterTest {
 
         assertEquals(
                 Option.of("aaaaaaa Alex Moreau · 2 months ago · A version cycles"),
-                BlameFooter.text(version, Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 1)), NOW));
+                BlameFooter.text(version, Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)), NOW));
         assertEquals(
                 Option.of("Not committed yet"),
-                BlameFooter.text(version, Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)), NOW));
+                BlameFooter.text(version, Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)), NOW));
         // On the bar of the file, which is no line.
         assertEquals(Option.of(""), BlameFooter.text(version, Option.of(new Anchor.File("a.txt")), NOW));
     }
@@ -58,7 +58,7 @@ class BlameFooterTest {
         // The removed line is line 2 of the original, on the left.
         assertEquals(
                 Option.of("Not committed yet"),
-                BlameFooter.text(version, Option.of(new Anchor.OnLine("a.txt", Side.LEFT, 2)), NOW));
+                BlameFooter.text(version, Option.of(new Anchor.OnLine("a.txt", DiffSide.OLD, 2)), NOW));
     }
 
     @Test

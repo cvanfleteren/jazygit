@@ -12,7 +12,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.app.keys.Features;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
@@ -31,9 +30,6 @@ import net.vanfleteren.jazygit.features.branches.branch.merge.MergeCmd;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.features.branches.branch.rebase.RebaseCmd;
-import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
-import net.vanfleteren.jazygit.features.github.state.LoadBranchChecks;
-import net.vanfleteren.jazygit.features.github.state.LoadProtectedBranches;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -52,8 +48,10 @@ import org.junit.jupiter.api.Test;
 class OperationUpdateTest {
 
     private static final MergeCmd MERGE = new MergeCmd(new BranchName("feature"), MergeMode.MERGE_COMMIT);
+
     private static final InProgress MERGING =
             new InProgress.Merging(new Sha("0123456789012345678901234567890123456789"));
+
     private static final PushCmd.Push PUSH = new PushCmd.Push(
             new BranchName("feature"), new RemoteBranch("origin", new BranchName("feature")), PushMode.FAST_FORWARD);
 
@@ -62,29 +60,6 @@ class OperationUpdateTest {
      */
     private static Model withTheFeatures() {
         return loaded().withReactions(Features.REACTIONS);
-    }
-
-    @Test
-    void aSuccessLogsItsCommandsReleasesItsBranchClearsTheErrorAndReadsTheRepositoryAgain() {
-        Model pushing = TestModels.running(CheckoutModels.withCheckoutError(withTheFeatures(), "foo", "boom"), PUSH);
-
-        Next next = TestModels.done(pushing, PUSH, succeeded(PUSH, "git push origin feature"));
-
-        assertEquals(
-                List.of(new LogEntry(PushCmd.PUSH, executed("git push origin feature"), Instant.EPOCH)),
-                next.model().outcome().commandLog());
-        assertEquals(HashSet.empty(), next.model().jobs().busy().keySet());
-        assertEquals(Option.none(), next.model().outcome().error());
-        assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        LoadBranches.LISTED,
-                        new LoadStashes(),
-                        new LoadWorktrees(),
-                        new LoadProtectedBranches(),
-                        new LoadRepositoryPullRequests(),
-                        new LoadBranchChecks()),
-                next.cmds());
     }
 
     @Test
@@ -139,7 +114,7 @@ class OperationUpdateTest {
             }
         });
 
-        Msg msg = Program.perform(new Env(throwing, StubGitHub.of()), PUSH);
+        Msg msg = Program.perform(new Env(throwing), PUSH);
 
         OperationMsg.Failed failed = assertInstanceOf(OperationMsg.Failed.class, msg);
         assertInstanceOf(Failure.Bug.class, failed.failure());
@@ -159,7 +134,7 @@ class OperationUpdateTest {
         });
         java.util.List<Throwable> bugs = new java.util.ArrayList<>();
 
-        Msg msg = Program.perform(new Env(throwing, StubGitHub.of()), PUSH, bugs::add);
+        Msg msg = Program.perform(new Env(throwing), PUSH, bugs::add);
 
         assertInstanceOf(
                 Failure.Bug.class,
@@ -184,7 +159,7 @@ class OperationUpdateTest {
             }
         });
 
-        Msg msg = Program.perform(new Env(stopping, StubGitHub.of()), MERGE);
+        Msg msg = Program.perform(new Env(stopping), MERGE);
 
         assertEquals(
                 new OperationMsg.Stopped(

@@ -13,10 +13,10 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -170,18 +170,18 @@ class RenderedMarkdownTest {
         assertEquals(
                 List.of(
                         // A context line is placed by its number in the old file too, after its own (ADR 140).
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 1), 1),
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 1), 1),
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 3), 3),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 1), 1),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 1), 1),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 3), 3),
                         // A blank line goes with the block after it, after that block's own lines.
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 2), 3),
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 2), 3),
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 5), 5),
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 5), 5),
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 4), 5),
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 4), 5),
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.RIGHT, 6), 6),
-                        new Drawn.Place(new Anchor.OnLine("README.md", Side.LEFT, 6), 6)),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 2), 3),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 2), 3),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 5), 5),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 5), 5),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 4), 5),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 4), 5),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 6), 6),
+                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 6), 6)),
                 drawn.places());
     }
 

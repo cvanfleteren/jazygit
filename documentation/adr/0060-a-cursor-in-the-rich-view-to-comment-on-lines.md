@@ -198,3 +198,6 @@ Amended by ADR 78: the cursor tints the lines of its stop only, not a copy of al
 
 Amended by ADR 83: the cursor stops on paired lines in the order they are shown; the hunk a range is open in is shown as
 git gives it.
+
+Amended by ADR 171: the cursor's keys in a diff with remarks are on `Scopes.REMARKED_DIFF`, and its stops on a thread
+or a remark carry ids of the kernel's.

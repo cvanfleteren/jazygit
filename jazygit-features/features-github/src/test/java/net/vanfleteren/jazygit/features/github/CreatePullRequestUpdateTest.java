@@ -202,7 +202,7 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(RELEASE.name())),
-                readParent().run(new Env(git, StubGitHub.of())));
+                readParent().run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test
@@ -245,7 +245,7 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(AHEAD.name())),
-                readParent().run(new Env(git, StubGitHub.of())));
+                readParent().run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test
@@ -259,7 +259,7 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()),
-                readParent().run(new Env(git, StubGitHub.of())));
+                readParent().run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     /**
@@ -281,14 +281,13 @@ class CreatePullRequestUpdateTest {
     private static Env distances(int main, int release, int ahead) {
         Map<BranchRef, Integer> counts =
                 HashMap.of(remote("main"), main, remote("release"), release, remote("ahead"), ahead);
-        return new Env(
-                StubGit.of().withHistory(new StubHistory() {
+        return new Env(StubGit.of().withHistory(new StubHistory() {
                     @Override
                     public Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
                         return Either.right(counts.get(base).get());
                     }
-                }),
-                StubGitHub.of());
+                }))
+                .with(GitHubServices.GH, StubGitHub.of());
     }
 
     /**
@@ -462,7 +461,8 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.BaseTitleRead(FEATURE, RELEASE.name(), Option.of("Fix release")),
-                new RereadTitle(FEATURE, RELEASE.name(), remote("release")).run(new Env(git, StubGitHub.of())));
+                new RereadTitle(FEATURE, RELEASE.name(), remote("release"))
+                        .run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test
@@ -512,7 +512,7 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
-                read.run(new Env(git, StubGitHub.of())));
+                read.run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test
@@ -522,7 +522,7 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
-                read.run(new Env(parentRecorded("dev"), StubGitHub.of())));
+                read.run(new Env(parentRecorded("dev")).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test
@@ -533,7 +533,7 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(new BranchName("stable"))),
-                read.run(new Env(parentRecorded("main"), StubGitHub.of())));
+                read.run(new Env(parentRecorded("main")).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     private static Git parentRecorded(String name) {
@@ -635,7 +635,8 @@ class CreatePullRequestUpdateTest {
                 new NewPullRequest("Login", "", true));
         Model creating = confirmed(cmd.pullRequest()).model();
 
-        Next done = TestModels.done(creating, cmd, cmd.run(new Env(StubGit.of(), StubGitHub.of())));
+        Next done =
+                TestModels.done(creating, cmd, cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of())));
 
         assertTrue(
                 done.cmds().contains(new LoadRepositoryPullRequests()),

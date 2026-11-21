@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.features.github.builds;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -26,10 +28,10 @@ public record LoadBuilds(RemoteBranch branch, Option<String> after) implements C
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub()
+        return GitHubServices.of(env)
                 .checks()
                 .builds(branch.branch().value(), after)
-                .mapLeft(Failure::of)
+                .mapLeft(GitHubFailure::of)
                 .fold(this::failed, page -> new BuildsMsg.Read(branch, after, page));
     }
 

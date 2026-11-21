@@ -7,8 +7,8 @@ import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.content.Halves;
@@ -32,13 +32,7 @@ import net.vanfleteren.jazygit.kernel.ui.text.Rows;
  *               to the other side
  */
 public record DiffCursor(
-        Vector<Drawn.Stop> stops,
-        int lines,
-        int height,
-        int stop,
-        int row,
-        Option<Integer> mark,
-        ReviewThread.Side side) {
+        Vector<Drawn.Stop> stops, int lines, int height, int stop, int row, Option<Integer> mark, DiffSide side) {
 
     /**
      * The cursor of a diff of {@code lines} lines with {@code stops}, shown {@code height} lines high from
@@ -57,7 +51,7 @@ public record DiffCursor(
             int row,
             Option<Anchor> at,
             Option<Anchor> mark) {
-        return of(stops, near, lines, height, row, at, mark, ReviewThread.Side.RIGHT);
+        return of(stops, near, lines, height, row, at, mark, DiffSide.NEW);
     }
 
     /**
@@ -72,7 +66,7 @@ public record DiffCursor(
             int row,
             Option<Anchor> at,
             Option<Anchor> mark,
-            ReviewThread.Side side) {
+            DiffSide side) {
         int on = at.flatMap(anchor -> index(stops, anchor, near)
                         .orElse(() -> DiffStops.nearest(
                                         stops.map(stop -> stop.mark().anchor()), anchor)
@@ -179,7 +173,7 @@ public record DiffCursor(
      * closest row of its hunk that has one there; where it is when its hunk has none, and while a range is open,
      * which keeps to its side. None off a line, and in the unified view.
      */
-    public Option<DiffCursor> toSide(ReviewThread.Side side) {
+    public Option<DiffCursor> toSide(DiffSide side) {
         Drawn.Mark on = stops.get(stop).mark();
         if (on.side().isEmpty() || !(on.anchor() instanceof Anchor.OnLine)) {
             return Option.none();
@@ -211,7 +205,7 @@ public record DiffCursor(
      * split view one as wide as the area, or on the side of the cursor (ADR 139).
      */
     private boolean keepsSide(int index) {
-        Option<ReviewThread.Side> its = stops.get(index).mark().side();
+        Option<DiffSide> its = stops.get(index).mark().side();
         return its.isEmpty() || its.contains(side);
     }
 
@@ -307,8 +301,7 @@ public record DiffCursor(
      */
     public Option<DiffCursor> clicked(int line, int column, Option<Integer> divider) {
         return Option.when(line >= 0 && line < height && row + line < lines, () -> containing(row + line))
-                .flatMap(index -> divider.map(at ->
-                                half(index, row + line, column < at ? ReviewThread.Side.LEFT : ReviewThread.Side.RIGHT))
+                .flatMap(index -> divider.map(at -> half(index, row + line, column < at ? DiffSide.OLD : DiffSide.NEW))
                         .getOrElse(Option.some(index)))
                 .filter(index -> mark.isEmpty() || (lineOfHunk(index) && keepsSide(index)))
                 .map(index -> at(index, row));
@@ -318,7 +311,7 @@ public record DiffCursor(
      * The stop of the half on {@code side} of the row {@code line}, whose last stop is at {@code index}: none when the
      * half has no line; the stop at {@code index} itself when the row is no row of lines.
      */
-    private Option<Integer> half(int index, int line, ReviewThread.Side side) {
+    private Option<Integer> half(int index, int line, DiffSide side) {
         boolean ofLines = start(index) == line
                 && stops.get(index).mark().side().isDefined()
                 && stops.get(index).mark().anchor() instanceof Anchor.OnLine;
@@ -343,7 +336,7 @@ public record DiffCursor(
      * {@code n} or {@code N} of a search, as {@link #toLine(int)}: in the split view, to the half on {@code onSide}
      * of the row, that of the match (ADR 139). While a range is open, only a line on its side.
      */
-    public Option<DiffCursor> toLine(int line, Option<ReviewThread.Side> onSide) {
+    public Option<DiffCursor> toLine(int line, Option<DiffSide> onSide) {
         int last = containing(line);
         int index = onSide.flatMap(its -> half(last, line, its)).getOrElse(last);
         return Option.when(mark.isEmpty() || (lineOfHunk(index) && keepsSide(index)), () -> {
@@ -517,7 +510,7 @@ public record DiffCursor(
                 })
                 : switch (on.mark().anchor()) {
                     case Anchor.Lead ignored -> lines;
-                    case Anchor.Thread _, Anchor.Comment _ ->
+                    case Anchor.Thread _, Anchor.Remark _ ->
                         List.range(
                                         first,
                                         Math.min(lines.size(), first + on.mark().lines()))

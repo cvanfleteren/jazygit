@@ -8,7 +8,6 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.HiddenHunks.Ranges;
@@ -22,6 +21,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Opened;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
@@ -181,7 +181,7 @@ class DiffFiltersUpdateTest {
 
     @Test
     void enterOnALineIsNoKeyOfTheFilters() {
-        DiffCursorAt line = at(new Anchor.OnLine("A.java", ReviewThread.Side.RIGHT, 2));
+        DiffCursorAt line = at(new Anchor.OnLine("A.java", DiffSide.NEW, 2));
 
         assertEquals(
                 Option.none(),

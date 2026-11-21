@@ -47,10 +47,6 @@
             <artifactId>core-git</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.vanfleteren</groupId>
-            <artifactId>core-gh</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.vavr</groupId>
             <artifactId>vavr</artifactId>
         </dependency>
@@ -78,12 +74,6 @@
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>core-git</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.vanfleteren</groupId>
-            <artifactId>core-gh</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

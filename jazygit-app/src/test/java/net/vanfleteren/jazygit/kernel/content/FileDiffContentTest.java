@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.diff.*;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
@@ -83,8 +84,7 @@ class FileDiffContentTest {
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         AreaId area = versions.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine removed =
-                new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.LEFT, 10);
+        Anchor.OnLine removed = new Anchor.OnLine("a.txt", DiffSide.OLD, 10);
         Model onLine = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
 
@@ -159,8 +159,7 @@ class FileDiffContentTest {
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
         AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine blank =
-                new Anchor.OnLine("a.md", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, 20);
+        Anchor.OnLine blank = new Anchor.OnLine("a.md", DiffSide.NEW, 20);
         Model onBlank = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(blank), Option.none())));
         DiffCursorAt at = new DiffCursorAt(
@@ -200,8 +199,7 @@ class FileDiffContentTest {
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
         AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine removed =
-                new Anchor.OnLine("a.md", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.LEFT, 2);
+        Anchor.OnLine removed = new Anchor.OnLine("a.md", DiffSide.OLD, 2);
         Model onLine = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
         DiffCursorAt at = new DiffCursorAt(
@@ -229,7 +227,7 @@ class FileDiffContentTest {
                 .map(net.vanfleteren.jazygit.features.changes.diff.VersionMsg.RenderToggled.class::cast);
         // With the bar of the file at the top, the first block, its first line.
         assertEquals(
-                List.of(new Anchor.OnLine("a.md", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, 1)),
+                List.of(new Anchor.OnLine("a.md", DiffSide.NEW, 1)),
                 toggled.map(msg -> msg.at().cursor()));
     }
 
@@ -247,8 +245,7 @@ class FileDiffContentTest {
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
         AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine on =
-                new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, 39);
+        Anchor.OnLine on = new Anchor.OnLine("a.txt", DiffSide.NEW, 39);
         Model onLine = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(on), Option.none())));
         DiffCursorAt at =
@@ -391,7 +388,7 @@ class FileDiffContentTest {
     }
 
     private static Anchor.OnLine onNew(int number) {
-        return new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, number);
+        return new Anchor.OnLine("a.txt", DiffSide.NEW, number);
     }
 
     /**
@@ -450,8 +447,7 @@ class FileDiffContentTest {
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         AreaId area = copying.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine added =
-                new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT, 10);
+        Anchor.OnLine added = new Anchor.OnLine("a.txt", DiffSide.NEW, 10);
         Model onLine = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(added), Option.none())));
 

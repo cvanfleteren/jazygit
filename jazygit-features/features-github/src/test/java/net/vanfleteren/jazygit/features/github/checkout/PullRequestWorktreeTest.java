@@ -30,6 +30,8 @@ import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.features.branches.worktree.add.ReadWorktreeTemplate;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -107,8 +109,8 @@ class PullRequestWorktreeTest {
             }
         });
 
-        Msg added =
-                new AddWorktreeCmd(new PullRequestWorktree(pullRequest()), "/repos/app-pr-9").run(new Env(git, gitHub));
+        Msg added = new AddWorktreeCmd(new PullRequestWorktree(pullRequest()), "/repos/app-pr-9")
+                .run(new Env(git).with(GitHubServices.GH, gitHub));
 
         assertEquals(java.util.List.of("add /repos/app-pr-9 HEAD", "gh 9 /repos/app-pr-9"), ran);
         assertEquals(
@@ -135,8 +137,8 @@ class PullRequestWorktreeTest {
             }
         });
 
-        Msg failed =
-                new AddWorktreeCmd(new PullRequestWorktree(pullRequest()), "/repos/app-pr-9").run(new Env(git, fails));
+        Msg failed = new AddWorktreeCmd(new PullRequestWorktree(pullRequest()), "/repos/app-pr-9")
+                .run(new Env(git).with(GitHubServices.GH, fails));
 
         assertEquals(java.util.List.of("remove /repos/app-pr-9 true"), ran);
         assertTrue(failed instanceof OperationMsg.Failed, failed.toString());
@@ -165,15 +167,15 @@ class PullRequestWorktreeTest {
             }
         });
 
-        Msg failed =
-                new AddWorktreeCmd(new PullRequestWorktree(pullRequest()), "/repos/app-pr-9").run(new Env(git, fails));
+        Msg failed = new AddWorktreeCmd(new PullRequestWorktree(pullRequest()), "/repos/app-pr-9")
+                .run(new Env(git).with(GitHubServices.GH, fails));
 
         Failure failure = ((OperationMsg.Failed) failed).failure();
         assertEquals(
                 List.of("git worktree add", "gh pr checkout 9", "git worktree remove --force"),
                 failure.commands().map(ExecutedCommand::line));
         assertEquals(
-                new Failure.GitHub(
+                new GitHubFailure(
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         failure.commands(),
                         Option.of(locked)),
@@ -203,9 +205,9 @@ class PullRequestWorktreeTest {
             }
         });
 
-        Msg failed =
-                new AddWorktreeCmd(new PullRequestWorktree(pullRequest()), "/repos/app-pr-9").run(new Env(git, fails));
+        Msg failed = new AddWorktreeCmd(new PullRequestWorktree(pullRequest()), "/repos/app-pr-9")
+                .run(new Env(git).with(GitHubServices.GH, fails));
 
-        assertEquals(Option.of(changed), ((Failure.GitHub) ((OperationMsg.Failed) failed).failure()).cleanupFailed());
+        assertEquals(Option.of(changed), ((GitHubFailure) ((OperationMsg.Failed) failed).failure()).cleanupFailed());
     }
 }

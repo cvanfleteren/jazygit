@@ -11,11 +11,11 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.Seq;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.content.diff.DiffCursor;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.view.ContentSearchMsg;
 import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
@@ -132,9 +132,9 @@ final class AreaKeys {
                 .orElse(Option.when(event.matches(Actions.HOME), cursor::home))
                 .orElse(Option.when(event.matches(Actions.END), cursor::end))
                 // In the split view, on a line: to the old or the new side; on a marker, more lines (ADR 77, 138).
-                .orElse(() -> Option.when(event.isChar(OLD_SIDE), () -> cursor.toSide(ReviewThread.Side.LEFT))
+                .orElse(() -> Option.when(event.isChar(OLD_SIDE), () -> cursor.toSide(DiffSide.OLD))
                         .flatMap(to -> to))
-                .orElse(() -> Option.when(event.isChar(NEW_SIDE), () -> cursor.toSide(ReviewThread.Side.RIGHT))
+                .orElse(() -> Option.when(event.isChar(NEW_SIDE), () -> cursor.toSide(DiffSide.NEW))
                         .flatMap(to -> to));
     }
 

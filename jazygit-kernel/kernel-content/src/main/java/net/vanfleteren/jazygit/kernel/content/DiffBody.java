@@ -51,7 +51,7 @@ record DiffBody(ShownChanges changes, Option<ShownRemarks> remarks) implements B
 
     @Override
     public Keymap.Scope<DiffCursorAt> cursorKeys() {
-        return remarks.isDefined() ? Scopes.PULL_REQUEST_DIFF : Scopes.DIFF;
+        return remarks.isDefined() ? Scopes.REMARKED_DIFF : Scopes.DIFF;
     }
 
     /**

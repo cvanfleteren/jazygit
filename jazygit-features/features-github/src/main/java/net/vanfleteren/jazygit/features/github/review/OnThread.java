@@ -5,8 +5,9 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
+import net.vanfleteren.jazygit.features.github.remarks.PrFiles;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
-import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
 
 /**
  * A review thread the cursor is on, or on a comment of, with the files of the pull request it is of.
@@ -14,15 +15,15 @@ import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
  * @param view   the files of the pull request, as they are listed
  * @param thread the thread
  */
-record OnThread(CommitFilesView view, ReviewThread thread) {
+record OnThread(PrFiles view, ReviewThread thread) {
 
     /**
      * The thread the cursor {@code on} is on, or on a comment of, of the files {@code view} lists.
      */
-    static Either<Why, OnThread> of(CommitFilesView view, Anchor on) {
+    static Either<Why, OnThread> of(PrFiles view, Anchor on) {
         Option<ReviewThread.Id> id = switch (on) {
-            case Anchor.Thread thread -> Option.of(thread.id());
-            case Anchor.Comment(var _, Anchor.Thread thread) -> Option.of(thread.id());
+            case Anchor.Thread thread -> Option.of(FromGitHub.threadId(thread.id()));
+            case Anchor.Remark(var _, Anchor.Thread thread) -> Option.of(FromGitHub.threadId(thread.id()));
             default -> Option.none();
         };
         return id.flatMap(found -> view.threads().find(thread -> thread.id().equals(found)))
@@ -40,8 +41,8 @@ record OnThread(CommitFilesView view, ReviewThread thread) {
     /**
      * The number of the pull request whose files {@code view} lists.
      */
-    static PrNumber number(CommitFilesView view) {
-        return view.pullRequest().getOrElse(() -> new PrNumber(0));
+    static PrNumber number(PrFiles view) {
+        return view.number();
     }
 
     /**
@@ -62,8 +63,8 @@ record OnThread(CommitFilesView view, ReviewThread thread) {
      * The comment of the thread the cursor {@code on} is on: the one it names, or its first, which its stop is.
      */
     Option<ReviewThread.Comment> comment(Anchor on) {
-        return on instanceof Anchor.Comment(ReviewThread.Comment.Id id, var _)
-                ? thread.comments().find(comment -> comment.id().equals(id))
+        return on instanceof Anchor.Remark(var id, var _)
+                ? thread.comments().find(comment -> comment.id().equals(FromGitHub.commentId(id)))
                 : thread.comments().headOption();
     }
 

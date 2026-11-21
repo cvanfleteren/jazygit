@@ -9,7 +9,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubEditor;
@@ -87,6 +86,6 @@ class EditUpdateTest {
     }
 
     private static Env env(Git git, Terminal terminal) {
-        return new Env(git, StubGitHub.of(), SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
+        return new Env(git, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 }

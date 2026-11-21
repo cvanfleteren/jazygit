@@ -8,7 +8,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubStatus;
@@ -131,6 +130,6 @@ class IndexRefreshUpdateTest {
     }
 
     private static Env env(Git git) {
-        return new Env(git, StubGitHub.of());
+        return new Env(git);
     }
 }

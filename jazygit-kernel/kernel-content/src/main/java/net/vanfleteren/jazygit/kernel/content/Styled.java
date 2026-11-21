@@ -94,7 +94,7 @@ record Styled(
                 .takeWhile(stop -> stop.row() == row)
                 .exists(stop -> switch (stop.mark().anchor()) {
                     case Anchor.File _, Anchor.OnLine _, Anchor.Gap _, Anchor.Filtered _, Anchor.Node _ -> true;
-                    case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
+                    case Anchor.Lead _, Anchor.Thread _, Anchor.Remark _ -> false;
                 });
     }
 

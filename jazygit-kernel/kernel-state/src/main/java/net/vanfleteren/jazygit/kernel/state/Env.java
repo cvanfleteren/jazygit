@@ -3,30 +3,23 @@ package net.vanfleteren.jazygit.kernel.state;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.git.Git;
-import net.vanfleteren.jazygit.kernel.settings.CollapsedStore;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
 
 /**
- * What a {@link Cmd} runs against: the repository through git, its GitHub repository through gh, where the
- * settings, the recent repositories and the review threads collapsed or opened are kept, where another repository is
- * opened, the terminal the app is shown on, and what the features run against of their own.
- *
- * <p>gh is a field, not a service of GitHub's feature, as the review threads of the rich diff, which the kernel still
- * draws, are loaded with it from {@code features-changes}; it can become one once they leave the kernel (ADR 169).
+ * What a {@link Cmd} runs against: the repository through git, where the settings and the recent repositories are
+ * kept, where another repository is opened, the terminal the app is shown on, and what the features run against of
+ * their own, which each builds once a repository is opened (ADR 169, 171): the kernel names no forge.
  *
  * @param services what the features run against of their own, each under a {@link Service} declared in its package,
  *                 as a part of the model is (ADR 169)
  */
 public record Env(
         Git git,
-        GitHub gitHub,
         SettingsStore settings,
         RecentRepositories recent,
-        CollapsedStore collapsed,
         Repositories repositories,
         Terminal terminal,
         Services services) {
@@ -38,52 +31,54 @@ public record Env(
     public static final Service<AccountOnForge> FORGE_ACCOUNT = Service.of("kernel.forgeAccount", env -> Option.none());
 
     /**
-     * As given, keeping no review threads collapsed or opened, and with nothing of the features'.
+     * As given, with nothing of the features'.
      */
     public Env(
-            Git git,
-            GitHub gitHub,
-            SettingsStore settings,
-            RecentRepositories recent,
-            Repositories repositories,
-            Terminal terminal) {
-        this(git, gitHub, settings, recent, CollapsedStore.NONE, repositories, terminal, Services.NONE);
+            Git git, SettingsStore settings, RecentRepositories recent, Repositories repositories, Terminal terminal) {
+        this(git, settings, recent, repositories, terminal, Services.NONE);
     }
 
     /**
      * As given, on no terminal.
      */
-    public Env(Git git, GitHub gitHub, SettingsStore settings, RecentRepositories recent, Repositories repositories) {
-        this(git, gitHub, settings, recent, repositories, Terminal.NONE);
+    public Env(Git git, SettingsStore settings, RecentRepositories recent, Repositories repositories) {
+        this(git, settings, recent, repositories, Terminal.NONE);
     }
 
     /**
-     * Against git and gh, keeping no settings and no recent repositories, and opening no other repository.
+     * Against git, keeping no settings and no recent repositories, and opening no other repository.
      */
-    public Env(Git git, GitHub gitHub) {
-        this(git, gitHub, SettingsStore.NONE);
+    public Env(Git git) {
+        this(git, SettingsStore.NONE);
     }
 
     /**
-     * Against git and gh, keeping the settings in {@code settings}, keeping no recent repositories, and opening
-     * no other repository.
+     * Against git, keeping the settings in {@code settings}, keeping no recent repositories, and opening no other
+     * repository.
      */
-    public Env(Git git, GitHub gitHub, SettingsStore settings) {
-        this(git, gitHub, settings, RecentRepositories.NONE, Repositories.NONE);
+    public Env(Git git, SettingsStore settings) {
+        this(git, settings, RecentRepositories.NONE, Repositories.NONE);
     }
 
     /**
      * As this, opening other repositories in {@code repositories} and shown on {@code terminal}.
      */
     public Env withApp(Repositories repositories, Terminal terminal) {
-        return new Env(git, gitHub, settings, recent, collapsed, repositories, terminal, services);
+        return new Env(git, settings, recent, repositories, terminal, services);
     }
 
     /**
      * As this, with {@code value} for {@code service}.
      */
     public <T> Env with(Service<T> service, T value) {
-        return new Env(git, gitHub, settings, recent, collapsed, repositories, terminal, services.with(service, value));
+        return new Env(git, settings, recent, repositories, terminal, services.with(service, value));
+    }
+
+    /**
+     * As this, with {@code more} as well: what it gives wins.
+     */
+    public Env with(Services more) {
+        return new Env(git, settings, recent, repositories, terminal, services.and(more));
     }
 
     /**
@@ -148,6 +143,13 @@ public record Env(
          */
         public <T> Services with(Service<T> service, T value) {
             return new Services(given.put(service.name(), value));
+        }
+
+        /**
+         * These, with {@code more} as well: what it gives wins.
+         */
+        public Services and(Services more) {
+            return new Services(given.merge(more.given, (mine, theirs) -> theirs));
         }
     }
 }

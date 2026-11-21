@@ -11,6 +11,8 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.Reaction;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
 import net.vanfleteren.jazygit.features.github.review.ReactCmd.React;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -86,7 +88,9 @@ public final class ReactUpdate {
                         done,
                         cmd.number(),
                         view -> view.withReacting(view.reacting().remove(cmd.comment()))));
-        return failure.gone() ? failed.then(done -> gone(done, cmd.number(), cmd.thread(), cmd.comment())) : failed;
+        return GitHubFailure.gone(failure)
+                ? failed.then(done -> gone(done, cmd.number(), cmd.thread(), cmd.comment()))
+                : failed;
     }
 
     /**
@@ -106,7 +110,8 @@ public final class ReactUpdate {
      * the reactions it has now, not those the popup opened with.
      */
     private static Next confirmReaction(Model model, ReactionPopup popup, Reaction reaction) {
-        Anchor on = new Anchor.Comment(popup.comment(), new Anchor.Thread(popup.thread(), Option.none()));
+        Anchor on = new Anchor.Remark(
+                FromGitHub.id(popup.comment()), new Anchor.Thread(FromGitHub.id(popup.thread()), Option.none()));
         return reactable(model, on)
                 .filterOrElse(found -> found.number().equals(popup.number()), found -> Why.NOT_READ)
                 .fold(why -> Next.of(refused(model.withoutPopup(ReactionPopup.class), why)), found -> {

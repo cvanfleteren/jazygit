@@ -14,17 +14,16 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
  */
 public final class FoldAction {
 
-    public static final FeatureAction ACTION =
-            FeatureAction.ofKeys(keys -> List.of(Scopes.DIFF, Scopes.PULL_REQUEST_DIFF)
-                    .foldLeft(
-                            keys,
-                            (keymap, scope) -> keymap.add(
-                                    scope,
-                                    new Binding<DiffCursorAt>(
-                                            "z",
-                                            "changes.help.diff.foldAll",
-                                            at -> at.filter(cursor -> cursor.cursor() instanceof Anchor.Node)
-                                                    .map(FoldMsg.AllToggled::new)))));
+    public static final FeatureAction ACTION = FeatureAction.ofKeys(keys -> List.of(Scopes.DIFF, Scopes.REMARKED_DIFF)
+            .foldLeft(
+                    keys,
+                    (keymap, scope) -> keymap.add(
+                            scope,
+                            new Binding<DiffCursorAt>(
+                                    "z",
+                                    "changes.help.diff.foldAll",
+                                    at -> at.filter(cursor -> cursor.cursor() instanceof Anchor.Node)
+                                            .map(FoldMsg.AllToggled::new)))));
 
     private FoldAction() {}
 }

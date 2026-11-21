@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.features.github.review;
 
 import static net.vanfleteren.jazygit.features.github.review.ReviewLookup.chosen;
 import static net.vanfleteren.jazygit.features.github.review.ReviewLookup.mapPullRequest;
-import static net.vanfleteren.jazygit.features.github.review.ReviewLookup.mapView;
 import static net.vanfleteren.jazygit.features.github.review.ReviewLookup.pullRequestFiles;
 import static net.vanfleteren.jazygit.features.github.review.ReviewLookup.refused;
 
@@ -19,9 +18,12 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.changes.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.features.github.compose.ComposeUpdate;
+import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
+import net.vanfleteren.jazygit.features.github.remarks.PrFiles;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd.LoadReviewRemarks;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksState;
 import net.vanfleteren.jazygit.features.github.review.ReviewCmd.Resolve;
 import net.vanfleteren.jazygit.features.github.review.ReviewCmd.Send;
 import net.vanfleteren.jazygit.features.github.review.ReviewPopup.Target;
@@ -153,7 +155,7 @@ public final class ReviewUpdate {
         return reviewed(model).flatMap(view -> startIn(model, view, at));
     }
 
-    private static Either<Why, ReviewPopup> startIn(Model model, CommitFilesView view, DiffCursorAt at) {
+    private static Either<Why, ReviewPopup> startIn(Model model, PrFiles view, DiffCursorAt at) {
         Sha commit = view.of().sha();
         if (model.repoView()
                 .version(at.area(), at.at().content())
@@ -183,12 +185,11 @@ public final class ReviewUpdate {
     /**
      * The popup that starts a thread at {@code commit} on {@code range}, lines of one hunk.
      */
-    private static ReviewPopup startOn(
-            CommitFilesView view, DiffCursorAt at, Sha commit, Vector<DiffLines.Line> range) {
+    private static ReviewPopup startOn(PrFiles view, DiffCursorAt at, Sha commit, Vector<DiffLines.Line> range) {
         Anchor.OnLine first = range.head().anchor();
         Anchor.OnLine last = range.last().anchor();
-        Option<NewReviewThread.Lines> lines =
-                Option.of(new NewReviewThread.Lines(first.side(), first.number(), last.side(), last.number()));
+        Option<NewReviewThread.Lines> lines = Option.of(new NewReviewThread.Lines(
+                FromGitHub.side(first.side()), first.number(), FromGitHub.side(last.side()), last.number()));
         return popup(
                 view,
                 at,
@@ -268,21 +269,20 @@ public final class ReviewUpdate {
      * the area of the cursor {@code at} (ADR 77); none when the diff does not show them, as for an outdated thread, or
      * one on a whole file.
      */
-    private static List<String> lines(Model model, CommitFilesView view, DiffCursorAt at, ReviewThread thread) {
+    private static List<String> lines(Model model, PrFiles view, DiffCursorAt at, ReviewThread thread) {
         return thread.line()
                 .flatMap(line -> diffLines(model, view, at)
                         .between(
                                 new Anchor.OnLine(
                                         thread.path(),
-                                        thread.startSide(),
+                                        FromGitHub.side(thread.startSide()),
                                         thread.startLine().getOrElse(line)),
-                                new Anchor.OnLine(thread.path(), thread.side(), line)))
+                                new Anchor.OnLine(thread.path(), FromGitHub.side(thread.side()), line)))
                 .map(ReviewUpdate::quoted)
                 .getOrElse(List.empty());
     }
 
-    private static ReviewPopup popup(
-            CommitFilesView view, DiffCursorAt at, Target target, Where where, List<String> quoted) {
+    private static ReviewPopup popup(PrFiles view, DiffCursorAt at, Target target, Where where, List<String> quoted) {
         return new ReviewPopup(OnThread.number(view), target, where, quoted, "", false, at.area(), at.at());
     }
 
@@ -352,7 +352,7 @@ public final class ReviewUpdate {
      */
     private static Option<Anchor.OnLine> lastLine(Target target) {
         return target instanceof Target.Start(var ignored, String path, Option<NewReviewThread.Lines> lines)
-                ? lines.map(on -> new Anchor.OnLine(path, on.side(), on.line()))
+                ? lines.map(on -> new Anchor.OnLine(path, FromGitHub.side(on.side()), on.line()))
                 : Option.none();
     }
 
@@ -379,7 +379,7 @@ public final class ReviewUpdate {
      * The lines the cursor {@code at} stops on in the diff the files of the pull request {@code view} shows, as the
      * content panel draws it: with the lines expanded in its area (ADR 77), so that a range stays in a hunk as shown.
      */
-    private static DiffLines diffLines(Model model, CommitFilesView view, DiffCursorAt at) {
+    private static DiffLines diffLines(Model model, PrFiles view, DiffCursorAt at) {
         return model.diffLines(
                 at, view.diff().flatMap(preview -> preview.shown().value().toOption()));
     }
@@ -388,16 +388,16 @@ public final class ReviewUpdate {
      * The files of the pull request listed, if they can be commented on: its threads read at the commits of its files,
      * so their lines number those the diff shows, and not merged.
      */
-    private static Either<Why, CommitFilesView> reviewed(Model model) {
+    private static Either<Why, PrFiles> reviewed(Model model) {
         return pullRequestFiles(model)
                 .filter(view ->
                         view.remarks().exists(remarks -> remarks.toOption().isDefined()))
                 .toEither(Why.NOT_READ)
                 .filterOrElse(view -> !view.ended().contains(PullRequestDetails.State.MERGED), view -> Why.MERGED)
-                .filterOrElse(CommitFilesView::remarksAtItsCommits, view -> Why.MOVED_ON);
+                .filterOrElse(PrFiles::remarksAtItsCommits, view -> Why.MOVED_ON);
     }
 
     private static Model sending(Model model, Function<Set<ReviewThread.Id>, Set<ReviewThread.Id>> f) {
-        return mapView(model, view -> view.withSending(f.apply(view.sending())));
+        return RemarksState.mapOpen(model, view -> view.withSending(f.apply(view.sending())));
     }
 }

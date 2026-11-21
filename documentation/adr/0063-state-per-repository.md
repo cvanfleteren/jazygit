@@ -67,3 +67,6 @@ time checks are done, by every jazygit running, whatever repository each has ope
   other.
 - Upgrading forgets how long checks took until they are topped up again, and which pull requests were unseen.
 - Amends ADR 29 and ADR 32, whose state moves to a file per repository, and ADR 62, whose flips outlive the tree.
+
+Amended by ADR 171: the files of the unseen pull requests, the check timings and the collapsed threads are
+`features-github`'s, on a table of `kernel-settings`; they keep their names and places.

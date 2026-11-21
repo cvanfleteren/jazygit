@@ -9,11 +9,12 @@ import dev.tamboui.text.Span;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.kernel.content.TextWindow;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
+import net.vanfleteren.jazygit.kernel.state.diff.Remark;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
 import net.vanfleteren.jazygit.kernel.ui.content.Halves;
 import net.vanfleteren.jazygit.kernel.ui.text.Rows;
@@ -26,11 +27,11 @@ class DiffCursorTest {
 
     private static final Anchor LEAD = new Anchor.Lead();
     private static final Anchor FILE = new Anchor.File("a.txt");
-    private static final Anchor ONE = new Anchor.OnLine("a.txt", Side.RIGHT, 1);
+    private static final Anchor ONE = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
     private static final Anchor THREAD =
-            new Anchor.Thread(new ReviewThread.Id("T"), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 1)));
-    private static final Anchor TWO = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
-    private static final Anchor THREE = new Anchor.OnLine("a.txt", Side.RIGHT, 3);
+            new Anchor.Thread(new RemarkThread.Id("T"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
+    private static final Anchor TWO = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
+    private static final Anchor THREE = new Anchor.OnLine("a.txt", DiffSide.NEW, 3);
 
     // 20 lines shown 5 at a time: a lead of 3 lines, a bar, line 1, a thread of 10 lines, line 2, and line 3 with the
     // 3 lines after it that are no stop.
@@ -38,9 +39,9 @@ class DiffCursorTest {
             stop(LEAD, 3, 0), stop(FILE, 1, 3), line(ONE, 4), stop(THREAD, 10, 5), line(TWO, 15), line(THREE, 16));
 
     private static final Anchor FIRST =
-            new Anchor.Thread(new ReviewThread.Id("T1"), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 1)));
+            new Anchor.Thread(new RemarkThread.Id("T1"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
     private static final Anchor LAST =
-            new Anchor.Thread(new ReviewThread.Id("T2"), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)));
+            new Anchor.Thread(new RemarkThread.Id("T2"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)));
 
     // A bar, line 1 and its thread, line 2 and its thread, and line 3: 6 lines, all on one screen.
     private static final Vector<Drawn.Stop> TWO_THREADS = Vector.of(
@@ -206,7 +207,7 @@ class DiffCursorTest {
 
     @Test
     void aCommentIsAStopThatTheNextAndThePreviousThreadGoFrom() {
-        Anchor reply = new Anchor.Comment(new ReviewThread.Comment.Id("R"), (Anchor.Thread) FIRST);
+        Anchor reply = new Anchor.Remark(new Remark.Id("R"), (Anchor.Thread) FIRST);
         Vector<Drawn.Stop> stops = Vector.of(
                 stop(FILE, 1, 0),
                 line(ONE, 1),
@@ -313,7 +314,7 @@ class DiffCursorTest {
         assertAt(
                 THREE,
                 15,
-                cursor(STOPS, 20, 5, 15, Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 4)), Option.none())
+                cursor(STOPS, 20, 5, 15, Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 4)), Option.none())
                         .get());
         assertAt(THREAD, 5, on(THREAD, 5));
     }
@@ -371,30 +372,30 @@ class DiffCursorTest {
 
     // The split view (ADR 139) of a hunk of a context line, a removed line beside an added one, another added line
     // beside a blank half, and a context line: a bar, then a stop for each half of a row that holds a line.
-    private static final Anchor LEFT_ONE = new Anchor.OnLine("a.txt", Side.LEFT, 1);
-    private static final Anchor RIGHT_ONE = new Anchor.OnLine("a.txt", Side.RIGHT, 1);
-    private static final Anchor REMOVED = new Anchor.OnLine("a.txt", Side.LEFT, 2);
-    private static final Anchor ADDED = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
-    private static final Anchor ALSO_ADDED = new Anchor.OnLine("a.txt", Side.RIGHT, 3);
-    private static final Anchor LEFT_LAST = new Anchor.OnLine("a.txt", Side.LEFT, 3);
-    private static final Anchor RIGHT_LAST = new Anchor.OnLine("a.txt", Side.RIGHT, 4);
+    private static final Anchor LEFT_ONE = new Anchor.OnLine("a.txt", DiffSide.OLD, 1);
+    private static final Anchor RIGHT_ONE = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
+    private static final Anchor REMOVED = new Anchor.OnLine("a.txt", DiffSide.OLD, 2);
+    private static final Anchor ADDED = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
+    private static final Anchor ALSO_ADDED = new Anchor.OnLine("a.txt", DiffSide.NEW, 3);
+    private static final Anchor LEFT_LAST = new Anchor.OnLine("a.txt", DiffSide.OLD, 3);
+    private static final Anchor RIGHT_LAST = new Anchor.OnLine("a.txt", DiffSide.NEW, 4);
     private static final Vector<Drawn.Stop> SPLIT = Vector.of(
             stop(FILE, 1, 0),
-            half(LEFT_ONE, Side.LEFT, 1, 0),
-            half(RIGHT_ONE, Side.RIGHT, 1, 0),
-            half(REMOVED, Side.LEFT, 2, 1),
-            half(ADDED, Side.RIGHT, 2, 2),
-            half(ALSO_ADDED, Side.RIGHT, 3, 3),
-            half(LEFT_LAST, Side.LEFT, 4, 4),
-            half(RIGHT_LAST, Side.RIGHT, 4, 4));
+            half(LEFT_ONE, DiffSide.OLD, 1, 0),
+            half(RIGHT_ONE, DiffSide.NEW, 1, 0),
+            half(REMOVED, DiffSide.OLD, 2, 1),
+            half(ADDED, DiffSide.NEW, 2, 2),
+            half(ALSO_ADDED, DiffSide.NEW, 3, 3),
+            half(LEFT_LAST, DiffSide.OLD, 4, 4),
+            half(RIGHT_LAST, DiffSide.NEW, 4, 4));
 
-    private static Drawn.Stop half(Anchor anchor, Side side, int row, int order) {
-        int column = side == Side.LEFT ? 0 : 6;
+    private static Drawn.Stop half(Anchor anchor, DiffSide side, int row, int order) {
+        int column = side == DiffSide.OLD ? 0 : 6;
         return new Drawn.Stop(
                 new Drawn.Mark(
                         anchor,
                         1,
-                        side == Side.LEFT ? 5 : 100,
+                        side == DiffSide.OLD ? 5 : 100,
                         Option.of(new DiffStops.HunkAt(0, 0)),
                         Option.of(side),
                         column,
@@ -420,14 +421,14 @@ class DiffCursorTest {
 
     @Test
     void theBracketsTakeTheCursorToTheOtherSideOfItsRowOrTheClosestRowWithALineThere() {
-        assertEquals(REMOVED, split(ADDED).toSide(Side.LEFT).get().anchor());
-        assertEquals(ADDED, split(REMOVED).toSide(Side.RIGHT).get().anchor());
-        assertEquals(ADDED, split(ADDED).toSide(Side.RIGHT).get().anchor());
-        Anchor closest = split(ALSO_ADDED).toSide(Side.LEFT).get().anchor();
+        assertEquals(REMOVED, split(ADDED).toSide(DiffSide.OLD).get().anchor());
+        assertEquals(ADDED, split(REMOVED).toSide(DiffSide.NEW).get().anchor());
+        assertEquals(ADDED, split(ADDED).toSide(DiffSide.NEW).get().anchor());
+        Anchor closest = split(ALSO_ADDED).toSide(DiffSide.OLD).get().anchor();
         assertTrue(closest.equals(REMOVED) || closest.equals(LEFT_LAST), closest.toString());
         // Off a line, as on the bar, they do nothing here: on a marker they show more lines.
-        assertTrue(split(FILE).toSide(Side.LEFT).isEmpty());
-        assertTrue(on(ONE, 0).toSide(Side.LEFT).isEmpty());
+        assertTrue(split(FILE).toSide(DiffSide.OLD).isEmpty());
+        assertTrue(on(ONE, 0).toSide(DiffSide.OLD).isEmpty());
     }
 
     @Test
@@ -459,11 +460,11 @@ class DiffCursorTest {
         DiffCursor ranged = split(REMOVED).marked().get();
 
         // The brackets leave the cursor where it is, and a click on the other half does nothing.
-        assertEquals(REMOVED, ranged.toSide(Side.RIGHT).get().anchor());
+        assertEquals(REMOVED, ranged.toSide(DiffSide.NEW).get().anchor());
         assertTrue(ranged.clicked(2, 7, Option.of(5)).isEmpty());
         assertEquals(LEFT_LAST, ranged.clicked(4, 3, Option.of(5)).get().anchor());
         // A match of a search on the other side is outside the range.
-        assertTrue(ranged.toLine(2, Option.of(Side.RIGHT)).isEmpty());
+        assertTrue(ranged.toLine(2, Option.of(DiffSide.NEW)).isEmpty());
         // A range from a line of the other side is dropped.
         assertTrue(DiffCursor.of(SPLIT, 0, 5, 5, 0, Option.of(ADDED), Option.of(REMOVED))
                 .get()
@@ -473,15 +474,15 @@ class DiffCursorTest {
 
     // The split view of two files: the bar of the second, as wide as the area, between a row of each.
     private static final Anchor OTHER_FILE = new Anchor.File("b.txt");
-    private static final Anchor OTHER_LEFT = new Anchor.OnLine("b.txt", Side.LEFT, 1);
-    private static final Anchor OTHER_RIGHT = new Anchor.OnLine("b.txt", Side.RIGHT, 1);
+    private static final Anchor OTHER_LEFT = new Anchor.OnLine("b.txt", DiffSide.OLD, 1);
+    private static final Anchor OTHER_RIGHT = new Anchor.OnLine("b.txt", DiffSide.NEW, 1);
     private static final Vector<Drawn.Stop> TWO_FILES = Vector.of(
             stop(FILE, 1, 0),
-            half(LEFT_ONE, Side.LEFT, 1, 0),
-            half(RIGHT_ONE, Side.RIGHT, 1, 0),
+            half(LEFT_ONE, DiffSide.OLD, 1, 0),
+            half(RIGHT_ONE, DiffSide.NEW, 1, 0),
             stop(OTHER_FILE, 1, 2),
-            half(OTHER_LEFT, Side.LEFT, 3, 0),
-            half(OTHER_RIGHT, Side.RIGHT, 3, 0));
+            half(OTHER_LEFT, DiffSide.OLD, 3, 0),
+            half(OTHER_RIGHT, DiffSide.NEW, 3, 0));
 
     @Test
     void jAndKKeepTheSideOfTheCursorOverAStopAsWideAsTheArea() {
@@ -499,12 +500,12 @@ class DiffCursorTest {
     void onAStopAsWideAsTheAreaTheCursorIsOnTheSideItWasOnInTheFrameBefore() {
         assertEquals(
                 LEFT_ONE,
-                DiffCursor.of(TWO_FILES, 0, 4, 4, 0, Option.of(FILE), Option.none(), Side.LEFT)
+                DiffCursor.of(TWO_FILES, 0, 4, 4, 0, Option.of(FILE), Option.none(), DiffSide.OLD)
                         .get()
                         .down()
                         .anchor());
-        assertEquals(Side.LEFT, split(REMOVED).side());
-        assertEquals(Side.RIGHT, split(FILE).side());
+        assertEquals(DiffSide.OLD, split(REMOVED).side());
+        assertEquals(DiffSide.NEW, split(FILE).side());
     }
 
     @Test
@@ -530,7 +531,7 @@ class DiffCursorTest {
         // An added file, then a file with a removed line in a hunk of its own.
         Vector<Drawn.Stop> stops = Vector.of(
                 stop(FILE, 1, 0),
-                half(RIGHT_ONE, Side.RIGHT, 1, 0),
+                half(RIGHT_ONE, DiffSide.NEW, 1, 0),
                 stop(OTHER_FILE, 1, 2),
                 new Drawn.Stop(
                         new Drawn.Mark(
@@ -538,7 +539,7 @@ class DiffCursorTest {
                                 1,
                                 5,
                                 Option.of(new DiffStops.HunkAt(1, 0)),
-                                Option.of(Side.LEFT),
+                                Option.of(DiffSide.OLD),
                                 0,
                                 Option.none(),
                                 0),
@@ -547,13 +548,14 @@ class DiffCursorTest {
         DiffCursor added =
                 cursor(stops, 4, 4, 0, Option.of(RIGHT_ONE), Option.none()).get();
 
-        assertEquals(RIGHT_ONE, added.toSide(Side.LEFT).get().anchor());
+        assertEquals(RIGHT_ONE, added.toSide(DiffSide.OLD).get().anchor());
     }
 
     @Test
     void aMatchOfASearchTakesTheCursorToItsHalf() {
-        assertEquals(REMOVED, split(FILE).toLine(2, Option.of(Side.LEFT)).get().anchor());
-        assertEquals(ADDED, split(FILE).toLine(2, Option.of(Side.RIGHT)).get().anchor());
+        assertEquals(
+                REMOVED, split(FILE).toLine(2, Option.of(DiffSide.OLD)).get().anchor());
+        assertEquals(ADDED, split(FILE).toLine(2, Option.of(DiffSide.NEW)).get().anchor());
         assertEquals(ADDED, split(FILE).toLine(2).get().anchor());
     }
 

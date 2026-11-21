@@ -130,6 +130,16 @@ public final class Bundles {
                 .get();
     }
 
+    /**
+     * Whether a module of the root {@code root} is there, with its bundle: a feature's may be deleted, as GitHub's
+     * is in a build without it (ADR 171).
+     */
+    public static boolean exists(String root) {
+        return GROUPS.exists(
+                group -> Try.of(() -> ResourceBundle.getBundle(PACKAGE + group + root + ".messages", Locale.ROOT))
+                        .isSuccess());
+    }
+
     // A name has its keys in one module: with a bundle in two groups, the check of either could read the other's.
     private static ResourceBundle bundle(String root) {
         List<String> groups = GROUPS.filter(

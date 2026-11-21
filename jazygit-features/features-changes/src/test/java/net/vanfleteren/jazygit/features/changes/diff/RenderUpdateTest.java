@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -17,6 +16,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.diff.Version;
@@ -34,7 +34,7 @@ class RenderUpdateTest {
     private static final String HEADER = "diff --git a/a.md b/a.md\n--- a/a.md\n+++ b/a.md\n";
     private static final DiffText CHANGES = DiffText.of(HEADER + "@@ -1,3 +1,3 @@\n # Title\n-old\n+new\n end\n");
     private static final DiffText WHOLE = CHANGES;
-    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.md", Side.RIGHT, 2);
+    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.md", DiffSide.NEW, 2);
 
     @Test
     void onTheDiffTheNewVersionShowsRendered() {
@@ -91,7 +91,7 @@ class RenderUpdateTest {
     void aDeletedFileShowsItsOriginalRendered() {
         DiffText deleted = DiffText.of("diff --git a/a.md b/a.md\ndeleted file mode 100644\n--- a/a.md\n+++ /dev/null\n"
                 + "@@ -1,2 +0,0 @@\n-# Title\n-gone\n");
-        Anchor.OnLine gone = new Anchor.OnLine("a.md", Side.LEFT, 2);
+        Anchor.OnLine gone = new Anchor.OnLine("a.md", DiffSide.OLD, 2);
 
         Next next = Update.update(loaded(), new VersionMsg.RenderToggled(at(deleted, gone)));
 
@@ -104,8 +104,8 @@ class RenderUpdateTest {
         DiffText text = DiffText.of(CHANGES.text().replace("a.md", "a.txt"));
         Model model = loaded();
 
-        Next next =
-                Update.update(model, new VersionMsg.RenderToggled(at(text, new Anchor.OnLine("a.txt", Side.RIGHT, 2))));
+        Next next = Update.update(
+                model, new VersionMsg.RenderToggled(at(text, new Anchor.OnLine("a.txt", DiffSide.NEW, 2))));
 
         assertSame(model, next.model());
         assertEquals(List.of(), next.cmds());

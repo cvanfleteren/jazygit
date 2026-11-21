@@ -5,7 +5,6 @@ import io.vavr.Tuple3;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.DiffFilter;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering.HunkStart;
@@ -34,7 +33,7 @@ import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
 public record Filtering(
         List<DiffFilter> filters,
         Option<Opened> opened,
-        List<ReviewThread> threads,
+        List<RemarkThread> threads,
         boolean keepEmptyFiles,
         boolean off) {
 
@@ -116,7 +115,7 @@ public record Filtering(
     private List<Hidden> hidden(ParsedFile file, String path) {
         List<DiffFilter> applying = DiffFiltering.applying(filters, path);
         Option<String> origin = file.file().origin();
-        List<ReviewThread> on = threads.filter(thread -> thread.isOn(path, origin));
+        List<RemarkThread> on = threads.filter(thread -> thread.isOn(path, origin));
         return applying.isEmpty()
                 ? List.empty()
                 : HiddenHunks.of(file, applying, hunk -> on.exists(thread -> threadOn(thread, hunk)));
@@ -125,11 +124,10 @@ public record Filtering(
     /**
      * Whether {@code thread} is on a line of {@code hunk}, or on lines that take one of its in.
      */
-    private static boolean threadOn(ReviewThread thread, Hunk hunk) {
+    private static boolean threadOn(RemarkThread thread, Hunk hunk) {
         return thread.line()
                 .exists(last -> hunk.lines().exists(line -> {
-                    Option<Integer> number =
-                            thread.side() == ReviewThread.Side.LEFT ? line.oldNumber() : line.newNumber();
+                    Option<Integer> number = thread.side() == DiffSide.OLD ? line.oldNumber() : line.newNumber();
                     int first = thread.startLine().getOrElse(last);
                     return line.kind() != DiffLine.Kind.NOTE
                             && number.exists(at -> at >= Math.min(first, last) && at <= Math.max(first, last));

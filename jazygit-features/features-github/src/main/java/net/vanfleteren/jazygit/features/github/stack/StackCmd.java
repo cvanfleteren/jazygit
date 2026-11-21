@@ -9,6 +9,8 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.features.github.GitHubFailure;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.features.github.state.StackChange;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -66,7 +68,11 @@ public sealed interface StackCmd extends OperationCmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().stacks().unstack(stack).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+            return GitHubServices.of(env)
+                    .stacks()
+                    .unstack(stack)
+                    .mapLeft(GitHubFailure::of)
+                    .fold(this::failed, this::succeeded);
         }
 
         @Override
@@ -119,7 +125,7 @@ public sealed interface StackCmd extends OperationCmd {
 
         @Override
         public Msg run(Env env) {
-            GitHub gitHub = env.gitHub();
+            GitHub gitHub = GitHubServices.of(env);
             Either<GhFailure, List<ExecutedCommand>> rebased = changes.foldLeft(
                     Either.right(List.empty()),
                     (done, change) -> done.flatMap(commands -> partly(
@@ -134,7 +140,7 @@ public sealed interface StackCmd extends OperationCmd {
                             stack.fold(
                                     () -> gitHub.stacks().create(pullRequests),
                                     number -> gitHub.stacks().add(number, pullRequests))))
-                    .mapLeft(Failure::of)
+                    .mapLeft(GitHubFailure::of)
                     .fold(this::failed, this::succeeded);
         }
 

@@ -12,7 +12,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubBranches;
@@ -196,7 +195,7 @@ class WorktreeUpdateTest {
         NewBranchStart fromFeature = new NewBranchStart.From(new BranchRef.Local(FEATURE), Option.of(FEATURE));
 
         new AddWorktreeCmd(new WorktreeSource.Created(new BranchName("topic"), fromFeature), "/repos/app-topic")
-                .run(new Env(git, net.vanfleteren.jazygit.core.gh.StubGitHub.of()));
+                .run(new Env(git));
 
         assertEquals(java.util.List.of(fromFeature), ran);
     }
@@ -306,7 +305,7 @@ class WorktreeUpdateTest {
 
         assertEquals(
                 new AddWorktreeMsg.StartResolved("v1", Option.of(new Sha("abc123"))),
-                new ResolveStartCmd("v1").run(new Env(git, StubGitHub.of())));
+                new ResolveStartCmd("v1").run(new Env(git)));
     }
 
     @Test
@@ -329,7 +328,7 @@ class WorktreeUpdateTest {
             }
         });
 
-        Msg msg = new ResolveStartCmd("v1").run(new Env(git, StubGitHub.of()));
+        Msg msg = new ResolveStartCmd("v1").run(new Env(git));
 
         assertInstanceOf(AddWorktreeMsg.StartNotResolved.class, msg);
         assertEquals(
@@ -383,7 +382,7 @@ class WorktreeUpdateTest {
         Msg added = new AddWorktreeCmd(
                         new WorktreeSource.Detached(new Revision.Commit(new Sha("abc123")), "abc123"),
                         "/repos/app-abc123")
-                .run(new Env(git, StubGitHub.of()));
+                .run(new Env(git));
 
         assertEquals(java.util.List.of("add /repos/app-abc123 abc123"), ran);
         assertEquals(
@@ -479,7 +478,7 @@ class WorktreeUpdateTest {
 
     @Test
     void anAddedWorktreeIsWhereTheLocationTakenFromTheWorkingTreeIs() {
-        Env env = new Env(StubGit.of(Path.of("/repos/app")), net.vanfleteren.jazygit.core.gh.StubGitHub.of());
+        Env env = new Env(StubGit.of(Path.of("/repos/app")));
 
         Msg added = new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "../app-feature").run(env);
 
@@ -686,14 +685,12 @@ class WorktreeUpdateTest {
         java.util.List<String> ran = new java.util.ArrayList<>();
         RemoveWorktreeCmd remove =
                 new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN), Option.of("on a usb stick"));
-        Env changed = new Env(
-                lockingGit(
-                        ran,
-                        Either.left(new GitFailure(
-                                new GitError.WorktreeHasChanges("changed"),
-                                StubGit.executed("git worktree remove /repos/app-taken"))),
-                        StubGit.ran("git worktree lock /repos/app-taken")),
-                net.vanfleteren.jazygit.core.gh.StubGitHub.of());
+        Env changed = new Env(lockingGit(
+                ran,
+                Either.left(new GitFailure(
+                        new GitError.WorktreeHasChanges("changed"),
+                        StubGit.executed("git worktree remove /repos/app-taken"))),
+                StubGit.ran("git worktree lock /repos/app-taken")));
 
         assertEquals(
                 new RemoveWorktreeMsg.NeedsForce(
@@ -715,12 +712,10 @@ class WorktreeUpdateTest {
     void whenTheWorktreeIsNotLockedAgainEitherThatFailsAndTheErrorSaysSo() {
         RemoveWorktreeCmd remove =
                 new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN), Option.of("on a usb stick"));
-        Env changed = new Env(
-                lockingGit(
-                        new java.util.ArrayList<>(),
-                        Either.left(new GitFailure(new GitError.WorktreeHasChanges("changed"), List.empty())),
-                        StubGit.refused("git worktree lock /repos/app-taken", "already locked")),
-                net.vanfleteren.jazygit.core.gh.StubGitHub.of());
+        Env changed = new Env(lockingGit(
+                new java.util.ArrayList<>(),
+                Either.left(new GitFailure(new GitError.WorktreeHasChanges("changed"), List.empty())),
+                StubGit.refused("git worktree lock /repos/app-taken", "already locked")));
 
         Msg failed = remove.run(changed);
 
@@ -794,9 +789,7 @@ class WorktreeUpdateTest {
 
         ran.clear();
         RemoveWorktreeCmd changed = new RemoveWorktreeCmd("/repos/app-changed", false, Option.of(TAKEN));
-        assertEquals(
-                new RemoveWorktreeMsg.NeedsForce(changed, List.empty()),
-                changed.run(new Env(git, net.vanfleteren.jazygit.core.gh.StubGitHub.of())));
+        assertEquals(new RemoveWorktreeMsg.NeedsForce(changed, List.empty()), changed.run(new Env(git)));
         assertEquals(java.util.List.of("remove /repos/app-changed false"), ran);
     }
 
@@ -817,7 +810,7 @@ class WorktreeUpdateTest {
                 });
         RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN));
 
-        Msg failed = remove.run(new Env(git, net.vanfleteren.jazygit.core.gh.StubGitHub.of()));
+        Msg failed = remove.run(new Env(git));
 
         assertEquals(
                 remove.failed(Failure.of(new GitFailure(

@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubWorktrees;
@@ -17,7 +16,6 @@ import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Worktree;
 import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
-import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.load.LoadWorktreeChanges;
@@ -66,7 +64,12 @@ class WorktreeChangesTest {
 
     @Test
     void aTickDoesNotReadThemWhileThePullRequestsAreShown() {
-        Model pullRequests = onWorktreesTab(withWorktrees()).withScreen(PrOverview.SCREEN);
+        Model pullRequests = onWorktreesTab(withWorktrees())
+                .withScreen(new net.vanfleteren.jazygit.kernel.state.preferences.Screen(
+                        "other",
+                        io.vavr.collection.List.of(new net.vanfleteren.jazygit.kernel.state.PaneId("other")),
+                        net.vanfleteren.jazygit.kernel.state.preferences.Screen.REPOSITORY.width(),
+                        net.vanfleteren.jazygit.kernel.state.preferences.Screen.REPOSITORY.heights()));
 
         assertFalse(Update.update(pullRequests, new TimerMsg.Tick())
                 .cmds()
@@ -121,7 +124,7 @@ class WorktreeChangesTest {
         assertTrue(load.background());
         assertEquals(
                 new LoadMsg.WorktreeChangesLoaded(load.worktrees(), HashMap.of(LINKED.toString(), true)),
-                load.run(new Env(git, StubGitHub.of())));
+                load.run(new Env(git)));
     }
 
     @Test

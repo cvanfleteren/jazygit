@@ -14,7 +14,6 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.app.keys.StandardSettings;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
@@ -40,7 +39,7 @@ class JazygitAppAgentsTest {
                 theme = "darcula"
                 """);
         SettingsFile file = new SettingsFile(config, StandardSettings.keys());
-        TestApp app = new TestApp(new Env(SampleData.git(), StubGitHub.of(), file), file.load());
+        TestApp app = new TestApp(new Env(SampleData.git(), file), file.load());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);

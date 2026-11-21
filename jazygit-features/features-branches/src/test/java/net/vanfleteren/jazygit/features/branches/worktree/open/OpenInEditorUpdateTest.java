@@ -14,7 +14,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubEditor;
 import net.vanfleteren.jazygit.core.git.model.*;
@@ -255,8 +254,7 @@ class OpenInEditorUpdateTest {
                 return result;
             }
         };
-        Env env = new Env(StubGit.of().withEditor(recording(events)), StubGitHub.of())
-                .withApp(Repositories.NONE, terminal);
+        Env env = new Env(StubGit.of().withEditor(recording(events))).withApp(Repositories.NONE, terminal);
 
         Msg result = new OpenInEditorCmd(NVIM, LINKED_PATH.toString()).run(env);
 
@@ -274,8 +272,7 @@ class OpenInEditorUpdateTest {
                 return program.get();
             }
         };
-        Env env = new Env(StubGit.of().withEditor(recording(events)), StubGitHub.of())
-                .withApp(Repositories.NONE, terminal);
+        Env env = new Env(StubGit.of().withEditor(recording(events))).withApp(Repositories.NONE, terminal);
 
         Msg result = new OpenInEditorCmd(IDEA, LINKED_PATH.toString()).run(env);
 
@@ -285,16 +282,13 @@ class OpenInEditorUpdateTest {
 
     @Test
     void anEditorThatCannotStartIsReportedForTheWorktree() {
-        Env env = new Env(
-                StubGit.of().withEditor(new StubEditor() {
-                    @Override
-                    public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
-                        return Either.left(new GitFailure(
-                                new GitError.EditorNotStarted("idea", new java.io.IOException("not found")),
-                                List.empty()));
-                    }
-                }),
-                StubGitHub.of());
+        Env env = new Env(StubGit.of().withEditor(new StubEditor() {
+            @Override
+            public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
+                return Either.left(new GitFailure(
+                        new GitError.EditorNotStarted("idea", new java.io.IOException("not found")), List.empty()));
+            }
+        }));
         OpenInEditorCmd cmd = new OpenInEditorCmd(IDEA, LINKED_PATH.toString());
 
         Model failed = Update.update(model(List.of(IDEA)), cmd.run(env)).model();

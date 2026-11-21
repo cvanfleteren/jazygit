@@ -7,8 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -27,6 +25,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
@@ -74,8 +73,8 @@ class CopyUpdateTest {
 
     @Test
     void inTheSplitViewARangeOnOneSideCopiesTheLinesOfThatSide() {
-        Anchor.OnLine leftNine = new Anchor.OnLine("a.txt", Side.LEFT, 9);
-        Anchor.OnLine leftEleven = new Anchor.OnLine("a.txt", Side.LEFT, 11);
+        Anchor.OnLine leftNine = new Anchor.OnLine("a.txt", DiffSide.OLD, 9);
+        Anchor.OnLine leftEleven = new Anchor.OnLine("a.txt", DiffSide.OLD, 11);
 
         assertEquals(
                 List.of(new CopyCmd("line9\nchanged\nline11", new Notice.Copied(3))),
@@ -222,17 +221,11 @@ class CopyUpdateTest {
     }
 
     private static Anchor.OnLine right(int number) {
-        return new Anchor.OnLine("a.txt", Side.RIGHT, number);
+        return new Anchor.OnLine("a.txt", DiffSide.NEW, number);
     }
 
     private static Env env(Terminal terminal) {
-        return new Env(
-                StubGit.of(),
-                StubGitHub.of(),
-                SettingsStore.NONE,
-                RecentRepositories.NONE,
-                Repositories.NONE,
-                terminal);
+        return new Env(StubGit.of(), SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 
     private static String line(int number) {

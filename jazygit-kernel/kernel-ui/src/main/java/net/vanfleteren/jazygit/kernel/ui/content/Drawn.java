@@ -5,8 +5,8 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.function.IntSupplier;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.Rows;
@@ -173,7 +173,7 @@ public record Drawn(
             int lines,
             int width,
             Option<DiffStops.HunkAt> hunk,
-            Option<ReviewThread.Side> side,
+            Option<DiffSide> side,
             int column,
             Option<Anchor> also,
             int order) {
@@ -192,7 +192,7 @@ public record Drawn(
         /**
          * This stop in the half of {@code side} (ADR 139).
          */
-        public Mark onSide(ReviewThread.Side side) {
+        public Mark onSide(DiffSide side) {
             return new Mark(anchor, lines, width, hunk, Option.some(side), column, also, order);
         }
     }

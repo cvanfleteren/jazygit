@@ -9,7 +9,6 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.LinePairs;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
@@ -18,6 +17,7 @@ import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.state.diff.Filtering;
@@ -174,7 +174,7 @@ public final class RichDiff {
     static Option<Anchor> leftOfContext(String path, DiffLine line) {
         return Option.when(line.kind() == DiffLine.Kind.CONTEXT, line::oldNumber)
                 .flatMap(number -> number)
-                .map(number -> new Anchor.OnLine(path, ReviewThread.Side.LEFT, number));
+                .map(number -> new Anchor.OnLine(path, DiffSide.OLD, number));
     }
 
     static int width(String text) {

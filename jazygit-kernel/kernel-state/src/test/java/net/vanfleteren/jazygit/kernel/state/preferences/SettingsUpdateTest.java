@@ -6,7 +6,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
@@ -31,7 +30,7 @@ class SettingsUpdateTest {
     private static final SaveSettings SAVE = new SaveSettings(Settings.DEFAULT, DARCULA);
 
     private static Env env(SettingsStore settings) {
-        return new Env(StubGit.of(), StubGitHub.of(), settings);
+        return new Env(StubGit.of(), settings);
     }
 
     private static SettingsStore saving(Either<SettingsProblem, Settings> outcome) {

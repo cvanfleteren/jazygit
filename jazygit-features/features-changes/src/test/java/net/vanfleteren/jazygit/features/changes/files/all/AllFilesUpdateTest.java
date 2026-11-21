@@ -6,7 +6,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.concurrent.atomic.AtomicInteger;
-import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubStatus;
 import net.vanfleteren.jazygit.core.git.model.*;
@@ -62,7 +61,7 @@ class AllFilesUpdateTest {
             }
         };
         return TestModels.program(
-                new Env(StubGit.of().withStatus(status), StubGitHub.of()), Runnable::run, Runnable::run, Runnable::run);
+                new Env(StubGit.of().withStatus(status)), Runnable::run, Runnable::run, Runnable::run);
     }
 
     @Test

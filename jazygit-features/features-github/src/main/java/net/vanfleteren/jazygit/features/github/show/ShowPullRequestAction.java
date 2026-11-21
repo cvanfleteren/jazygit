@@ -14,13 +14,8 @@ public final class ShowPullRequestAction {
     public static final FeatureAction ACTION = new FeatureAction(
             keys -> PrScopes.ALL.foldLeft(
                     keys.add(
-                                    Scopes.BRANCHES,
-                                    Binding.onSelected(
-                                            "o", "github.help.branches.pullRequest", PullRequestMsg.Requested::new))
-                            .add(
-                                    Scopes.BRANCHES,
-                                    Binding.onSelected(
-                                            "F", "github.help.branches.files", PullRequestMsg.FilesRequested::new)),
+                            Scopes.BRANCHES,
+                            Binding.onSelected("o", "github.help.branches.pullRequest", PullRequestMsg.Requested::new)),
                     (added, scope) -> added.add(
                                     scope,
                                     Binding.onSelected(

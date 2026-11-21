@@ -2,8 +2,11 @@ package net.vanfleteren.jazygit.kernel.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.kernel.state.diff.Changes;
+import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
 import net.vanfleteren.jazygit.kernel.state.load.Targeted;
 import net.vanfleteren.jazygit.lib.lens.Lens;
 
@@ -69,6 +72,22 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
     }
 
     /**
+     * This part, stating the remarks of a change whose files are listed as {@code remarking} finds them in its value
+     * (ADR 171).
+     */
+    public Part<S> remarking(Remarking<S> remarking) {
+        return new Part<>(name, initial, hooks.withRemarking(remarking));
+    }
+
+    /**
+     * This part, showing the files of a branch as {@code listing} finds in its value, in place of those the branch
+     * changes against its base: those of its pull request (ADR 61, 171).
+     */
+    public Part<S> listingFiles(ListsFiles<S> listing) {
+        return new Part<>(name, initial, hooks.withListsFiles(listing));
+    }
+
+    /**
      * Where this part sits in a model.
      */
     public Lens<Model, S> lens() {
@@ -117,21 +136,46 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
     }
 
     /**
-     * What the kernel asks of a part (ADR 158, 169).
+     * The remarks {@code value}, a part, states for {@code changes}, if it states any (ADR 171).
+     */
+    @FunctionalInterface
+    public interface Remarking<S> {
+        Option<StatedRemarks> remarks(S value, Changes changes);
+    }
+
+    /**
+     * What shows the files of {@code branch} in place of those it changes against its base, if {@code value}, a part,
+     * knows other changes of it, as its pull request (ADR 171).
+     */
+    @FunctionalInterface
+    public interface ListsFiles<S> {
+        Option<Msg> files(S value, Branch branch);
+    }
+
+    /**
+     * What the kernel asks of a part (ADR 158, 169, 171).
      */
     public record Hooks<S>(
-            Rereads<S> rereads, KnowsCommit<S> knowsCommit, Reacting<S> reacting, States<S> states, Names<S> names) {
+            Rereads<S> rereads,
+            KnowsCommit<S> knowsCommit,
+            Reacting<S> reacting,
+            States<S> states,
+            Names<S> names,
+            Remarking<S> remarking,
+            ListsFiles<S> listsFiles) {
 
         private static final Hooks<Object> NONE = new Hooks<>(
                 (model, value) -> List.empty(),
                 (value, sha) -> Option.none(),
                 (model, value, event) -> Update.Next.of(model),
                 value -> StatedBases.NONE,
-                value -> Option.none());
+                value -> Option.none(),
+                (value, changes) -> Option.none(),
+                (value, branch) -> Option.none());
 
         /**
-         * No hooks: the part reads nothing again, knows no commit, answers nothing, states no bases and names no
-         * repository.
+         * No hooks: the part reads nothing again, knows no commit, answers nothing, states no bases, names no
+         * repository and states no remarks.
          */
         @SuppressWarnings("unchecked") // None of them looks at the value.
         public static <S> Hooks<S> none() {
@@ -139,23 +183,31 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
         }
 
         Hooks<S> withRereads(Rereads<S> rereads) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
 
         Hooks<S> withKnowsCommit(KnowsCommit<S> knowsCommit) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
 
         Hooks<S> withReacting(Reacting<S> reacting) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
 
         Hooks<S> withStates(States<S> states) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
 
         Hooks<S> withNames(Names<S> names) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+        }
+
+        Hooks<S> withRemarking(Remarking<S> remarking) {
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+        }
+
+        Hooks<S> withListsFiles(ListsFiles<S> listsFiles) {
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
         }
     }
 }

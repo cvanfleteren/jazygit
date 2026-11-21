@@ -6,14 +6,11 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
-import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
-import net.vanfleteren.jazygit.core.gh.model.ThreadsByPath;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Subject;
 
 /**
  * The review threads of a pull request placed in a parsed diff of some of the files it changes (ADR 55): each after
@@ -27,13 +24,13 @@ public record PlacedRemarks(List<FileRemarks> files) {
 
     /**
      * {@code threads} placed in {@code diff}. A thread goes after the line with its number on its side, in the file
-     * with its path: the number in the new file for {@link Side#RIGHT}, in the old one for {@link Side#LEFT}; one on
+     * with its path: the number in the new file for {@link DiffSide#RIGHT}, in the old one for {@link DiffSide#LEFT}; one on
      * several lines after its last one, covering every line of the diff from its first, on that line's own side, to
      * it, or from the first line the diff shows after its first, when it does not show that. One about a whole file
      * goes under its bar. One that cannot be placed, outdated or on a line the diff does not show, is listed at the end
      * of its file. A thread of a file the diff does not have is left out: it is shown with the diff of its own file.
      */
-    public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads) {
+    public static PlacedRemarks place(UnifiedDiff diff, List<RemarkThread> threads) {
         return place(diff, threads, true);
     }
 
@@ -42,8 +39,8 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * {@code onLines}: when they were read at other commits than the diff, their lines number other lines, and they
      * are listed at the end of their file (ADR 55).
      */
-    public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads, boolean onLines) {
-        ThreadsByPath byPath = ThreadsByPath.of(threads);
+    public static PlacedRemarks place(UnifiedDiff diff, List<RemarkThread> threads, boolean onLines) {
+        RemarksByPath byPath = RemarksByPath.of(threads);
         return new PlacedRemarks(diff.files().map(file -> file(file, byPath.on(file.path(), file.origin()), onLines)));
     }
 
@@ -54,7 +51,7 @@ public record PlacedRemarks(List<FileRemarks> files) {
         return files.forAll(FileRemarks::isEmpty);
     }
 
-    private static FileRemarks file(FileDiff file, List<ReviewThread> threads, boolean placeable) {
+    private static FileRemarks file(FileDiff file, List<RemarkThread> threads, boolean placeable) {
         // Most files of a diff have no thread: those need nothing worked out for their lines.
         if (threads.isEmpty()) {
             return new FileRemarks(
@@ -66,10 +63,10 @@ public record PlacedRemarks(List<FileRemarks> files) {
                 .scanLeft(0, (start, hunk) -> start + hunk.lines().size())
                 .init()
                 .toVector();
-        List<ReviewThread> onLines = threads.filter(thread -> thread.subject() == Subject.LINE);
-        List<Tuple2<ReviewThread, Option<Integer>>> found = onLines.map(thread ->
+        List<RemarkThread> onLines = threads.filter(thread -> thread.subject() == Subject.LINE);
+        List<Tuple2<RemarkThread, Option<Integer>>> found = onLines.map(thread ->
                 Tuple.of(thread, placeable ? at(lines, thread.line(), thread.side()) : Option.<Integer>none()));
-        Map<Integer, List<ReviewThread>> after = found.flatMap(
+        Map<Integer, List<RemarkThread>> after = found.flatMap(
                         placed -> placed._2().map(at -> Tuple.of(at, placed._1())))
                 .groupBy(Tuple2::_1)
                 .mapValues(placed -> placed.map(Tuple2::_2));
@@ -78,9 +75,9 @@ public record PlacedRemarks(List<FileRemarks> files) {
                 .flatMap(last -> placed._1()
                         .startLine()
                         .map(start -> Tuple.of(
-                                at(lines, Option.of(start), placed._1().startSide())
+                                at(lines, Option.of(start), placed._1().firstSide())
                                         .getOrElse(() -> firstAfter(
-                                                file, starts, start, placed._1().startSide(), last)),
+                                                file, starts, start, placed._1().firstSide(), last)),
                                 last))));
         Vector<Boolean> covered = spans.isEmpty() ? Vector.empty() : covered(spans, lines.size());
         return new FileRemarks(
@@ -100,7 +97,7 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * {@code line} on {@code side} is; none when the diff does not show it, or there is no line, as for an outdated
      * thread.
      */
-    private static Option<Integer> at(Vector<DiffLine> lines, Option<Integer> line, Side side) {
+    private static Option<Integer> at(Vector<DiffLine> lines, Option<Integer> line, DiffSide side) {
         return line.map(number -> lines.indexWhere(shown -> number(shown, side).contains(number)))
                 .filter(index -> index >= 0);
     }
@@ -111,7 +108,7 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * hunks cut elsewhere than GitHub's: a hunk shows every line of its range on either side, so each hunk is wholly
      * before or wholly after that line. The start of the hunk of {@code last} when none is found before it.
      */
-    private static int firstAfter(FileDiff file, Vector<Integer> starts, int number, Side side, int last) {
+    private static int firstAfter(FileDiff file, Vector<Integer> starts, int number, DiffSide side, int last) {
         return file.hunks()
                 .zip(starts)
                 .find(hunk ->
@@ -137,14 +134,14 @@ public record PlacedRemarks(List<FileRemarks> files) {
                 .map(open -> open > 0);
     }
 
-    private static LineRemarks remarks(List<ReviewThread> threads, boolean covered) {
+    private static LineRemarks remarks(List<RemarkThread> threads, boolean covered) {
         return threads.isEmpty() && !covered ? NONE : new LineRemarks(threads, covered);
     }
 
-    private static Option<Integer> number(DiffLine line, Side side) {
+    private static Option<Integer> number(DiffLine line, DiffSide side) {
         return switch (side) {
-            case LEFT -> line.oldNumber();
-            case RIGHT -> line.newNumber();
+            case OLD -> line.oldNumber();
+            case NEW -> line.newNumber();
         };
     }
 
@@ -155,7 +152,7 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * @param lines    for each hunk, for each of its lines, the threads after it
      * @param unplaced the threads that cannot be placed, which go at the end of the file
      */
-    public record FileRemarks(List<ReviewThread> onFile, List<List<LineRemarks>> lines, List<ReviewThread> unplaced) {
+    public record FileRemarks(List<RemarkThread> onFile, List<List<LineRemarks>> lines, List<RemarkThread> unplaced) {
 
         /**
          * Whether no thread is on the file.
@@ -173,5 +170,5 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * @param threads the threads that end on it, which go after it
      * @param covered whether a thread on several lines that is placed covers it, before its last
      */
-    public record LineRemarks(List<ReviewThread> threads, boolean covered) {}
+    public record LineRemarks(List<RemarkThread> threads, boolean covered) {}
 }
