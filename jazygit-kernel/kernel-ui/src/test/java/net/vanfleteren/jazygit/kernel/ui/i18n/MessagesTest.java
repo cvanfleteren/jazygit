@@ -12,7 +12,7 @@ class MessagesTest {
 
     @Test
     void substitutesParameters() {
-        assertEquals("2h 5m", Messages.forLocale(Locale.ENGLISH).format("checks.hours", "2", "5"));
+        assertEquals("(a) Add", Messages.forLocale(Locale.ENGLISH).format("dialog.choice.row", "a", "Add"));
     }
 
     @Test

@@ -99,6 +99,20 @@ class HelpDialogTest {
     }
 
     @Test
+    void theLegendSaysWhatGitsSymbolsMeanThenWhatTheFeaturesAdd() throws Exception {
+        List<String> lines = List.of(screen(Scopes.BRANCHES.id()).split("\n"));
+        // features-chrome keeps git's, and GitHub adds what its badges mean (ADR 168).
+        List<Integer> rows = List.of(
+                        "Its upstream was deleted",
+                        "Checked out in another worktree",
+                        "Pull request (dim: draft)",
+                        "Where its pull request sits in its stack")
+                .map(description -> lines.indexWhere(line -> line.contains(description)));
+        assertEquals(rows.sorted(), rows, rows.toString());
+        assertFalse(rows.contains(-1), rows.toString());
+    }
+
+    @Test
     void listsTheKeysOfTheCommitsPanel() throws Exception {
         assertTrue(screen(Scopes.COMMITS.id()).contains("           r Reword commit…"));
     }

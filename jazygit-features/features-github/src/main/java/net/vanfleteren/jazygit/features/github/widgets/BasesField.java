@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.github;
+package net.vanfleteren.jazygit.features.github.widgets;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
@@ -92,8 +92,9 @@ public final class BasesField<B> {
                 panel(
                                 shown.cursor()
                                         .filter()
-                                        .map(typed -> Messages.get("dialog.newPullRequest.baseFiltered", named, typed))
-                                        .getOrElse(() -> Messages.get("dialog.newPullRequest.base", named)),
+                                        .map(typed ->
+                                                Messages.get("github.dialog.newPullRequest.baseFiltered", named, typed))
+                                        .getOrElse(() -> Messages.get("github.dialog.newPullRequest.base", named)),
                                 // Enter moves the focus on, which a list drops from its onKeyEvent handler.
                                 new KeysFirst(
                                         shown.lines().isEmpty() ? rows : new FocusHighlighted(rows),
@@ -109,7 +110,7 @@ public final class BasesField<B> {
      */
     public Element fixed(B base, String why) {
         return panel(
-                        Messages.get("dialog.newPullRequest.base", name.apply(base)),
+                        Messages.get("github.dialog.newPullRequest.base", name.apply(base)),
                         text(why).addClass(Theme.Classes.DIM))
                 .length(FIXED_HEIGHT);
     }

@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
+import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
 
@@ -36,6 +37,7 @@ import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
  * @param badges      what it shows of a branch in the branches pane, beside what git says (ADR 167)
  * @param groupings   the groups it makes of the local branches in the branches pane (ADR 167)
  * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
+ * @param legends     what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
  */
 public record Feature(
         List<FeatureAction> actions,
@@ -46,7 +48,8 @@ public record Feature(
         List<Reaction> reactions,
         List<BranchBadges.Badge> badges,
         List<BranchGroups.Grouping> groupings,
-        List<ScreenSpec> screens) {
+        List<ScreenSpec> screens,
+        List<Legend> legends) {
 
     /**
      * The feature of {@code actions}, in that order, which shows nothing in the content panel of its own, has no
@@ -56,6 +59,7 @@ public record Feature(
     public static Feature of(FeatureAction... actions) {
         return new Feature(
                 List.of(actions),
+                List.empty(),
                 List.empty(),
                 List.empty(),
                 List.empty(),
@@ -79,7 +83,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -95,7 +100,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -111,7 +117,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -128,7 +135,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -145,7 +153,8 @@ public record Feature(
                 reactions.append(reaction),
                 badges,
                 groupings,
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -154,7 +163,16 @@ public record Feature(
      */
     public Feature badging(BranchBadges.Badge badge) {
         return new Feature(
-                actions, contents, settingKeys, settings, timers, reactions, badges.append(badge), groupings, screens);
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges.append(badge),
+                groupings,
+                screens,
+                legends);
     }
 
     /**
@@ -171,7 +189,8 @@ public record Feature(
                 reactions,
                 badges,
                 groupings.append(grouping),
-                screens);
+                screens,
+                legends);
     }
 
     /**
@@ -180,7 +199,34 @@ public record Feature(
      */
     public Feature screen(ScreenSpec screen) {
         return new Feature(
-                actions, contents, settingKeys, settings, timers, reactions, badges, groupings, screens.append(screen));
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings,
+                screens.append(screen),
+                legends);
+    }
+
+    /**
+     * This feature, also saying what its symbols in a panel mean with {@code legends}, which the help of that panel
+     * lists after the panel's own and those of the features before it (ADR 168).
+     */
+    public Feature explaining(Legend... legends) {
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                badges,
+                groupings,
+                screens,
+                this.legends.appendAll(List.of(legends)));
     }
 
     /**

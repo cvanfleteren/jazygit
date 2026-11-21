@@ -27,6 +27,8 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.failed.FailedBuilds;
+import net.vanfleteren.jazygit.features.github.widgets.CheckRows;
+import net.vanfleteren.jazygit.features.github.widgets.CheckTimesText;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -36,8 +38,6 @@ import net.vanfleteren.jazygit.kernel.state.github.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.github.Reading;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.kernel.ui.github.CheckRows;
-import net.vanfleteren.jazygit.kernel.ui.github.CheckTimesText;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -304,7 +304,7 @@ public final class ChecksDialog implements PopupView {
                         text(timeOfDay(end, now, zone)),
                         label("github.dialog.checks.took", " · "),
                         text(took)))
-                .getOrElse(() -> List.of(label("checks.running", " · "), text(took)));
+                .getOrElse(() -> List.of(label("github.checks.running", " · "), text(took)));
         return row(List.<StyledElement<?>>of(
                         label("github.dialog.checks.started", ""), text(timeOfDay(span.start(), now, zone)))
                 .appendAll(ended)

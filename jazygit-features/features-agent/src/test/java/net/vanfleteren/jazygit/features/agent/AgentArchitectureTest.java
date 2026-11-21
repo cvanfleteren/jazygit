@@ -30,6 +30,5 @@ class AgentArchitectureTest {
             .resideInAnyPackage(
                     "net.vanfleteren.jazygit.core.gh..",
                     "net.vanfleteren.jazygit.features.github..",
-                    "net.vanfleteren.jazygit.kernel.state.github..",
-                    "net.vanfleteren.jazygit.kernel.ui.github..");
+                    "net.vanfleteren.jazygit.kernel.state.github..");
 }

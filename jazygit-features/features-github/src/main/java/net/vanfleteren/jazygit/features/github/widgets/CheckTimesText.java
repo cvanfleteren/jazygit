@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.github;
+package net.vanfleteren.jazygit.features.github.widgets;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -39,7 +39,7 @@ public final class CheckTimesText {
     public static String left(Duration left) {
         long seconds = Math.round(left.toSeconds() / 5.0) * 5;
         return Messages.get(
-                "checks.about",
+                "github.checks.about",
                 seconds >= TO_THE_SECOND ? minutes(Math.round(left.toSeconds() / 60.0)) : minutesAndSeconds(seconds));
     }
 
@@ -48,11 +48,13 @@ public final class CheckTimesText {
      */
     private static String minutesAndSeconds(long seconds) {
         return seconds < 60
-                ? Messages.get("checks.seconds", String.valueOf(seconds))
+                ? Messages.get("github.checks.seconds", String.valueOf(seconds))
                 : seconds % 60 == 0
                         ? minutes(seconds / 60)
                         : Messages.get(
-                                "checks.minutesSeconds", String.valueOf(seconds / 60), String.valueOf(seconds % 60));
+                                "github.checks.minutesSeconds",
+                                String.valueOf(seconds / 60),
+                                String.valueOf(seconds % 60));
     }
 
     /**
@@ -69,8 +71,8 @@ public final class CheckTimesText {
      */
     private static String leftInMinutes(Duration left) {
         return left.toSeconds() < 60
-                ? Messages.get("checks.underAMinute")
-                : Messages.get("checks.about", minutes(Math.round(left.toSeconds() / 60.0)));
+                ? Messages.get("github.checks.underAMinute")
+                : Messages.get("github.checks.about", minutes(Math.round(left.toSeconds() / 60.0)));
     }
 
     /**
@@ -78,7 +80,7 @@ public final class CheckTimesText {
      * is exact, {@code 3m}, {@code 1h 5m}, or {@code <1m} (ADR 35).
      */
     public static String waited(Duration since) {
-        return since.toSeconds() < 60 ? Messages.get("checks.underAMinute") : minutes(since.toMinutes());
+        return since.toSeconds() < 60 ? Messages.get("github.checks.underAMinute") : minutes(since.toMinutes());
     }
 
     /**
@@ -87,10 +89,11 @@ public final class CheckTimesText {
      */
     private static String minutes(long minutes) {
         return minutes < 60
-                ? Messages.get("checks.minutes", String.valueOf(minutes))
+                ? Messages.get("github.checks.minutes", String.valueOf(minutes))
                 : minutes % 60 == 0
-                        ? Messages.get("checks.wholeHours", String.valueOf(minutes / 60))
-                        : Messages.get("checks.hours", String.valueOf(minutes / 60), String.valueOf(minutes % 60));
+                        ? Messages.get("github.checks.wholeHours", String.valueOf(minutes / 60))
+                        : Messages.get(
+                                "github.checks.hours", String.valueOf(minutes / 60), String.valueOf(minutes % 60));
     }
 
     /**
@@ -107,10 +110,10 @@ public final class CheckTimesText {
     private static String widestState() {
         String widest = duration(Duration.ofSeconds(3599));
         return widest(List.of(
-                Messages.get("checks.runningFor", widest),
-                Messages.get("checks.queuedFor", widest),
-                Messages.get("checks.running"),
-                Messages.get("checks.queued")));
+                Messages.get("github.checks.runningFor", widest),
+                Messages.get("github.checks.queuedFor", widest),
+                Messages.get("github.checks.running"),
+                Messages.get("github.checks.queued")));
     }
 
     /**
@@ -118,11 +121,11 @@ public final class CheckTimesText {
      */
     private static String widestLeft() {
         return widest(List.of(
-                Messages.get("checks.left", left(Duration.ofSeconds(297))),
-                Messages.get("checks.left", unknown(false)),
-                Messages.get("checks.left", unknown(true)),
-                Messages.get("checks.due"),
-                Messages.get("checks.overdue")));
+                Messages.get("github.checks.left", left(Duration.ofSeconds(297))),
+                Messages.get("github.checks.left", unknown(false)),
+                Messages.get("github.checks.left", unknown(true)),
+                Messages.get("github.checks.due"),
+                Messages.get("github.checks.overdue")));
     }
 
     private static String widest(List<String> texts) {
@@ -138,14 +141,15 @@ public final class CheckTimesText {
     public static Option<String> together(Eta eta, Option<Instant> start, boolean learning, Instant now) {
         return switch (eta) {
             case Eta.Done done -> Option.none();
-            case Eta.Unknown unknown -> Option.of(Messages.get("checks.doneIn", unknown(learning)));
+            case Eta.Unknown unknown -> Option.of(Messages.get("github.checks.doneIn", unknown(learning)));
             case Eta.Expected expected
             when expected.overdue(now) ->
-                Option.of(start.map(from ->
-                                Messages.get("checks.longerThanUsualOf", left(Duration.between(from, expected.at()))))
-                        .getOrElse(() -> Messages.get("checks.longerThanUsual")));
-            case Eta.Expected expected when due(expected.left(now)) -> Option.of(Messages.get("checks.doneAnyMoment"));
-            case Eta.Expected expected -> Option.of(Messages.get("checks.doneIn", left(expected.left(now))));
+                Option.of(start.map(from -> Messages.get(
+                                "github.checks.longerThanUsualOf", left(Duration.between(from, expected.at()))))
+                        .getOrElse(() -> Messages.get("github.checks.longerThanUsual")));
+            case Eta.Expected expected
+            when due(expected.left(now)) -> Option.of(Messages.get("github.checks.doneAnyMoment"));
+            case Eta.Expected expected -> Option.of(Messages.get("github.checks.doneIn", left(expected.left(now))));
         };
     }
 
@@ -158,7 +162,7 @@ public final class CheckTimesText {
         return switch (eta) {
             case Eta.Done done -> Option.none();
             case Eta.Unknown unknown -> Option.of(unknown(learning));
-            case Eta.Expected expected when expected.overdue(now) -> Option.of(Messages.get("checks.late"));
+            case Eta.Expected expected when expected.overdue(now) -> Option.of(Messages.get("github.checks.late"));
             case Eta.Expected expected -> Option.of(leftInMinutes(expected.left(now)));
         };
     }
@@ -186,14 +190,15 @@ public final class CheckTimesText {
      */
     private static String state(Check check, Instant now) {
         if (check.run().isEmpty()) {
-            return Messages.get("checks.running");
+            return Messages.get("github.checks.running");
         }
         return check.queued()
                 ? queued(check, now)
                 : check.run()
                         .flatMap(CheckRun::startedAt)
-                        .map(started -> Messages.get("checks.runningFor", duration(Duration.between(started, now))))
-                        .getOrElse(() -> Messages.get("checks.running"));
+                        .map(started ->
+                                Messages.get("github.checks.runningFor", duration(Duration.between(started, now))))
+                        .getOrElse(() -> Messages.get("github.checks.running"));
     }
 
     /**
@@ -205,10 +210,10 @@ public final class CheckTimesText {
             return Option.none();
         }
         return switch (eta) {
-            case Eta.Expected expected when expected.overdue(now) -> Option.of(Messages.get("checks.overdue"));
-            case Eta.Expected expected when due(expected.left(now)) -> Option.of(Messages.get("checks.due"));
-            case Eta.Expected expected -> Option.of(Messages.get("checks.left", left(expected.left(now))));
-            case Eta.Unknown u -> Option.of(Messages.get("checks.left", unknown(learning)));
+            case Eta.Expected expected when expected.overdue(now) -> Option.of(Messages.get("github.checks.overdue"));
+            case Eta.Expected expected when due(expected.left(now)) -> Option.of(Messages.get("github.checks.due"));
+            case Eta.Expected expected -> Option.of(Messages.get("github.checks.left", left(expected.left(now))));
+            case Eta.Unknown u -> Option.of(Messages.get("github.checks.left", unknown(learning)));
             case Eta.Done done -> Option.none();
         };
     }
@@ -230,7 +235,7 @@ public final class CheckTimesText {
                         + (eta instanceof Eta.Expected(Instant at)
                                 ? left(Duration.between(started, at))
                                 : unknown(learning)))
-                .getOrElse(() -> Messages.get("checks.running"));
+                .getOrElse(() -> Messages.get("github.checks.running"));
     }
 
     /**
@@ -243,8 +248,8 @@ public final class CheckTimesText {
                 widest + "/" + left(Duration.ofSeconds(297)),
                 widest + "/" + unknown(false),
                 widest + "/" + unknown(true),
-                Messages.get("checks.queuedFor", widest),
-                Messages.get("checks.running")));
+                Messages.get("github.checks.queuedFor", widest),
+                Messages.get("github.checks.running")));
     }
 
     /**
@@ -254,11 +259,12 @@ public final class CheckTimesText {
     private static String queued(Check check, Instant now) {
         return check.run()
                 .filter(run -> run.runAttempt() == 1)
-                .map(run -> Messages.get("checks.queuedFor", duration(Duration.between(run.runCreatedAt(), now))))
-                .getOrElse(() -> Messages.get("checks.queued"));
+                .map(run ->
+                        Messages.get("github.checks.queuedFor", duration(Duration.between(run.runCreatedAt(), now))))
+                .getOrElse(() -> Messages.get("github.checks.queued"));
     }
 
     private static String unknown(boolean learning) {
-        return Messages.get(learning ? "checks.learning" : "checks.unknown");
+        return Messages.get(learning ? "github.checks.learning" : "github.checks.unknown");
     }
 }
