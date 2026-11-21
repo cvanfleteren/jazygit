@@ -79,7 +79,9 @@ panel (`ContentSource`); actions on another feature's subject go through a hoste
 `SettingKey`s (`Feature.settingKeys`, through `keeping`), and the rows it adds to the settings panel are
 `SettingsSection`s (`Feature.settings`, through `withSettings`) (ADR 163); what it shows of a branch in the branches
 pane are `BranchBadges` (`Feature.badges`, through `badging`), and the groups it makes of the local branches there are
-`BranchGroups` (`Feature.groupings`, through `grouping`) (ADR 167); a screen it brings beside the repository's is a
+`BranchGroups` (`Feature.groupings`, through `grouping`) (ADR 167); what it shows in a pane that lives in a group
+fills a `PaneKey` the pane declares beside itself (`Feature.fills`, through `filling`), as the line and the listing
+of the commits pane (ADR 172); a screen it brings beside the repository's is a
 `ScreenSpec` (`Feature.screens`, through `screen`), whose `Screen` is an open value, and what its symbols in a panel
 mean are `Legend`s (`Feature.legends`, through `explaining`), which the help lists after the panel's own (ADR 168).
 What a feature's dialogs and panes draw with lives in its `widgets` package. A feature uses only the features its
