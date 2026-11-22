@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.core.process.SshAsking;
@@ -121,7 +122,7 @@ class AskpassServerTest {
             return null;
         });
 
-        assertEquals(Tuple.of(1, ""), waiting.get());
+        assertEquals(Tuple.of(1, ""), waiting.get(10, TimeUnit.SECONDS));
         assertEquals(java.util.List.of(1L), user.withdrawn);
     }
 
@@ -354,7 +355,7 @@ class AskpassServerTest {
         private final CompletableFuture<Void> question = new CompletableFuture<>();
         private Option<String> answer = Option.none();
         private boolean answers;
-        private CompletableFuture<Option<SecretBuffer>> open = new CompletableFuture<>();
+        private volatile CompletableFuture<Option<SecretBuffer>> open = new CompletableFuture<>();
 
         void answer(String typed) {
             answer = Option.of(typed);
@@ -366,17 +367,21 @@ class AskpassServerTest {
         }
 
         void waitForAQuestion() {
-            question.join();
+            question.orTimeout(10, TimeUnit.SECONDS).join();
         }
 
         @Override
         public CompletableFuture<Option<SecretBuffer>> ask(long request, String prompt) {
             asked.add(prompt);
-            question.complete(null);
+            // The question is left open before it is told to be asked: the test may end the operation as soon as it
+            // is, which withdraws it, and that must complete this one, not one before it.
             if (!answers) {
-                open = new CompletableFuture<>();
-                return open;
+                CompletableFuture<Option<SecretBuffer>> left = new CompletableFuture<>();
+                open = left;
+                question.complete(null);
+                return left;
             }
+            question.complete(null);
             return CompletableFuture.completedFuture(answer.map(text -> {
                 SecretBuffer buffer = new SecretBuffer();
                 text.codePoints().forEach(buffer::type);
