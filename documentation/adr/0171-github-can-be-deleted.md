@@ -87,3 +87,6 @@ It is built in one step: only the end of it has to work.
 
 Amended by ADR 173: an architecture test, and the app's tests run without GitHub, prove it in place of
 `scripts/without-github.sh` and its job.
+
+Amended by ADR 177: a forge tells which remotes are its own, and the kernel switches on the forge of the
+home, or asks the user which it is.

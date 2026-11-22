@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.forge.ReadForgeChoice;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +54,8 @@ class FeatureGatedTest {
         Next opened = FEATURE.gated().reactions().head().to(TestModels.loaded(), new KernelEvent.RepositoryOpened());
 
         assertFalse(opened.model().on("f"));
-        assertEquals(List.of(new Run("detect")), opened.cmds());
+        // What the user chose as the forge before is read too, from which the kernel decides (ADR 177).
+        assertEquals(List.of(new ReadForgeChoice(), new Run("detect")), opened.cmds());
     }
 
     @Test

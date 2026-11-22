@@ -48,6 +48,30 @@ class CliRemotesTest {
     }
 
     @Test
+    void aSettingOfEachRemoteIsReadByItsName() {
+        assertEquals(
+                HashMap.of("upstream", "base").mapKeys(RemoteName::new),
+                CliRemotes.parseSetting(
+                        "remote.upstream.gh-resolved base\nremote.origin.url git@x:o/r.git\n", "gh-resolved"));
+    }
+
+    @Test
+    void aSettingIsFoundWhateverTheCaseItIsNamedIn(@TempDir Path repo) throws Exception {
+        for (List<String> command : List.of(
+                List.of("git", "init", "-q", repo.toString()),
+                List.of("git", "-C", repo.toString(), "config", "remote.mirror.skipFetchAll", "true"))) {
+            new ProcessExecutor()
+                    .command(command.toJavaList())
+                    .exitValueNormal()
+                    .execute();
+        }
+
+        assertEquals(
+                HashMap.of(new RemoteName("mirror"), "true"),
+                CliRemotes.setting(repo, "skipFetchAll").get());
+    }
+
+    @Test
     void theCredentialsAreSetForCommandsThatTalkToARemote(@TempDir Path repo) {
         GitCommand fetch = CliRemotes.toRemote(
                         repo, GitCommand.git("fetch", "origin"), Option.of("ssh"), HashMap.of("GH_TOKEN", "secret"))

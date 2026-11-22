@@ -5,6 +5,8 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.kernel.state.settings.SettingsPanelPopup;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
@@ -48,7 +50,8 @@ public final class SettingsPanelDialogs {
                     "chrome.dialog.settings.animations.details",
                     Settings.ANIMATIONS));
     /**
-     * How git runs: reading the repository and fetching from the remotes every so often (ADR 125).
+     * How git runs: reading the repository and fetching from the remotes every so often (ADR 125); and which forge the
+     * repository is on (ADR 177).
      */
     public static final SettingsSection GIT = SettingsSection.of(
             "chrome.dialog.settings.group.git",
@@ -61,7 +64,14 @@ public final class SettingsPanelDialogs {
                     'f',
                     "chrome.dialog.settings.autoFetch",
                     "chrome.dialog.settings.autoFetch.details",
-                    Settings.AUTO_FETCH));
+                    Settings.AUTO_FETCH),
+            new Choice<SettingsPanelPopup>(
+                            'o',
+                            "chrome.dialog.settings.forge",
+                            ForgeMsg.Asked::new,
+                            (model, popup) ->
+                                    !model.part(ForgeHome.PART).candidates().isEmpty())
+                    .withDetails("chrome.dialog.settings.forge.details"));
     /**
      * The settings file, which opens in git's editor (ADR 111); last, as it holds every setting.
      */
@@ -113,7 +123,8 @@ public final class SettingsPanelDialogs {
                 PopupSlot.returningToFocus(new ChoiceDialog<>(PANEL, dispatch)),
                 PopupSlot.returningToFocus(new PickDialog<>(ListDialogs.LIST, dispatch)),
                 PopupSlot.returningToFocus(new PickDialog<>(ListDialogs.FORM, dispatch)),
-                PopupSlot.returningToFocus(new TextInputDialog<>(ListDialogs.FIELD, dispatch)));
+                PopupSlot.returningToFocus(new TextInputDialog<>(ListDialogs.FIELD, dispatch)),
+                PopupSlot.returningToFocus(new ChoiceDialog<>(ForgeChoiceDialog.SPEC, dispatch)));
     }
 
     /**

@@ -36,6 +36,11 @@ public interface StubRemotes extends Remotes {
     }
 
     @Override
+    default Either<GitError, Map<RemoteName, String>> setting(String key) {
+        return Either.right(HashMap.empty());
+    }
+
+    @Override
     default Either<GitFailure, List<ExecutedCommand>> push(BranchName branch, RemoteBranch upstream, PushMode mode) {
         return ran();
     }

@@ -28,9 +28,19 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
         return ForgejoRepository.of(remoteUrl, FjKeys.NONE.aliases());
     }
 
+    /**
+     * A host that cannot be reached: whether it is Forgejo cannot be told.
+     */
+    static final String DOWN = "down.example.net";
+
     @Override
     public boolean isForgejo(ForgejoRepository repository) {
         return hosts.contains(repository.host());
+    }
+
+    @Override
+    public Option<Boolean> tells(ForgejoRepository repository) {
+        return repository.host().equals(DOWN) ? Option.none() : Option.of(isForgejo(repository));
     }
 
     @Override

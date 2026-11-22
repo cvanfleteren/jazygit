@@ -1,0 +1,110 @@
+package net.vanfleteren.jazygit.kernel.state.forge;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
+import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
+
+/**
+ * Which forge a repository is on (ADR 177): once every forge told its claims, and what the user chose before was
+ * read, the kernel switches on the forge of the home, or asks the user which it is. It names no forge.
+ */
+public final class ForgeUpdate {
+
+    private ForgeUpdate() {}
+
+    public static Next update(Model model, ForgeMsg msg) {
+        return switch (msg) {
+            case ForgeMsg.Remembered(var chosen) ->
+                decided(model.mapPart(ForgeHome.PART, home -> home.remembering(chosen)));
+            case ForgeMsg.Chosen(var home) -> chosen(model.withoutPopup(ForgeChoicePopup.class), home);
+            case ForgeMsg.Picked(int index) ->
+                model.popup(ForgeChoicePopup.class)
+                        .flatMap(popup -> popup.candidates().drop(index).headOption())
+                        .map(home -> chosen(model.withoutPopup(ForgeChoicePopup.class), Option.of(home)))
+                        .getOrElse(() -> Next.of(model));
+            case ForgeMsg.Later() -> Next.of(model.withoutPopup(ForgeChoicePopup.class));
+            case ForgeMsg.Asked() -> asked(model);
+        };
+    }
+
+    /**
+     * {@code model} waiting for the claims of {@code feature}, as the repository opens, and reading what the user
+     * chose before, once for every forge.
+     */
+    public static Next opening(Model model, String feature) {
+        return Next.of(model.mapPart(ForgeHome.PART, home -> home.awaiting(feature)), new ReadForgeChoice());
+    }
+
+    /**
+     * {@code model} once a forge told {@code claim}.
+     */
+    public static Next claimed(Model model, ForgeClaim claim) {
+        return decided(model.mapPart(ForgeHome.PART, home -> home.claimed(claim)));
+    }
+
+    /**
+     * Decides, once everything it decides from is known: the forge of the home on, or the user asked.
+     */
+    private static Next decided(Model model) {
+        ForgeHome home = model.part(ForgeHome.PART);
+        if (!home.due()) {
+            return Next.of(model);
+        }
+        return switch (ForgeDecision.of(home.claims(), home.remembered())) {
+            case ForgeDecision.Home(ForgeCandidate chosen) -> switched(model, Option.of(chosen));
+            case ForgeDecision.NoForge() -> Next.of(model.mapPart(ForgeHome.PART, h -> h.deciding(Option.none())));
+            // As the forges may answer late, the user may be in a dialog by then: it is not taken away, and the
+            // question is put off as Escape would, until the next opening or the settings.
+            case ForgeDecision.Ask(var candidates, var pick) ->
+                Next.of(model.mapPart(ForgeHome.PART, h -> h.deciding(Option.none()))
+                        .openPopupIfFree(new ForgeChoicePopup(candidates, pick)));
+        };
+    }
+
+    /**
+     * {@code model} with {@code chosen} the home, kept so that it is not asked again.
+     */
+    private static Next chosen(Model model, Option<ForgeCandidate> chosen) {
+        return switched(model, chosen)
+                .then(switched ->
+                        OperationUpdate.start(switched, new SaveForgeChoice(chosen.map(ForgeCandidate::remote))));
+    }
+
+    /**
+     * {@code model} with the forge of {@code chosen} on, that of the home before off if it is another, and
+     * {@code chosen} the home. Another home on the forge that is on already switches it on afresh: the features are
+     * told it was, so that it reads anew what it read of the home before.
+     */
+    private static Next switched(Model model, Option<ForgeCandidate> chosen) {
+        Option<ForgeCandidate> before = model.part(ForgeHome.PART).home();
+        Model decided = model.mapPart(ForgeHome.PART, home -> home.deciding(chosen));
+        List<FeatureMsg.Applies> switches = before.map(ForgeCandidate::feature)
+                .filter(feature -> !chosen.exists(c -> c.feature().equals(feature)))
+                .map(feature -> new FeatureMsg.Applies(feature, false))
+                .toList()
+                .appendAll(chosen.map(c -> new FeatureMsg.Applies(c.feature(), true)));
+        Next next = switches.foldLeft(
+                Next.of(decided), (done, applies) -> done.then(m -> FeatureUpdate.update(m, applies)));
+        boolean moved = chosen.exists(c -> before.exists(b -> b.feature().equals(c.feature()) && !b.equals(c)));
+        return moved
+                ? Events.happened(next, new KernelEvent.Switched(chosen.get().feature(), true))
+                : next;
+    }
+
+    /**
+     * Asks again which forge the repository is on, from what the forges claimed as it opened, with the home
+     * highlighted; nothing when no forge claimed a remote.
+     */
+    private static Next asked(Model model) {
+        ForgeHome home = model.part(ForgeHome.PART);
+        return home.candidates().isEmpty()
+                ? Next.of(model)
+                : Next.of(model.openPopup(new ForgeChoicePopup(home.candidates(), home.home())));
+    }
+}

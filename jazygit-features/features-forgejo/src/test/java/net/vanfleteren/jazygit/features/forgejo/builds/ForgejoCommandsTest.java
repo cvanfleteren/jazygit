@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeClaim;
 import org.junit.jupiter.api.Test;
 
 class ForgejoCommandsTest {
@@ -30,19 +32,41 @@ class ForgejoCommandsTest {
             new FakeForgejo(HashSet.of("code.example.net"), HashMap.of(PASSED, CommitStatus.State.PASSED));
 
     @Test
-    void forgejoAppliesWithARemoteOnAHostThatIsForgejo() {
+    void forgejoClaimsEachRemoteOnAHostThatIsForgejo() {
+        String github = "git@github.com:cvanfleteren/jazygit.git";
+        Msg detected = new DetectForgejo()
+                .run(FORGEJO.env(HashMap.of(
+                        new RemoteName("origin"), github,
+                        new RemoteName("upstream"), REMOTE,
+                        new RemoteName("mine"), "https://code.example.net/me/nix.git")));
+
+        ForgeClaim claim = ((FeatureMsg.Claimed) detected).claim();
+        assertEquals(ForgejoFeature.ID, claim.feature());
         assertEquals(
-                new FeatureMsg.Applies(ForgejoFeature.ID, true), new DetectForgejo().run(FORGEJO.env(origin(REMOTE))));
+                List.of("mine", "upstream"),
+                claim.claimed().keySet().toList().map(RemoteName::value).sorted());
+        assertEquals(REMOTE, claim.claimed().get(new RemoteName("upstream")).get());
+        assertEquals(HashSet.empty(), claim.unsure());
     }
 
     @Test
-    void itDoesNotWithoutOne() {
+    void itClaimsNoneWithoutOne() {
         assertEquals(
-                new FeatureMsg.Applies(ForgejoFeature.ID, false),
+                new FeatureMsg.Claimed(ForgeClaim.none(ForgejoFeature.ID, "Forgejo")),
                 new DetectForgejo().run(FORGEJO.env(origin("git@github.com:cvanfleteren/jazygit.git"))));
         assertEquals(
-                new FeatureMsg.Applies(ForgejoFeature.ID, false),
+                new FeatureMsg.Claimed(ForgeClaim.none(ForgejoFeature.ID, "Forgejo")),
                 new DetectForgejo().run(FORGEJO.env(origin("https://elsewhere.example.net/cvf/nix.git"))));
+    }
+
+    @Test
+    void aRemoteOnAHostThatCouldNotBeReachedCannotBeTold() {
+        ForgeClaim claim = ((FeatureMsg.Claimed)
+                        new DetectForgejo().run(FORGEJO.env(origin("https://" + FakeForgejo.DOWN + "/cvf/nix.git"))))
+                .claim();
+
+        assertEquals(HashMap.empty(), claim.claimed());
+        assertEquals(HashSet.of(new RemoteName("origin")), claim.unsure());
     }
 
     @Test

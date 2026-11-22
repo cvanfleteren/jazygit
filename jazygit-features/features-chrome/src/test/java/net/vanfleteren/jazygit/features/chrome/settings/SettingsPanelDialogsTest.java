@@ -60,7 +60,7 @@ class SettingsPanelDialogsTest {
                 new Choice<SettingsPanelPopup>('x', popup -> "x", SettingsPanelMsg.FileRequested::new));
 
         assertEquals(
-                List.of('t', 'r', 'm', 's', 'f', 'x', 'e'),
+                List.of('t', 'r', 'm', 's', 'f', 'o', 'x', 'e'),
                 SettingsPanelDialogs.panel(List.of(added)).choices().map(Choice::key));
         assertEquals(
                 List.of(

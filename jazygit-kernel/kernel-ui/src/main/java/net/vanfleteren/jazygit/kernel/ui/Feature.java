@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Reactions.Reaction;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeUpdate;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
@@ -408,9 +409,9 @@ public record Feature(
     }
 
     /**
-     * This feature, on for a repository only once {@code detect} found it applies to it (ADR 171): {@code detect}
-     * answers with {@code FeatureMsg.Applies} of {@code id}. It is asked once a repository is opened; until it answers,
-     * the feature is off.
+     * This feature, a forge, on for a repository only once the kernel chose it (ADR 171, 177): {@code detect} answers
+     * with {@code FeatureMsg.Claimed}, the remotes of the repository on it, and the kernel switches on the forge of
+     * the home, or asks the user which it is. It is asked once a repository is opened; until then, the feature is off.
      */
     public Feature applying(String id, Function<Model, Cmd> detect) {
         return new Feature(
@@ -443,8 +444,8 @@ public record Feature(
     private Feature gated(Applying applying) {
         String id = applying.id();
         Reaction detecting = (model, event) -> event instanceof KernelEvent.RepositoryOpened
-                ? new Update.Next(
-                        FeatureUpdate.off(model, id), List.of(applying.detect().apply(model)))
+                ? ForgeUpdate.opening(FeatureUpdate.off(model, id), id)
+                        .and(applying.detect().apply(model))
                 : Update.Next.of(model);
         return new Feature(
                 actions,
@@ -518,10 +519,11 @@ public record Feature(
             Path cacheDir) {}
 
     /**
-     * How a feature decides whether it applies to a repository (ADR 171).
+     * How a forge tells which remotes of a repository are on it, from which the kernel decides whether it applies to
+     * the repository (ADR 171, 177).
      *
      * @param id     its id, by which the model keeps whether it is on
-     * @param detect what finds out in a model, and answers with {@code FeatureMsg.Applies} of {@code id}
+     * @param detect what finds out in a model which remotes are on it, and answers with {@code FeatureMsg.Claimed}
      */
     public record Applying(String id, Function<Model, Cmd> detect) {}
 

@@ -173,8 +173,11 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   `Env`), its spinners and clocks (`spinning`, `clocking`), and whether it applies (`applying`, a detection run when
   the repository opens). `Feature.gated` keeps what a feature that is off would show or run out (`Model.on`,
   `FeatureSwitches`; keys through `Keymap.owned`, screens through `Screen.feature`, legends through
-  `Legend.feature`), but for its section of the settings panel. GitHub applies with a remote on a GitHub host and
-  gh found; it reads its pull requests once it is switched on (`KernelEvent.Switched`).
+  `Legend.feature`), but for its section of the settings panel. A forge's detection tells which remotes are its own
+  (`FeatureMsg.Claimed`, a `ForgeClaim`); once every forge told, the kernel switches on the forge of the home of the
+  pull requests, or asks the user which it is (`kernel.state.forge`: `ForgeDecision`, `ForgeUpdate`,
+  `ForgeChoicePopup`, kept in git's `jazygit.forgeHome`), and keeps the home in the model (`ForgeHome.of`) (ADR 177).
+  GitHub reads its pull requests once it is switched on (`KernelEvent.Switched`).
 - **Each forge has its own pull-request dialogs, and binds the keys the other does** (ADR 175): features that are on
   or off may bind one key in a scope, once each; it sends a `FeatureMsg.FirstOn`, which runs what the first of them
   that is on sends, and the help lists it once.

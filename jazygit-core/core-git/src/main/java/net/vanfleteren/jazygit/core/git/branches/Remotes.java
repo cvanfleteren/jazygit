@@ -35,6 +35,12 @@ public interface Remotes {
      */
     Either<GitError, Map<RemoteName, String>> urls();
 
+    /**
+     * The value of {@code remote.<name>.<key>} of each remote that has it, by its name: a setting a tool keeps on a
+     * remote, as gh's {@code gh-resolved} (ADR 177).
+     */
+    Either<GitError, Map<RemoteName, String>> setting(String key);
+
     // Pushing branches, as git push does.
 
     /**

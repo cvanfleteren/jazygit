@@ -63,3 +63,6 @@ it are on or off: a second forge cannot bind `o` on the branches as GitHub does.
 - Not: a test of the app that each forge, on alone, has no clashing keys: the keymap refuses those as it is made.
 - Not: keys of the panes that no forge names ("the pull request of this branch"), sending messages of the kernel
   that the forge on answers: every action of a forge that wants a key would need a message of the kernel.
+
+Amended by ADR 177: only the forge of the home of the pull requests applies to a repository, decided by the
+kernel from what the forges claim, or asked.
