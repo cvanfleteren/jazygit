@@ -219,7 +219,9 @@ public final class Keymap {
      * features that are on or off bind it alike, what the first of them that is on sends (ADR 175).
      */
     private static Option<Msg> firstOn(List<Msg> sent) {
-        return sent.size() > 1
+        // Two global keys of the kernel may match one press with labels that differ, as ctrl+p and ctrl+P: the first
+        // has it, as before.
+        return sent.size() > 1 && sent.forAll(FeatureMsg.Owned.class::isInstance)
                 ? Option.of(new FeatureMsg.FirstOn(sent.map(FeatureMsg.Owned.class::cast)))
                 : sent.headOption();
     }

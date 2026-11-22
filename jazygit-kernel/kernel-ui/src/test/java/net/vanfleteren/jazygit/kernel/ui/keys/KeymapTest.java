@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
@@ -200,6 +201,16 @@ class KeymapTest {
                 Option.of(new FeatureMsg.FirstOn(
                         List.of(new FeatureMsg.Owned("f", ALWAYS), new FeatureMsg.Owned("g", other)))),
                 keymap.handleGlobal(KeyEvent.ofChar('z')));
+    }
+
+    @Test
+    void twoGlobalKeysOfTheKernelThatMatchOnePressSendWhatTheFirstSends() {
+        Probe other = new Probe("other");
+        Keymap keymap = Keymap.empty()
+                .global(Keymap.Global.Dispatching.ofCtrl('p', "probe.p", () -> ALWAYS))
+                .global(Keymap.Global.Dispatching.ofCtrl('P', "probe.P", () -> other));
+
+        assertEquals(Option.of(ALWAYS), keymap.handleGlobal(KeyEvent.ofChar('p', KeyModifiers.CTRL)));
     }
 
     @Test
