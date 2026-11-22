@@ -53,6 +53,17 @@ public record ForgejoReview(String reviewer, Verdict verdict, boolean stale, boo
     }
 
     /**
+     * How many reviewers approve the pull request by {@code reviews}: whose last review that counts approves it (ADR
+     * 181). Forgejo counts only those of reviewers it trusts, which it does not tell: these may be more.
+     */
+    public static int approvals(List<ForgejoReview> reviews) {
+        return reviews.filter(ForgejoReview::counts)
+                .groupBy(ForgejoReview::reviewer)
+                .values()
+                .count(byReviewer -> byReviewer.last().verdict() == Verdict.APPROVED);
+    }
+
+    /**
      * Whether it says something of the pull request: it approves or asks for changes, and was not set aside.
      */
     public boolean counts() {

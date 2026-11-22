@@ -21,11 +21,13 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoBranchRules;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeSettings;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview.Verdict;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -166,6 +168,33 @@ class ForgejoPullRequestDialogTest {
                         "(M) Rebase, then merge commit",
                         "(f) Fast-forward only")
                 .forEach(key -> assertTrue(screen.contains(key), screen));
+    }
+
+    @Test
+    void aPullRequestItsBaseHoldsIsMergedWhenItsChecksSucceedAndOneScheduledShowsIt() throws Exception {
+        ForgejoBranchRules required = new ForgejoBranchRules(true, true, List.empty(), 0);
+        String holding = screen(read(new ShownPullRequest(
+                details("Merge it"), Option.none(), BUILDS, Option.none(), Option.of(required), 0, Option.none())));
+
+        List.of(
+                        "(m) Merge when checks succeed",
+                        "(s) Squash when checks succeed",
+                        "(r) Rebase when checks succeed",
+                        "(M) Rebase+merge when checks succeed",
+                        "(f) Fast-forward when checks succeed")
+                .forEach(key -> assertTrue(holding.contains(key), holding));
+
+        String scheduled = screen(read(new ShownPullRequest(
+                details("Merge it"),
+                Option.none(),
+                BUILDS,
+                Option.none(),
+                Option.of(required),
+                0,
+                Option.of(new ForgejoScheduledMerge("anna", TIME.minusSeconds(3_600))))));
+
+        assertTrue(scheduled.contains("Auto-merge  scheduled · @anna · "), scheduled);
+        assertTrue(scheduled.contains("(s) Cancel scheduled merge"), scheduled);
     }
 
     @Test

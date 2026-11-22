@@ -36,6 +36,7 @@ public final class HttpForgejo implements Forgejo {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final int OK = 200;
     private static final int CREATED = 201;
+    private static final int NO_CONTENT = 204;
     private static final int FORBIDDEN = 403;
     private static final int SERVER_ERROR = 500;
     // What Forgejo answers, with a 403, when it merged a pull request but could not delete its head branch (ADR 180).
@@ -211,7 +212,8 @@ public final class HttpForgejo implements Forgejo {
 
     /**
      * {@inheritDoc} With fj's token, which Forgejo needs for it. A 403 that says the head branch could not be deleted
-     * comes after the merge: it is merged, with its branch kept.
+     * comes after the merge: it is merged, with its branch kept. A merge when its checks succeed is answered with 201,
+     * scheduled.
      */
     @Override
     public Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge) {
@@ -220,12 +222,51 @@ public final class HttpForgejo implements Forgejo {
                         repo(repository) + "/pulls/" + number + "/merge",
                         request -> request.header("Content-Type", "application/json")
                                 .POST(HttpRequest.BodyPublishers.ofString(merge.json(), StandardCharsets.UTF_8)),
-                        OK)
+                        merge.whenChecksSucceed() ? CREATED : OK)
                 .fold(
                         error -> branchKept(error)
                                 .<Either<ForgejoError, ForgejoMerged>>map(Either::right)
                                 .getOrElse(() -> Either.left(error)),
-                        body -> Either.right(new ForgejoMerged.Merged()));
+                        body -> Either.right(
+                                merge.whenChecksSucceed()
+                                        ? new ForgejoMerged.Scheduled()
+                                        : new ForgejoMerged.Merged()));
+    }
+
+    @Override
+    public Either<ForgejoError, ForgejoBranchRules> branchRules(ForgejoRepository repository, String branch) {
+        return get(repository, repo(repository) + "/branches/" + encoded(branch))
+                .flatMap(body -> decoded(PullRequestJson.branchRules(), body));
+    }
+
+    /**
+     * {@inheritDoc} The timeline is read a page of {@value #PAGE} at a time, as the pull requests are: on one longer
+     * than {@value #PAGES} pages, what comes after is not seen.
+     */
+    @Override
+    public Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(
+            ForgejoRepository repository, long number) {
+        return pages(
+                        repository,
+                        repo(repository) + "/issues/" + number + "/timeline?",
+                        PullRequestJson.mergeEvents(),
+                        1,
+                        List.<Option<ForgejoScheduledMerge.Event>>empty())
+                .map(events -> ForgejoScheduledMerge.of(events.flatMap(event -> event)));
+    }
+
+    /**
+     * {@inheritDoc} With fj's token, which Forgejo needs for it; answered with 204.
+     */
+    @Override
+    public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
+        return send(
+                        repository,
+                        repo(repository) + "/pulls/" + number + "/merge",
+                        HttpRequest.Builder::DELETE,
+                        NO_CONTENT)
+                .swap()
+                .toOption();
     }
 
     private static Option<ForgejoMerged> branchKept(ForgejoError error) {

@@ -18,6 +18,7 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Activity;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Branches;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Conversation;
@@ -128,7 +129,46 @@ final class PullRequestJson {
                             .toLinkedSet(),
                     delete));
 
+    /**
+     * What a branch requires before a pull request is merged into it (ADR 181); a branch without a rule requires
+     * nothing.
+     */
+    private static final Decoder<ForgejoBranchRules> BRANCH_RULES = map4(
+            flag("protected"),
+            flag("enable_status_check"),
+            names("status_check_contexts", string()),
+            count("required_approvals"),
+            ForgejoBranchRules::new);
+
+    // The types of the timeline that schedule a merge for when the checks succeed, and cancel it.
+    private static final String SCHEDULED = "pull_scheduled_merge";
+    private static final String CANCELLED = "pull_cancel_scheduled_merge";
+
+    /**
+     * What an event of the timeline of a pull request says of scheduling its merge, if anything.
+     */
+    private static final Decoder<Option<ForgejoScheduledMerge.Event>> MERGE_EVENT =
+            map3(text("type"), USER, optionalField("created_at", instant()), (type, by, at) -> switch (type) {
+                case SCHEDULED -> at.map(when -> new ForgejoScheduledMerge.Event.Scheduled(by, when));
+                case CANCELLED -> Option.of(new ForgejoScheduledMerge.Event.Cancelled());
+                default -> Option.none();
+            });
+
     private PullRequestJson() {}
+
+    /**
+     * What a branch requires before a pull request is merged into it.
+     */
+    static Decoder<ForgejoBranchRules> branchRules() {
+        return BRANCH_RULES;
+    }
+
+    /**
+     * What the events of a page of the timeline of a pull request say of scheduling its merge.
+     */
+    static Decoder<List<Option<ForgejoScheduledMerge.Event>>> mergeEvents() {
+        return list(MERGE_EVENT);
+    }
 
     /**
      * How a repository lets its pull requests be merged.

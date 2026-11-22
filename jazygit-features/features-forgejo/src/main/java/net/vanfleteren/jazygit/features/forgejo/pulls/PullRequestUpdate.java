@@ -36,6 +36,9 @@ public final class PullRequestUpdate {
             case PullRequestMsg.MergeChosen(var style) -> MergeUpdate.chosen(model, style);
             case PullRequestMsg.Merged(var cmd, var merged) -> MergeUpdate.merged(model, cmd, merged);
             case PullRequestMsg.MergeFailed(var cmd, var failure) -> MergeUpdate.failed(model, cmd, failure);
+            case PullRequestMsg.AlreadyScheduled(var cmd) -> MergeUpdate.alreadyScheduled(model, cmd);
+            case PullRequestMsg.MergeCancelled(var cmd) -> MergeUpdate.cancelled(model, cmd, false);
+            case PullRequestMsg.NoLongerScheduled(var cmd) -> MergeUpdate.cancelled(model, cmd, true);
             // A warning, in the command log: the user chose the remote (ADR 179). It comes late, so it does not take
             // the place of what an operation left there, an error or a notice; then it is not given.
             case PullRequestMsg.PlainHttpChecked(var base) ->
@@ -105,12 +108,17 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * {@code model} once read {@code read} brought {@code result}: the dialog that waits for it shows it; unchanged
-     * when none does, as it was closed or read again since.
+     * {@code model} once read {@code read} brought {@code result}: the dialog that waits for it shows it, as what is
+     * kept of a merge scheduled says (ADR 181), which keeps what it shows; unchanged when none does, as it was closed
+     * or read again since.
      */
     private static Model read(Model model, long read, Either<Failure, ShownPullRequest> result) {
+        ForgejoPullRequests prs = model.part(ForgejoPullRequests.PART);
+        Either<Failure, ShownPullRequest> seen = result.map(prs::shown);
         return model.popup(ForgejoPullRequestPopup.class)
-                .map(popup -> model.openPopup(popup.with(result, read)))
+                .filter(popup -> popup.read() == read)
+                .map(popup -> model.withPart(ForgejoPullRequests.PART, seen.fold(_ -> prs, prs::readShown))
+                        .openPopup(popup.with(seen, read)))
                 .getOrElse(model);
     }
 
@@ -126,15 +134,27 @@ public final class PullRequestUpdate {
     private static Next refreshChosen(Model model) {
         return model.popup(ForgejoPullRequestPopup.class)
                 .filter(popup -> !popup.reading())
-                .map(popup -> {
-                    Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
-                    long read = given.part(ForgejoPullRequests.PART).reads();
-                    return Next.of(
-                            given.openPopup(popup.readingAgain(read)),
-                            new LoadPullRequest(
-                                    popup.home(), popup.pullRequest().number(), read));
-                })
+                .map(popup -> readAgain(model, popup))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Reads pull request {@code number} again when the dialog shows it, as after its merge was scheduled or cancelled
+     * (ADR 181): also while it is read, as that read may have started before; the dialog then waits for this one.
+     */
+    static Next readAgain(Next next, long number) {
+        return next.then(model -> model.popup(ForgejoPullRequestPopup.class)
+                .filter(popup -> popup.pullRequest().number() == number)
+                .map(popup -> readAgain(model, popup))
+                .getOrElse(() -> Next.of(model)));
+    }
+
+    private static Next readAgain(Model model, ForgejoPullRequestPopup popup) {
+        Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
+        long read = given.part(ForgejoPullRequests.PART).reads();
+        return Next.of(
+                given.openPopup(popup.readingAgain(read)),
+                new LoadPullRequest(popup.home(), popup.pullRequest().number(), read));
     }
 
     /**

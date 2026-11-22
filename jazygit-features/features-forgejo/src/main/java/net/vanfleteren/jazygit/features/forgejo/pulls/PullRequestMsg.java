@@ -71,4 +71,20 @@ public sealed interface PullRequestMsg extends Msg {
      * Merging the pull request of {@code cmd} failed, as {@code failure} says.
      */
     record MergeFailed(MergePullRequestCmd cmd, Failure failure) implements PullRequestMsg {}
+
+    /**
+     * Forgejo did not schedule the merge of {@code cmd}, as one is scheduled already (ADR 181).
+     */
+    record AlreadyScheduled(MergePullRequestCmd cmd) implements PullRequestMsg {}
+
+    /**
+     * The scheduled merge of the pull request of {@code cmd} was cancelled (ADR 181).
+     */
+    record MergeCancelled(CancelScheduledMergeCmd cmd) implements PullRequestMsg {}
+
+    /**
+     * The merge of the pull request of {@code cmd} was not scheduled any more when it was to be cancelled: it was
+     * merged, or Forgejo dropped it, as when merging it failed.
+     */
+    record NoLongerScheduled(CancelScheduledMergeCmd cmd) implements PullRequestMsg {}
 }

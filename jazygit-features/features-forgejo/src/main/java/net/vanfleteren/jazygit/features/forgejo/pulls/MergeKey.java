@@ -3,23 +3,29 @@ package net.vanfleteren.jazygit.features.forgejo.pulls;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.State;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 
 /**
- * What a merge key of the pull request dialog on Forgejo does, by what was read of the pull request (ADR 180): merge
- * it now as its style says, or nothing, and why. What the rules of its base branch require, approvals or checks,
- * Forgejo does not say before it is merged: it refuses the merge then, saying why.
+ * What a merge key of the pull request dialog on Forgejo does, by what was read of the pull request (ADR 180, 181):
+ * merge it now as its style says, schedule it for when its checks succeed, cancel the merge scheduled, or nothing, and
+ * why.
  */
 sealed interface MergeKey {
 
     /**
-     * What the key of {@code style} does to {@code shown}, the first that fits: a pull request that is not open, a
+     * What the key of {@code style} does to {@code shown}, the first that fits: a pull request that is not open is not
+     * merged; while its merge is scheduled, every key cancels it, as Forgejo schedules one and does not say how; a
      * draft, one that does not merge without conflicts as far as Forgejo found, or a style its repository does not
-     * allow, as far as that was read, is not merged.
+     * allow, as far as that was read, is not merged; one its base branch does not let be merged yet is merged when its
+     * checks succeed; any other now.
      */
     static MergeKey of(ShownPullRequest shown, ForgejoMergeStyle style) {
         ForgejoPullRequestDetails.Status status = shown.pullRequest().status();
         if (status.state() != State.OPEN) {
             return new Disabled(new Why.NotOpen());
+        }
+        if (shown.scheduled().isDefined()) {
+            return new Cancel(shown.scheduled().get());
         }
         if (status.draft()) {
             return new Disabled(new Why.Draft());
@@ -30,13 +36,23 @@ sealed interface MergeKey {
         return shown.settings()
                 .filter(settings -> !settings.allows(style))
                 .<MergeKey>map(settings -> new Disabled(new Why.NotAllowed(style)))
-                .getOrElse(Now::new);
+                .getOrElse(() -> shown.waits() ? new WhenChecksSucceed() : new Now());
     }
 
     /**
      * Merges it now as its style says.
      */
     record Now() implements MergeKey {}
+
+    /**
+     * Schedules it to be merged as its style says once the rules of its base branch are met (ADR 181).
+     */
+    record WhenChecksSucceed() implements MergeKey {}
+
+    /**
+     * Cancels {@code merge}, the merge scheduled for it.
+     */
+    record Cancel(ForgejoScheduledMerge merge) implements MergeKey {}
 
     /**
      * Does nothing, for the reason {@code why} says.

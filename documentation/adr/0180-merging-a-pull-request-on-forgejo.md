@@ -79,3 +79,5 @@ Forgejo's API (as of `main` at 6840f006da, Codeberg's swagger 17.0.0):
 - No acceptance test covers it, for the reason of ADR 176. The feature's tests run its update, commands and dialog on
   a Forgejo of the test's, and core-forgejo's run the requests against a server of the test's.
 - ADR 176 is amended: merging comes as this says.
+
+Amended by ADR 181: a pull request its base branch holds is merged when its checks succeed.
