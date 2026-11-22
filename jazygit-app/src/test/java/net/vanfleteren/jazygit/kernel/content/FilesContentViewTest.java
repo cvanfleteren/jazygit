@@ -34,7 +34,7 @@ class FilesContentViewTest {
 
     private final Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
-    private static final DiffLook RICH_LOOK = new DiffLook(DiffStyle.RICH, true, true);
+    private static final DiffLook RICH_LOOK = new DiffLook(DiffStyle.RICH, true, true, true);
 
     private static final DiffText STASHED =
             DiffText.of("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-a\n+b\n");

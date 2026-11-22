@@ -69,8 +69,8 @@ public final class RichDiff {
      * stop of the cursor starts in the lines (ADR 60): the bar of each file, each line that has a side and a number,
      * each thread, and each comment of an open thread but its first. Each file has a marker for the lines it leaves
      * out, as far as {@code folded} knows them (ADR 77). The lines of a hunk are shown in pairs where they can be (ADR
-     * 83, {@link LinePairs}), but those of {@code asGiven}, the hunk a range is open in, which are shown as git gives
-     * them. Side by side, it is unified, with a note that says why, when the area is narrower than
+     * 83, {@link LinePairs}), unless {@code drawing} says not to, but those of {@code asGiven}, the hunk a range is open
+     * in, which are shown as git gives them. Side by side, it is unified, with a note that says why, when the area is narrower than
      * {@link #SPLIT_WIDTH}.
      */
     public static Drawn drawn(
@@ -232,29 +232,34 @@ public final class RichDiff {
 
     /**
      * How a diff is drawn: what it {@code highlights}, in the {@code styles} of the theme, in an area {@code width}
-     * columns wide, which a version of a file is rendered as wide as, its gutter included (ADR 103), and laid out as
-     * {@code split} says.
+     * columns wide, which a version of a file is rendered as wide as, its gutter included (ADR 103), laid out as
+     * {@code split} says, and, unified, its changed lines in pairs where they can be if {@code paired} (ADR 83), else
+     * as git gives them.
      */
-    public record Drawing(Set<Highlight> highlights, Theme.SpanStyles styles, int width, Split split) {
+    public record Drawing(Set<Highlight> highlights, Theme.SpanStyles styles, int width, Split split, boolean paired) {
 
         /**
-         * A diff drawn in {@code styles}, its syntax and its words highlighted, unified, {@link #RENDERED_WIDTH}
-         * columns wide.
+         * A diff drawn in {@code styles}, its syntax and its words highlighted, unified, its changed lines in pairs,
+         * {@link #RENDERED_WIDTH} columns wide.
          */
         public static Drawing of(Theme.SpanStyles styles) {
-            return new Drawing(HashSet.of(Highlight.values()), styles, RENDERED_WIDTH, Split.UNIFIED);
+            return new Drawing(HashSet.of(Highlight.values()), styles, RENDERED_WIDTH, Split.UNIFIED, true);
         }
 
         public Drawing withHighlights(Set<Highlight> highlights) {
-            return new Drawing(highlights, styles, width, split);
+            return new Drawing(highlights, styles, width, split, paired);
         }
 
         public Drawing withWidth(int width) {
-            return new Drawing(highlights, styles, width, split);
+            return new Drawing(highlights, styles, width, split, paired);
         }
 
         public Drawing withSplit(Split split) {
-            return new Drawing(highlights, styles, width, split);
+            return new Drawing(highlights, styles, width, split, paired);
+        }
+
+        public Drawing withPaired(boolean paired) {
+            return new Drawing(highlights, styles, width, split, paired);
         }
 
         boolean has(Highlight highlight) {

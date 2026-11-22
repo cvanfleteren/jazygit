@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog.Row;
 
 /**
  * The popup of the diff options: the style the diffs are drawn in and the lines of context, which the arrows to the
- * sides step through and Enter steps forward, the switches of the changed words and of whitespace, which Space or Enter
+ * sides step through and Enter steps forward, the switches of the changed words, of the pairs of changed lines and of whitespace, which Space or Enter
  * switches, and the diff filters, which Space switches all off or on again and Enter opens the popup of. Each change
  * shows at once; the popup stays open.
  */
@@ -33,7 +33,7 @@ public final class DiffOptionsDialog {
     /**
      * The row of the diff filters, which the popup of the filters goes back to.
      */
-    static final int FILTERS_ROW = 4;
+    static final int FILTERS_ROW = 5;
 
     private static final List<DiffStyle> STYLES = List.of(DiffStyle.values());
 
@@ -49,7 +49,8 @@ public final class DiffOptionsDialog {
     }
 
     /**
-     * The rows of {@code popup}: the style, the context, the changed words, whitespace and the filters.
+     * The rows of {@code popup}: the style, the context, the changed words, the pairs of changed lines,
+     * whitespace and the filters.
      */
     static List<Row<Msg>> rows(DiffOptionsPopup popup) {
         DiffStyle style = popup.style();
@@ -81,13 +82,26 @@ public final class DiffOptionsDialog {
                                 Cell.styled(DiffFiltersDialog.box(popup.words()), Theme.Classes.DISABLED),
                                 Cell.styled(
                                         Messages.get("changes.dialog.diffOptions.words.plain"), Theme.Classes.DIM)));
+        // Only the unified rich style pairs lines or not: the split one shows them side by side already.
+        Row<Msg> pairsRow = new Row<>(
+                new DiffOptionsMsg.PairsToggled(),
+                style == DiffStyle.RICH
+                        ? List.of(
+                                Cell.of(Messages.get("changes.dialog.diffOptions.pairs")),
+                                Cell.of(DiffFiltersDialog.box(popup.pairs())),
+                                Cell.styled(Messages.get("changes.dialog.diffOptions.saved"), Theme.Classes.DIM))
+                        : List.of(
+                                Cell.styled(Messages.get("changes.dialog.diffOptions.pairs"), Theme.Classes.DISABLED),
+                                Cell.styled(DiffFiltersDialog.box(popup.pairs()), Theme.Classes.DISABLED),
+                                Cell.styled(
+                                        Messages.get("changes.dialog.diffOptions.pairs.notRich"), Theme.Classes.DIM)));
         Row<Msg> whitespaceRow = new Row<>(
                 new DiffOptionsMsg.WhitespaceToggled(),
                 List.of(
                         Cell.of(Messages.get("changes.dialog.diffOptions.whitespace")),
                         Cell.of(DiffFiltersDialog.box(popup.ignoreWhitespace())),
                         Cell.styled(Messages.get("changes.dialog.diffOptions.session"), Theme.Classes.DIM)));
-        return List.of(styleRow, contextRow, wordsRow, whitespaceRow, filtersRow(popup.filters()));
+        return List.of(styleRow, contextRow, wordsRow, pairsRow, whitespaceRow, filtersRow(popup.filters()));
     }
 
     private static Row<Msg> filtersRow(DiffFilters filters) {

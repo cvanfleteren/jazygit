@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
  */
 class CommitContentTest {
 
-    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true, true);
+    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true, true, true);
 
     @Test
     void commitTextShowsTheHeaderTheMessageADividerAndTheChanges() {

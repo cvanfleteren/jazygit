@@ -69,6 +69,11 @@ public record Settings(Map<String, Held<?>> held) {
      */
     public static final SettingKey<Boolean> DIFF_WORDS = SettingKey.of("ui.diff-words", true, Codec.bool());
     /**
+     * Whether the unified rich view shows each removed line beside the added line that replaced it (ADR 83), or the
+     * lines of a hunk as git gives them, the removed ones before the added ones.
+     */
+    public static final SettingKey<Boolean> DIFF_PAIRS = SettingKey.of("ui.diff-pairs", true, Codec.bool());
+    /**
      * The heights of the panes of the left column of the repository screen. The TOML writer writes a java.util list
      * as an array.
      */
@@ -170,6 +175,14 @@ public record Settings(Map<String, Held<?>> held) {
 
     public Settings withDiffWords(boolean on) {
         return with(DIFF_WORDS, on);
+    }
+
+    public boolean diffPairs() {
+        return get(DIFF_PAIRS);
+    }
+
+    public Settings withDiffPairs(boolean on) {
+        return with(DIFF_PAIRS, on);
     }
 
     public List<Integer> repositoryHeights() {

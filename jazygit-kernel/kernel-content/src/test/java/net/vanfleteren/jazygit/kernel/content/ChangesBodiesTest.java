@@ -34,7 +34,8 @@ class ChangesBodiesTest {
                     new Stash("stash@{0}", new Sha("5555"), "my work", Option.none(), Instant.EPOCH), changes));
 
     private static ShownChanges changes(DiffStyle style) {
-        return new ShownChanges(new ShownDiff(DiffText.of("+a\n"), Option.none()), new DiffLook(style, true, true));
+        return new ShownChanges(
+                new ShownDiff(DiffText.of("+a\n"), Option.none()), new DiffLook(style, true, true, true));
     }
 
     @Test
