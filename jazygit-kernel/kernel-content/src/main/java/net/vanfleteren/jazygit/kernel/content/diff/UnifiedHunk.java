@@ -51,12 +51,13 @@ record UnifiedHunk(
 
     /**
      * The hunks of {@code file} laid out as in the unified view, as wide as its gutter and its widest line. The lines
-     * of its hunk {@code asGiven}, and of a block a thread on several lines covers, are shown as git gives them, else
-     * in pairs where they can be (ADR 83).
+     * of its hunk {@code asGiven}, and of a block a thread on several lines covers, are shown as git gives them, as are
+     * all its lines when its drawing does not pair them, else in pairs where they can be (ADR 83).
      */
     static UnifiedHunk of(FileSections.Lines file, Option<Integer> asGiven) {
         Vector<ParsedLine> lines = file.lines();
-        boolean version = file.fold().version().isDefined();
+        // A version shows its lines in their order in the file, never in pairs (ADR 102).
+        boolean unpaired = file.fold().version().isDefined() || !file.drawing().paired();
         // A version shown blamed has the column of its blame before its numbers (ADR 147).
         Option<BlameColumn> blame =
                 Gutter.blameColumn(lines, file.fold(), file.drawing().width(), file.styles());
@@ -74,7 +75,7 @@ record UnifiedHunk(
         Vector<Vector<Row>> byHunk = Vector.range(0, file.hunks().size()).map(at -> file.inHunk(rows, at));
         // A block a thread covers stays as git gives it, so its gutter marks the lines the thread is on in a run.
         Vector<Vector<Group>> groups = file.hunks()
-                .zipWithIndex((hunk, at) -> (asGiven.contains(at) || version
+                .zipWithIndex((hunk, at) -> (asGiven.contains(at) || unpaired
                                 ? List.range(0, hunk.lines().size()).map(List::of)
                                 : LinePairs.groups(
                                         hunk.lines(),

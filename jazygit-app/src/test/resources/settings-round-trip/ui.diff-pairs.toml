@@ -1,0 +1,39 @@
+# my settings
+future = true
+old-key = "kept"
+
+[ui]
+# the one I like
+theme = "darcula"
+repository-width = 40
+diff-syntax = false
+repository-heights = [20, 20, 20]
+animations = false
+diff-filters = ["java-imports"]
+other = 3
+diff-pairs = false
+
+[git]
+# fetch by hand
+auto-fetch = false
+
+[github]
+executable = "/opt/gh"
+
+[github.browsers."github.com"]
+# personal
+cvf = "firefox -P personal"
+
+[mine]
+x = [1, 2]
+
+[[editors]]
+# the IDE
+name = "IntelliJ"
+command = ["idea", "{dir}"]
+shortcut = "i"
+
+[[diff-filters]]
+id = "mine"
+name = "Generated sources"
+paths = ["**/generated/**"]

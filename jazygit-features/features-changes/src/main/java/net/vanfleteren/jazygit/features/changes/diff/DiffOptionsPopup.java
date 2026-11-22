@@ -11,12 +11,18 @@ import net.vanfleteren.jazygit.kernel.state.preferences.Preferences;
  *
  * @param style            how the diffs are drawn
  * @param words            whether the rich view highlights the words that changed in a line
+ * @param pairs            whether the rich view shows the changed lines in pairs, or as git gives them (ADR 83)
  * @param ignoreWhitespace whether changes to whitespace only are left out, for this session
  * @param context          how many lines show around a change, for this session
  * @param filters          the diff filters, which are enabled, and whether all are switched off
  */
 public record DiffOptionsPopup(
-        DiffStyle style, boolean words, boolean ignoreWhitespace, DiffContext context, DiffFilters filters)
+        DiffStyle style,
+        boolean words,
+        boolean pairs,
+        boolean ignoreWhitespace,
+        DiffContext context,
+        DiffFilters filters)
         implements Popup {
 
     /**
@@ -26,6 +32,7 @@ public record DiffOptionsPopup(
         return new DiffOptionsPopup(
                 preferences.settings().diffStyle(),
                 preferences.settings().diffWords(),
+                preferences.settings().diffPairs(),
                 preferences.ignoreWhitespace(),
                 preferences.context(),
                 preferences.diffFilters());

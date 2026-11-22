@@ -10,6 +10,7 @@ diff-filters = ["java-imports", "lockfiles"]
 other = 3
 diff-style = "plain"
 diff-words = false
+diff-pairs = false
 pull-requests-width = 50
 pull-requests-heights = [40, 30]
 

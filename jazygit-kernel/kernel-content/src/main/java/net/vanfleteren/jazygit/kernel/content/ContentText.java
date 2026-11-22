@@ -270,7 +270,8 @@ public final class ContentText {
                     case WORDS -> look.words();
                 }))
                 .withWidth(width)
-                .withSplit(look.style() == DiffStyle.SPLIT ? RichDiff.Split.SIDE_BY_SIDE : RichDiff.Split.UNIFIED);
+                .withSplit(look.style() == DiffStyle.SPLIT ? RichDiff.Split.SIDE_BY_SIDE : RichDiff.Split.UNIFIED)
+                .withPaired(look.paired());
     }
 
     static List<String> lines(String text) {

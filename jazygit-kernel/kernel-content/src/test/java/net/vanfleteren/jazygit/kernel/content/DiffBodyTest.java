@@ -52,7 +52,8 @@ class DiffBodyTest {
             HashSet.empty());
 
     private static ShownChanges changes(DiffStyle style) {
-        return new ShownChanges(new ShownDiff(DiffText.of(PAIRS), Option.none()), new DiffLook(style, true, true));
+        return new ShownChanges(
+                new ShownDiff(DiffText.of(PAIRS), Option.none()), new DiffLook(style, true, true, true));
     }
 
     @Test

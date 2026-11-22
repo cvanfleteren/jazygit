@@ -27,6 +27,7 @@ class SettingsTest {
             .withDiffStyle(DiffStyle.PLAIN)
             .withDiffSyntax(false)
             .withDiffWords(false)
+            .withDiffPairs(false)
             .withRepositoryHeights(List.of(20, 20, 20))
             .withAnimations(false)
             .withAutoRefresh(false)

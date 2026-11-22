@@ -228,6 +228,7 @@ class DiffOptionsUpdateTest {
                 new DiffOptionsPopup(
                         DiffStyle.SPLIT,
                         !open.preferences().settings().diffWords(),
+                        open.preferences().settings().diffPairs(),
                         true,
                         DiffContext.DEFAULT.wider(),
                         open.preferences().diffFilters()),
@@ -243,6 +244,60 @@ class DiffOptionsUpdateTest {
 
         assertSame(plain, next.model());
         assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void togglingPairsKeepsItForTheNextSessionWithoutReadingTheDiffsAgain() {
+        Model model = shown().mapPreferences(preferences ->
+                preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+
+        Next next = Update.update(model, new DiffOptionsMsg.PairsToggled());
+
+        assertFalse(next.model().preferences().diffLook().paired());
+        assertEquals(
+                List.of(new SaveSettings(
+                        model.preferences().settings(),
+                        model.preferences().settings().withDiffPairs(false))),
+                next.cmds());
+        assertEquals(model.repoView(), next.model().repoView());
+        assertTrue(Update.update(next.model(), new DiffOptionsMsg.PairsToggled())
+                .model()
+                .preferences()
+                .diffLook()
+                .paired());
+    }
+
+    @Test
+    void thePairsCannotBeSwitchedButInTheUnifiedRichStyle() {
+        Model plain = Update.update(shown(), new DiffOptionsMsg.StyleChosen(DiffStyle.PLAIN))
+                .model();
+        Model split = Update.update(shown(), new DiffOptionsMsg.StyleChosen(DiffStyle.SPLIT))
+                .model();
+
+        Next inPlain = Update.update(plain, new DiffOptionsMsg.PairsToggled());
+        Next inSplit = Update.update(split, new DiffOptionsMsg.PairsToggled());
+
+        assertSame(plain, inPlain.model());
+        assertEquals(List.of(), inPlain.cmds());
+        assertSame(split, inSplit.model());
+        assertEquals(List.of(), inSplit.cmds());
+    }
+
+    @Test
+    void thePairsRowSwitchesThemAndIsDisabledButInTheUnifiedRichStyle() {
+        Model open = Update.update(shown(), new DiffOptionsMsg.Requested()).model();
+        DiffOptionsPopup plain = open.popup(DiffOptionsPopup.class).get();
+        DiffOptionsPopup rich = Update.update(open, new DiffOptionsMsg.StyleChosen(DiffStyle.RICH))
+                .model()
+                .popup(DiffOptionsPopup.class)
+                .get();
+
+        PickDialog.Row<Msg> enabled = DiffOptionsDialog.rows(rich).get(3);
+        PickDialog.Row<Msg> disabled = DiffOptionsDialog.rows(plain).get(3);
+
+        assertEquals(new DiffOptionsMsg.PairsToggled(), enabled.value());
+        assertEquals("Pair changed lines", enabled.cells().head().text());
+        assertEquals("only in the rich style", disabled.cells().last().text());
     }
 
     @Test

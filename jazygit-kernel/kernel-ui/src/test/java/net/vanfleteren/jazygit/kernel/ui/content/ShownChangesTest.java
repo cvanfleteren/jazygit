@@ -29,7 +29,7 @@ class ShownChangesTest {
              three
             """);
 
-    private static final DiffLook RICH = new DiffLook(DiffStyle.RICH, true, true);
+    private static final DiffLook RICH = new DiffLook(DiffStyle.RICH, true, true, true);
 
     /**
      * The new version of a.txt shown in place of its diff, read whole.
@@ -50,8 +50,8 @@ class ShownChangesTest {
 
     @Test
     void aDiffIsDrawnToTheWidthOfItsAreaOnlyWhenSplit() {
-        assertTrue(
-                shown(Option.none(), new DiffLook(DiffStyle.SPLIT, true, true)).drawnToWidth());
+        assertTrue(shown(Option.none(), new DiffLook(DiffStyle.SPLIT, true, true, true))
+                .drawnToWidth());
         assertFalse(shown(Option.none(), RICH).drawnToWidth());
     }
 

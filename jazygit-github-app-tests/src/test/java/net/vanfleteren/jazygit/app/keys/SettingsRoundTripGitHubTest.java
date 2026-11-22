@@ -124,6 +124,7 @@ class SettingsRoundTripGitHubTest {
             change(Settings.DIFF_STYLE.path(), settings -> settings.withDiffStyle(DiffStyle.PLAIN)),
             change(Settings.DIFF_SYNTAX.path(), settings -> settings.withDiffSyntax(true)),
             change(Settings.DIFF_WORDS.path(), settings -> settings.withDiffWords(false)),
+            change(Settings.DIFF_PAIRS.path(), settings -> settings.withDiffPairs(false)),
             change(Settings.REPOSITORY_HEIGHTS.path(), settings -> settings.withRepositoryHeights(List.of(25, 25, 25))),
             change(Settings.ANIMATIONS.path(), settings -> settings.withAnimations(true)),
             change(Settings.AUTO_REFRESH.path(), settings -> settings.withAutoRefresh(false)),

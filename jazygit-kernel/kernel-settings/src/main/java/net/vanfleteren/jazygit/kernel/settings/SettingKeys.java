@@ -19,6 +19,7 @@ public record SettingKeys(List<SettingKey<?>> all) {
             Settings.DIFF_STYLE,
             Settings.DIFF_SYNTAX,
             Settings.DIFF_WORDS,
+            Settings.DIFF_PAIRS,
             Settings.REPOSITORY_HEIGHTS,
             Settings.ANIMATIONS,
             Settings.AUTO_REFRESH,

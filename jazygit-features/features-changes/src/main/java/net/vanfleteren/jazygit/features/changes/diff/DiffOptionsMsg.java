@@ -41,6 +41,12 @@ public sealed interface DiffOptionsMsg extends Msg {
     record WordsToggled() implements DiffOptionsMsg {}
 
     /**
+     * The user asked for the rich view to show each removed line beside the added line that replaced it (ADR 83), or
+     * the lines of a hunk as git gives them.
+     */
+    record PairsToggled() implements DiffOptionsMsg {}
+
+    /**
      * The user asked for the diffs to show more lines around a change.
      */
     record ContextWidened() implements DiffOptionsMsg {}

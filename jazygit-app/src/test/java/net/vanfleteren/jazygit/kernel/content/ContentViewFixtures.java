@@ -23,7 +23,7 @@ final class ContentViewFixtures {
 
     private ContentViewFixtures() {}
 
-    static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true, true);
+    static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true, true, true);
 
     /**
      * What the files pane says in place of a diff: a note, an area that holds the focus (ADR 117).

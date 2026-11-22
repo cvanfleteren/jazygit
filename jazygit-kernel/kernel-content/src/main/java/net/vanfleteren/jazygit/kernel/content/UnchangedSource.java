@@ -77,7 +77,8 @@ record UnchangedSource() implements ContentSource {
                         title,
                         new ScrolledContent.Unchanged(path, asDiff, commit),
                         new DiffBody(new ShownChanges(
-                                Shows.shown(asDiff), new DiffLook(DiffStyle.RICH, look.syntax(), look.words()))));
+                                Shows.shown(asDiff),
+                                new DiffLook(DiffStyle.RICH, look.syntax(), look.words(), look.paired()))));
             }
             case FileContent.Binary(long size) -> Shown.dim(title, Messages.get("content.file.binarySize", size(size)));
             case FileContent.Link(String target) -> Shown.dim(title, Messages.get("content.file.link", target));

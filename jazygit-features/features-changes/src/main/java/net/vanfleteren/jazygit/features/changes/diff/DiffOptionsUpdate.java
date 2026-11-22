@@ -46,6 +46,7 @@ public final class DiffOptionsUpdate {
             case DiffOptionsMsg.StyleChosen(DiffStyle style) -> shown(styled(model, previous -> style));
             case DiffOptionsMsg.SplitToggled() -> shown(styled(model, DiffStyle::splitToggled));
             case DiffOptionsMsg.WordsToggled() -> shown(wordsToggled(model));
+            case DiffOptionsMsg.PairsToggled() -> shown(pairsToggled(model));
             case DiffOptionsMsg.ContextWidened() -> shown(stepped(model, DiffContext::wider));
             case DiffOptionsMsg.ContextNarrowed() -> shown(stepped(model, DiffContext::narrower));
         };
@@ -105,6 +106,23 @@ public final class DiffOptionsUpdate {
             return Next.of(model);
         }
         Settings chosen = previous.withDiffWords(!previous.diffWords());
+        return Next.of(
+                model.mapPreferences(preferences -> preferences.withSettings(chosen)),
+                new SaveSettings(previous, chosen));
+    }
+
+    /**
+     * Shows the changed lines of the rich view in pairs from now on (ADR 83), or as git gives them, keeping it for the
+     * next session. It only changes how the diffs are drawn, so they are not read again. Only the unified rich style
+     * lays lines out in pairs or not: the plain one shows them as git gives them, and the split one side by side, so
+     * there it changes nothing and the popup shows it disabled.
+     */
+    private static Next pairsToggled(Model model) {
+        Settings previous = model.preferences().settings();
+        if (previous.diffStyle() != DiffStyle.RICH) {
+            return Next.of(model);
+        }
+        Settings chosen = previous.withDiffPairs(!previous.diffPairs());
         return Next.of(
                 model.mapPreferences(preferences -> preferences.withSettings(chosen)),
                 new SaveSettings(previous, chosen));

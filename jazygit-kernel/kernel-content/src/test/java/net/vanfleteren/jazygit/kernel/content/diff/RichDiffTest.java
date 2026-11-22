@@ -312,6 +312,39 @@ class RichDiffTest {
     }
 
     @Test
+    void unpairedTheChangedLinesAreShownAsGitGivesThemAndTheCursorStopsOnThemInThatOrder() {
+        Drawn drawn = RichDiff.drawn(
+                Expansion.Folded.of(ParsedDiff.of(VERSIONS)),
+                Option.none(),
+                Option.none(),
+                RichDiff.Drawing.of(Theme.SpanStyles.NONE).withPaired(false));
+
+        assertEquals(
+                List.of(
+                        "44    │ - <checkstyle>14.3.0</checkstyle>",
+                        "45    │ - <errorprone>2.51.0</errorprone>",
+                        "46    │ - <native>1.1.17</native>",
+                        "   44 │ + <checkstyle>14.4.0</checkstyle>",
+                        "   45 │ + <errorprone>2.52.0</errorprone>",
+                        "   46 │ + <native>1.1.18</native>"),
+                text(drawn.lines())
+                        .filter(line -> line.contains("│ -") || line.contains("│ +"))
+                        .map(String::stripTrailing));
+        assertEquals(
+                List.of(
+                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 44),
+                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 45),
+                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 46),
+                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 44),
+                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 45),
+                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 46)),
+                drawn.stops()
+                        .map(stop -> stop.mark().anchor())
+                        .filter(anchor ->
+                                anchor instanceof Anchor.OnLine(var path, var side, int number) && number > 43));
+    }
+
+    @Test
     void theHunkARangeIsOpenInIsShownAsGitGivesIt() {
         List<String> lines = text(RichDiff.drawn(
                                 Expansion.Folded.of(ParsedDiff.of(VERSIONS)),
