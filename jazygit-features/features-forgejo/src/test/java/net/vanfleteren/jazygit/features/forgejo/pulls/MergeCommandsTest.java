@@ -27,12 +27,7 @@ import org.junit.jupiter.api.Test;
 class MergeCommandsTest {
 
     private static final MergePullRequestCmd REBASE = new MergePullRequestCmd(
-            ORIGIN,
-            new BranchName("feature"),
-            12,
-            ForgejoMergeStyle.REBASE,
-            new FailedMerge.Standing(HEAD, true, false),
-            true);
+            ORIGIN, new BranchName("feature"), 12, ForgejoMergeStyle.REBASE, new FailedMerge.Standing(HEAD), true);
 
     private static Phrase phrase(int status, String body) {
         return new MergeFailure(new ForgejoError.Refused(status, body), "code.example.net", "cvf/nix").phrase();

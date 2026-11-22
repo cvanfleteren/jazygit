@@ -18,11 +18,10 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 public record FailedMerge(long number, ForgejoMergeStyle style, Failure failure, Standing standing) {
 
     /**
-     * How a pull request stood, as it was last read before it was merged.
+     * How a pull request stood, as it was last read before it was merged: its head alone, as only one that is no
+     * draft and merges without conflicts is merged, so that those never differ.
      *
-     * @param head      the commit its head was at
-     * @param mergeable whether it merged without conflicts, as Forgejo found
-     * @param draft     whether it was a draft
+     * @param head the commit its head was at
      */
-    public record Standing(Sha head, boolean mergeable, boolean draft) {}
+    public record Standing(Sha head) {}
 }

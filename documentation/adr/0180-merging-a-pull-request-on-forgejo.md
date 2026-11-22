@@ -56,14 +56,18 @@ Forgejo's API (as of `main` at 6840f006da, Codeberg's swagger 17.0.0):
   could not be deleted is a merge, with a notice that Forgejo kept the branch, saying why. The local branch is left as
   it is.
 - **Once merged, the remotes are fetched and the open pull requests read again**, as after any operation that changes
-  the forge, as the base changed and the pull request is no longer open.
+  the forge, as the base changed and the pull request is no longer open. A merge that failed reads them again too: its
+  head may have moved on, or it may be merged all the same, as Forgejo merges before it deletes the branch, and a
+  deletion that fails otherwise than the 403s known is answered as a failure.
 - **Errors say what to do**, as creating does (ADR 178): 401, to run `fj auth login` for the host; 403, that one may not
   merge in the repository, with Forgejo's message; 405, that Forgejo does not merge it, with its message; 409 without a
   message, that it conflicts with its base; others with their status and message.
 - **A merge that failed is kept in Forgejo's part** (`FailedMerge`), the last of each pull request: its style, why, and
-  how the pull request stood when it was asked, its head, `mergeable` and whether it was a draft, as GitHub's standing
-  (ADR 119). Nothing reads it yet: once Forgejo's pull requests show on the branches, their marker can show it and let
-  it give way once the pull request changed. It is dropped once the pull request is merged, or no longer listed open.
+  how the pull request stood when it was asked, its head, as GitHub's standing (ADR 119). Not: whether it merged without
+  conflicts and was a draft, as GitHub's has: only one that is no draft and merges is merged, so that those would never
+  differ. Nothing reads it yet: once Forgejo's pull requests show on the branches, their marker can show it and let it
+  give way once the pull request changed. It is dropped once the pull request is merged, or no longer listed open, and
+  all of them once the home is another, whose pull requests are numbered anew.
 
 ## Consequences
 

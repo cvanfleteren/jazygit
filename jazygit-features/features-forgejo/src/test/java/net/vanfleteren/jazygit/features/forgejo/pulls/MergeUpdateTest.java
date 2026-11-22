@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -33,7 +34,7 @@ import org.junit.jupiter.api.Test;
  */
 class MergeUpdateTest {
 
-    private static final FailedMerge.Standing STANDING = new FailedMerge.Standing(HEAD, true, false);
+    private static final FailedMerge.Standing STANDING = new FailedMerge.Standing(HEAD);
 
     private static final MergePullRequestCmd SQUASH =
             new MergePullRequestCmd(ORIGIN, new BranchName("feature"), 12, ForgejoMergeStyle.SQUASH, STANDING, true);
@@ -170,18 +171,37 @@ class MergeUpdateTest {
         assertEquals(
                 Option.of(refused),
                 next.model().outcome().error().map(error -> ((AppError.OperationFailed) error).failure()));
-        assertEquals(List.empty(), next.cmds().filter(ReadPullRequests.class::isInstance));
     }
 
     @Test
-    void aMergeRefusedAsTheBranchMovedOnReadsThePullRequestsAgain() {
+    void anyMergeThatFailedReadsThePullRequestsAgainAsItMayBeMergedAllTheSame() {
+        // Forgejo merges before it deletes the branch: a deletion that fails otherwise than the 403s known still
+        // merged.
+        MergeFailure deleting =
+                new MergeFailure(new ForgejoError.Refused(500, "{\"message\":\"\"}"), "code.example.net", "cvf/nix");
         MergeFailure moved = new MergeFailure(
                 new ForgejoError.Refused(409, "{\"message\":\"head out of date\"}"), "code.example.net", "cvf/nix");
 
-        Next next = Update.update(listed(), new PullRequestMsg.MergeFailed(SQUASH, moved));
+        List.of(deleting, moved).forEach(failure -> {
+            Next next = Update.update(listed(), new PullRequestMsg.MergeFailed(SQUASH, failure));
+            assertEquals(
+                    List.of(new ReadPullRequests(ORIGIN)),
+                    next.cmds().filter(ReadPullRequests.class::isInstance),
+                    next.cmds().toString());
+        });
+    }
 
-        assertTrue(
-                next.cmds().contains(new ReadPullRequests(ORIGIN)), next.cmds().toString());
+    @Test
+    void theFailedMergesAreDroppedOnceThePullRequestsAreOfAnotherHome() {
+        // Another repository numbers its pull requests anew: its #12 is not the one that failed.
+        FailedMerge failed = new FailedMerge(
+                12, ForgejoMergeStyle.SQUASH, new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"), STANDING);
+        ForgejoPullRequests kept = prs(listed()).mergeFailed(failed);
+
+        ForgejoPullRequests other =
+                kept.listed(new RemoteName("upstream"), Option.of(HashMap.of(FEATURE, LISTED)), Option.none());
+
+        assertEquals(HashMap.empty(), other.failedMerges());
     }
 
     @Test

@@ -34,7 +34,7 @@ class ScheduleCommandsTest {
             BRANCH,
             12,
             ForgejoMergeStyle.REBASE,
-            new FailedMerge.Standing(HEAD, true, false),
+            new FailedMerge.Standing(HEAD),
             false,
             Option.of(REQUIRED),
             0);

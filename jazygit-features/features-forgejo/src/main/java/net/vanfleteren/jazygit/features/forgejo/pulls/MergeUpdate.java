@@ -61,10 +61,7 @@ final class MergeUpdate {
                 popup.local(),
                 pr.number(),
                 style,
-                new FailedMerge.Standing(
-                        pr.branches().headSha(),
-                        pr.status().mergeable(),
-                        pr.status().draft()),
+                new FailedMerge.Standing(pr.branches().headSha()),
                 shown.settings().exists(ForgejoMergeSettings::deleteBranch),
                 shown.rules().filter(_ -> shown.waits()),
                 shown.approvals());
@@ -104,19 +101,17 @@ final class MergeUpdate {
 
     /**
      * Merging the pull request of {@code cmd} failed as {@code failure} says: shown as any failed operation, and kept
-     * as its last merge that failed. One refused as its head moved on reads the pull requests again; the dialog that
-     * still shows it, as when it was to be merged when its checks succeed, reads it again.
+     * as its last merge that failed. The pull requests are read again: its head may have moved on, or it may be merged
+     * all the same, as Forgejo merges before it deletes the branch, and a deletion that fails otherwise than the 403s
+     * known is answered as a failure. The dialog that still shows it, as when it was to be merged when its checks
+     * succeed, reads it again.
      */
     static Next failed(Model model, MergePullRequestCmd cmd, Failure failure) {
         Next shown = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
                 .map(after -> after.mapPart(
                         ForgejoPullRequests.PART,
                         prs -> prs.mergeFailed(new FailedMerge(cmd.number(), cmd.style(), failure, cmd.standing()))));
-        return PullRequestUpdate.readAgain(
-                failure instanceof MergeFailure refused && refused.moved()
-                        ? shown.and(new ReadPullRequests(cmd.home()))
-                        : shown,
-                cmd.number());
+        return PullRequestUpdate.readAgain(shown.and(new ReadPullRequests(cmd.home())), cmd.number());
     }
 
     /**

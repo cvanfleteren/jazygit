@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
 class ScheduleUpdateTest {
 
     private static final BranchName BRANCH = new BranchName("feature");
-    private static final FailedMerge.Standing STANDING = new FailedMerge.Standing(HEAD, true, false);
+    private static final FailedMerge.Standing STANDING = new FailedMerge.Standing(HEAD);
     // The base requires its checks, which one failed on the head (PullRequestFixtures.FakeForgejo.of), and an approval.
     private static final ForgejoBranchRules REQUIRED = new ForgejoBranchRules(true, true, List.empty(), 1);
     private static final CommitStatus FAILING = new CommitStatus(
