@@ -333,10 +333,12 @@ learned, so a fact that has grown old can be checked again; see README.md.
   from these files without running git. — learned 2026-11-22 · [ADR 0009](../adr/0009-worktree-ux.md)
 - The worktrees of a repository share its common git directory: the remotes and their URLs, the git configuration
   (`remote.<name>.gh-resolved`, `jazygit.forgeHome`), the branches, and the remote-tracking branches a fetch brings.
-  Only HEAD, the index and so the status, the files and the log are each worktree's own, unless
-  `extensions.worktreeConfig` gives a worktree configuration of its own. *Why it matters:* another worktree of the same
-  repository opens with what was read of the shared part, and does not fetch again. — learned 2026-11-22 ·
-  [ADR 0182](../adr/0182-another-worktree-opens-with-what-the-repository-shares.md)
+  Each worktree has its own HEAD and its reflog (so the log of HEAD), the index and so the status, the files, an
+  operation in progress (`rebase-merge/`, `MERGE_HEAD`, `CHERRY_PICK_HEAD`, `BISECT_LOG`) and the per-worktree refs
+  (`refs/bisect/*`, `refs/worktree/*`, `refs/rewritten/*`, gitglossary(7) "per-worktree ref"); and a configuration of
+  its own only where `extensions.worktreeConfig` is on. *Why it matters:* another worktree of the same repository opens
+  with what was read of the shared part, and does not fetch again, while what is in progress there is read afresh.
+  — learned 2026-11-23 · [ADR 0182](../adr/0182-another-worktree-opens-with-what-the-repository-shares.md)
 - Next to a bare repository there is no main worktree: every worktree is a linked one. *Why it matters:* a "check out in
   the main worktree" choice cannot exist there. — learned 2026-11-22 · [ADR
   0068](../adr/0068-asking-where-to-check-out-in-a-linked-worktree.md)
