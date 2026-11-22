@@ -7,7 +7,6 @@ import io.vavr.control.Try;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -136,11 +135,12 @@ final class RepositorySession {
 
     /**
      * The model a frame drawn at {@code now} shows: that of the running program, or the screen of the repository shown
-     * before it while it reads what its panes show, as {@link HeldFrame} says.
+     * before it while it reads what its panes show, as {@link HeldFrame} says; that is let go once it is not held.
      */
     Model drawn(Instant now) {
         Model running = model();
-        return held.map(frame -> frame.drawn(running, now)).getOrElse(running);
+        held = held.flatMap(frame -> frame.still(running, now));
+        return held.map(HeldFrame::shown).getOrElse(running);
     }
 
     /**
@@ -255,8 +255,8 @@ final class RepositorySession {
             runtime.forEach(next -> next.program().dispatch(SettingsPanelUpdate.carried(last)));
             requestRedraw.run();
             // The frame once the screen before is held no longer, for a repository that takes that long to read.
-            CompletableFuture.delayedExecutor(Jobs.SHOWN_AFTER.toMillis(), TimeUnit.MILLISECONDS)
-                    .execute(() -> runner.get().runOnRenderThread(requestRedraw));
+            // On the runner's scheduler, as the app's other wakes, so it stops with the app.
+            runner.get().schedule(() -> runner.get().runOnRenderThread(requestRedraw), Jobs.SHOWN_AFTER);
         });
     }
 

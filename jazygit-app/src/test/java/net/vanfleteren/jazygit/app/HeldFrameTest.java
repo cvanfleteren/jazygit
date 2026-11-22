@@ -1,8 +1,9 @@
 package net.vanfleteren.jazygit.app;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.Head;
@@ -32,18 +33,20 @@ class HeldFrameTest {
     private static final HeldFrame HELD = HeldFrame.of(BEFORE, SWITCHED);
 
     @Test
-    void theScreenBeforeIsDrawnWhileThePanesOfTheRepositoryOpenedAreRead() {
-        assertSame(BEFORE, HELD.drawn(OPENING, SWITCHED));
-        assertSame(BEFORE, HELD.drawn(OPENING, SWITCHED.plus(Jobs.SHOWN_AFTER).minusMillis(1)));
+    void theScreenBeforeIsStillHeldWhileThePanesOfTheRepositoryOpenedAreRead() {
+        assertEquals(Option.of(HELD), HELD.still(OPENING, SWITCHED));
+        assertEquals(
+                Option.of(HELD),
+                HELD.still(OPENING, SWITCHED.plus(Jobs.SHOWN_AFTER).minusMillis(1)));
     }
 
     @Test
-    void theRepositoryOpenedIsDrawnOnceItsPanesWereRead() {
-        assertSame(READ, HELD.drawn(READ, SWITCHED.plusMillis(50)));
+    void theScreenBeforeIsLetGoOnceThePanesOfTheRepositoryOpenedWereRead() {
+        assertEquals(Option.none(), HELD.still(READ, SWITCHED.plusMillis(50)));
     }
 
     @Test
-    void theRepositoryOpenedIsDrawnLoadingOnceReadingTakesLongerThanACommandTakesToShow() {
-        assertSame(OPENING, HELD.drawn(OPENING, SWITCHED.plus(Jobs.SHOWN_AFTER)));
+    void theScreenBeforeIsLetGoOnceReadingTakesLongerThanACommandTakesToShow() {
+        assertEquals(Option.none(), HELD.still(OPENING, SWITCHED.plus(Jobs.SHOWN_AFTER)));
     }
 }

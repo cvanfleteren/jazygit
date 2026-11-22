@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.app;
 
+import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.kernel.state.Jobs;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -25,14 +26,15 @@ record HeldFrame(Model shown, Instant until) {
      * Whether the screen before is still drawn at {@code now}, while {@code opened} is the model of the repository
      * opened: until its panes were read, or it is {@link #until}.
      */
-    boolean holds(Model opened, Instant now) {
+    private boolean holds(Model opened, Instant now) {
         return !opened.repo().firstRead() && now.isBefore(until);
     }
 
     /**
-     * What is drawn at {@code now} while {@code opened} is the model of the repository opened.
+     * This frame, while it is still held at {@code now}, with {@code opened} the model of the repository opened; none
+     * once it is not: it is let go then, so the screen before is not kept, and does not come back.
      */
-    Model drawn(Model opened, Instant now) {
-        return holds(opened, now) ? shown : opened;
+    Option<HeldFrame> still(Model opened, Instant now) {
+        return Option.when(holds(opened, now), this);
     }
 }
