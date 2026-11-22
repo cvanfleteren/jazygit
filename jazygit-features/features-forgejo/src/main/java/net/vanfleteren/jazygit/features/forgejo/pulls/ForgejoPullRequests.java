@@ -55,6 +55,18 @@ public record ForgejoPullRequests(
     }
 
     /**
+     * These with {@code created}, just created in {@code of} (ADR 178), as the open pull request that merges
+     * {@code head}, before the list is read again; unchanged when they are of another home, or not read yet.
+     */
+    public ForgejoPullRequests created(RemoteName of, RemoteBranch head, ForgejoPullRequest created) {
+        return new ForgejoPullRequests(
+                home,
+                open.filter(prs -> read(of)).map(prs -> prs.put(head, created)).orElse(open),
+                failure,
+                reads);
+    }
+
+    /**
      * These with the next read of a pull request given out.
      */
     public ForgejoPullRequests givingOutRead() {

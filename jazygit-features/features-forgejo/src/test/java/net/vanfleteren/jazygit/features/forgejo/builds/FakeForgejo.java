@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.FjKeys;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoNewPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
@@ -66,6 +67,12 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
     @Override
     public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
         return Either.right(List.empty());
+    }
+
+    @Override
+    public Either<ForgejoError, ForgejoPullRequest> createPullRequest(
+            ForgejoRepository repository, ForgejoNewPullRequest pullRequest) {
+        return Either.left(new ForgejoError.Refused(404, "not found"));
     }
 
     /**

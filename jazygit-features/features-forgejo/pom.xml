@@ -20,5 +20,10 @@
             <groupId>net.vanfleteren</groupId>
             <artifactId>core-forgejo</artifactId>
         </dependency>
+        <!-- Pushing a branch before its pull request is created (ADR 25, 178). -->
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>features-branches</artifactId>
+        </dependency>
     </dependencies>
 </project>

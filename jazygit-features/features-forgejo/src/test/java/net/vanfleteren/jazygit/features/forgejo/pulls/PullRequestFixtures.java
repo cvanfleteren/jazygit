@@ -6,16 +6,19 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.FjKeys;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoNewPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
+import net.vanfleteren.jazygit.core.git.history.StubHistory;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -115,7 +118,8 @@ final class PullRequestFixtures {
             Either<ForgejoError, List<ForgejoPullRequest>> open,
             Either<ForgejoError, ForgejoPullRequestDetails> details,
             Either<ForgejoError, List<ForgejoReview>> reviews,
-            Either<ForgejoError, CommitStatus> status)
+            Either<ForgejoError, CommitStatus> status,
+            Function<ForgejoNewPullRequest, Either<ForgejoError, ForgejoPullRequest>> create)
             implements Forgejo {
 
         static FakeForgejo of(ForgejoPullRequestDetails details) {
@@ -125,11 +129,47 @@ final class PullRequestFixtures {
                     Either.right(List.of(new ForgejoReview("anna", ForgejoReview.Verdict.APPROVED, false, false))),
                     Either.right(new CommitStatus(
                             CommitStatus.State.FAILED,
-                            List.of(new CommitStatus.Status("check / lint (push)", CommitStatus.State.FAILED, "")))));
+                            List.of(new CommitStatus.Status("check / lint (push)", CommitStatus.State.FAILED, "")))),
+                    created -> Either.left(new ForgejoError.Refused(500, "not asked for")));
         }
 
         FakeForgejo withOpen(Either<ForgejoError, List<ForgejoPullRequest>> listed) {
-            return new FakeForgejo(listed, details, reviews, status);
+            return new FakeForgejo(listed, details, reviews, status, create);
+        }
+
+        /**
+         * This Forgejo answering the creation of a pull request as {@code created} does.
+         */
+        FakeForgejo creating(Function<ForgejoNewPullRequest, Either<ForgejoError, ForgejoPullRequest>> created) {
+            return new FakeForgejo(open, details, reviews, status, created);
+        }
+
+        @Override
+        public Either<ForgejoError, ForgejoPullRequest> createPullRequest(
+                ForgejoRepository repository, ForgejoNewPullRequest pullRequest) {
+            return repository.equals(NIX)
+                    ? create.apply(pullRequest)
+                    : Either.left(new ForgejoError.Refused(404, "{\"message\":\"not this repository\"}"));
+        }
+
+        /**
+         * An environment with this Forgejo, remotes of {@code urls}, and {@code ahead} commits of every branch that
+         * its base does not have.
+         */
+        Env ahead(Map<RemoteName, String> urls, int ahead) {
+            Env env = env(urls);
+            return new Env(env.git().withHistory(new StubHistory() {
+                        @Override
+                        public Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+                            return Either.right(Math.min(ahead, max));
+                        }
+
+                        @Override
+                        public Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
+                            return Either.right(Option.of("Create it"));
+                        }
+                    }))
+                    .with(ForgejoServices.FORGEJO, this);
         }
 
         @Override

@@ -91,7 +91,11 @@ class PullRequestCommandsTest {
     @Test
     void reviewsOrBuildsThatCannotBeReadLeaveThePullRequestShownWithoutThem() {
         FakeForgejo forgejo = new FakeForgejo(
-                Either.right(List.of(LISTED)), Either.right(details("Show")), Either.left(DOWN), Either.left(DOWN));
+                Either.right(List.of(LISTED)),
+                Either.right(details("Show")),
+                Either.left(DOWN),
+                Either.left(DOWN),
+                created -> Either.left(DOWN));
 
         assertEquals(
                 new PullRequestMsg.Read(
@@ -102,7 +106,11 @@ class PullRequestCommandsTest {
     @Test
     void aPullRequestThatCannotBeReadOrAHomeNoLongerOnForgejoFails() {
         FakeForgejo down = new FakeForgejo(
-                Either.right(List.of(LISTED)), Either.left(DOWN), Either.right(List.empty()), Either.left(DOWN));
+                Either.right(List.of(LISTED)),
+                Either.left(DOWN),
+                Either.right(List.empty()),
+                Either.left(DOWN),
+                created -> Either.left(DOWN));
         assertEquals(
                 new PullRequestMsg.Read(3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.Asked(DOWN))),
                 new LoadPullRequest(ORIGIN, 12, 3).run(down.env()));
