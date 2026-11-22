@@ -36,6 +36,9 @@ public final class HttpForgejo implements Forgejo {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final int OK = 200;
     private static final int SERVER_ERROR = 500;
+    // How many pull requests a page of them asks for, and the most pages read: Forgejo gives at most 50 by default.
+    private static final int PAGE = 50;
+    private static final int PAGES = 10;
 
     private static final Decoder<CommitStatus.Status> STATUS = map3(
             optionalField("context", string()).map(context -> context.getOrElse("")),
@@ -130,6 +133,44 @@ public final class HttpForgejo implements Forgejo {
                 + encoded(sha.value()) + "/status";
         return get(repository, path)
                 .flatMap(body -> COMBINED.parse(body).mapLeft(error -> new ForgejoError.Unreadable(error.toString())));
+    }
+
+    /**
+     * {@inheritDoc} They are read a page of {@value #PAGE} at a time, until a page is not full, and at most
+     * {@value #PAGES} pages.
+     */
+    @Override
+    public Either<ForgejoError, List<ForgejoPullRequest>> openPullRequests(ForgejoRepository repository) {
+        return page(repository, 1, List.empty());
+    }
+
+    private Either<ForgejoError, List<ForgejoPullRequest>> page(
+            ForgejoRepository repository, int page, List<ForgejoPullRequest> before) {
+        return get(repository, repo(repository) + "/pulls?state=open&limit=" + PAGE + "&page=" + page)
+                .flatMap(body -> decoded(PullRequestJson.summaries(), body))
+                .flatMap(read -> read.size() < PAGE || page >= PAGES
+                        ? Either.right(before.appendAll(read))
+                        : page(repository, page + 1, before.appendAll(read)));
+    }
+
+    @Override
+    public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number) {
+        return get(repository, repo(repository) + "/pulls/" + number)
+                .flatMap(body -> decoded(PullRequestJson.details(), body));
+    }
+
+    @Override
+    public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
+        return get(repository, repo(repository) + "/pulls/" + number + "/reviews?limit=" + PAGE)
+                .flatMap(body -> decoded(PullRequestJson.reviews(), body));
+    }
+
+    private static String repo(ForgejoRepository repository) {
+        return "/api/v1/repos/" + encoded(repository.owner()) + "/" + encoded(repository.name());
+    }
+
+    private static <T> Either<ForgejoError, T> decoded(Decoder<T> decoder, String body) {
+        return decoder.parse(body).mapLeft(error -> new ForgejoError.Unreadable(error.toString()));
     }
 
     /**

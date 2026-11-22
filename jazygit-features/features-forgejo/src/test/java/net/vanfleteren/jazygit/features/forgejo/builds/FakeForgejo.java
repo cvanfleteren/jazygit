@@ -10,7 +10,10 @@ import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.FjKeys;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.process.GitError;
@@ -48,6 +51,21 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
         return states.get(sha)
                 .<Either<ForgejoError, CommitStatus>>map(state -> Either.right(new CommitStatus(state, List.empty())))
                 .getOrElse(() -> Either.left(new ForgejoError.Refused(404, "not found")));
+    }
+
+    @Override
+    public Either<ForgejoError, List<ForgejoPullRequest>> openPullRequests(ForgejoRepository repository) {
+        return Either.right(List.empty());
+    }
+
+    @Override
+    public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number) {
+        return Either.left(new ForgejoError.Refused(404, "not found"));
+    }
+
+    @Override
+    public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
+        return Either.right(List.empty());
     }
 
     /**

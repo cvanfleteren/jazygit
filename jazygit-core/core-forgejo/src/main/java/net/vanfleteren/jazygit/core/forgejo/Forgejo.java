@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.core.forgejo;
 
+import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -25,6 +26,21 @@ public interface Forgejo {
 
         @Override
         public Either<ForgejoError, CommitStatus> status(ForgejoRepository repository, Sha sha) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
+
+        @Override
+        public Either<ForgejoError, List<ForgejoPullRequest>> openPullRequests(ForgejoRepository repository) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
+
+        @Override
+        public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
+
+        @Override
+        public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
             return Either.left(new ForgejoError.Unreachable("no Forgejo"));
         }
     };
@@ -53,4 +69,19 @@ public interface Forgejo {
      * How the builds of {@code sha} in {@code repository} went.
      */
     Either<ForgejoError, CommitStatus> status(ForgejoRepository repository, Sha sha);
+
+    /**
+     * The open pull requests of {@code repository}, those from forks too (ADR 176).
+     */
+    Either<ForgejoError, List<ForgejoPullRequest>> openPullRequests(ForgejoRepository repository);
+
+    /**
+     * Pull request {@code number} of {@code repository}, as it is shown.
+     */
+    Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number);
+
+    /**
+     * The reviews of pull request {@code number} of {@code repository}, in the order they were given.
+     */
+    Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number);
 }
