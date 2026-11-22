@@ -41,7 +41,6 @@ public final class CheckRows {
                 all.count(check -> check.state() == Checks.PENDING),
                 all.count(check -> check.state() == Checks.PASSING));
         return CheckSymbols.joined(List.of(counts)
-                .filter(pieces -> !pieces.isEmpty())
                 .appendAll(CheckTimesText.together(eta(all, times), CheckSpan.current(all), learning(times), now)
                         .map(together -> List.<StyledElement<?>>of(text(together)))));
     }
@@ -72,7 +71,7 @@ public final class CheckRows {
         List<Symbol> symbols = PullRequestSymbols.check(check).toList();
         int left =
                 width - symbols.map(symbol -> TextWidth.of(symbol.text())).sum().intValue() - 1;
-        return symbols.<StyledElement<?>>map(CheckRows::symbol)
+        return symbols.<StyledElement<?>>map(Symbol::element)
                 .appendAll(doing(check, all, times, now, took)
                         .map(text -> {
                             TextElement name = text(" " + padded(check.name(), left - 2 - doingWidth) + "  ");
@@ -144,7 +143,7 @@ public final class CheckRows {
                 - doingWidth;
         TextElement named = text(" " + padded(check.name(), name) + "  ");
         String doing = barredDoing(check, all, times, now).getOrElse("");
-        return symbols.<StyledElement<?>>map(CheckRows::symbol)
+        return symbols.<StyledElement<?>>map(Symbol::element)
                 .append(check.queued() ? named.addClass(Theme.Classes.DIM) : named)
                 .appendAll(check.done() ? List.of(text(" ".repeat(barWidth))) : bar(check, all, times, now, barWidth))
                 .append(text("  " + TextWidth.alignRight(doing, doingWidth)).addClass(Theme.Classes.DIM));
@@ -249,9 +248,5 @@ public final class CheckRows {
     private static String padded(String name, int width) {
         String cut = TextWidth.cut(name, width);
         return cut + " ".repeat(Math.max(0, width - TextWidth.of(cut)));
-    }
-
-    private static StyledElement<?> symbol(Symbol symbol) {
-        return symbol.element();
     }
 }

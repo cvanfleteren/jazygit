@@ -15,7 +15,8 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 
 /**
  * The coloured symbols for how the checks and the review of a pull request are doing, the same wherever
- * they show (ADR 48); those of the checks are every forge's ({@link CheckSymbols}, ADR 175). Each is one column wide, told apart by its shape as well as its colour (ADR 45).
+ * they show (ADR 48); those of the checks are every forge's ({@link CheckSymbols}, ADR 175). Each is one column
+ * wide, told apart by its shape as well as its colour (ADR 45).
  */
 public final class PullRequestSymbols {
 

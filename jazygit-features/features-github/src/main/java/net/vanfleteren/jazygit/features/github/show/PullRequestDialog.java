@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.features.github.show;
 
 import static dev.tamboui.toolkit.Toolkit.text;
 import static net.vanfleteren.jazygit.kernel.ui.widgets.LabelledLines.INDENT;
-import static net.vanfleteren.jazygit.kernel.ui.widgets.LabelledLines.label;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
@@ -49,7 +48,6 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.KeysFirst;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LabelledLines;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LabelledLines.Line;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
-import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 import net.vanfleteren.jazygit.kernel.ui.widgets.WithDetails;
 
 /**
@@ -326,7 +324,7 @@ public final class PullRequestDialog implements PopupView {
                     case CHANGES_REQUESTED -> "github.dialog.pullRequest.review.changes";
                 });
         return PullRequestSymbols.review(review)
-                .map(symbol -> List.of(symbol(symbol), text(" " + text)))
+                .map(symbol -> List.of(symbol.element(), text(" " + text)))
                 .getOrElse(() -> List.of(text(text).addClass(Theme.Classes.DIM)));
     }
 
@@ -337,7 +335,9 @@ public final class PullRequestDialog implements PopupView {
         return pr.conversation()
                 .reviewers()
                 .map(reviewer -> List.<StyledElement<?>>of(
-                        symbol(PullRequestSymbols.reviewer(reviewer.state())), text(" "), text("@" + reviewer.login())))
+                        PullRequestSymbols.reviewer(reviewer.state()).element(),
+                        text(" "),
+                        text("@" + reviewer.login())))
                 .zipWithIndex()
                 .flatMap(indexed -> indexed._2 > 0 ? indexed._1.prepend(text("  ")) : indexed._1);
     }
@@ -362,17 +362,12 @@ public final class PullRequestDialog implements PopupView {
                 ? CheckRows.barredDoingWidth(listed, checks, times, now)
                 : CheckRows.doingWidth(listed, checks, times, now, false);
         return List.of(
-                        Line.pieces(List.<StyledElement<?>>of(label("github.dialog.pullRequest.checks"))
-                                .appendAll(CheckRows.counts(checks, times, now))),
-                        Line.pieces(List.<StyledElement<?>>of(text(INDENT))
-                                .appendAll(CheckRows.gauge(checks, times, progress, now, CHECK_WIDTH))))
-                .appendAll(listed.map(check -> Line.pieces(List.<StyledElement<?>>of(text(INDENT))
-                        .appendAll(
-                                running
-                                        ? CheckRows.barred(
-                                                check, checks, times, now, CHECK_WIDTH, CHECK_BAR, doingWidth)
-                                        : CheckRows.filling(
-                                                check, checks, times, now, CHECK_WIDTH, doingWidth, false)))))
+                        Line.labelled("github.dialog.pullRequest.checks", CheckRows.counts(checks, times, now)),
+                        Line.indented(CheckRows.gauge(checks, times, progress, now, CHECK_WIDTH)))
+                .appendAll(listed.map(check -> Line.indented(
+                        running
+                                ? CheckRows.barred(check, checks, times, now, CHECK_WIDTH, CHECK_BAR, doingWidth)
+                                : CheckRows.filling(check, checks, times, now, CHECK_WIDTH, doingWidth, false))))
                 .appendAll(Option.when(
                         notPassed.size() > LISTED_CHECKS,
                         () -> Line.of(text(INDENT
@@ -380,10 +375,6 @@ public final class PullRequestDialog implements PopupView {
                                                 "github.dialog.pullRequest.checks.more",
                                                 String.valueOf(notPassed.size() - LISTED_CHECKS)))
                                 .addClass(Theme.Classes.DIM))));
-    }
-
-    private static StyledElement<?> symbol(Symbol symbol) {
-        return symbol.element();
     }
 
     @Override
@@ -488,11 +479,11 @@ public final class PullRequestDialog implements PopupView {
                 .appendAll(Option.when(
                         !pr.author().isEmpty(),
                         () -> Line.labelled("github.dialog.pullRequest.author", text("@" + pr.author()))))
-                .append(Line.pieces(List.<StyledElement<?>>of(
-                                label("github.dialog.pullRequest.branch"),
-                                text(pr.branches().head().name() + " → "
+                .append(Line.labelled(
+                        "github.dialog.pullRequest.branch",
+                        List.<StyledElement<?>>of(text(pr.branches().head().name() + " → "
                                         + pr.branches().base().name()))
-                        .appendAll(behindBase(pr))))
+                                .appendAll(behindBase(pr))))
                 .appendAll(pr.stack().map(PullRequestDialog::stack))
                 // Next to the stack, which GitHub has no auto-merge for: both only show when it was turned on
                 // elsewhere.
@@ -517,12 +508,12 @@ public final class PullRequestDialog implements PopupView {
                                 "github.dialog.pullRequest.mergeable",
                                 mergeable(pr.status().mergeable())),
                         Line.blank(),
-                        Line.pieces(List.<StyledElement<?>>of(label("github.dialog.pullRequest.review"))
-                                .appendAll(review(pr.conversation().review())))))
+                        Line.labelled(
+                                "github.dialog.pullRequest.review",
+                                review(pr.conversation().review()))))
                 .appendAll(Option.when(
                         !pr.conversation().reviewers().isEmpty(),
-                        () -> Line.pieces(List.<StyledElement<?>>of(label("github.dialog.pullRequest.reviewers"))
-                                .appendAll(reviewers(pr)))))
+                        () -> Line.labelled("github.dialog.pullRequest.reviewers", reviewers(pr))))
                 .append(Line.labelled(
                         "github.dialog.pullRequest.comments",
                         text(String.valueOf(pr.conversation().comments()))))
