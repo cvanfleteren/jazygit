@@ -18,7 +18,7 @@ import lombok.With;
  * @param closedGroups  the keys of the groups of branches the pane shows closed, as only their header; a group starts
  *                      open (ADR 72, ADR 167)
  * @param grouped       whether the pane lists the branches of a group under its header, or as any other branch
- *                      (ADR 87)
+ *                      (ADR 72)
  */
 @With
 public record BranchesView(

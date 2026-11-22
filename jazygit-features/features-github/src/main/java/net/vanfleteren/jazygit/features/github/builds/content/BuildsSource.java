@@ -113,7 +113,7 @@ public record BuildsSource() implements ContentSource {
                         .getOrElse(() -> Messages.get("github.builds.panel.everyBranch", ofBranch))
                 : ofBranch;
         // Older builds can be read with m, or read again after failing: of the branch, or on every branch, of the tab
-        // (ADR 132).
+        // (ADR 131).
         boolean more = view.allBranches() ? runs.exists(WorkflowRuns::hasMore) : view.hasMore();
         if (!more) {
             return every;

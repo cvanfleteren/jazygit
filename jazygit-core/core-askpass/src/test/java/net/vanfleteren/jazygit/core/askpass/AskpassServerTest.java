@@ -177,7 +177,7 @@ class AskpassServerTest {
     }
 
     /**
-     * The socket only opens for the first operation that lets ssh ask (ADR 153): a session that never talks to a
+     * The socket only opens for the first operation that lets ssh ask (ADR 150): a session that never talks to a
      * remote, or only with an ssh that cannot ask, leaves nothing in the temporary directory.
      */
     @Test

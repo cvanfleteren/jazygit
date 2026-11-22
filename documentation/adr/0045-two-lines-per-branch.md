@@ -85,3 +85,16 @@ Later: ADR 48 shows the symbols one column wide in the dialogs, the comments and
 emoji are gone.
 
 Amended by ADR 72: a stack has a header of one line, with its branches under it, indented.
+
+## Folded in: ADR 48 (2026-11-22)
+
+ADR 48 made the symbols one column wide of this ADR the only ones: they show wherever the state of a pull request
+shows, in the branch lists, the pull requests screen, the details of a pull request, the checks dialog and the
+comments, and the emoji are gone (`Symbol`, `CheckSymbols`, `ReviewSymbols`, `PullRequestSymbols`). A review that only
+commented takes `~`, dimmed; a dismissed one keeps `⊘`; where a pull request sits in its stack shows as `2/4`.
+
+Ambiguous width costs more in the dialogs than in the lists. They line up the right-hand column from the width TamboUI
+counts, one, so in a terminal that draws `●`, `≡` and `◆` wide, a running check pushes on the border. The emoji had
+no such cost, as every terminal draws them two columns wide. The three are kept for their shape; `◔`, `≣` and `⬥`, of
+neutral width, are the fallbacks should the wide case matter. One look per state was chosen over the emoji being
+easier to make out where there is room.

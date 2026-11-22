@@ -24,7 +24,7 @@ public interface Status {
 
     /**
      * Writes into the index what the files in the working tree are like now, where it no longer says so: as a status
-     * that took the optional locks would (ADR 93). Until then, every {@link #read()} compares the contents of those
+     * that took the optional locks would (ADR 97). Until then, every {@link #read()} compares the contents of those
      * files again. Fails, and leaves the index as it is, when another git command holds it.
      */
     Either<GitFailure, List<ExecutedCommand>> refreshIndex();

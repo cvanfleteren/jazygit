@@ -31,7 +31,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 import org.junit.jupiter.api.Test;
 
 /**
- * A {@link ChoiceList} in two columns (ADR 66); in one column, {@link ChoiceDialogTest} tries it.
+ * A {@link ChoiceList} in two columns; in one column, {@link ChoiceDialogTest} tries it.
  */
 class ChoiceListTest {
 

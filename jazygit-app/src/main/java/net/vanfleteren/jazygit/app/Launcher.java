@@ -92,7 +92,7 @@ final class Launcher {
 
     private static void start(StartupOptions options) {
         // ssh asks the user through the app for what the user starts (ADR 150); the socket only opens for the first
-        // operation that lets ssh ask (ADR 153). Only made once the app is, after the debug log: the first logger
+        // operation that lets ssh ask (ADR 150). Only made once the app is, after the debug log: the first logger
         // made fixes where the log goes.
         Lazy<AskpassServer> askpass = Lazy.of(() -> {
             AskpassServer server = AskpassServer.in(Path.of(System.getProperty("java.io.tmpdir")));

@@ -55,7 +55,7 @@ public sealed interface BuildsMsg extends Msg {
 
     /**
      * The user asked for older builds than those read: of more commits of the branch, or, on every branch, more runs
-     * of the workflow of the tab (ADR 132).
+     * of the workflow of the tab (ADR 131).
      */
     record MoreRequested() implements BuildsMsg {}
 

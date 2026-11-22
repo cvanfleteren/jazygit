@@ -4,7 +4,7 @@ import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.element.StyledElement;
 
 /**
- * A coloured symbol, as of how the checks or the review of a change are doing (ADR 48): told apart by its shape as
+ * A coloured symbol, as of how the checks or the review of a change are doing (ADR 45): told apart by its shape as
  * well as its colour (ADR 45).
  *
  * @param text     the symbol, one column wide where it stands for a state

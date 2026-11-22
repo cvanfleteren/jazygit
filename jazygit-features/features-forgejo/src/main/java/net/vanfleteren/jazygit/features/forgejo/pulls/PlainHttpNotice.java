@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 
 /**
  * The warning in the command log that fj's token goes to the home of the pull requests unencrypted, as its remote is
- * over plain HTTP (ADR 179): no failure, as the user chose the remote.
+ * over plain HTTP (ADR 174): no failure, as the user chose the remote.
  *
  * @param base where the home is asked, as {@code http://code.example.net}
  */

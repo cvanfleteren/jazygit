@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 
 /**
  * Tells, once Forgejo turns on, whether fj's token goes to {@code home}, the remote the pull requests are opened
- * against (ADR 177), unencrypted, as one over plain HTTP, in the background (ADR 179).
+ * against (ADR 177), unencrypted, as one over plain HTTP, in the background (ADR 174).
  */
 public record CheckPlainHttp(RemoteName home) implements Cmd {
 

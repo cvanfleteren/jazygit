@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.core.gh.model.CheckRun;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 
 /**
- * When the checks of a commit started and, once they are all done, ended (ADR 37).
+ * When the checks of a commit started and, once they are all done, ended (ADR 32).
  *
  * @param start when the first of their workflow runs started
  * @param end   when the last of them was done; none while one is not

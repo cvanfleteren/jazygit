@@ -100,7 +100,7 @@ public interface Forgejo {
 
     /**
      * Whether fj's token goes to the host of {@code repository} unencrypted: it has one for it, and it is asked over
-     * plain HTTP, as its remote says (ADR 179).
+     * plain HTTP, as its remote says (ADR 174).
      */
     default boolean sendsTokenInTheClear(ForgejoRepository repository) {
         return false;

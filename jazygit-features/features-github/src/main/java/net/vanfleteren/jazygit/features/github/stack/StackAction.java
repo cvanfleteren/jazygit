@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 /**
  * Opening and closing the stack whose header is highlighted in the branches pane (ADR 72), and the menu of what can be
  * done with the stack of a branch or with a stack (ADR 73), also of a pull request on the pull requests screen
- * (ADR 99); and showing the stacks or listing their branches as any other branch (ADR 87).
+ * (ADR 99); and showing the stacks or listing their branches as any other branch (ADR 72).
  */
 public final class StackAction {
 

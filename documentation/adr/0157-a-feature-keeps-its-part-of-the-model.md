@@ -46,3 +46,16 @@ and content that is no diff is a `ScrolledContent.Other` of its source (ADR 155)
 - A part's value is cast when read; only `withPart`, which takes a value of the part's type, puts one there, under a
   name no other part has.
 - A part declared other than as a constant, as in a local variable, escapes `PartNamesTest`.
+
+## Folded in: ADR 156 (2026-11-22)
+
+ADR 156 gave a feature a `content` package for what it shows in the content panel, as `github.builds.content`.
+`AppRules` takes the classes in such a package for views, as it takes the dialogs: they may use TamboUI and the
+translated texts, and hold what is no value, and only send messages, never run git or gh. Their texts are in the
+feature's bundle; what a source shows while it reads, when it could not, or when there is nothing, is `Shown.loading`,
+`Shown.dim` and `Shown.whenLoaded` in `ui.content`. ADR 156 left the model of the builds in the kernel; this ADR moved
+it.
+
+One gotcha stays: a feature's sources are asked before the content panel's own (ADR 154), so a source that must give
+way to one asked after it, as the builds do to a divergence or a branch's commits opened over them, has to say so
+itself. The order of the sources alone does not say which wins.
