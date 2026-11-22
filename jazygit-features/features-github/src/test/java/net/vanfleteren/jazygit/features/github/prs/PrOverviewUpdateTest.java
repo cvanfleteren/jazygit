@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.TreeSet;
 import io.vavr.control.Either;
@@ -155,6 +156,50 @@ class PrOverviewUpdateTest {
                         .values()
                         .map(pr -> pr.number())
                         .toList());
+    }
+
+    @Test
+    void thoseFromOnesOwnForkAreOfTheBranchesThoseFromOtherForksAreNot() {
+        PullRequestSummary mine = fork(3, "anna/repo");
+        PullRequestSummary theirs = fork(4, "stranger/repo");
+        Model read = Update.update(
+                        loaded(),
+                        new PrOverviewMsg.RepositoryLoaded(
+                                new RepositoryPullRequests(
+                                        "Owner/Repo", new PullRequestList(List.of(OLD, mine, theirs), 3)),
+                                Option.none(),
+                                HashSet.of("anna/repo", "owner/repo")))
+                .model();
+
+        assertEquals(
+                HashSet.of(OLD.number(), mine.number()),
+                read.part(GitHubState.PART)
+                        .pullRequests()
+                        .get()
+                        .values()
+                        .map(pr -> pr.number())
+                        .toSet());
+    }
+
+    private static PullRequestSummary fork(int number, String head) {
+        PullRequestSummary pr = pr("owner/repo", number, Instant.parse("2026-10-02T00:00:00Z"));
+        return new PullRequestSummary(
+                pr.repository(),
+                pr.number(),
+                pr.title(),
+                pr.author(),
+                pr.headBranch(),
+                pr.draft(),
+                true,
+                pr.checks(),
+                pr.review(),
+                pr.updatedAt(),
+                pr.url(),
+                pr.stack(),
+                pr.baseCommit(),
+                pr.headCommit(),
+                pr.baseBranch(),
+                Option.of(head));
     }
 
     @Test

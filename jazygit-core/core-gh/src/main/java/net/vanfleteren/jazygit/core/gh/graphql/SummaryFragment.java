@@ -39,6 +39,7 @@ public final class SummaryFragment {
 
     public static final String FRAGMENT = """
             fragment summary on PullRequest { number title url updatedAt isDraft isCrossRepository headRefName baseRefName headRefOid baseRefOid \
+            headRepository { nameWithOwner } \
             author { login } repository { nameWithOwner } reviewDecision %s \
             commits(last: 1) { nodes { commit { statusCheckRollup { state } %s } } } }""".formatted(StackFragment.FIELDS, SuiteFragment.FIELDS);
 
@@ -77,13 +78,18 @@ public final class SummaryFragment {
     static final Decoder<Tuple2<Option<GhCommit>, Option<GhCommit>>> COMMITS =
             map2(commit("baseRefOid"), commit("headRefOid"), Tuple::of);
 
-    public static final Decoder<PullRequestSummary> SUMMARY = map5(
+    // The repository its branch is in, none for a fork that was deleted (ADR 177).
+    static final Decoder<Option<String>> HEAD_REPOSITORY =
+            field("headRepository", nullable(field("nameWithOwner", string())));
+
+    public static final Decoder<PullRequestSummary> SUMMARY = map6(
             NAMED,
             STATE,
             StackFragment.DECODER,
             COMMITS,
             field("baseRefName", string()).map(GhBranch::named),
-            (named, state, stack, commits, base) -> new PullRequestSummary(
+            HEAD_REPOSITORY,
+            (named, state, stack, commits, base, head) -> new PullRequestSummary(
                     named._1(),
                     named._2(),
                     named._3(),
@@ -98,7 +104,8 @@ public final class SummaryFragment {
                     stack,
                     commits._1(),
                     commits._2(),
-                    base));
+                    base,
+                    head));
 
     /**
      * A hit of a search of issues: a pull request, or none for an issue, which answers only its {@code __typename}.

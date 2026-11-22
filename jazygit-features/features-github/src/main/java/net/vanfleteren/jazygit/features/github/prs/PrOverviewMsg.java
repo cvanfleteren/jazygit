@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.features.github.prs;
 
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.gh.model.MyPullRequests;
@@ -45,10 +47,20 @@ public sealed interface PrOverviewMsg extends Msg {
     /**
      * The pull requests of the repository were read; the model's clock tells when.
      *
-     * @param kept the unseen pull requests that were kept for the repository, if any
+     * @param kept    the unseen pull requests that were kept for the repository, if any
+     * @param remotes the repository of each remote on GitHub, as {@code owner/name}, one's own fork among them, whose
+     *                pull requests into the repository are those of its branches (ADR 177)
      */
-    record RepositoryLoaded(RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept)
-            implements PrOverviewMsg {}
+    record RepositoryLoaded(RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept, Set<String> remotes)
+            implements PrOverviewMsg {
+
+        /**
+         * Read without the remotes known, so the pull requests of forks are none of its branches'.
+         */
+        public RepositoryLoaded(RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept) {
+            this(pullRequests, kept, HashSet.empty());
+        }
+    }
 
     record RepositoryLoadFailed(Failure failure) implements PrOverviewMsg {}
 

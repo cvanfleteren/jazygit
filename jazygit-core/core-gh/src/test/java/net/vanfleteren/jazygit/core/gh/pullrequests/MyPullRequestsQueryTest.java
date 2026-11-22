@@ -42,7 +42,7 @@ class MyPullRequestsQueryTest {
         String fix = """
                 { "__typename": "PullRequest", "number": 9, "title": "Fix the\\tlogin",
                   "url": "https://github.com/other/repo/pull/9", "updatedAt": "2026-10-16T21:39:59Z",
-                  "isDraft": false, "isCrossRepository": false, "headRefName": "feature/login", "baseRefName": "main",
+                  "isDraft": false, "isCrossRepository": false, "headRepository": { "nameWithOwner": "other/repo" }, "headRefName": "feature/login", "baseRefName": "main",
                   "author": { "login": "alice" }, "repository": { "nameWithOwner": "other/repo" },
                   "reviewDecision": "APPROVED", "stackEntry": null, "stack": null,
                   "commits": { "nodes": [ { "commit": { "statusCheckRollup": { "state": "SUCCESS" },

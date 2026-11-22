@@ -48,9 +48,9 @@ public final class PrOverviewUpdate {
             // The reads that keep failing wait longer the more they failed (ADR 58).
             case PrOverviewMsg.Tick() -> loaded(Next.of(model), TICKED.filter(load -> FailingRead.due(model, load)));
             // The pull requests of the repository are those of the branches too (ADR 58).
-            case PrOverviewMsg.RepositoryLoaded(var read, var kept) ->
+            case PrOverviewMsg.RepositoryLoaded(var read, var kept, var remotes) ->
                 overview(model, msg)
-                        .then(shown -> PullRequestReads.loaded(shown, read.ofBranches(), read.repository()));
+                        .then(shown -> PullRequestReads.loaded(shown, read.ofBranches(remotes), read.repository()));
             case PrOverviewMsg.RepositoryLoadFailed(var failure) ->
                 overview(model, msg).then(failed -> PullRequestReads.failed(failed, failure));
             default -> overview(model, msg);
@@ -71,7 +71,7 @@ public final class PrOverviewUpdate {
                         .map(preview -> preview(overview, preview.key(), loads))
                         .getOrElse(() -> new Step(overview, loads));
             }
-            case PrOverviewMsg.RepositoryLoaded(var read, var kept) -> {
+            case PrOverviewMsg.RepositoryLoaded(var read, var kept, var remotes) -> {
                 PrOverview loaded = overview.withFreshness(overview.freshness().succeeded(REPOSITORY, now))
                         .withRepository(overview.repository().reload(newestFirst(read.open())));
                 // What was kept is only of use until the model has its own.

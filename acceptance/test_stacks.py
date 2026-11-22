@@ -7,7 +7,7 @@ def node(repository: str, number: int, branch: str, base: str, stack: dict = Non
     """Open pull request number of repository, from branch into base, at position in stack if given."""
     return {
         "number": number, "title": f"Add {branch}", "url": f"https://github.com/{repository}/pull/{number}",
-        "updatedAt": DATE, "isDraft": False, "isCrossRepository": False, "headRefName": branch, "baseRefName": base,
+        "updatedAt": DATE, "isDraft": False, "isCrossRepository": False, "headRepository": {"nameWithOwner": repository}, "headRefName": branch, "baseRefName": base,
         "author": {"login": "agent"}, "repository": {"nameWithOwner": repository},
         "reviewDecision": None,
         "stackEntry": {"position": position} if stack else None, "stack": stack,
