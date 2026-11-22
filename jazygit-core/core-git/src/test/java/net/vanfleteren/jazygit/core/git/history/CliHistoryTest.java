@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.repo.Ahead;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tag;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +54,9 @@ class CliHistoryTest {
 
         assertFalse(three.more());
         assertTrue(two.more());
-        assertEquals(List.of("Side three", "Side two"), two.commits().map(Commit::message));
+        assertEquals(
+                List.of("Side three", "Side two"),
+                two.commits().map(c -> c.message().summary()));
         assertEquals(head, two.tip());
         // The walk cut short stops at Side one too, so the fork point is asked of git merge-base.
         assertEquals(three.forkPoint(), two.forkPoint());
@@ -98,8 +101,7 @@ class CliHistoryTest {
                                 "Ada",
                                 "ada@example.com",
                                 Instant.ofEpochSecond(60),
-                                "Subject",
-                                "Body\nmore",
+                                new CommitMessage("Subject", "Body\nmore"),
                                 List.of(new Sha(B)),
                                 List.of(new Tag("v1"), new Tag("v1.1"))),
                         Fixtures.commit(new Sha(B), "Bob", "bob@example.com", Instant.EPOCH, "Root", "", List.empty())),

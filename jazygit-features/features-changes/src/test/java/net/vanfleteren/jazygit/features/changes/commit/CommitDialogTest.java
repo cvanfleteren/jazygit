@@ -274,7 +274,10 @@ class CommitDialogTest {
         }
 
         assertEquals(java.util.List.of(new PopupMsg.Confirmed(RewordPopup.class)), dispatched);
-        assertEquals(java.util.List.of(new CommitMessage("Scaffold Maven project", last.body())), held);
+        assertEquals(
+                java.util.List.of(new CommitMessage(
+                        "Scaffold Maven project", last.message().description())),
+                held);
     }
 
     @Test
@@ -292,13 +295,13 @@ class CommitDialogTest {
             SettledPilot.focus(runner, CommitDialog.REWORD_ID);
             String screen =
                     RenderedText.ofLarge(runner, () -> reword.render(open).get());
-            assertTrue(screen.contains(last.message()), screen);
+            assertTrue(screen.contains(last.message().summary()), screen);
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
         }
 
         assertEquals(java.util.List.of(new PopupMsg.Confirmed(RewordPopup.class)), dispatched);
-        assertEquals(java.util.List.of(new CommitMessage(last.message(), last.body())), held);
+        assertEquals(java.util.List.of(last.message()), held);
     }
 
     @Test
@@ -321,7 +324,10 @@ class CommitDialogTest {
         }
 
         assertEquals(java.util.List.of(new PopupMsg.Confirmed(RewordPopup.class)), dispatched);
-        assertEquals(java.util.List.of(new CommitMessage(last.message() + "!", last.body())), held);
+        assertEquals(
+                java.util.List.of(new CommitMessage(
+                        last.message().summary() + "!", last.message().description())),
+                held);
     }
 
     @Test

@@ -26,7 +26,11 @@ public record SummaryHistory(
      */
     public static SummaryHistory of(List<Commit> commits) {
         return new SummaryHistory(
-                commits.filter(commit -> !commit.isMerge()).map(Commit::message).distinct(), TYPED, "");
+                commits.filter(commit -> !commit.isMerge())
+                        .map(commit -> commit.message().summary())
+                        .distinct(),
+                TYPED,
+                "");
     }
 
     /**

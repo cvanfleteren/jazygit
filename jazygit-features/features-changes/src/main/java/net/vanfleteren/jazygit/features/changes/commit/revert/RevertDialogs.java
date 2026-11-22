@@ -23,7 +23,7 @@ public final class RevertDialogs {
             popup -> Messages.get(
                     popup.commit().isMerge() ? "changes.dialog.revert.mergeMessage" : "changes.dialog.revert.message",
                     popup.commit().shortSha(),
-                    popup.commit().message()));
+                    popup.commit().message().summary()));
 
     private RevertDialogs() {}
 

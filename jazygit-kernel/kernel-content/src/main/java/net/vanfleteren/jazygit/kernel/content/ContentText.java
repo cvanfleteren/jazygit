@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.core.repo.Stash;
 import net.vanfleteren.jazygit.kernel.content.diff.RichDiff;
 import net.vanfleteren.jazygit.kernel.content.diff.ShownRemarks;
@@ -147,11 +148,12 @@ public final class ContentText {
      * The indented message of {@code commit}: its subject, and its body after a blank line if it has one.
      */
     static List<String> messageLines(Commit commit) {
-        return List.of(MESSAGE_INDENT + commit.message())
+        CommitMessage message = commit.message();
+        return List.of(MESSAGE_INDENT + message.summary())
                 .appendAll(
-                        commit.body().isBlank()
+                        !message.hasDescription()
                                 ? List.empty()
-                                : lines(commit.body())
+                                : lines(message.description())
                                         .map(line -> line.isBlank() ? line : MESSAGE_INDENT + line)
                                         .prepend(""));
     }
