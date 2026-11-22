@@ -417,7 +417,10 @@ public class JazygitApp extends ToolkitApp {
         frameStats.rendering();
         long started = System.nanoTime();
         redrawPending = false;
-        Model model = model();
+        // While another repository opened in place of the one shown reads its panes, the screen before is drawn, and
+        // nothing of it is reported to the one opened, whose model it is not.
+        Model model = session.drawn(clock.instant());
+        boolean live = model == model();
         Theme.activate(styleEngine, model.preferences().theme());
         Option<Focus> focused = focus.settle(model);
         Option<PaneId> active = focus.activePane(model, focused);
@@ -442,6 +445,21 @@ public class JazygitApp extends ToolkitApp {
         borderDrag.shown(panes, left, rendered.panes());
         // The framework knows no focus before the first render.
         Popups.Rendered shown = popups.render(model, focused);
+        if (live) {
+            followed(model, focused, shown);
+        }
+        // What is behind an open popup is dimmed, so the popup stands out, unless the popup previews its choices there.
+        Element behind = shown.dimsBehind() ? new Dimmed(layout, Theme.backdrop(styleEngine)) : layout;
+        Element screen = shown.dialog().<Element>map(d -> stack(behind, d)).getOrElse(layout);
+        frameStats.rendered(started);
+        return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
+    }
+
+    /**
+     * What the widgets, the focus and the clock follow of {@code model}, the program's, once a frame of it was
+     * rendered with {@code focused} and its popups {@code shown}.
+     */
+    private void followed(Model model, Option<Focus> focused, Popups.Rendered shown) {
         report(reports());
         stepPastFiltered(model, focused);
         // A popup opening while the log has the focus gives it back to the log once it closes.
@@ -462,11 +480,6 @@ public class JazygitApp extends ToolkitApp {
             clocked = model;
             shownTimeWake.at(ShownClocks.next(model, model.now()), clock.instant());
         }
-        // What is behind an open popup is dimmed, so the popup stands out, unless the popup previews its choices there.
-        Element behind = shown.dimsBehind() ? new Dimmed(layout, Theme.backdrop(styleEngine)) : layout;
-        Element screen = shown.dialog().<Element>map(d -> stack(behind, d)).getOrElse(layout);
-        frameStats.rendered(started);
-        return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
     }
 
     /**
