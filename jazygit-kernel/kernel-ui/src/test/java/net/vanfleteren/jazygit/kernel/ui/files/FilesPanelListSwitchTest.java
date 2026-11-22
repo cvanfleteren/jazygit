@@ -150,6 +150,28 @@ class FilesPanelListSwitchTest {
     }
 
     @Test
+    void aDirectoryMergedIntoANodeGoesToThatNodeAndOneWithoutChangesToTheDirectoryHoldingIt() throws Exception {
+        // All rows: /, docs/guide, src, main, M A.java, B.java, test, README.md; src/test starts collapsed.
+        // Changed rows: /, src/main, M A.java: src is merged with its only child directory there.
+        Loadable<List<CommitFile>> tree =
+                new Loadable.Loaded<>(ALL.append(new CommitFile("src/test/C.java", ChangeType.UNCHANGED)));
+        Model all = commit(TIP, true, tree);
+        Model changed = commit(TIP, false, tree);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(all, FilesPanel.PANE))) {
+            draw(testRunner, all);
+            panel.commitAllTree().selected(2);
+            draw(testRunner, changed);
+            assertEquals(1, panel.commitTree().selected(), "src goes to src/main");
+
+            draw(testRunner, all);
+            panel.commitAllTree().selected(1);
+            draw(testRunner, changed);
+            assertEquals(0, panel.commitTree().selected(), "docs/guide goes to the root");
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
     void theHighlightOfTheWorkingTreeStaysOnItsPathBothWays() throws Exception {
         Model changed = working(FilesShown.CHANGED);
         Model all = working(FilesShown.ALL);
