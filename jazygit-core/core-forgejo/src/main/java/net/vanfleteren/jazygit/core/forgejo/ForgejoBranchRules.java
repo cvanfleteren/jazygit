@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.core.forgejo;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
 import java.util.regex.Pattern;
 
 /**
@@ -30,14 +32,15 @@ public record ForgejoBranchRules(boolean guarded, boolean statusChecks, List<Str
 
     /**
      * Whether the checks are passed as Forgejo tells it: without required contexts, their combined state succeeded,
-     * which none do not; with them, each glob matches a check, and every check it matches passed.
+     * which none do not; with them, each glob matches a check, and every check it matches passed. A context that is
+     * no glob is skipped, as Forgejo skips one it cannot compile.
      */
     private boolean passed(CommitStatus status) {
         if (contexts.isEmpty()) {
             return !status.statuses().isEmpty()
                     && status.statuses().forAll(check -> check.state() == CommitStatus.State.PASSED);
         }
-        return contexts.map(ForgejoBranchRules::glob).forAll(glob -> {
+        return contexts.flatMap(ForgejoBranchRules::glob).forAll(glob -> {
             List<CommitStatus.Status> matched = status.statuses()
                     .filter(check -> glob.matcher(check.context()).matches());
             return !matched.isEmpty() && matched.forAll(check -> check.state() == CommitStatus.State.PASSED);
@@ -46,38 +49,49 @@ public record ForgejoBranchRules(boolean guarded, boolean statusChecks, List<Str
 
     /**
      * {@code pattern} as Forgejo compiles a required context, with gobwas' glob and no separators: {@code *} any
-     * text, {@code ?} any character, {@code [...]} one of them, {@code {a,b}} either; anything else as it is.
+     * text, {@code ?} any character, {@code [...]} one of the characters in it, {@code [!...]} one not in it, with
+     * {@code a-z} a range, and {@code {a,b}} either; anything else as it is. None when it is no glob, as a class or a
+     * brace left open.
      */
-    static Pattern glob(String pattern) {
-        return Pattern.compile(
-                List.ofAll(pattern.toCharArray())
-                        .foldLeft(new Glob("", 0, false), Glob::next)
-                        .regex(),
-                Pattern.DOTALL);
+    static Option<Pattern> glob(String pattern) {
+        Glob read = List.ofAll(pattern.toCharArray()).foldLeft(new Glob("", 0, false, false), Glob::next);
+        return read.braces() > 0 || read.inClass()
+                ? Option.none()
+                : Try.of(() -> Pattern.compile(read.regex(), Pattern.DOTALL)).toOption();
     }
 
     /**
      * A glob turned into a regular expression up to a character: the expression so far, how many braces are open,
-     * and whether it is in a class of characters, {@code [...]}.
+     * whether it is in a class of characters, {@code [...]}, and whether that class was just opened.
      */
-    private record Glob(String regex, int braces, boolean inClass) {
+    private record Glob(String regex, int braces, boolean inClass, boolean opened) {
 
         Glob next(char c) {
             if (inClass) {
-                // A class that starts with ! is one of the characters it does not have.
-                String added = c == '!' && regex.endsWith("[") ? "^" : String.valueOf(c);
-                return new Glob(regex + added, braces, c != ']');
+                return new Glob(regex + inClass(c), braces, c != ']', false);
             }
             return switch (c) {
-                case '*' -> new Glob(regex + ".*", braces, false);
-                case '?' -> new Glob(regex + ".", braces, false);
-                case '[' -> new Glob(regex + "[", braces, true);
-                case '{' -> new Glob(regex + "(?:", braces + 1, false);
-                case '}' ->
-                    braces > 0 ? new Glob(regex + ")", braces - 1, false) : new Glob(regex + "\\}", braces, false);
-                case ',' -> new Glob(regex + (braces > 0 ? "|" : ","), braces, false);
-                default -> new Glob(regex + Pattern.quote(String.valueOf(c)), braces, false);
+                case '*' -> outside(".*", braces);
+                case '?' -> outside(".", braces);
+                case '[' -> new Glob(regex + "[", braces, true, true);
+                case '{' -> outside("(?:", braces + 1);
+                case '}' -> braces > 0 ? outside(")", braces - 1) : outside("\\}", braces);
+                case ',' -> outside(braces > 0 ? "|" : ",", braces);
+                default -> outside(Pattern.quote(String.valueOf(c)), braces);
             };
+        }
+
+        private Glob outside(String added, int open) {
+            return new Glob(regex + added, open, false, false);
+        }
+
+        // A class that starts with ! is one of the characters it does not have; - makes a range, and ] closes it. Any
+        // other character is only itself, as [, & or ^ are not in Java's classes.
+        private String inClass(char c) {
+            if (c == '!' && opened) {
+                return "^";
+            }
+            return c == '-' || c == ']' || Character.isLetterOrDigit(c) ? String.valueOf(c) : "\\" + c;
         }
     }
 }

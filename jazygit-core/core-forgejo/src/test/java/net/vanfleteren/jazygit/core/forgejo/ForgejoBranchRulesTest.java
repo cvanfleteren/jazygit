@@ -23,6 +23,11 @@ class ForgejoBranchRulesTest {
                         new CommitStatus.Status("ci / test (push)", test, "")));
     }
 
+    private static boolean matches(String glob, String text) {
+        return ForgejoBranchRules.glob(glob)
+                .exists(pattern -> pattern.matcher(text).matches());
+    }
+
     @Test
     void aBranchWithoutARuleWaitsForNothing() {
         assertFalse(ForgejoBranchRules.NONE.waitFor(CommitStatus.NONE, 0));
@@ -60,17 +65,37 @@ class ForgejoBranchRulesTest {
 
     @Test
     void aRequiredContextIsAGlobAsForgejoCompilesIt() {
-        assertTrue(ForgejoBranchRules.glob("ci/*").matcher("ci/lint (push)").matches());
-        assertTrue(ForgejoBranchRules.glob("ci/??st").matcher("ci/test").matches());
-        assertTrue(ForgejoBranchRules.glob("ci/{lint,test}").matcher("ci/test").matches());
-        assertFalse(
-                ForgejoBranchRules.glob("ci/{lint,test}").matcher("ci/build").matches());
-        assertTrue(ForgejoBranchRules.glob("v[0-9]").matcher("v7").matches());
-        assertFalse(ForgejoBranchRules.glob("v[!0-9]").matcher("v7").matches());
+        assertTrue(matches("ci/*", "ci/lint (push)"));
+        assertTrue(matches("ci/??st", "ci/test"));
+        assertTrue(matches("ci/{lint,test}", "ci/test"));
+        assertFalse(matches("ci/{lint,test}", "ci/build"));
+        assertTrue(matches("v[0-9]", "v7"));
+        assertFalse(matches("v[!0-9]", "v7"));
         // What a regular expression would read otherwise is as it is.
-        assertTrue(
-                ForgejoBranchRules.glob("build (1.0)+").matcher("build (1.0)+").matches());
-        assertFalse(ForgejoBranchRules.glob("build.x").matcher("buildyx").matches());
+        assertTrue(matches("build (1.0)+", "build (1.0)+"));
+        assertFalse(matches("build.x", "buildyx"));
+    }
+
+    @Test
+    void whatIsInAClassIsOnlyOneOfItsCharacters() {
+        assertTrue(matches("[[]", "["));
+        assertTrue(matches("[a&&b]", "&"));
+        assertTrue(matches("[^a]", "^"));
+        assertFalse(matches("[^a]", "b"));
+    }
+
+    @Test
+    void aGlobLeftOpenIsNone() {
+        assertTrue(ForgejoBranchRules.glob("{a,b").isEmpty());
+        assertTrue(ForgejoBranchRules.glob("build[").isEmpty());
+    }
+
+    @Test
+    void aRequiredContextThatIsNoGlobIsSkippedAsForgejoDoes() {
+        ForgejoBranchRules rules = new ForgejoBranchRules(true, true, List.of("{a,b", "ci / lint*"), 0);
+
+        assertFalse(rules.waitFor(checks(CommitStatus.State.PASSED, CommitStatus.State.FAILED), 0));
+        assertTrue(rules.waitFor(checks(CommitStatus.State.FAILED, CommitStatus.State.PASSED), 0));
     }
 
     @Test
