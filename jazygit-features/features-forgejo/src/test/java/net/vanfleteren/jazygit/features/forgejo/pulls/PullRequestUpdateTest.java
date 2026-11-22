@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
+import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -223,6 +224,23 @@ class PullRequestUpdateTest {
         assertEquals(
                 List.empty(),
                 PullRequestReactions.to(homeless, new KernelEvent.Fetched()).cmds());
+        Next on = PullRequestReactions.to(
+                homeless.withPart(ForgejoPullRequests.PART, listed().part(ForgejoPullRequests.PART)),
+                new KernelEvent.Switched(ForgejoFeature.ID, true));
+        assertEquals(List.empty(), on.cmds());
+        assertEquals(ForgejoPullRequests.NONE, on.model().part(ForgejoPullRequests.PART));
+    }
+
+    @Test
+    void theWarningDoesNotReplaceWhatAnOperationLeftInTheCommandLog() {
+        AppError shown = new PullRequestsError.Unavailable(FAILED);
+        Model failed = model().fail(shown);
+
+        Model after = Update.update(failed, new PullRequestMsg.PlainHttpChecked(Option.of("http://code.example.net")))
+                .model();
+
+        assertEquals(Option.of(shown), after.outcome().error());
+        assertEquals(Option.none(), after.outcome().notice());
     }
 
     @Test

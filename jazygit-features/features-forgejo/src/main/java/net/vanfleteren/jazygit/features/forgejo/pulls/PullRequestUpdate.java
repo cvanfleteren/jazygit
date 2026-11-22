@@ -33,9 +33,12 @@ public final class PullRequestUpdate {
             case PullRequestMsg.Read(long read, var result) -> Next.of(read(model, read, result));
             case PullRequestMsg.OpenChosen() -> openChosen(model);
             case PullRequestMsg.RefreshChosen() -> refreshChosen(model);
-            // A warning, in the command log: the user chose the remote (ADR 179).
+            // A warning, in the command log: the user chose the remote (ADR 179). It comes late, so it does not take
+            // the place of what an operation left there, an error or a notice; then it is not given.
             case PullRequestMsg.PlainHttpChecked(var base) ->
-                Next.of(base.map(over -> model.inform(new PlainHttpNotice(over)))
+                Next.of(base.filter(over -> model.outcome().error().isEmpty()
+                                && model.outcome().notice().isEmpty())
+                        .map(over -> model.inform(new PlainHttpNotice(over)))
                         .getOrElse(model));
         };
     }

@@ -18,7 +18,8 @@ own integration tests, served on `http://localhost:3000`, is the same case.
   forbid it.
 - **It warns in the command log, once as Forgejo turns on**, when fj's token goes to the home of the pull requests
   (ADR 177) unencrypted: "Forgejo at `http://host` is asked over plain HTTP: fj's token is sent unencrypted". A
-  notice, not an error: nothing is refused.
+  notice, not an error: nothing is refused. It comes once the home was found to be Forgejo, so it never takes the place
+  of what an operation left in the command log, an error or a notice: then it is not given for that opening.
 - **An ssh remote is still asked over https** (or at fj's alias of its host, ADR 174), as it has no scheme of its
   own to follow.
 - **A 401 means the host has no token of fj's for jazygit to send**, so ADR 178's advice to run `fj auth login`
