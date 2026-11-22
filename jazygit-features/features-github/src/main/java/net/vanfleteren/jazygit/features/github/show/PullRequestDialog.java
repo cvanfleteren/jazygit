@@ -1,7 +1,8 @@
 package net.vanfleteren.jazygit.features.github.show;
 
-import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
+import static net.vanfleteren.jazygit.kernel.ui.widgets.LabelledLines.INDENT;
+import static net.vanfleteren.jazygit.kernel.ui.widgets.LabelledLines.label;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
@@ -32,7 +33,6 @@ import net.vanfleteren.jazygit.features.github.verdict.VerdictMsg;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.features.github.widgets.CheckRows;
 import net.vanfleteren.jazygit.features.github.widgets.PullRequestSymbols;
-import net.vanfleteren.jazygit.features.github.widgets.PullRequestSymbols.Symbol;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -40,14 +40,16 @@ import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
-import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceList;
 import net.vanfleteren.jazygit.kernel.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.kernel.ui.widgets.KeysFirst;
+import net.vanfleteren.jazygit.kernel.ui.widgets.LabelledLines;
+import net.vanfleteren.jazygit.kernel.ui.widgets.LabelledLines.Line;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
+import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 import net.vanfleteren.jazygit.kernel.ui.widgets.WithDetails;
 
 /**
@@ -62,9 +64,6 @@ public final class PullRequestDialog implements PopupView {
     public static final String ID = "pull-request";
 
     private static final int WIDTH = 80;
-    // The labels right-aligned in a column of this many characters, then two spaces and the value.
-    private static final int LABEL_COLUMN = 11;
-    private static final String INDENT = " ".repeat(LABEL_COLUMN + 2);
     // A check listed after the indent takes the rest of the line, how it is doing lined up on the right.
     private static final int CHECK_WIDTH = DialogFrame.contentWidth(WIDTH) - INDENT.length();
     // The failed and running checks listed one by one; the rest are counted.
@@ -282,12 +281,8 @@ public final class PullRequestDialog implements PopupView {
         return List.of(Line.wrapped(
                 Messages.get("github.dialog.pullRequest.failed", ErrorText.of(failure)),
                 Theme.Classes.ERROR,
+                WIDTH,
                 CONTENT_HEIGHT));
-    }
-
-    private static StyledElement<?> label(String labelKey) {
-        return text(TextWidth.alignRight(Messages.get(labelKey), LABEL_COLUMN) + "  ")
-                .addClass(Theme.Classes.DIM);
     }
 
     private static String state(PullRequestDetails pr) {
@@ -388,7 +383,7 @@ public final class PullRequestDialog implements PopupView {
     }
 
     private static StyledElement<?> symbol(Symbol symbol) {
-        return text(symbol.text()).addClass(symbol.cssClass());
+        return symbol.element();
     }
 
     @Override
@@ -436,14 +431,12 @@ public final class PullRequestDialog implements PopupView {
                             PullRequestDialog::failed,
                             pr -> details(pr, model.now(), PullRequestPopup.times(model, pr), popup.progress(model))))
                     .getOrElse(() -> loading(popup));
-            int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
             Element dialog = DialogFrame.withHint(
                             title(popup),
                             WIDTH,
                             "dialog.hint.selectCancel",
-                            lines.appendAll(List.fill(Math.max(0, blanks), Line::blank))
-                                    .append(Line.blank())
-                                    .map(Line::element)
+                            LabelledLines.filled(lines, CONTENT_HEIGHT)
+                                    .append(Line.blank().element())
                                     .append(actions.render(model, popup)))
                     // The lines, a blank line, the actions, the blank line and the hint, plus the border.
                     .length(CONTENT_HEIGHT + 1 + actions.height(model, popup) + 2 + 2);
@@ -489,7 +482,7 @@ public final class PullRequestDialog implements PopupView {
 
     private List<Line> details(PullRequestDetails pr, Instant now, Option<CheckTimes> times, double progress) {
         return List.of(
-                        Line.wrapped(pr.title(), Theme.Classes.BOLD, TITLE_LINES),
+                        Line.wrapped(pr.title(), Theme.Classes.BOLD, WIDTH, TITLE_LINES),
                         Line.blank(),
                         Line.labelled("github.dialog.pullRequest.state", text(state(pr))))
                 .appendAll(Option.when(
@@ -570,39 +563,5 @@ public final class PullRequestDialog implements PopupView {
                 "github.dialog.pullRequest.when",
                 LocalDate.ofInstant(at, clock.getZone()).toString(),
                 TimeText.ago(Duration.between(at, now)));
-    }
-
-    /**
-     * A part of the dialog, and how many lines it takes.
-     */
-    private record Line(Element element, int height) {
-
-        static Line of(StyledElement<?> element) {
-            return new Line(element, 1);
-        }
-
-        static Line blank() {
-            return of(text(""));
-        }
-
-        /**
-         * {@code text}, wrapped at the width of the dialog, and cut after {@code maxLines}.
-         */
-        static Line wrapped(String text, String cssClass, int maxLines) {
-            return new Line(
-                    DialogFrame.wrapped(text, WIDTH, maxLines).addClass(cssClass),
-                    DialogFrame.wrappedHeight(text, WIDTH, maxLines));
-        }
-
-        /**
-         * A row with {@code label} in the label column and {@code value} next to it.
-         */
-        static Line labelled(String labelKey, StyledElement<?>... value) {
-            return pieces(List.<StyledElement<?>>of(label(labelKey)).appendAll(List.of(value)));
-        }
-
-        static Line pieces(List<StyledElement<?>> pieces) {
-            return of(pieces.size() == 1 ? pieces.head() : row(pieces.toJavaArray(StyledElement[]::new)));
-        }
     }
 }

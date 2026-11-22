@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.features.github.widgets.PullRequestSymbols;
 import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 
 /**
  * What GitHub's badges in the branches pane mean, which its help lists after what git's symbols there mean (ADR 168):
@@ -44,7 +45,7 @@ public final class BadgeLegend {
     /**
      * The texts of {@code symbols}, a space apart.
      */
-    private static String texts(PullRequestSymbols.Symbol... symbols) {
-        return List.of(symbols).map(PullRequestSymbols.Symbol::text).mkString(" ");
+    private static String texts(Symbol... symbols) {
+        return List.of(symbols).map(Symbol::text).mkString(" ");
     }
 }
