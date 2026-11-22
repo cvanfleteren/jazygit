@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.features.github.state.CheckTimes;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
+import net.vanfleteren.jazygit.kernel.ui.widgets.CheckSymbols;
+import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 
 /**
  * What the dialogs that list checks one by one have in common (ADR 32): how many are in each state, in which order
@@ -34,28 +36,13 @@ public final class CheckRows {
      * done together, as far as {@code times} tells: {@code ✗ 1 failed · ● 2 running · done in ~3m}.
      */
     public static List<StyledElement<?>> counts(List<Check> all, Option<CheckTimes> times, Instant now) {
-        return List.of(
-                        count(all, Checks.FAILING, "github.dialog.pullRequest.checks.failed"),
-                        count(all, Checks.PENDING, "github.dialog.pullRequest.checks.running"),
-                        count(all, Checks.PASSING, "github.dialog.pullRequest.checks.passed"),
-                        CheckTimesText.together(eta(all, times), CheckSpan.current(all), learning(times), now)
-                                .map(together -> List.<StyledElement<?>>of(text(together))))
-                .flatMap(o -> o)
-                .zipWithIndex()
-                .flatMap(indexed -> indexed._2 > 0 ? indexed._1.prepend(text(" · ")) : indexed._1);
-    }
-
-    /**
-     * The symbol of {@code state} and how many of {@code checks} are in it; nothing when none are.
-     */
-    private static Option<List<StyledElement<?>>> count(List<Check> checks, Checks state, String key) {
-        int count = checks.count(check -> check.state() == state);
-        return Option.when(
-                count > 0,
-                () -> PullRequestSymbols.checks(state)
-                        .toList()
-                        .<StyledElement<?>>map(CheckRows::symbol)
-                        .append(text(" " + Messages.get(key, String.valueOf(count)))));
+        List<StyledElement<?>> counts = CheckSymbols.counts(
+                all.count(check -> check.state() == Checks.FAILING),
+                all.count(check -> check.state() == Checks.PENDING),
+                all.count(check -> check.state() == Checks.PASSING));
+        return CheckSymbols.joined(List.of(counts)
+                .appendAll(CheckTimesText.together(eta(all, times), CheckSpan.current(all), learning(times), now)
+                        .map(together -> List.<StyledElement<?>>of(text(together)))));
     }
 
     /**
@@ -81,11 +68,10 @@ public final class CheckRows {
             int width,
             int doingWidth,
             boolean took) {
-        List<PullRequestSymbols.Symbol> symbols =
-                PullRequestSymbols.check(check).toList();
+        List<Symbol> symbols = PullRequestSymbols.check(check).toList();
         int left =
                 width - symbols.map(symbol -> TextWidth.of(symbol.text())).sum().intValue() - 1;
-        return symbols.<StyledElement<?>>map(CheckRows::symbol)
+        return symbols.<StyledElement<?>>map(Symbol::element)
                 .appendAll(doing(check, all, times, now, took)
                         .map(text -> {
                             TextElement name = text(" " + padded(check.name(), left - 2 - doingWidth) + "  ");
@@ -147,8 +133,7 @@ public final class CheckRows {
             int width,
             int barWidth,
             int doingWidth) {
-        List<PullRequestSymbols.Symbol> symbols =
-                PullRequestSymbols.check(check).toList();
+        List<Symbol> symbols = PullRequestSymbols.check(check).toList();
         int name = width
                 - symbols.map(symbol -> TextWidth.of(symbol.text())).sum().intValue()
                 - 1
@@ -158,7 +143,7 @@ public final class CheckRows {
                 - doingWidth;
         TextElement named = text(" " + padded(check.name(), name) + "  ");
         String doing = barredDoing(check, all, times, now).getOrElse("");
-        return symbols.<StyledElement<?>>map(CheckRows::symbol)
+        return symbols.<StyledElement<?>>map(Symbol::element)
                 .append(check.queued() ? named.addClass(Theme.Classes.DIM) : named)
                 .appendAll(check.done() ? List.of(text(" ".repeat(barWidth))) : bar(check, all, times, now, barWidth))
                 .append(text("  " + TextWidth.alignRight(doing, doingWidth)).addClass(Theme.Classes.DIM));
@@ -263,9 +248,5 @@ public final class CheckRows {
     private static String padded(String name, int width) {
         String cut = TextWidth.cut(name, width);
         return cut + " ".repeat(Math.max(0, width - TextWidth.of(cut)));
-    }
-
-    private static StyledElement<?> symbol(PullRequestSymbols.Symbol symbol) {
-        return text(symbol.text()).addClass(symbol.cssClass());
     }
 }

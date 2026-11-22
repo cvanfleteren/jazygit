@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
+import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 
 /**
  * How a branch is doing on GitHub, as the branches pane shows it among its badges (ADR 167): its pull request, with
@@ -223,7 +224,7 @@ public final class GitHubBadge {
         return segs.isEmpty() ? segs : segs.update(0, first -> first.prefixed(" "));
     }
 
-    private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {
+    private static LoadableList.Seg symbol(Symbol symbol) {
         return LoadableList.Seg.styled(" " + symbol.text(), symbol.cssClass());
     }
 }

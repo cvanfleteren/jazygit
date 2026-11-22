@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import net.vanfleteren.jazygit.kernel.ui.widgets.Pane;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
+import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 
 /**
  * A pane of the pull requests screen, listing pull requests: how long ago each changed, the name of its repository
@@ -149,7 +150,7 @@ public final class PullRequestsPanel implements LeftPane {
         return cssClass.isEmpty() ? LoadableList.Seg.of(text) : LoadableList.Seg.styled(text, cssClass);
     }
 
-    private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {
+    private static LoadableList.Seg symbol(Symbol symbol) {
         return LoadableList.Seg.styled(" " + symbol.text(), symbol.cssClass());
     }
 
