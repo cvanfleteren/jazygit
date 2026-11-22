@@ -63,7 +63,7 @@ public record ForgejoRepository(String base, String owner, String name) {
     }
 
     /**
-     * Whether the host is asked over https, so that a token can be sent to it.
+     * Whether the host is asked over https, so that a token sent to it is encrypted.
      */
     public boolean secure() {
         return base.startsWith("https://");

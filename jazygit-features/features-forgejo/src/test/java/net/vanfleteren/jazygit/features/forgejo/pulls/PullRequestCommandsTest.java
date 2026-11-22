@@ -56,6 +56,16 @@ class PullRequestCommandsTest {
     }
 
     @Test
+    void aHomeOverPlainHttpIsToldToGetTheTokenUnencryptedAndOneOverHttpsIsNot() {
+        FakeForgejo forgejo = FakeForgejo.of(details("Show"));
+
+        assertEquals(
+                new PullRequestMsg.PlainHttpChecked(Option.of("http://code.example.net")),
+                new CheckPlainHttp(ORIGIN).run(forgejo.env(HashMap.of(ORIGIN, "http://code.example.net/cvf/nix.git"))));
+        assertEquals(new PullRequestMsg.PlainHttpChecked(Option.none()), new CheckPlainHttp(ORIGIN).run(forgejo.env()));
+    }
+
+    @Test
     void withoutAHomeOnForgejoNoneAreRead() {
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.left(DOWN));
 

@@ -226,10 +226,26 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aTokenSentUnencryptedIsWarnedOfInTheCommandLogAndNothingElse() {
+        Next warned = Update.update(model(), new PullRequestMsg.PlainHttpChecked(Option.of("http://code.example.net")));
+
+        assertEquals(
+                Option.of(new PlainHttpNotice("http://code.example.net")),
+                warned.model().outcome().notice());
+        assertEquals(Option.none(), warned.model().outcome().error());
+        assertEquals(
+                model().outcome(),
+                Update.update(model(), new PullRequestMsg.PlainHttpChecked(Option.none()))
+                        .model()
+                        .outcome());
+    }
+
+    @Test
     void theyAreReadAfreshAsForgejoTurnsOnAndAgainAfterAFetchOrAPush() {
         Next on = PullRequestReactions.to(listed(), new KernelEvent.Switched(ForgejoFeature.ID, true));
         assertEquals(ForgejoPullRequests.NONE, on.model().part(ForgejoPullRequests.PART));
-        assertEquals(List.of(new ReadPullRequests(ORIGIN)), on.cmds());
+        // Whether the token goes to the home unencrypted is told once, as Forgejo turns on (ADR 179).
+        assertEquals(List.of(new ReadPullRequests(ORIGIN), new CheckPlainHttp(ORIGIN)), on.cmds());
 
         assertEquals(
                 List.of(new ReadPullRequests(ORIGIN)),

@@ -72,9 +72,7 @@ class HttpForgejoCreateTest {
     @Test
     void itIsPostedAsJsonWithTheTokenAndAnsweredWithThePullRequest() {
         ForgejoRepository nix = repository("nix");
-        // This server is plain HTTP; it stands for one over https, where the token is sent.
-        Forgejo forgejo = HttpForgejo.trusting(
-                () -> new FjKeys(HashMap.of(nix.host(), "secret"), HashMap.empty()), repository -> true);
+        Forgejo forgejo = HttpForgejo.of(() -> new FjKeys(HashMap.of(nix.host(), "secret"), HashMap.empty()));
 
         Either<ForgejoError, ForgejoPullRequest> created = forgejo.createPullRequest(nix, NEW);
 

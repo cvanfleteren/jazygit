@@ -33,6 +33,10 @@ public final class PullRequestUpdate {
             case PullRequestMsg.Read(long read, var result) -> Next.of(read(model, read, result));
             case PullRequestMsg.OpenChosen() -> openChosen(model);
             case PullRequestMsg.RefreshChosen() -> refreshChosen(model);
+            // A warning, in the command log: the user chose the remote (ADR 179).
+            case PullRequestMsg.PlainHttpChecked(var base) ->
+                Next.of(base.map(over -> model.inform(new PlainHttpNotice(over)))
+                        .getOrElse(model));
         };
     }
 
@@ -43,6 +47,18 @@ public final class PullRequestUpdate {
         return ForgeHome.of(model)
                 .map(home -> Next.of(model, new ReadPullRequests(home)))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * {@code model} once Forgejo turned on for the repository opened: its pull requests read afresh, as the
+     * repository may be another one, with other remotes under the same names, and whether fj's token goes to the home
+     * unencrypted told, once for the opening (ADR 179).
+     */
+    public static Next turnedOn(Model model) {
+        Model afresh = model.withPart(ForgejoPullRequests.PART, ForgejoPullRequests.NONE);
+        return ForgeHome.of(afresh)
+                .map(home -> Next.of(afresh, new ReadPullRequests(home), new CheckPlainHttp(home)))
+                .getOrElse(() -> Next.of(afresh));
     }
 
     /**

@@ -70,3 +70,6 @@ a short sha and no branch, and leaves out the statuses of other CIs.
 
 Amended by ADR 177: only the forge of the home of the pull requests applies to a repository, decided by the
 kernel from what the forges claim, or asked.
+
+Amended by ADR 179: fj's token goes where the remote points, over plain HTTP too, with a warning in the command
+log when the home is asked so.

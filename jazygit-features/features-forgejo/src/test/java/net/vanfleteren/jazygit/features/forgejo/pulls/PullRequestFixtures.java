@@ -172,6 +172,12 @@ final class PullRequestFixtures {
                     .with(ForgejoServices.FORGEJO, this);
         }
 
+        // fj has a token for the host, which goes to it unencrypted over plain HTTP.
+        @Override
+        public boolean sendsTokenInTheClear(ForgejoRepository repository) {
+            return !repository.secure();
+        }
+
         @Override
         public Option<ForgejoRepository> repository(String remoteUrl) {
             return ForgejoRepository.of(remoteUrl, FjKeys.NONE.aliases());
