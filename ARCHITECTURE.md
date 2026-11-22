@@ -39,7 +39,7 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `core-repo` | `repo`: what a repository is made of, as values that git and gh share: `Sha`, `BranchName`, `Commit`, `Branch`, `Upstream`, `Tag`, `Stash` (ADR 165). | vavr |
 | ↳ `core-git` | `git`, `git.model`: running git, and what it reports as values, as diffs, blame and the status. | repo, base, process, syntax |
 | ↳ `core-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, repo, json |
-| ↳ `core-forgejo` | `forgejo`: asking Forgejo's HTTP API with fj's token, and what it reports as values: a commit's combined status, which hosts are Forgejo (ADR 174). | repo, json |
+| ↳ `core-forgejo` | `forgejo`: asking Forgejo's HTTP API with fj's token, and what it reports as values: a commit's combined status, which hosts are Forgejo (ADR 174), the open pull requests of a repository, one of them and its reviews (ADR 176). | repo, json |
 | ↳ `core-askpass` | `askpass`: lets ssh ask the user through jazygit: the socket, the helper ssh runs, its launcher (ADR 150). | process, git |
 | `jazygit-kernel` | The kernel: what every feature builds on. | lib, core |
 | ↳ `kernel-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
@@ -50,7 +50,7 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits` and `changes.panes.stash`, the commits and stash panes (ADR 158). | ui |
 | ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
 | ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds, and how gh runs in the settings panel; the only module of the application that names gh. Deleting it, with `core-gh`, leaves jazygit working, without GitHub (ADR 171). | branches, changes, gh |
-| ↳ `features-forgejo` | `forgejo.*`: how the last build of each branch on Forgejo went, as a badge in the branches pane (ADR 174); the only module of the application that names `core-forgejo`. Deleting it, with `core-forgejo`, leaves jazygit working, without Forgejo. | forgejo |
+| ↳ `features-forgejo` | `forgejo.*`: how the last build of each branch on Forgejo went, as a badge in the branches pane (ADR 174), and the pull request of a branch, in a dialog of its own (`pulls`, ADR 176); the only module of the application that names `core-forgejo`. Deleting it, with `core-forgejo`, leaves jazygit working, without Forgejo. | forgejo |
 | ↳ `features-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
 | ↳ `features-agent` | `agent.*`: handing a failed build to a coding agent (ADR 161); it knows no forge, and reaches the build only through the keys a forge's views host. | — |
 | `jazygit-app` | `app.*`: `JazygitApp`, `Launcher`, `RepositorySession`, `Popups`; `app.cli`; `app.keys` (`GlobalKeys`, `Standard`, `StandardContent`, `Features`). Builds the fat jar and the native image. | the groups of features, content, askpass, TamboUI's backend, picocli |
