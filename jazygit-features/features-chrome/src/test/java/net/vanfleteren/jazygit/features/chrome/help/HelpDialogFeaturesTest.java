@@ -32,20 +32,28 @@ class HelpDialogFeaturesTest {
     private final HelpDialog dialog = new HelpDialog(
             cursor,
             Keymap.withHelp(HelpMsg.Requested::new)
-                    .owned("f", keys -> keys.add(Scopes.BRANCHES, Binding.always("Z", "key.space", Probe::new)))
+                    .owned(
+                            "f",
+                            keys -> keys.add(Scopes.BRANCHES, Binding.always("Z", "key.space", Probe::new))
+                                    .global(Keymap.Global.Dispatching.ofChar('Y', "key.space", Probe::new)))
                     .owned(
                             "g",
-                            keys -> keys.add(Scopes.BRANCHES, Binding.always("Z", "panel.files.title", Probe::new))));
+                            keys -> keys.add(Scopes.BRANCHES, Binding.always("Z", "panel.files.title", Probe::new))
+                                    .global(Keymap.Global.Dispatching.ofChar('Y', "panel.files.title", Probe::new))));
 
     @Test
     void aKeyBothFeaturesBindIsListedOnceAsTheFirstThatIsOnHasIt() throws Exception {
         String both = screen(TestModels.loaded());
         assertEquals(1, occurrences(both, " Z "), both);
         assertTrue(both.contains("Z space"), both);
+        assertEquals(1, occurrences(both, " Y "), both);
+        assertTrue(both.contains("Y space"), both);
 
         String onlyG = screen(FeatureUpdate.off(TestModels.loaded(), "f"));
         assertEquals(1, occurrences(onlyG, " Z "), onlyG);
         assertTrue(onlyG.contains("Z Files"), onlyG);
+        assertEquals(1, occurrences(onlyG, " Y "), onlyG);
+        assertTrue(onlyG.contains("Y Files"), onlyG);
     }
 
     private static int occurrences(String screen, String text) {

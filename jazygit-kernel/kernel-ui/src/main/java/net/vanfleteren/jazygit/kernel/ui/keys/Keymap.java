@@ -4,6 +4,7 @@ import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -139,16 +140,24 @@ public final class Keymap {
      * repository, once each, as two forges do (ADR 175): the first of them that is on has it.
      */
     private void requireOnce(String scopeId) {
-        Option<String> twice = bindings(scopeId)
+        Option<String> twice = boundTwice(bindings(scopeId)
                 .map(binding -> Tuple.of(binding.key(), binding.feature()))
-                .append(Tuple.of(HELP_KEY, Option.<String>none()))
-                .groupBy(key -> key._1())
-                .filterValues(keys -> keys.size() > 1
-                        && (keys.exists(key -> key._2().isEmpty())
-                                || keys.distinctBy(key -> key._2()).size() < keys.size()))
+                .append(Tuple.of(HELP_KEY, Option.<String>none())));
+        Require.that(twice.isEmpty(), () -> "The key \"" + twice.get() + "\" is bound twice in " + scopeId);
+    }
+
+    /**
+     * A key of {@code keys}, each with the feature that binds it if one does, that is bound twice: by the kernel or a
+     * feature that is always on and another, or twice by one feature. Features that are on or off may bind a key
+     * once each (ADR 175).
+     */
+    private static Option<String> boundTwice(List<Tuple2<String, Option<String>>> keys) {
+        return keys.groupBy(Tuple2::_1)
+                .filterValues(bound -> bound.size() > 1
+                        && (bound.exists(key -> key._2().isEmpty())
+                                || bound.distinctBy(Tuple2::_2).size() < bound.size()))
                 .keySet()
                 .headOption();
-        Require.that(twice.isEmpty(), () -> "The key \"" + twice.get() + "\" is bound twice in " + scopeId);
     }
 
     /**
@@ -164,12 +173,11 @@ public final class Keymap {
      * This keymap with the key {@code global} added.
      */
     public Keymap global(Global global) {
-        return new Keymap(
-                sections,
-                globals.append(owning.map(feature -> Global.of(feature, global)).getOrElse(global)),
-                help,
-                guests,
-                owning);
+        List<Global> all =
+                globals.append(owning.map(feature -> Global.of(feature, global)).getOrElse(global));
+        Option<String> twice = boundTwice(all.map(added -> Tuple.of(added.label(), added.feature())));
+        Require.that(twice.isEmpty(), () -> "The global key \"" + twice.get() + "\" is bound twice");
+        return new Keymap(sections, all, help, guests, owning);
     }
 
     /**
@@ -188,25 +196,29 @@ public final class Keymap {
         if (HELP_KEY.equals(name(event))) {
             return help.map(requested -> requested.apply(scope.id(), actions(scope, selection, subjects)));
         }
-        List<Binding<?>> matching = own(scope.id()).filter(binding -> binding.matches(event));
-        return matching.isEmpty()
-                ? guestsOf(scope.id())
-                        .iterator()
-                        .flatMap(guest -> subject(guest, subjects).handled(this, event))
-                        .headOption()
-                : sent(matching, selection);
+        // The scope's own keys and those of the scopes it hosts are one set (ADR 161), which features that are on or
+        // off may bind alike (ADR 175).
+        return firstOn(sent(own(scope.id()).filter(binding -> binding.matches(event)), selection)
+                .appendAll(guestsOf(scope.id())
+                        .flatMap(guest -> subject(guest, subjects).sent(this, event))));
     }
 
     /**
-     * What the key bound by {@code matching} sends for {@code selection}: what its binding sends, or, when features
-     * that are on or off bind it alike, what the first of them that is on sends (ADR 175).
+     * What {@code matching}, the bindings of one key, send for {@code selection}, leaving out those that send nothing.
      */
-    private static <S> Option<Msg> sent(List<Binding<?>> matching, Option<S> selection) {
-        List<Msg> sent = matching.flatMap(binding -> {
+    private static <S> List<Msg> sent(List<Binding<?>> matching, Option<S> selection) {
+        return matching.flatMap(binding -> {
             @SuppressWarnings("unchecked")
             Binding<S> typed = (Binding<S>) binding;
             return typed.action().apply(selection);
         });
+    }
+
+    /**
+     * What a key sends of {@code sent}, what each of its bindings sends: what its one binding sends, or, when
+     * features that are on or off bind it alike, what the first of them that is on sends (ADR 175).
+     */
+    private static Option<Msg> firstOn(List<Msg> sent) {
         return sent.size() > 1
                 ? Option.of(new FeatureMsg.FirstOn(sent.map(FeatureMsg.Owned.class::cast)))
                 : sent.headOption();
@@ -275,7 +287,7 @@ public final class Keymap {
      * The message of the global key {@code event} is, if it is one.
      */
     public Option<Msg> handleGlobal(KeyEvent event) {
-        return globals.iterator().flatMap(global -> global.handle(event)).headOption();
+        return firstOn(globals.flatMap(global -> global.handle(event)));
     }
 
     /**
@@ -486,8 +498,8 @@ public final class Keymap {
             return new Hosted<>(scope, Option.none());
         }
 
-        private Option<Msg> handled(Keymap keymap, KeyEvent event) {
-            return sent(keymap.own(scope.id()).filter(binding -> binding.matches(event)), subject);
+        private List<Msg> sent(Keymap keymap, KeyEvent event) {
+            return Keymap.sent(keymap.own(scope.id()).filter(binding -> binding.matches(event)), subject);
         }
 
         private List<Option<Msg>> actions(Keymap keymap) {

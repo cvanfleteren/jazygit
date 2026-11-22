@@ -176,6 +176,44 @@ class KeymapTest {
     }
 
     @Test
+    void aKeyAHostsFeatureAndAGuestsFeatureBindAlikeSendsWhatTheFirstOfThemThatIsOnSends() {
+        Probe guest = new Probe("guest");
+        Keymap keymap = Keymap.empty()
+                .host(SCOPE, GUEST)
+                .owned("f", keys -> keys.add(SCOPE, Binding.always("a", "f.a", () -> ALWAYS)))
+                .owned("g", keys -> keys.add(GUEST, Binding.always("a", "g.a", () -> guest)));
+
+        assertEquals(
+                Option.of(new FeatureMsg.FirstOn(
+                        List.of(new FeatureMsg.Owned("f", ALWAYS), new FeatureMsg.Owned("g", guest)))),
+                keymap.handle(SCOPE, KeyEvent.ofChar('a'), Option.of("one"), new Keymap.Hosted<>(GUEST, Option.of(7))));
+    }
+
+    @Test
+    void aGlobalKeyFeaturesBindAlikeSendsWhatTheFirstOfThemThatIsOnSends() {
+        Probe other = new Probe("other");
+        Keymap keymap = Keymap.empty()
+                .owned("f", keys -> keys.global(Keymap.Global.Dispatching.ofChar('z', "f.z", () -> ALWAYS)))
+                .owned("g", keys -> keys.global(Keymap.Global.Dispatching.ofChar('z', "g.z", () -> other)));
+
+        assertEquals(
+                Option.of(new FeatureMsg.FirstOn(
+                        List.of(new FeatureMsg.Owned("f", ALWAYS), new FeatureMsg.Owned("g", other)))),
+                keymap.handleGlobal(KeyEvent.ofChar('z')));
+    }
+
+    @Test
+    void aGlobalKeyOfAFeatureIsRefusedWhenTheKernelOrTheSameFeatureBindsIt() {
+        Keymap.Global z = Keymap.Global.Dispatching.ofChar('z', "probe.z", () -> ALWAYS);
+        Keymap kernel = Keymap.empty().global(z);
+        Keymap feature = Keymap.empty().owned("f", keys -> keys.global(z));
+
+        assertThrows(IllegalArgumentException.class, () -> kernel.owned("f", keys -> keys.global(z)));
+        assertThrows(IllegalArgumentException.class, () -> feature.global(z));
+        assertThrows(IllegalArgumentException.class, () -> feature.owned("f", keys -> keys.global(z)));
+    }
+
+    @Test
     void theStandardKeymapIsEmptyWithoutTheApp() {
         Keymap standard = Keymap.standard();
 

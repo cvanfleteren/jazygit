@@ -40,14 +40,15 @@ it are on or off: a second forge cannot bind `o` on the branches as GitHub does.
   as Forgejo's own.
 - **The forges bind the same keys, each with its own texts** (`forgejo.help.*`), so that what is learnt on one works
   on the other.
-- **Features that are on or off for a repository may bind one key in one scope, once each**: `requireOnce` refuses a
-  key bound twice only when a binding of it is the kernel's or of a feature that is always on, or when one feature
-  binds it twice. The keys a feature adds are its own as they are added (`Keymap.owned`), so the check sees whose
-  they are.
+- **Features that are on or off for a repository may bind one key in one scope, once each**, the keys of the scopes
+  it hosts counted with its own (ADR 161), and one global key alike: `requireOnce` refuses a key bound twice only
+  when a binding of it is the kernel's or of a feature that is always on, or when one feature binds it twice. The
+  keys a feature adds are its own as they are added (`Keymap.owned`), so the check sees whose they are.
 - **Such a key sends what the first of them that is on sends**: `Keymap.handle` gives a `FeatureMsg.FirstOn` of what
   each of their bindings sends, in the order of `Features.ALL`, and the update runs the first whose feature is on, as
   ADR 172's fills take what the first feature gives. A binding that sends nothing, as without a selection, is left
-  out. The help lists the key once, as the first of them that is on has it.
+  out. A key of a scope gathers its own bindings and those of the scopes it hosts, and `handleGlobal` the global
+  keys, in the same way. The help lists the key once, as the first of them that is on has it.
 
 ## Consequences
 

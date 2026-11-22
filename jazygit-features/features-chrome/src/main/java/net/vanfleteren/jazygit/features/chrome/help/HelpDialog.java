@@ -192,6 +192,7 @@ public final class HelpDialog implements PopupView {
                 .append(Text.heading("chrome.dialog.help.global"))
                 .appendAll(keymap.globals()
                         .filter(global -> global.feature().forAll(model::on))
+                        .distinctBy(Keymap.Global::label)
                         .map(global -> new Key(
                                 global.label(),
                                 global.descriptionKey(),
