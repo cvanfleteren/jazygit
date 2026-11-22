@@ -11,6 +11,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoBranchRules;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
@@ -95,7 +96,10 @@ class PullRequestCommandsTest {
                                 details("Show"),
                                 Option.of(ForgejoReview.Verdict.APPROVED),
                                 forgejo.status().get(),
-                                Option.of(PullRequestFixtures.SETTINGS)))),
+                                Option.of(PullRequestFixtures.SETTINGS),
+                                Option.of(ForgejoBranchRules.NONE),
+                                1,
+                                Option.none()))),
                 new LoadPullRequest(ORIGIN, 12, 3).run(forgejo.env()));
     }
 

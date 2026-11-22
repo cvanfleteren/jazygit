@@ -36,6 +36,9 @@ public final class PullRequestUpdate {
             case PullRequestMsg.MergeChosen(var style) -> MergeUpdate.chosen(model, style);
             case PullRequestMsg.Merged(var cmd, var merged) -> MergeUpdate.merged(model, cmd, merged);
             case PullRequestMsg.MergeFailed(var cmd, var failure) -> MergeUpdate.failed(model, cmd, failure);
+            case PullRequestMsg.AlreadyScheduled(var cmd) -> MergeUpdate.alreadyScheduled(model, cmd);
+            case PullRequestMsg.MergeCancelled(var cmd) -> MergeUpdate.cancelled(model, cmd, false);
+            case PullRequestMsg.NoLongerScheduled(var cmd) -> MergeUpdate.cancelled(model, cmd, true);
             // A warning, in the command log: the user chose the remote (ADR 179). It comes late, so it does not take
             // the place of what an operation left there, an error or a notice; then it is not given.
             case PullRequestMsg.PlainHttpChecked(var base) ->
@@ -126,15 +129,27 @@ public final class PullRequestUpdate {
     private static Next refreshChosen(Model model) {
         return model.popup(ForgejoPullRequestPopup.class)
                 .filter(popup -> !popup.reading())
-                .map(popup -> {
-                    Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
-                    long read = given.part(ForgejoPullRequests.PART).reads();
-                    return Next.of(
-                            given.openPopup(popup.readingAgain(read)),
-                            new LoadPullRequest(
-                                    popup.home(), popup.pullRequest().number(), read));
-                })
+                .map(popup -> readAgain(model, popup))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Reads pull request {@code number} again when the dialog shows it, as after its merge was scheduled or cancelled
+     * (ADR 181): also while it is read, as that read may have started before; the dialog then waits for this one.
+     */
+    static Next readAgain(Next next, long number) {
+        return next.then(model -> model.popup(ForgejoPullRequestPopup.class)
+                .filter(popup -> popup.pullRequest().number() == number)
+                .map(popup -> readAgain(model, popup))
+                .getOrElse(() -> Next.of(model)));
+    }
+
+    private static Next readAgain(Model model, ForgejoPullRequestPopup popup) {
+        Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
+        long read = given.part(ForgejoPullRequests.PART).reads();
+        return Next.of(
+                given.openPopup(popup.readingAgain(read)),
+                new LoadPullRequest(popup.home(), popup.pullRequest().number(), read));
     }
 
     /**

@@ -15,27 +15,44 @@ import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
 /**
- * Merging a pull request on Forgejo from its dialog (ADR 180), which Forgejo does at once: the dialog closes, as on
- * GitHub (ADR 24), and the merge is an operation on the branch shown. Once merged, the remotes are fetched and the
- * pull requests read again; a merge that failed is shown as any failed operation, and kept in Forgejo's part.
+ * Merging a pull request on Forgejo from its dialog (ADR 180, 181), as an operation on the branch shown. Merging it
+ * now closes the dialog, as on GitHub (ADR 24); once merged, the remotes are fetched and the pull requests read again.
+ * Scheduling it for when its checks succeed, or cancelling that, keeps the dialog open, which reads it again once
+ * done, as GitHub's does for auto-merge (ADR 112). A merge that failed is shown as any failed operation, and kept in
+ * Forgejo's part.
  */
 final class MergeUpdate {
 
     private MergeUpdate() {}
 
     /**
-     * The user chose to merge the pull request shown as {@code style}: merged, when its key merges it now.
+     * The user chose to merge the pull request shown as {@code style}: what its key does, while it is not being read.
      */
     static Next chosen(Model model, ForgejoMergeStyle style) {
-        return PopupUpdate.confirm(
-                model,
-                ForgejoPullRequestPopup.class,
-                popup -> Option.when(!popup.reading(), popup)
-                        .flatMap(ForgejoPullRequestPopup::shown)
-                        .filter(shown -> MergeKey.of(shown, style) instanceof MergeKey.Now)
-                        .map(shown -> cmd(popup, shown, style)));
+        return model.popup(ForgejoPullRequestPopup.class)
+                .filter(popup -> !popup.reading())
+                .flatMap(popup -> popup.shown().map(shown -> switch (MergeKey.of(shown, style)) {
+                    case MergeKey.Now() ->
+                        PopupUpdate.confirm(
+                                model, ForgejoPullRequestPopup.class, _ -> Option.of(cmd(popup, shown, style)));
+                    case MergeKey.WhenChecksSucceed() ->
+                        OperationUpdate.start(model.clearError(), cmd(popup, shown, style));
+                    case MergeKey.Cancel() ->
+                        OperationUpdate.start(
+                                model.clearError(),
+                                new CancelScheduledMergeCmd(
+                                        popup.home(),
+                                        popup.local(),
+                                        shown.pullRequest().number()));
+                    case MergeKey.Disabled(var _) -> Next.of(model);
+                }))
+                .getOrElse(() -> Next.of(model));
     }
 
+    /**
+     * Merging the pull request {@code shown} as {@code style}: when its checks succeed when its base branch does not
+     * let it be merged yet.
+     */
     private static MergePullRequestCmd cmd(
             ForgejoPullRequestPopup popup, ShownPullRequest shown, ForgejoMergeStyle style) {
         ForgejoPullRequestDetails pr = shown.pullRequest();
@@ -48,43 +65,80 @@ final class MergeUpdate {
                         pr.branches().headSha(),
                         pr.status().mergeable(),
                         pr.status().draft()),
-                shown.settings().exists(ForgejoMergeSettings::deleteBranch));
+                shown.settings().exists(ForgejoMergeSettings::deleteBranch),
+                shown.rules().filter(_ -> shown.waits()),
+                shown.approvals());
     }
 
     /**
-     * Whether the key of {@code style} merges the pull request {@code popup} shows now.
+     * Whether the key of {@code style} does something to the pull request {@code popup} shows now.
      */
     static boolean choosable(ForgejoPullRequestPopup popup, ForgejoMergeStyle style) {
-        return !popup.reading() && popup.shown().exists(shown -> MergeKey.of(shown, style) instanceof MergeKey.Now);
+        return !popup.reading()
+                && popup.shown().exists(shown -> !(MergeKey.of(shown, style) instanceof MergeKey.Disabled));
     }
 
     /**
-     * Forgejo merged the pull request of {@code cmd}: done like any operation, a merge of it that failed before is
-     * forgotten, and the remotes are fetched, as its base changed. A head branch that was kept although it was to be
-     * deleted is told.
+     * Forgejo merged the pull request of {@code cmd}, or scheduled its merge, as {@code merged} says: done like any
+     * operation, and a merge of it that failed before is forgotten. Once merged, the remotes are fetched, as its base
+     * changed, and a head branch that was kept although it was to be deleted is told; once scheduled, its style is
+     * kept. The dialog that still shows it reads it again.
      */
     static Next merged(Model model, MergePullRequestCmd cmd, ForgejoMerged merged) {
-        Next done = OperationUpdate.succeeded(model, cmd, List.empty())
-                .map(after -> after.mapPart(ForgejoPullRequests.PART, prs -> prs.merged(cmd.number())));
-        return FetchUpdate.requested(
-                switch (merged) {
-                    case ForgejoMerged.Merged() -> done;
-                    case ForgejoMerged.BranchKept(String why) ->
-                        done.map(after -> after.inform(new BranchKeptNotice(cmd.branch(), why)));
-                });
+        Next done = OperationUpdate.succeeded(model, cmd, List.empty());
+        Next went = switch (merged) {
+            case ForgejoMerged.Merged() -> FetchUpdate.requested(done.map(after -> merged(after, cmd)));
+            case ForgejoMerged.BranchKept(String why) ->
+                FetchUpdate.requested(
+                        done.map(after -> merged(after, cmd).inform(new BranchKeptNotice(cmd.branch(), why))));
+            case ForgejoMerged.Scheduled() ->
+                done.map(after ->
+                        after.mapPart(ForgejoPullRequests.PART, prs -> prs.mergeScheduled(cmd.number(), cmd.style())));
+        };
+        return PullRequestUpdate.readAgain(went, cmd.number());
+    }
+
+    private static Model merged(Model model, MergePullRequestCmd cmd) {
+        return model.mapPart(ForgejoPullRequests.PART, prs -> prs.merged(cmd.number()));
     }
 
     /**
      * Merging the pull request of {@code cmd} failed as {@code failure} says: shown as any failed operation, and kept
-     * as its last merge that failed. One refused as its head moved on reads the pull requests again.
+     * as its last merge that failed. One refused as its head moved on reads the pull requests again; the dialog that
+     * still shows it, as when it was to be merged when its checks succeed, reads it again.
      */
     static Next failed(Model model, MergePullRequestCmd cmd, Failure failure) {
         Next shown = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
                 .map(after -> after.mapPart(
                         ForgejoPullRequests.PART,
                         prs -> prs.mergeFailed(new FailedMerge(cmd.number(), cmd.style(), failure, cmd.standing()))));
-        return failure instanceof MergeFailure refused && refused.moved()
-                ? shown.and(new ReadPullRequests(cmd.home()))
-                : shown;
+        return PullRequestUpdate.readAgain(
+                failure instanceof MergeFailure refused && refused.moved()
+                        ? shown.and(new ReadPullRequests(cmd.home()))
+                        : shown,
+                cmd.number());
+    }
+
+    /**
+     * Forgejo did not schedule the merge of {@code cmd}, as one was scheduled already: no failure, as what was asked
+     * for is so; it is told, and the dialog reads the pull request again, to show it.
+     */
+    static Next alreadyScheduled(Model model, MergePullRequestCmd cmd) {
+        return PullRequestUpdate.readAgain(
+                OperationUpdate.succeeded(model, cmd, List.empty())
+                        .map(done -> done.inform(new ScheduleNotice.AlreadyScheduled(cmd.branch()))),
+                cmd.number());
+    }
+
+    /**
+     * The scheduled merge of the pull request of {@code cmd} was cancelled, or was not scheduled any more when
+     * {@code gone}, which is told: no failure, as what was asked for is so. The dialog reads it again.
+     */
+    static Next cancelled(Model model, CancelScheduledMergeCmd cmd, boolean gone) {
+        Next done = OperationUpdate.succeeded(model, cmd, List.empty())
+                .map(after -> after.mapPart(ForgejoPullRequests.PART, prs -> prs.unscheduled(cmd.number())));
+        return PullRequestUpdate.readAgain(
+                gone ? done.map(after -> after.inform(new ScheduleNotice.NoLongerScheduled(cmd.branch()))) : done,
+                cmd.number());
     }
 }

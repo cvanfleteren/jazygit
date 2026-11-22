@@ -60,6 +60,22 @@ public interface Forgejo {
                 ForgejoRepository repository, long number, ForgejoMerge merge) {
             return Either.left(new ForgejoError.Unreachable("no Forgejo"));
         }
+
+        @Override
+        public Either<ForgejoError, ForgejoBranchRules> branchRules(ForgejoRepository repository, String branch) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
+
+        @Override
+        public Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(
+                ForgejoRepository repository, long number) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
+
+        @Override
+        public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
+            return Option.of(new ForgejoError.Unreachable("no Forgejo"));
+        }
     };
 
     /**
@@ -123,8 +139,25 @@ public interface Forgejo {
     Either<ForgejoError, ForgejoMergeSettings> mergeSettings(ForgejoRepository repository);
 
     /**
-     * Merges pull request {@code number} of {@code repository} as {@code merge} says (ADR 180), at once: how that
-     * went, or why Forgejo did not merge it.
+     * Merges pull request {@code number} of {@code repository} as {@code merge} says (ADR 180), at once, or schedules
+     * it for when its checks succeed (ADR 181): how that went, or why Forgejo did not do it.
      */
     Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge);
+
+    /**
+     * What {@code branch} of {@code repository} requires before a pull request is merged into it (ADR 181).
+     */
+    Either<ForgejoError, ForgejoBranchRules> branchRules(ForgejoRepository repository, String branch);
+
+    /**
+     * The merge of pull request {@code number} of {@code repository} scheduled for when its checks succeed, as its
+     * timeline tells it (ADR 181); none when none is.
+     */
+    Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(ForgejoRepository repository, long number);
+
+    /**
+     * Cancels the merge of pull request {@code number} of {@code repository} scheduled for when its checks succeed
+     * (ADR 181): none once cancelled, else why not, as the 404 of one that is no longer scheduled.
+     */
+    Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number);
 }

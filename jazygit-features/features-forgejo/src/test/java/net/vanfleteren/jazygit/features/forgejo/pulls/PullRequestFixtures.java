@@ -11,6 +11,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.FjKeys;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoBranchRules;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMerge;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeSettings;
@@ -21,6 +22,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.history.StubHistory;
@@ -131,8 +133,7 @@ final class PullRequestFixtures {
             Either<ForgejoError, List<ForgejoReview>> reviews,
             Either<ForgejoError, CommitStatus> status,
             Function<ForgejoNewPullRequest, Either<ForgejoError, ForgejoPullRequest>> create,
-            Either<ForgejoError, ForgejoMergeSettings> settings,
-            Function<ForgejoMerge, Either<ForgejoError, ForgejoMerged>> merge)
+            Merging merging)
             implements Forgejo {
 
         static FakeForgejo of(ForgejoPullRequestDetails details) {
@@ -144,8 +145,12 @@ final class PullRequestFixtures {
                             CommitStatus.State.FAILED,
                             List.of(new CommitStatus.Status("check / lint (push)", CommitStatus.State.FAILED, "")))),
                     created -> Either.left(new ForgejoError.Refused(500, "not asked for")),
-                    Either.right(SETTINGS),
-                    merged -> Either.left(new ForgejoError.Refused(500, "not asked for")));
+                    new Merging(
+                            Either.right(SETTINGS),
+                            merged -> Either.left(new ForgejoError.Refused(500, "not asked for")),
+                            Either.right(ForgejoBranchRules.NONE),
+                            Either.right(Option.none()),
+                            Option.none()));
         }
 
         /**
@@ -161,39 +166,89 @@ final class PullRequestFixtures {
                     reviews,
                     Either.left(error),
                     created -> Either.left(error),
-                    Either.left(error),
-                    merged -> Either.left(error));
+                    new Merging(
+                            Either.left(error),
+                            merged -> Either.left(error),
+                            Either.left(error),
+                            Either.left(error),
+                            Option.of(error)));
         }
 
         FakeForgejo withOpen(Either<ForgejoError, List<ForgejoPullRequest>> listed) {
-            return new FakeForgejo(listed, details, reviews, status, create, settings, merge);
+            return new FakeForgejo(listed, details, reviews, status, create, merging);
+        }
+
+        /**
+         * This Forgejo with {@code checks} as the builds of every commit.
+         */
+        FakeForgejo withStatus(Either<ForgejoError, CommitStatus> checks) {
+            return new FakeForgejo(open, details, reviews, checks, create, merging);
         }
 
         /**
          * This Forgejo answering the creation of a pull request as {@code created} does.
          */
         FakeForgejo creating(Function<ForgejoNewPullRequest, Either<ForgejoError, ForgejoPullRequest>> created) {
-            return new FakeForgejo(open, details, reviews, status, created, settings, merge);
+            return new FakeForgejo(open, details, reviews, status, created, merging);
         }
 
         /**
          * This Forgejo answering a merge of pull request 12 as {@code merged} does (ADR 180).
          */
         FakeForgejo merging(Function<ForgejoMerge, Either<ForgejoError, ForgejoMerged>> merged) {
-            return new FakeForgejo(open, details, reviews, status, create, settings, merged);
+            return new FakeForgejo(
+                    open,
+                    details,
+                    reviews,
+                    status,
+                    create,
+                    new Merging(merging.settings(), merged, merging.rules(), merging.scheduled(), merging.cancel()));
+        }
+
+        /**
+         * This Forgejo with what the base branch requires, the merge scheduled, and how cancelling it is answered, as
+         * these say (ADR 181).
+         */
+        FakeForgejo scheduling(
+                Either<ForgejoError, ForgejoBranchRules> rules,
+                Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduled,
+                Option<ForgejoError> cancel) {
+            return new FakeForgejo(
+                    open,
+                    details,
+                    reviews,
+                    status,
+                    create,
+                    new Merging(merging.settings(), merging.merge(), rules, scheduled, cancel));
         }
 
         @Override
         public Either<ForgejoError, ForgejoMergeSettings> mergeSettings(ForgejoRepository repository) {
-            return settings;
+            return merging.settings();
         }
 
         @Override
         public Either<ForgejoError, ForgejoMerged> merge(
                 ForgejoRepository repository, long number, ForgejoMerge asked) {
             return repository.equals(NIX) && number == 12
-                    ? merge.apply(asked)
+                    ? merging.merge().apply(asked)
                     : Either.left(new ForgejoError.Refused(404, "{\"message\":\"not this pull request\"}"));
+        }
+
+        @Override
+        public Either<ForgejoError, ForgejoBranchRules> branchRules(ForgejoRepository repository, String branch) {
+            return merging.rules();
+        }
+
+        @Override
+        public Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(
+                ForgejoRepository repository, long number) {
+            return merging.scheduled();
+        }
+
+        @Override
+        public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
+            return merging.cancel();
         }
 
         @Override
@@ -276,5 +331,16 @@ final class PullRequestFixtures {
         Env env() {
             return env(HashMap.of(ORIGIN, URL));
         }
+
+        /**
+         * How this Forgejo answers what merging asks (ADR 180, 181): how the repository lets pull requests be merged,
+         * a merge, what the base branch requires, the merge scheduled, and cancelling it.
+         */
+        record Merging(
+                Either<ForgejoError, ForgejoMergeSettings> settings,
+                Function<ForgejoMerge, Either<ForgejoError, ForgejoMerged>> merge,
+                Either<ForgejoError, ForgejoBranchRules> rules,
+                Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduled,
+                Option<ForgejoError> cancel) {}
     }
 }

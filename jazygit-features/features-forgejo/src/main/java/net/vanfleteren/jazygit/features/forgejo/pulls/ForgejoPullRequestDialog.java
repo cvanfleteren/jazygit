@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview.Verdict;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -58,7 +59,8 @@ public final class ForgejoPullRequestDialog implements PopupView {
      * and mergeable, and a blank line; review, reviewers, comments and labels, and a blank line; the checks counted,
      * listed, and how many more there are. The dialog is always this high, so it keeps its size when the details
      * arrive; and three lines more, those GitHub's has for the stack, the threads and the bar of the checks, so that
-     * the dialogs of both forges are as high (ADR 175).
+     * the dialogs of both forges are as high (ADR 175). A merge scheduled for when the checks succeed takes the line of
+     * the stack, as GitHub's auto-merge does (ADR 181).
      */
     private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 7 + 1 + 4 + 1 + 1 + LISTED_CHECKS + 1 + 3;
 
@@ -99,19 +101,29 @@ public final class ForgejoPullRequestDialog implements PopupView {
     }
 
     /**
-     * Merging it as {@code style} says (ADR 180), on the keys GitHub's has for the styles both have; only when its key
-     * merges it now. When it does nothing, its details say why.
+     * Merging it as {@code style} says (ADR 180), on the keys GitHub's has for the styles both have: now, when its
+     * checks succeed, or cancelling the merge scheduled (ADR 181), as its label says. When it does nothing, its details
+     * say why.
      */
     private static Choice<ForgejoPullRequestPopup> merge(char key, ForgejoMergeStyle style) {
         String labelKey = "forgejo.dialog.pullRequest.merge." + named(style);
         return new Choice<ForgejoPullRequestPopup>(
                         key,
-                        labelKey,
+                        popup -> popup.shown()
+                                .map(shown -> switch (MergeKey.of(shown, style)) {
+                                    case MergeKey.WhenChecksSucceed() -> Messages.get(labelKey + ".whenChecks");
+                                    case MergeKey.Cancel() -> Messages.get("forgejo.dialog.pullRequest.merge.cancel");
+                                    case MergeKey.Now(), MergeKey.Disabled(var _) -> Messages.get(labelKey);
+                                })
+                                .getOrElse(() -> Messages.get(labelKey)),
                         () -> new PullRequestMsg.MergeChosen(style),
                         (model, popup) -> MergeUpdate.choosable(popup, style))
                 .withDetails(popup -> popup.shown()
                         .map(shown -> switch (MergeKey.of(shown, style)) {
                             case MergeKey.Now() -> Messages.get(labelKey + ".details");
+                            case MergeKey.WhenChecksSucceed() ->
+                                Messages.get("forgejo.dialog.pullRequest.merge.whenChecks.details");
+                            case MergeKey.Cancel() -> Messages.get("forgejo.dialog.pullRequest.merge.cancel.details");
                             case MergeKey.Disabled(var why) -> why(why);
                         })
                         .getOrElse(() -> Messages.get(labelKey + ".details")));
@@ -153,24 +165,35 @@ public final class ForgejoPullRequestDialog implements PopupView {
     }
 
     /**
-     * The times the dialog shows (ADR 124): how long ago the pull request was opened and last changed.
+     * The times the dialog shows (ADR 124): how long ago the pull request was opened and last changed, and its merge
+     * scheduled (ADR 181).
      */
     public static List<ShownTime> shownTimes(Model model) {
         return model.popup(ForgejoPullRequestPopup.class)
                 .flatMap(ForgejoPullRequestPopup::shown)
-                .map(ShownPullRequest::pullRequest)
                 .toList()
-                .map(pr -> ShownTime.reading(
-                        now -> TimeText.ago(Duration.between(pr.activity().createdAt(), now))
-                                + " "
-                                + TimeText.ago(Duration.between(pr.activity().updatedAt(), now))));
+                .map(shown -> ShownTime.reading(now -> TimeText.ago(
+                                Duration.between(shown.pullRequest().activity().createdAt(), now))
+                        + " "
+                        + TimeText.ago(
+                                Duration.between(shown.pullRequest().activity().updatedAt(), now))
+                        + shown.scheduled()
+                                .map(merge -> " " + TimeText.ago(Duration.between(merge.at(), now)))
+                                .getOrElse("")));
     }
 
     @Override
     public Option<Element> render(Model model) {
         return model.popup(ForgejoPullRequestPopup.class).map(popup -> {
             List<Line> lines = popup.details()
-                    .map(read -> read.fold(ForgejoPullRequestDialog::failed, shown -> details(shown, model.now())))
+                    .map(read -> read.fold(
+                            ForgejoPullRequestDialog::failed,
+                            shown -> details(
+                                    shown,
+                                    model.part(ForgejoPullRequests.PART)
+                                            .scheduled()
+                                            .get(shown.pullRequest().number()),
+                                    model.now())))
                     .getOrElse(() -> loading(popup));
             Element dialog = DialogFrame.withHint(
                             title(popup),
@@ -226,7 +249,21 @@ public final class ForgejoPullRequestDialog implements PopupView {
                 CONTENT_HEIGHT));
     }
 
-    private List<Line> details(ShownPullRequest shown, Instant now) {
+    /**
+     * Its merge scheduled for when its checks succeed (ADR 181): how, when jazygit scheduled it, as Forgejo does not
+     * tell; by whom and how long ago, as its timeline does.
+     */
+    private static Line scheduled(ForgejoScheduledMerge merge, Option<ForgejoMergeStyle> style, Instant now) {
+        return Line.labelled(
+                "forgejo.dialog.pullRequest.autoMerge",
+                text(List.of(style.map(how -> Messages.get("forgejo.dialog.pullRequest.autoMerge." + named(how)))
+                                .getOrElse(() -> Messages.get("forgejo.dialog.pullRequest.autoMerge.scheduled")))
+                        .appendAll(Option.when(!merge.by().isEmpty(), () -> "@" + merge.by()))
+                        .append(TimeText.ago(Duration.between(merge.at(), now)))
+                        .mkString(" · ")));
+    }
+
+    private List<Line> details(ShownPullRequest shown, Option<ForgejoMergeStyle> style, Instant now) {
         ForgejoPullRequestDetails pr = shown.pullRequest();
         return List.of(
                         Line.wrapped(pr.title(), Theme.Classes.BOLD, WIDTH, TITLE_LINES),
@@ -235,11 +272,12 @@ public final class ForgejoPullRequestDialog implements PopupView {
                 .appendAll(Option.when(
                         !pr.author().isEmpty(),
                         () -> Line.labelled("forgejo.dialog.pullRequest.author", text("@" + pr.author()))))
+                .append(Line.labelled(
+                        "forgejo.dialog.pullRequest.branch",
+                        text(pr.branches().head() + " → " + pr.branches().base())))
+                // In the line GitHub's has for the stack, as GitHub's shows its auto-merge (ADR 112).
+                .appendAll(shown.scheduled().map(merge -> scheduled(merge, style, now)))
                 .appendAll(List.of(
-                        Line.labelled(
-                                "forgejo.dialog.pullRequest.branch",
-                                text(pr.branches().head() + " → "
-                                        + pr.branches().base())),
                         Line.labelled(
                                 "forgejo.dialog.pullRequest.created",
                                 text(when(pr.activity().createdAt(), now))),

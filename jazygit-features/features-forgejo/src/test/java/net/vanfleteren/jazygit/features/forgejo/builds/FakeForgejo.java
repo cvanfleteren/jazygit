@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.FjKeys;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoBranchRules;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMerge;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeSettings;
@@ -18,6 +19,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.process.GitError;
@@ -86,6 +88,22 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
     @Override
     public Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge) {
         return Either.left(new ForgejoError.Refused(404, "not found"));
+    }
+
+    @Override
+    public Either<ForgejoError, ForgejoBranchRules> branchRules(ForgejoRepository repository, String branch) {
+        return Either.left(new ForgejoError.Refused(404, "not found"));
+    }
+
+    @Override
+    public Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(
+            ForgejoRepository repository, long number) {
+        return Either.left(new ForgejoError.Refused(404, "not found"));
+    }
+
+    @Override
+    public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
+        return Option.of(new ForgejoError.Refused(404, "not found"));
     }
 
     /**
