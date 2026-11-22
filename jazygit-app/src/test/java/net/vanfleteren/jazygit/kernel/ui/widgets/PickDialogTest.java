@@ -340,6 +340,44 @@ class PickDialogTest {
     }
 
     @Test
+    void aLetterHighlightsItsRowSoTheKeysAfterItActOnThatRow() throws Exception {
+        PickDialog<BranchPopup, String> settings = new PickDialog<>(
+                new PickDialog.Spec<>(
+                                "pick",
+                                BranchPopup.class,
+                                popup -> "Options",
+                                popup -> List.of(
+                                        PickDialog.Row.of("style")
+                                                .withSteps("previous style", "next style")
+                                                .withKey('s'),
+                                        PickDialog.Row.of("context")
+                                                .withSteps("less context", "more context")
+                                                .withSpace("whole file")
+                                                .withKey('c')),
+                                Picked::new)
+                        .pickedBySpace(),
+                cursor);
+        Supplier<Element> view = () -> stack(
+                text("background"),
+                settings.render(cursor.on(TestModels.loaded().openPopup(new BranchPopup(List.empty()))))
+                        .get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            RenderedText.of(runner, view);
+            type(runner, "c");
+            RenderedText.of(runner, view);
+            SettledPilot.of(runner).press(KeyCode.LEFT);
+            type(runner, " ");
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new Picked("context"), new Picked("less context"), new Picked("whole file")),
+                dispatched.stream().filter(Picked.class::isInstance).toList());
+    }
+
+    @Test
     void theArrowsToTheSidesDoNothingOnARowWithoutAValueNorWhileTheFilterIsOpen() throws Exception {
         PickDialog<BranchPopup, String> settings = new PickDialog<>(
                 new PickDialog.Spec<>(

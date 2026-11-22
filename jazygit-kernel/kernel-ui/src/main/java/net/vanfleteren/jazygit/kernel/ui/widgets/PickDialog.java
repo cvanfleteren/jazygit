@@ -204,7 +204,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     /**
      * What {@code event}, which is not a key of the list, does with the filter closed: Space switches the highlighted
      * row when the dialog has it so, a key of the dialog's own acts, on the highlighted row if it needs one, the
-     * arrows to the sides step the row's value, and a letter picks its row.
+     * arrows to the sides step the row's value, and a letter highlights its row and picks it.
      */
     private EventResult unlisted(FilteredCursor<Row<T>> view, KeyEvent event) {
         Option<Row<T>> highlighted = view.highlighted();
@@ -226,9 +226,13 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                     .map(steps -> send(spec.onPick().apply(back ? steps.back() : steps.forward())))
                     .getOrElse(EventResult.UNHANDLED);
         }
-        return view.lines()
-                .find(row -> row.key().exists(event::isChar))
-                .map(row -> send(spec.onPick().apply(row.value())))
+        // The letter highlights its row too, so that in a dialog that stays open the keys after it act on that row.
+        return Option.of(view.lines().indexWhere(row -> row.key().exists(event::isChar)))
+                .filter(line -> line >= 0)
+                .map(line -> {
+                    moved(view.at(line));
+                    return send(spec.onPick().apply(view.lines().get(line).value()));
+                })
                 .getOrElse(EventResult.UNHANDLED);
     }
 
