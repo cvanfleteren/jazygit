@@ -34,7 +34,7 @@ class PullRequestCommandsTest {
 
         assertEquals(
                 new PullRequestMsg.Listed(Option.of(HashMap.of(FEATURE, LISTED)), Option.none()),
-                new ReadPullRequests().run(forgejo.env()));
+                new ReadPullRequests(ORIGIN).run(forgejo.env()));
     }
 
     @Test
@@ -46,7 +46,7 @@ class PullRequestCommandsTest {
 
         assertEquals(
                 new PullRequestMsg.Listed(Option.of(HashMap.of(FEATURE, fromAnna)), Option.none()),
-                new ReadPullRequests()
+                new ReadPullRequests(new RemoteName("upstream"))
                         .run(forgejo.env(HashMap.of(
                                 ORIGIN,
                                 "git@code.example.net:anna/nix.git",
@@ -60,7 +60,7 @@ class PullRequestCommandsTest {
 
         assertEquals(
                 new PullRequestMsg.Listed(Option.none(), Option.none()),
-                new ReadPullRequests()
+                new ReadPullRequests(new RemoteName("github"))
                         .run(forgejo.env(HashMap.of(new RemoteName("github"), "git@github.com:cvf/nix.git"))));
     }
 
@@ -70,7 +70,7 @@ class PullRequestCommandsTest {
 
         assertEquals(
                 new PullRequestMsg.Listed(Option.none(), Option.of(new ForgejoFailure.Asked(DOWN))),
-                new ReadPullRequests().run(forgejo.env()));
+                new ReadPullRequests(ORIGIN).run(forgejo.env()));
     }
 
     @Test
@@ -84,7 +84,7 @@ class PullRequestCommandsTest {
                                 details("Show"),
                                 Option.of(ForgejoReview.Verdict.APPROVED),
                                 forgejo.status().get()))),
-                new LoadPullRequest(12, 3).run(forgejo.env()));
+                new LoadPullRequest(ORIGIN, 12, 3).run(forgejo.env()));
     }
 
     @Test
@@ -95,7 +95,7 @@ class PullRequestCommandsTest {
         assertEquals(
                 new PullRequestMsg.Read(
                         3, Either.right(new ShownPullRequest(details("Show"), Option.none(), CommitStatus.NONE))),
-                new LoadPullRequest(12, 3).run(forgejo.env()));
+                new LoadPullRequest(ORIGIN, 12, 3).run(forgejo.env()));
     }
 
     @Test
@@ -104,11 +104,11 @@ class PullRequestCommandsTest {
                 Either.right(List.of(LISTED)), Either.left(DOWN), Either.right(List.empty()), Either.left(DOWN));
         assertEquals(
                 new PullRequestMsg.Read(3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.Asked(DOWN))),
-                new LoadPullRequest(12, 3).run(down.env()));
+                new LoadPullRequest(ORIGIN, 12, 3).run(down.env()));
 
         assertEquals(
                 new PullRequestMsg.Read(3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.NoHome())),
-                new LoadPullRequest(12, 3)
+                new LoadPullRequest(ORIGIN, 12, 3)
                         .run(FakeForgejo.of(details("Show")).env(HashMap.of(ORIGIN, "git@github.com:cvf/nix.git"))));
     }
 }

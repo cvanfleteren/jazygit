@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +53,7 @@ class PullRequestUpdateTest {
         Next next = requested(listed(), "feature");
 
         assertEquals(ForgejoPullRequestPopup.loading(FEATURE, LISTED, 1), popup(next.model()));
-        assertEquals(List.of(new LoadPullRequest(12, 1)), next.cmds());
+        assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 1)), next.cmds());
     }
 
     @Test
@@ -76,7 +77,7 @@ class PullRequestUpdateTest {
                 .model();
 
         Next again = Update.update(read, new PullRequestMsg.RefreshChosen());
-        assertEquals(List.of(new LoadPullRequest(12, 2)), again.cmds());
+        assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 2)), again.cmds());
         assertTrue(popup(again.model()).asked());
         assertEquals(Option.of(shown("read")), popup(again.model()).shown());
         // While it is read, asking again reads nothing more.
@@ -170,16 +171,25 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void withoutAHomeNoneAreRead() {
+        Model homeless = model().withPart(ForgeHome.PART, ForgeHome.NONE);
+
+        assertEquals(
+                List.empty(),
+                PullRequestReactions.to(homeless, new KernelEvent.Fetched()).cmds());
+    }
+
+    @Test
     void theyAreReadAfreshAsForgejoTurnsOnAndAgainAfterAFetchOrAPush() {
         Next on = PullRequestReactions.to(listed(), new KernelEvent.Switched(ForgejoFeature.ID, true));
         assertEquals(ForgejoPullRequests.NONE, on.model().part(ForgejoPullRequests.PART));
-        assertEquals(List.of(new ReadPullRequests()), on.cmds());
+        assertEquals(List.of(new ReadPullRequests(ORIGIN)), on.cmds());
 
         assertEquals(
-                List.of(new ReadPullRequests()),
+                List.of(new ReadPullRequests(ORIGIN)),
                 PullRequestReactions.to(model(), new KernelEvent.Fetched()).cmds());
         assertEquals(
-                List.of(new ReadPullRequests()),
+                List.of(new ReadPullRequests(ORIGIN)),
                 PullRequestReactions.to(model(), new KernelEvent.OperationDone(true))
                         .cmds());
         assertEquals(

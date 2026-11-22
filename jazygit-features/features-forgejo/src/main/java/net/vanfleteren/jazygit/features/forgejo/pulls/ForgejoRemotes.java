@@ -8,7 +8,6 @@ import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.PullRequestHome;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -23,22 +22,21 @@ import net.vanfleteren.jazygit.kernel.state.Env;
 record ForgejoRemotes(ForgejoRepository home, Map<RemoteName, ForgejoRepository> remotes) {
 
     /**
-     * The home and the remotes on its host, when the home is on Forgejo; none when it is not, there is none, or the
-     * remotes could not be listed.
+     * The home, {@code home} as the kernel decided it (ADR 177), and the remotes on its host, when the home is on
+     * Forgejo; none when it is not, or the remotes could not be listed.
      */
-    static Option<ForgejoRemotes> of(Env env, Forgejo forgejo) {
+    static Option<ForgejoRemotes> of(Env env, Forgejo forgejo, RemoteName home) {
         return env.git()
                 .remotes()
                 .urls()
                 .toOption()
-                .flatMap(urls -> PullRequestHome.of(Option.none(), urls.keySet())
-                        .flatMap(urls::get)
+                .flatMap(urls -> urls.get(home)
                         .flatMap(forgejo::repository)
                         .filter(forgejo::isForgejo)
-                        .map(home -> new ForgejoRemotes(
-                                home,
+                        .map(repositoryOfHome -> new ForgejoRemotes(
+                                repositoryOfHome,
                                 urls.flatMap((remote, url) -> forgejo.repository(url)
-                                        .filter(repository -> repository.base().equals(home.base()))
+                                        .filter(repository -> repository.base().equals(repositoryOfHome.base()))
                                         .map(repository -> Tuple.of(remote, repository))))));
     }
 

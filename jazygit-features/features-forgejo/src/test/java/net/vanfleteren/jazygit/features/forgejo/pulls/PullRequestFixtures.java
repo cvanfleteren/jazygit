@@ -29,6 +29,8 @@ import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeCandidate;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
 
 /**
  * Pull requests on Forgejo as the tests have them (ADR 176).
@@ -70,13 +72,17 @@ final class PullRequestFixtures {
     }
 
     /**
-     * A model with local branch {@code feature} following {@code origin/feature}, and {@code alone} following none.
+     * A model with local branch {@code feature} following {@code origin/feature}, and {@code alone} following none, on
+     * Forgejo with {@code origin} the home (ADR 177).
      */
     static Model model() {
         return TestModels.localBranchesRead(
                         TestModels.loaded(),
                         List.of(following("feature", Option.of("feature")), following("alone", Option.none())))
-                .model();
+                .model()
+                .withPart(
+                        ForgeHome.PART,
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate("forgejo", "Forgejo", ORIGIN, URL))));
     }
 
     /**

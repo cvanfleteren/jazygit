@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
@@ -34,7 +35,9 @@ public final class PullRequestUpdate {
      * {@code model} reading the open pull requests again, as Forgejo turned on, after a fetch or a push.
      */
     public static Next list(Model model) {
-        return Next.of(model, new ReadPullRequests());
+        return ForgeHome.of(model)
+                .map(home -> Next.of(model, new ReadPullRequests(home)))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**
@@ -63,7 +66,9 @@ public final class PullRequestUpdate {
         Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
         long read = given.part(ForgejoPullRequests.PART).reads();
         return PopupUpdate.ask(given, ForgejoPullRequestPopup.loading(head, pr, read))
-                .and(new LoadPullRequest(pr.number(), read));
+                .and(ForgeHome.of(model)
+                        .map(home -> new LoadPullRequest(home, pr.number(), read))
+                        .toJavaArray(LoadPullRequest[]::new));
     }
 
     /**
@@ -88,13 +93,13 @@ public final class PullRequestUpdate {
     private static Next refreshChosen(Model model) {
         return model.popup(ForgejoPullRequestPopup.class)
                 .filter(popup -> !popup.reading())
-                .map(popup -> {
+                .flatMap(popup -> ForgeHome.of(model).map(home -> {
                     Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
                     long read = given.part(ForgejoPullRequests.PART).reads();
                     return Next.of(
                             given.openPopup(popup.readingAgain(read)),
-                            new LoadPullRequest(popup.pullRequest().number(), read));
-                })
+                            new LoadPullRequest(home, popup.pullRequest().number(), read));
+                }))
                 .getOrElse(() -> Next.of(model));
     }
 

@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -13,10 +14,12 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import org.slf4j.LoggerFactory;
 
 /**
- * Reads pull request {@code number} of the home on Forgejo to show it, as read {@code read} (ADR 176, 177): the pull request, its reviews and the builds of the commit it merges, in the background. Reviews or
- * builds that cannot be read leave the pull request shown without them, and the log says why.
+ * Reads pull request {@code number} of {@code home}, the remote on Forgejo the pull requests are opened against, to
+ * show it, as read {@code read} (ADR 176, 177): the pull request, its reviews and the builds of the commit it merges,
+ * in the background. Reviews or builds that cannot be read leave the pull request shown without them, and the log
+ * says why.
  */
-public record LoadPullRequest(long number, long read) implements Cmd {
+public record LoadPullRequest(RemoteName home, long number, long read) implements Cmd {
 
     @Override
     public boolean background() {
@@ -26,7 +29,7 @@ public record LoadPullRequest(long number, long read) implements Cmd {
     @Override
     public Msg run(Env env) {
         Forgejo forgejo = ForgejoServices.of(env);
-        Either<Failure, ShownPullRequest> shown = ForgejoRemotes.of(env, forgejo)
+        Either<Failure, ShownPullRequest> shown = ForgejoRemotes.of(env, forgejo, home)
                 .map(ForgejoRemotes::home)
                 .<Either<Failure, ForgejoRepository>>map(Either::right)
                 .getOrElse(() -> Either.left(new ForgejoFailure.NoHome()))

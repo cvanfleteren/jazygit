@@ -4,6 +4,7 @@ import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -15,7 +16,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
  * they merge, a fork's that is a remote, as one's own, included; one whose branch is in no remote's repository, as
  * someone else's fork, is left out.
  */
-public record ReadPullRequests() implements Cmd {
+public record ReadPullRequests(RemoteName home) implements Cmd {
 
     @Override
     public boolean background() {
@@ -25,7 +26,7 @@ public record ReadPullRequests() implements Cmd {
     @Override
     public Msg run(Env env) {
         Forgejo forgejo = ForgejoServices.of(env);
-        return ForgejoRemotes.of(env, forgejo)
+        return ForgejoRemotes.of(env, forgejo, home)
                 .map(remotes -> forgejo.openPullRequests(remotes.home())
                         .fold(
                                 error -> new PullRequestMsg.Listed(
