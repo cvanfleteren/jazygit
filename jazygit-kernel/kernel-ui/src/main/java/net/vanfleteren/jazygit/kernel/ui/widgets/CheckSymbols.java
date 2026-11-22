@@ -6,11 +6,12 @@ import dev.tamboui.toolkit.element.StyledElement;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 
 /**
- * How the checks of a commit are doing, drawn the same by every forge (ADR 48, 175): the symbol of each state, and
- * how many are in each.
+ * How the checks of a commit are doing, drawn the same by every forge (ADR 48, 175): the symbol of each state, how
+ * many are in each, and a check by its name.
  */
 public final class CheckSymbols {
 
@@ -45,5 +46,14 @@ public final class CheckSymbols {
     private static Option<List<StyledElement<?>>> count(Symbol symbol, int count, String key) {
         return Option.when(
                 count > 0, () -> List.of(symbol.element(), text(" " + Messages.get(key, String.valueOf(count)))));
+    }
+
+    /**
+     * A check by its name, after {@code symbol}, taking at most {@code width} columns: the name is cut to leave room,
+     * and left out when there is none.
+     */
+    public static List<StyledElement<?>> named(Symbol symbol, String name, int width) {
+        int room = width - TextWidth.of(symbol.text()) - 1;
+        return room > 0 ? List.of(symbol.element(), text(" " + TextWidth.cut(name, room))) : List.of(symbol.element());
     }
 }

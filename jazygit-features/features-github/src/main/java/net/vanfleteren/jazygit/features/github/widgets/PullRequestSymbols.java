@@ -11,11 +11,13 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.ReviewerState;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.CheckSymbols;
+import net.vanfleteren.jazygit.kernel.ui.widgets.ReviewSymbols;
 import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 
 /**
  * The coloured symbols for how the checks and the review of a pull request are doing, the same wherever
- * they show (ADR 48); those of the checks are every forge's ({@link CheckSymbols}, ADR 175). Each is one column
+ * they show (ADR 48); those of the checks and the review are every forge's ({@link CheckSymbols},
+ * {@link ReviewSymbols}, ADR 175). Each is one column
  * wide, told apart by its shape as well as its colour (ADR 45).
  */
 public final class PullRequestSymbols {
@@ -24,9 +26,9 @@ public final class PullRequestSymbols {
     public static final Symbol FAILED = CheckSymbols.FAILED;
     public static final Symbol RUNNING = CheckSymbols.RUNNING;
     public static final Symbol QUEUED = CheckSymbols.QUEUED;
-    public static final Symbol APPROVED = new Symbol("+", Theme.Classes.REVIEW_APPROVED);
-    public static final Symbol CHANGES = new Symbol("−", Theme.Classes.REVIEW_CHANGES);
-    public static final Symbol TO_REVIEW = new Symbol("?", Theme.Classes.DIM);
+    public static final Symbol APPROVED = ReviewSymbols.APPROVED;
+    public static final Symbol CHANGES = ReviewSymbols.CHANGES;
+    public static final Symbol TO_REVIEW = ReviewSymbols.TO_REVIEW;
     public static final Symbol MERGING = new Symbol("»", Theme.Classes.DIM);
     public static final Symbol ENQUEUED = new Symbol("≡", Theme.Classes.DIM);
     public static final Symbol MERGE_FAILED = new Symbol("!", Theme.Classes.CHECKS_FAILED);

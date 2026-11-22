@@ -36,6 +36,9 @@ public final class HttpForgejo implements Forgejo {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final int OK = 200;
     private static final int SERVER_ERROR = 500;
+    // How many pull requests a page of them asks for, and the most pages read: Forgejo gives at most 50 by default.
+    private static final int PAGE = 50;
+    private static final int PAGES = 10;
 
     private static final Decoder<CommitStatus.Status> STATUS = map3(
             optionalField("context", string()).map(context -> context.getOrElse("")),
@@ -130,6 +133,57 @@ public final class HttpForgejo implements Forgejo {
                 + encoded(sha.value()) + "/status";
         return get(repository, path)
                 .flatMap(body -> COMBINED.parse(body).mapLeft(error -> new ForgejoError.Unreadable(error.toString())));
+    }
+
+    /**
+     * {@inheritDoc} They are read a page of {@value #PAGE} at a time (ADR 176).
+     */
+    @Override
+    public Either<ForgejoError, List<ForgejoPullRequest>> openPullRequests(ForgejoRepository repository) {
+        return pages(repository, repo(repository) + "/pulls?state=open&", PullRequestJson.summaries(), 1, List.empty());
+    }
+
+    /**
+     * What the pages of {@code path}, a path ending in its query and {@code ?} or {@code &}, give, from page
+     * {@code page} on, after {@code before}: a page of {@value #PAGE} at a time, until a page is empty, and at most
+     * {@value #PAGES} pages. Not until one is not full: a host serves fewer a page when its {@code MAX_RESPONSE_ITEMS}
+     * is lower, without saying so.
+     */
+    private <T> Either<ForgejoError, List<T>> pages(
+            ForgejoRepository repository, String path, Decoder<List<T>> decoder, int page, List<T> before) {
+        return get(repository, path + "limit=" + PAGE + "&page=" + page)
+                .flatMap(body -> decoded(decoder, body))
+                .flatMap(read -> read.isEmpty() || page >= PAGES
+                        ? Either.right(before.appendAll(read))
+                        : pages(repository, path, decoder, page + 1, before.appendAll(read)));
+    }
+
+    @Override
+    public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number) {
+        return get(repository, repo(repository) + "/pulls/" + number)
+                .flatMap(body -> decoded(PullRequestJson.details(), body));
+    }
+
+    /**
+     * {@inheritDoc} They are read a page of {@value #PAGE} at a time, so that each reviewer's last counts on a long
+     * pull request (ADR 176).
+     */
+    @Override
+    public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
+        return pages(
+                repository,
+                repo(repository) + "/pulls/" + number + "/reviews?",
+                PullRequestJson.reviews(),
+                1,
+                List.empty());
+    }
+
+    private static String repo(ForgejoRepository repository) {
+        return "/api/v1/repos/" + encoded(repository.owner()) + "/" + encoded(repository.name());
+    }
+
+    private static <T> Either<ForgejoError, T> decoded(Decoder<T> decoder, String body) {
+        return decoder.parse(body).mapLeft(error -> new ForgejoError.Unreadable(error.toString()));
     }
 
     /**
