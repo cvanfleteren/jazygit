@@ -132,6 +132,24 @@ class FilesPanelListSwitchTest {
     }
 
     @Test
+    void aPathCarriedToFilesNeverReadIsNotCarriedToTheFilesOfAnotherCommit() throws Exception {
+        Model changed = commit(TIP, false, Loadable.loading());
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(changed, FilesPanel.PANE))) {
+            draw(testRunner, changed);
+            panel.commitTree().selected(2);
+            draw(testRunner, commit(TIP, true, Loadable.loading()));
+
+            // As the main branch's files, which list all files from the start.
+            draw(testRunner, commit(OTHER, true, Loadable.loading()));
+            draw(testRunner, commit(OTHER, true, new Loadable.Loaded<>(ALL)));
+
+            // The root, which holds README.md directly, as all files of a commit start on.
+            assertEquals(0, panel.commitAllTree().selected());
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
     void theHighlightOfTheWorkingTreeStaysOnItsPathBothWays() throws Exception {
         Model changed = working(FilesShown.CHANGED);
         Model all = working(FilesShown.ALL);

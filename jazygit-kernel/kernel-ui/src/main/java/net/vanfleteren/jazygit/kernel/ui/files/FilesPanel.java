@@ -515,7 +515,7 @@ public class FilesPanel {
      */
     private <T extends Pathed> void switching(Object of, FileTreeList<T> tree, FileTreeList<T> other) {
         if (listed.exists(last -> last.of().equals(of) && last.tree() == other)) {
-            other.selected().map(FileTree::path).forEach(tree::carrying);
+            other.selected().map(FileTree::path).forEach(path -> tree.carrying(of, path));
         }
         listed = Option.of(new Listed(of, tree));
     }
