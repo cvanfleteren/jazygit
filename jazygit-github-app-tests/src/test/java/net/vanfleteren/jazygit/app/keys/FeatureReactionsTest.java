@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import org.junit.jupiter.api.Test;
 
 /**
- * What the features answer of what happens in the kernel, as the app wires it (ADR 166).
+ * What the features answer of what happens in the kernel, as the app wires it (ADR 158).
  */
 class FeatureReactionsTest {
 

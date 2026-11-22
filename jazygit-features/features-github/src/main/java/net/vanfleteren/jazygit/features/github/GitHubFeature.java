@@ -38,7 +38,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 
 /**
  * The GitHub operations: showing a pull request and what is done from there, showing the checks and the builds of a branch,
- * creating a pull request, checking one out, the stacks of pull requests and what is done with them (ADR 72, 73, 87, 99),
+ * creating a pull request, checking one out, the stacks of pull requests and what is done with them (ADR 72, 73, 99),
  * and opening a branch or pull request in the browser. Adding an operation is adding its subpackage, and listing its
  * action here.
  */

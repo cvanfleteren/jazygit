@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  * Lets ssh ask the user through jazygit (ADR 150). It listens on a Unix domain socket, in a directory of its own that
  * only the user can enter; ssh runs jazygit as its {@code SSH_ASKPASS}, which passes what ssh asks here. It starts
  * listening only for the first operation that lets ssh ask, and stops when the app does, so a session that never talks
- * to a remote leaves nothing behind (ADR 153). Each operation that talks to a remote gets a token of its own, which
+ * to a remote leaves nothing behind (ADR 150). Each operation that talks to a remote gets a token of its own, which
  * ties what ssh asks to it, and which is retired once it ends.
  */
 public final class AskpassServer implements SshAsking, AutoCloseable {

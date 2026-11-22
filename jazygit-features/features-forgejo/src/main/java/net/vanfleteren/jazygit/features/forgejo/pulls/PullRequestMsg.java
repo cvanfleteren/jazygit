@@ -33,7 +33,7 @@ public sealed interface PullRequestMsg extends Msg {
 
     /**
      * Whether fj's token goes to the home unencrypted was checked: {@code base}, where it is asked over plain HTTP,
-     * when it does (ADR 179).
+     * when it does (ADR 174).
      */
     record PlainHttpChecked(Option<String> base) implements PullRequestMsg {}
 

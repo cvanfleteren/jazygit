@@ -135,3 +135,17 @@ A stack is one node of the list: a header of one line, with its branches under i
 - The list has rows of one line next to rows of two.
 
 Amended by ADR 143: a parent can be a branch that is only on `origin`, recorded or the base of a pull request.
+
+## Folded in: ADR 87 (2026-11-22)
+
+`S` in the local branches, on a branch or on the header of a stack, switches between showing the stacks and listing
+their branches as any other branch, each by when it last saw activity (`StackAction`, `StackMsg`, `BranchesView`).
+A stack sits where its branch that saw activity last does, and takes its other branches along, also those untouched
+for weeks: not what one wants when after the branch one worked on last. Without the stacks, a branch of a stack still
+shows its `n/m` on line 2.
+
+- The stacks show at first. Whether they show is view state in `RepoView`, not kept; which stacks are closed stays
+  while they do not show.
+- One key for both, as on a header the keys of a branch do nothing.
+- Not: a setting. The switch is for a moment; a setting per repository (ADR 63) can come when one turns out to want it
+  off for good.

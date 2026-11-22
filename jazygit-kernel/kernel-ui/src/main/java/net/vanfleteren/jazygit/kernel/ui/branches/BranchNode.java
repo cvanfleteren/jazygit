@@ -24,7 +24,7 @@ sealed interface BranchNode {
      * The nodes of {@code branches}, in their order (ADR 41): a branch in a group brings in its whole group, a header
      * and, when the group is open, what is under it; at the first of its branches, so a group sits where the one of its
      * branches that saw activity last does, and the checked out branch's group comes first. Unless {@code grouped},
-     * every branch is a node of its own, also one in a group (ADR 87).
+     * every branch is a node of its own, also one in a group (ADR 72).
      *
      * @param groups  the groups the features make of {@code branches}
      * @param grouped whether the groups show

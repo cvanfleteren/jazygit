@@ -48,7 +48,7 @@ public final class AppRules {
 
     /**
      * The packages in which a feature keeps what it shows in the content panel, its source and its body, which are
-     * views as its dialogs are (ADR 156): a {@code content} package in a feature, as {@code github.builds.content};
+     * views as its dialogs are (ADR 157): a {@code content} package in a feature, as {@code github.builds.content};
      * the panes a group of features draws, in its {@code panes} package, as {@code changes.panes.commits}
      * (ADR 158); and what its dialogs and panes draw with, in its {@code widgets} package, as {@code github.widgets}
      * (ADR 168).

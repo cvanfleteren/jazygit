@@ -92,3 +92,20 @@ through hooks of the kernel, so that deleting GitHub's modules leaves jazygit wo
 
 Amended by ADR 172: the extension point a pane declares is a `PaneKey` the features fill through `Feature.filling`;
 the commits pane is the first, and names the search no more.
+
+## Folded in: ADR 166 (2026-11-22)
+
+A feature declares its timers and its reactions, so that the kernel and the app need not name a forge to read from
+outside the repository. A part's `reacting` is not enough for that: a feature like GitHub's must answer always, not
+only while it keeps a part.
+
+- `Feature.every(interval, msg)` adds a message to dispatch every so often. The app starts the timers of
+  `Features.ALL`, in the order of the features, next to the kernel's refresh tick; a feature that is not listed has
+  no timer. No timer depends on another.
+- `Feature.reacting(reaction)` adds a `Reactions.Reaction`, from the model and a `KernelEvent` to a `Next`.
+  `Events.happened(next, event)` tells the parts that are kept first, then the reactions, each with the model the
+  earlier ones left.
+- The kernel says what happened without naming a forge: `KernelEvent.OperationDone(changedForge)`, `Fetched`,
+  `RepositoryOpened`. An event is added when the first feature needs it.
+- A test that needs the model to read from a forge after an event gives it the feature's reactions
+  (`GitHubFeature.FEATURE.reactions()`).

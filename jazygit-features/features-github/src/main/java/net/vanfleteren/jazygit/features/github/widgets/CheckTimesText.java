@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 
 /**
  * How long checks have run and are expected to take still (ADR 32). In the dialogs how long they ran, which is
- * exact, is shown to the second, from an hour on to the minute (ADR 37); what is left, an estimate, to the nearest 5s
+ * exact, is shown to the second, from an hour on to the minute (ADR 32); what is left, an estimate, to the nearest 5s
  * while that is under 5m, else to the nearest minute (ADR 34). In the branches pane, which has no room for seconds, in
  * whole minutes.
  */

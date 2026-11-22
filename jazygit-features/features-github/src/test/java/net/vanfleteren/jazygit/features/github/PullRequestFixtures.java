@@ -116,7 +116,7 @@ public final class PullRequestFixtures {
     }
 
     /**
-     * The sample model, with GitHub's feature answering what happens in the kernel (ADR 166): the one place the
+     * The sample model, with GitHub's feature answering what happens in the kernel (ADR 158): the one place the
      * tests of GitHub's pull requests give their model the reactions.
      */
     public static Model loadedWithTheFeature() {

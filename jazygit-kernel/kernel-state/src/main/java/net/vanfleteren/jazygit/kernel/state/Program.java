@@ -86,7 +86,7 @@ public final class Program {
      * @param repositoryTheme the theme the git configuration gives the repository, before the saved one (ADR 70)
      * @param landing     where the repository is shown at first
      * @param reactions     how the features answer what happens in the kernel, from the opening of the repository on
-     *                      (ADR 166); {@link Reactions#NONE} for none
+     *                      (ADR 158); {@link Reactions#NONE} for none
      * @param io            where git is called; a single thread keeps git commands from running concurrently
      * @param background    where {@link Cmd#background() background} commands run, so they do not hold up the
      *                      others; several at once may

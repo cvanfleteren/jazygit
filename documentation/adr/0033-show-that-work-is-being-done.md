@@ -125,3 +125,17 @@ Amended by ADR 101: a command that a newer one for its slot cancelled reports no
 
 Amended by ADR 124: `Msg.Clock` no longer comes every second, `Model.drawn()` no longer holds the time, and a
 command asks for the frames of the spinner only once it shows; the app is woken when a time shown changes.
+
+## Folded in: ADR 21 and ADR 22 (2026-11-22)
+
+ADR 21 told the model the time on a clock of its own every 5 s, apart from the refresh tick, and ADR 22 rounded how
+long ago the remotes were fetched to that clock. This ADR replaced both. What they found still holds:
+
+- An age counted in seconds from a timer that does not divide a second stutters: told at 0, 0.75, 1.5, 2.25 and 3 s,
+  an age shows 0, 0, 1, 2, 3, so one second in four shows twice as long. Even an interval that divides a second
+  stutters now and then, when the timer runs late just as a second turns.
+- Seconds say little in the ages of the lists: a branch committed to 37 s ago says no more than one committed to just
+  now, so an age under a minute shows as "now", or "just now" in a sentence (`TimeText.age`, `TimeText.ago`).
+- How long ago the remotes were fetched, or the pull requests read, counts in steps of 10 s under a minute
+  (`TimeText.readAgo`): they are read every minute, so "just now" alone would only say anything once a fetch had
+  failed for a while.

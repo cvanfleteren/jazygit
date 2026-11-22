@@ -85,3 +85,11 @@ creating, merging or ending a pull request fetch.
   to the remote as behind, and a fetch that fails says so in the line at the bottom.
 
 Amends ADR 17 (`0017-fetch-at-startup.md`) and ADR 67 (`0067-reading-less-rather-than-nothing-in-the-background.md`).
+
+## Folded in: ADR 52 (2026-11-22)
+
+ADR 52 moved the tick from 750 ms to a second, the step before this ADR's 3 s. Its measurement is what both rest on:
+idle, a tick runs one `git status --porcelain=v2 --untracked-files=all`, which walks the whole working tree. Profiled
+on jazygit's own repository, that is 50 to 60 ms of git a tick, and the largest part of what an idle app spends
+outside the JVM: 1 to 5 s of CPU a minute, depending on what else touches the repository. Not: watching the working
+tree for changes, which takes a watch per directory (and see ADR 97 on `WatchService`).

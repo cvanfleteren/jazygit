@@ -37,7 +37,7 @@ public interface Cmd {
 
     /**
      * The slot this command takes, if it is only wanted until a newer one for that slot is asked for: the newer
-     * one cancels it when it has not started yet, and it then reports nothing: it is only done (ADR 101). Only a
+     * one cancels it when it has not started yet, and it then reports nothing: it is only done. Only a
      * command whose result the model drops once a newer one is asked for may take one, as nothing else may wait for
      * its answer.
      */

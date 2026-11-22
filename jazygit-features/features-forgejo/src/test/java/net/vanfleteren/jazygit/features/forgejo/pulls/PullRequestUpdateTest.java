@@ -263,7 +263,7 @@ class PullRequestUpdateTest {
     void theyAreReadAfreshAsForgejoTurnsOnAndAgainAfterAFetchOrAPush() {
         Next on = PullRequestReactions.to(listed(), new KernelEvent.Switched(ForgejoFeature.ID, true));
         assertEquals(ForgejoPullRequests.NONE, on.model().part(ForgejoPullRequests.PART));
-        // Whether the token goes to the home unencrypted is told once, as Forgejo turns on (ADR 179).
+        // Whether the token goes to the home unencrypted is told once, as Forgejo turns on (ADR 174).
         assertEquals(List.of(new ReadPullRequests(ORIGIN), new CheckPlainHttp(ORIGIN)), on.cmds());
 
         assertEquals(

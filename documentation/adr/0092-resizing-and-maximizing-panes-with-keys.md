@@ -94,3 +94,15 @@ they get, maximizes it.
 
 Amended by ADR 104: `Z` on the content panel collapses the left column to 3 columns instead of making it 15
 percent wide.
+
+## Folded in: ADR 95 (2026-11-22)
+
+`+` takes the rows from the panes under the focused pane first, the nearest first, each down to `MIN_HEIGHT`, then
+from the panes above it. Once every other pane is that short, the next `+` maximizes the pane, as `Z` does: pressing
+`+` again and again ends where `Z` does, and `-` comes back from there.
+
+- It does not maximize a pane that would show no more rows that way: on a column under 30 rows, `MIN_HEIGHT` is fewer
+  than the 3 rows a pane keeps beside a maximized one. Nor a stash that shows all its stashes.
+- `-`, and a drag of a border, still move that one border only.
+- Not: letting the heights kept go under `MIN_HEIGHT` to reach 3 rows, which the settings file would not read back.
+- A maximized pane is not saved, so the heights saved after the last `+` are the ones from before that press.

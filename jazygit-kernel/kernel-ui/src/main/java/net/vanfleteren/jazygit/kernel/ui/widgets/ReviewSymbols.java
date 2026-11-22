@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.kernel.ui.widgets;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 
 /**
- * Where the review of a change stands, drawn the same by every forge (ADR 48, 175): one column wide, told apart by
+ * Where the review of a change stands, drawn the same by every forge (ADR 45, 175): one column wide, told apart by
  * its shape as well as its colour (ADR 45).
  */
 public final class ReviewSymbols {

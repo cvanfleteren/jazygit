@@ -109,7 +109,7 @@ public final class BuildsUpdate {
 
     /**
      * {@code model}, reading older builds than those read, when older ones are left and none are being read: on every
-     * branch, more runs of the workflow of the tab shown; else more commits of the branch (ADR 132).
+     * branch, more runs of the workflow of the tab shown; else more commits of the branch (ADR 131).
      */
     private static Next more(Model model) {
         return model.part(BuildsView.PART)

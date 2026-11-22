@@ -75,7 +75,7 @@ public final class HttpForgejo implements Forgejo {
 
     /**
      * Forgejo with fj's keys from {@code keys}, read once, when first needed. The token goes where the remote points,
-     * over the scheme it says, as git's credentials and fj's own do: over plain HTTP too (ADR 179).
+     * over the scheme it says, as git's credentials and fj's own do: over plain HTTP too (ADR 174).
      */
     public static HttpForgejo of(Supplier<FjKeys> keys) {
         return new HttpForgejo(keys);
