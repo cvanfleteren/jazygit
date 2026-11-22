@@ -72,6 +72,14 @@ public interface Forgejo {
     }
 
     /**
+     * Whether fj's token goes to the host of {@code repository} unencrypted: it has one for it, and it is asked over
+     * plain HTTP, as its remote says (ADR 179).
+     */
+    default boolean sendsTokenInTheClear(ForgejoRepository repository) {
+        return false;
+    }
+
+    /**
      * How the builds of {@code sha} in {@code repository} went.
      */
     Either<ForgejoError, CommitStatus> status(ForgejoRepository repository, Sha sha);

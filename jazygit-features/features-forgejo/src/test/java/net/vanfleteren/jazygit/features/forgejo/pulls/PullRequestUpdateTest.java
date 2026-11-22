@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
+import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -223,13 +224,46 @@ class PullRequestUpdateTest {
         assertEquals(
                 List.empty(),
                 PullRequestReactions.to(homeless, new KernelEvent.Fetched()).cmds());
+        Next on = PullRequestReactions.to(
+                homeless.withPart(ForgejoPullRequests.PART, listed().part(ForgejoPullRequests.PART)),
+                new KernelEvent.Switched(ForgejoFeature.ID, true));
+        assertEquals(List.empty(), on.cmds());
+        assertEquals(ForgejoPullRequests.NONE, on.model().part(ForgejoPullRequests.PART));
+    }
+
+    @Test
+    void theWarningDoesNotReplaceWhatAnOperationLeftInTheCommandLog() {
+        AppError shown = new PullRequestsError.Unavailable(FAILED);
+        Model failed = model().fail(shown);
+
+        Model after = Update.update(failed, new PullRequestMsg.PlainHttpChecked(Option.of("http://code.example.net")))
+                .model();
+
+        assertEquals(Option.of(shown), after.outcome().error());
+        assertEquals(Option.none(), after.outcome().notice());
+    }
+
+    @Test
+    void aTokenSentUnencryptedIsWarnedOfInTheCommandLogAndNothingElse() {
+        Next warned = Update.update(model(), new PullRequestMsg.PlainHttpChecked(Option.of("http://code.example.net")));
+
+        assertEquals(
+                Option.of(new PlainHttpNotice("http://code.example.net")),
+                warned.model().outcome().notice());
+        assertEquals(Option.none(), warned.model().outcome().error());
+        assertEquals(
+                model().outcome(),
+                Update.update(model(), new PullRequestMsg.PlainHttpChecked(Option.none()))
+                        .model()
+                        .outcome());
     }
 
     @Test
     void theyAreReadAfreshAsForgejoTurnsOnAndAgainAfterAFetchOrAPush() {
         Next on = PullRequestReactions.to(listed(), new KernelEvent.Switched(ForgejoFeature.ID, true));
         assertEquals(ForgejoPullRequests.NONE, on.model().part(ForgejoPullRequests.PART));
-        assertEquals(List.of(new ReadPullRequests(ORIGIN)), on.cmds());
+        // Whether the token goes to the home unencrypted is told once, as Forgejo turns on (ADR 179).
+        assertEquals(List.of(new ReadPullRequests(ORIGIN), new CheckPlainHttp(ORIGIN)), on.cmds());
 
         assertEquals(
                 List.of(new ReadPullRequests(ORIGIN)),

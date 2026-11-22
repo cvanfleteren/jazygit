@@ -30,6 +30,12 @@ public sealed interface PullRequestMsg extends Msg {
             implements PullRequestMsg {}
 
     /**
+     * Whether fj's token goes to the home unencrypted was checked: {@code base}, where it is asked over plain HTTP,
+     * when it does (ADR 179).
+     */
+    record PlainHttpChecked(Option<String> base) implements PullRequestMsg {}
+
+    /**
      * The user asked for the pull request of {@code branch}.
      */
     record Requested(BranchName branch) implements PullRequestMsg {}

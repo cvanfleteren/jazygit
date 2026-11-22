@@ -147,9 +147,7 @@ class HttpForgejoTest {
     @Test
     void theStatusOfACommitIsReadWithFjsTokenForTheHost() {
         String host = base().substring("http://".length());
-        // This server is plain HTTP; it stands for one over https, where the token is sent.
-        HttpForgejo forgejo =
-                HttpForgejo.trusting(() -> new FjKeys(HashMap.of(host, "secret"), HashMap.empty()), repository -> true);
+        HttpForgejo forgejo = HttpForgejo.of(() -> new FjKeys(HashMap.of(host, "secret"), HashMap.empty()));
         assertEquals(
                 Either.right(new CommitStatus(
                         CommitStatus.State.FAILED,
@@ -160,11 +158,22 @@ class HttpForgejoTest {
     }
 
     @Test
-    void fjsTokenIsNotSentOverPlainHttp() {
+    void fjsTokenIsSentOverPlainHttpTooWhereTheRemotePoints() {
         String host = base().substring("http://".length());
         HttpForgejo.of(() -> new FjKeys(HashMap.of(host, "secret"), HashMap.empty()))
                 .status(repository("nix"), SHA);
-        assertEquals(List.of("null"), List.ofAll(authorizations));
+        assertEquals(List.of("token secret"), List.ofAll(authorizations));
+    }
+
+    @Test
+    void itTellsWhichHostsGetTheTokenInTheClear() {
+        String host = base().substring("http://".length());
+        HttpForgejo forgejo = HttpForgejo.of(
+                () -> new FjKeys(HashMap.of(host, "secret", "code.example.net", "other"), HashMap.empty()));
+
+        assertTrue(forgejo.sendsTokenInTheClear(repository("nix")));
+        assertFalse(forgejo.sendsTokenInTheClear(new ForgejoRepository("https://code.example.net", "cvf", "nix")));
+        assertFalse(HttpForgejo.of(() -> FjKeys.NONE).sendsTokenInTheClear(repository("nix")));
     }
 
     @Test

@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -56,13 +55,11 @@ public final class HttpForgejo implements Forgejo {
     private static final Decoder<String> VERSION = field("version", string());
 
     private final Supplier<FjKeys> keys;
-    private final Predicate<ForgejoRepository> trusted;
     private final Lazy<HttpClient> client;
     private final ConcurrentMap<String, Boolean> forgejo = new ConcurrentHashMap<>();
 
-    private HttpForgejo(Supplier<FjKeys> keys, Predicate<ForgejoRepository> trusted) {
+    private HttpForgejo(Supplier<FjKeys> keys) {
         this.keys = Lazy.of(keys);
-        this.trusted = trusted;
         this.client = Lazy.of(() -> HttpClient.newBuilder()
                 .connectTimeout(CONNECT_TIMEOUT)
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -70,18 +67,16 @@ public final class HttpForgejo implements Forgejo {
     }
 
     /**
-     * Forgejo with fj's keys from {@code keys}, read once, when first needed. A token is sent only over https: a
-     * remote over plain HTTP is asked without one, which is enough for a public repository.
+     * Forgejo with fj's keys from {@code keys}, read once, when first needed. The token goes where the remote points,
+     * over the scheme it says, as git's credentials and fj's own do: over plain HTTP too (ADR 179).
      */
     public static HttpForgejo of(Supplier<FjKeys> keys) {
-        return new HttpForgejo(keys, ForgejoRepository::secure);
+        return new HttpForgejo(keys);
     }
 
-    /**
-     * As {@link #of}, but sending the token to the hosts {@code trusted} picks, for a test whose server is plain HTTP.
-     */
-    static HttpForgejo trusting(Supplier<FjKeys> keys, Predicate<ForgejoRepository> trusted) {
-        return new HttpForgejo(keys, trusted);
+    @Override
+    public boolean sendsTokenInTheClear(ForgejoRepository repository) {
+        return !repository.secure() && keys.get().token(repository.host()).isDefined();
     }
 
     @Override
@@ -212,7 +207,7 @@ public final class HttpForgejo implements Forgejo {
 
     /**
      * The body of what the host of {@code repository} answers to the request {@code method} makes of {@code path},
-     * when its status is {@code expected}; with fj's token, when the host is trusted with it.
+     * when its status is {@code expected}; with fj's token, when it has one for the host.
      */
     private Either<ForgejoError, String> send(
             ForgejoRepository repository, String path, UnaryOperator<HttpRequest.Builder> method, int expected) {
@@ -223,7 +218,6 @@ public final class HttpForgejo implements Forgejo {
                                     .header("Accept", "application/json"));
                     keys.get()
                             .token(repository.host())
-                            .filter(token -> trusted.test(repository))
                             .forEach(token -> request.header("Authorization", "token " + token));
                     return client.get()
                             .send(request.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));

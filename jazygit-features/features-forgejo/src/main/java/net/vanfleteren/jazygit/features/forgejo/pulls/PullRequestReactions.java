@@ -19,9 +19,7 @@ public final class PullRequestReactions {
     public static Next to(Model model, KernelEvent event) {
         return switch (event) {
             case KernelEvent.Switched(String feature, boolean on)
-            // Afresh, as the repository may be another one, with other remotes under the same names.
-            when feature.equals(ForgejoFeature.ID) && on ->
-                PullRequestUpdate.list(model.withPart(ForgejoPullRequests.PART, ForgejoPullRequests.NONE));
+            when feature.equals(ForgejoFeature.ID) && on -> PullRequestUpdate.turnedOn(model);
             case KernelEvent.Fetched _ -> PullRequestUpdate.list(model);
             case KernelEvent.OperationDone(boolean changedForge) ->
                 changedForge ? PullRequestUpdate.list(model) : Next.of(model);
