@@ -6,6 +6,8 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +46,8 @@ final class RepositorySession {
     private final Consumer<Model> started;
     // What runs while the app is started.
     private Option<Runtime> runtime = Option.none();
+    // The screen of the repository shown before the one that runs, while that one reads what its panes show.
+    private Option<HeldFrame> held = Option.none();
 
     /**
      * @param env           what the repository the app starts in is read with; other repositories are opened here
@@ -128,6 +132,15 @@ final class RepositorySession {
     Model model() {
         return runtime.map(running -> running.program().model())
                 .getOrElse(() -> Model.initial(env.git().repositoryName()));
+    }
+
+    /**
+     * The model a frame drawn at {@code now} shows: that of the running program, or the screen of the repository shown
+     * before it while it reads what its panes show, as {@link HeldFrame} says.
+     */
+    Model drawn(Instant now) {
+        Model running = model();
+        return held.map(frame -> frame.drawn(running, now)).getOrElse(running);
     }
 
     /**
@@ -221,6 +234,8 @@ final class RepositorySession {
     private void show(Git git, RepositoryTheme repositoryTheme, Landing landing, Carried.Shown opened) {
         runtime.forEach(running -> {
             Model last = running.program().model();
+            Instant now = clock.instant();
+            held = Option.of(HeldFrame.of(drawn(now), now));
             // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
@@ -237,8 +252,11 @@ final class RepositorySession {
                     Carried.between(running.shown(), opened, last));
             // What this session knew of the settings file goes on, so a setting only it has is not taken for one
             // the file has, and a problem it was showing still shows (ADR 111).
-            runtime.forEach(now -> now.program().dispatch(SettingsPanelUpdate.carried(last)));
+            runtime.forEach(next -> next.program().dispatch(SettingsPanelUpdate.carried(last)));
             requestRedraw.run();
+            // The frame once the screen before is held no longer, for a repository that takes that long to read.
+            CompletableFuture.delayedExecutor(Jobs.SHOWN_AFTER.toMillis(), TimeUnit.MILLISECONDS)
+                    .execute(() -> runner.get().runOnRenderThread(requestRedraw));
         });
     }
 

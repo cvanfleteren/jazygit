@@ -59,6 +59,16 @@ public record Repo(
             Loadable.loading());
 
     /**
+     * Whether what the panes show of the repository was read once, or could not be: its status, branches, log,
+     * stashes and worktrees. Until then they show that it is loading; what is read later, or only once asked for, as
+     * what is ahead or all files, does not count.
+     */
+    public boolean firstRead() {
+        return List.<Loadable<?>>of(status, branches, commits, stashes, worktrees)
+                .forAll(read -> !(read instanceof Loadable.Loading));
+    }
+
+    /**
      * The files the files pane lists for the working tree: its changed files, and, when {@code all} of them are
      * listed, each of its other files as one without changes (ADR 108). Those are loading until all files are read
      * once, so that the tree starts from all of them.
