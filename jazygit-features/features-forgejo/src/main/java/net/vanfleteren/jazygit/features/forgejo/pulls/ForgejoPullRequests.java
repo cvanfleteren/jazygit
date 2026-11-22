@@ -121,17 +121,17 @@ public record ForgejoPullRequests(
      * scheduled first, and forgotten once it shows another, as one scheduled in the browser; a merge Forgejo dropped
      * is forgotten once another is scheduled. One it does not show, as its timeline could not be read, keeps them.
      */
-    public ForgejoPullRequests read(ShownPullRequest shown) {
+    public ForgejoPullRequests readShown(ShownPullRequest shown) {
         long number = shown.pullRequest().number();
         Map<Long, Scheduling> kept = shown.scheduled()
-                .flatMap(merge -> scheduled.get(number).map(was -> read(was, merge.at())))
+                .flatMap(merge -> scheduled.get(number).map(was -> keptOnceShown(was, merge.at())))
                 .map(now -> now.fold(() -> scheduled.remove(number), is -> scheduled.put(number, is)))
                 .getOrElse(scheduled);
         return new ForgejoPullRequests(home, open, failure, reads, failedMerges, kept);
     }
 
     // What is kept of a merge as was kept, once its timeline shows one scheduled at at.
-    private static Option<Scheduling> read(Scheduling was, Instant at) {
+    private static Option<Scheduling> keptOnceShown(Scheduling was, Instant at) {
         return switch (was) {
             case Scheduling.Ours(var style, var bound)
             when bound.isEmpty() -> Option.of(new Scheduling.Ours(style, Option.of(at)));

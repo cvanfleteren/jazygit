@@ -117,7 +117,7 @@ public final class PullRequestUpdate {
         Either<Failure, ShownPullRequest> seen = result.map(prs::shown);
         return model.popup(ForgejoPullRequestPopup.class)
                 .filter(popup -> popup.read() == read)
-                .map(popup -> model.withPart(ForgejoPullRequests.PART, seen.fold(_ -> prs, prs::read))
+                .map(popup -> model.withPart(ForgejoPullRequests.PART, seen.fold(_ -> prs, prs::readShown))
                         .openPopup(popup.with(seen, read)))
                 .getOrElse(model);
     }
