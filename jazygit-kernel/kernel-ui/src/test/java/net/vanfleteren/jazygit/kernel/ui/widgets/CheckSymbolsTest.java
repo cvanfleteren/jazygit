@@ -31,6 +31,13 @@ class CheckSymbolsTest {
                 line(CheckSymbols.joined(List.of(CheckSymbols.counts(0, 1, 0), List.of(text("done in ~3m"))))));
     }
 
+    @Test
+    void aCheckByItsNameIsCutToTheWidthGivenAndLeftOutWithoutRoom() throws Exception {
+        assertEquals("✗ accep…", line(CheckSymbols.named(CheckSymbols.FAILED, "acceptance", 8)));
+        assertEquals("● lint", line(CheckSymbols.named(CheckSymbols.RUNNING, "lint", 8)));
+        assertEquals("✓", line(CheckSymbols.named(CheckSymbols.PASSED, "lint", 2)));
+    }
+
     private static String line(List<StyledElement<?>> pieces) throws Exception {
         return LabelledLinesTest.screen(List.of(Line.pieces(pieces))).get(0).stripTrailing();
     }
