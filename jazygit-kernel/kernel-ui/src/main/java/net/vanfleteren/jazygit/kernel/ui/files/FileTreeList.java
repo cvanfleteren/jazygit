@@ -75,6 +75,9 @@ final class FileTreeList<T extends Pathed> {
     // What the files are of with it, so the same path among the files of another commit is wanted again.
     private Option<Tuple2<Object, String>> wanted = Option.none();
     private boolean wantedPlaced = true;
+    // The path highlighted in the other list of the same files, when the pane switched from it, to highlight once
+    // these are read: the changed files and all files keep the highlight on its path.
+    private Option<String> carried = Option.none();
     // The nodes drawn for the frame being rendered, with what they were drawn as, to find the one clicked on.
     private List<Drawn<T>> drawn = List.of();
     // The node a step moved the highlight to (ADR 117), until the tree is drawn again: the widget says which node is
@@ -141,6 +144,16 @@ final class FileTreeList<T extends Pathed> {
             wanted = want;
             wantedPlaced = want.isEmpty();
         }
+    }
+
+    /**
+     * Makes the highlight go to {@code path} once the files are read, in place of where it was or where
+     * {@link #start} puts it: the path highlighted in the other list of the same files, which the pane switched
+     * from. A node not listed gives it to the directory merged into a node that holds it, or else to the deepest
+     * directory that holds it.
+     */
+    void carrying(String path) {
+        carried = Option.of(path);
     }
 
     /**
@@ -218,7 +231,25 @@ final class FileTreeList<T extends Pathed> {
                             && wanted.exists(want -> want._2().equals(file.path())))
                     .forEach(this::highlight);
         }
+        if (carried.isDefined() && files instanceof Loadable.Loaded<List<T>>) {
+            carried.flatMap(this::nearest).forEach(this::highlight);
+            carried = Option.none();
+        }
         return tree;
+    }
+
+    /**
+     * The node of {@code path}; else, for a directory merged with its only child directories, the node it is merged
+     * into; else the deepest directory that holds it.
+     */
+    private Option<TreeNode<FileTree<T>>> nearest(String path) {
+        List<TreeNode<FileTree<T>>> all = nodes(roots);
+        return all.find(n -> n.data() != null && n.data().path().equals(path))
+                .orElse(() -> all.find(n ->
+                        n.data() instanceof FileTree.Dir<T> dir && dir.path().startsWith(path + "/")))
+                .orElse(() -> all.filter(n -> n.data() instanceof FileTree.Dir<T> dir
+                                && (dir.path().isEmpty() || path.startsWith(dir.path() + "/")))
+                        .maxBy(n -> n.data().path().length()));
     }
 
     /**

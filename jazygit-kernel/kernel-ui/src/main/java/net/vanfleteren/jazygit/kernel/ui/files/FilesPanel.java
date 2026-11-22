@@ -74,6 +74,8 @@ public class FilesPanel {
     private boolean held;
     // Whether the pane was locked to a list at the last render, which Escape in the working tree lets go of (ADR 149).
     private boolean locked;
+    // What the files drawn last were of, and the tree they were drawn in, to see `a` switch to the other list.
+    private Option<Listed> listed = Option.none();
     // All files of the working tree, as last merged, with the status and the paths they were merged from: merging
     // them again on every frame would cost tens of milliseconds in a repository of 100 000 files (ADR 108).
     private Option<Merged> merged = Option.none();
@@ -507,6 +509,18 @@ public class FilesPanel {
     }
 
     /**
+     * Draws the files of {@code of} in {@code tree}: when they were drawn in {@code other} last, the tree of the other
+     * list of them, the pane switched between their changed files and all of them, and the highlight goes with its
+     * path.
+     */
+    private <T extends Pathed> void switching(Object of, FileTreeList<T> tree, FileTreeList<T> other) {
+        if (listed.exists(last -> last.of().equals(of) && last.tree() == other)) {
+            other.selected().map(FileTree::path).forEach(tree::carrying);
+        }
+        listed = Option.of(new Listed(of, tree));
+    }
+
+    /**
      * The files of the working tree listed: all of them merged with its changed ones only when either changed, the
      * last merge otherwise.
      */
@@ -549,6 +563,7 @@ public class FilesPanel {
                 .peek(view -> held = view.held().isDefined())
                 // The files of a commit opened from a line blamed on it start on the file of the line (ADR 147).
                 .peek(view -> commitTreeOf(view).wanting(view.of(), view.wanted()))
+                .peek(view -> switching(view.of(), commitTreeOf(view), view.allFiles() ? commitTree : commitAllTree))
                 .map(view -> Pane.bordered(
                         model.remarks(view.of())
                                         .flatMap(StatedRemarks::ended)
@@ -584,6 +599,7 @@ public class FilesPanel {
                     boolean all = model.repoView().files().shown().all();
                     Loadable<List<FileEntry>> files = workingFiles(model.repo(), all);
                     FileTreeList<FileEntry> tree = workingTree(model.repoView());
+                    switching(ID, tree, all ? statusTree : allTree);
                     return Pane.bordered(
                             Messages.get("panel.files.title")
                                     + (all ? Messages.get("panel.files.all") : "")
@@ -753,4 +769,9 @@ public class FilesPanel {
      * listed: the tree is built anew once they are.
      */
     private record Held(Changes of) {}
+
+    /**
+     * What the files drawn were of, and the tree they were drawn in: of their changed files, or of all of them.
+     */
+    private record Listed(Object of, FileTreeList<?> tree) {}
 }
