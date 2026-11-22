@@ -7,6 +7,7 @@ import java.util.Random;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -78,7 +79,8 @@ public final class Fixtures {
             String message,
             String body,
             List<Sha> parents) {
-        return new Commit(sha, authorName, authorEmail, authorTime, message, body, parents, List.of());
+        return new Commit(
+                sha, authorName, authorEmail, authorTime, new CommitMessage(message, body), parents, List.of());
     }
 
     public static FileEntry fileEntry(String path, ChangeType type) {

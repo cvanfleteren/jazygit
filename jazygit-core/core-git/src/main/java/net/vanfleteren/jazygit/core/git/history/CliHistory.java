@@ -409,8 +409,7 @@ public final class CliHistory implements History {
                                         f.get(2),
                                         f.get(3),
                                         time,
-                                        f.get(5),
-                                        extendedMessage(f.get(7)),
+                                        new CommitMessage(f.get(5), extendedMessage(f.get(7))),
                                         List.of(f.get(1).split(" ")).flatMap(Sha::parse),
                                         tags(f.get(6))))));
     }

@@ -168,7 +168,7 @@ class CliGitTest {
         assertNotEquals(headBefore, status.headCommit().get());
         assertEquals(List.of(), status.files());
         List<Commit> commits = commits().get();
-        assertEquals("Second commit", commits.get(0).message());
+        assertEquals("Second commit", commits.get(0).message().summary());
         assertEquals(status.headCommit().get(), commits.get(0).sha());
     }
 
@@ -227,7 +227,7 @@ class CliGitTest {
                 .history()
                 .search(CommitQuery.parse(query))
                 .get()
-                .map(Commit::message)
+                .map(c -> c.message().summary())
                 .toList();
     }
 
@@ -382,9 +382,9 @@ class CliGitTest {
                 .get();
         assertEquals(
                 List.of("Side subject", "Initial commit"),
-                side.map(Commit::message).toList());
-        assertEquals("Side detail\nsecond line", side.get(0).body());
-        assertEquals("", side.get(1).body());
+                side.map(c -> c.message().summary()).toList());
+        assertEquals("Side detail\nsecond line", side.get(0).message().description());
+        assertEquals("", side.get(1).message().description());
         assertEquals("Test", side.get(0).authorName());
         assertEquals("test@example.com", side.get(0).authorEmail());
 
@@ -394,7 +394,7 @@ class CliGitTest {
                         .history()
                         .log(new BranchRef.Local(new BranchName("main")))
                         .get()
-                        .map(Commit::message)
+                        .map(c -> c.message().summary())
                         .toList());
         assertEquals(
                 new GitError.UnknownBranch(new BranchRef.Local(new BranchName("gone"))),
@@ -417,9 +417,12 @@ class CliGitTest {
         Divergence divergence = repository.history().divergence(side, main).get();
 
         assertEquals(
-                List.of("Side two", "Side one"), divergence.ahead().commits().map(Commit::message));
+                List.of("Side two", "Side one"),
+                divergence.ahead().commits().map(c -> c.message().summary()));
         assertEquals(2, divergence.ahead().count());
-        assertEquals(List.of("Main one"), divergence.behind().commits().map(Commit::message));
+        assertEquals(
+                List.of("Main one"),
+                divergence.behind().commits().map(c -> c.message().summary()));
         assertEquals(1, divergence.behind().count());
         BranchRef gone = new BranchRef.Local(new BranchName("gone"));
         assertEquals(
@@ -467,9 +470,9 @@ class CliGitTest {
         assertEquals(main, ahead.base());
         assertEquals(
                 List.of("Merge branch 'main' into side", "Side one"),
-                ahead.commits().map(Commit::message));
+                ahead.commits().map(c -> c.message().summary()));
         assertFalse(ahead.more());
-        assertTrue(ahead.forkPoint().exists(commit -> commit.message().equals("Main one")));
+        assertTrue(ahead.forkPoint().exists(commit -> commit.message().summary().equals("Main one")));
         assertFalse(ahead.shared(ahead.commits().head().sha()));
         assertTrue(ahead.shared(fork));
         assertEquals(head, ahead.tip());
@@ -486,7 +489,7 @@ class CliGitTest {
 
         Ahead ahead = repository.history().ahead(tip("side"), main, tip("main")).get();
 
-        assertEquals(List.of("Side one"), ahead.commits().map(Commit::message));
+        assertEquals(List.of("Side one"), ahead.commits().map(c -> c.message().summary()));
         assertEquals(Option.of(fork), ahead.forkPoint().map(Commit::sha));
     }
 
@@ -515,7 +518,7 @@ class CliGitTest {
                 .ahead(repository.status().read().get().headCommit().get(), main, tip("main"))
                 .get();
 
-        assertEquals(List.of("Other root"), ahead.commits().map(Commit::message));
+        assertEquals(List.of("Other root"), ahead.commits().map(c -> c.message().summary()));
         assertEquals(Option.none(), ahead.forkPoint());
     }
 
@@ -632,7 +635,7 @@ class CliGitTest {
 
         assertEquals(
                 List.of("Merge feature", "Feature work", "Main work"),
-                commits.map(Commit::message).take(3));
+                commits.map(c -> c.message().summary()).take(3));
         assertEquals(2, commits.head().parents().size());
         assertTrue(commits.head().isMerge());
     }
@@ -662,8 +665,8 @@ class CliGitTest {
         List<Commit> after = commits().get();
         assertEquals(
                 List.of("Third", "Second, better", "Initial commit"),
-                after.map(Commit::message).toList());
-        assertEquals("because", after.get(1).body());
+                after.map(c -> c.message().summary()).toList());
+        assertEquals("because", after.get(1).message().description());
         assertEquals("hello\n".replace("hello", "dirty"), Files.readString(repo.resolve("README.md")));
         assertTrue(Files.exists(repo.resolve("a.txt")) && Files.exists(repo.resolve("b.txt")));
     }
@@ -688,7 +691,7 @@ class CliGitTest {
                 executed);
         assertEquals(
                 List.of("Feature work", "Main work", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
     }
 
     @Test
@@ -709,7 +712,7 @@ class CliGitTest {
 
         assertEquals(
                 List.of("Feature work", "Main work", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
     }
 
     @Test
@@ -740,9 +743,11 @@ class CliGitTest {
         repository.integrate().rebase(new BranchName("main")).get();
 
         List<Commit> after = commits().get();
-        assertEquals(List.of("fixup! Feature work", "Merge side"), after.take(2).map(Commit::message));
+        assertEquals(
+                List.of("fixup! Feature work", "Merge side"),
+                after.take(2).map(c -> c.message().summary()));
         assertTrue(after.get(1).isMerge());
-        assertTrue(after.exists(c -> c.message().equals("Main work")));
+        assertTrue(after.exists(c -> c.message().summary().equals("Main work")));
     }
 
     @Test
@@ -791,7 +796,7 @@ class CliGitTest {
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
         assertEquals(
                 List.of("Remove x", "Add x", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
     }
 
     @Test
@@ -818,7 +823,7 @@ class CliGitTest {
         assertEquals(List.of("git cherry-pick " + picked.value()), executed);
         assertEquals(
                 List.of("Feature work", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertEquals("f\n", Files.readString(repo.resolve("f.txt")));
     }
 
@@ -859,7 +864,7 @@ class CliGitTest {
 
         assertEquals(
                 List.of("Same work", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "CHERRY_PICK_HEAD"));
     }
 
@@ -893,8 +898,10 @@ class CliGitTest {
 
         assertEquals(List.of("git revert --no-edit " + reverted.sha().value()), executed);
         Commit revert = commits().get().head();
-        assertEquals("Revert \"Add f\"", revert.message());
-        assertEquals("This reverts commit " + reverted.sha().value() + ".", revert.body());
+        assertEquals("Revert \"Add f\"", revert.message().summary());
+        assertEquals(
+                "This reverts commit " + reverted.sha().value() + ".",
+                revert.message().description());
         assertTrue(!Files.exists(repo.resolve("f.txt")));
     }
 
@@ -911,7 +918,8 @@ class CliGitTest {
         List<String> executed = repository.integrate().revert(merge).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git revert --no-edit -m 1 " + merge.sha().value()), executed);
-        assertEquals("Revert \"Merge feature\"", commits().get().head().message());
+        assertEquals(
+                "Revert \"Merge feature\"", commits().get().head().message().summary());
         assertTrue(!Files.exists(repo.resolve("f.txt")));
     }
 
@@ -947,7 +955,7 @@ class CliGitTest {
 
         assertEquals(
                 List.of("Remove f", "Add f", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "REVERT_HEAD"));
     }
 
@@ -979,8 +987,10 @@ class CliGitTest {
         List<Commit> after = commits().get();
         assertEquals(
                 List.of("Fourth", "Second", "Initial commit"),
-                after.map(Commit::message).toList());
-        assertTrue(after.get(1).body().contains("Third"), after.get(1).body());
+                after.map(c -> c.message().summary()).toList());
+        assertTrue(
+                after.get(1).message().description().contains("Third"),
+                after.get(1).message().description());
         assertTrue(Files.exists(repo.resolve("b.txt")));
         assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
     }
@@ -997,7 +1007,8 @@ class CliGitTest {
                 .get();
 
         assertEquals(
-                List.of("Initial commit"), commits().get().map(Commit::message).toList());
+                List.of("Initial commit"),
+                commits().get().map(c -> c.message().summary()).toList());
     }
 
     @Test
@@ -1019,8 +1030,8 @@ class CliGitTest {
         List<Commit> after = commits().get();
         assertEquals(
                 List.of("Fourth", "Second", "Initial commit"),
-                after.map(Commit::message).toList());
-        assertEquals("", after.get(1).body().strip());
+                after.map(c -> c.message().summary()).toList());
+        assertEquals("", after.get(1).message().description().strip());
         assertTrue(Files.exists(repo.resolve("b.txt")));
         assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
     }
@@ -1042,8 +1053,9 @@ class CliGitTest {
 
         List<Commit> after = commits().get();
         assertEquals(
-                List.of("Third", "Initial commit"), after.map(Commit::message).toList());
-        assertEquals("Third body", after.head().body().strip());
+                List.of("Third", "Initial commit"),
+                after.map(c -> c.message().summary()).toList());
+        assertEquals("Third body", after.head().message().description().strip());
         assertEquals("Test", after.head().authorName());
         assertTrue(Files.exists(repo.resolve("a.txt")));
         assertTrue(Files.exists(repo.resolve("b.txt")));
@@ -1064,7 +1076,8 @@ class CliGitTest {
                 .map(ExecutedCommand::line);
         assertEquals(List.of("git reset --quiet --soft " + initial.value()), executed);
         assertEquals(
-                List.of("Initial commit"), commits().get().map(Commit::message).toList());
+                List.of("Initial commit"),
+                commits().get().map(c -> c.message().summary()).toList());
         assertTrue(repository
                 .status()
                 .read()
@@ -1092,7 +1105,8 @@ class CliGitTest {
                 .reset(new ResetTarget.ToCommit(initial), ResetMode.HARD)
                 .get();
         assertEquals(
-                List.of("Initial commit"), commits().get().map(Commit::message).toList());
+                List.of("Initial commit"),
+                commits().get().map(c -> c.message().summary()).toList());
         assertTrue(Files.notExists(repo.resolve("a.txt")));
         assertEquals("hello\n", Files.readString(repo.resolve("README.md")));
         assertEquals("kept\n", Files.readString(repo.resolve("untracked.txt")));
@@ -1130,7 +1144,8 @@ class CliGitTest {
                 .get();
 
         assertEquals(
-                List.of("Second", "Start"), commits().get().map(Commit::message).toList());
+                List.of("Second", "Start"),
+                commits().get().map(c -> c.message().summary()).toList());
     }
 
     @Test
@@ -1143,7 +1158,7 @@ class CliGitTest {
 
         assertEquals(1, executed.size());
         assertTrue(executed.head().startsWith("git commit"), executed.toString());
-        assertEquals("Renamed", commits().get().head().message());
+        assertEquals("Renamed", commits().get().head().message().summary());
     }
 
     @Test
@@ -1168,8 +1183,8 @@ class CliGitTest {
                 .get();
 
         List<Commit> after = commits().get();
-        assertEquals("After merge", after.head().message());
-        assertEquals("Merged the feature", after.get(1).message());
+        assertEquals("After merge", after.head().message().summary());
+        assertEquals("Merged the feature", after.get(1).message().summary());
         assertTrue(after.get(1).isMerge());
     }
 
@@ -1188,7 +1203,8 @@ class CliGitTest {
                 .get();
 
         assertEquals(
-                List.of("Second", "First"), commits().get().map(Commit::message).toList());
+                List.of("Second", "First"),
+                commits().get().map(c -> c.message().summary()).toList());
     }
 
     @Test
@@ -1204,8 +1220,8 @@ class CliGitTest {
                 .get();
 
         Commit reworded = commits().get().get(1);
-        assertEquals("#12 First", reworded.message());
-        assertEquals("#13 too", reworded.body());
+        assertEquals("#12 First", reworded.message().summary());
+        assertEquals("#13 too", reworded.message().description());
     }
 
     @Test
@@ -1229,7 +1245,7 @@ class CliGitTest {
                 executed.toString());
         assertEquals(
                 List.of("Third", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertTrue(Files.notExists(repo.resolve("a.txt")));
         assertTrue(Files.exists(repo.resolve("b.txt")));
         assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
@@ -1244,7 +1260,9 @@ class CliGitTest {
 
         repository.commits().drop(root).get();
 
-        assertEquals(List.of("Second"), commits().get().map(Commit::message).toList());
+        assertEquals(
+                List.of("Second"),
+                commits().get().map(c -> c.message().summary()).toList());
         assertTrue(Files.notExists(repo.resolve("README.md")));
     }
 
@@ -1281,7 +1299,7 @@ class CliGitTest {
 
         assertEquals(
                 List.of("Third", "Second", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertEquals("amended\n", git("show", "HEAD~1:a.txt"));
         assertEquals("", git("diff", "--cached", "--name-only"));
         assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
@@ -1301,7 +1319,7 @@ class CliGitTest {
         assertEquals(List.of("git commit --quiet --amend --no-edit"), executed);
         assertEquals(
                 List.of("Second", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertEquals("amended\n", git("show", "HEAD:a.txt"));
     }
 
@@ -1318,7 +1336,7 @@ class CliGitTest {
 
         assertEquals(
                 List.of("Second", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertEquals("root\n", git("show", "HEAD~1:root.txt"));
     }
 
@@ -1338,7 +1356,7 @@ class CliGitTest {
 
         assertEquals(
                 List.of("fixup! Second", "Second", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertEquals("c\n", git("show", "HEAD~1:c.txt"));
     }
 
@@ -1377,7 +1395,7 @@ class CliGitTest {
 
         assertEquals(
                 List.of("Second", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertEquals("b.txt\n", git("diff", "--cached", "--name-only"));
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
     }
@@ -1398,7 +1416,7 @@ class CliGitTest {
 
         assertEquals(
                 List.of("Second", "Initial commit"),
-                commits().get().map(Commit::message).toList());
+                commits().get().map(c -> c.message().summary()).toList());
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
     }
 
@@ -1429,7 +1447,7 @@ class CliGitTest {
         assertTrue(
                 failure.commands().head().line().startsWith("git rev-list"),
                 failure.commands().toString());
-        assertEquals("Initial commit", commits().get().head().message());
+        assertEquals("Initial commit", commits().get().head().message().summary());
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
     }
 
@@ -1700,7 +1718,7 @@ class CliGitTest {
                         .history()
                         .log(new BranchRef.Remote(feature))
                         .get()
-                        .map(Commit::message)
+                        .map(c -> c.message().summary())
                         .toList());
 
         repository

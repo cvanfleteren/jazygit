@@ -37,7 +37,7 @@ class SampleDataTest {
         assertFalse(commits.isEmpty());
         for (Commit commit : commits) {
             assertFalse(commit.shortSha().isBlank());
-            assertFalse(commit.message().isBlank());
+            assertFalse(commit.message().summary().isBlank());
         }
     }
 

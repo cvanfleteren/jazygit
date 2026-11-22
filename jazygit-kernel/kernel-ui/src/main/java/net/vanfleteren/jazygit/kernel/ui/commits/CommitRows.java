@@ -68,7 +68,8 @@ public final class CommitRows {
                 : List.of(LoadableList.Seg.of(commit.shortSha() + author));
         List<LoadableList.Seg> tags =
                 commit.tags().map(tag -> LoadableList.Seg.styled("[" + tag.name() + "] ", Theme.Classes.TAG));
-        return new LoadableList.Row(prefix.appendAll(tags).append(LoadableList.Seg.of(commit.message())));
+        return new LoadableList.Row(prefix.appendAll(tags)
+                .append(LoadableList.Seg.of(commit.message().summary())));
     }
 
     /**
