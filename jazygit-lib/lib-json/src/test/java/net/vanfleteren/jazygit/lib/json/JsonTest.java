@@ -39,6 +39,33 @@ class JsonTest {
     }
 
     @Test
+    void aValueIsWrittenOnOneLineInTheOrderOfItsFields() {
+        Json json = new JObject(LinkedHashMap.of(
+                "title", new JString("Create"),
+                "count", new JNumber(new BigDecimal("3")),
+                "done", new JBool(true),
+                "author", new JNull(),
+                "labels", new JArray(List.of(new JString("bug"), new JObject(LinkedHashMap.empty())))));
+
+        assertEquals(
+                "{\"title\":\"Create\",\"count\":3,\"done\":true,\"author\":null,\"labels\":[\"bug\",{}]}",
+                json.text());
+    }
+
+    @Test
+    void whatIsWrittenIsReadBackAsItWas() {
+        Json json = new JObject(LinkedHashMap.of(
+                "body", new JString("a\tb\n\"c\" \\ é \u0001 🇧🇪\r"), "empty", new JArray(List.empty())));
+
+        assertEquals(Either.right(json), Json.parse(json.text()));
+    }
+
+    @Test
+    void quotesBackslashesAndControlCharactersAreEscaped() {
+        assertEquals("\"\\\"a\\\\b\\n\\u0001\"", new JString("\"a\\b\n\u0001").text());
+    }
+
+    @Test
     void theFieldsOfAnObjectKeepTheirOrder() {
         JObject object = (JObject) Json.parse("{\"b\": 1, \"a\": 2, \"c\": 3}").get();
 

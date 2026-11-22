@@ -113,6 +113,13 @@ final class PullRequestJson {
     }
 
     /**
+     * A pull request as creating it answers it (ADR 178), with what the list of the open ones gives.
+     */
+    static Decoder<ForgejoPullRequest> summary() {
+        return SUMMARY;
+    }
+
+    /**
      * A pull request as it is read to be shown.
      */
     static Decoder<ForgejoPullRequestDetails> details() {

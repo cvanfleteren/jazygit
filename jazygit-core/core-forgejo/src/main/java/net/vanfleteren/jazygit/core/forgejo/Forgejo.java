@@ -43,6 +43,12 @@ public interface Forgejo {
         public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
             return Either.left(new ForgejoError.Unreachable("no Forgejo"));
         }
+
+        @Override
+        public Either<ForgejoError, ForgejoPullRequest> createPullRequest(
+                ForgejoRepository repository, ForgejoNewPullRequest pullRequest) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
     };
 
     /**
@@ -84,4 +90,11 @@ public interface Forgejo {
      * The reviews of pull request {@code number} of {@code repository}, in the order they were given.
      */
     Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number);
+
+    /**
+     * Creates {@code pullRequest} in {@code repository} (ADR 178): the pull request as Forgejo answers it, or why it
+     * did not create it, as the 409 that names the one open already.
+     */
+    Either<ForgejoError, ForgejoPullRequest> createPullRequest(
+            ForgejoRepository repository, ForgejoNewPullRequest pullRequest);
 }

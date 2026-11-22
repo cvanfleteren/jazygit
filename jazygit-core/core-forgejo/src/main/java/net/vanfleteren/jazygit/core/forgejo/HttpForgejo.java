@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -35,6 +36,7 @@ public final class HttpForgejo implements Forgejo {
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final int OK = 200;
+    private static final int CREATED = 201;
     private static final int SERVER_ERROR = 500;
     // How many pull requests a page of them asks for, and the most pages read: Forgejo gives at most 50 by default.
     private static final int PAGE = 50;
@@ -187,14 +189,38 @@ public final class HttpForgejo implements Forgejo {
     }
 
     /**
+     * {@inheritDoc} With fj's token, which Forgejo needs for it.
+     */
+    @Override
+    public Either<ForgejoError, ForgejoPullRequest> createPullRequest(
+            ForgejoRepository repository, ForgejoNewPullRequest pullRequest) {
+        return send(
+                        repository,
+                        repo(repository) + "/pulls",
+                        request -> request.header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString(pullRequest.json(), StandardCharsets.UTF_8)),
+                        CREATED)
+                .flatMap(body -> decoded(PullRequestJson.summary(), body));
+    }
+
+    /**
      * The body of what the host of {@code repository} answers to a GET of {@code path}, when that is 200.
      */
     private Either<ForgejoError, String> get(ForgejoRepository repository, String path) {
+        return send(repository, path, HttpRequest.Builder::GET, OK);
+    }
+
+    /**
+     * The body of what the host of {@code repository} answers to the request {@code method} makes of {@code path},
+     * when its status is {@code expected}; with fj's token, when the host is trusted with it.
+     */
+    private Either<ForgejoError, String> send(
+            ForgejoRepository repository, String path, UnaryOperator<HttpRequest.Builder> method, int expected) {
         return Try.of(() -> {
-                    HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(repository.base() + path))
-                            .timeout(REQUEST_TIMEOUT)
-                            .header("Accept", "application/json")
-                            .GET();
+                    HttpRequest.Builder request =
+                            method.apply(HttpRequest.newBuilder(URI.create(repository.base() + path))
+                                    .timeout(REQUEST_TIMEOUT)
+                                    .header("Accept", "application/json"));
                     keys.get()
                             .token(repository.host())
                             .filter(token -> trusted.test(repository))
@@ -204,7 +230,7 @@ public final class HttpForgejo implements Forgejo {
                 })
                 .toEither()
                 .<ForgejoError>mapLeft(failed -> new ForgejoError.Unreachable(String.valueOf(failed.getMessage())))
-                .flatMap(response -> response.statusCode() == OK
+                .flatMap(response -> response.statusCode() == expected
                         ? Either.right(response.body())
                         : Either.left(new ForgejoError.Refused(response.statusCode(), response.body())));
     }

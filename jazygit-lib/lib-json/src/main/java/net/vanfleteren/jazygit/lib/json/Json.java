@@ -4,6 +4,7 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.math.BigDecimal;
+import java.util.stream.Collectors;
 
 /**
  * A JSON value, as plain values that never change (ADR 42). The fields of an object keep the order they were read in.
@@ -29,6 +30,38 @@ public sealed interface Json {
             case JBool b -> "a boolean";
             case JNull n -> "null";
         };
+    }
+
+    /**
+     * This value as JSON text, on one line, its fields in their order: what {@link #parse} reads back as it.
+     */
+    default String text() {
+        return switch (this) {
+            case JObject(var fields) ->
+                fields.map(field -> quoted(field._1()) + ":" + field._2().text())
+                        .mkString("{", ",", "}");
+            case JArray(var elements) -> elements.map(Json::text).mkString("[", ",", "]");
+            case JString(var value) -> quoted(value);
+            case JNumber(var value) -> value.toString();
+            case JBool(var value) -> String.valueOf(value);
+            case JNull n -> "null";
+        };
+    }
+
+    /**
+     * {@code value} as a JSON string: quotes and backslashes escaped, and the control characters, as JSON needs.
+     */
+    private static String quoted(String value) {
+        return value.chars()
+                .mapToObj(c -> switch (c) {
+                    case '"' -> "\\\"";
+                    case '\\' -> "\\\\";
+                    case '\n' -> "\\n";
+                    case '\r' -> "\\r";
+                    case '\t' -> "\\t";
+                    default -> c < 0x20 ? "\\u%04x".formatted(c) : String.valueOf((char) c);
+                })
+                .collect(Collectors.joining("", "\"", "\""));
     }
 
     record JObject(LinkedHashMap<String, Json> fields) implements Json {}

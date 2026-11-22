@@ -124,15 +124,14 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void aBranchNoPullRequestMergesIsToldSo() {
+    void aBranchNoPullRequestMergesHasOneCreatedWhereItIsPushedToCheckedFirst() {
         Model listedNone = PullRequestUpdate.update(
                         model(), new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.empty()), Option.none()))
                 .model();
 
         Next next = requested(listedNone, "feature");
         assertEquals(
-                Option.of(new PullRequestNotice.None(new BranchName("feature"))),
-                next.model().outcome().notice());
+                List.of(new CreatePullRequestCmd.CheckHead(ORIGIN, new BranchName("feature"), FEATURE)), next.cmds());
         assertEquals(Option.none(), next.model().popup(ForgejoPullRequestPopup.class));
     }
 
@@ -148,8 +147,9 @@ class PullRequestUpdateTest {
 
         assertEquals(LISTED, popup(requested(listedAlone, "alone").model()).pullRequest());
         assertEquals(
-                Option.of(new PullRequestNotice.None(new BranchName("alone"))),
-                requested(listed(), "alone").model().outcome().notice());
+                List.of(new CreatePullRequestCmd.CheckHead(
+                        ORIGIN, new BranchName("alone"), new RemoteBranch(ORIGIN, new BranchName("alone")))),
+                requested(listed(), "alone").cmds());
     }
 
     @Test
