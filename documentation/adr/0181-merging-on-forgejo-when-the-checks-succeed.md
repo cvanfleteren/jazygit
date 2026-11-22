@@ -42,8 +42,9 @@ Forgejo merges a pull request by itself once the rules of its base branch are me
 - **The rules are read with the pull request** (`ForgejoBranchRules`), on every `o` and `R`, as the reviews and the
   builds are. A rule that cannot be read leaves the keys merging now, and the log says why. The globs are matched as
   Forgejo compiles them, with gobwas' glob without separators: `*`, `?`, `[…]`, `[!…]` and `{a,b}`; `\` takes the
-  character after it as it is, and any other character, in a class too, is only itself. One that does not compile, as
-  a class or a brace left open, or a `\` that ends it, is skipped, as Forgejo skips it.
+  character after it as it is, and any other character is only itself. A class is, as gobwas' lexer reads it, a range
+  `[a-z]`, or else characters up to `]`, each only itself, `-` too. One that does not compile, as a class or a brace
+  left open, a range not closed right after it, or a `\` that ends it, is skipped, as Forgejo skips it.
 - **The approvals are counted from the reviews read**: reviewers whose last review that counts approves. Forgejo counts
   only those of reviewers it trusts, which it does not tell; a pull request may then be merged now and refused, as
   before.

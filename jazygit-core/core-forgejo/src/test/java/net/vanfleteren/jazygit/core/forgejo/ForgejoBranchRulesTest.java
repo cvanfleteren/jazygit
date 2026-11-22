@@ -94,6 +94,19 @@ class ForgejoBranchRulesTest {
     }
 
     @Test
+    void aClassIsOneRangeOrCharactersInWhichADashIsItself() {
+        assertTrue(matches("[ab-d]", "-"));
+        assertFalse(matches("[ab-d]", "c"));
+        assertTrue(matches("[\\a-z]", "-"));
+        assertFalse(matches("[\\a-z]", "m"));
+        assertTrue(matches("[a-z]", "m"));
+        assertFalse(matches("[!a-z]", "m"));
+        assertFalse(matches("[]", "a"));
+        assertTrue(ForgejoBranchRules.glob("[a-cx]").isEmpty());
+        assertTrue(ForgejoBranchRules.glob("[a-]").isEmpty());
+    }
+
+    @Test
     void aGlobLeftOpenIsNone() {
         assertTrue(ForgejoBranchRules.glob("{a,b").isEmpty());
         assertTrue(ForgejoBranchRules.glob("build[").isEmpty());
