@@ -47,8 +47,8 @@ another tool adds it there too.
 | 18 | [One dialog to create a pull request](0018-one-dialog-to-create-a-pull-request.md) |  |
 | 19 | [Refresh the pull request dialog](0019-refresh-the-pull-request-dialog.md) |  |
 | 20 | [Telling the commits of a branch from those on its base](0020-commits-not-on-the-base.md) |  |
-| 21 | [Ages in minutes, told by a clock apart from the refresh](0021-a-clock-apart-from-the-refresh.md) | folded into ADR 33 |
-| 22 | [How long ago the remotes were fetched, in steps of 10s](0022-fetched-ago-in-steps-of-10s.md) | folded into ADR 33 |
+| 21 | [Ages in minutes, told by a clock apart from the refresh](0021-a-clock-apart-from-the-refresh.md) |  |
+| 22 | [How long ago the remotes were fetched, in steps of 10s](0022-fetched-ago-in-steps-of-10s.md) |  |
 | 23 | [View the commits of a branch](0023-view-a-branchs-commits.md) |  |
 | 24 | [Stacked pull requests](0024-stacked-pull-requests.md) |  |
 | 25 | [Push before creating a pull request](0025-push-before-creating-a-pull-request.md) |  |
@@ -63,7 +63,7 @@ another tool adds it there too.
 | 34 | [Check times to the second in the dialogs](0034-check-times-to-the-second-in-the-dialogs.md) |  |
 | 35 | [A workflow that waits to start is queued](0035-a-workflow-that-waits-to-start-is-queued.md) |  |
 | 36 | [Wait for the jobs GitHub has not made yet](0036-wait-for-jobs-not-made-yet.md) |  |
-| 37 | [When the checks started and ended](0037-when-the-checks-started-and-ended.md) | folded into ADR 32 |
+| 37 | [When the checks started and ended](0037-when-the-checks-started-and-ended.md) |  |
 | 38 | [A popup closes by itself](0038-a-popup-closes-by-itself.md) |  |
 | 39 | [What runs is told from `Jobs.running`](0039-what-runs-is-told-from-running.md) |  |
 | 40 | [Typed revisions and remotes](0040-typed-revisions-and-remotes.md) |  |
@@ -74,11 +74,11 @@ another tool adds it there too.
 | 45 | [Two lines per branch](0045-two-lines-per-branch.md) |  |
 | 46 | [How far a branch is behind its base](0046-how-far-a-branch-is-behind-its-base.md) |  |
 | 47 | [The rich view for the working tree](0047-the-rich-view-for-the-working-tree.md) |  |
-| 48 | [One set of pull request symbols](0048-one-set-of-pull-request-symbols.md) | folded into ADR 45 |
+| 48 | [One set of pull request symbols](0048-one-set-of-pull-request-symbols.md) |  |
 | 49 | [Fewer git processes per read](0049-fewer-git-processes-per-read.md) |  |
 | 50 | [A diff is parsed where it is read](0050-a-diff-is-parsed-where-it-is-read.md) |  |
 | 51 | [A rewritten line spends none of the word budget](0051-a-rewritten-line-spends-none-of-the-word-budget.md) |  |
-| 52 | [The status is read every second](0052-the-status-is-read-every-second.md) | folded into ADR 125 |
+| 52 | [The status is read every second](0052-the-status-is-read-every-second.md) |  |
 | 53 | [Syntax in the rich view](0053-syntax-in-the-rich-view.md) |  |
 | 54 | [Whitespace between changed words is highlighted](0054-whitespace-between-changed-words-is-highlighted.md) |  |
 | 55 | [Review remarks in a pull request's diff](0055-review-remarks-in-a-pull-requests-diff.md) |  |
@@ -113,15 +113,15 @@ another tool adds it there too.
 | 84 | [An image in a review remark is drawn in half blocks](0084-an-image-in-a-review-remark-is-drawn-in-half-blocks.md) |  |
 | 85 | [A review remark opens in the browser](0085-a-review-remark-opens-in-the-browser.md) |  |
 | 86 | [Reactions on review comments](0086-reactions-on-review-comments.md) |  |
-| 87 | [The stacks shown or not](0087-the-stacks-shown-or-not.md) | folded into ADR 72 |
+| 87 | [The stacks shown or not](0087-the-stacks-shown-or-not.md) |  |
 | 88 | [A browser per account](0088-a-browser-per-account.md) |  |
 | 89 | [How far the checks are](0089-how-far-the-checks-are.md) |  |
 | 90 | [Renaming a branch on the remote](0090-renaming-a-branch-on-the-remote.md) |  |
 | 91 | [Rebasing on the base branch](0091-rebasing-on-the-base-branch.md) |  |
 | 92 | [Resizing and maximizing panes with keys](0092-resizing-and-maximizing-panes-with-keys.md) |  |
-| 93 | [The index written anew now and then](0093-the-index-written-anew-now-and-then.md) | folded into ADR 97 |
+| 93 | [The index written anew now and then](0093-the-index-written-anew-now-and-then.md) |  |
 | 94 | [Copying lines of a diff](0094-copying-lines-of-a-diff.md) |  |
-| 95 | [A taller pane grows as far as a maximized one](0095-a-taller-pane-grows-as-far-as-maximized.md) | folded into ADR 92 |
+| 95 | [A taller pane grows as far as a maximized one](0095-a-taller-pane-grows-as-far-as-maximized.md) |  |
 | 96 | [Opening the links of a comment](0096-opening-the-links-of-a-comment.md) |  |
 | 97 | [The index written anew once it changed](0097-the-index-written-anew-once-it-changed.md) |  |
 | 98 | [References and bare links in a comment](0098-references-and-bare-links-in-a-comment.md) |  |
@@ -158,7 +158,7 @@ another tool adds it there too.
 | 129 | [The command log takes the focus](0129-the-command-log-takes-the-focus.md) |  |
 | 130 | [The log reads 3000 commits](0130-the-log-reads-3000-commits.md) |  |
 | 131 | [The builds of a branch](0131-the-builds-of-a-branch.md) |  |
-| 132 | [Older builds on demand](0132-older-builds-on-demand.md) | folded into ADR 131 |
+| 132 | [Older builds on demand](0132-older-builds-on-demand.md) |  |
 | 133 | [The timings of one build](0133-the-timings-of-one-build.md) |  |
 | 134 | [Where a new worktree starts out](0134-where-a-new-worktree-starts-out.md) |  |
 | 135 | [Running failed checks again](0135-rerun-failed-checks.md) |  |
@@ -168,7 +168,7 @@ another tool adds it there too.
 | 139 | [The old and the new file side by side](0139-the-old-and-the-new-file-side-by-side.md) |  |
 | 140 | [Going to a line](0140-going-to-a-line.md) |  |
 | 141 | [The files follow the highlight](0141-the-files-follow-the-highlight.md) |  |
-| 142 | [No listing of only the commits not on the base](0142-no-listing-of-only-the-commits-ahead.md) | folded into ADR 143 |
+| 142 | [No listing of only the commits not on the base](0142-no-listing-of-only-the-commits-ahead.md) |  |
 | 143 | [Setting the base of a branch](0143-setting-the-base-of-a-branch.md) |  |
 | 144 | [Filters that hide hunks of a diff](0144-filters-that-hide-hunks-of-a-diff.md) |  |
 | 145 | [A file opened in an editor, at a line](0145-a-file-opened-in-an-editor-at-a-line.md) |  |
@@ -179,10 +179,10 @@ another tool adds it there too.
 | 150 | [ssh asks jazygit for a key's passphrase](0150-ssh-asks-jazygit-for-a-passphrase.md) |  |
 | 151 | [A version of XML rendered](0151-a-version-of-xml-rendered.md) |  |
 | 152 | [Each kind of content draws itself](0152-each-kind-of-content-draws-itself.md) |  |
-| 153 | [The askpass socket opens when ssh may ask](0153-the-askpass-socket-opens-when-ssh-may-ask.md) | folded into ADR 150 |
+| 153 | [The askpass socket opens when ssh may ask](0153-the-askpass-socket-opens-when-ssh-may-ask.md) |  |
 | 154 | [Features contribute what the content panel shows](0154-features-contribute-what-the-content-panel-shows.md) |  |
 | 155 | [What an area shows has its own keys, scroll value and focus](0155-what-an-area-shows-keys-and-focuses-itself.md) |  |
-| 156 | [A feature keeps what it shows in the content panel in a content package](0156-a-feature-keeps-its-content-in-a-content-package.md) | folded into ADR 157 |
+| 156 | [A feature keeps what it shows in the content panel in a content package](0156-a-feature-keeps-its-content-in-a-content-package.md) |  |
 | 157 | [A feature keeps its part of the model](0157-a-feature-keeps-its-part-of-the-model.md) |  |
 | 158 | [A feature's code lives in its feature's module](0158-a-features-code-lives-in-its-features-module.md) |  |
 | 159 | [The modules in groups](0159-the-modules-in-groups.md) |  |
@@ -192,7 +192,7 @@ another tool adds it there too.
 | 163 | [A feature owns its settings](0163-a-feature-owns-its-settings.md) |  |
 | 164 | [The panel edits a list of the settings](0164-the-panel-edits-a-list-of-the-settings.md) |  |
 | 165 | [What a repository is made of is `core-repo`](0165-what-a-repository-is-made-of-is-core-repo.md) |  |
-| 166 | [The features add timers and answer the kernel's events](0166-the-features-add-timers-and-answer-the-kernels-events.md) | folded into ADR 158 |
+| 166 | [The features add timers and answer the kernel's events](0166-the-features-add-timers-and-answer-the-kernels-events.md) |  |
 | 167 | [A feature draws in the pane of another](0167-a-feature-draws-in-the-pane-of-another.md) |  |
 | 168 | [A feature brings a screen](0168-a-feature-brings-a-screen.md) |  |
 | 169 | [GitHub's state leaves the kernel](0169-githubs-state-leaves-the-kernel.md) |  |
@@ -205,6 +205,7 @@ another tool adds it there too.
 | 176 | [The pull request of a branch on Forgejo](0176-the-pull-request-of-a-branch-on-forgejo.md) |  |
 | 177 | [The forge of a repository, decided or asked](0177-the-forge-of-a-repository-decided-or-asked.md) |  |
 | 178 | [Creating a pull request on Forgejo](0178-creating-a-pull-request-on-forgejo.md) |  |
-| 179 | [fj's token goes where the remote points, over plain HTTP too](0179-fjs-token-goes-where-the-remote-points.md) | folded into ADR 174 |
+| 179 | [fj's token goes where the remote points, over plain HTTP too](0179-fjs-token-goes-where-the-remote-points.md) |  |
 | 180 | [Merging a pull request on Forgejo](0180-merging-a-pull-request-on-forgejo.md) |  |
 | 181 | [Merging on Forgejo when the checks succeed](0181-merging-on-forgejo-when-the-checks-succeed.md) |  |
+| 182 | [Another worktree of the repository opens with what the worktrees share](0182-another-worktree-opens-with-what-the-repository-shares.md) |  |

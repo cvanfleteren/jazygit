@@ -331,6 +331,12 @@ learned, so a fact that has grown old can be checked again; see README.md.
 - A linked worktree's `.git` is a file pointing to its git directory, and only a linked worktree's git directory has a
   `commondir` file pointing to the common git directory. *Why it matters:* the repository a worktree belongs to is read
   from these files without running git. — learned 2026-11-22 · [ADR 0009](../adr/0009-worktree-ux.md)
+- The worktrees of a repository share its common git directory: the remotes and their URLs, the git configuration
+  (`remote.<name>.gh-resolved`, `jazygit.forgeHome`), the branches, and the remote-tracking branches a fetch brings.
+  Only HEAD, the index and so the status, the files and the log are each worktree's own, unless
+  `extensions.worktreeConfig` gives a worktree configuration of its own. *Why it matters:* another worktree of the same
+  repository opens with what was read of the shared part, and does not fetch again. — learned 2026-11-22 ·
+  [ADR 0182](../adr/0182-another-worktree-opens-with-what-the-repository-shares.md)
 - Next to a bare repository there is no main worktree: every worktree is a linked one. *Why it matters:* a "check out in
   the main worktree" choice cannot exist there. — learned 2026-11-22 · [ADR
   0068](../adr/0068-asking-where-to-check-out-in-a-linked-worktree.md)
@@ -431,10 +437,19 @@ learned, so a fact that has grown old can be checked again; see README.md.
 - On a clone of jazygit (1,245 files) with a stale index, `git status` took 75 ms instead of 6 ms, and an idle app's git
   processes used 8 % of a core instead of 1 %. *Why it matters:* this measures the cost of never writing the index back.
   — learned 2026-11-22 · [ADR 0093](../adr/0093-the-index-written-anew-now-and-then.md)
-- `git status --porcelain=v2 --untracked-files=all` walks the whole working tree; idle on jazygit's repository it costs
-  50 to 60 ms of git per call. *Why it matters:* the status read is most of what an idle jazygit spends outside the JVM.
-  — learned 2026-11-22 · [ADR 0052](../adr/0052-the-status-is-read-every-second.md) *(conflicts with the fact above;
-  check)*
+- On a clone of jazygit (2,315 tracked files), `git --no-optional-locks status --porcelain=v2 --untracked-files=all`
+  takes about 12 ms on a fresh index and 70 to 80 ms on a stale one (every file racily clean, or stat dirty after a
+  `touch`). Of the 12 ms, about 10 is the walk for untracked files (`git ls-files --others` alone); with
+  `--untracked-files=no` it takes 5 ms on a fresh index and 75 ms on a stale one. ADR 52's 50 to 60 ms a call was taken
+  before ADR 93 found that the index is never written back, so on a stale index. *Why it matters:* a stale index, not
+  the walk of the working tree, is what makes the idle status expensive, which is why the index is written anew.
+  — learned 2026-11-23 · [ADR 0052](../adr/0052-the-status-is-read-every-second.md),
+  [ADR 0093](../adr/0093-the-index-written-anew-now-and-then.md) · git 2.56
+- `git update-index -q --refresh` run in the same second as the files were written leaves them racily clean, so the
+  next status hashes them all again: a refresh right after a clone, or right after touching every file, left the status
+  at 75 ms; one a few seconds later took it to 12 ms. *Why it matters:* writing the index anew in the same second as
+  something wrote the files does not help; it does once that second has passed. — learned 2026-11-23 · [ADR
+  0097](../adr/0097-the-index-written-anew-once-it-changed.md) · git 2.56
 - Running `git status`, branches, stashes and worktrees every 500 ms (some 8 git processes a second) cost about 3% of a
   core in git itself and 1% in reading its output. *Why it matters:* only the status needs to run on every tick. —
   learned 2026-11-22 · [ADR 0015](../adr/0015-check-metadata-before-loading.md)
