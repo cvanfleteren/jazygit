@@ -49,6 +49,17 @@ public interface Forgejo {
                 ForgejoRepository repository, ForgejoNewPullRequest pullRequest) {
             return Either.left(new ForgejoError.Unreachable("no Forgejo"));
         }
+
+        @Override
+        public Either<ForgejoError, ForgejoMergeSettings> mergeSettings(ForgejoRepository repository) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
+
+        @Override
+        public Either<ForgejoError, ForgejoMerged> merge(
+                ForgejoRepository repository, long number, ForgejoMerge merge) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
     };
 
     /**
@@ -105,4 +116,15 @@ public interface Forgejo {
      */
     Either<ForgejoError, ForgejoPullRequest> createPullRequest(
             ForgejoRepository repository, ForgejoNewPullRequest pullRequest);
+
+    /**
+     * How {@code repository} lets its pull requests be merged (ADR 180).
+     */
+    Either<ForgejoError, ForgejoMergeSettings> mergeSettings(ForgejoRepository repository);
+
+    /**
+     * Merges pull request {@code number} of {@code repository} as {@code merge} says (ADR 180), at once: how that
+     * went, or why Forgejo did not merge it.
+     */
+    Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge);
 }

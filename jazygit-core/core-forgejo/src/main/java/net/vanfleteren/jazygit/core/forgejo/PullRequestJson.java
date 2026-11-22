@@ -10,10 +10,13 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.longValue;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map2;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map3;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map4;
+import static net.vanfleteren.jazygit.lib.json.Decoder.map6;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map7;
 import static net.vanfleteren.jazygit.lib.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Activity;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Branches;
@@ -25,8 +28,8 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
- * How Forgejo's API gives its pull requests and their reviews (ADR 176), as {@code /api/v1} answers them; what it
- * leaves out or nulls is empty, false or 0.
+ * How Forgejo's API gives its pull requests and their reviews (ADR 176), and how a repository lets them be merged
+ * (ADR 180), as {@code /api/v1} answers them; what it leaves out or nulls is empty, false or 0.
  */
 final class PullRequestJson {
 
@@ -103,7 +106,36 @@ final class PullRequestJson {
             flag("dismissed"),
             ForgejoReview::new);
 
+    /**
+     * How a repository lets its pull requests be merged: a style it does not say it allows is not allowed.
+     */
+    private static final Decoder<ForgejoMergeSettings> MERGE_SETTINGS = map6(
+            flag("allow_merge_commits"),
+            flag("allow_squash_merge"),
+            flag("allow_rebase"),
+            flag("allow_rebase_explicit"),
+            flag("allow_fast_forward_only_merge"),
+            flag("default_delete_branch_after_merge"),
+            (merge, squash, rebase, rebaseMerge, fastForward, delete) -> new ForgejoMergeSettings(
+                    List.of(
+                                    Tuple.of(merge, ForgejoMergeStyle.MERGE),
+                                    Tuple.of(squash, ForgejoMergeStyle.SQUASH),
+                                    Tuple.of(rebase, ForgejoMergeStyle.REBASE),
+                                    Tuple.of(rebaseMerge, ForgejoMergeStyle.REBASE_MERGE),
+                                    Tuple.of(fastForward, ForgejoMergeStyle.FAST_FORWARD_ONLY))
+                            .filter(Tuple2::_1)
+                            .map(Tuple2::_2)
+                            .toLinkedSet(),
+                    delete));
+
     private PullRequestJson() {}
+
+    /**
+     * How a repository lets its pull requests be merged.
+     */
+    static Decoder<ForgejoMergeSettings> mergeSettings() {
+        return MERGE_SETTINGS;
+    }
 
     /**
      * The pull requests of a page of the list of the open ones.

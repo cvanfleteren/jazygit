@@ -85,7 +85,7 @@ class PullRequestCommandsTest {
     }
 
     @Test
-    void aPullRequestIsReadWithWhereItsReviewStandsAndHowItsBuildsWent() {
+    void aPullRequestIsReadWithWhereItsReviewStandsHowItsBuildsWentAndHowItMayBeMerged() {
         FakeForgejo forgejo = FakeForgejo.of(details("Show"));
 
         assertEquals(
@@ -94,18 +94,14 @@ class PullRequestCommandsTest {
                         Either.right(new ShownPullRequest(
                                 details("Show"),
                                 Option.of(ForgejoReview.Verdict.APPROVED),
-                                forgejo.status().get()))),
+                                forgejo.status().get(),
+                                Option.of(PullRequestFixtures.SETTINGS)))),
                 new LoadPullRequest(ORIGIN, 12, 3).run(forgejo.env()));
     }
 
     @Test
-    void reviewsOrBuildsThatCannotBeReadLeaveThePullRequestShownWithoutThem() {
-        FakeForgejo forgejo = new FakeForgejo(
-                Either.right(List.of(LISTED)),
-                Either.right(details("Show")),
-                Either.left(DOWN),
-                Either.left(DOWN),
-                created -> Either.left(DOWN));
+    void reviewsBuildsOrSettingsThatCannotBeReadLeaveThePullRequestShownWithoutThem() {
+        FakeForgejo forgejo = FakeForgejo.failing(Either.right(details("Show")), Either.left(DOWN), DOWN);
 
         assertEquals(
                 new PullRequestMsg.Read(
@@ -115,12 +111,7 @@ class PullRequestCommandsTest {
 
     @Test
     void aPullRequestThatCannotBeReadOrAHomeNoLongerOnForgejoFails() {
-        FakeForgejo down = new FakeForgejo(
-                Either.right(List.of(LISTED)),
-                Either.left(DOWN),
-                Either.right(List.empty()),
-                Either.left(DOWN),
-                created -> Either.left(DOWN));
+        FakeForgejo down = FakeForgejo.failing(Either.left(DOWN), Either.right(List.empty()), DOWN);
         assertEquals(
                 new PullRequestMsg.Read(3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.Asked(DOWN))),
                 new LoadPullRequest(ORIGIN, 12, 3).run(down.env()));

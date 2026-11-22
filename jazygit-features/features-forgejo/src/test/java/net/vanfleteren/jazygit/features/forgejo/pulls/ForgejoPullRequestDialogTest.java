@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
+import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -21,6 +22,8 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeSettings;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview.Verdict;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -47,12 +50,13 @@ class ForgejoPullRequestDialogTest {
             new ForgejoPullRequestDialog(dispatched::add, Clock.fixed(TIME, ZoneOffset.UTC));
 
     private static ForgejoPullRequestPopup read(ShownPullRequest shown) {
-        return ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1).with(Either.right(shown), 1);
+        return ForgejoPullRequestPopup.loading(FEATURE.branch(), ORIGIN, FEATURE, LISTED, 1)
+                .with(Either.right(shown), 1);
     }
 
     @Test
     void whileItIsReadItShowsItsBranchAndThatItIsRead() throws Exception {
-        String screen = screen(ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1));
+        String screen = screen(ForgejoPullRequestPopup.loading(FEATURE.branch(), ORIGIN, FEATURE, LISTED, 1));
 
         assertTrue(screen.contains("Pull request #12"), screen);
         assertTrue(screen.contains("Branch  feature"), screen);
@@ -128,8 +132,8 @@ class ForgejoPullRequestDialogTest {
     @Test
     void aReadThatFailedSaysWhyAndOneAgainThatFailedMarksItStale() throws Exception {
         ForgejoFailure down = new ForgejoFailure.Asked(new ForgejoError.Unreachable("timed out"));
-        String failed = screen(
-                ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1).with(Either.left(down), 1));
+        String failed = screen(ForgejoPullRequestPopup.loading(FEATURE.branch(), ORIGIN, FEATURE, LISTED, 1)
+                .with(Either.left(down), 1));
         assertTrue(failed.contains("Could not read the pull request: Forgejo could not be reached: timed out"), failed);
 
         String stale = screen(read(new ShownPullRequest(details("Shown"), Option.none(), CommitStatus.NONE))
@@ -141,7 +145,7 @@ class ForgejoPullRequestDialogTest {
 
     @Test
     void itKeepsItsHeightWhenTheDetailsArrive() throws Exception {
-        String loading = screen(ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1));
+        String loading = screen(ForgejoPullRequestPopup.loading(FEATURE.branch(), ORIGIN, FEATURE, LISTED, 1));
         String shown = screen(read(new ShownPullRequest(details("Shown"), Option.none(), BUILDS)));
 
         assertEquals(height(loading), height(shown));
@@ -152,8 +156,53 @@ class ForgejoPullRequestDialogTest {
     }
 
     @Test
+    void itOffersForgejosFiveStylesOfMerging() throws Exception {
+        String screen = screen(read(new ShownPullRequest(details("Merge it"), Option.none(), CommitStatus.NONE)));
+
+        List.of(
+                        "(m) Merge",
+                        "(s) Squash and merge",
+                        "(r) Rebase and merge",
+                        "(M) Rebase, then merge commit",
+                        "(f) Fast-forward only")
+                .forEach(key -> assertTrue(screen.contains(key), screen));
+    }
+
+    @Test
+    void aMergeKeyThatDoesNothingSaysWhy() {
+        ForgejoPullRequestDetails pr = details("Merge it");
+        ShownPullRequest merged = new ShownPullRequest(
+                new ForgejoPullRequestDetails(
+                        pr.number(),
+                        pr.title(),
+                        pr.author(),
+                        new ForgejoPullRequestDetails.Status(ForgejoPullRequestDetails.State.MERGED, false, true),
+                        pr.branches(),
+                        pr.activity(),
+                        pr.size(),
+                        pr.conversation(),
+                        pr.url()),
+                Option.none(),
+                CommitStatus.NONE);
+        ShownPullRequest squashOnly = new ShownPullRequest(
+                pr,
+                Option.none(),
+                CommitStatus.NONE,
+                Option.of(new ForgejoMergeSettings(LinkedHashSet.of(ForgejoMergeStyle.SQUASH), false)));
+
+        assertEquals(new MergeKey.Disabled(new MergeKey.Why.NotOpen()), MergeKey.of(merged, ForgejoMergeStyle.SQUASH));
+        assertEquals(
+                new MergeKey.Disabled(new MergeKey.Why.NotAllowed(ForgejoMergeStyle.REBASE)),
+                MergeKey.of(squashOnly, ForgejoMergeStyle.REBASE));
+        assertEquals(new MergeKey.Now(), MergeKey.of(squashOnly, ForgejoMergeStyle.SQUASH));
+        assertFalse(MergeUpdate.choosable(read(merged), ForgejoMergeStyle.SQUASH));
+        assertTrue(MergeUpdate.choosable(read(squashOnly), ForgejoMergeStyle.SQUASH));
+    }
+
+    @Test
     void itsSpinnerTurnsWhileItIsRead() {
-        Model loading = TestModels.loaded().openPopup(ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1));
+        Model loading = TestModels.loaded()
+                .openPopup(ForgejoPullRequestPopup.loading(FEATURE.branch(), ORIGIN, FEATURE, LISTED, 1));
         Model shown = TestModels.loaded()
                 .openPopup(read(new ShownPullRequest(details("Shown"), Option.none(), CommitStatus.NONE)));
 

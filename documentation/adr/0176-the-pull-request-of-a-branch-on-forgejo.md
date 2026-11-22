@@ -60,3 +60,5 @@ request, anywhere. The builds of its head are the commit's combined status, whic
 - The fork workflow finds the pull request of a branch: it is the project's, its branch in one's fork.
 - No acceptance test covers it: Forgejo is found only over https (ADR 174), which the acceptance tests do not
   serve. The feature's tests run its update, commands and dialog on a Forgejo of the test's.
+
+Amended by ADR 180: the dialog merges the pull request, on five keys, one per style of Forgejo.
