@@ -44,10 +44,7 @@ final class MergeUpdate {
                 popup.local(),
                 pr.number(),
                 style,
-                new FailedMerge.Standing(
-                        pr.branches().headSha(),
-                        pr.status().mergeable(),
-                        pr.status().draft()),
+                new FailedMerge.Standing(pr.branches().headSha()),
                 shown.settings().exists(ForgejoMergeSettings::deleteBranch));
     }
 
@@ -76,15 +73,15 @@ final class MergeUpdate {
 
     /**
      * Merging the pull request of {@code cmd} failed as {@code failure} says: shown as any failed operation, and kept
-     * as its last merge that failed. One refused as its head moved on reads the pull requests again.
+     * as its last merge that failed. The pull requests are read again: its head may have moved on, or it may be merged
+     * all the same, as Forgejo merges before it deletes the branch, and a deletion that fails otherwise than the 403s
+     * known is answered as a failure.
      */
     static Next failed(Model model, MergePullRequestCmd cmd, Failure failure) {
-        Next shown = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
+        return OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
                 .map(after -> after.mapPart(
                         ForgejoPullRequests.PART,
-                        prs -> prs.mergeFailed(new FailedMerge(cmd.number(), cmd.style(), failure, cmd.standing()))));
-        return failure instanceof MergeFailure refused && refused.moved()
-                ? shown.and(new ReadPullRequests(cmd.home()))
-                : shown;
+                        prs -> prs.mergeFailed(new FailedMerge(cmd.number(), cmd.style(), failure, cmd.standing()))))
+                .and(new ReadPullRequests(cmd.home()));
     }
 }
