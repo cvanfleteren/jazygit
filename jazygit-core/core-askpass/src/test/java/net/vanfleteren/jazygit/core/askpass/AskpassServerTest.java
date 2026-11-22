@@ -367,7 +367,7 @@ class AskpassServerTest {
         }
 
         void waitForAQuestion() {
-            question.join();
+            question.orTimeout(10, TimeUnit.SECONDS).join();
         }
 
         @Override
