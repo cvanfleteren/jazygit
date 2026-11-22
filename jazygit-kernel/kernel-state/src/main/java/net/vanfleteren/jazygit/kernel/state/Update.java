@@ -60,9 +60,26 @@ public final class Update {
             Landing landing,
             Reactions reactions,
             Instant now) {
+        return begin(repositoryName, settings, themeOverride, repositoryTheme, landing, Carried.NONE, reactions, now);
+    }
+
+    /**
+     * The start of a session as {@link #begin(String, SettingsStore.Loaded, Option, RepositoryTheme, Landing, Reactions,
+     * Instant)} starts it, in a worktree of the repository shown before, with what {@code carried} keeps of what that
+     * one knew (ADR 182).
+     */
+    public static Step begin(
+            String repositoryName,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            RepositoryTheme repositoryTheme,
+            Landing landing,
+            Carried carried,
+            Reactions reactions,
+            Instant now) {
         return stamped(
                 init(
-                        Model.initial(repositoryName).withNow(now).withReactions(reactions),
+                        carried.into(Model.initial(repositoryName).withNow(now).withReactions(reactions)),
                         settings,
                         themeOverride,
                         repositoryTheme,

@@ -85,6 +85,8 @@ public final class Program {
      * @param themeOverride the theme for this session instead of the saved one, if any
      * @param repositoryTheme the theme the git configuration gives the repository, before the saved one (ADR 70)
      * @param landing     where the repository is shown at first
+     * @param carried       what it opens with of what the worktree shown before knew, as another worktree of the same
+     *                      repository (ADR 182); {@link Carried#NONE} for a repository opened afresh
      * @param reactions     how the features answer what happens in the kernel, from the opening of the repository on
      *                      (ADR 158); {@link Reactions#NONE} for none
      * @param io            where git is called; a single thread keeps git commands from running concurrently
@@ -105,6 +107,7 @@ public final class Program {
             Option<ThemeName> themeOverride,
             RepositoryTheme repositoryTheme,
             Landing landing,
+            Carried carried,
             Reactions reactions,
             Executor io,
             Executor background,
@@ -120,6 +123,7 @@ public final class Program {
                 themeOverride,
                 repositoryTheme,
                 landing,
+                carried,
                 reactions,
                 clock.instant()));
         return program;

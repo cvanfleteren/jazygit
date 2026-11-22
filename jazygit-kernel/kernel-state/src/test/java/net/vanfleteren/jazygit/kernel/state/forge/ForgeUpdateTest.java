@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.Carried;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -67,6 +68,48 @@ class ForgeUpdateTest {
         assertTrue(decided.on("github"));
         assertFalse(decided.on("forgejo"));
         assertEquals(Option.of(new RemoteName("origin")), ForgeHome.of(decided));
+    }
+
+    @Test
+    void anotherWorktreeOfTheRepositoryOpensOnTheForgeDecidedWithoutAskingTheForgesAgain() {
+        Model decided = told(nothingRemembered(opened()), claim("github", "origin"), claim("forgejo"));
+
+        Model worktree = Carried.from(decided).into(Model.initial("repo"));
+
+        assertTrue(ForgeUpdate.known(worktree));
+        assertTrue(worktree.on("github"));
+        assertFalse(worktree.on("forgejo"));
+        assertEquals(Option.of(new RemoteName("origin")), ForgeHome.of(worktree));
+        // The settings panel can still ask which it is, from what the forges claimed.
+        assertEquals(
+                decided.part(ForgeHome.PART).candidates(),
+                worktree.part(ForgeHome.PART).candidates());
+    }
+
+    @Test
+    void aRepositoryOnNoForgeIsOnNoneInAnotherWorktreeEither() {
+        Model decided = told(nothingRemembered(opened()), claim("github"), claim("forgejo"));
+
+        Model worktree = Carried.from(decided).into(Model.initial("repo"));
+
+        assertTrue(ForgeUpdate.known(worktree));
+        assertFalse(worktree.on("github"));
+        assertFalse(worktree.on("forgejo"));
+    }
+
+    @Test
+    void aForgeNotDecidedYetIsDecidedAgainInAnotherWorktree() {
+        Model githubTold = told(nothingRemembered(opened()), claim("github", "origin"));
+
+        assertFalse(ForgeUpdate.known(Carried.from(githubTold).into(Model.initial("repo"))));
+    }
+
+    @Test
+    void aQuestionPutOffIsAskedAgainInAnotherWorktreeAsAtAnyOpening() {
+        Model asked = told(nothingRemembered(opened()), claim("github", "origin"), claim("forgejo", "codeberg"));
+        Model later = Update.update(asked, new ForgeMsg.Later()).model();
+
+        assertFalse(ForgeUpdate.known(Carried.from(later).into(Model.initial("repo"))));
     }
 
     @Test

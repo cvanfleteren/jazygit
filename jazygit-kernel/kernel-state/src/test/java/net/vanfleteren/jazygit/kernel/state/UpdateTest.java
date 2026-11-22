@@ -244,6 +244,29 @@ class UpdateTest {
     }
 
     @Test
+    void anotherWorktreeOfTheRepositoryBeginsWithWhatWasCarriedAndReadsItsOwnAfresh() {
+        Instant now = Instant.parse("2026-10-22T10:00:00Z");
+        Part<Integer> shared = Part.of("test.shared", 0).carrying(Option::of);
+        Freshness fetched = Freshness.NEVER.succeeded("origin", now.minusSeconds(20));
+        Model before = TestModels.loaded().withPart(shared, 3).mapJobs(jobs -> jobs.withLastFetch(fetched));
+
+        Step begun = Update.begin(
+                "repo",
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                RepositoryTheme.NONE,
+                Landing.START,
+                Carried.from(before),
+                Reactions.NONE,
+                now);
+
+        assertEquals(3, begun.model().part(shared));
+        assertEquals(fetched, begun.model().jobs().lastFetch());
+        // The worktree's own status, branches and log are read as at any opening.
+        assertEquals(TestModels.init("repo").cmds(), begun.launches().map(Launch::cmd));
+    }
+
+    @Test
     void theReactionsAreAskedWhenTheRepositoryOpensAndTheirCommandsAreStamped() {
         Instant now = Instant.parse("2026-10-22T10:00:00Z");
         Cmd marker = new RefreshIndex();

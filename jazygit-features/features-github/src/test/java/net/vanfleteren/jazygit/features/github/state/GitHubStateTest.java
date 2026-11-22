@@ -108,6 +108,21 @@ class GitHubStateTest {
     }
 
     @Test
+    void anotherWorktreeOfTheRepositoryKeepsWhatWasReadButAsksAgainHowAPendingMergeIsDoing() {
+        PullRequestMerge checking = PullRequestMerge.asked(
+                        new PrNumber(42), FEATURE, List.empty(), new MergeStatus.Pending("id"), Instant.EPOCH)
+                .beingChecked();
+        GitHubState before = LISTED.withMerges(HashMap.of(new PrNumber(42), checking))
+                .withAgain(io.vavr.collection.HashSet.of(new ListRead()));
+
+        Option<GitHubState> carried = GitHubState.PART.hooks().carries().carried(before);
+
+        assertEquals(
+                Option.of(LISTED.withMerges(HashMap.of(new PrNumber(42), checking.checked(checking.status())))),
+                carried);
+    }
+
+    @Test
     void aListReadThatStartedBeforeTheMergeFailedDoesNotDropTheFailure() {
         // The list is read while the checks run; the dialog then reads them passing, and the merge fails anyway.
         GitHubState reading = GitHubState.NOT_READ

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.kernel.state;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.Set;
+import io.vavr.control.Option;
 
 /**
  * Which features are off for the repository shown (ADR 171): a feature decides whether it applies to a repository,
@@ -19,7 +20,10 @@ public record FeatureSwitches(Set<String> off) {
     /**
      * Where they are kept in the model.
      */
-    public static final Part<FeatureSwitches> PART = Part.of("kernel.features", ALL_ON);
+    // Another worktree of the same repository is on the same forge (ADR 182): they stay as they are, unless the forges
+    // decide again as it opens.
+    public static final Part<FeatureSwitches> PART =
+            Part.of("kernel.features", ALL_ON).carrying(Option::of);
 
     /**
      * Whether the feature {@code feature} is on.

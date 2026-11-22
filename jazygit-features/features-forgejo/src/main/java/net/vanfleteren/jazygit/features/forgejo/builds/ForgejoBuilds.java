@@ -37,7 +37,8 @@ public record ForgejoBuilds(
     /**
      * The part of the model it is kept in.
      */
-    public static final Part<ForgejoBuilds> PART = Part.of("forgejo.builds", NONE);
+    public static final Part<ForgejoBuilds> PART =
+            Part.of("forgejo.builds", NONE).carrying(builds -> Option.of(builds.carried()));
 
     /**
      * How the builds of {@code sha} went, if they were read.
@@ -79,6 +80,14 @@ public record ForgejoBuilds(
                 reading.diff(tips.map(Tip::sha).toSet()),
                 failed.diff(read.keySet()).union(failing),
                 elsewhere.union(notOnForgejo));
+    }
+
+    /**
+     * What another worktree of the same repository opens with (ADR 182): how the builds of its commits went, but not
+     * the reads that run, whose answers go to the worktree shown before.
+     */
+    public ForgejoBuilds carried() {
+        return new ForgejoBuilds(states, stale, HashSet.empty(), failed, elsewhere);
     }
 
     /**

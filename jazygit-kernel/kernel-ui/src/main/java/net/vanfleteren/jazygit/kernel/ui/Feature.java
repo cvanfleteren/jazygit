@@ -412,6 +412,7 @@ public record Feature(
      * This feature, a forge, on for a repository only once the kernel chose it (ADR 171, 177): {@code detect} answers
      * with {@code FeatureMsg.Claimed}, the remotes of the repository on it, and the kernel switches on the forge of
      * the home, or asks the user which it is. It is asked once a repository is opened; until then, the feature is off.
+     * A worktree of the repository shown before is not asked again (ADR 182).
      */
     public Feature applying(String id, Function<Model, Cmd> detect) {
         return new Feature(
@@ -443,10 +444,12 @@ public record Feature(
 
     private Feature gated(Applying applying) {
         String id = applying.id();
-        Reaction detecting = (model, event) -> event instanceof KernelEvent.RepositoryOpened
-                ? ForgeUpdate.opening(FeatureUpdate.off(model, id), id)
-                        .and(applying.detect().apply(model))
-                : Update.Next.of(model);
+        // A worktree of the repository shown before opens on the forge decided there (ADR 182).
+        Reaction detecting =
+                (model, event) -> event instanceof KernelEvent.RepositoryOpened && !ForgeUpdate.known(model)
+                        ? ForgeUpdate.opening(FeatureUpdate.off(model, id), id)
+                                .and(applying.detect().apply(model))
+                        : Update.Next.of(model);
         return new Feature(
                 actions,
                 contents.map(source -> (ContentSource) new GatedSource(id, source)),
