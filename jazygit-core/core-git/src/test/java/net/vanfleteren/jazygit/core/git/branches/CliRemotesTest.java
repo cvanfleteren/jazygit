@@ -48,6 +48,14 @@ class CliRemotesTest {
     }
 
     @Test
+    void aSettingOfEachRemoteIsReadByItsName() {
+        assertEquals(
+                HashMap.of("upstream", "base").mapKeys(RemoteName::new),
+                CliRemotes.parseSetting(
+                        "remote.upstream.gh-resolved base\nremote.origin.url git@x:o/r.git\n", "gh-resolved"));
+    }
+
+    @Test
     void theCredentialsAreSetForCommandsThatTalkToARemote(@TempDir Path repo) {
         GitCommand fetch = CliRemotes.toRemote(
                         repo, GitCommand.git("fetch", "origin"), Option.of("ssh"), HashMap.of("GH_TOKEN", "secret"))

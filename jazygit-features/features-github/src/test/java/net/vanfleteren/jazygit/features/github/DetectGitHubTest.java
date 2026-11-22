@@ -37,6 +37,50 @@ class DetectGitHubTest {
     }
 
     @Test
+    void itAppliesOnlyWhenTheHomeOfThePullRequestsIsOnGitHub() {
+        String github = "https://github.com/owner/repo.git";
+        String codeberg = "https://codeberg.org/owner/repo.git";
+        // A project on GitHub with a mirror on Codeberg.
+        assertEquals(
+                applies(true),
+                new DetectGitHub("gh")
+                        .run(env(
+                                HashMap.of(new RemoteName("origin"), github, new RemoteName("codeberg"), codeberg),
+                                StubGitHub.of())));
+        // A fork on GitHub of a project on Codeberg: Codeberg is the home.
+        assertEquals(
+                applies(false),
+                new DetectGitHub("gh")
+                        .run(env(
+                                HashMap.of(new RemoteName("origin"), github, new RemoteName("upstream"), codeberg),
+                                StubGitHub.of())));
+    }
+
+    @Test
+    void theRemoteGhRepoSetDefaultChoseIsTheHome() {
+        Map<RemoteName, String> urls = HashMap.of(
+                new RemoteName("origin"), "https://codeberg.org/owner/repo.git",
+                new RemoteName("hub"), "https://github.com/owner/repo.git");
+        Env chosen = new Env(StubGit.of().withRemotes(new StubRemotes() {
+                    @Override
+                    public Either<GitError, Map<RemoteName, String>> urls() {
+                        return Either.right(urls);
+                    }
+
+                    @Override
+                    public Either<GitError, Map<RemoteName, String>> setting(String key) {
+                        return Either.right(
+                                key.equals("gh-resolved")
+                                        ? HashMap.of(new RemoteName("hub"), "base")
+                                        : HashMap.empty());
+                    }
+                }))
+                .with(GitHubServices.GH, StubGitHub.of());
+
+        assertEquals(applies(true), new DetectGitHub("gh").run(chosen));
+    }
+
+    @Test
     void aHostGhIsLoggedInToIsGitHubs() {
         GitHub loggedIn = StubGitHub.of().withAccount(new StubAccount() {
             @Override

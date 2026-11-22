@@ -36,6 +36,29 @@ class ForgejoCommandsTest {
     }
 
     @Test
+    void itAppliesOnlyWhenTheHomeOfThePullRequestsIsOnForgejo() {
+        String github = "git@github.com:cvanfleteren/jazygit.git";
+        // A fork on Forgejo of a project on Forgejo; the project is the home.
+        assertEquals(
+                new FeatureMsg.Applies(ForgejoFeature.ID, true),
+                new DetectForgejo()
+                        .run(FORGEJO.env(
+                                HashMap.of(new RemoteName("origin"), github, new RemoteName("upstream"), REMOTE))));
+        // A project on GitHub with a mirror on Forgejo: GitHub is the home.
+        assertEquals(
+                new FeatureMsg.Applies(ForgejoFeature.ID, false),
+                new DetectForgejo()
+                        .run(FORGEJO.env(
+                                HashMap.of(new RemoteName("origin"), github, new RemoteName("codeberg"), REMOTE))));
+        // Several remotes, none of them the home.
+        assertEquals(
+                new FeatureMsg.Applies(ForgejoFeature.ID, false),
+                new DetectForgejo()
+                        .run(FORGEJO.env(
+                                HashMap.of(new RemoteName("github"), github, new RemoteName("codeberg"), REMOTE))));
+    }
+
+    @Test
     void itDoesNotWithoutOne() {
         assertEquals(
                 new FeatureMsg.Applies(ForgejoFeature.ID, false),
