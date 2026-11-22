@@ -60,30 +60,43 @@ class HttpForgejoPullRequestsTest {
     @BeforeEach
     void start() throws IOException {
         server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
-        server.createContext("/api/v1/repos/cvf/nix/pulls/12/reviews", exchange -> answer(exchange, 200, REVIEWS));
+        server.createContext(
+                "/api/v1/repos/cvf/nix/pulls/12/reviews",
+                exchange -> answer(exchange, 200, page(exchange) == 1 ? REVIEWS : "[]"));
         server.createContext("/api/v1/repos/cvf/nix/pulls/12", exchange -> answer(exchange, 200, DETAILS));
         server.createContext("/api/v1/repos/cvf/long/pulls/1/reviews", exchange -> {
-            // 50 comments on the first page, then Anna asks for changes on the second.
-            boolean first = exchange.getRequestURI().getQuery().contains("page=1");
+            // 50 comments on the first page, then Anna asks for changes on the second, and nothing after.
+            int page = page(exchange);
             answer(
                     exchange,
                     200,
-                    first
+                    page == 1
                             ? List.range(0, 50)
                                     .map(i -> "{\"user\":{\"login\":\"bob\"},\"state\":\"COMMENT\"}")
                                     .mkString("[", ",", "]")
-                            : "[{\"user\":{\"login\":\"anna\"},\"state\":\"REQUEST_CHANGES\"}]");
+                            : page == 2 ? "[{\"user\":{\"login\":\"anna\"},\"state\":\"REQUEST_CHANGES\"}]" : "[]");
         });
         server.createContext("/api/v1/repos/cvf/nix/pulls", exchange -> {
             String query = exchange.getRequestURI().getQuery();
             pages.add(query);
-            // A full first page of 50, then 2 on the second.
-            int count = query.contains("page=1") ? 50 : 2;
-            int first = query.contains("page=1") ? 1 : 51;
+            // A full first page of 50, then 2 on the second, and nothing after.
+            int page = page(exchange);
+            int count = page == 1 ? 50 : page == 2 ? 2 : 0;
+            int first = page == 1 ? 1 : 51;
             answer(
                     exchange,
                     200,
                     List.range(first, first + count)
+                            .map(HttpForgejoPullRequestsTest::summary)
+                            .mkString("[", ",", "]"));
+        });
+        server.createContext("/api/v1/repos/cvf/small/pulls", exchange -> {
+            // A host that serves at most 30 a page, of 40 open pull requests.
+            int first = (page(exchange) - 1) * 30 + 1;
+            answer(
+                    exchange,
+                    200,
+                    List.range(first, Math.min(first + 30, 41))
                             .map(HttpForgejoPullRequestsTest::summary)
                             .mkString("[", ",", "]"));
         });
@@ -94,6 +107,13 @@ class HttpForgejoPullRequestsTest {
                 """));
         server.createContext("/", exchange -> answer(exchange, 404, "{\"message\":\"The target couldn't be found.\"}"));
         server.start();
+    }
+
+    private static int page(HttpExchange exchange) {
+        return List.of(exchange.getRequestURI().getQuery().split("&"))
+                .find(part -> part.startsWith("page="))
+                .map(part -> Integer.parseInt(part.substring("page=".length())))
+                .getOrElse(1);
     }
 
     private static String summary(int number) {
@@ -137,7 +157,18 @@ class HttpForgejoPullRequestsTest {
                         false,
                         "https://code.example.net/cvf/nix/pulls/51"),
                 open.get(50));
-        assertEquals(List.of("state=open&limit=50&page=1", "state=open&limit=50&page=2"), List.ofAll(pages));
+        assertEquals(
+                List.of("state=open&limit=50&page=1", "state=open&limit=50&page=2", "state=open&limit=50&page=3"),
+                List.ofAll(pages));
+    }
+
+    @Test
+    void aHostThatServesFewerAPageIsReadUntilAPageIsEmpty() {
+        List<ForgejoPullRequest> open = HttpForgejo.of(() -> FjKeys.NONE)
+                .openPullRequests(repository("small"))
+                .get();
+
+        assertEquals(List.rangeClosed(1L, 40L), open.map(ForgejoPullRequest::number));
     }
 
     @Test

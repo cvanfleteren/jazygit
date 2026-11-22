@@ -145,14 +145,15 @@ public final class HttpForgejo implements Forgejo {
 
     /**
      * What the pages of {@code path}, a path ending in its query and {@code ?} or {@code &}, give, from page
-     * {@code page} on, after {@code before}: a page of {@value #PAGE} at a time, until a page is not full, and at most
-     * {@value #PAGES} pages.
+     * {@code page} on, after {@code before}: a page of {@value #PAGE} at a time, until a page is empty, and at most
+     * {@value #PAGES} pages. Not until one is not full: a host serves fewer a page when its {@code MAX_RESPONSE_ITEMS}
+     * is lower, without saying so.
      */
     private <T> Either<ForgejoError, List<T>> pages(
             ForgejoRepository repository, String path, Decoder<List<T>> decoder, int page, List<T> before) {
         return get(repository, path + "limit=" + PAGE + "&page=" + page)
                 .flatMap(body -> decoded(decoder, body))
-                .flatMap(read -> read.size() < PAGE || page >= PAGES
+                .flatMap(read -> read.isEmpty() || page >= PAGES
                         ? Either.right(before.appendAll(read))
                         : pages(repository, path, decoder, page + 1, before.appendAll(read)));
     }

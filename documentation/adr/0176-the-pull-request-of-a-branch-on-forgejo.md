@@ -55,7 +55,8 @@ request, anywhere. The builds of its head are the commit's combined status, whic
 
 - A branch on Forgejo shows its pull request with `o`, with no setup beyond `fj auth login` for a private
   repository.
-- Each fetch reads the open pull requests of the home once, a page per 50 of them.
+- Each fetch reads the open pull requests of the home once, a page per 50 of them, and an empty page after
+  the last: a host may serve fewer a page than asked, without saying so.
 - The fork workflow finds the pull request of a branch: it is the project's, its branch in one's fork.
 - No acceptance test covers it: Forgejo is found only over https (ADR 174), which the acceptance tests do not
   serve. The feature's tests run its update, commands and dialog on a Forgejo of the test's.
