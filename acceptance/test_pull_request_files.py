@@ -18,7 +18,7 @@ def listed(repository: str, branch: str) -> dict:
             "pageInfo": {"hasNextPage": False, "endCursor": None},
             "nodes": [{
                 "number": 1, "title": "Add b", "url": f"https://github.com/{repository}/pull/1", "updatedAt": DATE,
-                "isDraft": False, "isCrossRepository": False, "headRefName": branch, "baseRefName": "main",
+                "isDraft": False, "isCrossRepository": False, "headRepository": {"nameWithOwner": repository}, "headRefName": branch, "baseRefName": "main",
                 "author": {"login": "teammate"}, "repository": {"nameWithOwner": repository},
                 "reviewDecision": None, "stackEntry": None, "stack": None,
                 "commits": {"nodes": [{"commit": {"statusCheckRollup": None, "checkSuites": {"nodes": []}}}]},

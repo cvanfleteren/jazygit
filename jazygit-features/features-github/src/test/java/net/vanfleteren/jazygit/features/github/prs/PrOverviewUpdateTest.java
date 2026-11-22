@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.TreeSet;
 import io.vavr.control.Either;
@@ -20,6 +21,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
@@ -155,6 +157,65 @@ class PrOverviewUpdateTest {
                         .values()
                         .map(pr -> pr.number())
                         .toList());
+    }
+
+    @Test
+    void thoseFromOnesOwnForkAreOfTheBranchesThoseFromOtherForksAreNot() {
+        PullRequestSummary mine = fork(3, "anna/repo");
+        PullRequestSummary theirs = fork(4, "stranger/repo");
+        Model read = Update.update(
+                        loaded(),
+                        new PrOverviewMsg.RepositoryLoaded(
+                                new RepositoryPullRequests(
+                                        "Owner/Repo", new PullRequestList(List.of(OLD, mine, theirs), 3)),
+                                Option.none(),
+                                io.vavr.collection.HashMap.of(
+                                        new RemoteName("origin"),
+                                        "anna/repo",
+                                        new RemoteName("upstream"),
+                                        "owner/repo")))
+                .model();
+
+        assertEquals(
+                HashSet.of(OLD.number(), mine.number()),
+                read.part(GitHubState.PART)
+                        .pullRequests()
+                        .get()
+                        .values()
+                        .map(pr -> pr.number())
+                        .toSet());
+        // Each known with the remote its branch is in.
+        assertEquals(
+                io.vavr.collection.HashMap.of(
+                        OLD.number(),
+                        HashSet.of(new RemoteName("upstream")),
+                        mine.number(),
+                        HashSet.of(new RemoteName("origin"))),
+                read.part(GitHubState.PART).heads());
+        assertEquals(
+                HashSet.of(mine.number(), theirs.number()),
+                read.part(GitHubState.PART).forks());
+    }
+
+    private static PullRequestSummary fork(int number, String head) {
+        PullRequestSummary pr = pr("owner/repo", number, Instant.parse("2026-10-02T00:00:00Z"));
+        return new PullRequestSummary(
+                pr.repository(),
+                pr.number(),
+                pr.title(),
+                pr.author(),
+                pr.headBranch(),
+                pr.draft(),
+                true,
+                pr.checks(),
+                pr.review(),
+                pr.updatedAt(),
+                pr.url(),
+                pr.stack(),
+                pr.baseCommit(),
+                pr.headCommit(),
+                pr.baseBranch(),
+                Option.of(head));
     }
 
     @Test

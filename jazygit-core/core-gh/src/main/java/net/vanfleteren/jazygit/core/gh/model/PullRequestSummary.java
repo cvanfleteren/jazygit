@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
  * @param baseCommit the commit its base branch is at, if GitHub said
  * @param headCommit the commit its branch is at, if GitHub said; none when that branch is gone
  * @param baseBranch the branch it merges into, if GitHub said
+ * @param headRepository the repository its branch is in, as {@code owner/name}; none when that was deleted (ADR 177)
  */
 public record PullRequestSummary(
         String repository,
@@ -39,7 +40,46 @@ public record PullRequestSummary(
         Option<PullRequestStack> stack,
         Option<GhCommit> baseCommit,
         Option<GhCommit> headCommit,
-        Option<GhBranch> baseBranch) {
+        Option<GhBranch> baseBranch,
+        Option<String> headRepository) {
+
+    /**
+     * One whose branch is in {@code repository}, or in a fork of it GitHub did not name.
+     */
+    public PullRequestSummary(
+            String repository,
+            PrNumber number,
+            String title,
+            String author,
+            GhBranch headBranch,
+            boolean draft,
+            boolean fromFork,
+            Checks checks,
+            Review review,
+            Instant updatedAt,
+            String url,
+            Option<PullRequestStack> stack,
+            Option<GhCommit> baseCommit,
+            Option<GhCommit> headCommit,
+            Option<GhBranch> baseBranch) {
+        this(
+                repository,
+                number,
+                title,
+                author,
+                headBranch,
+                draft,
+                fromFork,
+                checks,
+                review,
+                updatedAt,
+                url,
+                stack,
+                baseCommit,
+                headCommit,
+                baseBranch,
+                fromFork ? Option.none() : Option.of(repository));
+    }
 
     /**
      * One whose base branch is not known.

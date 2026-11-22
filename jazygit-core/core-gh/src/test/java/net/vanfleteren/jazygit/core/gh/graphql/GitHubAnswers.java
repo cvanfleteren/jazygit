@@ -73,7 +73,7 @@ public final class GitHubAnswers {
     public static String summary(int number, String rollup, String suites, String stack) {
         return """
                 { "number": %d, "title": "t", "url": "https://github.com/owner/repo/pull/%1$d",
-                  "updatedAt": "2026-10-26T22:00:00Z", "isDraft": false, "isCrossRepository": false,
+                  "updatedAt": "2026-10-26T22:00:00Z", "isDraft": false, "isCrossRepository": false, "headRepository": { "nameWithOwner": "owner/repo" },
                   "headRefName": "b%1$d", "baseRefName": "main", "author": { "login": "cvf" }, "repository": { "nameWithOwner": "owner/repo" },
                   "reviewDecision": null, %s,
                   "commits": { "nodes": [ { "commit": { "statusCheckRollup": %s, %s } } ] } }""".formatted(number, stack, rollup, suites);

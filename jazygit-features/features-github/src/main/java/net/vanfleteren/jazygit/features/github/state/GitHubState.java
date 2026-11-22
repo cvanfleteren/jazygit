@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.gh.timing.Eta;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -58,6 +59,11 @@ import net.vanfleteren.jazygit.kernel.state.StatedBases;
  * @param stackChange         a change made to the stacks that the pull requests read may not show yet, which they are
  *                            read again for until they do (ADR 73)
  * @param repository          the repository on GitHub, as {@code owner/name}, once its pull requests were read
+ * @param heads               the remotes each open pull request's branch is in, by its number, as far as the
+ *                            repositories of the remotes tell (ADR 177): a pull request is a branch's only when its
+ *                            branch is in the repository of the remote that branch is pushed to, whichever of that
+ *                            repository's remotes it is; one not among them matches by name
+ * @param forks               the open pull requests whose branch is in another repository, a fork
  */
 @With
 public record GitHubState(
@@ -74,7 +80,9 @@ public record GitHubState(
         Map<PrNumber, Long> readsFrom,
         Map<Cmd, FailingRead> failing,
         Option<StackChange> stackChange,
-        Option<String> repository) {
+        Option<String> repository,
+        Map<PrNumber, Set<RemoteName>> heads,
+        Set<PrNumber> forks) {
 
     public static final GitHubState NOT_READ = new GitHubState(
             Option.none(),
@@ -90,7 +98,9 @@ public record GitHubState(
             HashMap.empty(),
             HashMap.empty(),
             Option.none(),
-            Option.none());
+            Option.none(),
+            HashMap.empty(),
+            HashSet.empty());
 
     /**
      * Where the model keeps what GitHub reports, as a part (ADR 157) rather than a field the model names: not kept until
@@ -234,13 +244,18 @@ public record GitHubState(
      */
     public StatedBases bases() {
         return new StatedBases(
-                open().flatMap(pr -> base(pr).map(base -> Tuple.of(
-                                FromGitHub.branch(pr.headBranch()),
-                                new StatedBases.Stated(
-                                        base,
-                                        Phrase.of(
-                                                "github.bases.pullRequest",
-                                                String.valueOf(pr.number().value()))))))
+                open().flatMap(pr -> base(pr)
+                                // A pull request from a fork's branch into the project's of the same name, as main
+                                // into main, says nothing of what a branch is built on.
+                                .filter(base -> !base.equals(FromGitHub.branch(pr.headBranch())))
+                                .map(base -> Tuple.of(
+                                        FromGitHub.branch(pr.headBranch()),
+                                        new StatedBases.Stated(
+                                                base,
+                                                Phrase.of(
+                                                        "github.bases.pullRequest",
+                                                        String.valueOf(
+                                                                pr.number().value()))))))
                         .toMap(pair -> pair),
                 protectedBranches.getOrElse(HashSet.empty()),
                 branchChecks.map(GitHubChecks::remotes));
@@ -269,17 +284,38 @@ public record GitHubState(
      */
     public Option<PullRequest> pullRequest(Branch branch) {
         Option<RemoteBranch> upstream = branch.remoteUpstream();
+        RemoteName pushedTo = branch.pushTarget().remote();
         return upstream.exists(followed -> !mayBeOnGitHub(followed))
                 ? Option.none()
-                : pullRequests.flatMap(open ->
-                        upstream.map(RemoteBranch::branch).flatMap(open::get).orElse(() -> open.get(branch.name())));
+                : pullRequests
+                        .flatMap(open -> upstream.map(RemoteBranch::branch)
+                                .flatMap(open::get)
+                                .orElse(() -> open.get(branch.name())))
+                        .filter(pr -> from(pr, pushedTo));
     }
 
     /**
      * The open pull request from {@code remote}, if it is a branch on GitHub.
      */
     public Option<PullRequest> pullRequest(RemoteBranch remote) {
-        return onGitHub(remote) ? pullRequests.flatMap(open -> open.get(remote.branch())) : Option.none();
+        return onGitHub(remote)
+                ? pullRequests.flatMap(open -> open.get(remote.branch())).filter(pr -> from(pr, remote.remote()))
+                : Option.none();
+    }
+
+    /**
+     * Whether the branch of {@code pr} is in the repository of {@code remote}, as far as is known (ADR 177): one
+     * whose remotes are not known matches by its name alone.
+     */
+    private boolean from(PullRequest pr, RemoteName remote) {
+        return heads.get(pr.number()).forAll(in -> in.contains(remote));
+    }
+
+    /**
+     * Whether the branch of {@code pr} is in a fork, not in the repository.
+     */
+    public boolean fromFork(PullRequest pr) {
+        return forks.contains(pr.number());
     }
 
     /**

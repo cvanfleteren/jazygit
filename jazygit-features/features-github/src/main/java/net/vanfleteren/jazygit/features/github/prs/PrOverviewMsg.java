@@ -1,11 +1,14 @@
 package net.vanfleteren.jazygit.features.github.prs;
 
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.github.state.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -45,10 +48,21 @@ public sealed interface PrOverviewMsg extends Msg {
     /**
      * The pull requests of the repository were read; the model's clock tells when.
      *
-     * @param kept the unseen pull requests that were kept for the repository, if any
+     * @param kept    the unseen pull requests that were kept for the repository, if any
+     * @param remotes the repository of each remote, as {@code owner/name}, by its name, one's own fork among them,
+     *                whose pull requests into the repository are those of its branches (ADR 177)
      */
-    record RepositoryLoaded(RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept)
-            implements PrOverviewMsg {}
+    record RepositoryLoaded(
+            RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept, Map<RemoteName, String> remotes)
+            implements PrOverviewMsg {
+
+        /**
+         * Read without the remotes known, so the pull requests of forks are none of its branches'.
+         */
+        public RepositoryLoaded(RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept) {
+            this(pullRequests, kept, HashMap.empty());
+        }
+    }
 
     record RepositoryLoadFailed(Failure failure) implements PrOverviewMsg {}
 

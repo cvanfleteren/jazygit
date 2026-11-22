@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.core.gh.model;
 
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -61,5 +62,25 @@ public record GhAccount(String host, String user) {
         }
         Matcher scp = SCP_LIKE.matcher(stripped);
         return Option.when(scp.find(), () -> scp.group(1));
+    }
+
+    /**
+     * The repository of the git remote {@code url}, as {@code owner/name}, without {@code .git}: the last two parts of
+     * its path; none for a local path, or a URL without them (ADR 177).
+     */
+    public static Option<String> repositoryOf(String url) {
+        String stripped = url.strip();
+        String path = stripped.contains("://")
+                ? Try.of(() -> URI.create(stripped).getPath())
+                        .toOption()
+                        .filter(p -> p != null)
+                        .getOrElse("")
+                : stripped.substring(stripped.indexOf(':') + 1);
+        List<String> parts = List.of(path.split("/")).filter(part -> !part.isEmpty());
+        return Option.when(hostOf(stripped).isDefined() && parts.size() >= 2, () -> parts.takeRight(2))
+                .map(two -> two.head() + "/"
+                        + (two.last().endsWith(".git")
+                                ? two.last().substring(0, two.last().length() - ".git".length())
+                                : two.last()));
     }
 }

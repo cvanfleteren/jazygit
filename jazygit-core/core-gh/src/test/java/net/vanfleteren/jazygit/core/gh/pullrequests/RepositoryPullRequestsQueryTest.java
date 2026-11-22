@@ -68,7 +68,7 @@ class RepositoryPullRequestsQueryTest {
                         Option.of(new PrNumber(7)))),
                 read("{ \"login\": \"bob\" }", "{ \"number\": 7 }", 1, """
                         { "number": 7, "title": "WIP", "url": "https://github.com/owner/repo/pull/7",
-                          "updatedAt": "2026-10-15T08:00:00Z", "isDraft": true, "isCrossRepository": true,
+                          "updatedAt": "2026-10-15T08:00:00Z", "isDraft": true, "isCrossRepository": true, "headRepository": null,
                           "headRefName": "patch-1", "baseRefName": "main", "author": null, "repository": { "nameWithOwner": "owner/repo" },
                           "reviewDecision": null, "stackEntry": null, "stack": null,
                           "commits": { "nodes": [ { "commit": { "statusCheckRollup": null, %s } } ] } }""".formatted(NO_SUITES)));
