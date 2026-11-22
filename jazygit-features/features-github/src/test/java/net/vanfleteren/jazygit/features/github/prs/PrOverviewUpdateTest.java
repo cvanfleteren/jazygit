@@ -187,7 +187,10 @@ class PrOverviewUpdateTest {
         // Each known with the remote its branch is in.
         assertEquals(
                 io.vavr.collection.HashMap.of(
-                        OLD.number(), new RemoteName("upstream"), mine.number(), new RemoteName("origin")),
+                        OLD.number(),
+                        HashSet.of(new RemoteName("upstream")),
+                        mine.number(),
+                        HashSet.of(new RemoteName("origin"))),
                 read.part(GitHubState.PART).heads());
         assertEquals(
                 HashSet.of(mine.number(), theirs.number()),

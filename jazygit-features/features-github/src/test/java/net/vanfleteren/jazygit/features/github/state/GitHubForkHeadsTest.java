@@ -14,6 +14,9 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
+import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
@@ -46,7 +49,7 @@ class GitHubForkHeadsTest {
 
     private static final GitHubState LISTED = GitHubState.NOT_READ
             .withListed(List.of(FROM_FORK))
-            .withHeads(HashMap.of(FROM_FORK.number(), ORIGIN))
+            .withHeads(HashMap.of(FROM_FORK.number(), HashSet.of(ORIGIN)))
             .withForks(HashSet.of(FROM_FORK.number()))
             .withBranchChecks(Option.of(new GitHubChecks(HashSet.of(ORIGIN, UPSTREAM), HashMap.empty())));
 
@@ -85,6 +88,40 @@ class GitHubForkHeadsTest {
     void aPullRequestFromAForkIsKnownToBeOne() {
         assertTrue(LISTED.fromFork(FROM_FORK));
         assertFalse(GitHubState.NOT_READ.withListed(List.of(FROM_FORK)).fromFork(FROM_FORK));
+    }
+
+    @Test
+    void aPullRequestOfTheRepositoryIsTheBranchsWhicheverOfItsRemotesItIsPushedTo() {
+        // A plain clone with a second remote of the same repository, as an alias.
+        RemoteName github = new RemoteName("github");
+        PullRequestSummary same = new PullRequestSummary(
+                "project/repo",
+                new PrNumber(8),
+                "Same repository",
+                "cvf",
+                new GhBranch("feature"),
+                false,
+                false,
+                Checks.PASSING,
+                Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/project/repo/pull/8",
+                Option.none(),
+                Option.none(),
+                Option.none(),
+                Option.none(),
+                Option.of("project/repo"));
+        RepositoryPullRequests read = new RepositoryPullRequests("project/repo", new PullRequestList(List.of(same), 1));
+        GitHubState state = GitHubState.NOT_READ
+                .withListed(read.ofBranches())
+                .withHeads(read.heads(HashMap.of(github, "project/repo", ORIGIN, "Project/Repo")))
+                // Both remotes on GitHub, so that their remote branches are looked up.
+                .withBranchChecks(Option.of(new GitHubChecks(HashSet.of(ORIGIN, github), HashMap.empty())));
+
+        assertEquals(Option.of(same.pullRequest()), state.pullRequest(following("feature", ORIGIN)));
+        assertEquals(Option.of(same.pullRequest()), state.pullRequest(following("feature", github)));
+        assertEquals(
+                Option.of(same.pullRequest()), state.pullRequest(new RemoteBranch(ORIGIN, new BranchName("feature"))));
     }
 
     @Test

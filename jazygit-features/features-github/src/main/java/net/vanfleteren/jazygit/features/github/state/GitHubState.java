@@ -59,9 +59,10 @@ import net.vanfleteren.jazygit.kernel.state.StatedBases;
  * @param stackChange         a change made to the stacks that the pull requests read may not show yet, which they are
  *                            read again for until they do (ADR 73)
  * @param repository          the repository on GitHub, as {@code owner/name}, once its pull requests were read
- * @param heads               the remote each open pull request's branch is in, by its number, as far as the
+ * @param heads               the remotes each open pull request's branch is in, by its number, as far as the
  *                            repositories of the remotes tell (ADR 177): a pull request is a branch's only when its
- *                            branch is in the remote that branch is pushed to; one not among them matches by name
+ *                            branch is in the repository of the remote that branch is pushed to, whichever of that
+ *                            repository's remotes it is; one not among them matches by name
  * @param forks               the open pull requests whose branch is in another repository, a fork
  */
 @With
@@ -80,7 +81,7 @@ public record GitHubState(
         Map<Cmd, FailingRead> failing,
         Option<StackChange> stackChange,
         Option<String> repository,
-        Map<PrNumber, RemoteName> heads,
+        Map<PrNumber, Set<RemoteName>> heads,
         Set<PrNumber> forks) {
 
     public static final GitHubState NOT_READ = new GitHubState(
@@ -303,11 +304,11 @@ public record GitHubState(
     }
 
     /**
-     * Whether the branch of {@code pr} is in {@code remote}, as far as is known (ADR 177): one whose remote is not
-     * known matches by its name alone.
+     * Whether the branch of {@code pr} is in the repository of {@code remote}, as far as is known (ADR 177): one
+     * whose remotes are not known matches by its name alone.
      */
     private boolean from(PullRequest pr, RemoteName remote) {
-        return heads.get(pr.number()).forAll(remote::equals);
+        return heads.get(pr.number()).forAll(in -> in.contains(remote));
     }
 
     /**

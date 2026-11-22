@@ -52,20 +52,22 @@ public record RepositoryPullRequests(
     }
 
     /**
-     * The remote the branch of each open pull request is in, by its number, among {@code remotes}, the repository of
-     * each remote, as {@code owner/name} (ADR 177): one from the repository itself is in the remote of the
-     * repository, one from a fork in the remote of the fork. One whose repository is no remote's is left out, as one
-     * whose fork was deleted; the first of several remotes of one repository, by name.
+     * The remotes the branch of each open pull request is in, by its number, among {@code remotes}, the repository of
+     * each remote, as {@code owner/name} (ADR 177): one from the repository itself is in the remotes of the
+     * repository, one from a fork in those of the fork; every remote of one repository, as {@code origin} and an
+     * alias of it. One whose repository is no remote's is left out, as one whose fork was deleted.
      */
-    public Map<PrNumber, RemoteName> heads(Map<RemoteName, String> remotes) {
-        List<Tuple2<RemoteName, String>> named = remotes.toList()
-                .sortBy(remote -> remote._1().value())
-                .map(remote -> Tuple.of(remote._1(), remote._2().toLowerCase(Locale.ROOT)));
+    public Map<PrNumber, Set<RemoteName>> heads(Map<RemoteName, String> remotes) {
+        List<Tuple2<RemoteName, String>> named =
+                remotes.toList().map(remote -> Tuple.of(remote._1(), remote._2().toLowerCase(Locale.ROOT)));
         return HashMap.ofEntries(open.pullRequests()
                 .flatMap(summary -> summary.headRepository()
                         .map(head -> head.toLowerCase(Locale.ROOT))
-                        .flatMap(head -> named.find(remote -> remote._2().equals(head)))
-                        .map(remote -> Tuple.of(summary.number(), remote._1()))));
+                        .map(head -> named.filter(remote -> remote._2().equals(head))
+                                .map(Tuple2::_1)
+                                .toSet())
+                        .filter(in -> !in.isEmpty())
+                        .map(in -> Tuple.of(summary.number(), in))));
     }
 
     /**
