@@ -7,3 +7,9 @@ __pycache__/
 .venv/
 .envrc.local
 .idea/
+*.iml
+#eclipse, because of the jdts lsp
+.settings/
+.project
+.classpath
+.factorypath
