@@ -48,7 +48,7 @@ public final class PullRequestUpdate {
     /**
      * Shows the pull request of {@code branch}, when it is idle: the one of the home that merges the branch it is
      * pushed to (ADR 177). Without one, the user is told so; without the list of the home, why it is not known, and it
-     * is read again when it was of another home.
+     * is read again only when the list is of another home.
      */
     private static Next requested(Model model, BranchName branch) {
         ForgejoPullRequests prs = model.part(ForgejoPullRequests.PART);
@@ -68,7 +68,11 @@ public final class PullRequestUpdate {
                 .filter(failure -> prs.home().contains(home))
                 .<PullRequestsError>map(PullRequestsError.Unavailable::new)
                 .getOrElse(PullRequestsError.NotRead::new));
-        return prs.home().contains(home) ? Next.of(failed) : Next.of(failed, new ReadPullRequests(home));
+        // Without a list yet, the one of the home is being read, as Forgejo turned on or the home changed; only a list
+        // of another home, which a change of the home sets aside first, would be read again here.
+        return prs.home().exists(other -> !other.equals(home))
+                ? Next.of(failed, new ReadPullRequests(home))
+                : Next.of(failed);
     }
 
     private static Next show(Model model, RemoteName home, RemoteBranch head, ForgejoPullRequest pr) {
