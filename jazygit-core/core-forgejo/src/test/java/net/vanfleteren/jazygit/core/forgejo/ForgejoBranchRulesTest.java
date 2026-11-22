@@ -90,7 +90,9 @@ class ForgejoBranchRulesTest {
         assertFalse(matches("ci\\*", "ci-x"));
         assertTrue(matches("[\\]]", "]"));
         assertTrue(matches("a\\{b", "a{b"));
-        assertTrue(ForgejoBranchRules.glob("ci\\").isEmpty());
+        // A \ that ends it is dropped, as gobwas does; one that ends a class leaves it open.
+        assertTrue(matches("ci\\", "ci"));
+        assertTrue(ForgejoBranchRules.glob("[a\\").isEmpty());
     }
 
     @Test
@@ -101,7 +103,8 @@ class ForgejoBranchRulesTest {
         assertFalse(matches("[\\a-z]", "m"));
         assertTrue(matches("[a-z]", "m"));
         assertFalse(matches("[!a-z]", "m"));
-        assertFalse(matches("[]", "a"));
+        assertTrue(ForgejoBranchRules.glob("[]").isEmpty());
+        assertTrue(ForgejoBranchRules.glob("[!]").isEmpty());
         assertTrue(ForgejoBranchRules.glob("[a-cx]").isEmpty());
         assertTrue(ForgejoBranchRules.glob("[a-]").isEmpty());
     }

@@ -52,60 +52,48 @@ public record ForgejoBranchRules(boolean guarded, boolean statusChecks, List<Str
      * text, {@code ?} any character, a class {@code [...]} one of its characters and {@code [!...]} one not of them,
      * and {@code {a,b}} either; {@code \} takes the character after it as it is; anything else as it is. A class is,
      * as gobwas' lexer reads it, a range {@code [a-z]}, or else characters up to {@code ]}, each only itself, as
-     * {@code -} is then. None when it is no glob: a class or a brace left open, a range not closed right after it, or
-     * a {@code \} that ends it.
+     * {@code -} is then. A {@code \} that ends it is dropped, as gobwas does. None when it is no glob: a class or a
+     * brace left open, a class with no character, or a range not closed right after it.
      */
     static Option<Pattern> glob(String pattern) {
-        return regex(pattern)
+        return regex(pattern, 0, 0, "")
                 .flatMap(regex ->
                         Try.of(() -> Pattern.compile(regex, Pattern.DOTALL)).toOption());
     }
 
-    private static Option<String> regex(String glob) {
-        StringBuilder regex = new StringBuilder();
-        int braces = 0;
-        int at = 0;
-        while (at < glob.length()) {
-            char c = glob.charAt(at);
-            if (c == '\\') {
-                if (at + 1 == glob.length()) {
-                    return Option.none();
-                }
-                regex.append(Pattern.quote(String.valueOf(glob.charAt(at + 1))));
-                at += 2;
-            } else if (c == '[') {
-                Option<Read> read = characterClass(glob, at + 1);
-                if (read.isEmpty()) {
-                    return Option.none();
-                }
-                regex.append(read.get().regex());
-                at = read.get().end();
-            } else {
-                if (c == '{') {
-                    braces++;
-                    regex.append("(?:");
-                } else if (c == '}' && braces > 0) {
-                    braces--;
-                    regex.append(')');
-                } else if (c == ',' && braces > 0) {
-                    regex.append('|');
-                } else if (c == '*') {
-                    regex.append(".*");
-                } else if (c == '?') {
-                    regex.append('.');
-                } else {
-                    regex.append(Pattern.quote(String.valueOf(c)));
-                }
-                at++;
-            }
+    // The regular expression of glob from at on, after soFar, with braces open; none where gobwas' lexer fails.
+    private static Option<String> regex(String glob, int at, int braces, String soFar) {
+        if (at == glob.length()) {
+            return braces > 0 ? Option.none() : Option.of(soFar);
         }
-        return braces > 0 ? Option.none() : Option.of(regex.toString());
+        char c = glob.charAt(at);
+        if (c == '[') {
+            return characterClass(glob, at + 1).flatMap(read -> regex(glob, read.end(), braces, soFar + read.regex()));
+        }
+        if (c == '\\') {
+            return at + 1 == glob.length()
+                    ? regex(glob, at + 1, braces, soFar)
+                    : regex(glob, at + 2, braces, soFar + quote(glob.charAt(at + 1)));
+        }
+        return switch (c) {
+            case '{' -> regex(glob, at + 1, braces + 1, soFar + "(?:");
+            case '}' -> regex(glob, at + 1, Math.max(braces - 1, 0), soFar + (braces > 0 ? ")" : quote(c)));
+            case ',' -> regex(glob, at + 1, braces, soFar + (braces > 0 ? "|" : quote(c)));
+            case '*' -> regex(glob, at + 1, braces, soFar + ".*");
+            case '?' -> regex(glob, at + 1, braces, soFar + ".");
+            default -> regex(glob, at + 1, braces, soFar + quote(c));
+        };
+    }
+
+    private static String quote(char c) {
+        return Pattern.quote(String.valueOf(c));
     }
 
     /**
      * The class of characters of {@code glob} from {@code from}, just after its {@code [}, as gobwas' lexer reads it
      * ({@code fetchRange}): after a {@code !}, a range when its second character is {@code -}, which {@code ]} must
-     * close right after; else characters up to {@code ]}, each itself, a {@code \} taking the next as it is.
+     * close right after; else characters up to {@code ]}, at least one, each itself, a {@code \} taking the next as it
+     * is.
      */
     private static Option<Read> characterClass(String glob, int from) {
         boolean not = from < glob.length() && glob.charAt(from) == '!';
@@ -117,30 +105,26 @@ public record ForgejoBranchRules(boolean guarded, boolean statusChecks, List<Str
                             open + literal(glob.charAt(at)) + "-" + literal(glob.charAt(at + 2)) + "]", at + 4))
                     : Option.none();
         }
-        StringBuilder characters = new StringBuilder();
-        while (at < glob.length()) {
-            char c = glob.charAt(at);
-            if (c == ']') {
-                return Option.of(new Read(set(not, open, characters.toString()), at + 1));
-            }
-            if (c == '\\') {
-                if (at + 1 == glob.length()) {
-                    return Option.none();
-                }
-                at++;
-            }
-            characters.append(literal(glob.charAt(at)));
-            at++;
-        }
-        return Option.none();
+        return characters(glob, at, "")
+                .filter(read -> !read.regex().isEmpty())
+                .map(read -> new Read(open + read.regex() + "]", read.end()));
     }
 
-    // No character matches an empty class, and any does when it is negated, as Java does not take [].
-    private static String set(boolean not, String open, String characters) {
-        if (!characters.isEmpty()) {
-            return open + characters + "]";
+    // The characters of a class from at up to its ], after soFar, each itself; none when it is left open.
+    private static Option<Read> characters(String glob, int at, String soFar) {
+        if (at == glob.length()) {
+            return Option.none();
         }
-        return not ? "." : "(?!)";
+        char c = glob.charAt(at);
+        if (c == ']') {
+            return Option.of(new Read(soFar, at + 1));
+        }
+        if (c == '\\') {
+            return at + 1 == glob.length()
+                    ? Option.none()
+                    : characters(glob, at + 2, soFar + literal(glob.charAt(at + 1)));
+        }
+        return characters(glob, at + 1, soFar + literal(c));
     }
 
     // c as only itself in a class of Java's: [, &, ^, - or ] are not.
