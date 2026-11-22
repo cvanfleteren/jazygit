@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.ui.Fills;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
@@ -50,6 +51,19 @@ class BranchBadgesTest {
                         .of(TestModels.loaded(), new BranchRef.Local(new BranchName("main")))
                         .timed()
                         .apply(NOW));
+    }
+
+    @Test
+    void theBadgesOfEveryFeatureThatFillsTheKeyAreJoinedInTheirOrder() {
+        Fills fills = Fills.NONE
+                .with(BranchBadges.KEY, model -> Option.some(marking("a:")))
+                .andThen(Fills.NONE.with(BranchBadges.KEY, model -> Option.none()))
+                .andThen(Fills.NONE.with(BranchBadges.KEY, model -> Option.some(marking("b:"))));
+
+        BranchBadges.Shown shown =
+                BranchBadges.filled(fills).of(TestModels.loaded(), new BranchRef.Local(new BranchName("main")));
+
+        assertEquals(List.of(LoadableList.Seg.of(" a:main"), LoadableList.Seg.of(" b:main")), shown.segs());
     }
 
     @Test

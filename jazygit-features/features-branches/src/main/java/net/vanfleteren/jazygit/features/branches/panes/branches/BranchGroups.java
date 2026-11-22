@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
  * The groups the features make of the local branches in the branches pane (ADR 167): a header, the branches of the
  * group under it, indented, with rows of what belongs to the group but is no local branch among them; and the keys of
  * the header. The pane knows no feature, nor what a group is: a feature fills its {@link #KEY} (ADR 172), and the pane
- * groups the branches as the first that does.
+ * groups the branches as all that do, in the order of the features.
  *
  * @param groupings how each feature groups the branches, in the order of the features; a branch is in the group of the
  *                  first that groups it
@@ -35,13 +35,12 @@ public record BranchGroups(List<Grouping> groupings) {
     public static final BranchGroups NONE = new BranchGroups(List.empty());
 
     /**
-     * The grouping of the first feature in {@code fills} that gives one for {@link #KEY} in the model the branches
-     * are shown in; no groups while none does.
+     * The groupings of the features in {@code fills} that give one for {@link #KEY} in the model the branches are
+     * shown in, in their order, a branch staying in the group of the first that groups it; no groups while none does.
      */
     public static BranchGroups filled(Fills fills) {
-        return new BranchGroups(List.of((model, branches) -> fills.of(KEY, model)
-                .map(grouping -> grouping.of(model, branches))
-                .getOrElse(List.empty())));
+        return new BranchGroups(
+                List.of((model, branches) -> new BranchGroups(fills.all(KEY, model)).of(model, branches)));
     }
 
     /**

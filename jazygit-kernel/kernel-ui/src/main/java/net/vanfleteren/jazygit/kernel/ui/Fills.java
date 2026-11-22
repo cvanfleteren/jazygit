@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.kernel.ui;
 
+import io.vavr.collection.Iterator;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -42,11 +43,23 @@ public record Fills(Map<PaneKey<?>, List<Function<Model, Option<?>>>> fillers) {
      * What the first that gives anything for {@code key} in {@code model} gives; none when none does.
      */
     public <T> Option<T> of(PaneKey<T> key, Model model) {
+        return given(key, model).headOption();
+    }
+
+    /**
+     * What each that gives anything for {@code key} in {@code model} gives, in their order: for a pane that joins what
+     * the features give, as the badges of a branch.
+     */
+    public <T> List<T> all(PaneKey<T> key, Model model) {
+        return given(key, model).toList();
+    }
+
+    // Lazily, so that of asks the fillers only up to the first that gives anything.
+    private <T> Iterator<T> given(PaneKey<T> key, Model model) {
         return fillers.get(key)
                 .getOrElse(List.empty())
                 .iterator()
                 .flatMap(filler -> filler.apply(model))
-                .headOption()
                 .map(key.type()::cast);
     }
 

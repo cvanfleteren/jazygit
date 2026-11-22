@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Entry;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Group;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.ui.Fills;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import org.junit.jupiter.api.Test;
@@ -139,6 +140,21 @@ class BranchNodeTest {
                 (model, listed) -> List.of(group("second", member("feat/a"), member("feat/b")))));
 
         List<Group> made = groups.of(TestModels.loaded(), branches);
+
+        assertEquals(List.of("first", "second"), made.map(Group::key));
+        assertEquals(List.of(new BranchName("feat/b")), made.last().members());
+    }
+
+    @Test
+    void theGroupsOfEveryFeatureThatFillsTheKeyAreKeptAndABranchStaysInTheFirst() {
+        List<Branch> branches = List.of(branch("feat/a"), branch("feat/b"));
+        BranchGroups.Grouping first = (model, listed) -> List.of(group("first", member("feat/a")));
+        BranchGroups.Grouping second = (model, listed) -> List.of(group("second", member("feat/a"), member("feat/b")));
+        Fills fills = Fills.NONE
+                .with(BranchGroups.KEY, model -> Option.some(first))
+                .andThen(Fills.NONE.with(BranchGroups.KEY, model -> Option.some(second)));
+
+        List<Group> made = BranchGroups.filled(fills).of(TestModels.loaded(), branches);
 
         assertEquals(List.of("first", "second"), made.map(Group::key));
         assertEquals(List.of(new BranchName("feat/b")), made.last().members());

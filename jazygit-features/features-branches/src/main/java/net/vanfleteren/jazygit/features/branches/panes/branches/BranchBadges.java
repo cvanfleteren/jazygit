@@ -12,8 +12,8 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 /**
  * What the features show of a branch in the branches pane, beside what git says of it (ADR 167): the badges of a row,
  * after its parent and before whether it is checked out in another worktree. The local and the remote branches share
- * them. The pane knows no feature: a feature fills its {@link #KEY} (ADR 172), and the pane shows the badge of the first
- * that does. Only one forge is on for a repository, so only one gives a badge at a time.
+ * them. The pane knows no feature: a feature fills its {@link #KEY} (ADR 172), and the pane shows the badges of all that
+ * do, in the order of the features.
  *
  * @param badges what each feature shows of a branch, in the order of the features
  */
@@ -30,12 +30,11 @@ public record BranchBadges(List<Badge> badges) {
     public static final BranchBadges NONE = new BranchBadges(List.empty());
 
     /**
-     * The badge of the first feature in {@code fills} that gives one for {@link #KEY} in the model a branch is shown
-     * in; none while none does.
+     * The badges of the features in {@code fills} that give one for {@link #KEY} in the model a branch is shown in,
+     * joined in their order; none while none does.
      */
     public static BranchBadges filled(Fills fills) {
-        return new BranchBadges(List.of((model, branch) ->
-                fills.of(KEY, model).map(badge -> badge.of(model, branch)).getOrElse(Shown.NONE)));
+        return new BranchBadges(List.of((model, branch) -> new BranchBadges(fills.all(KEY, model)).of(model, branch)));
     }
 
     /**

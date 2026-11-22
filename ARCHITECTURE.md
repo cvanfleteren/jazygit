@@ -158,7 +158,8 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
 - **A pane declares keys the features fill** (ADR 172): a pane in a group names no feature; it declares `PaneKey`s
   beside itself, as `CommitsPane.LINE` and `CommitsPane.LISTING`, or `BranchBadges.KEY` and `BranchGroups.KEY` of the
   branches pane, which a `Feature` fills with `filling`, and the app gives it the `Fills` of its features
-  (`Features.FILLS`). For each key, the first feature that gives anything wins: of the forges, only one is on.
+  (`Features.FILLS`). A pane asks for the first feature that gives anything (`Fills.of`), or for all of them in
+  their order (`Fills.all`), as the branches pane joins the badges and the groups of every feature.
 - **The kernel names no forge** (ADR 167, 169, 171): GitHub's state, its stores, its screen, its stack and its
   review threads are `features-github`'s. The kernel composes what the features state the branches are built on
   (`BranchBases`, from each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as
