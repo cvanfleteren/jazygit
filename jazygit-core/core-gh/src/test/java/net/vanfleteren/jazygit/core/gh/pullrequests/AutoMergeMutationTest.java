@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -26,8 +26,9 @@ class AutoMergeMutationTest {
                         "-f",
                         "method=SQUASH",
                         "-f",
-                        "head=abc123"),
-                args(AutoMergeMutation.enable("PR_1", MergeMethod.SQUASH, Option.of(new GhCommit("abc123")))));
+                        "head=abc1230000000000000000000000000000000000"),
+                args(AutoMergeMutation.enable(
+                        "PR_1", MergeMethod.SQUASH, Option.of(new Sha("abc1230000000000000000000000000000000000")))));
     }
 
     @Test

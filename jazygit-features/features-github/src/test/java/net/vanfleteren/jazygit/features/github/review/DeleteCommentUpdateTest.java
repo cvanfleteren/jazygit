@@ -7,11 +7,11 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd;
@@ -287,8 +287,8 @@ class DeleteCommentUpdateTest {
                         new PrNumber(7),
                         new ReviewRemarks(
                                 PullRequestDetails.State.OPEN,
-                                GhCommit.parse("c".repeat(40)),
-                                GhCommit.parse(BASE),
+                                Sha.parse("c".repeat(40)),
+                                Sha.parse(BASE),
                                 List.of(OPEN, SETTLED)),
                         HashSet.empty(),
                         0));
@@ -310,8 +310,8 @@ class DeleteCommentUpdateTest {
                                 new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.OPEN,
-                                        GhCommit.parse("d".repeat(40)),
-                                        GhCommit.parse(BASE),
+                                        Sha.parse("d".repeat(40)),
+                                        Sha.parse(BASE),
                                         view(deleted).threads()),
                                 HashSet.empty(),
                                 1))

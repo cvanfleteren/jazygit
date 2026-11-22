@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.Reaction;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -37,7 +37,7 @@ class ReviewThreadMutationsTest {
                         "-f",
                         "body=@me",
                         "-f",
-                        "commit_id=abc123",
+                        "commit_id=abc1230000000000000000000000000000000000",
                         "-f",
                         "path=src/Foo.java",
                         "-F",
@@ -46,7 +46,7 @@ class ReviewThreadMutationsTest {
                         "side=RIGHT"),
                 args(ReviewThreadMutations.start(
                         new PrNumber(7),
-                        new GhCommit("abc123"),
+                        new Sha("abc1230000000000000000000000000000000000"),
                         new NewReviewThread(
                                 "src/Foo.java",
                                 Option.of(new NewReviewThread.Lines(Side.RIGHT, 12, Side.RIGHT, 12)),
@@ -57,7 +57,7 @@ class ReviewThreadMutationsTest {
     void aThreadOnSeveralLinesGivesItsFirstToo() {
         List<String> args = args(ReviewThreadMutations.start(
                 new PrNumber(7),
-                new GhCommit("abc123"),
+                new Sha("abc1230000000000000000000000000000000000"),
                 new NewReviewThread(
                         "src/Foo.java", Option.of(new NewReviewThread.Lines(Side.LEFT, 10, Side.RIGHT, 12)), "Hm")));
 
@@ -69,7 +69,9 @@ class ReviewThreadMutationsTest {
     @Test
     void aThreadOnAWholeFileHasNoLine() {
         List<String> args = args(ReviewThreadMutations.start(
-                new PrNumber(7), new GhCommit("abc123"), new NewReviewThread("src/Foo.java", Option.none(), "Split")));
+                new PrNumber(7),
+                new Sha("abc1230000000000000000000000000000000000"),
+                new NewReviewThread("src/Foo.java", Option.none(), "Split")));
 
         assertEquals(List.of("-f", "subject_type=file"), args.drop(11));
     }

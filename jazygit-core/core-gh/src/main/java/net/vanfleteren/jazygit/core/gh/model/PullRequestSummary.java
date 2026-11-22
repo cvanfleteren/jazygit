@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * An open pull request as a list of them shows it, in any repository.
@@ -38,8 +39,8 @@ public record PullRequestSummary(
         Instant updatedAt,
         String url,
         Option<PullRequestStack> stack,
-        Option<GhCommit> baseCommit,
-        Option<GhCommit> headCommit,
+        Option<Sha> baseCommit,
+        Option<Sha> headCommit,
         Option<GhBranch> baseBranch,
         Option<String> headRepository) {
 
@@ -59,8 +60,8 @@ public record PullRequestSummary(
             Instant updatedAt,
             String url,
             Option<PullRequestStack> stack,
-            Option<GhCommit> baseCommit,
-            Option<GhCommit> headCommit,
+            Option<Sha> baseCommit,
+            Option<Sha> headCommit,
             Option<GhBranch> baseBranch) {
         this(
                 repository,
@@ -97,8 +98,8 @@ public record PullRequestSummary(
             Instant updatedAt,
             String url,
             Option<PullRequestStack> stack,
-            Option<GhCommit> baseCommit,
-            Option<GhCommit> headCommit) {
+            Option<Sha> baseCommit,
+            Option<Sha> headCommit) {
         this(
                 repository,
                 number,

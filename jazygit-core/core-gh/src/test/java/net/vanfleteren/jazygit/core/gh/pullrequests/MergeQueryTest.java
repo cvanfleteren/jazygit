@@ -6,12 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -37,8 +37,11 @@ class MergeQueryTest {
                         "-f",
                         "merge_method=squash",
                         "-f",
-                        "sha=abc123"),
-                MergeQuery.mergeCommand(new PrNumber(95), Option.of(new GhCommit("abc123")), MergeMethod.SQUASH)
+                        "sha=abc1230000000000000000000000000000000000"),
+                MergeQuery.mergeCommand(
+                                new PrNumber(95),
+                                Option.of(new Sha("abc1230000000000000000000000000000000000")),
+                                MergeMethod.SQUASH)
                         .executed()
                         .commandLine());
         assertFalse(MergeQuery.mergeCommand(new PrNumber(95), Option.none(), MergeMethod.REBASE)

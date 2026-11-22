@@ -8,6 +8,7 @@ import java.time.Instant;
 import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Everything shown about one pull request, read when the user asks for it, in the parts its dialog shows together
@@ -303,11 +304,7 @@ public record PullRequestDetails(
      * @param baseCommit the commit its base branch is at, if known, which its changes are diffed against (ADR 55)
      */
     public record Branches(
-            GhBranch head,
-            GhBranch base,
-            Option<GhCommit> headCommit,
-            Option<Integer> behindBase,
-            Option<GhCommit> baseCommit) {
+            GhBranch head, GhBranch base, Option<Sha> headCommit, Option<Integer> behindBase, Option<Sha> baseCommit) {
 
         /**
          * Branches at a commit that is not known, not known to be apart.
@@ -319,7 +316,7 @@ public record PullRequestDetails(
         /**
          * Branches whose base is at a commit that is not known.
          */
-        public Branches(GhBranch head, GhBranch base, Option<GhCommit> headCommit, Option<Integer> behindBase) {
+        public Branches(GhBranch head, GhBranch base, Option<Sha> headCommit, Option<Integer> behindBase) {
             this(head, base, headCommit, behindBase, Option.none());
         }
 

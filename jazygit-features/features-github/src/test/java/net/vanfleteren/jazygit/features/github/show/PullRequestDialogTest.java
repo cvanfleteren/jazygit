@@ -23,7 +23,6 @@ import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
@@ -36,6 +35,7 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.features.github.comments.CommentsMsg;
@@ -103,7 +103,7 @@ class PullRequestDialogTest {
     // DETAILS at commit head, into base, not known to be behind it.
     private static PullRequestDetails at(String head, String base) {
         return DETAILS.withBranches(
-                new Branches(DETAILS.branches().head(), new GhBranch(base), GhCommit.parse(head), Option.none()));
+                new Branches(DETAILS.branches().head(), new GhBranch(base), Option.of(new Sha(head)), Option.none()));
     }
 
     /**
@@ -116,10 +116,7 @@ class PullRequestDialogTest {
                 READY.author(),
                 READY.status(),
                 new Branches(
-                        READY.branches().head(),
-                        READY.branches().base(),
-                        Option.of(new GhCommit("abc123")),
-                        Option.none()),
+                        READY.branches().head(), READY.branches().base(), Option.of(new Sha("abc123")), Option.none()),
                 READY.activity(),
                 READY.size(),
                 READY.conversation(),
@@ -367,10 +364,7 @@ class PullRequestDialogTest {
                 READY.author(),
                 READY.status(),
                 new Branches(
-                        READY.branches().head(),
-                        READY.branches().base(),
-                        Option.of(new GhCommit("abc123")),
-                        Option.none()),
+                        READY.branches().head(), READY.branches().base(), Option.of(new Sha("abc123")), Option.none()),
                 READY.activity(),
                 READY.size(),
                 READY.conversation(),
@@ -811,9 +805,9 @@ class PullRequestDialogTest {
         PullRequestDetails known = READY.withBranches(new Branches(
                 new GhBranch("support_rename"),
                 new GhBranch("main"),
-                GhCommit.parse("a".repeat(40)),
+                Sha.parse("a".repeat(40)),
                 Option.none(),
-                GhCommit.parse("b".repeat(40))));
+                Sha.parse("b".repeat(40))));
         PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
         for (PullRequestPopup popup :
                 List.of(loading, loading.with(Either.right(READY), 0), loading.with(Either.right(known), 0))) {

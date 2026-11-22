@@ -10,11 +10,11 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.succeed;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -45,7 +45,7 @@ final class MergeQuery {
      * The command that has GitHub merge pull request {@code number} in the background, only while its branch is at
      * {@code head}, if given. gh fills in the repository of the working tree for {owner} and {repo}.
      */
-    static GhCommand mergeCommand(PrNumber number, Option<GhCommit> head, MergeMethod method) {
+    static GhCommand mergeCommand(PrNumber number, Option<Sha> head, MergeMethod method) {
         return gh(List.of(
                         "api",
                         "--method",
@@ -53,7 +53,7 @@ final class MergeQuery {
                         "repos/{owner}/{repo}/pulls/" + number.value() + "/merge-async",
                         "-f",
                         "merge_method=" + mergeMethod(method))
-                .appendAll(head.toList().flatMap(commit -> List.of("-f", "sha=" + commit.oid())))
+                .appendAll(head.toList().flatMap(commit -> List.of("-f", "sha=" + commit.value())))
                 .toJavaArray(String[]::new));
     }
 

@@ -10,7 +10,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
@@ -25,6 +24,7 @@ import net.vanfleteren.jazygit.core.gh.pullrequests.StubPullRequests;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.DisableAutoMerge;
@@ -46,7 +46,7 @@ import org.junit.jupiter.api.Test;
  */
 class AutoMergeUpdateTest {
 
-    private static final GhCommit HEAD = new GhCommit("abc123");
+    private static final Sha HEAD = new Sha("abc123");
 
     private static final Merging BLOCKED = new Merging(MergeState.BLOCKED, true, Option.none(), true, false);
 
@@ -194,7 +194,7 @@ class AutoMergeUpdateTest {
                 .with(GitHubServices.GH, StubGitHub.of().withPullRequests(new StubPullRequests() {
                     @Override
                     public Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(
-                            String pullRequest, MergeMethod method, Option<GhCommit> head) {
+                            String pullRequest, MergeMethod method, Option<Sha> head) {
                         return Either.left(new GhFailure(
                                 new GhError.CommandFailed(Option.of("Pull request is in clean status"), 1),
                                 List.empty()));

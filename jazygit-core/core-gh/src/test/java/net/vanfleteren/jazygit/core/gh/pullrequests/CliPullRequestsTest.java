@@ -131,8 +131,8 @@ class CliPullRequestsTest {
     void anOpenPullRequestIsComparedAtItsHeadWithItsBaseInTheSameQuery(@TempDir Path dir) throws Exception {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
 
-        PullRequestDetails details =
-                detailsFrom(dir, "OPEN", "abc123", BEHIND_BY_2).get();
+        PullRequestDetails details = detailsFrom(dir, "OPEN", "abc1230000000000000000000000000000000000", BEHIND_BY_2)
+                .get();
 
         assertEquals(Option.of(2), details.branches().behindBase());
         String asked = Files.readString(dir.resolve("asked"));
@@ -145,7 +145,7 @@ class CliPullRequestsTest {
 
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "MERGED", "abc123", BEHIND_BY_2)
+                detailsFrom(dir, "MERGED", "abc1230000000000000000000000000000000000", BEHIND_BY_2)
                         .get()
                         .branches()
                         .behindBase());
@@ -157,7 +157,7 @@ class CliPullRequestsTest {
     @Test
     void theDetailsAreReadWithoutHowFarBehindWhenGitHubCannotCompare(@TempDir Path dir) throws Exception {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
-        String answer = DetailsQueryTest.details(95, "OPEN", "abc123")
+        String answer = DetailsQueryTest.details(95, "OPEN", "abc1230000000000000000000000000000000000")
                 .replace("\"baseRef\": " + BEHIND_BY_2, "\"baseRef\": { \"name\": \"main\" }");
         // An error for the comparison fails the whole query, as gh exits with 1.
         Path gh = Files.writeString(
@@ -184,10 +184,17 @@ class CliPullRequestsTest {
 
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "OPEN", "abc123", "null").get().branches().behindBase());
+                detailsFrom(dir, "OPEN", "abc1230000000000000000000000000000000000", "null")
+                        .get()
+                        .branches()
+                        .behindBase());
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "OPEN", "abc123", "{ \"compare\": { \"behindBy\": \"many\" } }")
+                detailsFrom(
+                                dir,
+                                "OPEN",
+                                "abc1230000000000000000000000000000000000",
+                                "{ \"compare\": { \"behindBy\": \"many\" } }")
                         .get()
                         .branches()
                         .behindBase());

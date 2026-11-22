@@ -7,7 +7,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.Reaction;
@@ -19,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,7 +34,7 @@ class ReviewThreadsQueryTest {
 
     private static String page(String head, String threads) {
         return """
-                { "data": { "repository": { "pullRequest": { "state": "OPEN", "headRefOid": %s, "baseRefOid": "def456",
+                { "data": { "repository": { "pullRequest": { "state": "OPEN", "headRefOid": %s, "baseRefOid": "def4560000000000000000000000000000000000",
                   "isDraft": false, "id": "", "viewerDidAuthor": false, "viewerLatestReview": null,
                   "reviewThreads": { "pageInfo": { "hasNextPage": false, "endCursor": null },
                   "nodes": [ %s ] } } } } }""".formatted(head, threads);
@@ -103,18 +103,18 @@ class ReviewThreadsQueryTest {
         assertEquals(
                 Either.right(new ReviewRemarks(
                         PullRequestDetails.State.OPEN,
-                        Option.of(new GhCommit("abc123")),
-                        Option.of(new GhCommit("def456")),
+                        Option.of(new Sha("abc1230000000000000000000000000000000000")),
+                        Option.of(new Sha("def4560000000000000000000000000000000000")),
                         List.of(onLine12(List.of(bob), 0), onLine12(List.of(carol), 0)))),
                 read(
                         page(
-                                "\"abc123\"",
+                                "\"abc1230000000000000000000000000000000000\"",
                                 thread(
                                         onLine(12),
                                         1,
                                         comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Rename this?"))),
                         page(
-                                "\"abc123\"",
+                                "\"abc1230000000000000000000000000000000000\"",
                                 thread(
                                         onLine(12),
                                         1,
@@ -123,13 +123,14 @@ class ReviewThreadsQueryTest {
 
     @Test
     void whetherItIsADraftAndWhatTheViewerNeedsToReviewItAsTheFirstPageSays() {
-        String first = page("\"abc123\"", "")
+        String first = page("\"abc1230000000000000000000000000000000000\"", "")
                 .replace(
                         "\"isDraft\": false, \"id\": \"\", \"viewerDidAuthor\": false, \"viewerLatestReview\": null",
                         "\"isDraft\": true, \"id\": \"PR_1\", \"viewerDidAuthor\": true, "
                                 + "\"viewerLatestReview\": { \"state\": \"PENDING\" }");
 
-        Either<GhError.UnexpectedOutput, ReviewRemarks> read = read(first, page("\"abc123\"", ""));
+        Either<GhError.UnexpectedOutput, ReviewRemarks> read =
+                read(first, page("\"abc1230000000000000000000000000000000000\"", ""));
 
         assertEquals(Either.right(true), read.map(ReviewRemarks::draft));
         assertEquals(
@@ -153,7 +154,7 @@ class ReviewThreadsQueryTest {
                                 CommentRights.ALL)),
                         0)),
                 read(page(
-                                "\"abc123\"",
+                                "\"abc1230000000000000000000000000000000000\"",
                                 thread(onLine(12), 2, theirs + ", " + mine) + ", " + thread(onLine(12), 1, mine)))
                         .get()
                         .threads());
@@ -170,7 +171,9 @@ class ReviewThreadsQueryTest {
                         new Comment.Id("IC_1"),
                         new Comment.RestId("101"),
                         CommentRights.ALL)),
-                read(page("\"abc123\"", thread(onLine(12), 1, comment("null", "SUBMITTED", "\"SPAM\"", "spam"))))
+                read(page(
+                                "\"abc1230000000000000000000000000000000000\"",
+                                thread(onLine(12), 1, comment("null", "SUBMITTED", "\"SPAM\"", "spam"))))
                         .get()
                         .threads()
                         .head()
@@ -182,7 +185,7 @@ class ReviewThreadsQueryTest {
         assertEquals(
                 49,
                 read(page(
-                                "\"abc123\"",
+                                "\"abc1230000000000000000000000000000000000\"",
                                 thread(
                                         onLine(12),
                                         50,
@@ -232,7 +235,7 @@ class ReviewThreadsQueryTest {
     @Test
     void theIdsAndTheRightsOfTheViewerAreRead() {
         ReviewRemarks read = read(page(
-                        "\"abc123\"",
+                        "\"abc1230000000000000000000000000000000000\"",
                         thread(onLine(12), 1, comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm"))))
                 .get();
 
@@ -250,7 +253,7 @@ class ReviewThreadsQueryTest {
     @Test
     void whatTheViewerMayDoWithEachCommentIsRead() {
         ReviewRemarks read = read(page(
-                        "\"abc123\"",
+                        "\"abc1230000000000000000000000000000000000\"",
                         thread(
                                 onLine(12),
                                 2,
@@ -274,8 +277,8 @@ class ReviewThreadsQueryTest {
                           { "content": "THUMBS_UP", "viewerHasReacted": true, "reactors": { "totalCount": 1 } }
                         ]""");
 
-        ReviewRemarks read =
-                read(page("\"abc123\"", thread(onLine(12), 1, reacted))).get();
+        ReviewRemarks read = read(page("\"abc1230000000000000000000000000000000000\"", thread(onLine(12), 1, reacted)))
+                .get();
 
         assertEquals(
                 new Reactions(List.of(
@@ -291,8 +294,8 @@ class ReviewThreadsQueryTest {
         String locked = comment("{ \"login\": \"me\" }", "SUBMITTED", "null", "Hm", "true", "true")
                 .replace("\"viewerCanReact\": true", "\"viewerCanReact\": false");
 
-        ReviewRemarks read =
-                read(page("\"abc123\"", thread(onLine(12), 1, locked))).get();
+        ReviewRemarks read = read(page("\"abc1230000000000000000000000000000000000\"", thread(onLine(12), 1, locked)))
+                .get();
 
         assertEquals(
                 new CommentRights(true, true, false),
@@ -308,8 +311,8 @@ class ReviewThreadsQueryTest {
                           { "content": "ROCKET", "viewerHasReacted": false, "reactors": { "totalCount": 1 } }
                         ]""");
 
-        ReviewRemarks read =
-                read(page("\"abc123\"", thread(onLine(12), 1, reacted))).get();
+        ReviewRemarks read = read(page("\"abc1230000000000000000000000000000000000\"", thread(onLine(12), 1, reacted)))
+                .get();
 
         assertEquals(
                 new Reactions(List.of(new Reactions.Group(Reaction.ROCKET, 1, false))),

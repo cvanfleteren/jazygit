@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
@@ -28,6 +27,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestComment.Kind;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -386,8 +386,8 @@ class CommentsDialogTest {
                         PullRequest.Commits.of(
                                 "owner/repo",
                                 "https://github.com/owner/repo/pull/42",
-                                Option.of(new GhCommit("b".repeat(40))),
-                                Option.of(new GhCommit("h".repeat(40))))),
+                                Option.of(new Sha("b".repeat(40))),
+                                Option.of(new Sha("h".repeat(40))))),
                 Instant.EPOCH,
                 0);
 

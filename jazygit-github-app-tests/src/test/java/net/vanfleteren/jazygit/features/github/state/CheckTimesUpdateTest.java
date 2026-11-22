@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.checks.StubChecks;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
@@ -33,6 +32,7 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.core.git.StubGit;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.state.CheckTimesCmd.RecordCheckTimes;
@@ -339,8 +339,7 @@ class CheckTimesUpdateTest {
                 "t",
                 "",
                 new Status(PullRequestDetails.State.OPEN, false, PullRequestDetails.Mergeable.UNKNOWN),
-                new Branches(
-                        new GhBranch("feature"), new GhBranch("main"), Option.of(new GhCommit("abc")), Option.none()),
+                new Branches(new GhBranch("feature"), new GhBranch("main"), Option.of(new Sha("abc")), Option.none()),
                 new Activity(NOW, NOW),
                 new Size(0, 0, 0, 1),
                 new Conversation(

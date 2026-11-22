@@ -11,7 +11,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
@@ -23,6 +22,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -147,14 +147,15 @@ class RepositoryPullRequestsQueryTest {
 
     @Test
     void theBranchesHaveTheCommitsTheirPullRequestIsDiffedBetween() {
-        Option<PullRequest.Commits> commits = commits(", \"headRefOid\": \"aaa\", \"baseRefOid\": \"bbb\"");
+        Option<PullRequest.Commits> commits =
+                commits(", \"headRefOid\": \"" + "a".repeat(40) + "\", \"baseRefOid\": \"" + "b".repeat(40) + "\"");
 
         assertEquals(
                 Option.of(new PullRequest.Commits(
                         "owner/repo",
                         "https://github.com/owner/repo/pull/95",
-                        new GhCommit("bbb"),
-                        new GhCommit("aaa"))),
+                        new Sha("b".repeat(40)),
+                        new Sha("a".repeat(40)))),
                 commits);
         assertEquals("github.com", commits.get().host());
     }
@@ -163,6 +164,11 @@ class RepositoryPullRequestsQueryTest {
     void aPullRequestWhoseBranchIsGoneOrWhoseCommitsAreNotSaidHasNone() {
         assertEquals(Option.none(), commits(", \"headRefOid\": null, \"baseRefOid\": \"bbb\""));
         assertEquals(Option.none(), commits(""));
+    }
+
+    @Test
+    void aPullRequestWhoseCommitIsNoFullObjectIdHasNone() {
+        assertEquals(Option.none(), commits(", \"headRefOid\": \"aaa\", \"baseRefOid\": \"" + "b".repeat(40) + "\""));
     }
 
     @Test

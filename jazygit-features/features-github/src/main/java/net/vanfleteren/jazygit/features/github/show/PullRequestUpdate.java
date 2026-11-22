@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesUpdate;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
@@ -471,7 +470,7 @@ public final class PullRequestUpdate {
     private static Next files(Model model, BranchName branch, PullRequest pullRequest, boolean fromFork) {
         return pullRequest
                 .commits()
-                .flatMap(listed -> commits(pullRequest.number(), listed))
+                .map(listed -> commits(pullRequest.number(), listed))
                 .map(commits -> files(model, commits))
                 .getOrElse(() -> show(model, branch, pullRequest, fromFork, true));
     }
@@ -487,14 +486,11 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * The commits pull request {@code number}, listed with {@code commits}, is diffed between; none when GitHub named
-     * one that is no sha.
+     * The commits pull request {@code number}, listed with {@code commits}, is diffed between.
      */
-    private static Option<PullRequestCommits> commits(PrNumber number, PullRequest.Commits commits) {
-        return Sha.parse(commits.base().oid())
-                .flatMap(base -> Sha.parse(commits.head().oid())
-                        .map(head -> new PullRequestCommits(
-                                number.value(), commits.repository(), commits.host(), base, head)));
+    private static PullRequestCommits commits(PrNumber number, PullRequest.Commits commits) {
+        return new PullRequestCommits(
+                number.value(), commits.repository(), commits.host(), commits.base(), commits.head());
     }
 
     /**

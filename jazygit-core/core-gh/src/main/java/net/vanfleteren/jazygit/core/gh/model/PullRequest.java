@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * An open pull request on GitHub.
@@ -67,12 +68,12 @@ public record PullRequest(
      * @param base       the commit its base branch is at
      * @param head       the commit its branch is at
      */
-    public record Commits(String repository, String url, GhCommit base, GhCommit head) {
+    public record Commits(String repository, String url, Sha base, Sha head) {
 
         /**
          * Its commits, when GitHub said both.
          */
-        public static Option<Commits> of(String repository, String url, Option<GhCommit> base, Option<GhCommit> head) {
+        public static Option<Commits> of(String repository, String url, Option<Sha> base, Option<Sha> head) {
             return base.flatMap(at -> head.map(tip -> new Commits(repository, url, at, tip)));
         }
 
