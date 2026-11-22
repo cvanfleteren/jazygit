@@ -10,16 +10,19 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.kernel.state.Carried;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
+import net.vanfleteren.jazygit.kernel.state.FeatureSwitches;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
 import net.vanfleteren.jazygit.kernel.state.forge.ReadForgeChoice;
 import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
 import org.junit.jupiter.api.Test;
@@ -56,6 +59,21 @@ class FeatureGatedTest {
         assertFalse(opened.model().on("f"));
         // What the user chose as the forge before is read too, from which the kernel decides (ADR 177).
         assertEquals(List.of(new ReadForgeChoice(), new Run("detect")), opened.cmds());
+    }
+
+    @Test
+    void anotherWorktreeOfTheRepositoryKeepsItAsTheForgeDecidedThereAndDoesNotDetectAgain() {
+        Model decided = TestModels.loaded()
+                .withPart(ForgeHome.PART, ForgeHome.NONE.deciding(Option.none()))
+                .withPart(FeatureSwitches.PART, FeatureSwitches.ALL_ON);
+
+        Next opened = FEATURE.gated()
+                .reactions()
+                .head()
+                .to(Carried.from(decided).into(TestModels.loaded()), new KernelEvent.RepositoryOpened());
+
+        assertTrue(opened.model().on("f"));
+        assertEquals(List.empty(), opened.cmds());
     }
 
     @Test
