@@ -50,7 +50,12 @@ public final class PrOverviewUpdate {
             // The pull requests of the repository are those of the branches too (ADR 58).
             case PrOverviewMsg.RepositoryLoaded(var read, var kept, var remotes) ->
                 overview(model, msg)
-                        .then(shown -> PullRequestReads.loaded(shown, read.ofBranches(remotes), read.repository()));
+                        .then(shown -> PullRequestReads.loaded(
+                                        shown, read.ofBranches(remotes.values().toSet()), read.repository())
+                                .map(heads -> heads.mapPart(
+                                        GitHubState.PART,
+                                        gitHub -> gitHub.withHeads(read.heads(remotes))
+                                                .withForks(read.forks()))));
             case PrOverviewMsg.RepositoryLoadFailed(var failure) ->
                 overview(model, msg).then(failed -> PullRequestReads.failed(failed, failure));
             default -> overview(model, msg);

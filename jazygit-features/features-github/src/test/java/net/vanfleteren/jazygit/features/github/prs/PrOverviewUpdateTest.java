@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
@@ -168,7 +169,11 @@ class PrOverviewUpdateTest {
                                 new RepositoryPullRequests(
                                         "Owner/Repo", new PullRequestList(List.of(OLD, mine, theirs), 3)),
                                 Option.none(),
-                                HashSet.of("anna/repo", "owner/repo")))
+                                io.vavr.collection.HashMap.of(
+                                        new RemoteName("origin"),
+                                        "anna/repo",
+                                        new RemoteName("upstream"),
+                                        "owner/repo")))
                 .model();
 
         assertEquals(
@@ -179,6 +184,14 @@ class PrOverviewUpdateTest {
                         .values()
                         .map(pr -> pr.number())
                         .toSet());
+        // Each known with the remote its branch is in.
+        assertEquals(
+                io.vavr.collection.HashMap.of(
+                        OLD.number(), new RemoteName("upstream"), mine.number(), new RemoteName("origin")),
+                read.part(GitHubState.PART).heads());
+        assertEquals(
+                HashSet.of(mine.number(), theirs.number()),
+                read.part(GitHubState.PART).forks());
     }
 
     private static PullRequestSummary fork(int number, String head) {

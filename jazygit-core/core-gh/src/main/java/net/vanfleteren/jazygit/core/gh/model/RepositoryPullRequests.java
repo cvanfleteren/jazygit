@@ -1,10 +1,15 @@
 package net.vanfleteren.jazygit.core.gh.model;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.Locale;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 
 /**
  * The open pull requests of a repository, forks included.
@@ -44,5 +49,32 @@ public record RepositoryPullRequests(
                 .filter(summary -> !summary.fromFork()
                         || summary.headRepository().exists(head -> own.contains(head.toLowerCase(Locale.ROOT))))
                 .map(PullRequestSummary::pullRequest);
+    }
+
+    /**
+     * The remote the branch of each open pull request is in, by its number, among {@code remotes}, the repository of
+     * each remote, as {@code owner/name} (ADR 177): one from the repository itself is in the remote of the
+     * repository, one from a fork in the remote of the fork. One whose repository is no remote's is left out, as one
+     * whose fork was deleted; the first of several remotes of one repository, by name.
+     */
+    public Map<PrNumber, RemoteName> heads(Map<RemoteName, String> remotes) {
+        List<Tuple2<RemoteName, String>> named = remotes.toList()
+                .sortBy(remote -> remote._1().value())
+                .map(remote -> Tuple.of(remote._1(), remote._2().toLowerCase(Locale.ROOT)));
+        return HashMap.ofEntries(open.pullRequests()
+                .flatMap(summary -> summary.headRepository()
+                        .map(head -> head.toLowerCase(Locale.ROOT))
+                        .flatMap(head -> named.find(remote -> remote._2().equals(head)))
+                        .map(remote -> Tuple.of(summary.number(), remote._1()))));
+    }
+
+    /**
+     * The open pull requests whose branch is in a fork, by their number.
+     */
+    public Set<PrNumber> forks() {
+        return open.pullRequests()
+                .filter(PullRequestSummary::fromFork)
+                .map(PullRequestSummary::number)
+                .toSet();
     }
 }

@@ -439,7 +439,7 @@ public final class PullRequestUpdate {
         GitHubState gitHub = model.part(GitHubState.PART);
         return model.idleBranch(branch)
                 .map(known -> gitHub.pullRequest(known)
-                        .map(pr -> show(model, branch, pr, false, false))
+                        .map(pr -> show(model, branch, pr, gitHub.fromFork(pr), false))
                         // Without the pull requests it is unknown whether there is one to open.
                         .getOrElse(() -> gitHub.pullRequestsFailure().isDefined()
                                         || gitHub.pullRequests().isEmpty()
