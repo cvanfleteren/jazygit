@@ -319,6 +319,7 @@ class PickDialogTest {
             SettledPilot.focus(runner, "pick");
             String screen = RenderedText.ofLarge(runner, view);
             assertTrue(screen.contains("(←/→) change"), screen);
+            assertTrue(screen.contains("(letter) change at once"), screen);
             SettledPilot.of(runner).press(KeyCode.RIGHT);
             SettledPilot.of(runner).press(KeyCode.LEFT);
             SettledPilot.of(runner).press(KeyCode.ENTER);
