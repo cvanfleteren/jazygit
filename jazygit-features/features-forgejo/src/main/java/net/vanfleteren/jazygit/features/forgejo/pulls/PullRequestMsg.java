@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.features.forgejo.pulls;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
@@ -54,4 +56,19 @@ public sealed interface PullRequestMsg extends Msg {
      * The user chose to read the pull request shown again.
      */
     record RefreshChosen() implements PullRequestMsg {}
+
+    /**
+     * The user chose to merge the pull request shown as {@code style} (ADR 180).
+     */
+    record MergeChosen(ForgejoMergeStyle style) implements PullRequestMsg {}
+
+    /**
+     * Forgejo merged the pull request of {@code cmd}, as {@code merged} says.
+     */
+    record Merged(MergePullRequestCmd cmd, ForgejoMerged merged) implements PullRequestMsg {}
+
+    /**
+     * Merging the pull request of {@code cmd} failed, as {@code failure} says.
+     */
+    record MergeFailed(MergePullRequestCmd cmd, Failure failure) implements PullRequestMsg {}
 }

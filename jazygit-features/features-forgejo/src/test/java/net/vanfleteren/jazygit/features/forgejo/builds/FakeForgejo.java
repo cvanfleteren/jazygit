@@ -10,6 +10,9 @@ import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.FjKeys;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMerge;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeSettings;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoNewPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
@@ -72,6 +75,16 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
     @Override
     public Either<ForgejoError, ForgejoPullRequest> createPullRequest(
             ForgejoRepository repository, ForgejoNewPullRequest pullRequest) {
+        return Either.left(new ForgejoError.Refused(404, "not found"));
+    }
+
+    @Override
+    public Either<ForgejoError, ForgejoMergeSettings> mergeSettings(ForgejoRepository repository) {
+        return Either.left(new ForgejoError.Refused(404, "not found"));
+    }
+
+    @Override
+    public Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge) {
         return Either.left(new ForgejoError.Refused(404, "not found"));
     }
 

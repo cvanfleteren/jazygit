@@ -56,7 +56,8 @@ class PullRequestUpdateTest {
     void thePullRequestThatMergesTheBranchFollowedIsShownWhileItIsRead() {
         Next next = requested(listed(), "feature");
 
-        assertEquals(ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1), popup(next.model()));
+        assertEquals(
+                ForgejoPullRequestPopup.loading(FEATURE.branch(), ORIGIN, FEATURE, LISTED, 1), popup(next.model()));
         assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 1)), next.cmds());
     }
 

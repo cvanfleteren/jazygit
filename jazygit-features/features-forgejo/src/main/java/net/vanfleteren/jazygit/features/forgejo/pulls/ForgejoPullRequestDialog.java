@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview.Verdict;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -38,8 +39,8 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.WithDetails;
 /**
  * Popup showing the pull request on Forgejo that merges a branch (ADR 176), as GitHub's shows its own (ADR 175):
  * its title, state, branches, review and checks, as labelled rows, and under them what can be done with it: open it
- * in the browser, or read it again. While it is read again, the details stay shown, with a spinner in the title; when
- * that fails, the title says they are stale.
+ * in the browser, merge it in one of Forgejo's five styles (ADR 180), or read it again. While it is read again, the
+ * details stay shown, with a spinner in the title; when that fails, the title says they are stale.
  */
 public final class ForgejoPullRequestDialog implements PopupView {
 
@@ -81,6 +82,11 @@ public final class ForgejoPullRequestDialog implements PopupView {
                 ID,
                 List.of(
                         new Choice<>('o', "forgejo.dialog.pullRequest.open", PullRequestMsg.OpenChosen::new),
+                        merge('m', ForgejoMergeStyle.MERGE),
+                        merge('s', ForgejoMergeStyle.SQUASH),
+                        merge('r', ForgejoMergeStyle.REBASE),
+                        merge('M', ForgejoMergeStyle.REBASE_MERGE),
+                        merge('f', ForgejoMergeStyle.FAST_FORWARD_ONLY),
                         new Choice<ForgejoPullRequestPopup>(
                                         'R',
                                         "forgejo.dialog.pullRequest.refresh",
@@ -90,6 +96,47 @@ public final class ForgejoPullRequestDialog implements PopupView {
                 () -> new PopupMsg.Dismissed(ForgejoPullRequestPopup.class),
                 dispatch,
                 DialogFrame.contentWidth(WIDTH));
+    }
+
+    /**
+     * Merging it as {@code style} says (ADR 180), on the keys GitHub's has for the styles both have; only when its key
+     * merges it now. When it does nothing, its details say why.
+     */
+    private static Choice<ForgejoPullRequestPopup> merge(char key, ForgejoMergeStyle style) {
+        String labelKey = "forgejo.dialog.pullRequest.merge." + named(style);
+        return new Choice<ForgejoPullRequestPopup>(
+                        key,
+                        labelKey,
+                        () -> new PullRequestMsg.MergeChosen(style),
+                        (model, popup) -> MergeUpdate.choosable(popup, style))
+                .withDetails(popup -> popup.shown()
+                        .map(shown -> switch (MergeKey.of(shown, style)) {
+                            case MergeKey.Now() -> Messages.get(labelKey + ".details");
+                            case MergeKey.Disabled(var why) -> why(why);
+                        })
+                        .getOrElse(() -> Messages.get(labelKey + ".details")));
+    }
+
+    private static String named(ForgejoMergeStyle style) {
+        return switch (style) {
+            case MERGE -> "merge";
+            case SQUASH -> "squash";
+            case REBASE -> "rebase";
+            case REBASE_MERGE -> "rebaseMerge";
+            case FAST_FORWARD_ONLY -> "fastForward";
+        };
+    }
+
+    private static String why(MergeKey.Why why) {
+        return switch (why) {
+            case MergeKey.Why.NotOpen() -> Messages.get("forgejo.dialog.pullRequest.merge.notOpen");
+            case MergeKey.Why.Draft() -> Messages.get("forgejo.dialog.pullRequest.merge.draft");
+            case MergeKey.Why.Conflicts() -> Messages.get("forgejo.dialog.pullRequest.merge.conflicts");
+            case MergeKey.Why.NotAllowed(var style) ->
+                Messages.get(
+                        "forgejo.dialog.pullRequest.merge.notAllowed",
+                        Messages.get("forgejo.dialog.pullRequest.merge." + named(style)));
+        };
     }
 
     @Override

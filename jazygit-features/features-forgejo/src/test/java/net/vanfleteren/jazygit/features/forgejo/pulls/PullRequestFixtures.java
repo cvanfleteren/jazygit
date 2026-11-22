@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.forgejo.pulls;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -11,6 +12,10 @@ import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.FjKeys;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMerge;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeSettings;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoNewPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
@@ -56,6 +61,12 @@ final class PullRequestFixtures {
             "main",
             false,
             "https://" + HOST + "/cvf/nix/pulls/12");
+
+    /**
+     * A repository that allows squashing and rebasing, and deletes the head branch once merged (ADR 180).
+     */
+    static final ForgejoMergeSettings SETTINGS =
+            new ForgejoMergeSettings(LinkedHashSet.of(ForgejoMergeStyle.SQUASH, ForgejoMergeStyle.REBASE), true);
 
     private PullRequestFixtures() {}
 
@@ -119,7 +130,9 @@ final class PullRequestFixtures {
             Either<ForgejoError, ForgejoPullRequestDetails> details,
             Either<ForgejoError, List<ForgejoReview>> reviews,
             Either<ForgejoError, CommitStatus> status,
-            Function<ForgejoNewPullRequest, Either<ForgejoError, ForgejoPullRequest>> create)
+            Function<ForgejoNewPullRequest, Either<ForgejoError, ForgejoPullRequest>> create,
+            Either<ForgejoError, ForgejoMergeSettings> settings,
+            Function<ForgejoMerge, Either<ForgejoError, ForgejoMerged>> merge)
             implements Forgejo {
 
         static FakeForgejo of(ForgejoPullRequestDetails details) {
@@ -130,18 +143,57 @@ final class PullRequestFixtures {
                     Either.right(new CommitStatus(
                             CommitStatus.State.FAILED,
                             List.of(new CommitStatus.Status("check / lint (push)", CommitStatus.State.FAILED, "")))),
-                    created -> Either.left(new ForgejoError.Refused(500, "not asked for")));
+                    created -> Either.left(new ForgejoError.Refused(500, "not asked for")),
+                    Either.right(SETTINGS),
+                    merged -> Either.left(new ForgejoError.Refused(500, "not asked for")));
+        }
+
+        /**
+         * This Forgejo with no pull requests to read, nor anything to create or merge, failing as {@code error}.
+         */
+        static FakeForgejo failing(
+                Either<ForgejoError, ForgejoPullRequestDetails> details,
+                Either<ForgejoError, List<ForgejoReview>> reviews,
+                ForgejoError error) {
+            return new FakeForgejo(
+                    Either.right(List.of(LISTED)),
+                    details,
+                    reviews,
+                    Either.left(error),
+                    created -> Either.left(error),
+                    Either.left(error),
+                    merged -> Either.left(error));
         }
 
         FakeForgejo withOpen(Either<ForgejoError, List<ForgejoPullRequest>> listed) {
-            return new FakeForgejo(listed, details, reviews, status, create);
+            return new FakeForgejo(listed, details, reviews, status, create, settings, merge);
         }
 
         /**
          * This Forgejo answering the creation of a pull request as {@code created} does.
          */
         FakeForgejo creating(Function<ForgejoNewPullRequest, Either<ForgejoError, ForgejoPullRequest>> created) {
-            return new FakeForgejo(open, details, reviews, status, created);
+            return new FakeForgejo(open, details, reviews, status, created, settings, merge);
+        }
+
+        /**
+         * This Forgejo answering a merge of pull request 12 as {@code merged} does (ADR 180).
+         */
+        FakeForgejo merging(Function<ForgejoMerge, Either<ForgejoError, ForgejoMerged>> merged) {
+            return new FakeForgejo(open, details, reviews, status, create, settings, merged);
+        }
+
+        @Override
+        public Either<ForgejoError, ForgejoMergeSettings> mergeSettings(ForgejoRepository repository) {
+            return settings;
+        }
+
+        @Override
+        public Either<ForgejoError, ForgejoMerged> merge(
+                ForgejoRepository repository, long number, ForgejoMerge asked) {
+            return repository.equals(NIX) && number == 12
+                    ? merge.apply(asked)
+                    : Either.left(new ForgejoError.Refused(404, "{\"message\":\"not this pull request\"}"));
         }
 
         @Override

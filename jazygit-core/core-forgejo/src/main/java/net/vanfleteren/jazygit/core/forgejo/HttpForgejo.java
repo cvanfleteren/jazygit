@@ -36,7 +36,13 @@ public final class HttpForgejo implements Forgejo {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final int OK = 200;
     private static final int CREATED = 201;
+    private static final int FORBIDDEN = 403;
     private static final int SERVER_ERROR = 500;
+    // What Forgejo answers, with a 403, when it merged a pull request but could not delete its head branch (ADR 180).
+    private static final List<String> BRANCH_KEPT = List.of(
+            "the head branch is the default branch",
+            "the head branch is protected",
+            "insufficient permission to delete head branch");
     // How many pull requests a page of them asks for, and the most pages read: Forgejo gives at most 50 by default.
     private static final int PAGE = 50;
     private static final int PAGES = 10;
@@ -196,6 +202,38 @@ public final class HttpForgejo implements Forgejo {
                                 .POST(HttpRequest.BodyPublishers.ofString(pullRequest.json(), StandardCharsets.UTF_8)),
                         CREATED)
                 .flatMap(body -> decoded(PullRequestJson.summary(), body));
+    }
+
+    @Override
+    public Either<ForgejoError, ForgejoMergeSettings> mergeSettings(ForgejoRepository repository) {
+        return get(repository, repo(repository)).flatMap(body -> decoded(PullRequestJson.mergeSettings(), body));
+    }
+
+    /**
+     * {@inheritDoc} With fj's token, which Forgejo needs for it. A 403 that says the head branch could not be deleted
+     * comes after the merge: it is merged, with its branch kept.
+     */
+    @Override
+    public Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge) {
+        return send(
+                        repository,
+                        repo(repository) + "/pulls/" + number + "/merge",
+                        request -> request.header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString(merge.json(), StandardCharsets.UTF_8)),
+                        OK)
+                .fold(
+                        error -> branchKept(error)
+                                .<Either<ForgejoError, ForgejoMerged>>map(Either::right)
+                                .getOrElse(() -> Either.left(error)),
+                        body -> Either.right(new ForgejoMerged.Merged()));
+    }
+
+    private static Option<ForgejoMerged> branchKept(ForgejoError error) {
+        return error instanceof ForgejoError.Refused refused && refused.status() == FORBIDDEN
+                ? refused.stated()
+                        .filter(message -> BRANCH_KEPT.exists(message::contains))
+                        .map(ForgejoMerged.BranchKept::new)
+                : Option.none();
     }
 
     /**

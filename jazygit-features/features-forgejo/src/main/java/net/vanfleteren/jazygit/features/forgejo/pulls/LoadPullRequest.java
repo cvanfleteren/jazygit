@@ -15,9 +15,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Reads pull request {@code number} of {@code home}, the remote on Forgejo the pull requests are opened against, to
- * show it, as read {@code read} (ADR 176, 177): the pull request, its reviews and the builds of the commit it merges,
- * in the background. Reviews or builds that cannot be read leave the pull request shown without them, and the log
- * says why.
+ * show it, as read {@code read} (ADR 176, 177): the pull request, its reviews, the builds of the commit it merges and
+ * how its repository lets it be merged (ADR 180), in the background. Reviews, builds or settings that cannot be read
+ * leave the pull request shown without them, and the log says why.
  */
 public record LoadPullRequest(RemoteName home, long number, long read) implements Cmd {
 
@@ -43,7 +43,10 @@ public record LoadPullRequest(RemoteName home, long number, long read) implement
                                         .flatMap(ForgejoReview::standing),
                                 forgejo.status(repository, pr.branches().headSha())
                                         .peekLeft(error -> logged("builds", error.why()))
-                                        .getOrElse(CommitStatus.NONE))));
+                                        .getOrElse(CommitStatus.NONE),
+                                forgejo.mergeSettings(repository)
+                                        .peekLeft(error -> logged("merge settings", error.why()))
+                                        .toOption())));
         return new PullRequestMsg.Read(read, shown);
     }
 

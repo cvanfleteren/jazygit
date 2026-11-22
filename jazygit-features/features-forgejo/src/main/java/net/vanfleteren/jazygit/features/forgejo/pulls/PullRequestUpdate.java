@@ -33,6 +33,9 @@ public final class PullRequestUpdate {
             case PullRequestMsg.Read(long read, var result) -> Next.of(read(model, read, result));
             case PullRequestMsg.OpenChosen() -> openChosen(model);
             case PullRequestMsg.RefreshChosen() -> refreshChosen(model);
+            case PullRequestMsg.MergeChosen(var style) -> MergeUpdate.chosen(model, style);
+            case PullRequestMsg.Merged(var cmd, var merged) -> MergeUpdate.merged(model, cmd, merged);
+            case PullRequestMsg.MergeFailed(var cmd, var failure) -> MergeUpdate.failed(model, cmd, failure);
             // A warning, in the command log: the user chose the remote (ADR 179). It comes late, so it does not take
             // the place of what an operation left there, an error or a notice; then it is not given.
             case PullRequestMsg.PlainHttpChecked(var base) ->
@@ -74,7 +77,7 @@ public final class PullRequestUpdate {
         return model.idleBranch(branch)
                 .flatMap(known -> ForgeHome.of(model)
                         .map(home -> prs.of(known, home)
-                                .map(pr -> show(model, home, known.pushTarget(), pr))
+                                .map(pr -> show(model, known.name(), home, known.pushTarget(), pr))
                                 .getOrElse(() -> unknown(model, known, prs, home))))
                 .getOrElse(() -> Next.of(model));
     }
@@ -94,10 +97,10 @@ public final class PullRequestUpdate {
                 : Next.of(failed);
     }
 
-    private static Next show(Model model, RemoteName home, RemoteBranch head, ForgejoPullRequest pr) {
+    private static Next show(Model model, BranchName local, RemoteName home, RemoteBranch head, ForgejoPullRequest pr) {
         Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
         long read = given.part(ForgejoPullRequests.PART).reads();
-        return PopupUpdate.ask(given, ForgejoPullRequestPopup.loading(home, head, pr, read))
+        return PopupUpdate.ask(given, ForgejoPullRequestPopup.loading(local, home, head, pr, read))
                 .and(new LoadPullRequest(home, pr.number(), read));
     }
 

@@ -46,7 +46,15 @@ public sealed interface ForgejoError {
          * is not that.
          */
         public String message() {
-            return MESSAGE.parse(why).getOrElse(why.strip());
+            return stated().getOrElse(why.strip());
+        }
+
+        /**
+         * The message of the answer, when Forgejo gave one, {@code {"message": "..."}}: not for the 409 of a merge
+         * that conflicts, whose answer is what failed, as Go writes it (ADR 180).
+         */
+        public Option<String> stated() {
+            return MESSAGE.parse(why).toOption();
         }
 
         /**
