@@ -143,3 +143,33 @@ def test_f_on_a_branch_without_a_pull_request_shows_its_files_against_its_base(r
     ui.app.press("escape")
 
     ui.app.eventually(lambda: ui.app.focused_pane() == "Branches", "the focus back on the branches")
+
+
+def test_a_keeps_the_highlight_on_its_path_between_the_changed_files_and_all_files(repo, jazygit):
+    repo.commit("Add files", **{"one.txt": "one\n", "src/two.txt": "two\n", "src/three.txt": "three\n"})
+    repo.commit("Change two", **{"src/two.txt": "two\nother\n"})
+    ui = jazygit()
+    ui.commits.select("Change two")
+    short = repo.short("HEAD")
+    ui.app.press("enter")
+    ui.app.wait_in("Files", "two.txt")
+    ui.app.eventually(lambda: ui.app.focused_pane() == "Files", "the focus in the files")
+    ui.app.move_cursor("Files", "two.txt")
+    ui.app.wait_for(f"{short} · src/two.txt")
+
+    def highlighted():
+        at = ui.app.cursor_row("Files")
+        return "" if at is None else ui.app.pane_rows("Files")[at][0]
+
+    ui.app.press("a")
+
+    ui.app.wait_in("Files", "one.txt")
+    ui.app.eventually(lambda: "two.txt" in highlighted(), "the highlight on two.txt among all files")
+    assert f"{short} · src/two.txt" in ui.app.text()
+
+    # A file the commit did not change is not among the changed files: the directory holding it is highlighted.
+    ui.app.move_cursor("Files", "three.txt")
+    ui.app.press("a")
+
+    ui.app.eventually(lambda: "one.txt" not in ui.app.pane_text("Files"), "only the changed files")
+    ui.app.eventually(lambda: highlighted().rstrip().endswith("src"), "the highlight on src")
