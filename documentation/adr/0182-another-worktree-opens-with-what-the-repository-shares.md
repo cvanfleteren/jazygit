@@ -21,7 +21,9 @@ its HEAD, status, files and log, is to be read afresh.
 
 - **Another worktree of the same repository opens with what the worktrees share.** The same repository is one whose
   worktrees share the common git directory the one shown had; one whose common git directory cannot be found is
-  another repository. Another repository opens from nothing, as before.
+  another repository. Another repository opens from nothing, as before, and so does the worktree shown when it is
+  opened anew, as a setting that only applies to a repository shown anew opens it (the gh executable, GitHub's
+  account): it is to be read from nothing, the forges deciding again with what the setting changed.
 - **A part says what of it another worktree starts from** (`Part.carrying`), as it says what it reads again or what it
   states (ADR 158): what it read of what the worktrees share, and none of what only the program before had, as the
   reads it was running, whose answers go to that program. A part that says nothing is the worktree's own and starts

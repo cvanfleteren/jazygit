@@ -111,7 +111,7 @@ final class RepositorySession {
                 themeOverride,
                 RepositoryTheme.read(env.git()),
                 Landing.START,
-                commonDir(env.git().worktree()),
+                shown(env.git().worktree()),
                 Carried.NONE);
     }
 
@@ -146,14 +146,17 @@ final class RepositorySession {
     }
 
     /**
-     * The git directory the worktrees of the repository at {@code worktree} share, if it can be found.
+     * The repository at {@code worktree}, with the git directory its worktrees share, if it can be found.
      */
-    private static Option<Path> commonDir(Path worktree) {
-        return RepositoryIdentity.read(worktree).map(RepositoryIdentity::commonDir);
+    private static Carried.Shown shown(Path worktree) {
+        // Real, as the common git directory is, so the worktree shown, opened anew, is told from another one.
+        return new Carried.Shown(
+                Try.of(worktree::toRealPath).getOrElse(worktree),
+                RepositoryIdentity.read(worktree).map(RepositoryIdentity::commonDir));
     }
 
     /**
-     * Starts showing the repository {@code env} reads, whose worktrees share {@code commonDir}, in the theme its git
+     * Starts showing the repository {@code env} reads, {@code shown}, in the theme its git
      * configuration gives it if no other is asked for, where {@code landing} says, with what {@code carried} keeps of
      * what the worktree shown before knew (ADR 182); from scratch when it carries nothing.
      */
@@ -163,7 +166,7 @@ final class RepositorySession {
             Option<ThemeName> themeOverride,
             RepositoryTheme repositoryTheme,
             Landing landing,
-            Option<Path> commonDir,
+            Carried.Shown shown,
             Carried carried) {
         ToolkitRunner runner = this.runner.get();
         ThreadPoolExecutor io = singleThread("git-io");
@@ -184,12 +187,12 @@ final class RepositorySession {
                 requestRedraw,
                 quit,
                 clock);
-        runtime = Option.of(new Runtime(io, background, program, commonDir));
+        runtime = Option.of(new Runtime(io, background, program, shown));
         started.accept(program.model());
         // The first tick of the fetch is a while off, so it fetches now. The features read what they show of the
         // repository from the start, as they answer its opening. Another worktree of the repository shown fetches
-        // into the same remote-tracking branches, which were fetched into already: it waits for the tick (ADR 182).
-        if (!carried.any()) {
+        // into the same remote-tracking branches: once they were fetched into, it waits for the tick (ADR 182).
+        if (!carried.fetched()) {
             program.dispatch(new FetchMsg.Tick());
         }
     }
@@ -202,8 +205,8 @@ final class RepositorySession {
         return CliGit.open(directory)
                 .peek(git -> {
                     RepositoryTheme theme = RepositoryTheme.read(git);
-                    Option<Path> commonDir = commonDir(git.worktree());
-                    runner.get().runOnRenderThread(() -> show(git, theme, landing, commonDir));
+                    Carried.Shown opened = shown(git.worktree());
+                    runner.get().runOnRenderThread(() -> show(git, theme, landing, opened));
                 })
                 .map(Git::worktree);
     }
@@ -211,14 +214,13 @@ final class RepositorySession {
     /**
      * Shows the repository {@code git} reads instead of the one shown, as if the app had been started there, where
      * {@code landing} says; the settings, and a theme asked for at startup, stay as they are in this session, and
-     * {@code repositoryTheme} is the one its git configuration gives it. Another worktree of the same repository, one
-     * whose worktrees share {@code commonDir} too, opens with what the worktrees share of what was known (ADR 182).
+     * {@code repositoryTheme} is the one its git configuration gives it. When {@code opened} is another worktree of the
+     * same repository, it opens with what the worktrees share of what was known, as {@link Carried#between} says
+     * (ADR 182); the worktree shown, opened anew, opens from nothing.
      */
-    private void show(Git git, RepositoryTheme repositoryTheme, Landing landing, Option<Path> commonDir) {
+    private void show(Git git, RepositoryTheme repositoryTheme, Landing landing, Carried.Shown opened) {
         runtime.forEach(running -> {
             Model last = running.program().model();
-            boolean sameRepository =
-                    commonDir.isDefined() && running.commonDir().equals(commonDir);
             // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other
             // repository, and its outcome goes to the old program, which nobody looks at anymore.
             stop(running);
@@ -231,11 +233,11 @@ final class RepositorySession {
                     last.preferences().themeOverride(),
                     repositoryTheme,
                     landing,
-                    commonDir,
-                    sameRepository ? Carried.from(last) : Carried.NONE);
+                    opened,
+                    Carried.between(running.shown(), opened, last));
             // What this session knew of the settings file goes on, so a setting only it has is not taken for one
             // the file has, and a problem it was showing still shows (ADR 111).
-            runtime.forEach(opened -> opened.program().dispatch(SettingsPanelUpdate.carried(last)));
+            runtime.forEach(now -> now.program().dispatch(SettingsPanelUpdate.carried(last)));
             requestRedraw.run();
         });
     }
@@ -246,8 +248,8 @@ final class RepositorySession {
      *
      * @param io         where git is called
      * @param background where the background commands run, like talking to the remotes and to GitHub
-     * @param commonDir  the git directory the worktrees of the repository share, if it was found
+     * @param shown      the repository shown, with the git directory its worktrees share
      */
     private record Runtime(
-            ThreadPoolExecutor io, ThreadPoolExecutor background, Program program, Option<Path> commonDir) {}
+            ThreadPoolExecutor io, ThreadPoolExecutor background, Program program, Carried.Shown shown) {}
 }
