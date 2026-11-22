@@ -57,7 +57,9 @@ Forgejo merges a pull request by itself once the rules of its base branch are me
 - **The timeline tells whether a merge is scheduled**, read with the pull request, a page of 50 at a time, at most 10
   pages: its last scheduling event, when it is not a cancelling one (`ForgejoScheduledMerge`). One that cannot be read
   shows none, and the log says why. jazygit keeps the style of each merge it scheduled, by its pull request, in
-  Forgejo's part, while the pull request is open: Forgejo does not tell it.
+  Forgejo's part, while the pull request is open: Forgejo does not tell it. The style is of the merge the next read
+  shows scheduled, by when it was, and forgotten once the timeline shows another, as one cancelled and scheduled again
+  in the browser.
 - **While one is scheduled, every key cancels it**, "Cancel scheduled merge", as its style may not be known. Not: only
   the key of its style, as on GitHub, which leaves nothing to press when it was scheduled in the browser. Another style
   is chosen by cancelling it, then pressing that key. Cancelling keeps the dialog open too ("Cancelling merge"), and
@@ -68,7 +70,8 @@ Forgejo merges a pull request by itself once the rules of its base branch are me
   have yet.
 - **What Forgejo answers that differs from what was read is told, and read again**, as no failure: a 409 of a merge
   scheduled already says so; a 404 of cancelling says it was no longer scheduled, as it was merged or merging it
-  failed, which also covers a timeline that still says it is.
+  failed, which also covers a timeline that still says it is. jazygit then keeps when the merge it showed was
+  scheduled, and shows none scheduled until the timeline has a later one; else every key would still cancel it.
 - **The details of a key say what Forgejo waits for**: the checks it requires and the approvals; and that what is pushed
   meanwhile is merged too, as Forgejo does not look at the head then.
 
@@ -80,7 +83,8 @@ Forgejo merges a pull request by itself once the rules of its base branch are me
   GitHub.
 - Each read of a pull request asks Forgejo twice more: the rules of its base branch, and its timeline, a page per 50
   events.
-- A merge Forgejo dropped after trying it shows as scheduled until it is cancelled, which then says so.
+- A merge Forgejo dropped after trying it shows as scheduled until it is cancelled, which then says so, after which
+  the keys merge it again; as does a cancelling event the timeline has beyond the pages read.
 - No acceptance test covers it, for the reason of ADR 176. The feature's tests run its update, commands and dialog on
   a Forgejo of the test's, and core-forgejo's run the requests against a server of the test's.
 - ADR 180 is amended: a pull request its base branch holds is merged when its checks succeed.

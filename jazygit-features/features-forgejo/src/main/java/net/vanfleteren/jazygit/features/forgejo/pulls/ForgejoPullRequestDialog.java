@@ -112,7 +112,8 @@ public final class ForgejoPullRequestDialog implements PopupView {
                         popup -> popup.shown()
                                 .map(shown -> switch (MergeKey.of(shown, style)) {
                                     case MergeKey.WhenChecksSucceed() -> Messages.get(labelKey + ".whenChecks");
-                                    case MergeKey.Cancel() -> Messages.get("forgejo.dialog.pullRequest.merge.cancel");
+                                    case MergeKey.Cancel(var _) ->
+                                        Messages.get("forgejo.dialog.pullRequest.merge.cancel");
                                     case MergeKey.Now(), MergeKey.Disabled(var _) -> Messages.get(labelKey);
                                 })
                                 .getOrElse(() -> Messages.get(labelKey)),
@@ -123,7 +124,8 @@ public final class ForgejoPullRequestDialog implements PopupView {
                             case MergeKey.Now() -> Messages.get(labelKey + ".details");
                             case MergeKey.WhenChecksSucceed() ->
                                 Messages.get("forgejo.dialog.pullRequest.merge.whenChecks.details");
-                            case MergeKey.Cancel() -> Messages.get("forgejo.dialog.pullRequest.merge.cancel.details");
+                            case MergeKey.Cancel(var _) ->
+                                Messages.get("forgejo.dialog.pullRequest.merge.cancel.details");
                             case MergeKey.Disabled(var why) -> why(why);
                         })
                         .getOrElse(() -> Messages.get(labelKey + ".details")));
@@ -191,8 +193,7 @@ public final class ForgejoPullRequestDialog implements PopupView {
                             shown -> details(
                                     shown,
                                     model.part(ForgejoPullRequests.PART)
-                                            .scheduled()
-                                            .get(shown.pullRequest().number()),
+                                            .style(shown.pullRequest().number()),
                                     model.now())))
                     .getOrElse(() -> loading(popup));
             Element dialog = DialogFrame.withHint(

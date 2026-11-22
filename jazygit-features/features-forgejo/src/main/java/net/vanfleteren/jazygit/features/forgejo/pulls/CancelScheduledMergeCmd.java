@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.forgejo.pulls;
 
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -14,10 +15,12 @@ import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
 
 /**
  * Cancels the merge of pull request {@code number} of the home {@code home} on Forgejo scheduled for when its checks
- * succeed (ADR 181). {@code branch}, the local branch it was shown for, is busy meanwhile. One no longer scheduled,
- * which Forgejo answers with 404, is told so, as the timeline may say it is when Forgejo dropped it.
+ * succeed (ADR 181), as its timeline said at {@code scheduledAt}. {@code branch}, the local branch it was shown for, is
+ * busy meanwhile. One no longer scheduled, which Forgejo answers with 404, is told so, as the timeline may say it is
+ * when Forgejo dropped it.
  */
-public record CancelScheduledMergeCmd(RemoteName home, BranchName branch, long number) implements OperationCmd {
+public record CancelScheduledMergeCmd(RemoteName home, BranchName branch, long number, Instant scheduledAt)
+        implements OperationCmd {
 
     static final Operation CANCEL = Operation.of("forgejo.log.title.cancelMerge", "forgejo.error.cancel.failed")
             .labelledWhenBusy("forgejo.branches.busy.cancel");

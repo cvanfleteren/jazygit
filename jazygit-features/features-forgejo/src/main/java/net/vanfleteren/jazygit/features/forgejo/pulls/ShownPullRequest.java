@@ -51,6 +51,13 @@ public record ShownPullRequest(
     }
 
     /**
+     * It with no merge scheduled.
+     */
+    public ShownPullRequest withoutScheduled() {
+        return new ShownPullRequest(pullRequest, review, checks, settings, rules, approvals, Option.none());
+    }
+
+    /**
      * Whether its base branch does not let it be merged yet, as far as was read: a check it requires has not passed,
      * or approvals are missing. It is merged when its checks succeed then (ADR 181).
      */

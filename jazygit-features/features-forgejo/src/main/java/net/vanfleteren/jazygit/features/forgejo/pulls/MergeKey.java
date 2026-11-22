@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.forgejo.pulls;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.State;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 
 /**
  * What a merge key of the pull request dialog on Forgejo does, by what was read of the pull request (ADR 180, 181):
@@ -24,7 +25,7 @@ sealed interface MergeKey {
             return new Disabled(new Why.NotOpen());
         }
         if (shown.scheduled().isDefined()) {
-            return new Cancel();
+            return new Cancel(shown.scheduled().get());
         }
         if (status.draft()) {
             return new Disabled(new Why.Draft());
@@ -49,9 +50,9 @@ sealed interface MergeKey {
     record WhenChecksSucceed() implements MergeKey {}
 
     /**
-     * Cancels the merge scheduled for it.
+     * Cancels {@code merge}, the merge scheduled for it.
      */
-    record Cancel() implements MergeKey {}
+    record Cancel(ForgejoScheduledMerge merge) implements MergeKey {}
 
     /**
      * Does nothing, for the reason {@code why} says.

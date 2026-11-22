@@ -37,13 +37,14 @@ final class MergeUpdate {
                                 model, ForgejoPullRequestPopup.class, _ -> Option.of(cmd(popup, shown, style)));
                     case MergeKey.WhenChecksSucceed() ->
                         OperationUpdate.start(model.clearError(), cmd(popup, shown, style));
-                    case MergeKey.Cancel() ->
+                    case MergeKey.Cancel(var merge) ->
                         OperationUpdate.start(
                                 model.clearError(),
                                 new CancelScheduledMergeCmd(
                                         popup.home(),
                                         popup.local(),
-                                        shown.pullRequest().number()));
+                                        shown.pullRequest().number(),
+                                        merge.at()));
                     case MergeKey.Disabled(var _) -> Next.of(model);
                 }))
                 .getOrElse(() -> Next.of(model));
@@ -127,11 +128,14 @@ final class MergeUpdate {
 
     /**
      * The scheduled merge of the pull request of {@code cmd} was cancelled, or was not scheduled any more when
-     * {@code gone}, which is told: no failure, as what was asked for is so. The dialog reads it again.
+     * {@code gone}, which is told: no failure, as what was asked for is so; the timeline still says it is then, which
+     * the dialog no longer shows. The dialog reads it again.
      */
     static Next cancelled(Model model, CancelScheduledMergeCmd cmd, boolean gone) {
         Next done = OperationUpdate.succeeded(model, cmd, List.empty())
-                .map(after -> after.mapPart(ForgejoPullRequests.PART, prs -> prs.unscheduled(cmd.number())));
+                .map(after -> after.mapPart(
+                        ForgejoPullRequests.PART,
+                        prs -> gone ? prs.dropped(cmd.number(), cmd.scheduledAt()) : prs.unscheduled(cmd.number())));
         return PullRequestUpdate.readAgain(
                 gone ? done.map(after -> after.inform(new ScheduleNotice.NoLongerScheduled(cmd.branch()))) : done,
                 cmd.number());

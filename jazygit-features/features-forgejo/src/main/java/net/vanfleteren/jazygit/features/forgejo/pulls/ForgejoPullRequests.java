@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.forgejo.pulls;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.Branch;
@@ -21,8 +22,8 @@ import net.vanfleteren.jazygit.kernel.state.Part;
  * @param failure      why they could not be read the last time, if they could not
  * @param reads        the last read of a pull request given out, which a dialog waits for (ADR 34)
  * @param failedMerges the last merge that failed of each pull request, by its number, while it is open
- * @param scheduled    the style of each merge jazygit scheduled for when the checks succeed, by the number of its
- *                     pull request, while it is open: Forgejo does not tell it
+ * @param scheduled    what is kept of each merge scheduled for when the checks succeed, by the number of its pull
+ *                     request, while it is open: the style jazygit scheduled it as, or that Forgejo dropped it
  */
 public record ForgejoPullRequests(
         Option<RemoteName> home,
@@ -30,7 +31,7 @@ public record ForgejoPullRequests(
         Option<Failure> failure,
         long reads,
         Map<Long, FailedMerge> failedMerges,
-        Map<Long, ForgejoMergeStyle> scheduled) {
+        Map<Long, Scheduling> scheduled) {
 
     public static final ForgejoPullRequests NONE =
             new ForgejoPullRequests(Option.none(), Option.none(), Option.none(), 0, HashMap.empty(), HashMap.empty());
@@ -93,6 +94,53 @@ public record ForgejoPullRequests(
     }
 
     /**
+     * The style jazygit scheduled the merge of pull request {@code number} as, if it did, for the merge its timeline
+     * shows scheduled.
+     */
+    public Option<ForgejoMergeStyle> style(long number) {
+        return scheduled
+                .get(number)
+                .flatMap(kept -> kept instanceof Scheduling.Ours(var style, var _) ? Option.of(style) : Option.none());
+    }
+
+    /**
+     * {@code shown} as the dialog shows it: without the merge its timeline says is scheduled when Forgejo said, as it
+     * was to be cancelled, that this one was not, as it dropped it when merging it failed.
+     */
+    public ShownPullRequest shown(ShownPullRequest shown) {
+        Option<Scheduling> kept = scheduled.get(shown.pullRequest().number());
+        return shown.scheduled()
+                        .exists(merge -> kept.exists(dropped -> dropped instanceof Scheduling.Dropped(Instant at)
+                                && !merge.at().isAfter(at)))
+                ? shown.withoutScheduled()
+                : shown;
+    }
+
+    /**
+     * These once {@code shown} was read, as {@link #shown} gives it: a style jazygit kept is of the merge it shows
+     * scheduled first, and forgotten once it shows another, as one scheduled in the browser; a merge Forgejo dropped
+     * is forgotten once another is scheduled. One it does not show, as its timeline could not be read, keeps them.
+     */
+    public ForgejoPullRequests read(ShownPullRequest shown) {
+        long number = shown.pullRequest().number();
+        Map<Long, Scheduling> kept = shown.scheduled()
+                .flatMap(merge -> scheduled.get(number).map(was -> read(was, merge.at())))
+                .map(now -> now.fold(() -> scheduled.remove(number), is -> scheduled.put(number, is)))
+                .getOrElse(scheduled);
+        return new ForgejoPullRequests(home, open, failure, reads, failedMerges, kept);
+    }
+
+    // What is kept of a merge as was kept, once its timeline shows one scheduled at at.
+    private static Option<Scheduling> read(Scheduling was, Instant at) {
+        return switch (was) {
+            case Scheduling.Ours(var style, var bound)
+            when bound.isEmpty() -> Option.of(new Scheduling.Ours(style, Option.of(at)));
+            case Scheduling.Ours(var _, var bound) -> bound.contains(at) ? Option.of(was) : Option.none();
+            case Scheduling.Dropped(Instant dropped) -> at.isAfter(dropped) ? Option.none() : Option.of(was);
+        };
+    }
+
+    /**
      * These with the next read of a pull request given out.
      */
     public ForgejoPullRequests givingOutRead() {
@@ -117,17 +165,49 @@ public record ForgejoPullRequests(
 
     /**
      * These once the merge of pull request {@code number} was scheduled as {@code style}: a merge of it that failed
-     * before is forgotten, as a new merge takes its place, as on GitHub (ADR 112).
+     * before is forgotten, as a new merge takes its place, as on GitHub (ADR 112). Its style is of the merge the next
+     * read shows scheduled.
      */
     public ForgejoPullRequests mergeScheduled(long number, ForgejoMergeStyle style) {
         return new ForgejoPullRequests(
-                home, open, failure, reads, failedMerges.remove(number), scheduled.put(number, style));
+                home,
+                open,
+                failure,
+                reads,
+                failedMerges.remove(number),
+                scheduled.put(number, new Scheduling.Ours(style, Option.none())));
     }
 
     /**
-     * These once the merge of pull request {@code number} is no longer scheduled.
+     * These once the merge of pull request {@code number} was cancelled.
      */
     public ForgejoPullRequests unscheduled(long number) {
         return new ForgejoPullRequests(home, open, failure, reads, failedMerges, scheduled.remove(number));
+    }
+
+    /**
+     * These once Forgejo said no merge of pull request {@code number} is scheduled, when its timeline said one was at
+     * {@code at}: that one is not shown any more, as Forgejo dropped it (ADR 181).
+     */
+    public ForgejoPullRequests dropped(long number, Instant at) {
+        return new ForgejoPullRequests(
+                home, open, failure, reads, failedMerges, scheduled.put(number, new Scheduling.Dropped(at)));
+    }
+
+    /**
+     * What jazygit keeps of the merge of a pull request scheduled for when its checks succeed (ADR 181), which Forgejo
+     * does not tell.
+     */
+    public sealed interface Scheduling {
+
+        /**
+         * jazygit scheduled it as {@code style}; {@code at} is when its timeline says it was, once read.
+         */
+        record Ours(ForgejoMergeStyle style, Option<Instant> at) implements Scheduling {}
+
+        /**
+         * Forgejo said none is scheduled, when its timeline said one was at {@code at}: it dropped that one.
+         */
+        record Dropped(Instant at) implements Scheduling {}
     }
 }

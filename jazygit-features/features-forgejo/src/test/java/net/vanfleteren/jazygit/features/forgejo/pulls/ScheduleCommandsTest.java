@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.forgejo.pulls;
 
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.HEAD;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.ORIGIN;
+import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.TIME;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.details;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,7 +39,7 @@ class ScheduleCommandsTest {
             false,
             Option.of(REQUIRED),
             0);
-    private static final CancelScheduledMergeCmd CANCEL = new CancelScheduledMergeCmd(ORIGIN, BRANCH, 12);
+    private static final CancelScheduledMergeCmd CANCEL = new CancelScheduledMergeCmd(ORIGIN, BRANCH, 12, TIME);
 
     private static CommitStatus checks(CommitStatus.State state) {
         return new CommitStatus(state, List.of(new CommitStatus.Status("ci", state, "")));

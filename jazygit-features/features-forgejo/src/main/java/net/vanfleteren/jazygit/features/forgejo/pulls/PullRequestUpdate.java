@@ -108,12 +108,17 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * {@code model} once read {@code read} brought {@code result}: the dialog that waits for it shows it; unchanged
-     * when none does, as it was closed or read again since.
+     * {@code model} once read {@code read} brought {@code result}: the dialog that waits for it shows it, as what is
+     * kept of a merge scheduled says (ADR 181), which keeps what it shows; unchanged when none does, as it was closed
+     * or read again since.
      */
     private static Model read(Model model, long read, Either<Failure, ShownPullRequest> result) {
+        ForgejoPullRequests prs = model.part(ForgejoPullRequests.PART);
+        Either<Failure, ShownPullRequest> seen = result.map(prs::shown);
         return model.popup(ForgejoPullRequestPopup.class)
-                .map(popup -> model.openPopup(popup.with(result, read)))
+                .filter(popup -> popup.read() == read)
+                .map(popup -> model.withPart(ForgejoPullRequests.PART, seen.fold(_ -> prs, prs::read))
+                        .openPopup(popup.with(seen, read)))
                 .getOrElse(model);
     }
 

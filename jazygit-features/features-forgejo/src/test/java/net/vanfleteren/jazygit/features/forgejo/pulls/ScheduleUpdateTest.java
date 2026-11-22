@@ -43,7 +43,7 @@ class ScheduleUpdateTest {
     private static final MergePullRequestCmd WHEN_READY = new MergePullRequestCmd(
             ORIGIN, BRANCH, 12, ForgejoMergeStyle.SQUASH, STANDING, true, Option.of(REQUIRED), 1);
 
-    private static final CancelScheduledMergeCmd CANCEL = new CancelScheduledMergeCmd(ORIGIN, BRANCH, 12);
+    private static final CancelScheduledMergeCmd CANCEL = new CancelScheduledMergeCmd(ORIGIN, BRANCH, 12, TIME);
 
     private static ShownPullRequest shown(CommitStatus checks, Option<ForgejoScheduledMerge> scheduled) {
         return new ShownPullRequest(
@@ -114,8 +114,7 @@ class ScheduleUpdateTest {
 
         Next next = Update.update(shown, new PullRequestMsg.Merged(WHEN_READY, new ForgejoMerged.Scheduled()));
 
-        assertEquals(
-                HashMap.of(12L, ForgejoMergeStyle.SQUASH), prs(next.model()).scheduled());
+        assertEquals(Option.of(ForgejoMergeStyle.SQUASH), prs(next.model()).style(12));
         assertEquals(HashMap.empty(), prs(next.model()).failedMerges());
         assertTrue(
                 next.cmds().contains(new LoadPullRequest(ORIGIN, 12, 2)),
@@ -146,18 +145,72 @@ class ScheduleUpdateTest {
                 .mapPart(ForgejoPullRequests.PART, prs -> prs.mergeScheduled(12, ForgejoMergeStyle.SQUASH));
 
         Next cancelled = Update.update(scheduled, new PullRequestMsg.MergeCancelled(CANCEL));
-        assertEquals(HashMap.empty(), prs(cancelled.model()).scheduled());
+        assertEquals(Option.none(), prs(cancelled.model()).style(12));
         assertEquals(Option.none(), cancelled.model().outcome().notice());
         assertTrue(
                 cancelled.cmds().contains(new LoadPullRequest(ORIGIN, 12, 2)),
                 cancelled.cmds().toString());
 
         Next gone = Update.update(scheduled, new PullRequestMsg.NoLongerScheduled(CANCEL));
-        assertEquals(HashMap.empty(), prs(gone.model()).scheduled());
+        assertEquals(Option.none(), prs(gone.model()).style(12));
         assertEquals(
                 Option.<Notice>of(new ScheduleNotice.NoLongerScheduled(BRANCH)),
                 gone.model().outcome().notice());
         assertEquals(Option.none(), gone.model().outcome().error());
+    }
+
+    private static Model read(Model model, long read, Option<ForgejoScheduledMerge> scheduled) {
+        return Update.update(model, new PullRequestMsg.Read(read, Either.right(shown(FAILING, scheduled))))
+                .model();
+    }
+
+    private static Model refreshed(Model model) {
+        return Update.update(model, new PullRequestMsg.RefreshChosen()).model();
+    }
+
+    private static MergeKey key(Model model) {
+        return MergeKey.of(popup(model).shown().get(), ForgejoMergeStyle.SQUASH);
+    }
+
+    @Test
+    void aMergeForgejoDroppedIsNoLongerShownScheduledOnceCancellingItSaidSo() {
+        ForgejoScheduledMerge dropped = new ForgejoScheduledMerge("anna", TIME);
+        Model gone = Update.update(
+                        showing(shown(FAILING, Option.of(dropped))), new PullRequestMsg.NoLongerScheduled(CANCEL))
+                .model();
+
+        // The timeline still ends in the merge Forgejo dropped.
+        Model readAgain = read(gone, 2, Option.of(dropped));
+        assertEquals(Option.none(), popup(readAgain).shown().get().scheduled());
+        assertEquals(new MergeKey.WhenChecksSucceed(), key(readAgain));
+
+        // One scheduled since is shown.
+        ForgejoScheduledMerge later = new ForgejoScheduledMerge("bob", TIME.plusSeconds(60));
+        assertEquals(new MergeKey.Cancel(later), key(read(refreshed(readAgain), 3, Option.of(later))));
+    }
+
+    @Test
+    void aStyleKeptIsOfTheMergeJazygitScheduledNotOfOneScheduledSinceInTheBrowser() {
+        Model scheduled = Update.update(
+                        showing(shown(FAILING, Option.none())),
+                        new PullRequestMsg.Merged(WHEN_READY, new ForgejoMerged.Scheduled()))
+                .model();
+        ForgejoScheduledMerge ours = new ForgejoScheduledMerge("anna", TIME);
+
+        Model shownOurs = read(scheduled, 2, Option.of(ours));
+        assertEquals(Option.of(ForgejoMergeStyle.SQUASH), prs(shownOurs).style(12));
+        // A read whose timeline shows none, as it could not be read, keeps it.
+        Model unread = read(refreshed(shownOurs), 3, Option.none());
+        assertEquals(Option.of(ForgejoMergeStyle.SQUASH), prs(unread).style(12));
+        assertEquals(
+                Option.of(ForgejoMergeStyle.SQUASH),
+                prs(read(refreshed(unread), 4, Option.of(ours))).style(12));
+
+        // Cancelled and scheduled again in the browser.
+        ForgejoScheduledMerge theirs = new ForgejoScheduledMerge("anna", TIME.plusSeconds(60));
+        assertEquals(
+                Option.none(),
+                prs(read(refreshed(unread), 4, Option.of(theirs))).style(12));
     }
 
     @Test
@@ -169,6 +222,6 @@ class ScheduleUpdateTest {
                         scheduled, new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.empty()), Option.none()))
                 .model();
 
-        assertEquals(HashMap.empty(), prs(gone).scheduled());
+        assertEquals(Option.none(), prs(gone).style(12));
     }
 }
