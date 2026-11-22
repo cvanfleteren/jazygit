@@ -18,8 +18,8 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
  * What the tests of the builds of a branch in the content panel share: the branches, a build, and the models that
@@ -73,7 +73,7 @@ final class BuildsFixtures {
     }
 
     static Shown content(Model model) {
-        return ContentViews.of(model, BranchesPanel.PANE);
+        return ContentViews.of(model, Scopes.BRANCHES.pane());
     }
 
     static Build withFile(Build build) {

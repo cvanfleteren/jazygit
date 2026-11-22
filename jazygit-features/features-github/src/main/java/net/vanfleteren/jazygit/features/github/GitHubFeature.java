@@ -1,7 +1,10 @@
 package net.vanfleteren.jazygit.features.github;
 
+import io.vavr.control.Option;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups;
 import net.vanfleteren.jazygit.features.github.badges.BadgeLegend;
 import net.vanfleteren.jazygit.features.github.badges.GitHubBadge;
 import net.vanfleteren.jazygit.features.github.browse.BrowseAction;
@@ -109,8 +112,8 @@ public final class GitHubFeature {
             .every(STACK_CHECK_INTERVAL, StackMsg.Tick::new)
             .reacting(GitHubReactions.REACTION)
             .reacting(PrOverviewUpdate::to)
-            .badging(GitHubBadge::of)
-            .grouping(StackGroups::of)
+            .filling(BranchBadges.KEY, model -> Option.some(GitHubBadge::of))
+            .filling(BranchGroups.KEY, model -> Option.some(StackGroups::of))
             .screen(PullRequestsScreen.SPEC)
             .explaining(BadgeLegend.BRANCHES.toJavaArray(Legend[]::new))
             .running(GitHubServices::running)

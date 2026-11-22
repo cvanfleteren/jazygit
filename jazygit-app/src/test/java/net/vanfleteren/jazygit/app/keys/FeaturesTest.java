@@ -44,7 +44,8 @@ class FeaturesTest {
      * The top-level feature packages that are no feature: {@code layout} has only global keys, {@code start} has
      * the popups of the start screen, and {@code panes} has the panes of its group (ADR 158).
      */
-    private static final Set<String> NO_FEATURE = HashSet.of("chrome.layout", "branches.start", "changes.panes");
+    private static final Set<String> NO_FEATURE =
+            HashSet.of("chrome.layout", "branches.start", "branches.panes", "changes.panes");
 
     private static final JavaClasses CLASSES = new ClassFileImporter()
             .withImportOption(new ImportOption.DoNotIncludeTests())

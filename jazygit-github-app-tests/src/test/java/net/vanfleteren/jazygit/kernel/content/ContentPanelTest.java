@@ -33,8 +33,8 @@ import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
@@ -159,16 +159,16 @@ class ContentPanelTest {
                                 Option.none())))));
         Model loading = Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
                 .model();
-        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.PANE));
+        assertEquals(Option.none(), content.areaOfPane(loading, Scopes.BRANCHES.pane()));
 
         Model loaded = Update.update(
                         loading,
                         new LoadMsg.CommitDetailLoaded(new Sha("cccc"), DiffOptions.DEFAULT, DiffText.of("+a")))
                 .model();
-        assertTrue(content.areaOfPane(loaded, BranchesPanel.PANE).isDefined());
+        assertTrue(content.areaOfPane(loaded, Scopes.BRANCHES.pane()).isDefined());
         Model remoteTab =
                 loaded.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
-        assertEquals(Option.none(), content.areaOfPane(remoteTab, BranchesPanel.PANE));
+        assertEquals(Option.none(), content.areaOfPane(remoteTab, Scopes.BRANCHES.pane()));
     }
 
     @Test
@@ -183,14 +183,14 @@ class ContentPanelTest {
                 Update.update(logRead, new BranchCommitsMsg.Opened(feature)).model();
         Model loading = Update.update(open, new SelectionMsg.BranchCommitSelected(new Sha("ffff")))
                 .model();
-        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.PANE));
+        assertEquals(Option.none(), content.areaOfPane(loading, Scopes.BRANCHES.pane()));
 
         Model loaded = Update.update(
                         loading,
                         new LoadMsg.CommitDetailLoaded(new Sha("ffff"), DiffOptions.DEFAULT, DiffText.of("+a")))
                 .model();
-        AreaId area = content.areaOfPane(loaded, BranchesPanel.PANE).get();
-        assertEquals(Option.of(BranchesPanel.PANE), content.paneOfArea(loaded, area));
+        AreaId area = content.areaOfPane(loaded, Scopes.BRANCHES.pane()).get();
+        assertEquals(Option.of(Scopes.BRANCHES.pane()), content.paneOfArea(loaded, area));
     }
 
     @Test
@@ -226,8 +226,8 @@ class ContentPanelTest {
         Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
         try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> clicking.render(model, BranchesPanel.PANE))) {
-            RenderedText.of(testRunner, () -> clicking.render(model, BranchesPanel.PANE));
+                ToolkitTestRunner.runTest(() -> clicking.render(model, Scopes.BRANCHES.pane()))) {
+            RenderedText.of(testRunner, () -> clicking.render(model, Scopes.BRANCHES.pane()));
             dev.tamboui.layout.Rect drawn = SettledPilot.of(testRunner).findElement("branch-log");
 
             SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, drawn.y() + 2);

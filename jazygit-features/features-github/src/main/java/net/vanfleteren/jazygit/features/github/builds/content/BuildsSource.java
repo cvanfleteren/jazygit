@@ -15,12 +15,12 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
  * The builds of the local branch highlighted in the branches pane, in place of its log, while they are shown for it
@@ -32,7 +32,7 @@ public record BuildsSource() implements ContentSource {
      * The builds of the branch highlighted in the branches pane, in place of its log (ADR 131), which take the focus
      * from the branches once they show after {@code B} opened them.
      */
-    static final ContentArea AREA = ContentArea.of(BuildsView.AREA, BranchesPanel.PANE)
+    static final ContentArea AREA = ContentArea.of(BuildsView.AREA, Scopes.BRANCHES.pane())
             .opening(model -> model.part(BuildsView.PART).map(BuildsView::branch));
 
     @Override

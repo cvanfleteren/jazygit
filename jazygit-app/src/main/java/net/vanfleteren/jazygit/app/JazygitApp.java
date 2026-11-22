@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.core.askpass.AskpassServer;
 import net.vanfleteren.jazygit.core.git.branches.BatchSsh;
 import net.vanfleteren.jazygit.core.process.SshAsking;
 import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.files.step.FileStepEnded;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
@@ -48,7 +49,6 @@ import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.ui.*;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -163,9 +163,8 @@ public class JazygitApp extends ToolkitApp {
         this.leftColumn = new LeftColumn(
                 dispatch,
                 styleEngine,
-                clock,
                 focus::openContent,
-                this::showBranchesTab,
+                highlights -> new BranchesPanel(dispatch, this::showBranchesTab, clock, highlights, Features.FILLS),
                 highlights -> new CommitsPanel(dispatch, highlights, Features.FILLS),
                 highlights -> new StashPanel(dispatch, highlights),
                 Screens.standard());
@@ -293,7 +292,7 @@ public class JazygitApp extends ToolkitApp {
      * Moves the focus to the branches pane, as a click on it does, and shows the list {@code tab} in it.
      */
     private void showBranchesTab(BranchesTab tab) {
-        focus.moveTo(BranchesPanel.PANE);
+        focus.moveTo(Scopes.BRANCHES.pane());
         dispatch.accept(new BranchesTabMsg.Chosen(tab));
     }
 

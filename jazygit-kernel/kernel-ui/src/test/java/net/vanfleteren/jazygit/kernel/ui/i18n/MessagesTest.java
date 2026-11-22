@@ -71,7 +71,7 @@ class MessagesTest {
      */
     @Test
     void aKeyThatNoModuleHasIsTheViews() {
-        assertEquals("gone", Messages.forLocale(Locale.ENGLISH).format("branches.gone"));
+        assertEquals("now", Messages.forLocale(Locale.ENGLISH).format("branches.age.now"));
         assertEquals("!unknown.key!", Messages.forLocale(Locale.ENGLISH).format("unknown.key"));
         assertEquals(Option.none(), Messages.find("unknown.key"));
     }

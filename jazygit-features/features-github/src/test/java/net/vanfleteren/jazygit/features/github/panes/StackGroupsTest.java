@@ -20,12 +20,12 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Entry;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Group;
 import net.vanfleteren.jazygit.features.github.stack.StackAction;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups.Entry;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups.Group;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import org.junit.jupiter.api.Test;
 

@@ -6,8 +6,8 @@ import net.vanfleteren.jazygit.core.git.model.DeleteScope;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
@@ -94,9 +94,9 @@ public final class DeleteBranchDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(DELETE_BRANCH, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(UNLOCK_WORKTREE, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(DELETE_REMOTE_BRANCH, dispatch)));
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ChoiceDialog<>(DELETE_BRANCH, dispatch)),
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ConfirmDialog<>(UNLOCK_WORKTREE, dispatch)),
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ConfirmDialog<>(DELETE_REMOTE_BRANCH, dispatch)));
     }
 
     /**

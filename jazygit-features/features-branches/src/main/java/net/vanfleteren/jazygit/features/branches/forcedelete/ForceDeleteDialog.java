@@ -4,8 +4,8 @@ import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
 
 /**
@@ -32,6 +32,6 @@ public final class ForceDeleteDialog {
      * The popups of this feature, which send what the user does to {@code dispatch}.
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(SPEC, dispatch)));
+        return List.of(PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ConfirmDialog<>(SPEC, dispatch)));
     }
 }

@@ -49,7 +49,7 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | ↳ `kernel-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | kernel |
 | ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch, inprogress; `changes.panes.commits` and `changes.panes.stash`, the commits and stash panes (ADR 158). | ui |
-| ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start. | changes |
+| ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start; `branches.panes.branches`, the branches pane (ADR 158). | changes |
 | ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds, and how gh runs in the settings panel; the only module of the application that names gh. Deleting it, with `core-gh`, leaves jazygit working, without GitHub (ADR 171). | branches, changes, gh |
 | ↳ `features-forgejo` | `forgejo.*`: how the last build of each branch on Forgejo went, as a badge in the branches pane (ADR 174), and the pull request of a branch, read from the home of the pull requests (ADR 177) and matched by its head, in a dialog of its own (`pulls`, ADR 176); the only module of the application that names `core-forgejo`. Deleting it, with `core-forgejo`, leaves jazygit working, without Forgejo. | forgejo |
 | ↳ `features-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
@@ -156,8 +156,10 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   `changes.panes.commits`; the app gives it to `LeftColumn` as a `LeftPane`, and its id is a `PaneId` constant. The
   search of the commits is the first that moved.
 - **A pane declares keys the features fill** (ADR 172): a pane in a group names no feature; it declares `PaneKey`s
-  beside itself, as `CommitsPane.LINE` and `CommitsPane.LISTING`, which a `Feature` fills with `filling`, and the app
-  gives it the `Fills` of its features (`Features.FILLS`). For each key, the first feature that gives anything wins.
+  beside itself, as `CommitsPane.LINE` and `CommitsPane.LISTING`, or `BranchBadges.KEY` and `BranchGroups.KEY` of the
+  branches pane, which a `Feature` fills with `filling`, and the app gives it the `Fills` of its features
+  (`Features.FILLS`). A pane asks for the first feature that gives anything (`Fills.of`), or for all of them in
+  their order (`Fills.all`), as the branches pane joins the badges and the groups of every feature.
 - **The kernel names no forge** (ADR 167, 169, 171): GitHub's state, its stores, its screen, its stack and its
   review threads are `features-github`'s. The kernel composes what the features state the branches are built on
   (`BranchBases`, from each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as

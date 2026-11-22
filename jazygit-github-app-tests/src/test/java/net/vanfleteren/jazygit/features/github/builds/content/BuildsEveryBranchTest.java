@@ -41,8 +41,8 @@ import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -107,7 +107,7 @@ class BuildsEveryBranchTest {
     }
 
     private static BuildsShown shown(Model model) {
-        return ((BuildsBody) ((Shown.Area) ContentViews.of(model, BranchesPanel.PANE)).body()).shown();
+        return ((BuildsBody) ((Shown.Area) ContentViews.of(model, Scopes.BRANCHES.pane())).body()).shown();
     }
 
     @Test
@@ -151,7 +151,7 @@ class BuildsEveryBranchTest {
         assertEquals(List.of(new LoadRepoWorkflows()), every.cmds());
         assertEquals(
                 "Builds: main · last 3 commits · every branch",
-                ((Shown.Area) ContentViews.of(every.model(), BranchesPanel.PANE)).title());
+                ((Shown.Area) ContentViews.of(every.model(), Scopes.BRANCHES.pane())).title());
         assertInstanceOf(Loadable.Loading.class, shown(every.model()).builds());
 
         Model listed = Update.update(
@@ -211,7 +211,7 @@ class BuildsEveryBranchTest {
                 .model();
         assertEquals(
                 "Builds: main · last 3 commits · every branch · m for more",
-                ((Shown.Area) ContentViews.of(hundred, BranchesPanel.PANE)).title());
+                ((Shown.Area) ContentViews.of(hundred, Scopes.BRANCHES.pane())).title());
 
         Next more = Update.update(hundred, new BuildsMsg.MoreRequested());
 
@@ -235,7 +235,7 @@ class BuildsEveryBranchTest {
     }
 
     private static String title(Model model) {
-        return ((Shown.Area) ContentViews.of(model, BranchesPanel.PANE)).title();
+        return ((Shown.Area) ContentViews.of(model, Scopes.BRANCHES.pane())).title();
     }
 
     private static final Failure TIMEOUT = GitHubFailure.of(new GhError.UnexpectedOutput("timeout"));

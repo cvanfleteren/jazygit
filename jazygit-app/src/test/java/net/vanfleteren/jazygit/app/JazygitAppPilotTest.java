@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.features.changes.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
@@ -40,9 +41,9 @@ import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.ui.*;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -75,7 +76,7 @@ class JazygitAppPilotTest {
 
             pilot.press(KeyCode.TAB);
             pilot.pause();
-            assertEquals(BranchesPanel.ID, focusManager.focusedId());
+            assertEquals(Scopes.BRANCHES.id(), focusManager.focusedId());
 
             pilot.press(KeyCode.TAB);
             pilot.pause();
@@ -207,7 +208,7 @@ class JazygitAppPilotTest {
         Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
         assertRightEntersAndLeftLeaves(
-                model, BranchesPanel.PANE, new BranchesPanel(msg -> {}, tab -> {})::render, AreaId.LOG);
+                model, Scopes.BRANCHES.pane(), new BranchesPanel(msg -> {}, tab -> {})::render, AreaId.LOG);
     }
 
     @Test
@@ -327,7 +328,7 @@ class JazygitAppPilotTest {
             Pilot pilot = SettledPilot.of(testRunner);
             pilot.press(KeyCode.TAB);
             pilot.pause();
-            assertEquals(BranchesPanel.ID, focusManager.focusedId());
+            assertEquals(Scopes.BRANCHES.id(), focusManager.focusedId());
             assertEquals(
                     new SelectionMsg.BranchSelected(new BranchRef.Remote(feature)),
                     fixture.selections().getLast());
@@ -349,7 +350,7 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
 
             Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
@@ -389,7 +390,7 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
 
             Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();
@@ -414,7 +415,7 @@ class JazygitAppPilotTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(fixture.renderer())) {
             FocusManager focusManager = testRunner.runner().focusManager();
             fixture.focusManagerRef().set(focusManager);
-            SettledPilot.focus(testRunner, BranchesPanel.ID);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
 
             Pilot pilot = SettledPilot.of(testRunner);
             pilot.pause();

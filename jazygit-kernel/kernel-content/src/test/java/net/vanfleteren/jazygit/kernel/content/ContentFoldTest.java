@@ -9,13 +9,13 @@ import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.content.Tone;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
@@ -28,14 +28,14 @@ class ContentFoldTest {
 
     private static final Model MODEL = TestModels.loaded();
 
-    private static final ContentArea MINE = ContentArea.of(new AreaId("mine"), BranchesPanel.PANE);
+    private static final ContentArea MINE = ContentArea.of(new AreaId("mine"), Scopes.BRANCHES.pane());
 
     @Test
     void aSourceThatAnswersComesBeforeTheContentPanelsOwn() {
         ContentSources sources = new ContentSources(
                 List.<ContentSource>of(new Says(Mirrored.BRANCHES)).appendAll(PanelSources.ALL));
 
-        assertEquals(said(Mirrored.BRANCHES), ContentView.of(MODEL, Option.of(BranchesPanel.PANE), sources));
+        assertEquals(said(Mirrored.BRANCHES), ContentView.of(MODEL, Option.of(Scopes.BRANCHES.pane()), sources));
     }
 
     @Test
@@ -63,7 +63,7 @@ class ContentFoldTest {
     void withoutASourceThatAnswersItIsLoading() {
         assertEquals(
                 new Shown.Message("", Placeholders.loading(), Tone.DIM),
-                ContentView.of(MODEL, Option.of(BranchesPanel.PANE), new ContentSources(List.empty())));
+                ContentView.of(MODEL, Option.of(Scopes.BRANCHES.pane()), new ContentSources(List.empty())));
     }
 
     /**
@@ -75,8 +75,8 @@ class ContentFoldTest {
         ContentPanel panel = new ContentPanel(
                 new ContentSources(List.of(new InArea())), Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
 
-        assertEquals(Option.of(MINE.id()), panel.areaOfPane(MODEL, BranchesPanel.PANE));
-        assertEquals(Option.of(BranchesPanel.PANE), panel.paneOfArea(MODEL, MINE.id()));
+        assertEquals(Option.of(MINE.id()), panel.areaOfPane(MODEL, Scopes.BRANCHES.pane()));
+        assertEquals(Option.of(Scopes.BRANCHES.pane()), panel.paneOfArea(MODEL, MINE.id()));
         assertEquals(Option.none(), panel.paneOfArea(MODEL, AreaId.LOG));
     }
 

@@ -52,7 +52,6 @@ class UiArchitectureTest {
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage(
-                    "net.vanfleteren.jazygit.kernel.ui.branches..",
                     "net.vanfleteren.jazygit.kernel.ui.commits..",
                     "net.vanfleteren.jazygit.kernel.ui.files..",
                     "net.vanfleteren.jazygit.kernel.ui.markdown..",

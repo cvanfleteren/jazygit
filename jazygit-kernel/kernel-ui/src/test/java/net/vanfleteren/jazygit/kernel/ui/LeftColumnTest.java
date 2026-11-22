@@ -14,7 +14,6 @@ import dev.tamboui.toolkit.event.EventRouter;
 import dev.tamboui.toolkit.focus.FocusManager;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.time.Clock;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
@@ -24,6 +23,7 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.preferences.TestScreens;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
@@ -35,16 +35,16 @@ class LeftColumnTest {
 
     private static final Rect AREA = new Rect(0, 0, 40, 60);
 
-    // The commits and stash panes live in a group of features (ADR 158): a pane of its id stands in for each.
+    // The branches, commits and stash panes live in groups of features (ADR 158): a pane of its id stands in for each.
+    private static final LeftPane BRANCHES = standIn(Scopes.BRANCHES.pane());
     private static final LeftPane COMMITS = standIn(PaneId.COMMITS);
     private static final LeftPane STASH = standIn(PaneId.STASH);
 
     private final LeftColumn leftColumn = new LeftColumn(
             msg -> {},
             StyleEngine.create(),
-            Clock.systemUTC(),
             id -> {},
-            tab -> {},
+            highlights -> BRANCHES,
             highlights -> COMMITS,
             highlights -> STASH,
             Screens.of(List.of(spec(
@@ -113,9 +113,8 @@ class LeftColumnTest {
         return new LeftColumn(
                 msg -> {},
                 StyleEngine.create(),
-                Clock.systemUTC(),
                 id -> {},
-                tab -> {},
+                highlights -> BRANCHES,
                 highlights -> COMMITS,
                 highlights -> STASH,
                 Screens.of(List.of(spec)));

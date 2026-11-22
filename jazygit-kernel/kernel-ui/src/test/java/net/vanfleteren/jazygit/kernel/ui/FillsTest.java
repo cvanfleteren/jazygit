@@ -2,13 +2,15 @@ package net.vanfleteren.jazygit.kernel.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import org.junit.jupiter.api.Test;
 
 /**
- * What the features give for the keys of the panes (ADR 172): the first that gives anything, in their order.
+ * What the features give for the keys of the panes (ADR 172): the first that gives anything, or all that do, in
+ * their order.
  */
 class FillsTest {
 
@@ -32,6 +34,18 @@ class FillsTest {
 
         assertEquals(Option.of("second"), first.andThen(second).andThen(third).of(KEY, MODEL));
         assertEquals(Option.of("third"), third.andThen(second).of(KEY, MODEL));
+    }
+
+    @Test
+    void allThatGiveSomethingAreKeptInTheOrderOfTheFeatures() {
+        Fills first = Fills.NONE.with(KEY, model -> Option.none());
+        Fills second = Fills.NONE.with(KEY, model -> Option.of("second"));
+        Fills third = Fills.NONE.with(KEY, model -> Option.of("third"));
+
+        assertEquals(
+                List.of("second", "third"), first.andThen(second).andThen(third).all(KEY, MODEL));
+        assertEquals(List.empty(), first.all(KEY, MODEL));
+        assertEquals(List.empty(), Fills.NONE.all(KEY, MODEL));
     }
 
     @Test

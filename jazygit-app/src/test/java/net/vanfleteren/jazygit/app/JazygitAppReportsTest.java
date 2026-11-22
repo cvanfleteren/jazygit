@@ -44,7 +44,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
 
@@ -95,10 +95,10 @@ class JazygitAppReportsTest {
             awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(1)));
 
             // The branches: the files pane lists the files of the commit highlighted now, which may be none (ADR 141).
-            Rect branches = pilot.findElement(BranchesPanel.ID);
+            Rect branches = pilot.findElement(Scopes.BRANCHES.id());
             pilot.mousePress(MouseButton.LEFT, branches.left() + 3, branches.top());
 
-            assertEquals(BranchesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+            assertEquals(Scopes.BRANCHES.id(), onRenderThread(testRunner, () -> focusedId(testRunner)));
         } finally {
             app.onStop();
         }
@@ -250,7 +250,7 @@ class JazygitAppReportsTest {
         TestApp app = new TestApp(new Env(new PullsSlowly(pulled).git()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
-            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id(), app.drawnAt::size);
             awaitModel(
                     testRunner,
                     app,
