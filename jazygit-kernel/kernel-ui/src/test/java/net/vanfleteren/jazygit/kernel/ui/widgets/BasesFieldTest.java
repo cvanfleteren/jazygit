@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.widgets;
+package net.vanfleteren.jazygit.kernel.ui.widgets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
