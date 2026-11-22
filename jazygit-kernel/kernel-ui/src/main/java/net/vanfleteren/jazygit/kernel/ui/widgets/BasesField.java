@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.widgets;
+package net.vanfleteren.jazygit.kernel.ui.widgets;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
@@ -18,16 +18,10 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
-import net.vanfleteren.jazygit.kernel.ui.widgets.FilteredCursor;
-import net.vanfleteren.jazygit.kernel.ui.widgets.FocusBordered;
-import net.vanfleteren.jazygit.kernel.ui.widgets.FocusHighlighted;
-import net.vanfleteren.jazygit.kernel.ui.widgets.KeysFirst;
-import net.vanfleteren.jazygit.kernel.ui.widgets.ListFilter;
-import net.vanfleteren.jazygit.kernel.ui.widgets.ListKeys;
 
 /**
- * The list of the branches a pull request can merge into, in the popups that create one (ADR 18) and edit one (ADR
- * 59): about 5 rows high, the highlighted one the base, which its border names. The arrows move the highlight, and
+ * The list of the branches a pull request can merge into, in the popups of each forge that create one (ADR 18) and
+ * edit one (ADR 59): about 5 rows high, the highlighted one the base, which its border names. The arrows move the highlight, and
  * typing filters the list straight away. Enter goes on to the next field; Escape clears the filter while there is
  * one. Where the user is in it lives in the model's {@code ListCursor}, which every move is sent to.
  *
@@ -92,9 +86,8 @@ public final class BasesField<B> {
                 panel(
                                 shown.cursor()
                                         .filter()
-                                        .map(typed ->
-                                                Messages.get("github.dialog.newPullRequest.baseFiltered", named, typed))
-                                        .getOrElse(() -> Messages.get("github.dialog.newPullRequest.base", named)),
+                                        .map(typed -> Messages.get("bases.intoFiltered", named, typed))
+                                        .getOrElse(() -> Messages.get("bases.into", named)),
                                 // Enter moves the focus on, which a list drops from its onKeyEvent handler.
                                 new KeysFirst(
                                         shown.lines().isEmpty() ? rows : new FocusHighlighted(rows),
@@ -109,9 +102,7 @@ public final class BasesField<B> {
      * it. It takes no focus, so Tab goes past it.
      */
     public Element fixed(B base, String why) {
-        return panel(
-                        Messages.get("github.dialog.newPullRequest.base", name.apply(base)),
-                        text(why).addClass(Theme.Classes.DIM))
+        return panel(Messages.get("bases.into", name.apply(base)), text(why).addClass(Theme.Classes.DIM))
                 .length(FIXED_HEIGHT);
     }
 
