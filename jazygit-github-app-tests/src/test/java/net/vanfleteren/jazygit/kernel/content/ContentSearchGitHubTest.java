@@ -128,7 +128,7 @@ class ContentSearchGitHubTest {
                 .map(net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding::key);
         Driven driven = new Driven(
                 BuildsPickTest.steppable(),
-                net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel.PANE,
+                net.vanfleteren.jazygit.kernel.ui.keys.Scopes.BRANCHES.pane(),
                 BuildsView.AREA);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
             SettledPilot.focus(testRunner, driven.area().id());

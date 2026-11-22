@@ -4,11 +4,11 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
  * The commit highlighted in the commits of a branch the branches pane lists.
@@ -18,7 +18,7 @@ record BranchCommitsSource() implements ContentSource {
     /**
      * The commit highlighted in the commits of a branch the branches pane lists.
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.BRANCH_COMMIT, BranchesPanel.PANE);
+    static final ContentArea AREA = ContentArea.of(AreaId.BRANCH_COMMIT, Scopes.BRANCHES.pane());
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {

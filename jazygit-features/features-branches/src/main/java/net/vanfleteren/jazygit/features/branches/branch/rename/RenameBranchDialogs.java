@@ -5,8 +5,8 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.kernel.ui.widgets.TextInputDialog;
@@ -60,7 +60,7 @@ public final class RenameBranchDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.PANE, new TextInputDialog<>(RENAME_BRANCH, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(RENAME_UPSTREAM, dispatch)));
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new TextInputDialog<>(RENAME_BRANCH, dispatch)),
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ChoiceDialog<>(RENAME_UPSTREAM, dispatch)));
     }
 }

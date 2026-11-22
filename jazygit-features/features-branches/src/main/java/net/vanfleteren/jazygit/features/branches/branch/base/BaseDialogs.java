@@ -7,8 +7,8 @@ import net.vanfleteren.jazygit.core.git.model.BaseCandidate;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog.Cell;
@@ -36,7 +36,7 @@ public final class BaseDialogs {
     private BaseDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.PANE, new PickDialog<>(BASE, dispatch)));
+        return List.of(PopupSlot.returningTo(Scopes.BRANCHES.pane(), new PickDialog<>(BASE, dispatch)));
     }
 
     static List<Row<Option<BranchName>>> rows(BasePopup popup) {

@@ -7,8 +7,8 @@ import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
@@ -144,9 +144,9 @@ public final class StackDialogs {
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
                 PopupSlot.returningToFocus(new ChoiceDialog<>(MENU, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.PANE, new StackPickDialog(dispatch)),
-                PopupSlot.returningTo(BranchesPanel.PANE, new KeyedConfirmDialog<>(LINK, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.PANE, new PickDialog<>(STACK_ON, dispatch)),
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new StackPickDialog(dispatch)),
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new KeyedConfirmDialog<>(LINK, dispatch)),
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new PickDialog<>(STACK_ON, dispatch)),
                 PopupSlot.returningToFocus(new ConfirmDialog<>(UNSTACK, dispatch)),
                 PopupSlot.returningToFocus(new KeyedConfirmDialog<>(REBASE, dispatch)),
                 PopupSlot.returningToFocus(new StackCheckoutDialog(dispatch)));

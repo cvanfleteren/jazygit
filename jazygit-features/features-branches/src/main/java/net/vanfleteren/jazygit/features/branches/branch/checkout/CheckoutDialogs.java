@@ -7,8 +7,8 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Worktree;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.HomeDir;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
@@ -104,7 +104,7 @@ public final class CheckoutDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(STASH_CHECKOUT, dispatch)),
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ConfirmDialog<>(STASH_CHECKOUT, dispatch)),
                 // Checking out a pull request, on its own screen, offers it too.
                 PopupSlot.returningToFocus(new ConfirmDialog<>(SWITCH_WORKTREE, dispatch)),
                 // So does asking where to check out.

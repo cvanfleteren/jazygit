@@ -4,8 +4,8 @@ import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
 
 /**
@@ -27,7 +27,7 @@ public final class NukeBranchDialogs {
     private NukeBranchDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(NUKE_BRANCH, dispatch)));
+        return List.of(PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ConfirmDialog<>(NUKE_BRANCH, dispatch)));
     }
 
     private static String message(NukeBranchPopup popup) {

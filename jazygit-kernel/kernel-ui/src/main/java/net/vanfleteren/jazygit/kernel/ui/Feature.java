@@ -25,8 +25,6 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Reactions.Reaction;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.forge.ForgeUpdate;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchBadges;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchGroups;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
@@ -55,8 +53,6 @@ import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
  * @param settings    the sections it adds to the settings panel, in this order (ADR 163)
  * @param timers      what it dispatches every so often, without input
  * @param reactions   what it answers of what happens in the kernel, whichever part it keeps (ADR 158)
- * @param badges      what it shows of a branch in the branches pane, beside what git says (ADR 167)
- * @param groupings   the groups it makes of the local branches in the branches pane (ADR 167)
  * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
  * @param legends     what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
  * @param fills       what it gives for the keys of the panes, as the line above a list or what a pane lists (ADR 172)
@@ -68,8 +64,6 @@ public record Feature(
         List<SettingsSection> settings,
         List<Timer> timers,
         List<Reaction> reactions,
-        List<BranchBadges.Badge> badges,
-        List<BranchGroups.Grouping> groupings,
         List<ScreenSpec> screens,
         List<Legend> legends,
         Fills fills,
@@ -80,14 +74,12 @@ public record Feature(
 
     /**
      * The feature of {@code actions}, in that order, which shows nothing in the content panel of its own, has no
-     * settings, dispatches nothing every so often, answers nothing, shows nothing of the branches, brings no screen
-     * and adds nothing to a legend.
+     * settings, dispatches nothing every so often, answers nothing, fills no key of a pane, brings no screen and adds
+     * nothing to a legend.
      */
     public static Feature of(FeatureAction... actions) {
         return new Feature(
                 List.of(actions),
-                List.empty(),
-                List.empty(),
                 List.empty(),
                 List.empty(),
                 List.empty(),
@@ -113,8 +105,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens,
                 legends,
                 fills,
@@ -135,8 +125,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens,
                 legends,
                 fills,
@@ -157,8 +145,6 @@ public record Feature(
                 settings.appendAll(List.of(sections)),
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens,
                 legends,
                 fills,
@@ -180,8 +166,6 @@ public record Feature(
                 settings,
                 timers.append(new Timer(interval, msg)),
                 reactions,
-                badges,
-                groupings,
                 screens,
                 legends,
                 fills,
@@ -203,54 +187,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions.append(reaction),
-                badges,
-                groupings,
-                screens,
-                legends,
-                fills,
-                running,
-                spinning,
-                clocking,
-                applying);
-    }
-
-    /**
-     * This feature, also showing what {@code badge} makes of a branch in the branches pane, after the badges of the
-     * features before it (ADR 167).
-     */
-    public Feature badging(BranchBadges.Badge badge) {
-        return new Feature(
-                actions,
-                contents,
-                settingKeys,
-                settings,
-                timers,
-                reactions,
-                badges.append(badge),
-                groupings,
-                screens,
-                legends,
-                fills,
-                running,
-                spinning,
-                clocking,
-                applying);
-    }
-
-    /**
-     * This feature, also grouping the local branches in the branches pane with {@code grouping}; a branch the features
-     * before it grouped stays in their group (ADR 167).
-     */
-    public Feature grouping(BranchGroups.Grouping grouping) {
-        return new Feature(
-                actions,
-                contents,
-                settingKeys,
-                settings,
-                timers,
-                reactions,
-                badges,
-                groupings.append(grouping),
                 screens,
                 legends,
                 fills,
@@ -272,8 +208,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens,
                 legends,
                 fills.with(key, filler),
@@ -295,8 +229,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens.append(screen),
                 legends,
                 fills,
@@ -318,8 +250,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens,
                 this.legends.appendAll(List.of(legends)),
                 fills,
@@ -341,8 +271,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens,
                 legends,
                 fills,
@@ -364,8 +292,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens,
                 legends,
                 fills,
@@ -388,8 +314,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens,
                 legends,
                 fills,
@@ -422,8 +346,6 @@ public record Feature(
                 settings,
                 timers,
                 reactions,
-                badges,
-                groupings,
                 screens,
                 legends,
                 fills,
@@ -461,10 +383,6 @@ public record Feature(
                 reactions
                         .map(reaction -> (Reaction) new GatedReaction(id, reaction))
                         .prepend(detecting),
-                badges.map(badge -> (BranchBadges.Badge)
-                        (model, branch) -> model.on(id) ? badge.of(model, branch) : BranchBadges.Shown.NONE),
-                groupings.map(grouping -> (BranchGroups.Grouping)
-                        (model, branches) -> model.on(id) ? grouping.of(model, branches) : List.empty()),
                 screens,
                 legends.map(legend -> legend.of(id)),
                 fills.gated(model -> model.on(id)),

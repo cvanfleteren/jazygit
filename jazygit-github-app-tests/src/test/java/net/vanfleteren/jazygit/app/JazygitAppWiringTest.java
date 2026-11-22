@@ -45,7 +45,6 @@ import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -78,7 +77,7 @@ class JazygitAppWiringTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             awaitModel(testRunner, app, model -> AheadUpdate.main(model).isDefined());
-            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id(), app.drawnAt::size);
 
             // The main branch is the first one listed.
             SettledPilot.of(testRunner, app.drawnAt::size).press('F');
@@ -168,7 +167,7 @@ class JazygitAppWiringTest {
                     () -> app.model().repoView().files().commitFiles().get().of());
 
             // The branches, whose checked-out branch follows the working tree, do not take their place (ADR 149).
-            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id(), app.drawnAt::size);
             SettledPilot.of(testRunner, app.drawnAt::size).pause();
             SettledPilot.of(testRunner, app.drawnAt::size).pause();
             assertEquals(
@@ -182,7 +181,7 @@ class JazygitAppWiringTest {
             SettledPilot.of(testRunner, app.drawnAt::size).press(KeyCode.ESCAPE);
             awaitModel(
                     testRunner, app, model -> model.repoView().files().locked().isEmpty());
-            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id(), app.drawnAt::size);
             awaitModel(
                     testRunner,
                     app,
@@ -202,14 +201,14 @@ class JazygitAppWiringTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             awaitModel(testRunner, app, model -> AheadUpdate.main(model).isDefined());
-            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id(), app.drawnAt::size);
             // F on the main branch, the first listed, locks the files to the branches.
             SettledPilot.of(testRunner, app.drawnAt::size).press('F');
             awaitModel(
                     testRunner, app, model -> model.repoView().files().locked().isDefined());
 
             // Back on the main branch, checked out here, the branches follow the working tree, still locked.
-            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id(), app.drawnAt::size);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
             pilot.press(KeyCode.DOWN);
             pilot.pause();
@@ -226,7 +225,7 @@ class JazygitAppWiringTest {
             awaitModel(
                     testRunner, app, model -> model.repoView().files().locked().isEmpty());
             await(
-                    () -> BranchesPanel.ID.equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
+                    () -> Scopes.BRANCHES.id().equals(onRenderThread(testRunner, () -> focusedId(testRunner))),
                     "the branches focused again");
         } finally {
             app.onStop();

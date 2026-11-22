@@ -5,8 +5,8 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
@@ -58,7 +58,7 @@ public final class RemoveWorktreeDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(REMOVE_WORKTREE, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.PANE, new ConfirmDialog<>(FORCE_REMOVE_WORKTREE, dispatch)));
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ChoiceDialog<>(REMOVE_WORKTREE, dispatch)),
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ConfirmDialog<>(FORCE_REMOVE_WORKTREE, dispatch)));
     }
 }

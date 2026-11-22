@@ -38,7 +38,7 @@ import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -104,7 +104,7 @@ class JazygitAppBuildsTest {
                     testRunner,
                     app,
                     model -> model.repoView().preview().branchLog().isDefined());
-            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            SettledPilot.focus(testRunner, Scopes.BRANCHES.id(), app.drawnAt::size);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
 
             pilot.press('B');
@@ -129,7 +129,7 @@ class JazygitAppBuildsTest {
             pilot.press('B');
             awaitModel(testRunner, app, model -> model.part(BuildsView.PART).isEmpty());
             SettledPilot.settle(testRunner, app.drawnAt::size);
-            assertEquals(BranchesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+            assertEquals(Scopes.BRANCHES.id(), onRenderThread(testRunner, () -> focusedId(testRunner)));
         } finally {
             app.onStop();
         }

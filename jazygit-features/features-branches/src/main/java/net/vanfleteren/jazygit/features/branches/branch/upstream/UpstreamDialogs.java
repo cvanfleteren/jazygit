@@ -6,8 +6,8 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 
@@ -54,7 +54,7 @@ public final class UpstreamDialogs {
     private UpstreamDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(BranchesPanel.PANE, new ChoiceDialog<>(UPSTREAM, dispatch)));
+        return List.of(PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ChoiceDialog<>(UPSTREAM, dispatch)));
     }
 
     private static String upstreamName(Option<Branch> branch) {

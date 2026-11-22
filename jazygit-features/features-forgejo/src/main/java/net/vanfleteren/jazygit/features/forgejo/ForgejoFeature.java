@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.features.forgejo;
 
+import io.vavr.control.Option;
 import java.time.Duration;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
 import net.vanfleteren.jazygit.features.forgejo.badges.BuildLegend;
 import net.vanfleteren.jazygit.features.forgejo.badges.ForgejoBadge;
 import net.vanfleteren.jazygit.features.forgejo.builds.BuildsMsg;
@@ -39,7 +41,7 @@ public final class ForgejoFeature {
             .every(READ_INTERVAL, BuildsMsg.Tick::new)
             .reacting(ForgejoReactions::to)
             .reacting(PullRequestReactions::to)
-            .badging(ForgejoBadge::of)
+            .filling(BranchBadges.KEY, model -> Option.some(ForgejoBadge::of))
             .explaining(BuildLegend.BRANCHES)
             .running(ForgejoServices::running)
             // Its dialog reads what Forgejo has, and shows how long ago (ADR 124).

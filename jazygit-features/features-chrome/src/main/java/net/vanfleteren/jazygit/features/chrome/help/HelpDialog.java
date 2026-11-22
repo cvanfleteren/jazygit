@@ -60,10 +60,10 @@ public final class HelpDialog implements PopupView {
     private static final Map<String, List<Tuple2<String, String>>> LEGENDS = HashMap.of(
             Scopes.BRANCHES.id(),
             List.of(
-                    Tuple.of(Messages.get("branches.gone"), "chrome.help.branches.legend.gone"),
+                    Tuple.of(Messages.get("branchRow.gone"), "chrome.help.branches.legend.gone"),
                     Tuple.of("⇡2", "chrome.help.branches.legend.ahead"),
                     Tuple.of("⇣3", "chrome.help.branches.legend.behind"),
-                    Tuple.of(Messages.get("branches.worktree.short"), "chrome.help.branches.legend.worktree")));
+                    Tuple.of(Messages.get("branchRow.worktree.short"), "chrome.help.branches.legend.worktree")));
 
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;

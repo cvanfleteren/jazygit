@@ -11,7 +11,6 @@ import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import java.time.Clock;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -19,9 +18,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
-import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
 import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
@@ -47,7 +44,7 @@ public final class LeftColumn {
     private final Consumer<Msg> dispatch;
     private final StyleEngine styleEngine;
     private final FilesPanel filesPanel;
-    private final BranchesPanel branchesPanel;
+    private final LeftPane branchesPanel;
     private final LeftPane commitsPanel;
     private final LeftPane stashPanel;
     private final Screens screens;
@@ -55,19 +52,17 @@ public final class LeftColumn {
 
     /**
      * @param styleEngine     the active theme, which highlights the selected rows
-     * @param clock           tells the time the branches are drawn at
      * @param openContent     moves the focus to the content shown for the pane given
-     * @param showBranchesTab moves the focus to the branches pane, and shows the list given in it
-     * @param commits         makes the commits pane, which lives in a group of features (ADR 158)
+     * @param branches        makes the branches pane, which lives in a group of features (ADR 158)
+     * @param commits         makes the commits pane, which lives in a group of features
      * @param stash           makes the stash pane, which lives in a group of features
      * @param screens         the screens the left of the window shows, whose panes the features make
      */
     public LeftColumn(
             Consumer<Msg> dispatch,
             StyleEngine styleEngine,
-            Clock clock,
             Consumer<PaneId> openContent,
-            Consumer<BranchesTab> showBranchesTab,
+            LeftPane.Factory branches,
             LeftPane.Factory commits,
             LeftPane.Factory stash,
             Screens screens) {
@@ -76,7 +71,7 @@ public final class LeftColumn {
         // How the active theme highlights the selected row of a pane, in use or not.
         Theme.Highlights highlight = active -> Theme.highlights(styleEngine).of(active);
         this.filesPanel = new FilesPanel(dispatch, () -> openContent.accept(FilesPanel.PANE), highlight);
-        this.branchesPanel = new BranchesPanel(dispatch, showBranchesTab, clock, highlight);
+        this.branchesPanel = branches.of(highlight);
         this.commitsPanel = commits.of(highlight);
         this.stashPanel = stash.of(highlight);
         this.screens = screens;

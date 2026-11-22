@@ -32,8 +32,8 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -73,10 +73,12 @@ class BuildsWorkflowsTest {
                 .model();
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
 
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, BranchesPanel.PANE))) {
-            int narrow = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.PANE), 60, 40));
-            int wide = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.PANE), 120, 40));
-            int again = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, BranchesPanel.PANE), 60, 40));
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(read, Scopes.BRANCHES.pane()))) {
+            int narrow =
+                    bars(RenderedText.ofSize(testRunner, () -> panel.render(read, Scopes.BRANCHES.pane()), 60, 40));
+            int wide = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, Scopes.BRANCHES.pane()), 120, 40));
+            int again = bars(RenderedText.ofSize(testRunner, () -> panel.render(read, Scopes.BRANCHES.pane()), 60, 40));
             assertTrue(narrow > 0 && narrow < 60, String.valueOf(narrow));
             assertTrue(wide > narrow + 40, "the chart follows the width of the area: " + narrow + " then " + wide);
             assertEquals(narrow, again);

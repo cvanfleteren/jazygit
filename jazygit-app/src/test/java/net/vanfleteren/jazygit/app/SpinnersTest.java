@@ -10,13 +10,13 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.state.Jobs;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.load.LoadStatus;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
 

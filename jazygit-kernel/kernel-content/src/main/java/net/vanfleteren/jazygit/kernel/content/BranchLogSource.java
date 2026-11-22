@@ -10,13 +10,13 @@ import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.view.NoLog;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.commits.AheadView;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
  * The log of the branch highlighted in the branches pane, when nothing else is shown for it: the last of the sources
@@ -27,7 +27,7 @@ record BranchLogSource() implements ContentSource {
     /**
      * The log of the branch highlighted in the branches pane.
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.LOG, BranchesPanel.PANE);
+    static final ContentArea AREA = ContentArea.of(AreaId.LOG, Scopes.BRANCHES.pane());
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {

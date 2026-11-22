@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
+import net.vanfleteren.jazygit.kernel.state.view.Followed;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 
 /**
@@ -31,6 +32,14 @@ public interface LeftPane {
      * The message to send when the pane highlights another item than the one {@code model} holds the preview of.
      */
     Option<Msg> selectionChange(Model model);
+
+    /**
+     * What the files pane lists while this pane has the focus (ADR 141), if it lists something of this pane: none
+     * while that is not known yet, or for a pane the files pane does not follow.
+     */
+    default Option<Followed> followed(Model model) {
+        return Option.none();
+    }
 
     /**
      * What makes a pane, once the column knows how the theme highlights a row.

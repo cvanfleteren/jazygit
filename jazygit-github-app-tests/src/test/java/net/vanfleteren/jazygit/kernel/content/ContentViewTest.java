@@ -27,11 +27,11 @@ import net.vanfleteren.jazygit.kernel.state.diff.*;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownChanges;
 import net.vanfleteren.jazygit.kernel.ui.content.Tone;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import org.junit.jupiter.api.Test;
 
@@ -148,7 +148,7 @@ class ContentViewTest {
 
         assertEquals(
                 ContentViewFixtures.note("Diff", Placeholders.loading()), ContentView.of(loading, FilesPanel.PANE));
-        assertEquals(loading("Log"), ContentView.of(loading, BranchesPanel.PANE));
+        assertEquals(loading("Log"), ContentView.of(loading, Scopes.BRANCHES.pane()));
         assertEquals(loading("Commit"), ContentView.of(loading, CommitsPanel.PANE));
         assertEquals(loading("Stash"), ContentView.of(loading, StashPanel.PANE));
     }
@@ -163,7 +163,7 @@ class ContentViewTest {
 
     @Test
     void theBranchesShowTheLogOfTheSelectedBranch() {
-        Shown.Area log = area(ContentView.of(model, BranchesPanel.PANE));
+        Shown.Area log = area(ContentView.of(model, Scopes.BRANCHES.pane()));
 
         assertEquals(BranchLogSource.AREA, log.area());
         assertEquals("Log: feature/initial-layout", log.title());
@@ -173,7 +173,7 @@ class ContentViewTest {
 
     @Test
     void theBranchesShowLoadingBeforeABranchIsSelected() {
-        assertEquals(loading("Log"), ContentView.of(TestModels.loaded(SampleData.git()), BranchesPanel.PANE));
+        assertEquals(loading("Log"), ContentView.of(TestModels.loaded(SampleData.git()), Scopes.BRANCHES.pane()));
     }
 
     @Test
@@ -185,12 +185,12 @@ class ContentViewTest {
 
         assertEquals(
                 dim("Log", "HEAD detached at 89eeda7: its commits are in the commits pane."),
-                ContentView.of(detached, BranchesPanel.PANE));
+                ContentView.of(detached, Scopes.BRANCHES.pane()));
     }
 
     @Test
     void theBranchesKeepShowingThePreviousLogWhileTheNewOneLoads() {
-        Shown.Area log = area(ContentView.of(TestModels.switchingBranch(model, "other"), BranchesPanel.PANE));
+        Shown.Area log = area(ContentView.of(TestModels.switchingBranch(model, "other"), Scopes.BRANCHES.pane()));
 
         assertEquals("Log: feature/initial-layout", log.title());
         assertTrue(shortShas(log).contains("0a1b2c3"), log.toString());
@@ -199,7 +199,7 @@ class ContentViewTest {
     @Test
     void aPopupThatJustClosedKeepsShowingTheBranchLogUntilTheFocusIsBack() {
         // The popup is gone from the model, but has the focus until the render gives it back.
-        Model closed = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.PANE)));
+        Model closed = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(Scopes.BRANCHES.pane())));
 
         assertEquals(
                 "Log: feature/initial-layout",
@@ -208,8 +208,8 @@ class ContentViewTest {
 
     @Test
     void aPopupOpenedFromTheBranchesKeepsShowingTheBranchLog() {
-        Model withPopup = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.PANE)))
-                .openPopup(new HelpPopup(BranchesPanel.ID, List.empty()));
+        Model withPopup = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(Scopes.BRANCHES.pane())))
+                .openPopup(new HelpPopup(Scopes.BRANCHES.id(), List.empty()));
 
         assertEquals(
                 "Log: feature/initial-layout",
@@ -276,18 +276,18 @@ class ContentViewTest {
                                 plain("cccc"),
                                 new ShownChanges(
                                         ContentViewFixtures.whole("+added line"), ContentViewFixtures.PLAIN_LOOK))),
-                ContentView.of(selected, BranchesPanel.PANE));
+                ContentView.of(selected, Scopes.BRANCHES.pane()));
     }
 
     @Test
     void theDivergenceShowsLoadingWhileItsCommitIsReadAndOnlyOnTheLocalTab() {
         Model loading = divergenceHighlighted();
 
-        assertEquals(loading("Commit"), ContentView.of(loading, BranchesPanel.PANE));
+        assertEquals(loading("Commit"), ContentView.of(loading, Scopes.BRANCHES.pane()));
         Model remoteTab =
                 loading.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
         // The remote branches show the log of the branch, which none is selected for here.
-        assertEquals(loading("Log"), ContentView.of(remoteTab, BranchesPanel.PANE));
+        assertEquals(loading("Log"), ContentView.of(remoteTab, Scopes.BRANCHES.pane()));
     }
 
     @Test
@@ -302,7 +302,7 @@ class ContentViewTest {
                                         new Divergence.Side(List.of(), 0), new Divergence.Side(List.of(), 0))),
                                 Option.none())))));
 
-        assertEquals(dim("Commit", "The branches have not diverged"), ContentView.of(diverged, BranchesPanel.PANE));
+        assertEquals(dim("Commit", "The branches have not diverged"), ContentView.of(diverged, Scopes.BRANCHES.pane()));
     }
 
     @Test
@@ -317,8 +317,8 @@ class ContentViewTest {
                                 new Sha("ffff"), DiffOptions.DEFAULT, DiffText.of("+added line")))
                 .model();
 
-        assertEquals(loading("Commit"), ContentView.of(loading, BranchesPanel.PANE));
-        Shown.Area commit = area(ContentView.of(selected, BranchesPanel.PANE));
+        assertEquals(loading("Commit"), ContentView.of(loading, Scopes.BRANCHES.pane()));
+        Shown.Area commit = area(ContentView.of(selected, Scopes.BRANCHES.pane()));
         assertEquals(BranchCommitsSource.AREA, commit.area());
         assertEquals("Commit: ffff", commit.title());
         assertEquals(
@@ -338,7 +338,8 @@ class ContentViewTest {
 
     @Test
     void aBranchWithoutCommitsSaysSoDimmed() {
-        assertEquals(dim("Commit", "No commits"), ContentView.of(branchCommitsOpen(List.empty()), BranchesPanel.PANE));
+        assertEquals(
+                dim("Commit", "No commits"), ContentView.of(branchCommitsOpen(List.empty()), Scopes.BRANCHES.pane()));
     }
 
     @Test

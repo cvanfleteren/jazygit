@@ -2,9 +2,9 @@ package net.vanfleteren.jazygit.app;
 
 import java.time.Instant;
 import net.vanfleteren.jazygit.app.keys.Features;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.ui.FetchLine;
-import net.vanfleteren.jazygit.kernel.ui.branches.BranchesPanel;
 
 /**
  * The spinners on the screen, which only turn while frames are drawn: their frame is told by the clock.
