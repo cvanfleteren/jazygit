@@ -2,8 +2,10 @@ package net.vanfleteren.jazygit.kernel.state.forge;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
@@ -76,17 +78,23 @@ public final class ForgeUpdate {
 
     /**
      * {@code model} with the forge of {@code chosen} on, that of the home before off if it is another, and
-     * {@code chosen} the home.
+     * {@code chosen} the home. Another home on the forge that is on already switches it on afresh: the features are
+     * told it was, so that it reads anew what it read of the home before.
      */
     private static Next switched(Model model, Option<ForgeCandidate> chosen) {
-        Option<String> before = model.part(ForgeHome.PART).home().map(ForgeCandidate::feature);
+        Option<ForgeCandidate> before = model.part(ForgeHome.PART).home();
         Model decided = model.mapPart(ForgeHome.PART, home -> home.deciding(chosen));
-        List<FeatureMsg.Applies> switches = before.filter(
-                        feature -> !chosen.exists(c -> c.feature().equals(feature)))
+        List<FeatureMsg.Applies> switches = before.map(ForgeCandidate::feature)
+                .filter(feature -> !chosen.exists(c -> c.feature().equals(feature)))
                 .map(feature -> new FeatureMsg.Applies(feature, false))
                 .toList()
                 .appendAll(chosen.map(c -> new FeatureMsg.Applies(c.feature(), true)));
-        return switches.foldLeft(Next.of(decided), (next, applies) -> next.then(m -> FeatureUpdate.update(m, applies)));
+        Next next = switches.foldLeft(
+                Next.of(decided), (done, applies) -> done.then(m -> FeatureUpdate.update(m, applies)));
+        boolean moved = chosen.exists(c -> before.exists(b -> b.feature().equals(c.feature()) && !b.equals(c)));
+        return moved
+                ? Events.happened(next, new KernelEvent.Switched(chosen.get().feature(), true))
+                : next;
     }
 
     /**

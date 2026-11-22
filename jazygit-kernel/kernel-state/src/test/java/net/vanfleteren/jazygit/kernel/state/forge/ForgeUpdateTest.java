@@ -12,7 +12,9 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
@@ -132,6 +134,25 @@ class ForgeUpdateTest {
         Model none = Update.update(asked, new ForgeMsg.Chosen(Option.none())).model();
         assertFalse(none.on("github"));
         assertEquals(Option.none(), ForgeHome.of(none));
+    }
+
+    @Test
+    void anotherHomeOnTheSameForgeSwitchesItOnAfresh() {
+        Model decided = told(nothingRemembered(opened()), claim("forgejo", "origin", "upstream"), claim("github"));
+        assertEquals(Option.of(new RemoteName("upstream")), ForgeHome.of(decided));
+        java.util.List<KernelEvent> seen = new java.util.ArrayList<>();
+        Model watched = decided.withReactions(new Reactions(List.of((model, event) -> {
+            seen.add(event);
+            return Next.of(model);
+        })));
+
+        Model asked = Update.update(watched, new ForgeMsg.Asked()).model();
+        Model origin = Update.update(asked, new ForgeMsg.Picked(0)).model();
+
+        assertEquals(Option.of(new RemoteName("origin")), ForgeHome.of(origin));
+        assertTrue(origin.on("forgejo"));
+        // As it reads anew what it read of the home before (ADR 177).
+        assertTrue(seen.contains(new KernelEvent.Switched("forgejo", true)), seen.toString());
     }
 
     @Test
