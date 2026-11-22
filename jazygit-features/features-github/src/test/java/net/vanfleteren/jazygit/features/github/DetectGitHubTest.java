@@ -88,6 +88,23 @@ class DetectGitHubTest {
     }
 
     @Test
+    void ghIsAskedWhereItIsLoggedInOnlyForAHostThatDoesNotSayItIsGitHubs() {
+        java.util.concurrent.atomic.AtomicInteger asked = new java.util.concurrent.atomic.AtomicInteger();
+        GitHub counting = StubGitHub.of().withAccount(new StubAccount() {
+            @Override
+            public Either<GhError, List<GhLogin>> logins() {
+                asked.incrementAndGet();
+                return Either.right(List.empty());
+            }
+        });
+
+        detect("https://github.com/owner/repo.git", counting);
+        assertEquals(0, asked.get());
+        detect("https://git.acme.com/owner/repo.git", counting);
+        assertEquals(1, asked.get());
+    }
+
+    @Test
     void aHostGhIsLoggedInToIsGitHubs() {
         GitHub loggedIn = StubGitHub.of().withAccount(new StubAccount() {
             @Override

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.github;
 
+import io.vavr.Lazy;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.LinkedHashMap;
@@ -54,16 +55,18 @@ public record DetectGitHub(String executable) implements Cmd {
         if (urls.isEmpty() || gh.account().version(executable).isLeft()) {
             return new FeatureMsg.Claimed(ForgeClaim.none(GitHubFeature.ID, NAME));
         }
-        Set<String> logins = gh.account()
+        // gh checks the token of each host it is logged in to over the network: only asked for a host that does not
+        // say it is GitHub's, as one of a GitHub Enterprise Server.
+        Lazy<Set<String>> logins = Lazy.of(() -> gh.account()
                 .logins()
                 .getOrElse(List.empty())
                 .map(login -> login.host().toLowerCase(Locale.ROOT))
-                .toSet();
+                .toSet());
         Map<RemoteName, String> claimed = LinkedHashMap.ofEntries(urls.toList()
                 .sortBy(remote -> remote._1().value())
                 .filter(remote -> GhAccount.hostOf(remote._2())
                         .map(host -> host.toLowerCase(Locale.ROOT))
-                        .exists(host -> named(host) || logins.contains(host))));
+                        .exists(host -> named(host) || logins.get().contains(host))));
         return new FeatureMsg.Claimed(new ForgeClaim(GitHubFeature.ID, NAME, claimed, HashSet.empty(), base(env)));
     }
 
