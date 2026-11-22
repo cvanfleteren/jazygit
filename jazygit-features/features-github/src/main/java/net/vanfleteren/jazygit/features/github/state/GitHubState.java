@@ -111,7 +111,18 @@ public record GitHubState(
             .naming(GitHubState::repository)
             // F on a branch with a pull request lists the files of that (ADR 61, 171).
             .listingFiles((state, branch) ->
-                    state.pullRequest(branch).map(pullRequest -> new PullRequestMsg.FilesRequested(branch.name())));
+                    state.pullRequest(branch).map(pullRequest -> new PullRequestMsg.FilesRequested(branch.name())))
+            // Another worktree of the repository has the same branches on GitHub (ADR 182).
+            .carrying(state -> Option.of(state.carried()));
+
+    /**
+     * What another worktree of the same repository opens with (ADR 182): what GitHub said of its branches and of the
+     * merges it was asked for, but not the reads to start again, nor that GitHub is being asked how a merge is doing:
+     * those answers go to the worktree shown before, so a pending merge is asked about again from here.
+     */
+    public GitHubState carried() {
+        return withAgain(HashSet.empty()).withMerges(merges.mapValues(merge -> merge.checked(merge.status())));
+    }
 
     /**
      * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one

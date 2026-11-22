@@ -36,7 +36,9 @@ public record ForgejoPullRequests(
     public static final ForgejoPullRequests NONE =
             new ForgejoPullRequests(Option.none(), Option.none(), Option.none(), 0, HashMap.empty(), HashMap.empty());
 
-    public static final Part<ForgejoPullRequests> PART = Part.of("forgejo.pullRequests", NONE);
+    // Another worktree of the repository has the same home, and the same pull requests (ADR 182).
+    public static final Part<ForgejoPullRequests> PART =
+            Part.of("forgejo.pullRequests", NONE).carrying(Option::of);
 
     /**
      * The open pull request of {@code home} that merges the branch {@code branch} is pushed to (ADR 177), if one does;

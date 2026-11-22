@@ -87,6 +87,14 @@ public record Parts(Map<String, Kept<?>> kept) {
     }
 
     /**
+     * What of these parts another worktree of the same repository starts from: what each part kept carries of itself,
+     * and none of a part that carries nothing (ADR 182).
+     */
+    public Parts carried() {
+        return kept.values().foldLeft(NONE, (carried, part) -> part.carriedInto(carried));
+    }
+
+    /**
      * What {@code model} becomes once each part it keeps answered {@code event}, in the order of their names. Each
      * one answers with its value as the parts before it left it, and not at all once they stopped keeping it.
      */
@@ -135,6 +143,14 @@ public record Parts(Map<String, Kept<?>> kept) {
 
         Option<Msg> files(Branch branch) {
             return part.hooks().listsFiles().files(value, branch);
+        }
+
+        Parts carriedInto(Parts parts) {
+            return part.hooks()
+                    .carries()
+                    .carried(value)
+                    .map(carried -> parts.with(part, carried))
+                    .getOrElse(parts);
         }
     }
 }

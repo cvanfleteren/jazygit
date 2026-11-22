@@ -88,6 +88,15 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
     }
 
     /**
+     * This part, carrying what {@code carries} keeps of its value to another worktree of the same repository as it
+     * opens (ADR 182): what the worktrees share, as the remotes and what their forge said of the branches, and none of
+     * what only the one before had, as the reads it was running.
+     */
+    public Part<S> carrying(Carries<S> carries) {
+        return new Part<>(name, initial, hooks.withCarries(carries));
+    }
+
+    /**
      * Where this part sits in a model.
      */
     public Lens<Model, S> lens() {
@@ -153,7 +162,15 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
     }
 
     /**
-     * What the kernel asks of a part (ADR 158, 169, 171).
+     * What of {@code value}, a part, another worktree of the same repository starts from, if anything (ADR 182).
+     */
+    @FunctionalInterface
+    public interface Carries<S> {
+        Option<S> carried(S value);
+    }
+
+    /**
+     * What the kernel asks of a part (ADR 158, 169, 171, 182).
      */
     public record Hooks<S>(
             Rereads<S> rereads,
@@ -162,7 +179,8 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
             States<S> states,
             Names<S> names,
             Remarking<S> remarking,
-            ListsFiles<S> listsFiles) {
+            ListsFiles<S> listsFiles,
+            Carries<S> carries) {
 
         private static final Hooks<Object> NONE = new Hooks<>(
                 (model, value) -> List.empty(),
@@ -171,11 +189,12 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
                 value -> StatedBases.NONE,
                 value -> Option.none(),
                 (value, changes) -> Option.none(),
-                (value, branch) -> Option.none());
+                (value, branch) -> Option.none(),
+                value -> Option.none());
 
         /**
          * No hooks: the part reads nothing again, knows no commit, answers nothing, states no bases, names no
-         * repository and states no remarks.
+         * repository, states no remarks and carries nothing to another worktree.
          */
         @SuppressWarnings("unchecked") // None of them looks at the value.
         public static <S> Hooks<S> none() {
@@ -183,31 +202,35 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
         }
 
         Hooks<S> withRereads(Rereads<S> rereads) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles, carries);
         }
 
         Hooks<S> withKnowsCommit(KnowsCommit<S> knowsCommit) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles, carries);
         }
 
         Hooks<S> withReacting(Reacting<S> reacting) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles, carries);
         }
 
         Hooks<S> withStates(States<S> states) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles, carries);
         }
 
         Hooks<S> withNames(Names<S> names) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles, carries);
         }
 
         Hooks<S> withRemarking(Remarking<S> remarking) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles, carries);
         }
 
         Hooks<S> withListsFiles(ListsFiles<S> listsFiles) {
-            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles);
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles, carries);
+        }
+
+        Hooks<S> withCarries(Carries<S> carries) {
+            return new Hooks<>(rereads, knowsCommit, reacting, states, names, remarking, listsFiles, carries);
         }
     }
 }

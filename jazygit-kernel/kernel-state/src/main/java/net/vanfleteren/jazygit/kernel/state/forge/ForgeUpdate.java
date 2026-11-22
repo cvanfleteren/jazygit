@@ -42,6 +42,14 @@ public final class ForgeUpdate {
     }
 
     /**
+     * Whether the forge of the repository opening in {@code model} is known already, as it opens with what another
+     * worktree of it decided (ADR 182): the forges are not asked again, and what they switched stays switched.
+     */
+    public static boolean known(Model model) {
+        return model.part(ForgeHome.PART).decided();
+    }
+
+    /**
      * {@code model} once a forge told {@code claim}.
      */
     public static Next claimed(Model model, ForgeClaim claim) {

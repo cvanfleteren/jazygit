@@ -124,6 +124,30 @@ class PartsTest {
     }
 
     @Test
+    void anotherWorktreeOfTheRepositoryGetsWhatEachPartCarriesAndNothingOfTheOthers() {
+        Part<Integer> halved = Part.of("test.halved", 0).carrying(value -> Option.of(value / 2));
+        Part<Integer> dropping = Part.of("test.dropping", 0).carrying(value -> Option.none());
+        Model model =
+                Model.initial("repo").withPart(halved, 8).withPart(dropping, 3).withPart(COUNT, 5);
+
+        Model carried = Model.initial("repo").withParts(model.parts().carried());
+
+        assertEquals(4, carried.part(halved));
+        assertEquals(0, carried.part(dropping));
+        // A part that declares nothing is the worktree's own.
+        assertEquals(0, carried.part(COUNT));
+        assertEquals(List.of("test.halved"), carried.parts().kept().keySet().toList());
+    }
+
+    @Test
+    void aPartThatCarriesItsInitialValueIsNotKept() {
+        Part<Integer> reset = Part.of("test.reset", 0).carrying(value -> Option.of(0));
+
+        assertEquals(
+                Parts.NONE, Model.initial("repo").withPart(reset, 2).parts().carried());
+    }
+
+    @Test
     void aLoadKeepsWhatItReadInAPartOnlyWhileThePartIsKept() {
         Part<Loadable<String>> read = Part.of("test.read", new Loadable.Loaded<>(""));
         Target<String> target = Target.inPart(read, Lens.of(value -> value, (value, now) -> now));

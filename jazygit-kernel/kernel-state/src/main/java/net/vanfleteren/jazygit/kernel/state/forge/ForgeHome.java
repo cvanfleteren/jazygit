@@ -31,7 +31,8 @@ public record ForgeHome(
     public static final ForgeHome NONE =
             new ForgeHome(HashSet.empty(), List.empty(), Option.none(), false, Option.none(), false);
 
-    public static final Part<ForgeHome> PART = Part.of("kernel.forgeHome", NONE);
+    // Another worktree of the same repository has the same remotes and git configuration, so the same home (ADR 182).
+    public static final Part<ForgeHome> PART = Part.of("kernel.forgeHome", NONE).carrying(ForgeHome::carried);
 
     /**
      * The remote the pull requests of the repository of {@code model} are opened against, while the forge it is on
@@ -76,6 +77,17 @@ public record ForgeHome(
      */
     public ForgeHome deciding(Option<ForgeCandidate> chosen) {
         return new ForgeHome(awaiting, claims, remembered, read, chosen, true);
+    }
+
+    /**
+     * What another worktree of the same repository opens with (ADR 182): the home, once it was decided, so that the
+     * forges do not tell their claims again; nothing while it was not, or while the user put off the question, which
+     * is asked again as the worktree opens, as at any opening (ADR 177).
+     */
+    public Option<ForgeHome> carried() {
+        return Option.when(
+                decided && (home.isDefined() || candidates().isEmpty()),
+                () -> new ForgeHome(HashSet.empty(), claims, remembered, read, home, true));
     }
 
     /**
