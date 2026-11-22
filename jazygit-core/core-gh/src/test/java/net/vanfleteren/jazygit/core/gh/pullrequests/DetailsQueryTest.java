@@ -14,7 +14,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
@@ -38,6 +37,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -255,7 +255,7 @@ class DetailsQueryTest {
     @Test
     void aStackedPullRequestSaysWhereItSitsAndWhatItsHeadIs() {
         PullRequestDetails details = read(MERGED.put("state", "\"OPEN\"")
-                        .put("headRefOid", "\"abc123\"")
+                        .put("headRefOid", "\"abc1230000000000000000000000000000000000\"")
                         .put("stackEntry", "{ \"position\": 2 }")
                         .put("stack", """
                                 { "number": 96, "size": 2, "entries": { "nodes": [
@@ -272,7 +272,9 @@ class DetailsQueryTest {
                         new PullRequestStack.Entry(
                                 2, new PrNumber(95), State.OPEN, new GhBranch("b95"), new GhBranch("b94"))));
 
-        assertEquals(Option.of(new GhCommit("abc123")), details.branches().headCommit());
+        assertEquals(
+                Option.of(new Sha("abc1230000000000000000000000000000000000")),
+                details.branches().headCommit());
         assertEquals(Option.of(stack), details.stack());
         assertEquals(Option.of(stack), details.listed().get().stack());
         assertEquals(0, details.stack().get().below());
@@ -281,8 +283,11 @@ class DetailsQueryTest {
     @Test
     void theCommitOfTheBaseIsReadToDiffAgainst() {
         assertEquals(
-                Option.of(new GhCommit("def456")),
-                read(MERGED.put("baseRefOid", "\"def456\"")).get().branches().baseCommit());
+                Option.of(new Sha("def4560000000000000000000000000000000000")),
+                read(MERGED.put("baseRefOid", "\"def4560000000000000000000000000000000000\""))
+                        .get()
+                        .branches()
+                        .baseCommit());
         assertEquals(Option.none(), read(MERGED).get().branches().baseCommit());
     }
 
@@ -290,7 +295,10 @@ class DetailsQueryTest {
     void theDetailsAsReadAreNotKnownToBeBehindTheirBase() {
         assertEquals(
                 Option.none(),
-                read(MERGED.put("headRefOid", "\"abc123\"")).get().branches().behindBase());
+                read(MERGED.put("headRefOid", "\"abc1230000000000000000000000000000000000\""))
+                        .get()
+                        .branches()
+                        .behindBase());
     }
 
     @Test

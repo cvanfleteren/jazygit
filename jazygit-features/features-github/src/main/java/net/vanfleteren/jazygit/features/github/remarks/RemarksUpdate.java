@@ -4,13 +4,11 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesUpdate;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -148,15 +146,11 @@ public final class RemarksUpdate {
     private static Option<PullRequestCommits> moved(PrFiles files, ReviewRemarks remarks) {
         PullRequestCommits commits = files.commits();
         return remarks.state() == PullRequestDetails.State.OPEN
-                ? sha(remarks.base())
-                        .flatMap(base -> sha(remarks.head())
+                ? remarks.base()
+                        .flatMap(base -> remarks.head()
                                 .map(head -> new PullRequestCommits(
                                         commits.number(), commits.repository(), commits.host(), base, head)))
                         .filter(read -> !read.equals(commits))
                 : Option.none();
-    }
-
-    private static Option<Sha> sha(Option<GhCommit> commit) {
-        return commit.flatMap(read -> Sha.parse(read.oid()));
     }
 }

@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.features.github.show;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
@@ -251,7 +250,7 @@ public record PullRequestPopup(
     /**
      * The commit its branch was at when it was read, which a merge is only done at; none before it is read.
      */
-    public Option<GhCommit> head() {
+    public Option<Sha> head() {
         return readDetails().flatMap(read -> read.branches().headCommit());
     }
 
@@ -265,10 +264,8 @@ public record PullRequestPopup(
                 .filter(read -> read.status().state() != PullRequestDetails.State.MERGED)
                 .flatMap(read -> read.branches()
                         .baseCommit()
-                        .flatMap(base -> Sha.parse(base.oid()))
                         .flatMap(base -> read.branches()
                                 .headCommit()
-                                .flatMap(head -> Sha.parse(head.oid()))
                                 .map(head -> new PullRequestCommits(
                                         read.number().value(), read.repository(), read.host(), base, head))));
     }

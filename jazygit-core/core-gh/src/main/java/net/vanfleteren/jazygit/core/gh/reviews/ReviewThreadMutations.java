@@ -5,12 +5,12 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.at;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.Reaction;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -59,7 +59,7 @@ final class ReviewThreadMutations {
      * The command that starts {@code thread} on pull request {@code number}, at its head commit {@code commit}: on its
      * lines, the first only when it has several, or on its whole file.
      */
-    static GhCommand start(PrNumber number, GhCommit commit, NewReviewThread thread) {
+    static GhCommand start(PrNumber number, Sha commit, NewReviewThread thread) {
         List<String> place = thread.lines()
                 .map(lines -> List.of("-F", "line=" + lines.line(), "-f", "side=" + lines.side())
                         .appendAll(
@@ -73,7 +73,13 @@ final class ReviewThreadMutations {
                 .getOrElse(() -> List.of("-f", "subject_type=file"));
         return post(
                 "repos/{owner}/{repo}/pulls/" + number.value() + "/comments",
-                List.of("-f", "body=" + thread.body(), "-f", "commit_id=" + commit.oid(), "-f", "path=" + thread.path())
+                List.of(
+                                "-f",
+                                "body=" + thread.body(),
+                                "-f",
+                                "commit_id=" + commit.value(),
+                                "-f",
+                                "path=" + thread.path())
                         .appendAll(place));
     }
 

@@ -33,7 +33,6 @@ import net.vanfleteren.jazygit.core.gh.graphql.ReviewingFragment;
 import net.vanfleteren.jazygit.core.gh.graphql.StackFragment;
 import net.vanfleteren.jazygit.core.gh.graphql.SuiteFragment;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
@@ -53,6 +52,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -117,8 +117,8 @@ final class DetailsQuery {
     static final Decoder<Branches> BRANCHES = map5(
             field("headRefName", string()).map(GhBranch::new),
             field("baseRefName", string()).map(GhBranch::new),
-            field("headRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
-            field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
+            field("headRefOid", nullable(string())).map(oid -> oid.flatMap(Sha::parse)),
+            field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(Sha::parse)),
             BEHIND,
             (head, base, commit, baseCommit, behind) ->
                     new Branches(head, base, commit, behind.filter(any -> commit.isDefined()), baseCommit));

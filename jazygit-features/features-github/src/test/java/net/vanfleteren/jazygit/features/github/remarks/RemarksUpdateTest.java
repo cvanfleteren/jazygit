@@ -10,7 +10,6 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
@@ -70,7 +69,7 @@ class RemarksUpdateTest {
     }
 
     private static ReviewRemarks remarks(PullRequestDetails.State state, String head, String base) {
-        return new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(base), List.of(THREAD));
+        return new ReviewRemarks(state, Sha.parse(head), Sha.parse(base), List.of(THREAD));
     }
 
     private static Model openedPullRequest() {
@@ -137,8 +136,8 @@ class RemarksUpdateTest {
                         CommentRights.ALL)));
         ReviewRemarks remarks = new ReviewRemarks(
                 PullRequestDetails.State.OPEN,
-                GhCommit.parse("a".repeat(40)),
-                GhCommit.parse("b".repeat(40)),
+                Sha.parse("a".repeat(40)),
+                Sha.parse("b".repeat(40)),
                 List.of(withImages));
 
         Next read =

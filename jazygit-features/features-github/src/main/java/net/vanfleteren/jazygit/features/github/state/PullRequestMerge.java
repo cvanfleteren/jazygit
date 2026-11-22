@@ -6,13 +6,13 @@ import io.vavr.collection.Traversable;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * A merge of a pull request that GitHub was asked for, which it does in the background (ADR 24).
@@ -157,7 +157,7 @@ public record PullRequestMerge(
      * @param draft  whether it is a draft
      * @param head   the commit its branch is at, when GitHub said
      */
-    public record Standing(Checks checks, Review review, boolean draft, Option<GhCommit> head) {
+    public record Standing(Checks checks, Review review, boolean draft, Option<Sha> head) {
 
         /**
          * How {@code pullRequest} stands.

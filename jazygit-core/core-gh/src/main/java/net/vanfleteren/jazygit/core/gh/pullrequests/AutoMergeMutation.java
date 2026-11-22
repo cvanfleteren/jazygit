@@ -4,9 +4,9 @@ import static net.vanfleteren.jazygit.core.gh.process.GhCommand.gh;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * Turning the auto-merge of a pull request on and off (ADR 112), with GraphQL's {@code enablePullRequestAutoMerge} and
@@ -30,7 +30,7 @@ final class AutoMergeMutation {
      * The command that turns auto-merge on for the pull request with node id {@code pullRequest}, merging it as
      * {@code method} says, only while its branch is at {@code head}, if given.
      */
-    static GhCommand enable(String pullRequest, MergeMethod method, Option<GhCommit> head) {
+    static GhCommand enable(String pullRequest, MergeMethod method, Option<Sha> head) {
         return gh(List.of(
                         "api",
                         "graphql",
@@ -40,7 +40,7 @@ final class AutoMergeMutation {
                         "pullRequest=" + pullRequest,
                         "-f",
                         "method=" + method.name())
-                .appendAll(head.toList().flatMap(commit -> List.of("-f", "head=" + commit.oid())))
+                .appendAll(head.toList().flatMap(commit -> List.of("-f", "head=" + commit.value())))
                 .toJavaArray(String[]::new));
     }
 

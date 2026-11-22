@@ -13,7 +13,6 @@ import net.vanfleteren.jazygit.core.gh.model.Reaction;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
@@ -187,10 +186,8 @@ public record PrRemarks(
      */
     public boolean atCommits(PullRequestCommits commits) {
         return remarks.toOption()
-                .exists(read -> read.head()
-                                .flatMap(head -> Sha.parse(head.oid()))
-                                .contains(commits.head())
-                        && read.base().flatMap(base -> Sha.parse(base.oid())).contains(commits.base()));
+                .exists(read ->
+                        read.head().contains(commits.head()) && read.base().contains(commits.base()));
     }
 
     /**

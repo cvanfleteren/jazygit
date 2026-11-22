@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * {@link Reviews} for tests: pull requests without a conversation or review threads, whose operations all succeed
@@ -53,8 +54,7 @@ public interface StubReviews extends Reviews {
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> startThread(
-            PrNumber number, GhCommit commit, NewReviewThread thread) {
+    default Either<GhFailure, List<ExecutedCommand>> startThread(PrNumber number, Sha commit, NewReviewThread thread) {
         return Either.right(
                 List.of(ReviewThreadMutations.start(number, commit, thread).executed()));
     }

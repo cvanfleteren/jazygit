@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * {@link PullRequests} for tests: a repository without pull requests, whose operations all succeed without running
@@ -87,7 +88,7 @@ public interface StubPullRequests extends PullRequests {
     }
 
     @Override
-    default Either<GhFailure, Merging> merge(PrNumber number, Option<GhCommit> head, MergeMethod method) {
+    default Either<GhFailure, Merging> merge(PrNumber number, Option<Sha> head, MergeMethod method) {
         return Either.right(new Merging(
                 new MergeStatus.Pending("merge-" + number.value()),
                 List.of(MergeQuery.mergeCommand(number, head, method).executed())));
@@ -103,7 +104,7 @@ public interface StubPullRequests extends PullRequests {
 
     @Override
     default Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(
-            String pullRequest, MergeMethod method, Option<GhCommit> head) {
+            String pullRequest, MergeMethod method, Option<Sha> head) {
         return Either.right(
                 List.of(AutoMergeMutation.enable(pullRequest, method, head).executed()));
     }

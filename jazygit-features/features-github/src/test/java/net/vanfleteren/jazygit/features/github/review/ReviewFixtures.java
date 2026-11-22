@@ -9,7 +9,6 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.Reactions;
@@ -119,7 +118,7 @@ final class ReviewFixtures {
                         opened,
                         new RemarksMsg.Loaded(
                                 new PrNumber(7),
-                                new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(BASE), threads),
+                                new ReviewRemarks(state, Sha.parse(head), Sha.parse(BASE), threads),
                                 HashSet.empty(),
                                 0))
                 .model();
@@ -159,14 +158,13 @@ final class ReviewFixtures {
 
     static ReviewRemarks remarks() {
         return new ReviewRemarks(
-                PullRequestDetails.State.OPEN, GhCommit.parse(HEAD), GhCommit.parse(BASE), List.of(OPEN, SETTLED));
+                PullRequestDetails.State.OPEN, Sha.parse(HEAD), Sha.parse(BASE), List.of(OPEN, SETTLED));
     }
 
     static RemarksMsg.Loaded readAgain(Set<ReviewThread.Id> settled, ReviewThread... threads) {
         return new RemarksMsg.Loaded(
                 new PrNumber(7),
-                new ReviewRemarks(
-                        PullRequestDetails.State.OPEN, GhCommit.parse(HEAD), GhCommit.parse(BASE), List.of(threads)),
+                new ReviewRemarks(PullRequestDetails.State.OPEN, Sha.parse(HEAD), Sha.parse(BASE), List.of(threads)),
                 settled,
                 0);
     }

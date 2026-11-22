@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.features.github.review;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
@@ -78,7 +77,7 @@ public sealed interface ReviewCmd extends Cmd {
                 case Target.Start(Sha commit, String path, var lines) ->
                     GitHubServices.of(env)
                             .reviews()
-                            .startThread(number, new GhCommit(commit.value()), new NewReviewThread(path, lines, body))
+                            .startThread(number, commit, new NewReviewThread(path, lines, body))
                             .mapLeft(GitHubFailure::of)
                             .fold(this::failed, this::succeeded);
                 case Target.Edit(var ignored, ReviewThread.Comment.Id comment, String original) ->

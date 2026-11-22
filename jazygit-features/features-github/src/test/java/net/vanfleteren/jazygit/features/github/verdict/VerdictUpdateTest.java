@@ -14,7 +14,6 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
@@ -111,7 +110,7 @@ class VerdictUpdateTest {
 
     private static ReviewRemarks remarks(State state, boolean draft, Reviewing reviewing) {
         return new ReviewRemarks(
-                state, GhCommit.parse("a".repeat(40)), GhCommit.parse("b".repeat(40)), List.empty(), draft, reviewing);
+                state, Sha.parse("a".repeat(40)), Sha.parse("b".repeat(40)), List.empty(), draft, reviewing);
     }
 
     @Test
