@@ -174,7 +174,8 @@ public final class HelpDialog implements PopupView {
 
     /**
      * The keys of the panel of {@code popup} and what they mean, then the global keys; those of a feature that is off
-     * in {@code model} are left out (ADR 171).
+     * in {@code model} are left out (ADR 171), and a key bound by several features that are on is listed once
+     * (ADR 175).
      */
     private List<Row> rows(Model model, HelpPopup popup) {
         List<Keymap.Binding<?>> bindings = keymap.bindings(popup.scopeId());
@@ -182,12 +183,16 @@ public final class HelpDialog implements PopupView {
         List<Option<Msg>> actions = popup.actions().padTo(bindings.size(), Option.none());
         return bindings.zip(actions)
                 .filter(key -> key._1().feature().forAll(model::on))
+                // A key that several features bind, as two forges do, is listed once: as the first of them that is on
+                // has it (ADR 175).
+                .distinctBy(key -> key._1().key())
                 .map(key -> (Row) new Key(key._1().label(), key._1().descriptionKey(), key._1()::matches, key._2()))
                 .appendAll(legend(model, popup.scopeId()))
                 .append(new Text(""))
                 .append(Text.heading("chrome.dialog.help.global"))
                 .appendAll(keymap.globals()
                         .filter(global -> global.feature().forAll(model::on))
+                        .distinctBy(Keymap.Global::label)
                         .map(global -> new Key(
                                 global.label(),
                                 global.descriptionKey(),

@@ -36,6 +36,23 @@ class FeatureUpdateTest {
     }
 
     @Test
+    void oneKeyThatFeaturesBindAlikeDoesWhatTheFirstOfThemThatIsOnSends() {
+        Msg first = new FeatureMsg.FirstOn(List.of(
+                new FeatureMsg.Owned("f", new FeatureMsg.Applies("x", false)),
+                new FeatureMsg.Owned("g", new FeatureMsg.Applies("y", false))));
+        Model fOff = FeatureUpdate.off(loaded(), "f");
+        Model bothOff = FeatureUpdate.off(fOff, "g");
+
+        Model both = Update.update(loaded(), first).model();
+        assertFalse(both.on("x"));
+        assertTrue(both.on("y"));
+        Model onlyG = Update.update(fOff, first).model();
+        assertTrue(onlyG.on("x"));
+        assertFalse(onlyG.on("y"));
+        assertEquals(bothOff, Update.update(bothOff, first).model());
+    }
+
+    @Test
     void switchedTheFeaturesAreToldAndOffItsScreenGoesBackToTheRepository() {
         Model reactions = loaded().withReactions(new Reactions(List.of(
                 (model, event) -> event instanceof KernelEvent.Switched(String feature, boolean on) && on

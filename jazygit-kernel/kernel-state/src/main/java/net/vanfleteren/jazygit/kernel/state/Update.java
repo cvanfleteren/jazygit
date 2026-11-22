@@ -94,6 +94,9 @@ public final class Update {
         if (msg instanceof FeatureMsg.Owned(String feature, Msg owned)) {
             return model.on(feature) ? handle(model, owned) : Next.of(model);
         }
+        if (msg instanceof FeatureMsg.FirstOn first) {
+            return first.on(model).map(owned -> handle(model, owned)).getOrElse(() -> Next.of(model));
+        }
         if (msg instanceof Msg.Periodic periodic
                 && !periodic.on(model.preferences().settings())) {
             return model.jobs().away() && periodic.readOnReturn()
