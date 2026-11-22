@@ -206,10 +206,10 @@ public final class ForgejoPullRequestDialog implements PopupView {
                                 text(" "
                                         + Messages.get(
                                                 "forgejo.dialog.pullRequest.changes.files",
-                                                pr.size().changedFiles()))),
-                        Line.labelled("forgejo.dialog.pullRequest.mergeable", mergeable(pr)),
-                        Line.blank(),
-                        Line.labelled("forgejo.dialog.pullRequest.review", review(shown.review()))))
+                                                pr.size().changedFiles())))))
+                .appendAll(mergeable(pr))
+                .appendAll(List.of(
+                        Line.blank(), Line.labelled("forgejo.dialog.pullRequest.review", review(shown.review()))))
                 .appendAll(Option.when(
                         !pr.conversation().reviewers().isEmpty(),
                         () -> Line.labelled("forgejo.dialog.pullRequest.reviewers", reviewers(pr))))
@@ -235,11 +235,20 @@ public final class ForgejoPullRequestDialog implements PopupView {
         return pr.status().draft() ? state + " · " + Messages.get("forgejo.dialog.pullRequest.draft") : state;
     }
 
-    private static StyledElement<?> mergeable(ForgejoPullRequestDetails pr) {
-        return pr.status().mergeable()
-                ? text(Messages.get("forgejo.dialog.pullRequest.mergeable.yes"))
-                : text(Messages.get("forgejo.dialog.pullRequest.mergeable.conflicting"))
-                        .addClass(Theme.Classes.CHECKS_FAILED);
+    /**
+     * Whether it merges, for an open pull request that is no draft: Forgejo says it does not for a draft, while it
+     * checks for conflicts, and for one merged or closed, so that "no" is all it tells, not a conflict.
+     */
+    private static Option<Line> mergeable(ForgejoPullRequestDetails pr) {
+        return Option.when(
+                pr.status().state() == ForgejoPullRequestDetails.State.OPEN
+                        && !pr.status().draft(),
+                () -> Line.labelled(
+                        "forgejo.dialog.pullRequest.mergeable",
+                        text(Messages.get(
+                                pr.status().mergeable()
+                                        ? "forgejo.dialog.pullRequest.mergeable.yes"
+                                        : "forgejo.dialog.pullRequest.mergeable.no"))));
     }
 
     private static List<StyledElement<?>> review(Option<Verdict> review) {

@@ -20,6 +20,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview.Verdict;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -80,6 +81,39 @@ class ForgejoPullRequestDialogTest {
         assertFalse(screen.contains("check / build (push)"), screen);
         assertTrue(screen.contains("(o) Open in browser"), screen);
         assertTrue(screen.contains("(R) Refresh"), screen);
+    }
+
+    @Test
+    void whetherItMergesShowsOnlyForAnOpenPullRequestThatIsNoDraftAndNeverAsConflicts() throws Exception {
+        // Forgejo says false for a draft, while it checks, and for one merged or closed: no conflict known.
+        String notNow = screen(read(shown(ForgejoPullRequestDetails.State.OPEN, false, false)));
+        assertTrue(notNow.contains("  Mergeable  no"), notNow);
+        assertFalse(notNow.contains("conflicts"), notNow);
+
+        String draft = screen(read(shown(ForgejoPullRequestDetails.State.OPEN, true, false)));
+        assertTrue(draft.contains("Open · Draft"), draft);
+        assertFalse(draft.contains("Mergeable"), draft);
+
+        String merged = screen(read(shown(ForgejoPullRequestDetails.State.MERGED, false, false)));
+        assertTrue(merged.contains("      State  Merged"), merged);
+        assertFalse(merged.contains("Mergeable"), merged);
+    }
+
+    private static ShownPullRequest shown(ForgejoPullRequestDetails.State state, boolean draft, boolean mergeable) {
+        ForgejoPullRequestDetails pr = details("Shown");
+        return new ShownPullRequest(
+                new ForgejoPullRequestDetails(
+                        pr.number(),
+                        pr.title(),
+                        pr.author(),
+                        new ForgejoPullRequestDetails.Status(state, draft, mergeable),
+                        pr.branches(),
+                        pr.activity(),
+                        pr.size(),
+                        pr.conversation(),
+                        pr.url()),
+                Option.none(),
+                CommitStatus.NONE);
     }
 
     @Test
