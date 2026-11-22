@@ -39,8 +39,8 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.WithDetails;
 /**
  * Popup showing the pull request on Forgejo that merges a branch (ADR 176), as GitHub's shows its own (ADR 175):
  * its title, state, branches, review and checks, as labelled rows, and under them what can be done with it: open it
- * in the browser, merge it in one of Forgejo's five styles (ADR 180), or read it again. While it is read again, the details stay shown, with a spinner in the title; when
- * that fails, the title says they are stale.
+ * in the browser, merge it in one of Forgejo's five styles (ADR 180), or read it again. While it is read again, the
+ * details stay shown, with a spinner in the title; when that fails, the title says they are stale.
  */
 public final class ForgejoPullRequestDialog implements PopupView {
 
