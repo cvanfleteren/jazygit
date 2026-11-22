@@ -23,7 +23,7 @@ public final class DropDialogs {
             popup -> Messages.get(
                     "changes.dialog.drop.message",
                     popup.commit().sha().shortSha(),
-                    popup.commit().message()));
+                    popup.commit().message().summary()));
 
     private DropDialogs() {}
 

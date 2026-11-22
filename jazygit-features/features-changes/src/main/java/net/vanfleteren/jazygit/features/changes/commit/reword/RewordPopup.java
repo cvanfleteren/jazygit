@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.features.changes.commit.MessagePopup;
 public record RewordPopup(Commit commit, CommitMessage message) implements MessagePopup {
 
     public RewordPopup(Commit commit) {
-        this(commit, new CommitMessage(commit.message(), commit.body()));
+        this(commit, commit.message());
     }
 
     @Override

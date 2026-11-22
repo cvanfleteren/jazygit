@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.CommitGraph;
+import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -288,8 +289,7 @@ class CommitsPanelTest {
                 "Ada",
                 "ada@example.com",
                 Instant.EPOCH,
-                "Release",
-                "",
+                new CommitMessage("Release", ""),
                 List.empty(),
                 List.of(new Tag("v1"), new Tag("v1.1")));
 
