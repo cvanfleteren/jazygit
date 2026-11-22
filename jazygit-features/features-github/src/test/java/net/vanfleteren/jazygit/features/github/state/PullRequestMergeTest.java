@@ -8,13 +8,13 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
 class PullRequestMergeTest {
@@ -30,7 +30,7 @@ class PullRequestMergeTest {
                 Review.APPROVED,
                 Option.none(),
                 Option.of(new PullRequest.Commits(
-                        "owner/repo", "https://github.com/owner/repo", new GhCommit("base"), new GhCommit(head))));
+                        "owner/repo", "https://github.com/owner/repo", new Sha("base"), new Sha(head))));
     }
 
     private static final PullRequest FEATURE_PR = at("abc", false);

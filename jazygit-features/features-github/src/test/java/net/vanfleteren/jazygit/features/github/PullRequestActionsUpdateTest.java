@@ -15,7 +15,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
@@ -32,6 +31,7 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
@@ -175,7 +175,7 @@ class PullRequestActionsUpdateTest {
         return StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
             public Either<GhFailure, PullRequests.Merging> merge(
-                    PrNumber number, Option<GhCommit> head, MergeMethod method) {
+                    PrNumber number, Option<Sha> head, MergeMethod method) {
                 return Either.right(new PullRequests.Merging(new MergeStatus.Merged(), List.empty()));
             }
         });
@@ -186,7 +186,7 @@ class PullRequestActionsUpdateTest {
      */
     private static Model asked(Model model) {
         MergePullRequest cmd =
-                new MergePullRequest(FEATURE, new PrNumber(42), Option.of(new GhCommit("abc123")), MergeMethod.MERGE);
+                new MergePullRequest(FEATURE, new PrNumber(42), Option.of(new Sha("abc123")), MergeMethod.MERGE);
         return TestModels.done(TestModels.running(model, cmd), cmd, cmd.run(env()))
                 .model();
     }
@@ -621,7 +621,7 @@ class PullRequestActionsUpdateTest {
         GitHub refusing = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
             public Either<GhFailure, PullRequests.Merging> merge(
-                    PrNumber number, Option<GhCommit> head, MergeMethod method) {
+                    PrNumber number, Option<Sha> head, MergeMethod method) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(
                                 Option.of(

@@ -380,8 +380,8 @@ public class PullRequestContentTest {
                 new PrNumber(7),
                 new net.vanfleteren.jazygit.core.gh.model.ReviewRemarks(
                         net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State.OPEN,
-                        net.vanfleteren.jazygit.core.gh.model.GhCommit.parse("a".repeat(40)),
-                        net.vanfleteren.jazygit.core.gh.model.GhCommit.parse("b".repeat(40)),
+                        net.vanfleteren.jazygit.core.repo.Sha.parse("a".repeat(40)),
+                        net.vanfleteren.jazygit.core.repo.Sha.parse("b".repeat(40)),
                         List.of(thread)),
                 HashSet.empty(),
                 0);

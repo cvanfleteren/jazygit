@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -89,8 +90,7 @@ public final class CliReviews implements Reviews {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> startThread(
-            PrNumber number, GhCommit commit, NewReviewThread thread) {
+    public Either<GhFailure, List<ExecutedCommand>> startThread(PrNumber number, Sha commit, NewReviewThread thread) {
         return process.log(ReviewThreadMutations.start(number, commit, thread));
     }
 

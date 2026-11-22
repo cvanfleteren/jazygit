@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * The review threads of a pull request, and the commits its changes were diffed between when they were read
@@ -17,8 +18,8 @@ import io.vavr.control.Option;
  */
 public record ReviewRemarks(
         PullRequestDetails.State state,
-        Option<GhCommit> head,
-        Option<GhCommit> base,
+        Option<Sha> head,
+        Option<Sha> base,
         List<ReviewThread> threads,
         boolean draft,
         PullRequestDetails.Reviewing reviewing) {
@@ -27,7 +28,7 @@ public record ReviewRemarks(
      * Remarks of a pull request that is no draft, which nothing is known to review by.
      */
     public ReviewRemarks(
-            PullRequestDetails.State state, Option<GhCommit> head, Option<GhCommit> base, List<ReviewThread> threads) {
+            PullRequestDetails.State state, Option<Sha> head, Option<Sha> base, List<ReviewThread> threads) {
         this(state, head, base, threads, false, PullRequestDetails.Reviewing.UNKNOWN);
     }
 

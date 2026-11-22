@@ -4,7 +4,7 @@ import io.vavr.control.Option;
 import java.util.regex.Pattern;
 
 /**
- * The object id of a git commit, as git printed it: in full, unless said otherwise.
+ * The object id of a git commit, as git printed it or GitHub reported it: in full, unless said otherwise (ADR 165).
  */
 public record Sha(String value) {
 

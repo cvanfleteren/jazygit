@@ -23,12 +23,12 @@ import io.vavr.collection.HashMap;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -75,7 +75,7 @@ public final class SummaryFragment {
 
     // The commits its base and its branch are at, which its changes are diffed between (ADR 61); none for a branch
     // that is gone.
-    static final Decoder<Tuple2<Option<GhCommit>, Option<GhCommit>>> COMMITS =
+    static final Decoder<Tuple2<Option<Sha>, Option<Sha>>> COMMITS =
             map2(commit("baseRefOid"), commit("headRefOid"), Tuple::of);
 
     // The repository its branch is in, none for a fork that was deleted (ADR 177).
@@ -117,8 +117,8 @@ public final class SummaryFragment {
 
     private SummaryFragment() {}
 
-    private static Decoder<Option<GhCommit>> commit(String name) {
-        return optionalField(name, nullable(string())).map(oid -> oid.flatMap(read -> read.flatMap(GhCommit::parse)));
+    private static Decoder<Option<Sha>> commit(String name) {
+        return optionalField(name, nullable(string())).map(oid -> oid.flatMap(read -> read.flatMap(Sha::parse)));
     }
 
     /**

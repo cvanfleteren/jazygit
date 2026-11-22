@@ -13,7 +13,6 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
@@ -22,6 +21,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
@@ -67,9 +67,9 @@ class PullRequestFilesUpdateTest {
                 .withBranches(new PullRequestDetails.Branches(
                         new GhBranch("feature"),
                         new GhBranch("main"),
-                        GhCommit.parse(known ? HEAD_OID : ""),
+                        Sha.parse(known ? HEAD_OID : ""),
                         Option.none(),
-                        GhCommit.parse(BASE_OID)));
+                        Sha.parse(BASE_OID)));
         return Update.update(shown, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(shown), details))
                 .model();
     }
@@ -124,9 +124,9 @@ class PullRequestFilesUpdateTest {
                 .withBranches(new PullRequestDetails.Branches(
                         new GhBranch("feature"),
                         new GhBranch("main"),
-                        GhCommit.parse(HEAD_OID),
+                        Sha.parse(HEAD_OID),
                         Option.none(),
-                        GhCommit.parse(BASE_OID)));
+                        Sha.parse(BASE_OID)));
     }
 
     @Test
@@ -190,10 +190,7 @@ class PullRequestFilesUpdateTest {
                 Review.APPROVED,
                 Option.none(),
                 Option.of(new PullRequest.Commits(
-                        "owner/repo",
-                        "https://github.com/owner/repo/pull/42",
-                        new GhCommit(BASE_OID),
-                        new GhCommit(HEAD_OID))));
+                        "owner/repo", "https://github.com/owner/repo/pull/42", new Sha(BASE_OID), new Sha(HEAD_OID))));
         Model shown = Update.update(model(), PullRequestFixtures.listed(List.of(listed)))
                 .model();
 
@@ -391,8 +388,8 @@ class PullRequestFilesUpdateTest {
                 Instant.EPOCH,
                 "https://github.com/owner/repo/pull/9",
                 Option.none(),
-                Option.of(new GhCommit(BASE_OID)),
-                Option.of(new GhCommit(HEAD_OID)));
+                Option.of(new Sha(BASE_OID)),
+                Option.of(new Sha(HEAD_OID)));
         Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
                 .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
 

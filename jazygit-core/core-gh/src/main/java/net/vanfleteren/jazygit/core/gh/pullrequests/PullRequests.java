@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * The pull requests: listing and reading them, and creating, checking out, merging, closing and editing them
@@ -71,14 +72,13 @@ public interface PullRequests {
      * together with the ones below it in its stack: only while its branch is still at {@code head}, if given, so
      * what was pushed since it was read is not merged.
      */
-    Either<GhFailure, Merging> merge(PrNumber number, Option<GhCommit> head, MergeMethod method);
+    Either<GhFailure, Merging> merge(PrNumber number, Option<Sha> head, MergeMethod method);
 
     /**
      * Turns auto-merge on for the pull request with node id {@code pullRequest} (ADR 112): GitHub merges it as
      * {@code method} says once nothing blocks it any more, only when its branch is at {@code head}, if given, now.
      */
-    Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(
-            String pullRequest, MergeMethod method, Option<GhCommit> head);
+    Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(String pullRequest, MergeMethod method, Option<Sha> head);
 
     /**
      * Turns auto-merge off for the pull request with node id {@code pullRequest} (ADR 112).

@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * The conversation on a pull request and its review threads: reading them, commenting, reviewing, and changing what
@@ -55,7 +56,7 @@ public interface Reviews {
      * Starts {@code thread} on pull request {@code number}, at its head commit {@code commit}, published at once
      * (ADR 60).
      */
-    Either<GhFailure, List<ExecutedCommand>> startThread(PrNumber number, GhCommit commit, NewReviewThread thread);
+    Either<GhFailure, List<ExecutedCommand>> startThread(PrNumber number, Sha commit, NewReviewThread thread);
 
     /**
      * Replies {@code body} to the review thread of pull request {@code number} whose first comment has the id

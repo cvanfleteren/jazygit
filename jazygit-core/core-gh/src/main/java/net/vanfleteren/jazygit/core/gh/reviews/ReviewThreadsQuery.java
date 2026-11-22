@@ -22,7 +22,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.graphql.ReviewingFragment;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.Reaction;
@@ -33,6 +32,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -161,8 +161,8 @@ final class ReviewThreadsQuery {
             "data.repository.pullRequest",
             map6(
                     field("state", enumOf(PullRequestDetails.State.class)),
-                    field("headRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
-                    field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
+                    field("headRefOid", nullable(string())).map(oid -> oid.flatMap(Sha::parse)),
+                    field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(Sha::parse)),
                     at("reviewThreads.nodes", list(THREAD)),
                     field("isDraft", bool()),
                     ReviewingFragment.REVIEWING,

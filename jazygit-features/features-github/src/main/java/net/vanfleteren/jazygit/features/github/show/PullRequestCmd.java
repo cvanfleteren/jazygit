@@ -2,12 +2,12 @@ package net.vanfleteren.jazygit.features.github.show;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhCommit;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
@@ -94,7 +94,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * Asks GitHub to merge pull request {@code number}, from {@code branch}, as {@code method} says, while its branch
      * is at {@code head}: GitHub merges it in the background (ADR 24).
      */
-    record MergePullRequest(BranchName branch, PrNumber number, Option<GhCommit> head, MergeMethod method)
+    record MergePullRequest(BranchName branch, PrNumber number, Option<Sha> head, MergeMethod method)
             implements PullRequestCmd, ChangingCmd {
 
         @Override
@@ -155,8 +155,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * GitHub merges it as {@code method} says once nothing blocks it any more, when its branch is at {@code head}, if
      * given, now (ADR 112).
      */
-    record EnableAutoMerge(
-            BranchName branch, PrNumber number, String pullRequest, MergeMethod method, Option<GhCommit> head)
+    record EnableAutoMerge(BranchName branch, PrNumber number, String pullRequest, MergeMethod method, Option<Sha> head)
             implements PullRequestCmd, AutoMergeCmd {
 
         @Override

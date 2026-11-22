@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.process.SshAsking;
+import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
  * {@link PullRequests} through gh, of the repository gh finds from the git remotes of its working tree (ADR 114).
@@ -145,7 +146,7 @@ public final class CliPullRequests implements PullRequests {
     }
 
     @Override
-    public Either<GhFailure, Merging> merge(PrNumber number, Option<GhCommit> head, MergeMethod method) {
+    public Either<GhFailure, Merging> merge(PrNumber number, Option<Sha> head, MergeMethod method) {
         return process.run(MergeQuery.mergeCommand(number, head, method))
                 .flatMap(output -> GhProcess.decoded(output.stdout(), MergeQuery.DECODER)
                         .map(status -> new Merging(status, output.log()))
@@ -154,7 +155,7 @@ public final class CliPullRequests implements PullRequests {
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> enableAutoMerge(
-            String pullRequest, MergeMethod method, Option<GhCommit> head) {
+            String pullRequest, MergeMethod method, Option<Sha> head) {
         return process.log(AutoMergeMutation.enable(pullRequest, method, head));
     }
 
