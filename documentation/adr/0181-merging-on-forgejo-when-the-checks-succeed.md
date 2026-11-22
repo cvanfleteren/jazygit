@@ -49,7 +49,9 @@ Forgejo merges a pull request by itself once the rules of its base branch are me
   before.
 - **The checks are read again just before it is sent**: once they passed meanwhile, it is merged now. Not: sending it
   scheduled anyway, which Forgejo would leave waiting for the next event. When they cannot be read, it is scheduled,
-  as was read.
+  as was read. A merge now that the scheduling turned into still runs as the scheduling: logged, busy and, when it
+  fails, told as one, in the dialog kept open, which then shows it merged. Not: carrying what was sent back to tell it
+  apart, for a label chosen before the checks are read again.
 - **Scheduling keeps the dialog open**, as GitHub's auto-merge does: it is an operation on the branch ("Scheduling
   merge"), logged, after which the dialog reads the pull request again, and the pull requests are read again, as after
   any change to the forge. A merge that failed before is forgotten (ADR 180's `FailedMerge`), as a new merge takes its

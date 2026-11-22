@@ -126,6 +126,23 @@ class ScheduleUpdateTest {
     }
 
     @Test
+    void oneMergedNowAsItsChecksPassedMeanwhileIsDoneAsAMergeInTheDialogKeptOpen() {
+        Model shown = showing(shown(FAILING, Option.none()))
+                .mapPart(ForgejoPullRequests.PART, prs -> prs.mergeScheduled(12, ForgejoMergeStyle.SQUASH));
+
+        Next next = Update.update(shown, new PullRequestMsg.Merged(WHEN_READY, new ForgejoMerged.Merged()));
+
+        assertTrue(
+                next.cmds().exists(FetchCmd.ListRemotes.class::isInstance),
+                next.cmds().toString());
+        assertEquals(Option.none(), prs(next.model()).style(12));
+        assertTrue(
+                next.cmds().contains(new LoadPullRequest(ORIGIN, 12, 2)),
+                next.cmds().toString());
+        assertTrue(popup(next.model()).asked());
+    }
+
+    @Test
     void aMergeScheduledAlreadyIsToldAndReadAgainAsNoFailure() {
         Next next =
                 Update.update(showing(shown(FAILING, Option.none())), new PullRequestMsg.AlreadyScheduled(WHEN_READY));

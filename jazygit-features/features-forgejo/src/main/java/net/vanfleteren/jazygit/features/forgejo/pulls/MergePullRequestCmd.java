@@ -24,7 +24,8 @@ import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
  *
  * <p>When {@code waitsFor} holds what its base branch requires, with the {@code approvals} it had, it is scheduled for
  * when its checks succeed instead (ADR 181), unless the checks of its head passed by now: Forgejo would wait for
- * something else to happen then, and it is merged now.
+ * something else to happen then, and it is merged now. That merge still runs as the scheduling it was chosen as: it
+ * is logged, shown busy and told when it fails as one, and the dialog stays open, to show it merged once read again.
  */
 public record MergePullRequestCmd(
         RemoteName home,
@@ -60,7 +61,8 @@ public record MergePullRequestCmd(
     }
 
     /**
-     * Whether it is scheduled for when its checks succeed, rather than merged now, as far as was read.
+     * Whether it is scheduled for when its checks succeed, rather than merged now, as far as was read; it is merged
+     * now all the same when its checks passed by the time it is sent, which its operation does not tell.
      */
     public boolean whenChecksSucceed() {
         return waitsFor.isDefined();
