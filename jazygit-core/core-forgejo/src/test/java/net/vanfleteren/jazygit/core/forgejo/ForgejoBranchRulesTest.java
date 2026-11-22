@@ -85,6 +85,15 @@ class ForgejoBranchRulesTest {
     }
 
     @Test
+    void aBackslashTakesTheNextCharacterAsItIs() {
+        assertTrue(matches("ci\\*", "ci*"));
+        assertFalse(matches("ci\\*", "ci-x"));
+        assertTrue(matches("[\\]]", "]"));
+        assertTrue(matches("a\\{b", "a{b"));
+        assertTrue(ForgejoBranchRules.glob("ci\\").isEmpty());
+    }
+
+    @Test
     void aGlobLeftOpenIsNone() {
         assertTrue(ForgejoBranchRules.glob("{a,b").isEmpty());
         assertTrue(ForgejoBranchRules.glob("build[").isEmpty());

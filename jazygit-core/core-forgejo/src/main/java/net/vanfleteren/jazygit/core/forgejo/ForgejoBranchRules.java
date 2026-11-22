@@ -50,30 +50,42 @@ public record ForgejoBranchRules(boolean guarded, boolean statusChecks, List<Str
     /**
      * {@code pattern} as Forgejo compiles a required context, with gobwas' glob and no separators: {@code *} any
      * text, {@code ?} any character, {@code [...]} one of the characters in it, {@code [!...]} one not in it, with
-     * {@code a-z} a range, and {@code {a,b}} either; anything else as it is. None when it is no glob, as a class or a
-     * brace left open.
+     * {@code a-z} a range, and {@code {a,b}} either; {@code \} takes the character after it as it is, in a class too;
+     * anything else as it is. None when it is no glob, as a class or a brace left open, or a {@code \} that ends it.
      */
     static Option<Pattern> glob(String pattern) {
-        Glob read = List.ofAll(pattern.toCharArray()).foldLeft(new Glob("", 0, false, false), Glob::next);
-        return read.braces() > 0 || read.inClass()
+        Glob read = List.ofAll(pattern.toCharArray()).foldLeft(new Glob("", 0, false, false, false), Glob::next);
+        return read.braces() > 0 || read.inClass() || read.escaped()
                 ? Option.none()
                 : Try.of(() -> Pattern.compile(read.regex(), Pattern.DOTALL)).toOption();
     }
 
     /**
      * A glob turned into a regular expression up to a character: the expression so far, how many braces are open,
-     * whether it is in a class of characters, {@code [...]}, and whether that class was just opened.
+     * whether it is in a class of characters, {@code [...]}, whether that class was just opened, and whether the
+     * character before was a {@code \}, which takes the next one as it is.
      */
-    private record Glob(String regex, int braces, boolean inClass, boolean opened) {
+    private record Glob(String regex, int braces, boolean inClass, boolean opened, boolean escaped) {
 
         Glob next(char c) {
+            if (escaped) {
+                return new Glob(
+                        regex + (inClass ? literalInClass(c) : Pattern.quote(String.valueOf(c))),
+                        braces,
+                        inClass,
+                        false,
+                        false);
+            }
+            if (c == '\\') {
+                return new Glob(regex, braces, inClass, false, true);
+            }
             if (inClass) {
-                return new Glob(regex + inClass(c), braces, c != ']', false);
+                return new Glob(regex + inClass(c), braces, c != ']', false, false);
             }
             return switch (c) {
                 case '*' -> outside(".*", braces);
                 case '?' -> outside(".", braces);
-                case '[' -> new Glob(regex + "[", braces, true, true);
+                case '[' -> new Glob(regex + "[", braces, true, true, false);
                 case '{' -> outside("(?:", braces + 1);
                 case '}' -> braces > 0 ? outside(")", braces - 1) : outside("\\}", braces);
                 case ',' -> outside(braces > 0 ? "|" : ",", braces);
@@ -82,7 +94,7 @@ public record ForgejoBranchRules(boolean guarded, boolean statusChecks, List<Str
         }
 
         private Glob outside(String added, int open) {
-            return new Glob(regex + added, open, false, false);
+            return new Glob(regex + added, open, false, false, false);
         }
 
         // A class that starts with ! is one of the characters it does not have; - makes a range, and ] closes it. Any
@@ -91,7 +103,11 @@ public record ForgejoBranchRules(boolean guarded, boolean statusChecks, List<Str
             if (c == '!' && opened) {
                 return "^";
             }
-            return c == '-' || c == ']' || Character.isLetterOrDigit(c) ? String.valueOf(c) : "\\" + c;
+            return c == '-' || c == ']' ? String.valueOf(c) : literalInClass(c);
+        }
+
+        private static String literalInClass(char c) {
+            return Character.isLetterOrDigit(c) ? String.valueOf(c) : "\\" + c;
         }
     }
 }
