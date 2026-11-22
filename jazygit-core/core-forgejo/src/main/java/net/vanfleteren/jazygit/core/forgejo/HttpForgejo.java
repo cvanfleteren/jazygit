@@ -136,21 +136,25 @@ public final class HttpForgejo implements Forgejo {
     }
 
     /**
-     * {@inheritDoc} They are read a page of {@value #PAGE} at a time, until a page is not full, and at most
-     * {@value #PAGES} pages.
+     * {@inheritDoc} They are read a page of {@value #PAGE} at a time (ADR 176).
      */
     @Override
     public Either<ForgejoError, List<ForgejoPullRequest>> openPullRequests(ForgejoRepository repository) {
-        return page(repository, 1, List.empty());
+        return pages(repository, repo(repository) + "/pulls?state=open&", PullRequestJson.summaries(), 1, List.empty());
     }
 
-    private Either<ForgejoError, List<ForgejoPullRequest>> page(
-            ForgejoRepository repository, int page, List<ForgejoPullRequest> before) {
-        return get(repository, repo(repository) + "/pulls?state=open&limit=" + PAGE + "&page=" + page)
-                .flatMap(body -> decoded(PullRequestJson.summaries(), body))
+    /**
+     * What the pages of {@code path}, a path ending in its query and {@code ?} or {@code &}, give, from page
+     * {@code page} on, after {@code before}: a page of {@value #PAGE} at a time, until a page is not full, and at most
+     * {@value #PAGES} pages.
+     */
+    private <T> Either<ForgejoError, List<T>> pages(
+            ForgejoRepository repository, String path, Decoder<List<T>> decoder, int page, List<T> before) {
+        return get(repository, path + "limit=" + PAGE + "&page=" + page)
+                .flatMap(body -> decoded(decoder, body))
                 .flatMap(read -> read.size() < PAGE || page >= PAGES
                         ? Either.right(before.appendAll(read))
-                        : page(repository, page + 1, before.appendAll(read)));
+                        : pages(repository, path, decoder, page + 1, before.appendAll(read)));
     }
 
     @Override
@@ -159,10 +163,18 @@ public final class HttpForgejo implements Forgejo {
                 .flatMap(body -> decoded(PullRequestJson.details(), body));
     }
 
+    /**
+     * {@inheritDoc} They are read a page of {@value #PAGE} at a time, so that each reviewer's last counts on a long
+     * pull request (ADR 176).
+     */
     @Override
     public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
-        return get(repository, repo(repository) + "/pulls/" + number + "/reviews?limit=" + PAGE)
-                .flatMap(body -> decoded(PullRequestJson.reviews(), body));
+        return pages(
+                repository,
+                repo(repository) + "/pulls/" + number + "/reviews?",
+                PullRequestJson.reviews(),
+                1,
+                List.empty());
     }
 
     private static String repo(ForgejoRepository repository) {

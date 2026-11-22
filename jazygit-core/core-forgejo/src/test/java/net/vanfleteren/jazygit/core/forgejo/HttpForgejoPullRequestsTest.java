@@ -64,6 +64,18 @@ class HttpForgejoPullRequestsTest {
         server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         server.createContext("/api/v1/repos/cvf/nix/pulls/12/reviews", exchange -> answer(exchange, 200, REVIEWS));
         server.createContext("/api/v1/repos/cvf/nix/pulls/12", exchange -> answer(exchange, 200, DETAILS));
+        server.createContext("/api/v1/repos/cvf/long/pulls/1/reviews", exchange -> {
+            // 50 comments on the first page, then Anna asks for changes on the second.
+            boolean first = exchange.getRequestURI().getQuery().contains("page=1");
+            answer(
+                    exchange,
+                    200,
+                    first
+                            ? List.range(0, 50)
+                                    .map(i -> "{\"user\":{\"login\":\"bob\"},\"state\":\"COMMENT\"}")
+                                    .mkString("[", ",", "]")
+                            : "[{\"user\":{\"login\":\"anna\"},\"state\":\"REQUEST_CHANGES\"}]");
+        });
         server.createContext("/api/v1/repos/cvf/nix/pulls", exchange -> {
             String query = exchange.getRequestURI().getQuery();
             pages.add(query);
@@ -174,6 +186,15 @@ class HttpForgejoPullRequestsTest {
                 reviews);
         // Anna approved after asking for changes; Bob only commented.
         assertEquals(Option.of(Verdict.APPROVED), ForgejoReview.standing(reviews));
+    }
+
+    @Test
+    void theReviewsAreReadAPageAtATimeSoTheLatestCount() {
+        List<ForgejoReview> reviews =
+                HttpForgejo.of(() -> FjKeys.NONE).reviews(repository("long"), 1).get();
+
+        assertEquals(51, reviews.size());
+        assertEquals(Option.of(Verdict.CHANGES_REQUESTED), ForgejoReview.standing(reviews));
     }
 
     @Test
