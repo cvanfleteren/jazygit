@@ -90,7 +90,8 @@ final class PullRequestFixtures {
      */
     static Model listed() {
         return PullRequestUpdate.update(
-                        model(), new PullRequestMsg.Listed(Option.of(HashMap.of(FEATURE, LISTED)), Option.none()))
+                        model(),
+                        new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.of(FEATURE, LISTED)), Option.none()))
                 .model();
     }
 

@@ -33,7 +33,7 @@ class PullRequestCommandsTest {
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.right(List.of(LISTED, fromFork)));
 
         assertEquals(
-                new PullRequestMsg.Listed(Option.of(HashMap.of(FEATURE, LISTED)), Option.none()),
+                new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.of(FEATURE, LISTED)), Option.none()),
                 new ReadPullRequests(ORIGIN).run(forgejo.env()));
     }
 
@@ -45,7 +45,8 @@ class PullRequestCommandsTest {
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.right(List.of(fromAnna)));
 
         assertEquals(
-                new PullRequestMsg.Listed(Option.of(HashMap.of(FEATURE, fromAnna)), Option.none()),
+                new PullRequestMsg.Listed(
+                        new RemoteName("upstream"), Option.of(HashMap.of(FEATURE, fromAnna)), Option.none()),
                 new ReadPullRequests(new RemoteName("upstream"))
                         .run(forgejo.env(HashMap.of(
                                 ORIGIN,
@@ -59,7 +60,7 @@ class PullRequestCommandsTest {
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.left(DOWN));
 
         assertEquals(
-                new PullRequestMsg.Listed(Option.none(), Option.none()),
+                new PullRequestMsg.Listed(new RemoteName("github"), Option.none(), Option.none()),
                 new ReadPullRequests(new RemoteName("github"))
                         .run(forgejo.env(HashMap.of(new RemoteName("github"), "git@github.com:cvf/nix.git"))));
     }
@@ -69,7 +70,7 @@ class PullRequestCommandsTest {
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.left(DOWN));
 
         assertEquals(
-                new PullRequestMsg.Listed(Option.none(), Option.of(new ForgejoFailure.Asked(DOWN))),
+                new PullRequestMsg.Listed(ORIGIN, Option.none(), Option.of(new ForgejoFailure.Asked(DOWN))),
                 new ReadPullRequests(ORIGIN).run(forgejo.env()));
     }
 

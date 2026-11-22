@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -22,10 +23,10 @@ public sealed interface PullRequestMsg extends Msg {
     }
 
     /**
-     * The open pull requests were read: {@code open}, by the branch they merge, when any remote was; why reading them
-     * failed, if it did for a remote.
+     * The open pull requests of {@code home} were read: {@code open}, by the branch they merge, when they could be;
+     * why reading them failed, if it did.
      */
-    record Listed(Option<Map<RemoteBranch, ForgejoPullRequest>> open, Option<Failure> failure)
+    record Listed(RemoteName home, Option<Map<RemoteBranch, ForgejoPullRequest>> open, Option<Failure> failure)
             implements PullRequestMsg {}
 
     /**

@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -22,8 +23,12 @@ public final class PullRequestUpdate {
 
     public static Next update(Model model, PullRequestMsg msg) {
         return switch (msg) {
-            case PullRequestMsg.Listed(var open, var failure) ->
-                Next.of(model.mapPart(ForgejoPullRequests.PART, prs -> prs.listed(open, failure)));
+            // A list of a home that is no longer it, as one read while the user chose another, is left out.
+            case PullRequestMsg.Listed(var home, var open, var failure) ->
+                Next.of(
+                        ForgeHome.of(model).contains(home)
+                                ? model.mapPart(ForgejoPullRequests.PART, prs -> prs.listed(home, open, failure))
+                                : model);
             case PullRequestMsg.Requested(BranchName branch) -> requested(model, branch);
             case PullRequestMsg.Read(long read, var result) -> Next.of(read(model, read, result));
             case PullRequestMsg.OpenChosen() -> openChosen(model);
@@ -42,33 +47,35 @@ public final class PullRequestUpdate {
 
     /**
      * Shows the pull request of {@code branch}, when it is idle: the one of the home that merges the branch it is
-     * pushed to (ADR 177). Without one, the user is told so; without the list, why it is not known.
+     * pushed to (ADR 177). Without one, the user is told so; without the list of the home, why it is not known, and it
+     * is read again when it was of another home.
      */
     private static Next requested(Model model, BranchName branch) {
         ForgejoPullRequests prs = model.part(ForgejoPullRequests.PART);
         return model.idleBranch(branch)
-                .map(known -> prs.of(known)
-                        .map(pr -> show(model, known.pushTarget(), pr))
-                        .getOrElse(() -> unknown(model, known, prs)))
+                .flatMap(known -> ForgeHome.of(model)
+                        .map(home -> prs.of(known, home)
+                                .map(pr -> show(model, home, known.pushTarget(), pr))
+                                .getOrElse(() -> unknown(model, known, prs, home))))
                 .getOrElse(() -> Next.of(model));
     }
 
-    private static Next unknown(Model model, Branch branch, ForgejoPullRequests prs) {
-        if (prs.open().isEmpty()) {
-            return Next.of(model.fail(prs.failure()
-                    .<PullRequestsError>map(PullRequestsError.Unavailable::new)
-                    .getOrElse(PullRequestsError.NotRead::new)));
+    private static Next unknown(Model model, Branch branch, ForgejoPullRequests prs, RemoteName home) {
+        if (prs.read(home)) {
+            return Next.of(model.inform(new PullRequestNotice.None(branch.name())));
         }
-        return Next.of(model.inform(new PullRequestNotice.None(branch.name())));
+        Model failed = model.fail(prs.failure()
+                .filter(failure -> prs.home().contains(home))
+                .<PullRequestsError>map(PullRequestsError.Unavailable::new)
+                .getOrElse(PullRequestsError.NotRead::new));
+        return prs.home().contains(home) ? Next.of(failed) : Next.of(failed, new ReadPullRequests(home));
     }
 
-    private static Next show(Model model, RemoteBranch head, ForgejoPullRequest pr) {
+    private static Next show(Model model, RemoteName home, RemoteBranch head, ForgejoPullRequest pr) {
         Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
         long read = given.part(ForgejoPullRequests.PART).reads();
-        return PopupUpdate.ask(given, ForgejoPullRequestPopup.loading(head, pr, read))
-                .and(ForgeHome.of(model)
-                        .map(home -> new LoadPullRequest(home, pr.number(), read))
-                        .toJavaArray(LoadPullRequest[]::new));
+        return PopupUpdate.ask(given, ForgejoPullRequestPopup.loading(home, head, pr, read))
+                .and(new LoadPullRequest(home, pr.number(), read));
     }
 
     /**
@@ -93,13 +100,14 @@ public final class PullRequestUpdate {
     private static Next refreshChosen(Model model) {
         return model.popup(ForgejoPullRequestPopup.class)
                 .filter(popup -> !popup.reading())
-                .flatMap(popup -> ForgeHome.of(model).map(home -> {
+                .map(popup -> {
                     Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
                     long read = given.part(ForgejoPullRequests.PART).reads();
                     return Next.of(
                             given.openPopup(popup.readingAgain(read)),
-                            new LoadPullRequest(home, popup.pullRequest().number(), read));
-                }))
+                            new LoadPullRequest(
+                                    popup.home(), popup.pullRequest().number(), read));
+                })
                 .getOrElse(() -> Next.of(model));
     }
 

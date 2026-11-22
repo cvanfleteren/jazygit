@@ -4,6 +4,7 @@ import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FEATURE;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.LISTED;
+import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.ORIGIN;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.TIME;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.details;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,12 +47,12 @@ class ForgejoPullRequestDialogTest {
             new ForgejoPullRequestDialog(dispatched::add, Clock.fixed(TIME, ZoneOffset.UTC));
 
     private static ForgejoPullRequestPopup read(ShownPullRequest shown) {
-        return ForgejoPullRequestPopup.loading(FEATURE, LISTED, 1).with(Either.right(shown), 1);
+        return ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1).with(Either.right(shown), 1);
     }
 
     @Test
     void whileItIsReadItShowsItsBranchAndThatItIsRead() throws Exception {
-        String screen = screen(ForgejoPullRequestPopup.loading(FEATURE, LISTED, 1));
+        String screen = screen(ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1));
 
         assertTrue(screen.contains("Pull request #12"), screen);
         assertTrue(screen.contains("Branch  feature"), screen);
@@ -127,8 +128,8 @@ class ForgejoPullRequestDialogTest {
     @Test
     void aReadThatFailedSaysWhyAndOneAgainThatFailedMarksItStale() throws Exception {
         ForgejoFailure down = new ForgejoFailure.Asked(new ForgejoError.Unreachable("timed out"));
-        String failed =
-                screen(ForgejoPullRequestPopup.loading(FEATURE, LISTED, 1).with(Either.left(down), 1));
+        String failed = screen(
+                ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1).with(Either.left(down), 1));
         assertTrue(failed.contains("Could not read the pull request: Forgejo could not be reached: timed out"), failed);
 
         String stale = screen(read(new ShownPullRequest(details("Shown"), Option.none(), CommitStatus.NONE))
@@ -140,7 +141,7 @@ class ForgejoPullRequestDialogTest {
 
     @Test
     void itKeepsItsHeightWhenTheDetailsArrive() throws Exception {
-        String loading = screen(ForgejoPullRequestPopup.loading(FEATURE, LISTED, 1));
+        String loading = screen(ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1));
         String shown = screen(read(new ShownPullRequest(details("Shown"), Option.none(), BUILDS)));
 
         assertEquals(height(loading), height(shown));
@@ -152,7 +153,7 @@ class ForgejoPullRequestDialogTest {
 
     @Test
     void itsSpinnerTurnsWhileItIsRead() {
-        Model loading = TestModels.loaded().openPopup(ForgejoPullRequestPopup.loading(FEATURE, LISTED, 1));
+        Model loading = TestModels.loaded().openPopup(ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1));
         Model shown = TestModels.loaded()
                 .openPopup(read(new ShownPullRequest(details("Shown"), Option.none(), CommitStatus.NONE)));
 

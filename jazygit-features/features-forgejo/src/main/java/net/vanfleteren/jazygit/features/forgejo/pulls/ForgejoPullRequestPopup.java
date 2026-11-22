@@ -4,6 +4,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
@@ -19,6 +20,7 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
  * @param read          the read of it it waits for (ADR 34)
  */
 public record ForgejoPullRequestPopup(
+        RemoteName home,
         RemoteBranch branch,
         ForgejoPullRequest pullRequest,
         Option<Either<Failure, ShownPullRequest>> details,
@@ -30,8 +32,9 @@ public record ForgejoPullRequestPopup(
     /**
      * The popup while its pull request is first read, by read {@code read}.
      */
-    public static ForgejoPullRequestPopup loading(RemoteBranch branch, ForgejoPullRequest pullRequest, long read) {
-        return new ForgejoPullRequestPopup(branch, pullRequest, Option.none(), false, Option.none(), read);
+    public static ForgejoPullRequestPopup loading(
+            RemoteName home, RemoteBranch branch, ForgejoPullRequest pullRequest, long read) {
+        return new ForgejoPullRequestPopup(home, branch, pullRequest, Option.none(), false, Option.none(), read);
     }
 
     /**
@@ -44,18 +47,19 @@ public record ForgejoPullRequestPopup(
         }
         return result.fold(
                 failure -> details.exists(Either::isRight)
-                        ? new ForgejoPullRequestPopup(branch, pullRequest, details, false, Option.of(failure), read)
+                        ? new ForgejoPullRequestPopup(
+                                home, branch, pullRequest, details, false, Option.of(failure), read)
                         : new ForgejoPullRequestPopup(
-                                branch, pullRequest, Option.of(result), false, Option.none(), read),
+                                home, branch, pullRequest, Option.of(result), false, Option.none(), read),
                 shown -> new ForgejoPullRequestPopup(
-                        branch, pullRequest, Option.of(result), false, Option.none(), read));
+                        home, branch, pullRequest, Option.of(result), false, Option.none(), read));
     }
 
     /**
      * The popup while it is read again, as the user asked, by read {@code id}.
      */
     public ForgejoPullRequestPopup readingAgain(long id) {
-        return new ForgejoPullRequestPopup(branch, pullRequest, details, true, refreshFailed, id);
+        return new ForgejoPullRequestPopup(home, branch, pullRequest, details, true, refreshFailed, id);
     }
 
     /**

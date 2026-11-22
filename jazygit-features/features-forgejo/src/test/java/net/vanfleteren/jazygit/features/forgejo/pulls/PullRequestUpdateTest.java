@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.forgejo.pulls;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FEATURE;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.LISTED;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.ORIGIN;
+import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.URL;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.details;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.listed;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.model;
@@ -18,12 +19,14 @@ import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeCandidate;
 import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
 import org.junit.jupiter.api.Test;
@@ -52,7 +55,7 @@ class PullRequestUpdateTest {
     void thePullRequestThatMergesTheBranchFollowedIsShownWhileItIsRead() {
         Next next = requested(listed(), "feature");
 
-        assertEquals(ForgejoPullRequestPopup.loading(FEATURE, LISTED, 1), popup(next.model()));
+        assertEquals(ForgejoPullRequestPopup.loading(ORIGIN, FEATURE, LISTED, 1), popup(next.model()));
         assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 1)), next.cmds());
     }
 
@@ -123,7 +126,7 @@ class PullRequestUpdateTest {
     @Test
     void aBranchNoPullRequestMergesIsToldSo() {
         Model listedNone = PullRequestUpdate.update(
-                        model(), new PullRequestMsg.Listed(Option.of(HashMap.empty()), Option.none()))
+                        model(), new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.empty()), Option.none()))
                 .model();
 
         Next next = requested(listedNone, "feature");
@@ -138,6 +141,7 @@ class PullRequestUpdateTest {
         Model listedAlone = PullRequestUpdate.update(
                         model(),
                         new PullRequestMsg.Listed(
+                                ORIGIN,
                                 Option.of(HashMap.of(new RemoteBranch(ORIGIN, new BranchName("alone")), LISTED)),
                                 Option.none()))
                 .model();
@@ -154,7 +158,8 @@ class PullRequestUpdateTest {
                 Option.of(new PullRequestsError.NotRead()),
                 requested(model(), "feature").model().outcome().error());
 
-        Model failed = PullRequestUpdate.update(model(), new PullRequestMsg.Listed(Option.none(), Option.of(FAILED)))
+        Model failed = PullRequestUpdate.update(
+                        model(), new PullRequestMsg.Listed(ORIGIN, Option.none(), Option.of(FAILED)))
                 .model();
         assertEquals(
                 Option.of(new PullRequestsError.Unavailable(FAILED)),
@@ -164,10 +169,38 @@ class PullRequestUpdateTest {
     @Test
     void theListReadBeforeStaysKnownWhenReadingItAgainFails() {
         Model failedAgain = PullRequestUpdate.update(
-                        listed(), new PullRequestMsg.Listed(Option.none(), Option.of(FAILED)))
+                        listed(), new PullRequestMsg.Listed(ORIGIN, Option.none(), Option.of(FAILED)))
                 .model();
 
         assertEquals(LISTED, popup(requested(failedAgain, "feature").model()).pullRequest());
+    }
+
+    @Test
+    void aListOfAnotherHomeIsNotUsedButReadAgain() {
+        RemoteName upstream = new RemoteName("upstream");
+        Model moved = listed().withPart(
+                        ForgeHome.PART,
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate("forgejo", "Forgejo", upstream, URL))));
+
+        Next next = requested(moved, "feature");
+        assertEquals(Option.none(), next.model().popup(ForgejoPullRequestPopup.class));
+        assertEquals(
+                Option.of(new PullRequestsError.NotRead()),
+                next.model().outcome().error());
+        assertEquals(List.of(new ReadPullRequests(upstream)), next.cmds());
+    }
+
+    @Test
+    void aListReadForAHomeThatIsNoLongerItIsLeftOut() {
+        RemoteName upstream = new RemoteName("upstream");
+        Model moved = model().withPart(
+                        ForgeHome.PART,
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate("forgejo", "Forgejo", upstream, URL))));
+
+        Model late = PullRequestUpdate.update(
+                        moved, new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.of(FEATURE, LISTED)), Option.none()))
+                .model();
+        assertEquals(ForgejoPullRequests.NONE, late.part(ForgejoPullRequests.PART));
     }
 
     @Test

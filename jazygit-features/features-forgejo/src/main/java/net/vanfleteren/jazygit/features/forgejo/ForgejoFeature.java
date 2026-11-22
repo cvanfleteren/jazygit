@@ -30,7 +30,8 @@ public final class ForgejoFeature {
 
     /**
      * The pull request of a branch (ADR 176), and the badges of the branches, read as the timer says and after a fetch,
-     * from Forgejo's API, with fj's token; on with a remote on Forgejo.
+     * from Forgejo's API, with fj's token; on when the kernel chose Forgejo as the forge of the repository (ADR
+     * 177).
      */
     public static final Feature FEATURE = Feature.of(ShowPullRequestAction.ACTION)
             .every(READ_INTERVAL, BuildsMsg.Tick::new)

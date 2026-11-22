@@ -30,16 +30,17 @@ public record ReadPullRequests(RemoteName home) implements Cmd {
                 .map(remotes -> forgejo.openPullRequests(remotes.home())
                         .fold(
                                 error -> new PullRequestMsg.Listed(
-                                        Option.none(), Option.of(new ForgejoFailure.Asked(error))),
+                                        home, Option.none(), Option.of(new ForgejoFailure.Asked(error))),
                                 open -> new PullRequestMsg.Listed(
+                                        home,
                                         Option.of(HashMap.ofEntries(open.flatMap(
                                                 pr -> remotes.head(pr).map(head -> Tuple.of(head, pr))))),
                                         Option.none())))
-                .getOrElse(() -> new PullRequestMsg.Listed(Option.none(), Option.none()));
+                .getOrElse(() -> new PullRequestMsg.Listed(home, Option.none(), Option.none()));
     }
 
     @Override
     public Msg failed(Failure failure) {
-        return new PullRequestMsg.Listed(Option.none(), Option.of(failure));
+        return new PullRequestMsg.Listed(home, Option.none(), Option.of(failure));
     }
 }
