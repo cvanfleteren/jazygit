@@ -11,6 +11,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.history.CliRebase;
@@ -127,11 +128,20 @@ public final class CliRemotes implements Remotes {
 
     @Override
     public Either<GitError, Map<RemoteName, String>> setting(String key) {
+        return setting(worktree, key);
+    }
+
+    /**
+     * The value of {@code remote.<name>.<key>} of each remote that has it, by its name. git names the keys in lower
+     * case as it prints them, so {@code key} is matched in lower case too. Only looked up, so not logged.
+     */
+    static Either<GitError, Map<RemoteName, String>> setting(Path worktree, String key) {
+        String lower = key.toLowerCase(Locale.ROOT);
         // git config --get-regexp exits with 1, saying nothing, when no key matches.
-        String pattern = "^remote\\..*\\." + key.replace(".", "\\.") + "$";
+        String pattern = "^remote\\..*\\." + lower.replace(".", "\\.") + "$";
         return GitProcess.ask(worktree, GitCommand.reading("config", "--get-regexp", pattern))
-                .map(answer ->
-                        answer.map(output -> parseSetting(output.stdout(), key)).getOrElse(HashMap.empty()))
+                .map(answer -> answer.map(output -> parseSetting(output.stdout(), lower))
+                        .getOrElse(HashMap.empty()))
                 .mapLeft(GitFailure::error);
     }
 
@@ -139,10 +149,7 @@ public final class CliRemotes implements Remotes {
      * The URL of each remote, by its name. Only looked up, so not logged.
      */
     static Either<GitError, Map<RemoteName, String>> remoteUrls(Path worktree) {
-        // git config --get-regexp exits with 1, saying nothing, when no key matches.
-        return GitProcess.ask(worktree, GitCommand.reading("config", "--get-regexp", "^remote\\..*\\.url$"))
-                .map(answer -> answer.map(output -> parseUrls(output.stdout())).getOrElse(HashMap.empty()))
-                .mapLeft(GitFailure::error);
+        return setting(worktree, URL_KEY.substring(1));
     }
 
     /**

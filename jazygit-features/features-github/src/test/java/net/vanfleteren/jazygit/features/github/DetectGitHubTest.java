@@ -6,6 +6,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.account.StubAccount;
@@ -17,47 +18,49 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
+import net.vanfleteren.jazygit.kernel.state.Msg;
 import org.junit.jupiter.api.Test;
 
 /**
- * GitHub applies to a repository with a remote on GitHub and gh found (ADR 171).
+ * GitHub claims the remotes of a repository on GitHub, with gh found (ADR 171, 177), from which the kernel decides
+ * whether it is the repository's forge.
  */
 class DetectGitHubTest {
 
     @Test
     void aRemoteOnGitHubWithGhFoundIsGitHubs() {
-        assertEquals(applies(true), detect("https://github.com/owner/repo.git", StubGitHub.of()));
-        assertEquals(applies(true), detect("git@acme.ghe.com:owner/repo.git", StubGitHub.of()));
+        assertEquals(List.of("origin"), claimed(detect("https://github.com/owner/repo.git", StubGitHub.of())));
+        assertEquals(List.of("origin"), claimed(detect("git@acme.ghe.com:owner/repo.git", StubGitHub.of())));
     }
 
     @Test
-    void withoutARemoteOnGitHubItIsNot() {
-        assertEquals(applies(false), detect("https://gitlab.com/owner/repo.git", StubGitHub.of()));
-        assertEquals(applies(false), new DetectGitHub("gh").run(env(HashMap.empty(), StubGitHub.of())));
+    void withoutARemoteOnGitHubItClaimsNone() {
+        assertEquals(List.empty(), claimed(detect("https://gitlab.com/owner/repo.git", StubGitHub.of())));
+        assertEquals(List.empty(), claimed(new DetectGitHub("gh").run(env(HashMap.empty(), StubGitHub.of()))));
     }
 
     @Test
-    void itAppliesOnlyWhenTheHomeOfThePullRequestsIsOnGitHub() {
-        String github = "https://github.com/owner/repo.git";
-        String codeberg = "https://codeberg.org/owner/repo.git";
-        // A project on GitHub with a mirror on Codeberg.
+    void itClaimsEachRemoteOnGitHubAndNoneOnAnotherForge() {
+        Msg detected = new DetectGitHub("gh")
+                .run(env(
+                        HashMap.of(
+                                new RemoteName("origin"), "https://github.com/me/repo.git",
+                                new RemoteName("upstream"), "https://github.com/owner/repo.git",
+                                new RemoteName("codeberg"), "https://codeberg.org/owner/repo.git"),
+                        StubGitHub.of()));
+
+        assertEquals(List.of("origin", "upstream"), claimed(detected));
         assertEquals(
-                applies(true),
-                new DetectGitHub("gh")
-                        .run(env(
-                                HashMap.of(new RemoteName("origin"), github, new RemoteName("codeberg"), codeberg),
-                                StubGitHub.of())));
-        // A fork on GitHub of a project on Codeberg: Codeberg is the home.
-        assertEquals(
-                applies(false),
-                new DetectGitHub("gh")
-                        .run(env(
-                                HashMap.of(new RemoteName("origin"), github, new RemoteName("upstream"), codeberg),
-                                StubGitHub.of())));
+                "https://github.com/owner/repo.git",
+                ((FeatureMsg.Claimed) detected)
+                        .claim()
+                        .claimed()
+                        .get(new RemoteName("upstream"))
+                        .get());
     }
 
     @Test
-    void theRemoteGhRepoSetDefaultChoseIsTheHome() {
+    void theRemoteGhRepoSetDefaultChoseIsTheOneItPrefers() {
         Map<RemoteName, String> urls = HashMap.of(
                 new RemoteName("origin"), "https://codeberg.org/owner/repo.git",
                 new RemoteName("hub"), "https://github.com/owner/repo.git");
@@ -77,7 +80,11 @@ class DetectGitHubTest {
                 }))
                 .with(GitHubServices.GH, StubGitHub.of());
 
-        assertEquals(applies(true), new DetectGitHub("gh").run(chosen));
+        Msg detected = new DetectGitHub("gh").run(chosen);
+        assertEquals(List.of("hub"), claimed(detected));
+        assertEquals(
+                Option.of(new RemoteName("hub")),
+                ((FeatureMsg.Claimed) detected).claim().preferred());
     }
 
     @Test
@@ -88,7 +95,7 @@ class DetectGitHubTest {
                 return Either.right(List.of(new GhLogin("git.acme.com", "ann", true, true)));
             }
         });
-        assertEquals(applies(true), detect("https://git.acme.com/owner/repo.git", loggedIn));
+        assertEquals(List.of("origin"), claimed(detect("https://git.acme.com/owner/repo.git", loggedIn)));
     }
 
     @Test
@@ -99,14 +106,20 @@ class DetectGitHubTest {
                 return Either.left(new GhError.GhUnavailable(new java.io.IOException("no gh")));
             }
         });
-        assertEquals(applies(false), detect("https://github.com/owner/repo.git", missing));
+        assertEquals(List.empty(), claimed(detect("https://github.com/owner/repo.git", missing)));
     }
 
-    private static FeatureMsg.Applies applies(boolean on) {
-        return new FeatureMsg.Applies(GitHubFeature.ID, on);
+    private static List<String> claimed(Msg detected) {
+        return ((FeatureMsg.Claimed) detected)
+                .claim()
+                .claimed()
+                .keySet()
+                .toList()
+                .map(RemoteName::value)
+                .sorted();
     }
 
-    private static Object detect(String url, GitHub gh) {
+    private static Msg detect(String url, GitHub gh) {
         return new DetectGitHub("gh").run(env(HashMap.of(new RemoteName("origin"), url), gh));
     }
 

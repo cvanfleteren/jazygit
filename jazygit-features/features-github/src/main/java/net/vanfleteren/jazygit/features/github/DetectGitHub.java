@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.features.github;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
@@ -8,8 +10,6 @@ import io.vavr.control.Option;
 import java.util.Locale;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
-import net.vanfleteren.jazygit.core.gh.model.GhLogin;
-import net.vanfleteren.jazygit.core.repo.PullRequestHome;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -18,15 +18,19 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeClaim;
 
 /**
- * Finds out whether GitHub applies to the repository (ADR 171): it does when the remote its pull requests are opened
- * against, its home (ADR 177), is on a GitHub host, and gh is found at {@code executable}; the home is the remote
- * {@code gh repo set-default} chose, if it was run, as gh reads pull requests from it. A host is GitHub's when it says so, as github.com and an enterprise's
- * {@code .ghe.com} do, or when gh is logged in to it, as to a GitHub Enterprise Server; no remote is taken to be on
- * github.com. It runs in the background, as it runs gh.
+ * Finds out which remotes of the repository are on GitHub (ADR 171, 177), so that the kernel decides whether GitHub
+ * is its forge: those on a GitHub host, with gh found at {@code executable}; none without gh. A host is GitHub's when
+ * it says so, as github.com and an enterprise's {@code .ghe.com} do, or when gh is logged in to it, as to a GitHub
+ * Enterprise Server. The remote {@code gh repo set-default} chose is the one GitHub prefers as the home. It runs in the
+ * background, as it runs gh.
  */
 public record DetectGitHub(String executable) implements Cmd {
+
+    // The forge, as the user is shown it when asked which forge a repository is on (ADR 177).
+    private static final String NAME = "GitHub";
 
     // What gh keeps on the remote set-default chose: remote.<name>.gh-resolved is base.
     private static final String RESOLVED = "gh-resolved";
@@ -46,22 +50,21 @@ public record DetectGitHub(String executable) implements Cmd {
     @Override
     public Msg run(Env env) {
         Map<RemoteName, String> urls = env.git().remotes().urls().getOrElse(HashMap::empty);
-        Set<String> hosts = PullRequestHome.of(base(env), urls.keySet())
-                .flatMap(urls::get)
-                .flatMap(GhAccount::hostOf)
-                .map(host -> host.toLowerCase(Locale.ROOT))
-                .toSet();
         GitHub gh = GitHubServices.of(env);
-        boolean found = !hosts.isEmpty() && gh.account().version(executable).isRight();
-        return new FeatureMsg.Applies(
-                GitHubFeature.ID,
-                found
-                        && (hosts.exists(DetectGitHub::named)
-                                || gh.account()
-                                        .logins()
-                                        .getOrElse(List.empty())
-                                        .map(GhLogin::host)
-                                        .exists(host -> hosts.contains(host.toLowerCase(Locale.ROOT)))));
+        if (urls.isEmpty() || gh.account().version(executable).isLeft()) {
+            return new FeatureMsg.Claimed(ForgeClaim.none(GitHubFeature.ID, NAME));
+        }
+        Set<String> logins = gh.account()
+                .logins()
+                .getOrElse(List.empty())
+                .map(login -> login.host().toLowerCase(Locale.ROOT))
+                .toSet();
+        Map<RemoteName, String> claimed = LinkedHashMap.ofEntries(urls.toList()
+                .sortBy(remote -> remote._1().value())
+                .filter(remote -> GhAccount.hostOf(remote._2())
+                        .map(host -> host.toLowerCase(Locale.ROOT))
+                        .exists(host -> named(host) || logins.contains(host))));
+        return new FeatureMsg.Claimed(new ForgeClaim(GitHubFeature.ID, NAME, claimed, HashSet.empty(), base(env)));
     }
 
     /**
@@ -86,6 +89,6 @@ public record DetectGitHub(String executable) implements Cmd {
 
     @Override
     public Msg failed(Failure failure) {
-        return new FeatureMsg.Applies(GitHubFeature.ID, false);
+        return new FeatureMsg.Claimed(ForgeClaim.none(GitHubFeature.ID, NAME));
     }
 }

@@ -135,6 +135,7 @@ class SettingsPanelTest {
                             "Git",
                             "(s)",
                             "(f)",
+                            "(o)",
                             "",
                             "GitHub",
                             "(g)",
@@ -144,7 +145,7 @@ class SettingsPanelTest {
                             "Agents",
                             "(i)"),
                     lines.dropWhile(line -> !line.contains("Appearance"))
-                            .take(16)
+                            .take(17)
                             .map(line -> line.replaceAll("^│", "").strip())
                             .map(line -> line.startsWith("(")
                                     ? line.substring(0, 3)
@@ -171,7 +172,10 @@ class SettingsPanelTest {
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.DOWN);
+            // Past the forge of the repository too (ADR 177).
+            SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);

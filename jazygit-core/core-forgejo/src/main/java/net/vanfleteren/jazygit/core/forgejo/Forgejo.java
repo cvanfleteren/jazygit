@@ -42,6 +42,14 @@ public interface Forgejo {
     boolean isForgejo(ForgejoRepository repository);
 
     /**
+     * Whether the host of {@code repository} is Forgejo, as {@link #isForgejo} tells it; none when that cannot be
+     * told now, as of a host that could not be reached (ADR 177).
+     */
+    default Option<Boolean> tells(ForgejoRepository repository) {
+        return Option.of(isForgejo(repository));
+    }
+
+    /**
      * How the builds of {@code sha} in {@code repository} went.
      */
     Either<ForgejoError, CommitStatus> status(ForgejoRepository repository, Sha sha);

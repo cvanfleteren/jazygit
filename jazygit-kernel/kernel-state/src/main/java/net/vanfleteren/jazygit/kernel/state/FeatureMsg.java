@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.kernel.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeClaim;
 
 /**
  * What a feature that is on or off for a repository sends (ADR 171).
@@ -34,7 +35,14 @@ public sealed interface FeatureMsg extends Msg {
     }
 
     /**
-     * The feature {@code feature} applies to the repository when {@code on}, as it found out.
+     * The feature {@code feature} is switched on when {@code on}, else off: as the kernel decided the forge of the
+     * repository (ADR 177).
      */
     record Applies(String feature, boolean on) implements FeatureMsg {}
+
+    /**
+     * A forge found which remotes of the repository are on it, as it opened (ADR 177): the kernel decides from what
+     * every forge claimed which one is on.
+     */
+    record Claimed(ForgeClaim claim) implements FeatureMsg {}
 }

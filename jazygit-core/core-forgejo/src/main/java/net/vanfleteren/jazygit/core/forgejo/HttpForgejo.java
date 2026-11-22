@@ -90,17 +90,25 @@ public final class HttpForgejo implements Forgejo {
      */
     @Override
     public boolean isForgejo(ForgejoRepository repository) {
+        return tells(repository).getOrElse(false);
+    }
+
+    /**
+     * {@inheritDoc} A host that could not be reached, or whose server failed, cannot tell.
+     */
+    @Override
+    public Option<Boolean> tells(ForgejoRepository repository) {
         Boolean known = forgejo.get(repository.base());
         if (known != null) {
-            return known;
+            return Option.of(known);
         }
         Either<ForgejoError, String> version = get(repository, "/api/forgejo/v1/version")
                 .flatMap(body -> VERSION.parse(body).mapLeft(error -> new ForgejoError.Unreadable(error.toString())));
         if (version.isLeft() && passing(version.getLeft())) {
-            return false;
+            return Option.none();
         }
         forgejo.put(repository.base(), version.isRight());
-        return version.isRight();
+        return Option.of(version.isRight());
     }
 
     /**

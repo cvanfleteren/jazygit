@@ -31,15 +31,16 @@ class PullRequestHomeTest {
     }
 
     @Test
-    void elseTheProjectAForkWasMadeOfThenOrigin() {
-        assertEquals(named("upstream"), PullRequestHome.of(Option.none(), remotes("origin", "upstream")));
+    void elseTheProjectAForkWasMadeOfThenGithubThenOrigin() {
+        assertEquals(named("upstream"), PullRequestHome.of(Option.none(), remotes("origin", "upstream", "github")));
+        assertEquals(named("github"), PullRequestHome.of(Option.none(), remotes("origin", "github")));
         assertEquals(named("origin"), PullRequestHome.of(Option.none(), remotes("origin", "mirror")));
     }
 
     @Test
     void elseTheOnlyRemoteAndNoneAmongSeveral() {
         assertEquals(named("codeberg"), PullRequestHome.of(Option.none(), remotes("codeberg")));
-        assertEquals(Option.none(), PullRequestHome.of(Option.none(), remotes("codeberg", "github")));
+        assertEquals(Option.none(), PullRequestHome.of(Option.none(), remotes("codeberg", "mirror")));
         assertEquals(Option.none(), PullRequestHome.of(Option.none(), remotes()));
     }
 }

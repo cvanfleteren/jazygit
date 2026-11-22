@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.kernel.state;
 
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeUpdate;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 
 /**
@@ -17,6 +18,7 @@ public final class FeatureUpdate {
             case FeatureMsg.FirstOn first ->
                 first.on(model).map(owned -> owned.msg().apply(model)).getOrElse(() -> Next.of(model));
             case FeatureMsg.Applies(String feature, boolean on) -> applies(model, feature, on);
+            case FeatureMsg.Claimed(var claim) -> ForgeUpdate.claimed(model, claim);
         };
     }
 

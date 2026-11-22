@@ -68,4 +68,5 @@ a short sha and no branch, and leaves out the statuses of other CIs.
 - The symbols of the checks are drawn the same in both forges' badges.
 - A native image needs the JDK's HTTP client and TLS; the Nix build checks it.
 
-Amended by ADR 177: only the forge of the home of the pull requests applies to a repository.
+Amended by ADR 177: only the forge of the home of the pull requests applies to a repository, decided by the
+kernel from what the forges claim, or asked.

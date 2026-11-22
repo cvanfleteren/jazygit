@@ -45,6 +45,13 @@ class CliConfigTest {
     }
 
     @Test
+    void anEmptyValueIsReadBackAsSet() {
+        config().setLocal(KEY, Option.of("")).get();
+
+        assertEquals(Option.of(""), config().local(KEY).get());
+    }
+
+    @Test
     void settingNoneRemovesTheKey() {
         config().setLocal(KEY, Option.of("alice-work")).get();
 
