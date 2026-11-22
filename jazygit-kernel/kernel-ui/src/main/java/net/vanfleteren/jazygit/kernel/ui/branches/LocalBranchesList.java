@@ -37,7 +37,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
  * A group the features make of branches, as a stack of pull requests on GitHub, is one node: a header, and what is in
  * it under it, indented (ADR 72, ADR 167). The keys on the header are those of the group; the keys of a branch do
  * nothing there. What is in it but is no local branch shows the log of its remote-tracking branch, once that is
- * fetched. The groups can also be left out, and their branches listed as any other (ADR 87).
+ * fetched. The groups can also be left out, and their branches listed as any other (ADR 72).
  */
 class LocalBranchesList implements BranchesTabList {
 

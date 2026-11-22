@@ -73,3 +73,21 @@ kernel from what the forges claim, or asked.
 
 Amended by ADR 179: fj's token goes where the remote points, over plain HTTP too, with a warning in the command
 log when the home is asked so.
+
+## Folded in: ADR 179 (2026-11-22)
+
+fj's token goes where the remote points, over the scheme the remote says, plain HTTP too, as git's credentials and
+fj's own token do. This ADR's first rule, https only, kept a Forgejo on a LAN, in a homelab, or in Docker for the
+integration tests (`http://localhost:3000`) from creating pull requests: a 401 whose advice, `fj auth login`, could
+not help.
+
+- jazygit warns once in the command log, as Forgejo turns on, when the token goes to the home of the pull requests
+  (ADR 177) unencrypted. A notice, not an error; it is left out for that opening rather than take the place of what
+  an operation left in the command log.
+- An ssh remote is still asked over https, or at fj's alias of its host, having no scheme of its own.
+- A 401 means fj has no token for the host.
+- Not: a variable naming the hosts asked over plain HTTP, for tests only, which would keep the rule and need its own
+  matching of hosts and ports.
+- Less safe: a host logged in to fj over https while one remote names it over `http://`, whose token then goes in
+  the clear, as git's credentials for that remote do. Only the home is warned of, not another remote whose builds are
+  read over plain HTTP.

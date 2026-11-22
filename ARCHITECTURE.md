@@ -14,7 +14,8 @@ Rendering never talks to git, and update functions never do IO.
 
 This file is a map of the shape of the code: the modules, the layers, the loop and what a feature is made of. It
 does not describe features; the code, its Javadoc and the tests do. Why things are as they are is in the ADRs, in
-`documentation/adr`. Change this file only when the shape changes.
+`documentation/adr`; what git, gh, GitHub, Forgejo and the other tools do that they rely on is in
+`documentation/facts`, each fact dated. Change this file only when the shape changes.
 
 ## Modules
 
@@ -140,7 +141,7 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   no diff is a `ScrolledContent.Other` of its source, and an area says what is opened in it, which takes the focus from
   its pane (ADR 155). Nothing in `kernel-content` asks which kind of `Other` a value is (`ContentArchitectureTest`).
 - **A feature keeps its content in a `content` package**: what a feature shows in the content panel, its source, body
-  and text, is in a `content` package of the feature, as the builds of a branch in `github.builds.content` (ADR 156).
+  and text, is in a `content` package of the feature, as the builds of a branch in `github.builds.content` (ADR 157).
   The rules take its classes for views, as they take the dialogs.
 - **A feature keeps its part of the model**: what a feature keeps in the model beyond a popup is a value under a
   `state.Part` it declares in its own package, as the builds of a branch under `BuildsView.PART`; the `Model` holds
@@ -227,7 +228,7 @@ flowchart LR
 - **What runs is in the model.** `Update.step` stamps each command with an id into `Jobs.running`; `Msg.Done`
   takes it out (ADR 39). Busy branches, running loads and the activity line all derive from that.
 - **The repository is read on ticks**, guarded by stamps of git's files so an idle app runs almost no git
-  (ADR 15, 58, 67, 93).
+  (ADR 15, 58, 67, 97).
 
 ## Core types
 

@@ -50,7 +50,7 @@ public final class Update {
     /**
      * The start of a session as {@link #init(Model, SettingsStore.Loaded, Option, RepositoryTheme, Landing)} starts
      * it, at {@code now}: the commands it asks for are stamped (ADR 33). The features answer what happens in the
-     * kernel with {@code reactions}, from the opening of the repository on (ADR 166).
+     * kernel with {@code reactions}, from the opening of the repository on (ADR 158).
      */
     public static Step begin(
             String repositoryName,

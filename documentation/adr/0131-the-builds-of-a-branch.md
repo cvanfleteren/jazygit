@@ -127,3 +127,14 @@ Amended by ADR 138: a file of a workflow git does not have at the commit of a bu
 commit.
 
 Amended by ADR 142: `b` is gone; the builds of the commits on the base always show.
+
+## Folded in: ADR 132 (2026-11-22)
+
+`m` in the builds reads 100 more: of the branch, 100 more commits; with every branch shown (`a`), 100 more runs of the
+workflow of the tab. They are read 25 a call, from where the last read ended, and show as they come in. After reading
+failed, `m` reads again from where it failed, rather than everything again with `B`. The title says `m for more` while
+more can be read and nothing is being read, and `m to try again` after a failure.
+
+A call for 25 commits costs about 3 of the 5,000 points an hour, and 2 to 3 s. So more is read when asked for, not
+once the list is scrolled to its end, and never everything at once: a branch of years has thousands of commits, read
+in minutes, and kept in memory for as long as the builds show.

@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 
 /**
- * How the checks of a commit are doing, drawn the same by every forge (ADR 48, 175): the symbol of each state, how
+ * How the checks of a commit are doing, drawn the same by every forge (ADR 45, 175): the symbol of each state, how
  * many are in each, and a check by its name.
  */
 public final class CheckSymbols {

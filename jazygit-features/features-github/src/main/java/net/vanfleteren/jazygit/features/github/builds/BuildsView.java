@@ -60,7 +60,7 @@ public record BuildsView(
         @With Option<Long> picked) {
 
     /**
-     * How many commits are read at first, and how many more each time more are asked for (ADR 131, 132).
+     * How many commits are read at first, and how many more each time more are asked for (ADR 131).
      */
     public static final int COMMITS = 100;
 
@@ -199,7 +199,7 @@ public record BuildsView(
 
     /**
      * Whether more commits can be asked for: older ones are left, or reading the first ones failed, and none are
-     * being read (ADR 132).
+     * being read (ADR 131).
      */
     public boolean hasMore() {
         return !reading && (after.isDefined() || builds.isFailed());
@@ -214,7 +214,7 @@ public record BuildsView(
 
     /**
      * This, reading {@link #COMMITS} more commits from where those read end, or again from where reading them failed,
-     * from the tip when it failed at the first; none when no older ones are left, or they are being read (ADR 132).
+     * from the tip when it failed at the first; none when no older ones are left, or they are being read (ADR 131).
      */
     public Option<BuildsView> more() {
         return Option.when(

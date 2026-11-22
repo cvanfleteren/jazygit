@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 
 /**
- * The symbols of how the builds of a commit went, those of the checks of every forge (ADR 48, 174, 175).
+ * The symbols of how the builds of a commit went, those of the checks of every forge (ADR 45, 174, 175).
  */
 public final class BuildSymbols {
 

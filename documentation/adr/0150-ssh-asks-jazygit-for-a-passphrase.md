@@ -133,3 +133,13 @@ Not:
   for the answer.
 
 Amended by ADR 153: the socket opens for the first operation that lets ssh ask, not when jazygit starts.
+
+## Folded in: ADR 153 (2026-11-22)
+
+The socket, its directory, the launcher and the thread that waits on it are made for the first operation that lets
+ssh ask (one the user started, whose ssh has `SSH_ASKPASS_REQUIRE`), not when jazygit starts, and stay until it quits.
+Most sessions never ask, and a jazygit that is killed or crashes never runs its shutdown hook: a socket made at the
+start would be left behind in the temporary directory each time. It cannot be made any later than just before git
+runs: ssh reads `SSH_ASKPASS` and the address of the socket from its environment as it starts, and whether it will ask
+only ssh knows (the agent may hold the key). A socket that cannot be opened leaves that operation, and the ones after
+it, in batch mode; once jazygit quits, nothing opens again.

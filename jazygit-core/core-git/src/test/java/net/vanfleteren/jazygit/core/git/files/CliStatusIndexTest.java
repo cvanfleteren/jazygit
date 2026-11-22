@@ -14,7 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
- * Writing the index anew where it no longer says what the files in the working tree are like (ADR 93).
+ * Writing the index anew where it no longer says what the files in the working tree are like (ADR 97).
  */
 class CliStatusIndexTest {
 

@@ -39,7 +39,7 @@ public final class PullRequestUpdate {
             case PullRequestMsg.AlreadyScheduled(var cmd) -> MergeUpdate.alreadyScheduled(model, cmd);
             case PullRequestMsg.MergeCancelled(var cmd) -> MergeUpdate.cancelled(model, cmd, false);
             case PullRequestMsg.NoLongerScheduled(var cmd) -> MergeUpdate.cancelled(model, cmd, true);
-            // A warning, in the command log: the user chose the remote (ADR 179). It comes late, so it does not take
+            // A warning, in the command log: the user chose the remote (ADR 174). It comes late, so it does not take
             // the place of what an operation left there, an error or a notice; then it is not given.
             case PullRequestMsg.PlainHttpChecked(var base) ->
                 Next.of(base.filter(over -> model.outcome().error().isEmpty()
@@ -61,7 +61,7 @@ public final class PullRequestUpdate {
     /**
      * {@code model} once Forgejo turned on for the repository opened: its pull requests read afresh, as the
      * repository may be another one, with other remotes under the same names, and whether fj's token goes to the home
-     * unencrypted told, once for the opening (ADR 179).
+     * unencrypted told, once for the opening (ADR 174).
      */
     public static Next turnedOn(Model model) {
         Model afresh = model.withPart(ForgejoPullRequests.PART, ForgejoPullRequests.NONE);

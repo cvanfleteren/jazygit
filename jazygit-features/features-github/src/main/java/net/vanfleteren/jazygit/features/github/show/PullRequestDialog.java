@@ -52,7 +52,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.WithDetails;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
- * rows, and under them, in two columns (ADR 66), what can be done with it: open it in the browser, comment on it, edit it, read its comments or see its checks, mark it
+ * rows, and under them, in two columns, what can be done with it: open it in the browser, comment on it, edit it, read its comments or see its checks, mark it
  * ready for review or turn it into a draft, merge it or close it, or read it again. While it is read again, the
  * details stay shown, with a spinner in the title; when that fails, the title says they are stale. Whether it is
  * open lives in the {@link Model}.

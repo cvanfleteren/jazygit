@@ -83,3 +83,12 @@ branch, or on one that is not checked out on this machine, is counted and dimmed
 - The ranking guesses: after the base was merged into the branch, the base forked off last can be another one, and a
   squash merge upstream leaves no shared commit to find. The counts show why each is where it is.
 - A pull request's base on a branch that is only on `origin` is now the parent, where ADR 72 had none.
+
+## Folded in: ADR 142 (2026-11-22)
+
+`b` used to list only the commits of a branch not on its base (ADR 20, 23, 131). It was removed to free `b` for
+setting the base: the commits on the base are dimmed, and the title counts the branch's own, which already shows which
+commits are the branch's, in every log and without a key. The logs, the commits of a branch and the builds always
+list everything; a search looks through the whole log of HEAD (`History.search` takes no branch to leave out). The
+fork point is still read with the commits not on the base, though nothing lists it any more: leaving that read out
+would save a git process now and then.

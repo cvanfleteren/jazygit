@@ -85,3 +85,16 @@ creating, merging or ending a pull request fetch.
   to the remote as behind, and a fetch that fails says so in the line at the bottom.
 
 Amends ADR 17 (`0017-fetch-at-startup.md`) and ADR 67 (`0067-reading-less-rather-than-nothing-in-the-background.md`).
+
+## Folded in: ADR 52 (2026-11-22)
+
+ADR 52 moved the tick from 750 ms to a second, the step before this ADR's 3 s. Idle, a tick runs one
+`git status --porcelain=v2 --untracked-files=all`, which walks the whole working tree. Profiled on jazygit's own
+repository, that was 50 to 60 ms of git a tick, and the largest part of what an idle app spent outside the JVM: 1 to 5
+s of CPU a minute, depending on what else touched the repository. Not: watching the working tree for changes, which
+takes a watch per directory (and see ADR 97 on `WatchService`).
+
+That figure was taken before ADR 93 found that a status with `--no-optional-locks` never writes the index back, so on
+a stale index. Measured again on 2026-11-23 (git 2.56, 2,315 tracked files), the same status takes about 12 ms on a
+fresh index and 70 to 80 ms on a stale one (`../facts/git.md`): once the index is written anew, a tick costs a fifth
+of what ADR 52 measured.

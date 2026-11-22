@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
 
 /**
- * {@code b} on a branch asks to set its base (ADR 143), and the commits no longer take it (ADR 142).
+ * {@code b} on a branch asks to set its base, and the commits no longer take it (ADR 143).
  */
 class BaseKeysTest {
 

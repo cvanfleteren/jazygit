@@ -116,3 +116,20 @@ Amended by ADR 75: `GitFailure` is no longer generic, and `ProcessError` is fold
 Amended by ADR 114: the GitHub operations are split into roles as well, as decision 8 left open.
 
 Amended by ADR 120: the role classes are in packages, by what they share, and public where another package calls them.
+
+## Folded in: ADR 71, the git roles as built (2026-11-22)
+
+There were two ADRs numbered 71. The one that told where the roles as built differ from this plan is folded in here,
+and 71 now names `0071-a-load-keeps-what-it-reads-in-a-target.md` only. The names of the roles and their operations
+have changed since (ADR 120, 159); the code is the reference for them.
+
+- `CliBaseDistance`, and the half of `CliPullRequest` that finds the remote of a pull request's repository by its URL,
+  stayed helpers of one role each rather than being merged into it: each is a piece of its own with its own tests, and
+  merging would have made `CliBranches` and `CliRemotes` about 500 lines each. A helper one role calls need not be
+  merged into that role's class.
+- The operations are named within their role where the old `GitInfoProvider` name would repeat it (`branches().all()`,
+  not `allBranches()`). `Remotes.deleteBranch` keeps its name: `remotes().delete(…)` would read as deleting a remote.
+- The role `Diffs` has the name of the record `git.model.Diffs`; inside the `git` package the record is written out in
+  full.
+- A stub `Git` elsewhere or under another name is made with `StubGit.of(worktree)` and `StubGit.of(worktree, name)`;
+  `@With` stays on the roles only.

@@ -173,3 +173,21 @@ Amended by ADR 37: the checks popup shows, under its counts, when the checks sta
 together.
 
 Amended by ADR 63: how long the checks took is kept in a file per repository, `repos/<owner>/<name>/check-timings.toml`.
+
+## Folded in: ADR 37 (2026-11-22)
+
+ADR 37 added a line to the checks popup, under its counts, with when the checks started, when they ended once all are
+done, and how long they took together (`CheckSpan`, `ChecksDialog`), and showed what is measured to the second
+(`CheckTimesText`). The decisions worth keeping:
+
+- The start is the one the estimate counts from: the earliest of the commit's workflow runs, a run by its
+  `runCreatedAt`, a re-run by the earliest `startedAt` of its checks, a check of an app other than Actions by its
+  `startedAt`. So the queueing before the first job counts. Commit statuses have no times and are left out. Not: the
+  earliest `startedAt` of any check, which leaves the queueing out.
+- The end is the latest `completedAt`, once every check is done; while one is not, there is no end, and how long they
+  took counts up to now. How long they took together is the time on the clock, not the sum of the checks: checks wait
+  for each other.
+- What is measured is shown to the second under an hour (`0s`, `1m 32s`), to the minute from an hour on; what is
+  estimated keeps ADR 34's rounding, and its `~`. Not: seconds from an hour on, which make the column of the times
+  three wider for little.
+- The line is in the checks popup only, not in the pull request dialog, which has little room and is one `c` away.

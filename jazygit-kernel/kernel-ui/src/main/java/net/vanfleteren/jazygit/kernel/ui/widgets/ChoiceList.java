@@ -35,7 +35,7 @@ import net.vanfleteren.jazygit.lib.base.Require;
  * opens a {@link ListFilter}, and only the options whose text contains it stay shown; while it is open, the
  * letters go into it, and Escape closes it instead of cancelling. A list can be in two columns, without headings or a
  * filter: the options fill the first column down, then the second, the arrows to the sides go to the other column,
- * and Up and Down go on from one column to the other (ADR 66). The highlighted line and the filter live in the
+ * and Up and Down go on from one column to the other. The highlighted line and the filter live in the
  * {@link Model}, as its {@link ListCursor}.
  *
  * @param <P> the popup the list is shown in

@@ -51,7 +51,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
 
 /**
  * Popup listing the checks on the tip of a branch one by one (ADR 32): how many are in each state and when they are
- * expected to be done; when they started and ended, and how long they took together (ADR 37); a bar of how far they
+ * expected to be done; when they started and ended, and how long they took together (ADR 32); a bar of how far they
  * are together (ADR 89); then each, the failed ones first, then the running, the queued and the passed ones, with how
  * long it took, or runs and is expected to take still; while one is not done, with a bar of how far each is after its
  * name, and how long it runs of how long it is expected to take. It scrolls when they do not all fit. While they are read

@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
 
 /**
- * What became of writing the index anew (ADR 93, ADR 97).
+ * What became of writing the index anew (ADR 97).
  */
 public sealed interface IndexMsg extends Msg {
 

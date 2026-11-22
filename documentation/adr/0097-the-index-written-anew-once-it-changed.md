@@ -44,3 +44,23 @@ on macOS, and the stamp of every tick sees a change within a second.
   cannot be found.
 
 Amends ADR 93 (`0093-the-index-written-anew-now-and-then.md`).
+
+## Folded in: ADR 93 (2026-11-22)
+
+ADR 93 first wrote the index anew every 30th tick; this ADR replaced when. Why it has to be written at all is ADR
+93's finding:
+
+- Every read runs with `--no-optional-locks` (`GitCommand.reading`), so that it never holds the index while the user
+  runs git elsewhere. A status that may not lock the index may not write it either.
+- Before it can tell what changed, git refreshes the index: for each file it compares what `stat` says now to what
+  the index holds. Where those differ, or where the file was written in the same second as the index (racily clean),
+  it reads the whole file and hashes it. A plain `git status` writes what it found back into the index, so the next one
+  is quick again; with `--no-optional-locks` it never does, and every status after it hashes those files again.
+- That is common: right after a clone, a checkout, a rebase or a reset, every file it wrote is racily clean, and a
+  tool that rewrites files without changing them (a formatter, a build, an editor) leaves them stat dirty. Whoever
+  uses jazygit rather than `git status` in a shell may never write the index otherwise.
+- On a clone of jazygit itself, 1,245 files, a status took 75 ms instead of 6 ms, and the git processes of an idle app
+  took 8 % of a core instead of 1 %, for as long as the app ran.
+- The refresh is `git update-index -q --unmerged --refresh`: it writes what the files are like now where the index no
+  longer says so. `-q` and `--unmerged` keep git from failing on a file that changed or is in conflict, so a failure
+  means the index was locked; it then changes nothing shown, and only the debug log says so.

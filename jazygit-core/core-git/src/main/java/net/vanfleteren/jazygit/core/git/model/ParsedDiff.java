@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.lib.syntax.Token;
 /**
  * A unified diff parsed, with the words of its changed lines compared and its code lexed: what the rich view draws
  * (ADR 50, 53). It is made where the diff is read, as comparing the words of a long diff takes too long to do where
- * it is drawn. It is one tree of files, hunks and lines, each line with its words and its tokens (ADR 56). A record's
+ * it is drawn. It is one tree of files, hunks and lines, each line with its words and its tokens. A record's
  * constructor is as public as the record: it is made with {@link #of} and {@link #withNote}, which keep each part of
  * the tree as what it wraps has it.
  *

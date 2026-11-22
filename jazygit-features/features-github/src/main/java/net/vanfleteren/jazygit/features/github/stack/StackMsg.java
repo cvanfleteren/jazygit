@@ -27,7 +27,7 @@ public sealed interface StackMsg extends Msg {
     record Toggled(int stack) implements StackMsg {}
 
     /**
-     * The user switched the branches pane between showing the stacks and listing their branches as any other (ADR 87).
+     * The user switched the branches pane between showing the stacks and listing their branches as any other (ADR 72).
      */
     record ViewToggled() implements StackMsg {}
 
