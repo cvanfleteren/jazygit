@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -74,6 +75,23 @@ class ForgeUpdateTest {
         assertFalse(asked.on("github"));
         assertFalse(asked.on("forgejo"));
     }
+
+    @Test
+    void aDialogTheUserIsInIsNotTakenAwayTheQuestionIsPutOff() {
+        Model typing = nothingRemembered(opened()).openPopup(new Typing());
+
+        Model told = told(typing, claim("github", "origin"), claim("forgejo", "codeberg"));
+        assertEquals(Option.of(new Typing()), told.popup(Typing.class));
+        assertFalse(told.on("github"));
+        assertFalse(told.on("forgejo"));
+        // The settings can still ask.
+        assertEquals(2, told.part(ForgeHome.PART).candidates().size());
+    }
+
+    /**
+     * A dialog the user is typing in.
+     */
+    private record Typing() implements Popup {}
 
     @Test
     void theChoiceTurnsItsForgeOnAndIsKept() {

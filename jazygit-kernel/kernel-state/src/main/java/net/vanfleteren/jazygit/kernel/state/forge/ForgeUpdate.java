@@ -57,9 +57,11 @@ public final class ForgeUpdate {
         return switch (ForgeDecision.of(home.claims(), home.remembered())) {
             case ForgeDecision.Home(ForgeCandidate chosen) -> switched(model, Option.of(chosen));
             case ForgeDecision.NoForge() -> Next.of(model.mapPart(ForgeHome.PART, h -> h.deciding(Option.none())));
+            // As the forges may answer late, the user may be in a dialog by then: it is not taken away, and the
+            // question is put off as Escape would, until the next opening or the settings.
             case ForgeDecision.Ask(var candidates, var pick) ->
                 Next.of(model.mapPart(ForgeHome.PART, h -> h.deciding(Option.none()))
-                        .openPopup(new ForgeChoicePopup(candidates, pick)));
+                        .openPopupIfFree(new ForgeChoicePopup(candidates, pick)));
         };
     }
 
