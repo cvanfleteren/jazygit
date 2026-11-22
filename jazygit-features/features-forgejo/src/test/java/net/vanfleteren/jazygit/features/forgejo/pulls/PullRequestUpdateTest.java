@@ -17,6 +17,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
@@ -51,7 +52,7 @@ class PullRequestUpdateTest {
         Next next = requested(listed(), "feature");
 
         assertEquals(ForgejoPullRequestPopup.loading(FEATURE, LISTED, 1), popup(next.model()));
-        assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 1)), next.cmds());
+        assertEquals(List.of(new LoadPullRequest(12, 1)), next.cmds());
     }
 
     @Test
@@ -75,7 +76,7 @@ class PullRequestUpdateTest {
                 .model();
 
         Next again = Update.update(read, new PullRequestMsg.RefreshChosen());
-        assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 2)), again.cmds());
+        assertEquals(List.of(new LoadPullRequest(12, 2)), again.cmds());
         assertTrue(popup(again.model()).asked());
         assertEquals(Option.of(shown("read")), popup(again.model()).shown());
         // While it is read, asking again reads nothing more.
@@ -132,9 +133,17 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void aBranchThatFollowsNoRemoteBranchIsToldSo() {
+    void aBranchWithoutAnUpstreamHasThePullRequestOfTheBranchOfItsNameOnOrigin() {
+        Model listedAlone = PullRequestUpdate.update(
+                        model(),
+                        new PullRequestMsg.Listed(
+                                Option.of(HashMap.of(new RemoteBranch(ORIGIN, new BranchName("alone")), LISTED)),
+                                Option.none()))
+                .model();
+
+        assertEquals(LISTED, popup(requested(listedAlone, "alone").model()).pullRequest());
         assertEquals(
-                Option.of(new PullRequestNotice.NotOnForgejo(new BranchName("alone"))),
+                Option.of(new PullRequestNotice.None(new BranchName("alone"))),
                 requested(listed(), "alone").model().outcome().notice());
     }
 

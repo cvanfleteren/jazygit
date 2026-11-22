@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.core.forgejo;
 
 import io.vavr.control.Option;
-import java.util.Locale;
 
 /**
  * An open pull request of a repository on Forgejo, as its list gives it (ADR 176).
@@ -15,13 +14,10 @@ import java.util.Locale;
  * @param url            where it is on the web
  */
 public record ForgejoPullRequest(
-        long number, String title, String head, Option<String> headRepository, String base, boolean draft, String url) {
-
-    /**
-     * Whether the branch it merges is in {@code repository}, not in a fork of it.
-     */
-    public boolean from(ForgejoRepository repository) {
-        return headRepository.exists(full -> full.toLowerCase(Locale.ROOT)
-                .equals((repository.owner() + "/" + repository.name()).toLowerCase(Locale.ROOT)));
-    }
-}
+        long number,
+        String title,
+        String head,
+        Option<String> headRepository,
+        String base,
+        boolean draft,
+        String url) {}

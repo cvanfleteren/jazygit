@@ -11,24 +11,13 @@ import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 public sealed interface PullRequestNotice extends Notice.Phrased {
 
     /**
-     * {@code branch} follows a branch on Forgejo that no open pull request merges.
+     * No open pull request of the home merges the branch {@code branch} is pushed to.
      */
     record None(BranchName branch) implements PullRequestNotice {
 
         @Override
         public Phrase phrase() {
             return Phrase.of("forgejo.notice.noPullRequest", branch.value());
-        }
-    }
-
-    /**
-     * {@code branch} follows no branch of a remote on Forgejo, so no pull request can merge it.
-     */
-    record NotOnForgejo(BranchName branch) implements PullRequestNotice {
-
-        @Override
-        public Phrase phrase() {
-            return Phrase.of("forgejo.notice.notOnForgejo", branch.value());
         }
     }
 }

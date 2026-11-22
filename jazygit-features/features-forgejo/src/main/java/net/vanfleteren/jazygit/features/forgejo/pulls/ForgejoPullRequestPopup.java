@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 /**
  * Showing the pull request on Forgejo that merges {@code branch} (ADR 176).
  *
- * @param branch        the branch of a remote on Forgejo it merges
+ * @param branch        the branch of a remote it merges, which the branch shown is pushed to
  * @param pullRequest   what is known of it from the list of the open pull requests
  * @param details       what was read of it, or why that failed; nothing while it is first being read
  * @param asked         whether it is being read again as the user asked, while {@code details} stay shown

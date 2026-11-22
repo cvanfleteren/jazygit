@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Part;
 
 /**
- * Forgejo's part of the model for its pull requests (ADR 157, 176): the open ones of each remote on Forgejo, by the
- * branch of that remote they merge, and the reads of a pull request given out.
+ * Forgejo's part of the model for its pull requests (ADR 157, 176): the open ones of the home (ADR 177), by the
+ * branch of a remote they merge, and the reads of a pull request given out.
  *
  * @param open    the open pull requests, by the branch they merge; none until they are first read
  * @param failure why they could not be read the last time, if they could not
@@ -24,10 +24,10 @@ public record ForgejoPullRequests(
     public static final Part<ForgejoPullRequests> PART = Part.of("forgejo.pullRequests", NONE);
 
     /**
-     * The open pull request that merges the branch {@code branch} follows, if it follows one on a remote and one does.
+     * The open pull request that merges the branch {@code branch} is pushed to (ADR 177), if one does.
      */
     public Option<ForgejoPullRequest> of(Branch branch) {
-        return branch.remoteUpstream().flatMap(upstream -> open.flatMap(prs -> prs.get(upstream)));
+        return open.flatMap(prs -> prs.get(branch.pushTarget()));
     }
 
     /**

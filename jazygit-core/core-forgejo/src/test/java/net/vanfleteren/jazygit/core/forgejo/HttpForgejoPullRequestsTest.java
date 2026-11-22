@@ -1,9 +1,7 @@
 package net.vanfleteren.jazygit.core.forgejo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -143,15 +141,13 @@ class HttpForgejoPullRequestsTest {
     }
 
     @Test
-    void aPullRequestFromAForkIsNotFromTheRepository() {
+    void aPullRequestFromAForkSaysWhichAndOneFromADeletedForkNone() {
         List<ForgejoPullRequest> open = HttpForgejo.of(() -> FjKeys.NONE)
                 .openPullRequests(repository("forked"))
                 .get();
 
-        assertFalse(open.get(0).from(repository("forked")));
-        assertTrue(open.get(0).from(new ForgejoRepository("https://code.example.net", "Someone", "Forked")));
+        assertEquals(Option.of("someone/forked"), open.get(0).headRepository());
         assertEquals(Option.none(), open.get(1).headRepository());
-        assertFalse(open.get(1).from(repository("forked")));
     }
 
     @Test

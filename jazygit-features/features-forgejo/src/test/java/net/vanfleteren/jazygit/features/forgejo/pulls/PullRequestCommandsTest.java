@@ -27,7 +27,7 @@ class PullRequestCommandsTest {
     private static final ForgejoError DOWN = new ForgejoError.Unreachable("timed out");
 
     @Test
-    void theOpenPullRequestsOfARemoteOnForgejoAreKnownByTheBranchTheyMergeThoseOfForksLeftOut() {
+    void theOpenPullRequestsOfTheHomeAreKnownByTheBranchTheyMergeThoseOfOthersForksLeftOut() {
         ForgejoPullRequest fromFork = new ForgejoPullRequest(
                 13, "From a fork", "feature", Option.of("someone/nix"), "main", false, "https://x/13");
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.right(List.of(LISTED, fromFork)));
@@ -38,11 +38,28 @@ class PullRequestCommandsTest {
     }
 
     @Test
-    void aRemoteNotOnForgejoIsNotAsked() {
+    void thoseOfTheProjectAForkWasMadeOfAreKnownByTheBranchOfTheForkTheyMerge() {
+        // origin is Anna's fork, upstream the project: her pull request is the project's, its branch in her fork.
+        ForgejoPullRequest fromAnna = new ForgejoPullRequest(
+                14, "From Anna's fork", "feature", Option.of("Anna/Nix"), "main", false, "https://x/14");
+        FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.right(List.of(fromAnna)));
+
+        assertEquals(
+                new PullRequestMsg.Listed(Option.of(HashMap.of(FEATURE, fromAnna)), Option.none()),
+                new ReadPullRequests()
+                        .run(forgejo.env(HashMap.of(
+                                ORIGIN,
+                                "git@code.example.net:anna/nix.git",
+                                new RemoteName("upstream"),
+                                "https://code.example.net/cvf/nix.git"))));
+    }
+
+    @Test
+    void withoutAHomeOnForgejoNoneAreRead() {
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.left(DOWN));
 
         assertEquals(
-                new PullRequestMsg.Listed(Option.of(HashMap.empty()), Option.none()),
+                new PullRequestMsg.Listed(Option.none(), Option.none()),
                 new ReadPullRequests()
                         .run(forgejo.env(HashMap.of(new RemoteName("github"), "git@github.com:cvf/nix.git"))));
     }
@@ -67,7 +84,7 @@ class PullRequestCommandsTest {
                                 details("Show"),
                                 Option.of(ForgejoReview.Verdict.APPROVED),
                                 forgejo.status().get()))),
-                new LoadPullRequest(ORIGIN, 12, 3).run(forgejo.env()));
+                new LoadPullRequest(12, 3).run(forgejo.env()));
     }
 
     @Test
@@ -78,21 +95,20 @@ class PullRequestCommandsTest {
         assertEquals(
                 new PullRequestMsg.Read(
                         3, Either.right(new ShownPullRequest(details("Show"), Option.none(), CommitStatus.NONE))),
-                new LoadPullRequest(ORIGIN, 12, 3).run(forgejo.env()));
+                new LoadPullRequest(12, 3).run(forgejo.env()));
     }
 
     @Test
-    void aPullRequestThatCannotBeReadOrARemoteNoLongerOnForgejoFails() {
+    void aPullRequestThatCannotBeReadOrAHomeNoLongerOnForgejoFails() {
         FakeForgejo down = new FakeForgejo(
                 Either.right(List.of(LISTED)), Either.left(DOWN), Either.right(List.empty()), Either.left(DOWN));
         assertEquals(
                 new PullRequestMsg.Read(3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.Asked(DOWN))),
-                new LoadPullRequest(ORIGIN, 12, 3).run(down.env()));
+                new LoadPullRequest(12, 3).run(down.env()));
 
         assertEquals(
-                new PullRequestMsg.Read(
-                        3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.NotOnForgejo(ORIGIN))),
-                new LoadPullRequest(ORIGIN, 12, 3)
+                new PullRequestMsg.Read(3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.NoHome())),
+                new LoadPullRequest(12, 3)
                         .run(FakeForgejo.of(details("Show")).env(HashMap.of(ORIGIN, "git@github.com:cvf/nix.git"))));
     }
 }

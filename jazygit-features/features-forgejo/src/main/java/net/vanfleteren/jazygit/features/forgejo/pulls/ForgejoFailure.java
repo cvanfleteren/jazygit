@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.features.forgejo.pulls;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
-import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 
@@ -37,13 +36,13 @@ public sealed interface ForgejoFailure extends Failure.Phrased {
     }
 
     /**
-     * The remote {@code remote} is not, or no longer, on Forgejo.
+     * The home of the pull requests (ADR 177) is not, or no longer, on Forgejo.
      */
-    record NotOnForgejo(RemoteName remote) implements ForgejoFailure {
+    record NoHome() implements ForgejoFailure {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("forgejo.error.notOnForgejo", remote.value());
+            return Phrase.of("forgejo.error.noHome");
         }
     }
 

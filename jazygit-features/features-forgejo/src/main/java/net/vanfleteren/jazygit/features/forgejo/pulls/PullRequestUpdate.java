@@ -38,17 +38,15 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Shows the pull request of {@code branch}, when it is idle: the one that merges the branch it follows on a
-     * remote on Forgejo. Without one, the user is told so; without the list, why it is not known.
+     * Shows the pull request of {@code branch}, when it is idle: the one of the home that merges the branch it is
+     * pushed to (ADR 177). Without one, the user is told so; without the list, why it is not known.
      */
     private static Next requested(Model model, BranchName branch) {
         ForgejoPullRequests prs = model.part(ForgejoPullRequests.PART);
         return model.idleBranch(branch)
-                .map(known -> known.remoteUpstream()
-                        .map(upstream -> prs.of(known)
-                                .map(pr -> show(model, upstream, pr))
-                                .getOrElse(() -> unknown(model, known, prs)))
-                        .getOrElse(() -> Next.of(model.inform(new PullRequestNotice.NotOnForgejo(branch)))))
+                .map(known -> prs.of(known)
+                        .map(pr -> show(model, known.pushTarget(), pr))
+                        .getOrElse(() -> unknown(model, known, prs)))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -61,11 +59,11 @@ public final class PullRequestUpdate {
         return Next.of(model.inform(new PullRequestNotice.None(branch.name())));
     }
 
-    private static Next show(Model model, RemoteBranch upstream, ForgejoPullRequest pr) {
+    private static Next show(Model model, RemoteBranch head, ForgejoPullRequest pr) {
         Model given = model.mapPart(ForgejoPullRequests.PART, ForgejoPullRequests::givingOutRead);
         long read = given.part(ForgejoPullRequests.PART).reads();
-        return PopupUpdate.ask(given, ForgejoPullRequestPopup.loading(upstream, pr, read))
-                .and(new LoadPullRequest(upstream.remote(), pr.number(), read));
+        return PopupUpdate.ask(given, ForgejoPullRequestPopup.loading(head, pr, read))
+                .and(new LoadPullRequest(pr.number(), read));
     }
 
     /**
@@ -95,8 +93,7 @@ public final class PullRequestUpdate {
                     long read = given.part(ForgejoPullRequests.PART).reads();
                     return Next.of(
                             given.openPopup(popup.readingAgain(read)),
-                            new LoadPullRequest(
-                                    popup.branch().remote(), popup.pullRequest().number(), read));
+                            new LoadPullRequest(popup.pullRequest().number(), read));
                 })
                 .getOrElse(() -> Next.of(model));
     }
