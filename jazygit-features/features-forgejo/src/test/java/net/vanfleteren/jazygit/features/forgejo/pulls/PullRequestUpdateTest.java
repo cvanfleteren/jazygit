@@ -191,6 +191,19 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aBranchAskedForWhileTheFirstListIsReadReadsNothingMore() {
+        // As Forgejo turns on, or the home changes, the list of the home is read already.
+        Next once = requested(model(), "feature");
+        Next twice = requested(once.model(), "feature");
+
+        assertEquals(
+                Option.of(new PullRequestsError.NotRead()),
+                twice.model().outcome().error());
+        assertEquals(List.empty(), once.cmds());
+        assertEquals(List.empty(), twice.cmds());
+    }
+
+    @Test
     void aListReadForAHomeThatIsNoLongerItIsLeftOut() {
         RemoteName upstream = new RemoteName("upstream");
         Model moved = model().withPart(

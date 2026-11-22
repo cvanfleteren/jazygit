@@ -10,10 +10,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.Cmd;
+import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -136,23 +140,58 @@ class ForgeUpdateTest {
         assertEquals(Option.none(), ForgeHome.of(none));
     }
 
+    /**
+     * {@code model} with a reaction that answers each event with a {@link Seen} of it, so that the events an update
+     * tells are among the commands of its {@code Next}.
+     */
+    private static Model watched(Model model) {
+        return model.withReactions(new Reactions(List.of((told, event) -> Next.of(told, new Seen(event)))));
+    }
+
+    private static List<KernelEvent> seen(Next next) {
+        return next.cmds().filter(Seen.class::isInstance).map(cmd -> ((Seen) cmd).event());
+    }
+
     @Test
     void anotherHomeOnTheSameForgeSwitchesItOnAfresh() {
         Model decided = told(nothingRemembered(opened()), claim("forgejo", "origin", "upstream"), claim("github"));
         assertEquals(Option.of(new RemoteName("upstream")), ForgeHome.of(decided));
-        java.util.List<KernelEvent> seen = new java.util.ArrayList<>();
-        Model watched = decided.withReactions(new Reactions(List.of((model, event) -> {
-            seen.add(event);
-            return Next.of(model);
-        })));
+        Model asked = Update.update(watched(decided), new ForgeMsg.Asked()).model();
 
-        Model asked = Update.update(watched, new ForgeMsg.Asked()).model();
-        Model origin = Update.update(asked, new ForgeMsg.Picked(0)).model();
+        Next origin = Update.update(asked, new ForgeMsg.Picked(0));
 
-        assertEquals(Option.of(new RemoteName("origin")), ForgeHome.of(origin));
-        assertTrue(origin.on("forgejo"));
-        // As it reads anew what it read of the home before (ADR 177).
-        assertTrue(seen.contains(new KernelEvent.Switched("forgejo", true)), seen.toString());
+        assertEquals(Option.of(new RemoteName("origin")), ForgeHome.of(origin.model()));
+        assertTrue(origin.model().on("forgejo"));
+        // Once, and only on, as it reads anew what it read of the home before (ADR 177).
+        assertEquals(List.of(new KernelEvent.Switched("forgejo", true)), seen(origin));
+    }
+
+    @Test
+    void pickingTheHomeThatIsChosenAlreadySwitchesNothing() {
+        Model decided = told(nothingRemembered(opened()), claim("forgejo", "origin", "upstream"), claim("github"));
+        Model asked = Update.update(watched(decided), new ForgeMsg.Asked()).model();
+
+        Next upstream = Update.update(asked, new ForgeMsg.Picked(1));
+
+        assertEquals(Option.of(new RemoteName("upstream")), ForgeHome.of(upstream.model()));
+        assertTrue(upstream.model().on("forgejo"));
+        assertEquals(List.empty(), seen(upstream));
+    }
+
+    /**
+     * What the reaction of {@link #watched} answers {@code event} with; it is never run.
+     */
+    private record Seen(KernelEvent event) implements Cmd {
+
+        @Override
+        public Msg run(Env env) {
+            throw new UnsupportedOperationException("never run");
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            throw new UnsupportedOperationException("never run");
+        }
     }
 
     @Test
