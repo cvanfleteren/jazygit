@@ -121,6 +121,28 @@ class ReflogUpdateTest {
     }
 
     @Test
+    void aReadThatEndsOnceTheTabIsHiddenReadsNoFurther() {
+        Model hidden = hide(reading(SHOWN, new ReadReflog(0, PAGE)));
+
+        Next next = read(hidden, new ReadReflog(0, PAGE), entries(0, PAGE));
+
+        assertEquals(entries(0, PAGE), view(next).entries().getOrElse(List.empty()));
+        assertEquals(List.empty(), next.cmds());
+        assertEquals(Option.none(), view(next).reading());
+    }
+
+    @Test
+    void aRereadAskedForIsNotRunOnceTheTabIsHidden() {
+        Model asked = ReflogUpdate.reacting(reading(SHOWN, new ReadReflog(0, PAGE)), new KernelEvent.LogRead())
+                .model();
+
+        Next next = read(hide(asked), new ReadReflog(0, PAGE), entries(0, 5));
+
+        assertEquals(List.empty(), next.cmds());
+        assertFalse(view(next).again());
+    }
+
+    @Test
     void askedToReadAgainWhileReadingItReadsAgainOnceDone() {
         Model running = reading(SHOWN, new ReadReflog(0, PAGE));
 
@@ -173,6 +195,10 @@ class ReflogUpdateTest {
         assertEquals(
                 Option.of(entries(0, 3).get(1).commit()),
                 read.commit(entries(0, 3).get(1).sha()));
+    }
+
+    private static Model hide(Model model) {
+        return model.mapRepoView(view -> view.withTab(CommitsPanel.PANE, CommitsPane.LOG));
     }
 
     private static Model reading(Model model, ReadReflog cmd) {

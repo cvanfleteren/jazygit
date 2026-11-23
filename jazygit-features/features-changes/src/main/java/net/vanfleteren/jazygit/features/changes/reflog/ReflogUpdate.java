@@ -110,10 +110,14 @@ public final class ReflogUpdate {
     }
 
     /**
-     * {@code model} with {@code view}, reading again if that was asked for while it read, else a page ahead.
+     * {@code model} with {@code view}, reading again if that was asked for while it read, else a page ahead; nothing
+     * once the tab is hidden, as showing it again reads it from the top.
      */
     private static Next next(Model model, ReflogView view) {
         Model read = model.withPart(ReflogView.PART, view.withAgain(false));
+        if (!shown(read)) {
+            return Next.of(read);
+        }
         return view.again() ? reread(read) : ahead(read);
     }
 
