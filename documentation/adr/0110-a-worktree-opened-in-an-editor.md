@@ -160,3 +160,5 @@ option of a `ChoiceDialog` is chosen; while the filter is open, the letters are 
 - Nothing works until the user lists an editor; the message says how.
 
 Amended by ADR 145: `command` is read as `dir-command`, and an editor can have a `file-command` that opens a file at a line.
+
+Amended by ADR 183: an editor the user set is started by the kernel's `ProgramLauncher`, not through git's `Editor`.

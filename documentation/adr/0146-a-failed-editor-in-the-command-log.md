@@ -37,3 +37,6 @@ command log; an editor was not.
 - The error does not say why the editor failed when it is not for want of a terminal; running the command from the log
   in a shell does.
 - An editor with the terminal prints why on the terminal, as before.
+
+Amended by ADR 183: a program the user set that exits as it starts fails as a `ProgramFailure.ExitedAtStart`, not a
+`GitError.EditorExitedAtStart`; the command log still shows what ran.
