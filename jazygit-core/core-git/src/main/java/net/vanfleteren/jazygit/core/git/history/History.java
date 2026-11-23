@@ -108,10 +108,10 @@ public interface History {
 
     /**
      * What keeps those of {@code commits} no branch, tag or remote-tracking branch reaches: only the reflog, until its
-     * entries expire, or HEAD, at {@code head}, until it moves away (ADR 186, 188). Two processes at the same time
-     * for all of them, one without a HEAD, none for none.
+     * entries expire, or HEAD, where it is as this runs, until it moves away (ADR 186, 188). Two processes at the same
+     * time for all of them, none for none.
      */
-    Either<GitError, Kept> lost(Seq<Sha> commits, Option<Sha> head);
+    Either<GitError, Kept> lost(Seq<Sha> commits);
 
     /**
      * Who last changed each line of the file {@code at} names, blamed with {@code options} (ADR 147).

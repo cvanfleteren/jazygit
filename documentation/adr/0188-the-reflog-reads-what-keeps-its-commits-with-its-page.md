@@ -28,10 +28,11 @@ with every reflog of the repository, and gives the same answer for each page.
 - **What keeps a commit is a `Kept`** of two sets: `lost`, what nothing but the reflog keeps, marked `✗`; and `byHead`,
   what only HEAD reaches, unmarked in the row, whose heading says it is lost once HEAD moves away. The commit HEAD is
   at keeps its `◆`.
-- **`History.lost` runs its two processes at the same time**: `git rev-list <commits> --not --branches --tags
-  --remotes`, and the same with HEAD's commit among what it leaves out; what the first lists and the second does not,
-  HEAD reaches. HEAD's commit is the one the status read last says, carried by `ReadReflog`, so no process is spent
-  on it; without one, the first process is all.
+- **`History.lost` runs its two processes at the same time**: `git rev-list --ignore-missing <commits> --not
+  --branches --tags --remotes`, and the same with `HEAD` among what it leaves out; what the first lists and the
+  second does not, HEAD reaches. git resolves `HEAD` as it runs, so it is where HEAD is then, not where the status
+  read before an operation said; `--ignore-missing` makes a HEAD without a commit reach nothing, where `HEAD` alone
+  would fail.
 - **`Parallel.both` in `core-process`** runs the two, each on a virtual thread, and waits for both before it returns,
   in a `try` with resources: nothing it starts outlives the call. `StructuredTaskScope` is a preview in Java 25, and the
   app uses no preview; when it is final, only `Parallel` changes. An interrupted wait gives none, and the thread stays

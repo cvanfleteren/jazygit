@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -176,7 +175,7 @@ class CliReflogTest {
         assertEquals(
                 new Kept(HashSet.of(dropped, droppedToo), HashSet.empty()),
                 new CliHistory(repo)
-                        .lost(List.of(droppedToo, one, dropped, one), Option.of(one))
+                        .lost(List.of(droppedToo, one, dropped, one))
                         .get());
     }
 
@@ -194,10 +193,7 @@ class CliReflogTest {
         git(repo, 5_000, "checkout", "-q", "main");
 
         assertEquals(
-                Kept.BY_REFS,
-                new CliHistory(repo)
-                        .lost(List.of(tagged, pushed), Option.of(head(repo)))
-                        .get());
+                Kept.BY_REFS, new CliHistory(repo).lost(List.of(tagged, pushed)).get());
     }
 
     @Test
@@ -215,15 +211,39 @@ class CliReflogTest {
 
         assertEquals(
                 new Kept(HashSet.of(dropped), HashSet.of(first, second)),
-                new CliHistory(repo)
-                        .lost(List.of(second, first, dropped), Option.of(second))
-                        .get());
-        // Without a HEAD to look at, all of them are lost.
+                new CliHistory(repo).lost(List.of(second, first, dropped)).get());
+    }
+
+    /**
+     * HEAD is the one git has when it looks, not the one the app read before: once HEAD moved away, what only it
+     * reached is lost.
+     */
+    @Test
+    void onceHeadMovesAwayWhatOnlyItReachedIsLost() throws Exception {
+        Path repo = init("repo");
+        commitAt(repo, "One", 1_000);
+        git(repo, 2_000, "checkout", "-q", "--detach");
+        commitAt(repo, "Detached", 3_000);
+        Sha detached = head(repo);
+        git(repo, 4_000, "checkout", "-q", "main");
+
         assertEquals(
-                new Kept(HashSet.of(dropped, first, second), HashSet.empty()),
-                new CliHistory(repo)
-                        .lost(List.of(second, first, dropped), Option.none())
-                        .get());
+                new Kept(HashSet.of(detached), HashSet.empty()),
+                new CliHistory(repo).lost(List.of(detached)).get());
+    }
+
+    @Test
+    void aHeadWithoutACommitKeepsNothing() throws Exception {
+        Path repo = init("repo");
+        commitAt(repo, "One", 1_000);
+        git(repo, 2_000, "checkout", "-q", "--detach");
+        commitAt(repo, "Detached", 3_000);
+        Sha detached = head(repo);
+        git(repo, 4_000, "checkout", "-q", "--orphan", "fresh");
+
+        assertEquals(
+                new Kept(HashSet.of(detached), HashSet.empty()),
+                new CliHistory(repo).lost(List.of(detached)).get());
     }
 
     @Test
@@ -231,9 +251,7 @@ class CliReflogTest {
         // No repository at all: a process would fail.
         assertEquals(
                 Kept.BY_REFS,
-                new CliHistory(dir.resolve("nowhere"))
-                        .lost(List.empty(), Option.none())
-                        .get());
+                new CliHistory(dir.resolve("nowhere")).lost(List.empty()).get());
     }
 
     @Test

@@ -553,22 +553,18 @@ public final class CliHistory implements History {
     }
 
     /**
-     * Two {@code git rev-list <commits> --not … --branches --tags --remotes} at the same time, one with {@code head}
-     * among what it leaves out: those the first lists that the second does not, HEAD reaches. Each walks from the
-     * commits only as far as the first commit a ref reaches. Without {@code head}, one is enough (ADR 188).
+     * Two {@code git rev-list --ignore-missing <commits> --not … --branches --tags --remotes} at the same time, one
+     * with {@code HEAD} among what it leaves out: those the first lists that the second does not, HEAD reaches. git
+     * resolves HEAD as it runs, so it is where HEAD is then; {@code --ignore-missing} makes a HEAD without a commit
+     * reach nothing. Each walks from the commits only as far as the first commit a ref reaches (ADR 188).
      */
     @Override
-    public Either<GitError, Kept> lost(Seq<Sha> commits, Option<Sha> head) {
+    public Either<GitError, Kept> lost(Seq<Sha> commits) {
         if (commits.isEmpty()) {
             return Either.right(Kept.BY_REFS);
         }
         Set<Sha> asked = HashSet.ofAll(commits);
-        if (head.isEmpty()) {
-            return unreached(asked, List.empty()).map(lost -> new Kept(lost, HashSet.empty()));
-        }
-        List<String> byHead =
-                head.map(sha -> GitArgs.revision(new Revision.Commit(sha))).toList();
-        return Parallel.both(() -> unreached(asked, List.empty()), () -> unreached(asked, byHead))
+        return Parallel.both(() -> unreached(asked, List.empty()), () -> unreached(asked, List.of("HEAD")))
                 .<Either<GitError, Kept>>map(both ->
                         both._1().flatMap(byRefs -> both._2().map(byAll -> new Kept(byAll, byRefs.removeAll(byAll)))))
                 .getOrElse(() -> Either.left(new GitError.Interrupted("rev-list")));
@@ -586,7 +582,7 @@ public final class CliHistory implements History {
     }
 
     private static GitCommand lostCommand(Set<Sha> commits, List<String> also) {
-        return GitCommand.reading(List.of("rev-list")
+        return GitCommand.reading(List.of("rev-list", "--ignore-missing")
                 .appendAll(commits.toList().map(sha -> GitArgs.revision(new Revision.Commit(sha))))
                 .append("--not")
                 .appendAll(also)

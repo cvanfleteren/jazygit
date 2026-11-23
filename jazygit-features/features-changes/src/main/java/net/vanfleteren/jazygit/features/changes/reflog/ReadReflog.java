@@ -5,7 +5,6 @@ import net.vanfleteren.jazygit.core.git.history.History;
 import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -14,10 +13,10 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 
 /**
  * Reads the entries of the reflog of HEAD after the newest {@code skip}, at most {@code max}, in one process (ADR
- * 186); then what keeps those of their commits no ref reaches, HEAD being at {@code head}, in two more at the same time
- * (ADR 188). What it read comes back as one, so that what is lost goes with the entries it is of.
+ * 186); then what keeps those of their commits no ref reaches, in two more at the same time (ADR 188). What it read
+ * comes back as one, so that what is lost goes with the entries it is of.
  */
-public record ReadReflog(int skip, int max, Option<Sha> head) implements Cmd {
+public record ReadReflog(int skip, int max) implements Cmd {
 
     @Override
     public Option<Label> label() {
@@ -45,7 +44,7 @@ public record ReadReflog(int skip, int max, Option<Sha> head) implements Cmd {
         return switch (reflog) {
             case Reflog.Empty _ -> Option.of(Kept.BY_REFS);
             case Reflog.Entries(var entries) ->
-                history.lost(entries.map(ReflogEntry::sha), head).toOption();
+                history.lost(entries.map(ReflogEntry::sha)).toOption();
         };
     }
 }

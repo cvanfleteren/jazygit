@@ -6,7 +6,6 @@ import net.vanfleteren.jazygit.core.git.history.History;
 import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
@@ -70,7 +69,7 @@ public final class ReflogUpdate {
         if (view.reading().isDefined()) {
             return Next.of(model.withPart(ReflogView.PART, view.withAgain(true)));
         }
-        ReadReflog cmd = new ReadReflog(0, Math.max(view.read(), History.REFLOG_PAGE), head(model));
+        ReadReflog cmd = new ReadReflog(0, Math.max(view.read(), History.REFLOG_PAGE));
         return Next.of(model.withPart(ReflogView.PART, view.withReading(Option.of(cmd))), cmd);
     }
 
@@ -99,13 +98,6 @@ public final class ReflogUpdate {
                                 .withKept((cmd.skip() == 0 ? Kept.BY_REFS : view.kept())
                                         .with(kept.getOrElse(Kept.BY_REFS), page.map(ReflogEntry::sha)));
                 });
-    }
-
-    /**
-     * The commit HEAD is at, as the status read last says.
-     */
-    private static Option<Sha> head(Model model) {
-        return model.repo().status().toOption().flatMap(status -> status.head().commit());
     }
 
     /**
@@ -148,7 +140,7 @@ public final class ReflogUpdate {
         if (!view.wantsMore()) {
             return Next.of(model);
         }
-        ReadReflog cmd = new ReadReflog(view.read(), History.REFLOG_PAGE, head(model));
+        ReadReflog cmd = new ReadReflog(view.read(), History.REFLOG_PAGE);
         return Next.of(model.withPart(ReflogView.PART, view.withReading(Option.of(cmd))), cmd);
     }
 

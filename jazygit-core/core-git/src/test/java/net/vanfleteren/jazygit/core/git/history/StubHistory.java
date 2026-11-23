@@ -85,7 +85,7 @@ public interface StubHistory extends History {
     }
 
     @Override
-    default Either<GitError, Kept> lost(Seq<Sha> commits, Option<Sha> head) {
+    default Either<GitError, Kept> lost(Seq<Sha> commits) {
         return Either.right(Kept.BY_REFS);
     }
 

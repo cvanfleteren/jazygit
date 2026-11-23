@@ -34,8 +34,6 @@ class ReflogUpdateTest {
 
     private static final int PAGE = History.REFLOG_PAGE;
     private static final Model HIDDEN = TestModels.loaded(SampleData.git());
-    private static final Sha HEAD =
-            HIDDEN.repo().status().toOption().get().head().commit().get();
     private static final Model SHOWN = HIDDEN.mapRepoView(view -> view.withTab(CommitsPanel.PANE, ReflogView.TAB));
 
     @Test
@@ -201,15 +199,6 @@ class ReflogUpdateTest {
     }
 
     @Test
-    void aReadReadsAtTheCommitHeadIsAt() {
-        assertEquals(new ReadReflog(0, PAGE, Option.of(HEAD)), readOf(0, PAGE));
-        assertEquals(
-                List.of(new ReadReflog(0, PAGE, Option.of(HEAD))),
-                ReflogUpdate.reacting(HIDDEN, new KernelEvent.TabShown(CommitsPanel.PANE, ReflogView.TAB))
-                        .cmds());
-    }
-
-    @Test
     void whatKeepsTheCommitsComesWithTheEntriesAndALaterPageAddsToIt() {
         List<ReflogEntry> top = entries(0, PAGE);
         List<ReflogEntry> later = entries(PAGE, 10);
@@ -274,7 +263,7 @@ class ReflogUpdateTest {
     }
 
     private static ReadReflog readOf(int skip, int max) {
-        return new ReadReflog(skip, max, Option.of(HEAD));
+        return new ReadReflog(skip, max);
     }
 
     private static Kept kept(List<ReflogEntry> lost, List<ReflogEntry> byHead) {
