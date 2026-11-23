@@ -92,6 +92,7 @@ public final class ReflogShown {
                     case AMEND -> Messages.get("changes.reflog.action.amend");
                     case INITIAL -> Messages.get("changes.reflog.action.initial");
                     case MERGE -> Messages.get("changes.reflog.action.mergeCommit");
+                    case CHERRY_PICK -> Messages.get("changes.reflog.action.cherryPick");
                 };
             case Action.Reset _ -> Messages.get("changes.reflog.action.reset");
             case Action.Rebase(var phase, var detail) ->

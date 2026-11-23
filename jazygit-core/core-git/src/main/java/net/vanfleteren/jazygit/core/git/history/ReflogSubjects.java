@@ -20,7 +20,7 @@ final class ReflogSubjects {
                     Pattern.compile("^checkout: moving from (\\S+) to (\\S+)$"),
                     m -> new Action.Checkout(m.group(1), m.group(2))),
             new Reading(
-                    Pattern.compile("^commit(?: \\((amend|initial|merge)\\))?: (.*)$", Pattern.DOTALL),
+                    Pattern.compile("^commit(?: \\((amend|initial|merge|cherry-pick)\\))?: (.*)$", Pattern.DOTALL),
                     m -> new Action.Committed(kind(m.group(1)), m.group(2))),
             new Reading(Pattern.compile("^reset: moving to (.*)$", Pattern.DOTALL), m -> new Action.Reset(m.group(1))),
             new Reading(
@@ -54,7 +54,9 @@ final class ReflogSubjects {
                 : switch (qualifier) {
                     case "amend" -> CommitKind.AMEND;
                     case "initial" -> CommitKind.INITIAL;
-                    default -> CommitKind.MERGE;
+                    case "merge" -> CommitKind.MERGE;
+                    // The pattern leaves no other qualifier.
+                    default -> CommitKind.CHERRY_PICK;
                 };
     }
 

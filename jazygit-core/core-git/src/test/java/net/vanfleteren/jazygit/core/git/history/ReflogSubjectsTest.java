@@ -29,6 +29,10 @@ class ReflogSubjectsTest {
         assertEquals(
                 new Action.Committed(CommitKind.MERGE, "Merge branch 'f'"),
                 ReflogSubjects.action("commit (merge): Merge branch 'f'"));
+        // git commit, or cherry-pick --continue, once a cherry-pick that stopped on conflicts is resolved.
+        assertEquals(
+                new Action.Committed(CommitKind.CHERRY_PICK, "Add c"),
+                ReflogSubjects.action("commit (cherry-pick): Add c"));
         assertEquals(
                 new Action.Committed(CommitKind.PLAIN, "fix: the reset: moving to x"),
                 ReflogSubjects.action("commit: fix: the reset: moving to x"));

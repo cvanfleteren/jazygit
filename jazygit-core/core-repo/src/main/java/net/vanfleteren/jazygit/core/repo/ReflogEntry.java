@@ -38,8 +38,9 @@ public record ReflogEntry(int place, Instant time, String subject, Action action
         record Checkout(String from, String to) implements Action {}
 
         /**
-         * {@code commit: message}, {@code commit (amend): …}, {@code commit (initial): …} or {@code commit (merge):
-         * …}: a commit made.
+         * {@code commit: message}, {@code commit (amend): …}, {@code commit (initial): …}, {@code commit (merge): …}
+         * or {@code commit (cherry-pick): …}, the last when a cherry-pick that stopped on conflicts is committed: a
+         * commit made.
          */
         record Committed(CommitKind kind, String message) implements Action {}
 
@@ -86,6 +87,7 @@ public record ReflogEntry(int place, Instant time, String subject, Action action
         PLAIN,
         AMEND,
         INITIAL,
-        MERGE
+        MERGE,
+        CHERRY_PICK
     }
 }

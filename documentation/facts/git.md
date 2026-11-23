@@ -186,11 +186,12 @@ learned, so a fact that has grown old can be checked again; see README.md.
   reflog says why from the status of git and one look at the config, only when it is empty. — learned 2026-11-23 ·
   [ADR 0186](../adr/0186-the-reflog-of-head-read-only.md) · git 2.56
 - The subjects of HEAD's reflog read `checkout: moving from <from> to <to>`, `commit: <subject>` (or
-  `commit (amend)`, `(initial)`, `(merge)`), `reset: moving to <revision>`, `rebase (start|pick|finish|…): <detail>`,
-  `merge <what>: <how>`, `cherry-pick: <subject>`, `revert: <subject>`, and `pull <arguments>: Fast-forward` or, for a
-  pull that rebases, `pull <arguments> (start|pick|finish): <detail>`, the arguments as typed (`pull -q --rebase`).
-  `git worktree add` gives the first entry of the new worktree's HEAD an empty subject. *Why it matters:* the reflog
-  view reads what was done from the subject. — learned 2026-11-23 · [ADR
+  `commit (amend)`, `(initial)`, `(merge)`, and `(cherry-pick)` when a cherry-pick that stopped on conflicts is
+  committed, by `git commit` or `cherry-pick --continue`), `reset: moving to <revision>`,
+  `rebase (start|pick|finish|…): <detail>`, `merge <what>: <how>`, `cherry-pick: <subject>`, `revert: <subject>`, and
+  `pull <arguments>: Fast-forward` or, for a pull that rebases, `pull <arguments> (start|pick|finish): <detail>`, the
+  arguments as typed (`pull -q --rebase`). `git worktree add` gives the first entry of the new worktree's HEAD an empty
+  subject. *Why it matters:* the reflog view reads what was done from the subject. — learned 2026-11-23 · [ADR
   0186](../adr/0186-the-reflog-of-head-read-only.md) · git 2.56
 - Each worktree has a reflog of HEAD of its own, at `git rev-parse --git-path logs/HEAD`
   (`.git/worktrees/<name>/logs/HEAD` for a linked one), and a reftable repository keeps it in its tables, where
