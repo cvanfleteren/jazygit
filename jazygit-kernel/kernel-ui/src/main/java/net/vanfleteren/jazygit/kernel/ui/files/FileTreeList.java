@@ -239,7 +239,7 @@ final class FileTreeList<T extends Pathed> {
             carried.flatMap(carry -> nearest(carry._2())).forEach(this::highlight);
             carried = Option.none();
         }
-        return new Unguided(tree);
+        return new Unguided(tree, () -> drawn.map(d -> d.element().renderedArea()));
     }
 
     /**

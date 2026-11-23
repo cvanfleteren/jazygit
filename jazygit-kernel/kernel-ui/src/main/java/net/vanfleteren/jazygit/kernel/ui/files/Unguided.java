@@ -14,15 +14,19 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.List;
+import java.util.function.Supplier;
 
 /**
  * {@code tree} drawn without its guide lines, but with its indent: TamboUI's tree drops the indent along with the
- * guides when it draws none, so it draws them and they are blanked after. Only the cells in front of a row's node are
- * blanked; a row without a node, such as one below the last that only
- * the scrollbar crosses, is left as it is. The tree is otherwise as it is wrapped: its id, focus and events are its
- * own.
+ * guides when it draws none, so it draws them and they are blanked after. Only the cells in front of where a row's
+ * node was drawn are blanked, so a label keeps its own text, even one that starts with blanks and a guide symbol,
+ * and a row without a node, such as one that only the scrollbar crosses, is left as it is. The tree is otherwise as
+ * it is wrapped: its id, focus and events are its own.
+ *
+ * @param nodes where the nodes of the frame being rendered were drawn, once {@code tree} is rendered: null for one
+ *              that was not
  */
-record Unguided(Element tree) implements Element {
+record Unguided(Element tree, Supplier<List<Rect>> nodes) implements Element {
 
     // The cells of TamboUI's default guides, two a level.
     private static final List<String> GUIDES = List.of("├", "└", "│", "─");
@@ -32,20 +36,18 @@ record Unguided(Element tree) implements Element {
         tree.render(frame, area, context);
         Buffer buffer = frame.buffer();
         Rect drawn = buffer.area().intersection(area);
-        List.range(drawn.top(), drawn.bottom()).forEach(y -> unguide(buffer, drawn, y));
+        nodes.get()
+                .filter(node -> node != null && node.top() >= drawn.top() && node.top() < drawn.bottom())
+                .forEach(node -> unguide(buffer, drawn.left(), Math.min(node.left(), drawn.right()), node.top()));
     }
 
-    private static void unguide(Buffer buffer, Rect drawn, int y) {
-        List<Integer> columns = List.range(drawn.left(), drawn.right());
-        List<Integer> prefix = columns.takeWhile(x -> inPrefix(buffer.get(x, y).symbol()));
-        if (prefix.size() < columns.size()) {
-            prefix.filter(x -> GUIDES.contains(buffer.get(x, y).symbol()))
-                    .forEach(x -> buffer.set(x, y, buffer.get(x, y).symbol(" ")));
-        }
-    }
-
-    private static boolean inPrefix(String symbol) {
-        return symbol.isBlank() || GUIDES.contains(symbol);
+    /**
+     * Blanks the guide cells of row {@code y} from column {@code left} up to {@code node}, where its node starts.
+     */
+    private static void unguide(Buffer buffer, int left, int node, int y) {
+        List.range(left, node)
+                .filter(x -> GUIDES.contains(buffer.get(x, y).symbol()))
+                .forEach(x -> buffer.set(x, y, buffer.get(x, y).symbol(" ")));
     }
 
     @Override
