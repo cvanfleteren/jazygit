@@ -216,3 +216,4 @@ another tool adds it there too.
 | 187 | [A source heads what another shows](0187-a-source-heads-what-another-shows.md) |  |
 | 188 | [The reflog reads what keeps its commits with its page](0188-the-reflog-reads-what-keeps-its-commits-with-its-page.md) |  |
 | 189 | [The branches pane has the tabs of any pane](0189-the-branches-pane-has-the-tabs-of-any-pane.md) |  |
+| 187 | [An image in a comment of the conversation is drawn too](0187-an-image-in-a-comment-of-the-conversation-is-drawn.md) |  |

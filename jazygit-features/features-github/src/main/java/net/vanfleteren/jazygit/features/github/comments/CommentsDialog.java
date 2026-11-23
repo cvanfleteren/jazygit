@@ -181,8 +181,9 @@ public final class CommentsDialog implements PopupView {
                                         Integer.MAX_VALUE)
                                 .addClass(Theme.Classes.ERROR),
                         comments -> highlighted
-                                .<Element>map(comment ->
-                                        scroll.render(MarkdownAutolinks.linked(body(comment), repository(popup))))
+                                .<Element>map(comment -> scroll.render(
+                                        MarkdownAutolinks.linked(body(comment), repository(popup)),
+                                        popup.shownPictures()))
                                 .getOrElse(() -> text(Messages.get("github.dialog.comments.none"))
                                         .addClass(Theme.Classes.DIM))))
                 .getOrElse(() -> row(

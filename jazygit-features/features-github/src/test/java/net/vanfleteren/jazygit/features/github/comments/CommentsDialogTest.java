@@ -11,6 +11,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.event.MouseEvent;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Clock;
@@ -37,6 +38,7 @@ import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
+import net.vanfleteren.jazygit.lib.image.Picture;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -120,6 +122,25 @@ class CommentsDialogTest {
             assertTrue(screen.contains("Claude Code is working… [image]"), screen);
             assertFalse(screen.contains("<img"), screen);
             assertFalse(screen.contains("user-attachments"), screen);
+        }
+    }
+
+    @Test
+    void aPastedScreenshotThatWasReadIsDrawn() throws Exception {
+        String url = "https://github.com/user-attachments/assets/5a779fb0";
+        PullRequestComment pasted = comment(
+                "IC_3", Kind.COMMENT, "cvf", "<img width=\"1854\" height=\"557\" alt=\"image\" src=\"" + url + "\" />");
+        model = reading(List.of(pasted));
+        CommentsPopup popup = model.popup(CommentsPopup.class).get();
+        model = model.openPopup(popup.withPictures(popup.pictures()
+                .put(url, Option.of(new Picture(8, 4, Vector.fill(32, 0xffff0000))))));
+        try (ToolkitTestRunner runner = start()) {
+            String screen = RenderedText.ofSize(runner, this::view, 140, 30);
+
+            assertTrue(screen.contains("││▀▀▀▀"), screen);
+            // Only the row of the list says it is an image; the comment shows it.
+            assertEquals(1, screen.split("\\[image]", -1).length - 1, screen);
+            assertTrue(line(screen, "  @cvf  ").contains("[image]"), screen);
         }
     }
 
