@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.history.History;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry.Action;
@@ -33,14 +34,16 @@ class ReflogUpdateTest {
 
     private static final int PAGE = History.REFLOG_PAGE;
     private static final Model HIDDEN = TestModels.loaded(SampleData.git());
+    private static final Sha HEAD =
+            HIDDEN.repo().status().toOption().get().head().commit().get();
     private static final Model SHOWN = HIDDEN.mapRepoView(view -> view.withTab(CommitsPanel.PANE, ReflogView.TAB));
 
     @Test
     void showingTheTabReadsTheFirstPage() {
         Next next = ReflogUpdate.reacting(HIDDEN, new KernelEvent.TabShown(CommitsPanel.PANE, ReflogView.TAB));
 
-        assertEquals(List.of(new ReadReflog(0, PAGE)), next.cmds());
-        assertEquals(Option.of(new ReadReflog(0, PAGE)), view(next).reading());
+        assertEquals(List.of(readOf(0, PAGE)), next.cmds());
+        assertEquals(Option.of(readOf(0, PAGE)), view(next).reading());
     }
 
     @Test
@@ -63,15 +66,15 @@ class ReflogUpdateTest {
 
     @Test
     void whileShownItIsReadAgainAfterAnOperationOrTheLogAsFarAsItWasRead() {
-        Model read = done(SHOWN, new ReadReflog(0, PAGE), entries(0, PAGE));
-        Model further = done(read, new ReadReflog(PAGE, PAGE), entries(PAGE, 50));
+        Model read = done(SHOWN, readOf(0, PAGE), entries(0, PAGE));
+        Model further = done(read, readOf(PAGE, PAGE), entries(PAGE, 50));
 
         assertEquals(
-                List.of(new ReadReflog(0, PAGE + 50)),
+                List.of(readOf(0, PAGE + 50)),
                 ReflogUpdate.reacting(further, new KernelEvent.OperationDone(false))
                         .cmds());
         assertEquals(
-                List.of(new ReadReflog(0, PAGE + 50)),
+                List.of(readOf(0, PAGE + 50)),
                 ReflogUpdate.reacting(further, new KernelEvent.LogRead()).cmds());
         assertEquals(
                 List.empty(),
@@ -80,18 +83,18 @@ class ReflogUpdateTest {
 
     @Test
     void aFullFirstPageIsShownAndTheNextIsReadAtOnce() {
-        Next next = read(reading(SHOWN, new ReadReflog(0, PAGE)), new ReadReflog(0, PAGE), entries(0, PAGE));
+        Next next = read(reading(SHOWN, readOf(0, PAGE)), readOf(0, PAGE), entries(0, PAGE));
 
         assertEquals(entries(0, PAGE), view(next).entries().getOrElse(List.empty()));
-        assertEquals(List.of(lookAt(1, true, entries(0, PAGE)), new ReadReflog(PAGE, PAGE)), next.cmds());
+        assertEquals(List.of(readOf(PAGE, PAGE)), next.cmds());
     }
 
     @Test
     void aPageShorterThanAskedForEndsTheReading() {
-        Next next = read(reading(SHOWN, new ReadReflog(0, PAGE)), new ReadReflog(0, PAGE), entries(0, 3));
+        Next next = read(reading(SHOWN, readOf(0, PAGE)), readOf(0, PAGE), entries(0, 3));
 
         assertTrue(view(next).ended());
-        assertEquals(List.of(lookAt(1, true, entries(0, 3))), next.cmds());
+        assertEquals(List.empty(), next.cmds());
         assertEquals(
                 List.empty(),
                 ReflogUpdate.update(next.model(), new ReflogMsg.Highlighted(2)).cmds());
@@ -99,68 +102,65 @@ class ReflogUpdateTest {
 
     @Test
     void theNextPageIsReadOnceTheHighlightEntersTheLastPageRead() {
-        Model twoPages = done(
-                done(SHOWN, new ReadReflog(0, PAGE), entries(0, PAGE)),
-                new ReadReflog(PAGE, PAGE),
-                entries(PAGE, PAGE));
+        Model twoPages = done(done(SHOWN, readOf(0, PAGE), entries(0, PAGE)), readOf(PAGE, PAGE), entries(PAGE, PAGE));
 
         assertEquals(
                 List.empty(),
                 ReflogUpdate.update(twoPages, new ReflogMsg.Highlighted(PAGE - 1))
                         .cmds());
         assertEquals(
-                List.of(new ReadReflog(2 * PAGE, PAGE)),
+                List.of(readOf(2 * PAGE, PAGE)),
                 ReflogUpdate.update(twoPages, new ReflogMsg.Highlighted(PAGE)).cmds());
     }
 
     @Test
     void aLaterPageIsAddedAfterThoseRead() {
-        Model first = done(SHOWN, new ReadReflog(0, PAGE), entries(0, PAGE));
+        Model first = done(SHOWN, readOf(0, PAGE), entries(0, PAGE));
 
-        Next next = read(reading(first, new ReadReflog(PAGE, PAGE)), new ReadReflog(PAGE, PAGE), entries(PAGE, 10));
+        Next next = read(reading(first, readOf(PAGE, PAGE)), readOf(PAGE, PAGE), entries(PAGE, 10));
 
         assertEquals(entries(0, PAGE + 10), view(next).entries().getOrElse(List.empty()));
     }
 
     @Test
     void aReadThatEndsOnceTheTabIsHiddenReadsNoFurther() {
-        Model hidden = hide(reading(SHOWN, new ReadReflog(0, PAGE)));
+        Model hidden = hide(reading(SHOWN, readOf(0, PAGE)));
 
-        Next next = read(hidden, new ReadReflog(0, PAGE), entries(0, PAGE));
+        Next next = read(hidden, readOf(0, PAGE), entries(0, PAGE));
 
         assertEquals(entries(0, PAGE), view(next).entries().getOrElse(List.empty()));
-        assertEquals(List.of(lookAt(1, true, entries(0, PAGE))), next.cmds());
+        assertEquals(List.empty(), next.cmds());
         assertEquals(Option.none(), view(next).reading());
     }
 
     @Test
     void aRereadAskedForIsNotRunOnceTheTabIsHidden() {
-        Model asked = ReflogUpdate.reacting(reading(SHOWN, new ReadReflog(0, PAGE)), new KernelEvent.LogRead())
+        Model asked = ReflogUpdate.reacting(reading(SHOWN, readOf(0, PAGE)), new KernelEvent.LogRead())
                 .model();
 
-        Next next = read(hide(asked), new ReadReflog(0, PAGE), entries(0, 5));
+        Next next = read(hide(asked), readOf(0, PAGE), entries(0, 5));
 
-        assertEquals(List.of(lookAt(1, true, entries(0, 5))), next.cmds());
+        assertEquals(List.empty(), next.cmds());
         assertFalse(view(next).again());
     }
 
     @Test
     void askedToReadAgainWhileReadingItReadsAgainOnceDone() {
-        Model running = reading(SHOWN, new ReadReflog(0, PAGE));
+        Model running = reading(SHOWN, readOf(0, PAGE));
 
         Next asked = ReflogUpdate.reacting(running, new KernelEvent.LogRead());
-        Next done = read(asked.model(), new ReadReflog(0, PAGE), entries(0, 5));
+        Next done = read(asked.model(), readOf(0, PAGE), entries(0, 5));
 
         assertEquals(List.empty(), asked.cmds());
-        assertEquals(List.of(lookAt(1, true, entries(0, 5)), new ReadReflog(0, PAGE)), done.cmds());
+        assertEquals(List.of(readOf(0, PAGE)), done.cmds());
         assertFalse(view(done).again());
     }
 
     @Test
     void whatAReadNoLongerWantedReadIsDropped() {
-        Model running = reading(SHOWN, new ReadReflog(0, PAGE));
+        Model running = reading(SHOWN, readOf(0, PAGE));
 
-        Next next = read(running, new ReadReflog(PAGE, PAGE), entries(PAGE, 5));
+        Next next = read(running, readOf(PAGE, PAGE), entries(PAGE, 5));
 
         assertEquals(running, next.model());
     }
@@ -168,7 +168,8 @@ class ReflogUpdateTest {
     @Test
     void anEmptyReflogSaysWhy() {
         Next next = ReflogUpdate.update(
-                reading(SHOWN, new ReadReflog(0, PAGE)), new ReflogMsg.Read(new ReadReflog(0, PAGE), Reflog.Empty.OFF));
+                reading(SHOWN, readOf(0, PAGE)),
+                new ReflogMsg.Read(readOf(0, PAGE), Reflog.Empty.OFF, Option.of(Kept.BY_REFS)));
 
         assertEquals(Option.of(Reflog.Empty.OFF), view(next).empty());
         assertEquals(new Loadable.Loaded<>(List.empty()), view(next).entries());
@@ -179,11 +180,11 @@ class ReflogUpdateTest {
     void aFirstReadThatFailedShowsTheFailureAndALaterOneEndsTheReading() {
         Failure failure = Failure.of(new GitError.UnexpectedOutput("x"));
 
-        Next first = ReflogUpdate.update(
-                reading(SHOWN, new ReadReflog(0, PAGE)), new ReflogMsg.Failed(new ReadReflog(0, PAGE), failure));
+        Next first =
+                ReflogUpdate.update(reading(SHOWN, readOf(0, PAGE)), new ReflogMsg.Failed(readOf(0, PAGE), failure));
         Next later = ReflogUpdate.update(
-                reading(done(SHOWN, new ReadReflog(0, PAGE), entries(0, PAGE)), new ReadReflog(PAGE, PAGE)),
-                new ReflogMsg.Failed(new ReadReflog(PAGE, PAGE), failure));
+                reading(done(SHOWN, readOf(0, PAGE), entries(0, PAGE)), readOf(PAGE, PAGE)),
+                new ReflogMsg.Failed(readOf(PAGE, PAGE), failure));
 
         assertEquals(new Loadable.Failed<>(failure), view(first).entries());
         assertTrue(view(later).ended());
@@ -192,7 +193,7 @@ class ReflogUpdateTest {
 
     @Test
     void theCommitsOfTheEntriesAreKnownToTheModel() {
-        Model read = done(SHOWN, new ReadReflog(0, PAGE), entries(0, 3));
+        Model read = done(SHOWN, readOf(0, PAGE), entries(0, 3));
 
         assertEquals(
                 Option.of(entries(0, 3).get(1).commit()),
@@ -200,81 +201,84 @@ class ReflogUpdateTest {
     }
 
     @Test
-    void aLaterPageIsLookedAtForLostCommitsAloneAndAnEmptyOneNotAtAll() {
-        Model first = done(SHOWN, new ReadReflog(0, PAGE), entries(0, PAGE));
-
-        Next later = read(reading(first, new ReadReflog(PAGE, PAGE)), new ReadReflog(PAGE, PAGE), entries(PAGE, 10));
-        Next none = read(reading(first, new ReadReflog(PAGE, PAGE)), new ReadReflog(PAGE, PAGE), List.empty());
-
-        assertEquals(List.of(lookAt(2, false, entries(PAGE, 10))), later.cmds());
-        assertEquals(List.empty(), none.cmds());
+    void aReadReadsAtTheCommitHeadIsAt() {
+        assertEquals(new ReadReflog(0, PAGE, Option.of(HEAD)), readOf(0, PAGE));
+        assertEquals(
+                List.of(new ReadReflog(0, PAGE, Option.of(HEAD))),
+                ReflogUpdate.reacting(HIDDEN, new KernelEvent.TabShown(CommitsPanel.PANE, ReflogView.TAB))
+                        .cmds());
     }
 
     @Test
-    void whatALookFoundLostIsMarkedAndALaterPageAddsToIt() {
+    void whatKeepsTheCommitsComesWithTheEntriesAndALaterPageAddsToIt() {
         List<ReflogEntry> top = entries(0, PAGE);
-        List<ReflogEntry> next = entries(PAGE, 10);
-        Model first = found(done(SHOWN, new ReadReflog(0, PAGE), top), lookAt(1, true, top), top.get(3));
+        List<ReflogEntry> later = entries(PAGE, 10);
+        Model first = done(SHOWN, readOf(0, PAGE), top, kept(List.of(top.get(3)), List.of(top.get(4))));
 
-        Model both = found(done(first, new ReadReflog(PAGE, PAGE), next), lookAt(2, false, next), next.get(1));
+        Model both = done(first, readOf(PAGE, PAGE), later, kept(List.of(later.get(1)), List.empty()));
 
         assertTrue(view(both).isLost(top.get(3)));
-        assertTrue(view(both).isLost(next.get(1)));
-        assertFalse(view(both).isLost(top.get(4)));
+        assertTrue(view(both).isKeptByHead(top.get(4)));
+        assertTrue(view(both).isLost(later.get(1)));
+        assertFalse(view(both).isLost(top.get(5)));
+        assertFalse(view(both).isKeptByHead(top.get(5)));
     }
 
     @Test
-    void aLookAtAllTheEntriesReplacesWhatWasFoundBefore() {
+    void aReadFromTheTopReplacesWhatWasKnown() {
         List<ReflogEntry> top = entries(0, 5);
-        Model first = found(done(SHOWN, new ReadReflog(0, PAGE), top), lookAt(1, true, top), top.get(3));
+        Model first = done(SHOWN, readOf(0, PAGE), top, kept(List.of(top.get(3)), List.empty()));
 
-        Model again = found(done(first, new ReadReflog(0, PAGE), top), lookAt(2, true, top), top.get(1));
+        Model again = done(first, readOf(0, PAGE), top, kept(List.of(top.get(1)), List.empty()));
 
         assertFalse(view(again).isLost(top.get(3)));
         assertTrue(view(again).isLost(top.get(1)));
     }
 
+    /**
+     * What keeps the commits comes with the read it is of, so a read that is no longer wanted brings none of it: no
+     * look at them can end after a newer one and undo it.
+     */
     @Test
-    void anOlderLookThatEndsAfterANewerLookAtAllTheEntriesIsDropped() {
+    void whatKeepsTheCommitsOfAReadNoLongerWantedIsDroppedWithIt() {
         List<ReflogEntry> top = entries(0, 5);
-        Model newer = found(done(SHOWN, new ReadReflog(0, PAGE), top), lookAt(3, true, top), top.get(1));
+        Model running = reading(SHOWN, readOf(0, PAGE));
 
-        Model older = found(newer, lookAt(2, false, top), top.get(4));
+        Next stale = read(running, readOf(PAGE, PAGE), entries(PAGE, 5), kept(List.of(top.get(1)), List.empty()));
 
-        assertEquals(view(newer), view(older));
+        assertEquals(running, stale.model());
     }
 
     @Test
-    void aLookThatFailedMarksNothing() {
+    void whenWhatKeepsTheCommitsIsNotKnownTheEntriesShowUnmarked() {
         List<ReflogEntry> top = entries(0, 5);
-        Model read = done(SHOWN, new ReadReflog(0, PAGE), top);
+        Model first = done(SHOWN, readOf(0, PAGE), top, kept(List.of(top.get(1)), List.empty()));
 
-        Next next = ReflogUpdate.update(
-                read, new ReflogMsg.LostUnknown(lookAt(1, true, top), Failure.of(new GitError.UnexpectedOutput("x"))));
+        Model unknown = ReflogUpdate.update(
+                        reading(first, readOf(0, PAGE)),
+                        new ReflogMsg.Read(readOf(0, PAGE), new Reflog.Entries(top), Option.none()))
+                .model();
 
-        assertEquals(read, next.model());
+        assertEquals(top, view(unknown).entries().getOrElse(List.empty()));
+        assertFalse(view(unknown).isLost(top.get(1)));
     }
 
     @Test
     void theHighlightedEntryIsKnown() {
         List<ReflogEntry> top = entries(0, 5);
 
-        Model highlighted = ReflogUpdate.update(done(SHOWN, new ReadReflog(0, PAGE), top), new ReflogMsg.Highlighted(2))
+        Model highlighted = ReflogUpdate.update(done(SHOWN, readOf(0, PAGE), top), new ReflogMsg.Highlighted(2))
                 .model();
 
         assertEquals(Option.of(top.get(2)), highlighted.part(ReflogView.PART).highlightedEntry());
     }
 
-    private static FindLost lookAt(int read, boolean all, List<ReflogEntry> entries) {
-        return new FindLost(read, all, entries.map(ReflogEntry::sha));
+    private static ReadReflog readOf(int skip, int max) {
+        return new ReadReflog(skip, max, Option.of(HEAD));
     }
 
-    private static Model found(Model model, FindLost look, ReflogEntry... lost) {
-        return ReflogUpdate.update(
-                        model,
-                        new ReflogMsg.LostFound(
-                                look, HashSet.ofAll(List.of(lost).map(ReflogEntry::sha))))
-                .model();
+    private static Kept kept(List<ReflogEntry> lost, List<ReflogEntry> byHead) {
+        return new Kept(HashSet.ofAll(lost.map(ReflogEntry::sha)), HashSet.ofAll(byHead.map(ReflogEntry::sha)));
     }
 
     private static Model hide(Model model) {
@@ -289,12 +293,20 @@ class ReflogUpdateTest {
      * {@code model} once {@code cmd} read {@code entries}, without what that asks for.
      */
     private static Model done(Model model, ReadReflog cmd, List<ReflogEntry> entries) {
-        Model read = read(reading(model, cmd), cmd, entries).model();
+        return done(model, cmd, entries, Kept.BY_REFS);
+    }
+
+    private static Model done(Model model, ReadReflog cmd, List<ReflogEntry> entries, Kept kept) {
+        Model read = read(reading(model, cmd), cmd, entries, kept).model();
         return read.withPart(ReflogView.PART, read.part(ReflogView.PART).withReading(Option.none()));
     }
 
     private static Next read(Model model, ReadReflog cmd, List<ReflogEntry> entries) {
-        return ReflogUpdate.update(model, new ReflogMsg.Read(cmd, new Reflog.Entries(entries)));
+        return read(model, cmd, entries, Kept.BY_REFS);
+    }
+
+    private static Next read(Model model, ReadReflog cmd, List<ReflogEntry> entries, Kept kept) {
+        return ReflogUpdate.update(model, new ReflogMsg.Read(cmd, new Reflog.Entries(entries), Option.of(kept)));
     }
 
     private static ReflogView view(Next next) {

@@ -7,6 +7,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPane;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
@@ -42,11 +43,13 @@ class ReflogSourceTest {
     @Test
     void aLostCommitIsSaidToBeLostAndOneHeadIsAtToBeKeptByHead() {
         Model lost = showing(
-                READ.withHighlighted(Option.of(1)).withLost(HashSet.of(ReflogShownTest.COMMIT.sha())),
+                READ.withHighlighted(Option.of(1))
+                        .withKept(new Kept(HashSet.of(ReflogShownTest.COMMIT.sha()), HashSet.empty())),
                 ReflogShownTest.COMMIT.sha());
         Model atHead = showing(READ.withHighlighted(Option.of(0)), ReflogShownTest.CHECKOUT.sha());
         Model atHeadOnly = showing(
-                READ.withHighlighted(Option.of(0)).withLost(HashSet.of(ReflogShownTest.CHECKOUT.sha())),
+                READ.withHighlighted(Option.of(0))
+                        .withKept(new Kept(HashSet.empty(), HashSet.of(ReflogShownTest.CHECKOUT.sha()))),
                 ReflogShownTest.CHECKOUT.sha());
 
         assertTrue(texts(SOURCE.heading(lost, Mirrored.COMMITS).get()).get(2).startsWith("✗ Lost"));
@@ -55,6 +58,19 @@ class ReflogSourceTest {
                 texts(SOURCE.heading(atHead, Mirrored.COMMITS).get()).get(2));
         assertTrue(
                 texts(SOURCE.heading(atHeadOnly, Mirrored.COMMITS).get()).get(2).contains("lost once HEAD moves"));
+    }
+
+    @Test
+    void aCommitOnlyHeadReachesFromPastItIsSaidToBeKeptByHeadAlone() {
+        Model byHead = showing(
+                READ.withHighlighted(Option.of(1))
+                        .withKept(new Kept(HashSet.empty(), HashSet.of(ReflogShownTest.COMMIT.sha()))),
+                ReflogShownTest.COMMIT.sha());
+
+        List<String> said = texts(SOURCE.heading(byHead, Mirrored.COMMITS).get());
+
+        assertTrue(said.get(2).contains("only HEAD"), said.toString());
+        assertTrue(said.forAll(line -> !line.contains("✗")), said.toString());
     }
 
     @Test

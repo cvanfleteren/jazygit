@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.core.git.history;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
-import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.Blame;
@@ -16,6 +15,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.CommitRange;
 import net.vanfleteren.jazygit.core.repo.Divergence;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Revision;
@@ -107,10 +107,11 @@ public interface History {
     Either<GitError, Reflog> reflog(int skip, int max);
 
     /**
-     * Which of {@code commits} no branch, tag or remote-tracking branch reaches: those only a reflog keeps, which are
-     * lost once it expires (ADR 186). One process for all of them, none for none.
+     * What keeps those of {@code commits} no branch, tag or remote-tracking branch reaches: only the reflog, until its
+     * entries expire, or HEAD, at {@code head}, until it moves away (ADR 186, 188). Two processes at the same time
+     * for all of them, one without a HEAD, none for none.
      */
-    Either<GitError, Set<Sha>> lost(Seq<Sha> commits);
+    Either<GitError, Kept> lost(Seq<Sha> commits, Option<Sha> head);
 
     /**
      * Who last changed each line of the file {@code at} names, blamed with {@code options} (ADR 147).

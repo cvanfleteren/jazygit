@@ -1,14 +1,12 @@
 package net.vanfleteren.jazygit.features.changes.reflog;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
-import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.core.git.history.History;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Part;
 import net.vanfleteren.jazygit.kernel.state.view.TabId;
@@ -26,9 +24,8 @@ import net.vanfleteren.jazygit.kernel.state.view.TabId;
  * @param reading     the read that runs, if one does
  * @param again       whether the entries are to be read again once that read is done, as they changed while it ran
  * @param highlighted the place of the entry highlighted, once one is
- * @param reads       how many reads are done: each look for lost commits is of the read it follows
- * @param lost        the commits of the entries no branch, tag or remote reaches, as far as that was looked for
- * @param lostAsOf    the read the newest look at all the entries followed, which an older look does not undo
+ * @param kept        what keeps those of the commits of the entries no branch, tag or remote reaches, as far as that
+ *                    was found: read with the entries, it is of the entries read (ADR 188)
  */
 @With
 public record ReflogView(
@@ -39,9 +36,7 @@ public record ReflogView(
         Option<ReadReflog> reading,
         boolean again,
         Option<Integer> highlighted,
-        int reads,
-        Set<Sha> lost,
-        int lostAsOf) {
+        Kept kept) {
 
     /**
      * The tab of the commits pane the reflog is shown in.
@@ -49,7 +44,7 @@ public record ReflogView(
     public static final TabId TAB = new TabId("changes.reflog");
 
     public static final ReflogView NONE = new ReflogView(
-            Loadable.loading(), Option.none(), false, 0, Option.none(), false, Option.none(), 0, HashSet.empty(), -1);
+            Loadable.loading(), Option.none(), false, 0, Option.none(), false, Option.none(), Kept.BY_REFS);
 
     /**
      * Where the model keeps the reflog. It is not carried to another worktree, which has a HEAD and a reflog of its
@@ -69,10 +64,18 @@ public record ReflogView(
     }
 
     /**
-     * Whether no branch, tag or remote reaches the commit of {@code entry}, as far as that is known.
+     * Whether nothing but the reflog keeps the commit of {@code entry}, as far as that is known.
      */
     public boolean isLost(ReflogEntry entry) {
-        return lost.contains(entry.sha());
+        return kept.lost().contains(entry.sha());
+    }
+
+    /**
+     * Whether HEAD is all that keeps the commit of {@code entry}, as far as that is known: it is lost once HEAD moves
+     * away.
+     */
+    public boolean isKeptByHead(ReflogEntry entry) {
+        return kept.byHead().contains(entry.sha());
     }
 
     /**
@@ -90,18 +93,5 @@ public record ReflogView(
                 && !ended
                 && entries instanceof Loadable.Loaded<List<ReflogEntry>>
                 && reached >= read() - History.REFLOG_PAGE;
-    }
-
-    /**
-     * This with what {@code look} found lost among the commits it looked at; unless a newer look at all the entries
-     * was taken in already, which knows better.
-     */
-    ReflogView withLostFound(FindLost look, Set<Sha> found) {
-        if (look.read() < lostAsOf) {
-            return this;
-        }
-        return look.all()
-                ? withLost(found).withLostAsOf(look.read())
-                : withLost(lost.removeAll(look.commits()).addAll(found));
     }
 }

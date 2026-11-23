@@ -43,7 +43,7 @@ public record ReflogSource() implements ContentSource {
                 model.repo().status().toOption().flatMap(status -> status.head().commit());
         return view.highlightedEntry()
                 .filter(entry -> shown.contains(entry.sha()))
-                .map(entry -> of(entry, head.contains(entry.sha()), view.isLost(entry), model));
+                .map(entry -> of(entry, keeping(head.contains(entry.sha()), view, entry), model));
     }
 
     @Override
@@ -52,30 +52,56 @@ public record ReflogSource() implements ContentSource {
     }
 
     /**
-     * The heading of {@code entry}, whose commit HEAD is at when {@code atHead}, and no ref reaches when
-     * {@code lost}, at the time {@code model} says it is: then a blank line before the commit.
+     * The heading of {@code entry}, saying {@code kept} of its commit if anything, at the time {@code model} says it
+     * is: then a blank line before the commit.
      */
-    static Heading of(ReflogEntry entry, boolean atHead, boolean lost, Model model) {
+    static Heading of(ReflogEntry entry, Option<Keeping> kept, Model model) {
         List<List<Part>> said = List.of(
                 List.of(
                         Part.styled(entry.selector(), Theme.Classes.SHA),
                         Part.styled(
                                 " · " + TimeText.ago(Duration.between(entry.time(), model.now())), Theme.Classes.DIM)),
                 List.of(Part.styled(entry.subject(), Theme.Classes.BOLD)));
-        return new Heading(said.appendAll(state(atHead, lost)).append(List.empty()));
+        return new Heading(said.appendAll(kept.map(Keeping::said)).append(List.empty()));
     }
 
     /**
-     * What is said of where the commit is: a line when HEAD is at it, or when it is lost, else none.
+     * What keeps the commit of {@code entry}, worth saying: HEAD, at it when {@code atHead}, or nothing but the
+     * reflog; none when a branch, tag or remote has it, or that is not known yet.
      */
-    private static List<List<Part>> state(boolean atHead, boolean lost) {
+    static Option<Keeping> keeping(boolean atHead, ReflogView view, ReflogEntry entry) {
         if (atHead) {
-            return List.of(List.of(Part.styled(
-                    Messages.get(lost ? "changes.reflog.heading.atHeadOnly" : "changes.reflog.heading.atHead"),
-                    Theme.Classes.CURRENT_BRANCH)));
+            return Option.of(view.isKeptByHead(entry) ? Keeping.HEAD_ONLY_AT_IT : Keeping.HEAD_AT_IT);
         }
-        return lost
-                ? List.of(List.of(Part.styled(Messages.get("changes.reflog.heading.lost"), Theme.Classes.ERROR)))
-                : List.empty();
+        if (view.isLost(entry)) {
+            return Option.of(Keeping.NOTHING);
+        }
+        return Option.when(view.isKeptByHead(entry), Keeping.HEAD_ONLY);
+    }
+
+    /**
+     * What keeps a commit, as the heading says it.
+     */
+    enum Keeping {
+        /** HEAD is at it, and a branch, tag or remote may have it too. */
+        HEAD_AT_IT("changes.reflog.heading.atHead", Theme.Classes.CURRENT_BRANCH),
+        /** HEAD is at it, and nothing else has it. */
+        HEAD_ONLY_AT_IT("changes.reflog.heading.atHeadOnly", Theme.Classes.CURRENT_BRANCH),
+        /** HEAD reaches it, from a commit after it, and nothing else does. */
+        HEAD_ONLY("changes.reflog.heading.byHeadOnly", Theme.Classes.NOTICE),
+        /** Nothing but the reflog. */
+        NOTHING("changes.reflog.heading.lost", Theme.Classes.ERROR);
+
+        private final String key;
+        private final String style;
+
+        Keeping(String key, String style) {
+            this.key = key;
+            this.style = style;
+        }
+
+        private List<Part> said() {
+            return List.of(Part.styled(Messages.get(key), style));
+        }
     }
 }

@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
+import net.vanfleteren.jazygit.core.process.Parallel;
 import net.vanfleteren.jazygit.core.repo.*;
 
 /**
@@ -552,22 +553,44 @@ public final class CliHistory implements History {
     }
 
     /**
-     * The commits {@code git rev-list <commits> --not --branches --tags --remotes} lists, those of {@code commits}
-     * among them: it walks from them only as far as the first commit a ref reaches.
+     * Two {@code git rev-list <commits> --not … --branches --tags --remotes} at the same time, one with {@code head}
+     * among what it leaves out: those the first lists that the second does not, HEAD reaches. Each walks from the
+     * commits only as far as the first commit a ref reaches. Without {@code head}, one is enough (ADR 188).
      */
     @Override
-    public Either<GitError, Set<Sha>> lost(Seq<Sha> commits) {
+    public Either<GitError, Kept> lost(Seq<Sha> commits, Option<Sha> head) {
         if (commits.isEmpty()) {
-            return Either.right(HashSet.empty());
+            return Either.right(Kept.BY_REFS);
         }
         Set<Sha> asked = HashSet.ofAll(commits);
+        if (head.isEmpty()) {
+            return unreached(asked, List.empty()).map(lost -> new Kept(lost, HashSet.empty()));
+        }
+        List<String> byHead =
+                head.map(sha -> GitArgs.revision(new Revision.Commit(sha))).toList();
+        return Parallel.both(() -> unreached(asked, List.empty()), () -> unreached(asked, byHead))
+                .<Either<GitError, Kept>>map(both ->
+                        both._1().flatMap(byRefs -> both._2().map(byAll -> new Kept(byAll, byRefs.removeAll(byAll)))))
+                .getOrElse(() -> Either.left(new GitError.Interrupted("rev-list")));
+    }
+
+    /**
+     * Those of {@code commits} no branch, tag, remote or one of {@code also} reaches.
+     */
+    private Either<GitError, Set<Sha>> unreached(Set<Sha> commits, List<String> also) {
         return GitProcess.read(
                 worktree,
-                GitCommand.reading(List.of("rev-list")
-                        .appendAll(asked.toList().map(sha -> GitArgs.revision(new Revision.Commit(sha))))
-                        .appendAll(List.of("--not", "--branches", "--tags", "--remotes", "--"))),
+                lostCommand(commits, also),
                 raw -> Either.sequenceRight(GitOutput.nonBlankLines(raw).map(GitOutput::sha))
-                        .map(listed -> HashSet.ofAll(listed).filter(asked::contains)));
+                        .map(listed -> HashSet.ofAll(listed).filter(commits::contains)));
+    }
+
+    private static GitCommand lostCommand(Set<Sha> commits, List<String> also) {
+        return GitCommand.reading(List.of("rev-list")
+                .appendAll(commits.toList().map(sha -> GitArgs.revision(new Revision.Commit(sha))))
+                .append("--not")
+                .appendAll(also)
+                .appendAll(List.of("--branches", "--tags", "--remotes", "--")));
     }
 
     /**

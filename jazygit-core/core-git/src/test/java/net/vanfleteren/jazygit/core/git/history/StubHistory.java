@@ -1,9 +1,7 @@
 package net.vanfleteren.jazygit.core.git.history;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
-import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -18,6 +16,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.CommitRange;
 import net.vanfleteren.jazygit.core.repo.Divergence;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Revision;
@@ -86,8 +85,8 @@ public interface StubHistory extends History {
     }
 
     @Override
-    default Either<GitError, Set<Sha>> lost(Seq<Sha> commits) {
-        return Either.right(HashSet.empty());
+    default Either<GitError, Kept> lost(Seq<Sha> commits, Option<Sha> head) {
+        return Either.right(Kept.BY_REFS);
     }
 
     @Override

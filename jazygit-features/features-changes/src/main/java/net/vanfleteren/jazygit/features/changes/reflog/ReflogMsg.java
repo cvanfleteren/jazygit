@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.changes.reflog;
 
-import io.vavr.collection.Set;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
-import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -19,9 +19,10 @@ public sealed interface ReflogMsg extends Msg {
     }
 
     /**
-     * {@code cmd} read {@code reflog}.
+     * {@code cmd} read {@code reflog}, and what keeps those of its commits no ref reaches, {@code kept}; none when
+     * that could not be found (ADR 188).
      */
-    record Read(ReadReflog cmd, Reflog reflog) implements ReflogMsg {}
+    record Read(ReadReflog cmd, Reflog reflog, Option<Kept> kept) implements ReflogMsg {}
 
     /**
      * {@code cmd} could not read the reflog, for {@code failure}.
@@ -32,14 +33,4 @@ public sealed interface ReflogMsg extends Msg {
      * The entry at {@code place} was highlighted: the next page is read once it is in the last page read.
      */
     record Highlighted(int place) implements ReflogMsg {}
-
-    /**
-     * {@code cmd} found that no branch, tag or remote reaches {@code lost}, of the commits it looked at.
-     */
-    record LostFound(FindLost cmd, Set<Sha> lost) implements ReflogMsg {}
-
-    /**
-     * {@code cmd} could not find which commits are lost, for {@code failure}: they are not marked.
-     */
-    record LostUnknown(FindLost cmd, Failure failure) implements ReflogMsg {}
 }

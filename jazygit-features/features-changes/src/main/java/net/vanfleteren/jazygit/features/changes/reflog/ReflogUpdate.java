@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.features.changes.reflog;
 
 import io.vavr.collection.List;
-import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.history.History;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -16,8 +16,8 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 
 /**
  * Reading the reflog of HEAD while its tab is shown (ADR 186): when it is shown, after an operation of the app and
- * after the log is read again; a page ahead of the highlighted entry; one read at a time; and after each read, which
- * of the commits it read are lost.
+ * after the log is read again; a page ahead of the highlighted entry; one read at a time, which finds which of the
+ * commits it read are lost as well (ADR 188).
  */
 public final class ReflogUpdate {
 
@@ -25,7 +25,7 @@ public final class ReflogUpdate {
 
     public static Next update(Model model, ReflogMsg msg) {
         return switch (msg) {
-            case ReflogMsg.Read(ReadReflog cmd, Reflog reflog) -> read(model, cmd, reflog);
+            case ReflogMsg.Read(ReadReflog cmd, Reflog reflog, Option<Kept> kept) -> read(model, cmd, reflog, kept);
             case ReflogMsg.Failed(ReadReflog cmd, Failure failure) -> failed(model, cmd, failure);
             case ReflogMsg.Highlighted(int place) ->
                 ahead(model.withPart(
@@ -33,9 +33,6 @@ public final class ReflogUpdate {
                         view(model)
                                 .withHighlighted(Option.of(place))
                                 .withReached(Math.max(view(model).reached(), place))));
-            case ReflogMsg.LostFound(FindLost cmd, Set<Sha> lost) ->
-                Next.of(model.withPart(ReflogView.PART, view(model).withLostFound(cmd, lost)));
-            case ReflogMsg.LostUnknown _ -> Next.of(model);
         };
     }
 
@@ -73,43 +70,42 @@ public final class ReflogUpdate {
         if (view.reading().isDefined()) {
             return Next.of(model.withPart(ReflogView.PART, view.withAgain(true)));
         }
-        ReadReflog cmd = new ReadReflog(0, Math.max(view.read(), History.REFLOG_PAGE));
+        ReadReflog cmd = new ReadReflog(0, Math.max(view.read(), History.REFLOG_PAGE), head(model));
         return Next.of(model.withPart(ReflogView.PART, view.withReading(Option.of(cmd))), cmd);
     }
 
     /**
-     * {@code model} with what {@code cmd} read, {@code reflog}, then a look for which of the commits it read are lost,
-     * once they are drawn, beside what reads next.
+     * {@code model} with what {@code cmd} read, {@code reflog}, and what keeps its commits, {@code kept}: from the top,
+     * in place of what was known; a later page, for its own commits. Unknown, nothing is marked of what it read.
      */
-    private static Next read(Model model, ReadReflog cmd, Reflog reflog) {
+    private static Next read(Model model, ReadReflog cmd, Reflog reflog, Option<Kept> kept) {
         ReflogView view = view(model);
         if (!view.reading().contains(cmd)) {
             return Next.of(model);
         }
-        ReflogView done = view.withReading(Option.none()).withReads(view.reads() + 1);
-        return switch (reflog) {
-            case Reflog.Empty empty ->
-                next(
-                        model,
+        ReflogView done = view.withReading(Option.none());
+        return next(
+                model,
+                switch (reflog) {
+                    case Reflog.Empty empty ->
                         done.withEntries(new Loadable.Loaded<>(List.empty()))
                                 .withEmpty(Option.of(empty))
-                                .withEnded(true));
-            case Reflog.Entries(List<ReflogEntry> page) -> {
-                Next next = next(
-                        model,
+                                .withEnded(true)
+                                .withKept(Kept.BY_REFS);
+                    case Reflog.Entries(List<ReflogEntry> page) ->
                         done.withEntries(done.entries().reload(joined(view, cmd, page)))
                                 .withEmpty(Option.none())
-                                .withEnded(page.size() < cmd.max()));
-                yield page.isEmpty()
-                        ? next
-                        : new Next(
-                                next.model(),
-                                next.cmds()
-                                        .prepend(new FindLost(
-                                                done.reads(), cmd.skip() == 0, page.map(ReflogEntry::sha))),
-                                next.quit());
-            }
-        };
+                                .withEnded(page.size() < cmd.max())
+                                .withKept((cmd.skip() == 0 ? Kept.BY_REFS : view.kept())
+                                        .with(kept.getOrElse(Kept.BY_REFS), page.map(ReflogEntry::sha)));
+                });
+    }
+
+    /**
+     * The commit HEAD is at, as the status read last says.
+     */
+    private static Option<Sha> head(Model model) {
+        return model.repo().status().toOption().flatMap(status -> status.head().commit());
     }
 
     /**
@@ -152,7 +148,7 @@ public final class ReflogUpdate {
         if (!view.wantsMore()) {
             return Next.of(model);
         }
-        ReadReflog cmd = new ReadReflog(view.read(), History.REFLOG_PAGE);
+        ReadReflog cmd = new ReadReflog(view.read(), History.REFLOG_PAGE, head(model));
         return Next.of(model.withPart(ReflogView.PART, view.withReading(Option.of(cmd))), cmd);
     }
 

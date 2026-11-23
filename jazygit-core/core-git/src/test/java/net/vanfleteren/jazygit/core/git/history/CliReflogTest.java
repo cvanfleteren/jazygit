@@ -6,10 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry.Action;
@@ -172,9 +174,9 @@ class CliReflogTest {
         git(repo, 0, "branch", "-q", "-D", "tmp");
 
         assertEquals(
-                HashSet.of(dropped, droppedToo),
+                new Kept(HashSet.of(dropped, droppedToo), HashSet.empty()),
                 new CliHistory(repo)
-                        .lost(List.of(droppedToo, one, dropped, one))
+                        .lost(List.of(droppedToo, one, dropped, one), Option.of(one))
                         .get());
     }
 
@@ -189,20 +191,49 @@ class CliReflogTest {
         commitAt(repo, "Pushed", 4_000);
         Sha pushed = head(repo);
         git(repo, 0, "update-ref", "refs/remotes/origin/pushed", pushed.value());
-        commitAt(repo, "Only at HEAD", 5_000);
-        Sha detached = head(repo);
+        git(repo, 5_000, "checkout", "-q", "main");
 
         assertEquals(
-                HashSet.of(detached),
-                new CliHistory(repo).lost(List.of(tagged, pushed, detached)).get());
+                Kept.BY_REFS,
+                new CliHistory(repo)
+                        .lost(List.of(tagged, pushed), Option.of(head(repo)))
+                        .get());
+    }
+
+    @Test
+    void onADetachedHeadTheCommitsBehindItAreKeptByHeadAndTheOthersLost() throws Exception {
+        Path repo = init("repo");
+        commitAt(repo, "One", 1_000);
+        git(repo, 2_000, "checkout", "-q", "--detach");
+        commitAt(repo, "Dropped", 3_000);
+        Sha dropped = head(repo);
+        git(repo, 4_000, "checkout", "-q", "--detach", "main");
+        commitAt(repo, "First", 5_000);
+        Sha first = head(repo);
+        commitAt(repo, "Second", 6_000);
+        Sha second = head(repo);
+
+        assertEquals(
+                new Kept(HashSet.of(dropped), HashSet.of(first, second)),
+                new CliHistory(repo)
+                        .lost(List.of(second, first, dropped), Option.of(second))
+                        .get());
+        // Without a HEAD to look at, all of them are lost.
+        assertEquals(
+                new Kept(HashSet.of(dropped, first, second), HashSet.empty()),
+                new CliHistory(repo)
+                        .lost(List.of(second, first, dropped), Option.none())
+                        .get());
     }
 
     @Test
     void noCommitsAskedForNeedNoProcess() {
         // No repository at all: a process would fail.
         assertEquals(
-                HashSet.empty(),
-                new CliHistory(dir.resolve("nowhere")).lost(List.empty()).get());
+                Kept.BY_REFS,
+                new CliHistory(dir.resolve("nowhere"))
+                        .lost(List.empty(), Option.none())
+                        .get());
     }
 
     @Test

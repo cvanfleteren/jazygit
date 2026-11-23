@@ -36,7 +36,7 @@ public final class ReflogShown {
     static final String AT_HEAD = "◆";
 
     /**
-     * What marks an entry whose commit no branch, tag or remote reaches, unless HEAD is at it, which keeps it.
+     * What marks an entry whose commit nothing but the reflog keeps: no branch, tag, remote or HEAD reaches it.
      */
     static final String LOST = "✗";
 
