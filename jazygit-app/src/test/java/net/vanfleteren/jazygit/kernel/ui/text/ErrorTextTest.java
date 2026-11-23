@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.process.GitError.CommandFailed;
-import net.vanfleteren.jazygit.core.git.process.GitError.EditorExitedAtStart;
 import net.vanfleteren.jazygit.core.git.process.GitError.SshKeyRefused;
 import net.vanfleteren.jazygit.core.git.process.GitError.StashNotRestored;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -16,6 +15,7 @@ import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
+import net.vanfleteren.jazygit.kernel.state.launch.ProgramFailure;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import org.junit.jupiter.api.Test;
 
@@ -29,11 +29,11 @@ class ErrorTextTest {
     }
 
     @Test
-    void anEditorThatExitedAsItStartedHintsAtATerminal() {
+    void aProgramThatExitedAsItStartedHintsAtATerminal() {
         assertEquals(
-                "The editor \"claude\" exited with code 1 as it started. If it runs in the terminal, set"
+                "\"claude\" exited with code 1 as it started. If it runs in the terminal, set"
                         + " terminal = true for it in the settings file.",
-                ErrorText.of(new EditorExitedAtStart("claude", 1)));
+                ErrorText.of(new ProgramFailure.ExitedAtStart(List.of("claude", "agents"), 1)));
     }
 
     @Test

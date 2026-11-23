@@ -1,14 +1,10 @@
 package net.vanfleteren.jazygit.features.branches.worktree.open;
 
 import io.vavr.collection.List;
-import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.process.GitFailure;
-import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.state.Env;
-import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
@@ -38,9 +34,8 @@ public record OpenInEditorCmd(EditorProgram editor, String worktree) implements 
         Path directory = Path.of(worktree);
         // Only an editor that opens a worktree is offered for one.
         List<String> commandLine = editor.commandLine(worktree).get();
-        Either<GitFailure, List<ExecutedCommand>> opened = editor.terminal()
-                ? env.terminal().handOver(() -> env.git().editor().open(directory, commandLine))
-                : env.git().editor().launch(directory, commandLine);
-        return opened.mapLeft(Failure::of).fold(this::failed, this::succeeded);
+        return env.launcher()
+                .launch(editor, directory, commandLine)
+                .fold(this::failed, opened -> succeeded(List.of(opened)));
     }
 }

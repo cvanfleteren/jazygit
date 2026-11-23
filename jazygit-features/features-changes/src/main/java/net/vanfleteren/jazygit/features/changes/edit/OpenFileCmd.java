@@ -1,14 +1,10 @@
 package net.vanfleteren.jazygit.features.changes.edit;
 
 import io.vavr.collection.List;
-import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.process.GitFailure;
-import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.state.Env;
-import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
@@ -38,9 +34,8 @@ public record OpenFileCmd(EditorProgram editor, String path, int line) implement
         List<String> commandLine = editor.fileCommandLine(
                         worktree.toString(), worktree.resolve(path).toString(), line)
                 .get();
-        Either<GitFailure, List<ExecutedCommand>> opened = editor.terminal()
-                ? env.terminal().handOver(() -> env.git().editor().open(worktree, commandLine))
-                : env.git().editor().launch(worktree, commandLine);
-        return opened.mapLeft(Failure::of).fold(this::failed, this::succeeded);
+        return env.launcher()
+                .launch(editor, worktree, commandLine)
+                .fold(this::failed, opened -> succeeded(List.of(opened)));
     }
 }

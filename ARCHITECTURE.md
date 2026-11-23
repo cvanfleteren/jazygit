@@ -277,8 +277,9 @@ classDiagram
 
 - **`Msg` applies itself.** Each feature has a sealed sub-interface (`RewordMsg`) whose `apply` delegates to that
   feature's update class (`RewordUpdate`), so adding a feature changes neither `Update` nor `Msg`.
-- **`Cmd` is immutable data** that runs itself against an `Env` (the `Git`, the stores, and what the features run
-  against of their own, each under its `Env.Service`, as GitHub's `GitHub`) and folds the `Either`
+- **`Cmd` is immutable data** that runs itself against an `Env` (the `Git`, the stores, the `ProgramLauncher` that
+  starts the editors and agents the user set (ADR 183), and what the features run against of their own, each under its
+  `Env.Service`, as GitHub's `GitHub`) and folds the `Either`
   it gets into a `Msg`, a failure through `failed(Failure)`.
 - **`Load`** reads part of the repository into the model as a `Loadable` (`Loading`, `Loaded`, `Failed`).
 - **`OperationCmd`** changes the repository. Its outcome is `OperationMsg.Succeeded`, `Stopped` (on conflicts) or

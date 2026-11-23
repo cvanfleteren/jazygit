@@ -8,14 +8,14 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.git.StubGit;
-import net.vanfleteren.jazygit.core.git.files.StubEditor;
-import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
+import net.vanfleteren.jazygit.kernel.state.launch.ProgramFailure;
+import net.vanfleteren.jazygit.kernel.state.launch.ProgramLauncher;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -40,13 +40,19 @@ class InvestigateCmdTest {
 
     private static java.util.List<List<String>> launched(Option<ForgeAccount> account) {
         java.util.List<List<String>> launched = new ArrayList<>();
-        Env env = new Env(StubGit.of().withEditor(new StubEditor() {
+        Env env = new Env(StubGit.of())
+                .with(new ProgramLauncher() {
                     @Override
-                    public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
-                        launched.add(commandLine);
-                        return Either.right(List.of(new ExecutedCommand(commandLine)));
+                    public Either<ProgramFailure, ExecutedCommand> run(Path directory, List<String> commandLine) {
+                        throw new AssertionError("an agent left running is not handed the terminal");
                     }
-                }))
+
+                    @Override
+                    public Either<ProgramFailure, ExecutedCommand> start(Path directory, List<String> commandLine) {
+                        launched.add(commandLine);
+                        return Either.right(new ExecutedCommand(commandLine));
+                    }
+                })
                 .with(Env.FORGE_ACCOUNT, any -> account);
         new InvestigateCmd(AGENT, "/repos/app", BUILD).run(env);
         return launched;
