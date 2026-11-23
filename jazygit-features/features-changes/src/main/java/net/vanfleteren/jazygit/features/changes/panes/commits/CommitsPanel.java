@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.changes.panes.commits;
 
 import dev.tamboui.text.Line;
+import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.PasteEvent;
@@ -196,14 +197,21 @@ public class CommitsPanel implements LeftPane {
         locked = PaneKeys.lockedTo(model, PANE);
         AheadView ahead = new AheadView(AheadUpdate.head(model), AheadUpdate.headDistance(model));
         String logTitle = ahead.title(listing.map(CommitsListing::title).getOrElse(() -> headTitle(model)));
-        List<String> names = List.of(logTitle).appendAll(added.map(PaneTab::title));
+        // With tabs, the log is named short, so that the names of the others stay in view where the pane is narrow;
+        // what it is the log of goes in a line at its bottom instead.
+        Option<String> logOf = Option.when(
+                        tabs.isDefined(),
+                        () -> ahead.title(listing.map(CommitsListing::title).getOrElse(() -> headName(model))))
+                .filter(text -> !text.isBlank());
+        List<String> names = List.of(tabs.isDefined() ? Messages.get("panel.commits.title") : logTitle)
+                .appendAll(added.map(PaneTab::title));
         Line title = tabs.isDefined() ? TabTitles.line(names, ids.indexOf(shown)) : Pane.title(logTitle);
         boolean focused = focus.contains(PANE);
         boolean active = inUse.contains(PANE);
         tabShown = addedShown.map(tab -> (TabList<?>) listOf(tab));
         Panel panel = addedShown
                 .map(tab -> tabPanel(tab, focused, active, title))
-                .getOrElse(() -> logPanel(model, ahead, focused, active, title));
+                .getOrElse(() -> logPanel(model, ahead, focused, active, title, logOf));
         return tabs.isEmpty()
                 ? panel
                 : panel.onMouseEvent(event -> TabTitles.clicked(
@@ -214,9 +222,11 @@ public class CommitsPanel implements LeftPane {
     }
 
     /**
-     * The pane showing the log, or what a feature lists in its place.
+     * The pane showing the log, or what a feature lists in its place, with what it is the log of in a dim line at its
+     * bottom, if {@code logOf} says.
      */
-    private Panel logPanel(Model model, AheadView ahead, boolean focused, boolean active, Line title) {
+    private Panel logPanel(
+            Model model, AheadView ahead, boolean focused, boolean active, Line title, Option<String> logOf) {
         Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
         boolean listed = listing.isDefined();
         list.whenEmpty(listing.map(CommitsListing::emptyText));
@@ -232,6 +242,11 @@ public class CommitsPanel implements LeftPane {
                 active,
                 title,
                 line.map(open -> filterLine.field(open.text())),
+                // One row, cut off with an ellipsis where the pane is narrow.
+                logOf.map(text -> Toolkit.text(text)
+                        .addClass(Theme.Classes.DIM)
+                        .ellipsis()
+                        .length(1)),
                 paste);
     }
 
@@ -270,6 +285,21 @@ public class CommitsPanel implements LeftPane {
                     case Head.Detached(Sha at) -> Messages.get("changes.panes.commits.titleDetached", at.shortSha());
                 })
                 .getOrElse(() -> Messages.get("panel.commits.title"));
+    }
+
+    /**
+     * What is checked out, whose log the commits are, as the line at the bottom of the log names it: a branch, or a
+     * detached HEAD; nothing until that is read.
+     */
+    static String headName(Model model) {
+        return model.repo()
+                .status()
+                .toOption()
+                .map(status -> switch (status.head()) {
+                    case Head.OnBranch(BranchName branch, var tip) -> branch.value();
+                    case Head.Detached(Sha at) -> Messages.get("changes.panes.commits.detachedAt", at.shortSha());
+                })
+                .getOrElse("");
     }
 
     /**
