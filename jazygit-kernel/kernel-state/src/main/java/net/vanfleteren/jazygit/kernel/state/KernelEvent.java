@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.kernel.state;
 
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
+import net.vanfleteren.jazygit.kernel.state.view.TabId;
 
 /**
  * What happened in the kernel that a feature may answer (ADR 158): a part it keeps answers the events while it is
@@ -51,4 +52,10 @@ public sealed interface KernelEvent {
      * whether it applies (ADR 171): once on, it reads what it shows.
      */
     record Switched(String feature, boolean on) implements KernelEvent {}
+
+    /**
+     * The user had {@code pane} show its tab {@code tab}, which it did not show (ADR 185, 186): what the tab lists is
+     * read while it is shown.
+     */
+    record TabShown(PaneId pane, TabId tab) implements KernelEvent {}
 }

@@ -21,6 +21,14 @@ public final class CommitFilesAction {
                             "changes.help.commits.files",
                             commit -> new CommitFilesMsg.Opened(
                                     new Changes.OfCommit(commit.sha()), Scopes.COMMITS.pane())))
+            // The reflog is a tab of the commits pane (ADR 186).
+            .add(
+                    Scopes.REFLOG,
+                    Binding.onSelected(
+                            KEY,
+                            "changes.help.commits.files",
+                            entry -> new CommitFilesMsg.Opened(
+                                    new Changes.OfCommit(entry.sha()), Scopes.COMMITS.pane())))
             .add(
                     Scopes.DIVERGENCE,
                     Binding.onSelected(

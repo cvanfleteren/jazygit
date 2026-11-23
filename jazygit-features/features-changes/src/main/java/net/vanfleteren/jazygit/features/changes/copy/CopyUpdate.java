@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.changes.copy;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
@@ -10,7 +11,7 @@ import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 
 /**
  * Copying what the cursor of a rich diff is on (ADR 94): its line, the lines of its range, or the path of the file
- * whose bar it is on.
+ * whose bar it is on; and the sha of a commit.
  */
 public final class CopyUpdate {
 
@@ -20,6 +21,7 @@ public final class CopyUpdate {
         return switch (msg) {
             case CopyMsg.Asked(DiffCursorAt at) ->
                 copy(model, at).map(cmd -> Next.of(model, cmd)).getOrElse(() -> Next.of(model));
+            case CopyMsg.ShaAsked(Sha sha) -> Next.of(model, new CopyCmd(sha.value(), new ShaCopied(sha)));
             case CopyMsg.Done(Notice notice) -> Next.of(model.inform(notice));
         };
     }

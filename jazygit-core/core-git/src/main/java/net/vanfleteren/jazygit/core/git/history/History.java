@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.CommitRange;
 import net.vanfleteren.jazygit.core.repo.Divergence;
+import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -28,6 +29,11 @@ public interface History {
      * How many commits a log or a search reads at most.
      */
     int MAX_COMMITS = 3000;
+
+    /**
+     * How many entries of the reflog {@link #reflog} reads at a time (ADR 186).
+     */
+    int REFLOG_PAGE = 200;
 
     /**
      * The log of HEAD, newest first, from {@code head}, the commit the status read last says it is at (ADR 49).
@@ -90,6 +96,13 @@ public interface History {
      * here had what it was pushed as; one behind what someone else pushed never had that (ADR 74).
      */
     Either<GitError, Boolean> everHad(BranchName branch, Revision revision);
+
+    /**
+     * The entries of the reflog of HEAD of this worktree, newest first, after the newest {@code skip}: at most
+     * {@code max}, each with its whole commit, read in one process (ADR 186). An entry whose commit is gone is left
+     * out. Read from the top, a reflog without entries says why: HEAD has no commit yet, or git keeps no reflogs.
+     */
+    Either<GitError, Reflog> reflog(int skip, int max);
 
     /**
      * Who last changed each line of the file {@code at} names, blamed with {@code options} (ADR 147).

@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
  * @param emptyText what it says when it lists nothing, if anything
  * @param selected  the message to send when the row highlighted is the one given, or none, if the model already holds
  *                  what is shown for it
+ * @param key       what a row is known by: the highlight follows it as rows are added or removed before it
  * @param <T>       what it lists
  */
 public record PaneTab<T>(
@@ -33,4 +34,20 @@ public record PaneTab<T>(
         Loadable<List<T>> rows,
         Function<T, LoadableList.Item> item,
         Option<String> emptyText,
-        Function<Option<T>, Option<Msg>> selected) {}
+        Function<Option<T>, Option<Msg>> selected,
+        Function<T, ?> key) {
+
+    /**
+     * A tab whose rows are known by what they are: the highlight follows an equal row.
+     */
+    public PaneTab(
+            TabId id,
+            String title,
+            Keymap.Scope<T> scope,
+            Loadable<List<T>> rows,
+            Function<T, LoadableList.Item> item,
+            Option<String> emptyText,
+            Function<Option<T>, Option<Msg>> selected) {
+        this(id, title, scope, rows, item, emptyText, selected, Function.identity());
+    }
+}

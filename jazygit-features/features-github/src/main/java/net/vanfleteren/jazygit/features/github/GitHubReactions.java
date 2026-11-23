@@ -49,7 +49,7 @@ final class GitHubReactions {
             // done (ADR 58): from the moment GitHub is found to apply to the repository (ADR 171).
             case KernelEvent.Switched(String feature, boolean on)
             when feature.equals(GitHubFeature.ID) && on -> PullRequestReads.load(Next.of(model));
-            case KernelEvent.Switched _, KernelEvent.RepositoryOpened _ -> Next.of(model);
+            case KernelEvent.Switched _, KernelEvent.RepositoryOpened _, KernelEvent.TabShown _ -> Next.of(model);
             // The review threads of a pull request whose files were opened, and those collapsed (ADR 55, 63, 171).
             case KernelEvent.ChangesOpened(var changes) -> RemarksUpdate.opened(model, changes);
             case KernelEvent.LogRead _, KernelEvent.ScreenShown _ -> Next.of(model);

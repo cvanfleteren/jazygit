@@ -28,6 +28,7 @@ public final class ForgejoReactions {
             case KernelEvent.OperationDone(boolean changedForge) ->
                 changedForge ? BuildsUpdate.read(model) : Next.of(model);
             case KernelEvent.Switched _,
+                    KernelEvent.TabShown _,
                     KernelEvent.RepositoryOpened _,
                     KernelEvent.LogRead _,
                     KernelEvent.ScreenShown _,

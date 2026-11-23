@@ -27,7 +27,18 @@ public final class TabList<T> {
      * @param id the id of the pane, which has the focus
      */
     public TabList(String id, Theme.Highlights highlights) {
-        list = new LoadableList<>("", id, highlights);
+        list = new LoadableList<>("", id, this::reselect, highlights);
+    }
+
+    /**
+     * Where the highlight goes as the rows of the tab shown change: to the row it was on, as the tab knows its rows.
+     */
+    private int reselect(List<T> previous, List<T> next, int selected) {
+        return shown.map(tab -> following(tab.key(), previous, next, selected)).getOrElse(selected);
+    }
+
+    private static <T, K> int following(Function<T, K> key, List<T> previous, List<T> next, int selected) {
+        return LoadableList.Reselect.following(key).apply(previous, next, selected);
     }
 
     /**
