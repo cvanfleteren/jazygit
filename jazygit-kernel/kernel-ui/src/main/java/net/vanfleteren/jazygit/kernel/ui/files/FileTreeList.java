@@ -46,8 +46,6 @@ final class FileTreeList<T extends Pathed> {
 
     // A virtual directory holding everything, so that all files can be acted on at once.
     private static final String ROOT_NAME = "/";
-    // TamboUI's default, which indents every node.
-    private static final String HIGHLIGHT_SYMBOL = "> ";
     // The cells a level of depth takes, half of TamboUI's default, so that deep files keep room for their names. The
     // tree is drawn without its guide lines (Unguided).
     private static final int INDENT_WIDTH = 2;
@@ -123,6 +121,8 @@ final class FileTreeList<T extends Pathed> {
                 .id(id)
                 .focusable()
                 .indentWidth(INDENT_WIDTH)
+                // The highlighted node shows by its colour alone, so that no column goes to a symbol in front of it.
+                .highlightSymbol("")
                 .scrollbar(ScrollBarPolicy.AS_NEEDED)
                 .scrollbarThumbColor(BorderBar.FOUND)
                 .nodeRenderer(this::drawNode);
@@ -187,8 +187,7 @@ final class FileTreeList<T extends Pathed> {
      */
     Element render(Object of, Loadable<List<T>> files, boolean active, Placeholder placeholder, Option<String> filter) {
         drawn = List.of();
-        tree.highlightStyle(highlights.of(active))
-                .highlightSymbol(active ? HIGHLIGHT_SYMBOL : " ".repeat(HIGHLIGHT_SYMBOL.length()));
+        tree.highlightStyle(highlights.of(active));
         if (!shownOf.contains(of)) {
             shownOf = Option.of(of);
             shown = Option.of(files);

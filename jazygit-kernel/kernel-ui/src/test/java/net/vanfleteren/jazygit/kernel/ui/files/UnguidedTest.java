@@ -27,7 +27,7 @@ class UnguidedTest {
                         .expanded())
                 .add(TreeNode.<String>of("b").leaf())
                 .expanded();
-        return Toolkit.<String>tree(root).indentWidth(2).highlightSymbol("> ");
+        return Toolkit.<String>tree(root).indentWidth(2).highlightSymbol("");
     }
 
     private static List<String> lines(Element element) {
@@ -42,10 +42,7 @@ class UnguidedTest {
 
     @Test
     void theGuidesAreBlankedAndEachLevelKeepsItsIndent() {
-        TreeElement<String> tree = tree();
-        tree.selected(0);
-
-        assertEquals(List.of("> ▼ root", "    ▼ dir", "      deeper", "    b"), lines(tree));
+        assertEquals(List.of("▼ root", "  ▼ dir", "    deeper", "  b"), lines(tree()));
     }
 
     @Test

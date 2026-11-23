@@ -18,7 +18,7 @@ import io.vavr.collection.List;
 /**
  * {@code tree} drawn without its guide lines, but with its indent: TamboUI's tree drops the indent along with the
  * guides when it draws none, so it draws them and they are blanked after. Only the cells in front of a row's node are
- * blanked, those of the highlight symbol and the guides; a row without a node, such as one below the last that only
+ * blanked; a row without a node, such as one below the last that only
  * the scrollbar crosses, is left as it is. The tree is otherwise as it is wrapped: its id, focus and events are its
  * own.
  */
@@ -26,8 +26,6 @@ record Unguided(Element tree) implements Element {
 
     // The cells of TamboUI's default guides, two a level.
     private static final List<String> GUIDES = List.of("├", "└", "│", "─");
-    // The symbol in front of the highlighted node, when the tree is in use.
-    private static final String HIGHLIGHT = ">";
 
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
@@ -47,7 +45,7 @@ record Unguided(Element tree) implements Element {
     }
 
     private static boolean inPrefix(String symbol) {
-        return symbol.isBlank() || symbol.equals(HIGHLIGHT) || GUIDES.contains(symbol);
+        return symbol.isBlank() || GUIDES.contains(symbol);
     }
 
     @Override

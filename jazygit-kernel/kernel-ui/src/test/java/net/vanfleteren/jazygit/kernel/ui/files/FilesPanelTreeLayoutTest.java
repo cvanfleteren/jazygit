@@ -70,7 +70,7 @@ class FilesPanelTreeLayoutTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
             String screen = RenderedText.ofSize(testRunner, () -> panel.render(model, FilesPanel.PANE), 30, 8);
 
-            assertTrue(screen.contains("module/src...t/feature"), screen);
+            assertTrue(screen.contains("module/src/...ct/feature"), screen);
             SettledPilot.of(testRunner).quit();
         }
     }

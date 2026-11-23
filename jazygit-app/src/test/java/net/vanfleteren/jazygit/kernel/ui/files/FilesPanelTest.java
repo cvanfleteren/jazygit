@@ -2,15 +2,24 @@ package net.vanfleteren.jazygit.kernel.ui.files;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.buffer.Buffer;
+import dev.tamboui.layout.Rect;
 import dev.tamboui.layout.Size;
+import dev.tamboui.style.Modifier;
+import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.Status;
@@ -105,16 +114,40 @@ class FilesPanelTest {
         Model model = TestModels.loaded(fixed(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
-            String active = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.PANE));
-            assertTrue(active.contains("> "), active);
-
-            String inactive = RenderedText.of(
-                    testRunner, () -> panel.render(model, Option.of(CommitsPanel.PANE), Option.of(CommitsPanel.PANE)));
-            assertFalse(inactive.contains(">"), inactive);
-            assertTrue(inactive.contains("UU both.txt"), inactive);
+            assertTrue(rootInHighlight(testRunner, () -> panel.render(model, FilesPanel.PANE)));
+            assertFalse(rootInHighlight(
+                    testRunner, () -> panel.render(model, Option.of(CommitsPanel.PANE), Option.of(CommitsPanel.PANE))));
 
             SettledPilot.of(testRunner).quit();
         }
+    }
+
+    @Test
+    void theHighlightedNodeTakesNoColumnForASymbol() throws Exception {
+        Model model = TestModels.loaded(fixed(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            String active = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.PANE));
+            assertFalse(active.contains(">"), active);
+            assertTrue(active.contains("│▼ /"), active);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    /**
+     * Whether the first row of the tree, the root, is drawn in the theme's highlight while in use: reversed.
+     */
+    private static boolean rootInHighlight(ToolkitTestRunner testRunner, Supplier<? extends Element> pane)
+            throws Exception {
+        CompletableFuture<Boolean> reversed = new CompletableFuture<>();
+        Rect area = new Rect(0, 0, 40, 5);
+        testRunner.runner().runOnRenderThread(() -> {
+            Buffer buffer = Buffer.empty(area);
+            pane.get().render(Frame.forTesting(buffer), area, RenderContext.empty());
+            reversed.complete(buffer.get(2, 1).style().addModifiers().contains(Modifier.REVERSED));
+        });
+        return reversed.get(5, TimeUnit.SECONDS);
     }
 
     @Test
