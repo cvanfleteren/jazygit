@@ -28,7 +28,6 @@ import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.core.askpass.AskpassServer;
 import net.vanfleteren.jazygit.core.git.branches.BatchSsh;
 import net.vanfleteren.jazygit.core.process.SshAsking;
-import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.files.step.FileStepEnded;
@@ -165,7 +164,7 @@ public class JazygitApp extends ToolkitApp {
                 dispatch,
                 styleEngine,
                 focus::openContent,
-                highlights -> new BranchesPanel(dispatch, this::showBranchesTab, clock, highlights, Features.FILLS),
+                highlights -> new BranchesPanel(dispatch, clock, highlights, Features.FILLS),
                 highlights -> new CommitsPanel(dispatch, highlights, Features.FILLS),
                 highlights -> new StashPanel(dispatch, highlights),
                 Screens.standard());
@@ -286,14 +285,6 @@ public class JazygitApp extends ToolkitApp {
             dispatch.accept(new LayoutMsg.Expanded(model.screen()));
         }
         return focus.leaveScrollArea();
-    }
-
-    /**
-     * Moves the focus to the branches pane, as a click on it does, and shows the list {@code tab} in it.
-     */
-    private void showBranchesTab(BranchesTab tab) {
-        focus.moveTo(Scopes.BRANCHES.pane());
-        dispatch.accept(new BranchesTabMsg.Chosen(tab));
     }
 
     /**

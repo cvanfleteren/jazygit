@@ -460,7 +460,7 @@ class WorktreeUpdateTest {
                         "/repos/app-feature",
                         StubGit.executed("git worktree add --quiet /repos/app-feature feature")));
 
-        assertEquals(BranchesTab.WORKTREES, next.model().repoView().branches().tab());
+        assertEquals(Option.of(BranchesTab.WORKTREES), next.model().repoView().branchesTab());
         assertEquals(Option.none(), next.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertTrue(next.cmds().contains(new LoadWorktrees()), next.cmds().toString());
         assertEquals(

@@ -101,6 +101,21 @@ public record RepoView(
     }
 
     /**
+     * Which of its own tabs the branches pane shows (ADR 185): the local branches until another was shown; none while
+     * it shows a tab a feature added.
+     */
+    public Option<BranchesTab> branchesTab() {
+        return tab(PaneId.BRANCHES).fold(() -> Option.of(BranchesTab.LOCAL), BranchesTab::of);
+    }
+
+    /**
+     * This view with the branches pane showing its own tab {@code tab}.
+     */
+    public RepoView withBranchesTab(BranchesTab tab) {
+        return withTab(PaneId.BRANCHES, tab.id());
+    }
+
+    /**
      * The version each area keeps, by the id of the area.
      */
     public Map<AreaId, Version> versions() {

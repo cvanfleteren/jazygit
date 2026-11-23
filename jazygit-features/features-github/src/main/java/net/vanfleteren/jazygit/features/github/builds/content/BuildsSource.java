@@ -41,7 +41,7 @@ public record BuildsSource() implements ContentSource {
             return Option.none();
         }
         return model.part(BuildsView.PART)
-                .filter(view -> model.repoView().branches().tab() == BranchesTab.LOCAL
+                .filter(view -> model.repoView().branchesTab().contains(BranchesTab.LOCAL)
                         // A divergence or the commits of a branch opened over the builds show in their place, as the
                         // content panel's own sources asked for them before the builds.
                         && model.repoView().branches().divergence().isEmpty()

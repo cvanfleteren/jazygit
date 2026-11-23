@@ -6,9 +6,9 @@ import io.vavr.control.Option;
 import lombok.With;
 
 /**
- * What the branches pane shows, apart from the previews read for the branch highlighted in it.
+ * What the branches pane shows, apart from the previews read for the branch highlighted in it and the tab it shows,
+ * which {@link RepoView#branchesTab} reads (ADR 185).
  *
- * @param tab           which branches the pane lists; it stays when the focus leaves the pane
  * @param divergence    the commits a local branch and its upstream or base branch do not share, which the pane lists
  *                      in place of the local branches while it is open
  * @param branchCommits the commits of a branch, local or remote, which the pane lists in place of the branches while
@@ -22,7 +22,6 @@ import lombok.With;
  */
 @With
 public record BranchesView(
-        BranchesTab tab,
         Option<DivergenceView> divergence,
         Option<BranchCommitsView> branchCommits,
         Option<NoLog> noLog,
@@ -30,5 +29,5 @@ public record BranchesView(
         boolean grouped) {
 
     public static final BranchesView INITIAL =
-            new BranchesView(BranchesTab.LOCAL, Option.none(), Option.none(), Option.none(), HashSet.empty(), true);
+            new BranchesView(Option.none(), Option.none(), Option.none(), HashSet.empty(), true);
 }

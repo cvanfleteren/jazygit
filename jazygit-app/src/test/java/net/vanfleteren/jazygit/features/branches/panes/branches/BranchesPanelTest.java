@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
-import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.features.branches.branch.upstream.UpstreamMsg;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreePopup;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg;
@@ -28,6 +27,7 @@ import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
+import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -46,11 +46,11 @@ class BranchesPanelTest {
     private static final Branch FEATURE = Fixtures.branch(new BranchName("feature"), false, new Sha("2"));
     private static final Branch OLD = Fixtures.branch(new BranchName("old"), false, new Sha("3"));
 
-    private final BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
+    private final BranchesPanel panel = new BranchesPanel(msg -> {});
     private final Model before = with(TestModels.loaded(SampleData.git()), List.of(MAIN, FEATURE, OLD));
 
     private static Model withWorktrees(Model model) {
-        return model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES)))
+        return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES))
                 .mapRepo(repo -> repo.withWorktrees(new Loadable.Loaded<>(List.of(
                         new Worktree(
                                 java.nio.file.Path.of("/repos/app"),
@@ -69,7 +69,7 @@ class BranchesPanelTest {
     }
 
     private static Model withRemotes(Model model) {
-        return model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)))
+        return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
                 .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.of(
                         new RemoteRef(
                                 new RemoteBranch("origin", new BranchName("feature")),
@@ -147,7 +147,7 @@ class BranchesPanelTest {
     void theKeysOfABranchDoNothingOnADetachedHead() throws Exception {
         Model detached = detachedAt(new Sha("89eeda75aaaaaaaa"));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(detached, Scopes.BRANCHES.pane()))) {
             SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
@@ -276,8 +276,8 @@ class BranchesPanelTest {
                 new BranchRef.Local(new BranchName("main")),
                 PullCmd.PULL);
         String frame = net.vanfleteren.jazygit.kernel.ui.text.TimeText.spinnerFrame(java.time.Instant.EPOCH);
-        BranchesPanel panel = new BranchesPanel(
-                msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
+        BranchesPanel panel =
+                new BranchesPanel(msg -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(busy, Scopes.BRANCHES.pane()))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(busy, Scopes.BRANCHES.pane()));
@@ -291,8 +291,8 @@ class BranchesPanelTest {
         Model deleting =
                 TestModels.busy(before, new BranchRef.Local(new BranchName("feature")), DeleteBranchCmd.DELETE_BRANCH);
         String frame = net.vanfleteren.jazygit.kernel.ui.text.TimeText.spinnerFrame(java.time.Instant.EPOCH);
-        BranchesPanel panel = new BranchesPanel(
-                msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
+        BranchesPanel panel =
+                new BranchesPanel(msg -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(deleting, Scopes.BRANCHES.pane()))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(deleting, Scopes.BRANCHES.pane()));
@@ -346,7 +346,7 @@ class BranchesPanelTest {
     @Test
     void shiftRAsksForANewNameForTheHighlightedBranch() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(before, Scopes.BRANCHES.pane()))) {
             SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
@@ -366,7 +366,7 @@ class BranchesPanelTest {
     @Test
     void nAsksForANewBranchStartingAtTheHighlightedBranch() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(before, Scopes.BRANCHES.pane()))) {
             SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
@@ -383,7 +383,7 @@ class BranchesPanelTest {
     @Test
     void shiftPPushesTheHighlightedBranch() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(before, Scopes.BRANCHES.pane()))) {
             SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
@@ -403,7 +403,7 @@ class BranchesPanelTest {
     @Test
     void pPullsTheHighlightedBranch() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(before, Scopes.BRANCHES.pane()))) {
             SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
@@ -423,7 +423,7 @@ class BranchesPanelTest {
     @Test
     void questionMarkAsksForTheKeybindingsOfThePanel() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(before, Scopes.BRANCHES.pane()))) {
             SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
@@ -486,7 +486,7 @@ class BranchesPanelTest {
 
     @Test
     void aWorktreeAddedOutsideTheAppLeavesTheHighlightButTheOneAPopupIsAboutGetsIt() {
-        BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
+        BranchesPanel panel = new BranchesPanel(msg -> {});
         Model two = withWorktrees(before);
         Worktree added = new Worktree(
                 java.nio.file.Path.of("/repos/app-other"),
@@ -509,7 +509,7 @@ class BranchesPanelTest {
     @Test
     void theWorktreesTabListsTheWorktreesAndItsKeysActOnTheHighlightedOne() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         Model worktrees = withWorktrees(before);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(worktrees, Scopes.BRANCHES.pane()))) {
@@ -532,7 +532,7 @@ class BranchesPanelTest {
                 java.util.List.of(
                         new SwitchWorktreeMsg.Requested("/repos/app-feature"),
                         new RemoveWorktreeMsg.Requested("/repos/app-feature"),
-                        new BranchesTabMsg.Switched(1)),
+                        new ViewMsg.TabChosen(BranchesPanel.PANE, BranchesTab.LOCAL.id())),
                 dispatched);
         assertEquals(
                 Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("feature")))),
@@ -542,7 +542,7 @@ class BranchesPanelTest {
     @Test
     void onTheLocalTabWChecksTheHighlightedBranchOutInANewWorktree() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(before, Scopes.BRANCHES.pane()))) {
             SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
@@ -558,8 +558,7 @@ class BranchesPanelTest {
 
     @Test
     void theRemoteTabSaysWhenThereAreNoRemoteBranches() throws Exception {
-        Model none = before.mapRepoView(
-                        repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)))
+        Model none = before.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
                 .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.empty())));
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(none, Scopes.BRANCHES.pane()))) {
@@ -574,7 +573,7 @@ class BranchesPanelTest {
     @Test
     void onTheRemoteTabSpaceChecksOutTheHighlightedRemoteBranchAndTheBracketsSwitchBack() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         Model remote = withRemotes(before);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(remote, Scopes.BRANCHES.pane()))) {
@@ -595,14 +594,14 @@ class BranchesPanelTest {
                 java.util.List.of(
                         new CheckoutMsg.RemoteRequested(upstreamMain),
                         new NewBranchMsg.RequestedAtRemote(upstreamMain),
-                        new BranchesTabMsg.Switched(-1)),
+                        new ViewMsg.TabChosen(BranchesPanel.PANE, BranchesTab.LOCAL.id())),
                 dispatched);
     }
 
     @Test
     void onTheLocalTabTheBracketsSwitchToTheRemoteBranches() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(before, Scopes.BRANCHES.pane()))) {
             SettledPilot.focus(testRunner, Scopes.BRANCHES.id());
@@ -612,13 +611,13 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        assertEquals(java.util.List.of(new BranchesTabMsg.Switched(1)), dispatched);
+        assertEquals(java.util.List.of(new ViewMsg.TabChosen(BranchesPanel.PANE, BranchesTab.REMOTE.id())), dispatched);
     }
 
     @Test
-    void clickingTheNameOfAListInTheTitleReportsThatList() throws Exception {
-        java.util.List<BranchesTab> clicked = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(msg -> {}, clicked::add);
+    void clickingTheNameOfATabInTheTitleShowsThatTab() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        BranchesPanel panel = new BranchesPanel(dispatched::add);
         int local = Messages.get("panel.branches.title").length();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, null))) {
             RenderedText.of(testRunner, () -> panel.render(before, null));
@@ -629,41 +628,11 @@ class BranchesPanelTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        assertEquals(java.util.List.of(BranchesTab.REMOTE, BranchesTab.LOCAL), clicked);
-    }
-
-    @Test
-    void onlyTheNamesInTheTitleAreTabs() {
-        int local = Messages.get("panel.branches.title").length();
-        int remote = Messages.get("panel.remoteBranches.title").length();
-
-        assertEquals(Option.of(BranchesTab.LOCAL), BranchesPanel.tabAt(0));
-        assertEquals(Option.of(BranchesTab.LOCAL), BranchesPanel.tabAt(local - 1));
-        assertEquals(Option.none(), BranchesPanel.tabAt(local + 1));
-        assertEquals(Option.of(BranchesTab.REMOTE), BranchesPanel.tabAt(local + 3));
-        assertEquals(Option.of(BranchesTab.REMOTE), BranchesPanel.tabAt(local + 3 + remote - 1));
-        assertEquals(Option.none(), BranchesPanel.tabAt(local + 3 + remote));
-        assertEquals(Option.of(BranchesTab.WORKTREES), BranchesPanel.tabAt(local + 3 + remote + 3));
         assertEquals(
-                Option.none(),
-                BranchesPanel.tabAt(local
-                        + 3
-                        + remote
-                        + 3
-                        + Messages.get("panel.worktrees.title").length()));
-        assertEquals(Option.none(), BranchesPanel.tabAt(-1));
-    }
-
-    @Test
-    void theTitleShowsWhichTabIsShownInBoldAndUnderlined() {
-        assertEquals(
-                List.of(false, true, false),
-                List.ofAll(BranchesPanel.title(BranchesTab.REMOTE).spans())
-                        .filter(span -> !span.content().contains("│"))
-                        .map(span -> span.style()
-                                .addModifiers()
-                                .containsAll(java.util.Set.of(
-                                        dev.tamboui.style.Modifier.BOLD, dev.tamboui.style.Modifier.UNDERLINED))));
+                java.util.List.of(
+                        new ViewMsg.TabChosen(BranchesPanel.PANE, BranchesTab.REMOTE.id()),
+                        new ViewMsg.TabChosen(BranchesPanel.PANE, BranchesTab.LOCAL.id())),
+                dispatched);
     }
 
     @Test
@@ -682,8 +651,7 @@ class BranchesPanelTest {
                                 new Divergence.Side(List.of(behind), 1))),
                         Option.none())))));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel panel =
-                new BranchesPanel(dispatched::add, tab -> {}, java.time.Clock.systemUTC(), Theme.Highlights.DEFAULT);
+        BranchesPanel panel = new BranchesPanel(dispatched::add, java.time.Clock.systemUTC(), Theme.Highlights.DEFAULT);
         java.util.List<Option<Msg>> highlighted = new java.util.ArrayList<>();
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(diverged, Scopes.BRANCHES.pane()))) {
@@ -721,14 +689,14 @@ class BranchesPanelTest {
                 java.util.List.of(
                         new CommitFilesMsg.Opened(new Changes.OfCommit(new Sha("b1")), Scopes.BRANCHES.pane()),
                         new UpstreamMsg.DivergenceClosed(),
-                        new BranchesTabMsg.Switched(1)),
+                        new ViewMsg.TabChosen(BranchesPanel.PANE, BranchesTab.REMOTE.id())),
                 dispatched);
     }
 
     @Test
     void enterOnABranchOpensItsCommitsOnTheLocalAndTheRemoteTab() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
-        BranchesPanel sending = new BranchesPanel(dispatched::add, tab -> {});
+        BranchesPanel sending = new BranchesPanel(dispatched::add);
         Model remotes = withRemotes(before);
         for (Model shown : List.of(before, remotes)) {
             try (ToolkitTestRunner testRunner =
@@ -765,7 +733,7 @@ class BranchesPanelTest {
                                 new Ahead(new Sha("a2"), base, List.of(newer), false, Option.of(older)))))))));
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         BranchesPanel sending =
-                new BranchesPanel(dispatched::add, tab -> {}, java.time.Clock.systemUTC(), Theme.Highlights.DEFAULT);
+                new BranchesPanel(dispatched::add, java.time.Clock.systemUTC(), Theme.Highlights.DEFAULT);
         java.util.List<Option<Msg>> highlighted = new java.util.ArrayList<>();
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> sending.render(open, Scopes.BRANCHES.pane()))) {
@@ -797,7 +765,7 @@ class BranchesPanelTest {
                 java.util.List.of(
                         new CommitFilesMsg.Opened(new Changes.OfCommit(new Sha("a1")), Scopes.BRANCHES.pane()),
                         new BranchCommitsMsg.Closed(),
-                        new BranchesTabMsg.Switched(1)),
+                        new ViewMsg.TabChosen(BranchesPanel.PANE, BranchesTab.REMOTE.id())),
                 dispatched);
         assertFalse(BranchesPanel.showsSpinner(TestModels.busy(open, feature, PushCmd.PUSH)));
     }
@@ -817,7 +785,11 @@ class BranchesPanelTest {
         BranchRef feature = new BranchRef.Local(new BranchName("feature"));
         Commit copied = commit("a1", "Older");
         Model open = listing(feature, feature, List.of(commit("a2", "Ours"), copied));
-        BranchCommitsList list = new BranchCommitsList(Scopes.BRANCHES.id(), msg -> {}, Theme.Highlights.DEFAULT);
+        BranchCommitsList list = new BranchCommitsList(
+                Scopes.BRANCHES.id(),
+                msg -> {},
+                Theme.Highlights.DEFAULT,
+                () -> new net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Hosted<>(Scopes.PANE_TABS, Option.none()));
 
         list.render(open, true, true);
         List<Option<String>> before =
@@ -932,7 +904,7 @@ class BranchesPanelTest {
      */
     private static List<Msg> escapedInBranches(Model model) throws Exception {
         java.util.List<Msg> sent = new java.util.ArrayList<>();
-        BranchesPanel panel = new BranchesPanel(sent::add, tab -> {});
+        BranchesPanel panel = new BranchesPanel(sent::add);
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(model, Scopes.BRANCHES.pane()))) {
             SettledPilot.focus(testRunner, Scopes.BRANCHES.id());

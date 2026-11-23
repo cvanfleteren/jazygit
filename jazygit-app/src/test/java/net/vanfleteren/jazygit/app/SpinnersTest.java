@@ -9,14 +9,15 @@ import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
-import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.state.Jobs;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.load.LoadStatus;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
+import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
 
@@ -41,11 +42,12 @@ class SpinnersTest {
         Model busy = TestModels.busy(LOADED, FEATURE, PushCmd.PUSH);
 
         assertTrue(Spinners.shown(busy, NOW));
-        assertFalse(BranchesPanel.showsSpinner(Update.update(busy, new BranchesTabMsg.Chosen(BranchesTab.REMOTE))
-                .model()));
+        assertFalse(BranchesPanel.showsSpinner(
+                Update.update(busy, new ViewMsg.TabChosen(PaneId.BRANCHES, BranchesTab.REMOTE.id()))
+                        .model()));
         // The line at the bottom still says that the push runs.
         assertTrue(Spinners.shown(
-                Update.update(busy, new BranchesTabMsg.Chosen(BranchesTab.REMOTE))
+                Update.update(busy, new ViewMsg.TabChosen(PaneId.BRANCHES, BranchesTab.REMOTE.id()))
                         .model(),
                 NOW));
     }

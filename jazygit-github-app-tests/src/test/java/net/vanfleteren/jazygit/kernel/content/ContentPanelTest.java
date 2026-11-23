@@ -166,8 +166,7 @@ class ContentPanelTest {
                         new LoadMsg.CommitDetailLoaded(new Sha("cccc"), DiffOptions.DEFAULT, DiffText.of("+a")))
                 .model();
         assertTrue(content.areaOfPane(loaded, Scopes.BRANCHES.pane()).isDefined());
-        Model remoteTab =
-                loaded.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
+        Model remoteTab = loaded.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE));
         assertEquals(Option.none(), content.areaOfPane(remoteTab, Scopes.BRANCHES.pane()));
     }
 

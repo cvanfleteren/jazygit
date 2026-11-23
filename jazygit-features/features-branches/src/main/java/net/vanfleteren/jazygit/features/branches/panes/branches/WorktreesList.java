@@ -5,11 +5,13 @@ import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreePopup;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;
+import net.vanfleteren.jazygit.kernel.state.view.ShownTabs;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -31,12 +33,14 @@ class WorktreesList implements BranchesTabList {
      * @param dispatch   receives the messages for the user's actions, on the render thread
      * @param highlights how the highlighted worktree is shown, also when the pane is not in use
      */
-    WorktreesList(String id, Consumer<Msg> dispatch, Theme.Highlights highlights) {
+    WorktreesList(
+            String id, Consumer<Msg> dispatch, Theme.Highlights highlights, Supplier<Keymap.Hosted<ShownTabs>> tabs) {
         list = new LoadableList<>(
                 Messages.get("panel.worktrees.title"), id, LoadableList.Reselect.following(Worktree::path), highlights);
         list.highlightSymbol("");
         list.whenEmpty(Messages.get("branches.panes.branches.worktrees.empty"));
-        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.WORKTREES, event, selectedWorktree()), dispatch));
+        list.onKey(event ->
+                PaneKeys.sending(keymap.handle(Scopes.WORKTREES, event, selectedWorktree(), tabs.get()), dispatch));
     }
 
     /**

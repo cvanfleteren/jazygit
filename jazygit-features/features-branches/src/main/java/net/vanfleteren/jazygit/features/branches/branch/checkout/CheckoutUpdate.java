@@ -44,10 +44,7 @@ public final class CheckoutUpdate {
                         OperationUpdate.done(model, cmd, commands).openPopupIfFree(new StashCheckoutPopup(cmd)));
             case CheckedOut(var cmd, var commands) ->
                 OperationUpdate.succeeded(
-                        model.mapRepoView(
-                                repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.LOCAL))),
-                        cmd,
-                        commands);
+                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.LOCAL)), cmd, commands);
             // It is shown as a checkout here shows it: on the local branches, the focus where it was.
             case SwitchWorktreeConfirmed() ->
                 model.popup(SwitchWorktreePopup.class)

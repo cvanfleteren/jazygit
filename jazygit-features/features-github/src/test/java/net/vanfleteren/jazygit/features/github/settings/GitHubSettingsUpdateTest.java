@@ -182,8 +182,8 @@ class GitHubSettingsUpdateTest {
     @Test
     void theRepositoryIsShownAgainWhereItWas() {
         Model there = TestModels.loaded()
-                .mapRepoView(view -> view.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES))
-                        .withFocusedPane(Option.of(new PaneId("commits"))))
+                .mapRepoView(view ->
+                        view.withBranchesTab(BranchesTab.WORKTREES).withFocusedPane(Option.of(new PaneId("commits"))))
                 .mapPreferences(preferences -> preferences.withGhExecutableEntered(Option.of("/opt/gh/bin/gh")));
 
         Next next = Update.update(
@@ -366,7 +366,10 @@ class GitHubSettingsUpdateTest {
                         SettingsStore.NONE,
                         RecentRepositories.NONE,
                         (directory, landing) -> {
-                            done.add("reopened " + directory + " on " + landing.branchesTab());
+                            done.add("reopened " + directory + " on "
+                                    + landing.applyTo(net.vanfleteren.jazygit.kernel.state.view.RepoView.INITIAL)
+                                            .branchesTab()
+                                            .get());
                             return Either.right(directory);
                         })
                 .with(GitHubServices.GH, StubGitHub.of());

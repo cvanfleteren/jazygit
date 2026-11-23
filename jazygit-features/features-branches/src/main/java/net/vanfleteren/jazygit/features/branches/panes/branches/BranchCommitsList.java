@@ -6,6 +6,7 @@ import io.vavr.Tuple3;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -14,6 +15,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.BranchCommitsView;
+import net.vanfleteren.jazygit.kernel.state.view.ShownTabs;
 import net.vanfleteren.jazygit.kernel.ui.commits.AheadView;
 import net.vanfleteren.jazygit.kernel.ui.commits.CommitRows;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -45,13 +47,15 @@ class BranchCommitsList {
      * @param dispatch   receives the messages for the user's actions, on the render thread
      * @param highlights how the highlighted commit is shown, also when the pane is not in use
      */
-    BranchCommitsList(String id, Consumer<Msg> dispatch, Theme.Highlights highlights) {
+    BranchCommitsList(
+            String id, Consumer<Msg> dispatch, Theme.Highlights highlights, Supplier<Keymap.Hosted<ShownTabs>> tabs) {
         list = new LoadableList<>(
                 Messages.get("panel.branchCommits.title"),
                 id,
                 LoadableList.Reselect.following(Commit::sha),
                 highlights);
-        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.BRANCH_COMMITS, event, selectedCommit()), dispatch));
+        list.onKey(event ->
+                PaneKeys.sending(keymap.handle(Scopes.BRANCH_COMMITS, event, selectedCommit(), tabs.get()), dispatch));
     }
 
     /**

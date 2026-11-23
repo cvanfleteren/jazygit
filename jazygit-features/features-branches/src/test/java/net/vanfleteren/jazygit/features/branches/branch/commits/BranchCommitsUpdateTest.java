@@ -8,12 +8,12 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.features.changes.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.RereadUpdate;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
+import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -87,7 +87,13 @@ class BranchCommitsUpdateTest {
                 view(Update.update(open, new BranchCommitsMsg.Closed()).model()));
         assertEquals(
                 Option.none(),
-                view(Update.update(open, new BranchesTabMsg.Switched(1)).model()));
+                view(Update.update(
+                                open.withReactions(
+                                        new net.vanfleteren.jazygit.kernel.state.Reactions(io.vavr.collection.List.of(
+                                                net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabUpdate
+                                                        ::reacting))),
+                                new ViewMsg.TabChosen(PaneId.BRANCHES, BranchesTab.REMOTE.id()))
+                        .model()));
         // The branch stays highlighted, with its log.
         assertEquals(
                 Option.of(FEATURE),

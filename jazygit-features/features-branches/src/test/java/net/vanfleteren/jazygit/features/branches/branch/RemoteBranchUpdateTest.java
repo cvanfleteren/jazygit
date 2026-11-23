@@ -17,11 +17,11 @@ import net.vanfleteren.jazygit.features.branches.branch.newbranch.NameAsked;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchCmd;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchPopup;
-import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.*;
+import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -42,58 +42,6 @@ class RemoteBranchUpdateTest {
                                 new RemoteRef(ORIGIN_FEATURE, new Sha("ffff"), Instant.EPOCH),
                                 new RemoteRef(ORIGIN_NEW, new Sha("eeee"), Instant.EPOCH)))
                 .model();
-    }
-
-    @Test
-    void theTabGoesRoundTheLocalBranchesTheRemoteOnesAndTheWorktrees() {
-        Model remote = Update.update(loaded(), new BranchesTabMsg.Switched(1)).model();
-        assertEquals(BranchesTab.REMOTE, remote.repoView().branches().tab());
-
-        Model worktrees = Update.update(remote, new BranchesTabMsg.Switched(1)).model();
-        assertEquals(BranchesTab.WORKTREES, worktrees.repoView().branches().tab());
-        assertEquals(
-                BranchesTab.LOCAL,
-                Update.update(worktrees, new BranchesTabMsg.Switched(1))
-                        .model()
-                        .repoView()
-                        .branches()
-                        .tab());
-        assertEquals(
-                BranchesTab.WORKTREES,
-                Update.update(loaded(), new BranchesTabMsg.Switched(-1))
-                        .model()
-                        .repoView()
-                        .branches()
-                        .tab());
-        assertEquals(
-                BranchesTab.LOCAL,
-                Update.update(remote, new BranchesTabMsg.Switched(-1))
-                        .model()
-                        .repoView()
-                        .branches()
-                        .tab());
-    }
-
-    @Test
-    void choosingATabShowsItWhicheverWasShown() {
-        Model remote = Update.update(loaded(), new BranchesTabMsg.Chosen(BranchesTab.REMOTE))
-                .model();
-        assertEquals(BranchesTab.REMOTE, remote.repoView().branches().tab());
-
-        assertEquals(
-                BranchesTab.REMOTE,
-                Update.update(remote, new BranchesTabMsg.Chosen(BranchesTab.REMOTE))
-                        .model()
-                        .repoView()
-                        .branches()
-                        .tab());
-        assertEquals(
-                BranchesTab.LOCAL,
-                Update.update(remote, new BranchesTabMsg.Chosen(BranchesTab.LOCAL))
-                        .model()
-                        .repoView()
-                        .branches()
-                        .tab());
     }
 
     @Test
@@ -181,8 +129,8 @@ class RemoteBranchUpdateTest {
 
     @Test
     void aCheckoutOrANewBranchFromTheRemoteBranchesShowsTheLocalOnesOnceItSucceeded() {
-        Model onRemotes =
-                Update.update(withRemotes(), new BranchesTabMsg.Switched(1)).model();
+        Model onRemotes = Update.update(withRemotes(), new ViewMsg.TabChosen(PaneId.BRANCHES, BranchesTab.REMOTE.id()))
+                .model();
 
         List.<BranchCmd>of(
                         new CheckoutRemote(new BranchName("new"), ORIGIN_NEW),
@@ -190,12 +138,11 @@ class RemoteBranchUpdateTest {
                         new NewBranchCmd(
                                 new BranchName("topic"), ORIGIN_NEW.tracking(), Option.of(new BranchName("new"))))
                 .forEach(cmd -> assertEquals(
-                        BranchesTab.LOCAL,
+                        Option.of(BranchesTab.LOCAL),
                         Update.update(onRemotes, cmd.succeeded(List.empty()))
                                 .model()
                                 .repoView()
-                                .branches()
-                                .tab(),
+                                .branchesTab(),
                         cmd.toString()));
     }
 
@@ -214,7 +161,7 @@ class RemoteBranchUpdateTest {
     @Test
     void aFailedCheckoutFromTheRemoteBranchesStaysOnThem() {
         Model started = Update.update(
-                        Update.update(withRemotes(), new BranchesTabMsg.Switched(1))
+                        Update.update(withRemotes(), new ViewMsg.TabChosen(PaneId.BRANCHES, BranchesTab.REMOTE.id()))
                                 .model(),
                         new CheckoutMsg.RemoteRequested(ORIGIN_NEW))
                 .model();
@@ -225,7 +172,7 @@ class RemoteBranchUpdateTest {
                                 .failed(net.vanfleteren.jazygit.kernel.state.TestModels.refused("boom")))
                 .model();
 
-        assertEquals(BranchesTab.REMOTE, failed.repoView().branches().tab());
+        assertEquals(Option.of(BranchesTab.REMOTE), failed.repoView().branchesTab());
     }
 
     @Test

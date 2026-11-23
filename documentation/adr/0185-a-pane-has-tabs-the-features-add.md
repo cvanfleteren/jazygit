@@ -41,3 +41,5 @@ reflog entries. And the next feature to want a tab is in sight: tags (wanted.md)
 - Two tab mechanisms live side by side until the branches pane moves.
 - A tab's rows are not commits, so a tab's keys are bound in its own scope; an action that also makes sense there
   (reset, checkout) adds a binding to it, as checkout does for `BRANCH_COMMITS`.
+
+Amended by ADR 189: the branches pane moved onto these tabs, so there is one tab mechanism.

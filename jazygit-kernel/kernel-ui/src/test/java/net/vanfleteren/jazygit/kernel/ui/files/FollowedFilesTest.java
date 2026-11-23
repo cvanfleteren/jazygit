@@ -221,7 +221,7 @@ class FollowedFilesTest {
                         Scopes.BRANCHES.pane(),
                         FilesLock.In.LIST,
                         Option.of(new Followed.Files(BRANCH)))
-                .mapRepoView(view -> view.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
+                .mapRepoView(view -> view.withBranchesTab(BranchesTab.REMOTE));
 
         assertEquals(
                 Option.of(new SelectionMsg.FilesUnlocked()),

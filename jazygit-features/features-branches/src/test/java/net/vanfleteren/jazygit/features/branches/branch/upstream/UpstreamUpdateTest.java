@@ -10,13 +10,13 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.features.changes.commit.reset.ResetCmd;
 import net.vanfleteren.jazygit.features.changes.commit.reset.ResetMsg;
 import net.vanfleteren.jazygit.features.changes.commit.reset.ResetPopup;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
 import net.vanfleteren.jazygit.kernel.state.view.DivergenceView;
 import net.vanfleteren.jazygit.kernel.state.view.DivergenceView.Against;
+import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -205,10 +206,26 @@ class UpstreamUpdateTest {
 
     @Test
     void switchingTabsClosesIt() {
-        Next next = Update.update(viewing(), new BranchesTabMsg.Switched(1));
+        Next next = Update.update(
+                viewing()
+                        .withReactions(new net.vanfleteren.jazygit.kernel.state.Reactions(io.vavr.collection.List.of(
+                                net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabUpdate::reacting))),
+                new ViewMsg.TabChosen(PaneId.BRANCHES, BranchesTab.REMOTE.id()));
 
         assertEquals(Option.none(), next.model().repoView().branches().divergence());
-        assertEquals(BranchesTab.REMOTE, next.model().repoView().branches().tab());
+        assertEquals(Option.of(BranchesTab.REMOTE), next.model().repoView().branchesTab());
+    }
+
+    @Test
+    void showingATabOfAnotherPaneLeavesItOpen() {
+        Next next = Update.update(
+                viewing()
+                        .withReactions(new net.vanfleteren.jazygit.kernel.state.Reactions(io.vavr.collection.List.of(
+                                net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabUpdate::reacting))),
+                new ViewMsg.TabChosen(PaneId.COMMITS, new net.vanfleteren.jazygit.kernel.state.view.TabId("other")));
+
+        assertEquals(true, next.model().repoView().branches().divergence().isDefined());
+        assertEquals(Option.of(BranchesTab.LOCAL), next.model().repoView().branchesTab());
     }
 
     @Test

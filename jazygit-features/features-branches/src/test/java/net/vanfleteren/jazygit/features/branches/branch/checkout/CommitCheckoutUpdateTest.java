@@ -117,8 +117,7 @@ class CommitCheckoutUpdateTest {
 
     @Test
     void checkedOutHereTheBranchesStayOnTheTabTheyWereOn() {
-        Model remoteTab = onMain().mapRepoView(
-                        repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
+        Model remoteTab = onMain().mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE));
 
         Model done = Update.update(remoteTab, new CheckoutCommit(OLDER).succeeded(List.empty()))
                 .model();
