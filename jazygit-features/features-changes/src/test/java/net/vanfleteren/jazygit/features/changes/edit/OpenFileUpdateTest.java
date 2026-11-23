@@ -9,24 +9,16 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.function.Supplier;
-import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
-import net.vanfleteren.jazygit.core.git.files.StubEditor;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.HiddenHunks.Ranges;
-import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
-import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
-import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.Repositories;
-import net.vanfleteren.jazygit.kernel.state.Terminal;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
@@ -36,6 +28,8 @@ import net.vanfleteren.jazygit.kernel.state.diff.Remark;
 import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.kernel.state.launch.ProgramFailure;
+import net.vanfleteren.jazygit.kernel.state.launch.ProgramLauncher;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
 import org.junit.jupiter.api.Test;
 
@@ -220,52 +214,49 @@ class OpenFileUpdateTest {
     }
 
     @Test
-    void theEditorRunsInTheWorktreeOnTheFileByItsWholePath() {
+    void theEditorRunsOnTheTerminalInTheWorktreeOnTheFileByItsWholePath() {
         java.util.List<String> events = new ArrayList<>();
-        Terminal terminal = new Terminal() {
-            @Override
-            public <T> T handOver(Supplier<T> program) {
-                events.add("leave");
-                T result = program.get();
-                events.add("come back");
-                return result;
-            }
-        };
-        ExecutedCommand ran = ExecutedCommand.of("nvim", "+3", "/repos/app/src/A.java");
-        Git git = StubGit.of(Path.of("/repos/app")).withEditor(new StubEditor() {
-            @Override
-            public Either<GitFailure, List<ExecutedCommand>> open(Path directory, List<String> commandLine) {
-                events.add(directory + ": " + commandLine.mkString(" "));
-                return Either.right(List.of(ran));
-            }
-        });
         OpenFileCmd cmd = new OpenFileCmd(NVIM, "src/A.java", 3);
 
-        assertEquals(new OperationMsg.Succeeded(cmd, List.of(ran)), cmd.run(env(git, terminal)));
-        assertEquals(java.util.List.of("leave", "/repos/app: nvim +3 /repos/app/src/A.java", "come back"), events);
+        assertEquals(
+                new OperationMsg.Succeeded(cmd, List.of(ExecutedCommand.of("nvim", "+3", "/repos/app/src/A.java"))),
+                cmd.run(env(recording(events))));
+        assertEquals(java.util.List.of("run in /repos/app: nvim +3 /repos/app/src/A.java"), events);
     }
 
     @Test
     void aGuiEditorIsStartedAndLeftRunning() {
-        java.util.List<String> launched = new ArrayList<>();
-        Git git = StubGit.of(Path.of("/repos/app")).withEditor(new StubEditor() {
-            @Override
-            public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
-                launched.add(commandLine.mkString(" "));
-                return Either.right(List.empty());
-            }
-        });
+        java.util.List<String> events = new ArrayList<>();
 
-        new OpenFileCmd(CODE, "src/A.java", 7).run(env(git, Terminal.NONE));
+        new OpenFileCmd(CODE, "src/A.java", 7).run(env(recording(events)));
 
-        assertEquals(java.util.List.of("code -g /repos/app/src/A.java:7"), launched);
+        assertEquals(java.util.List.of("start in /repos/app: code -g /repos/app/src/A.java:7"), events);
     }
 
     private static Anchor.OnLine right(int number) {
         return new Anchor.OnLine("a.txt", DiffSide.NEW, number);
     }
 
-    private static Env env(Git git, Terminal terminal) {
-        return new Env(git, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
+    private static Env env(ProgramLauncher launcher) {
+        return new Env(StubGit.of(Path.of("/repos/app"))).with(launcher);
+    }
+
+    /**
+     * A launcher that records what it was asked to run or start, and where.
+     */
+    private static ProgramLauncher recording(java.util.List<String> events) {
+        return new ProgramLauncher() {
+            @Override
+            public Either<ProgramFailure, ExecutedCommand> run(Path directory, List<String> commandLine) {
+                events.add("run in " + directory + ": " + commandLine.mkString(" "));
+                return Either.right(new ExecutedCommand(commandLine));
+            }
+
+            @Override
+            public Either<ProgramFailure, ExecutedCommand> start(Path directory, List<String> commandLine) {
+                events.add("start in " + directory + ": " + commandLine.mkString(" "));
+                return Either.right(new ExecutedCommand(commandLine));
+            }
+        };
     }
 }

@@ -227,6 +227,29 @@ public final class AppRules {
             .callMethod(Runtime.class, "exec", String.class)
             .allowEmptyShould(true);
     /**
+     * A feature or the kernel starts a program the user set, as an editor or an agent, through the kernel's
+     * {@code ProgramLauncher}, not by running it itself, nor through git (ADR 183). What opens a link in the browser,
+     * as Forgejo's {@code Browser}, is not yet one of those programs.
+     */
+    @ArchTest
+    static final ArchRule programsAreStartedThroughTheLauncher = noClasses()
+            .that()
+            .resideInAnyPackage("..jazygit.features..", "..jazygit.kernel..")
+            .and()
+            .resideOutsideOfPackage("..jazygit.kernel.state.launch..")
+            .and()
+            .doNotHaveSimpleName("Browser")
+            .should()
+            .callMethod(ROOT + ".core.process.Exec", "interactive", "java.nio.file.Path", "io.vavr.collection.List")
+            .orShould()
+            .callMethod(
+                    ROOT + ".core.process.Exec",
+                    "launch",
+                    "java.nio.file.Path",
+                    "io.vavr.collection.List",
+                    "java.time.Duration")
+            .allowEmptyShould(true);
+    /**
      * The updates, the messages they handle, the popups and the model are pure: running git or gh is left to
      * the commands, showing anything to the views. The commands that ran are only passed on as data.
      */

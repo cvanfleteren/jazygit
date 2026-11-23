@@ -120,67 +120,6 @@ class CliEditorTest {
     }
 
     @Test
-    void anEditorTheUserSetRunsInTheDirectoryAndIsWaitedFor() throws Exception {
-        List<ExecutedCommand> ran = new CliEditor(repo)
-                .open(repo, List.of("sh", "-c", "pwd > opened.txt"))
-                .get();
-
-        assertEquals(
-                repo.toRealPath().toString(),
-                Files.readString(repo.resolve("opened.txt")).strip());
-        assertEquals(List.of(new ExecutedCommand(List.of("sh", "-c", "pwd > opened.txt"))), ran);
-    }
-
-    @Test
-    void anEditorTheUserSetThatFailsSaysItsProgram() {
-        GitFailure failure =
-                new CliEditor(repo).open(repo, List.of("sh", "-c", "exit 3")).getLeft();
-
-        assertEquals(new GitError.EditorFailed("sh", 3), failure.error());
-    }
-
-    @Test
-    void anEditorLeftRunningStartsInTheDirectory() throws Exception {
-        List<ExecutedCommand> ran = new CliEditor(repo)
-                .launch(repo, List.of("sh", "-c", "pwd > launched.txt"))
-                .get();
-
-        assertEquals(
-                repo.toRealPath().toString(),
-                Files.readString(repo.resolve("launched.txt")).strip());
-        assertEquals(1, ran.size());
-    }
-
-    @Test
-    void anEditorLeftRunningThatCannotBeStartedSaysSo() {
-        GitFailure failure = new CliEditor(repo)
-                .launch(repo, List.of("jazygit-no-such-editor", repo.toString()))
-                .getLeft();
-
-        GitError.EditorNotStarted notStarted = assertInstanceOf(GitError.EditorNotStarted.class, failure.error());
-        assertEquals("jazygit-no-such-editor", notStarted.editor());
-    }
-
-    @Test
-    void anEditorLeftRunningThatExitsWithAnErrorAtOnceFailsAndIsInTheLog() {
-        List<String> commandLine = List.of("sh", "-c", "exit 2", repo.toString());
-
-        GitFailure failure = new CliEditor(repo).launch(repo, commandLine).getLeft();
-
-        assertEquals(new GitError.EditorExitedAtStart("sh", 2), failure.error());
-        assertEquals(List.of(new ExecutedCommand(commandLine)), failure.commands());
-    }
-
-    @Test
-    void anEditorThatCannotBeStartedIsInTheLog() {
-        List<String> commandLine = List.of("jazygit-no-such-editor", repo.toString());
-
-        GitFailure failure = new CliEditor(repo).open(repo, commandLine).getLeft();
-
-        assertEquals(List.of(new ExecutedCommand(commandLine)), failure.commands());
-    }
-
-    @Test
     void gitsEditorThatFailsIsInTheLogAsItRan() {
         GitFailure failure = CliEditor.open(repo, "false", List.of("a.txt")).getLeft();
 

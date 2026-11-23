@@ -13,12 +13,8 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.StubGit;
-import net.vanfleteren.jazygit.core.git.files.StubEditor;
 import net.vanfleteren.jazygit.core.git.model.*;
-import net.vanfleteren.jazygit.core.git.process.GitError;
-import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
@@ -27,6 +23,8 @@ import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.launch.ProgramFailure;
+import net.vanfleteren.jazygit.kernel.state.launch.ProgramLauncher;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
@@ -243,77 +241,64 @@ class OpenInEditorUpdateTest {
     }
 
     @Test
-    void aTerminalEditorRunsWithTheTerminalHandedOverInTheWorktree() {
+    void aTerminalEditorRunsOnTheTerminalInTheWorktree() {
         java.util.List<String> events = new ArrayList<>();
-        Terminal terminal = new Terminal() {
-            @Override
-            public <T> T handOver(Supplier<T> program) {
-                events.add("leave");
-                T result = program.get();
-                events.add("come back");
-                return result;
-            }
-        };
-        Env env = new Env(StubGit.of().withEditor(recording(events))).withApp(Repositories.NONE, terminal);
+        Env env = new Env(StubGit.of()).with(recording(events));
 
         Msg result = new OpenInEditorCmd(NVIM, LINKED_PATH.toString()).run(env);
 
-        assertEquals(java.util.List.of("leave", "open nvim /repos/app-taken in /repos/app-taken", "come back"), events);
+        assertEquals(java.util.List.of("run nvim /repos/app-taken in /repos/app-taken"), events);
         assertInstanceOf(OperationMsg.Succeeded.class, result);
     }
 
     @Test
     void aGuiEditorIsLeftRunningWithoutTheTerminal() {
         java.util.List<String> events = new ArrayList<>();
-        Terminal terminal = new Terminal() {
-            @Override
-            public <T> T handOver(Supplier<T> program) {
-                events.add("leave");
-                return program.get();
-            }
-        };
-        Env env = new Env(StubGit.of().withEditor(recording(events))).withApp(Repositories.NONE, terminal);
+        Env env = new Env(StubGit.of()).with(recording(events));
 
         Msg result = new OpenInEditorCmd(IDEA, LINKED_PATH.toString()).run(env);
 
-        assertEquals(java.util.List.of("launch idea /repos/app-taken in /repos/app-taken"), events);
+        assertEquals(java.util.List.of("start idea /repos/app-taken in /repos/app-taken"), events);
         assertInstanceOf(OperationMsg.Succeeded.class, result);
     }
 
     @Test
     void anEditorThatCannotStartIsReportedForTheWorktree() {
-        Env env = new Env(StubGit.of().withEditor(new StubEditor() {
+        Env env = new Env(StubGit.of()).with(new ProgramLauncher() {
             @Override
-            public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
-                return Either.left(new GitFailure(
-                        new GitError.EditorNotStarted("idea", new java.io.IOException("not found")), List.empty()));
+            public Either<ProgramFailure, ExecutedCommand> run(Path directory, List<String> commandLine) {
+                return start(directory, commandLine);
             }
-        }));
+
+            @Override
+            public Either<ProgramFailure, ExecutedCommand> start(Path directory, List<String> commandLine) {
+                return Either.left(new ProgramFailure.NotStarted(commandLine, "not found"));
+            }
+        });
         OpenInEditorCmd cmd = new OpenInEditorCmd(IDEA, LINKED_PATH.toString());
 
         Model failed = Update.update(model(List.of(IDEA)), cmd.run(env)).model();
 
         assertEquals(
-                Option.of("Opening /repos/app-taken in the editor failed: Could not start the editor \"idea\": "
-                        + "not found"),
+                Option.of("Opening /repos/app-taken in the editor failed: Could not start \"idea\": not found"),
                 errorText(failed));
     }
 
     /**
-     * An editor that records what it was asked to open, and where.
+     * A launcher that records what it was asked to run or start, and where.
      */
-    private static StubEditor recording(java.util.List<String> events) {
-        return new StubEditor() {
+    private static ProgramLauncher recording(java.util.List<String> events) {
+        return new ProgramLauncher() {
             @Override
-            public Either<GitFailure, List<ExecutedCommand>> open(Path directory, List<String> commandLine) {
-                events.add("open " + commandLine.mkString(" ") + " in " + directory);
-                return Either.right(List.of(new ExecutedCommand(commandLine)));
+            public Either<ProgramFailure, ExecutedCommand> run(Path directory, List<String> commandLine) {
+                events.add("run " + commandLine.mkString(" ") + " in " + directory);
+                return Either.right(new ExecutedCommand(commandLine));
             }
 
             @Override
-            public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
-                events.add("launch " + commandLine.mkString(" ") + " in " + directory);
-                return Either.right(List.of(new ExecutedCommand(commandLine)));
+            public Either<ProgramFailure, ExecutedCommand> start(Path directory, List<String> commandLine) {
+                events.add("start " + commandLine.mkString(" ") + " in " + directory);
+                return Either.right(new ExecutedCommand(commandLine));
             }
         };
     }

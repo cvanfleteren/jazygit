@@ -7,12 +7,15 @@ import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
+import net.vanfleteren.jazygit.kernel.state.launch.ProgramLauncher;
 
 /**
  * What a {@link Cmd} runs against: the repository through git, where the settings and the recent repositories are
- * kept, where another repository is opened, the terminal the app is shown on, and what the features run against of
- * their own, which each builds once a repository is opened (ADR 169, 171): the kernel names no forge.
+ * kept, where another repository is opened, the terminal the app is shown on, what starts the programs the user set
+ * (ADR 183), and what the features run against of their own, which each builds once a repository is opened (ADR 169,
+ * 171): the kernel names no forge.
  *
+ * @param launcher what starts the programs the user set, as editors and agents, rather than git (ADR 183)
  * @param services what the features run against of their own, each under a {@link Service} declared in its package,
  *                 as a part of the model is (ADR 169)
  */
@@ -22,6 +25,7 @@ public record Env(
         RecentRepositories recent,
         Repositories repositories,
         Terminal terminal,
+        ProgramLauncher launcher,
         Services services) {
 
     /**
@@ -29,6 +33,19 @@ public record Env(
      * use the forge's own program, as an agent (ADR 162): the feature of the forge gives it, the kernel names none.
      */
     public static final Service<AccountOnForge> FORGE_ACCOUNT = Service.of("kernel.forgeAccount", env -> Option.none());
+
+    /**
+     * As given, starting no program: for the tests, which give a launcher of their own when they look at one.
+     */
+    public Env(
+            Git git,
+            SettingsStore settings,
+            RecentRepositories recent,
+            Repositories repositories,
+            Terminal terminal,
+            Services services) {
+        this(git, settings, recent, repositories, terminal, ProgramLauncher.NONE, services);
+    }
 
     /**
      * As given, with nothing of the features'.
@@ -61,24 +78,32 @@ public record Env(
     }
 
     /**
-     * As this, opening other repositories in {@code repositories} and shown on {@code terminal}.
+     * As this, opening other repositories in {@code repositories} and shown on {@code terminal}, which the programs
+     * the user set are started on, as processes of this one.
      */
     public Env withApp(Repositories repositories, Terminal terminal) {
-        return new Env(git, settings, recent, repositories, terminal, services);
+        return new Env(git, settings, recent, repositories, terminal, ProgramLauncher.on(terminal), services);
+    }
+
+    /**
+     * As this, starting the programs the user set with {@code launcher}.
+     */
+    public Env with(ProgramLauncher launcher) {
+        return new Env(git, settings, recent, repositories, terminal, launcher, services);
     }
 
     /**
      * As this, with {@code value} for {@code service}.
      */
     public <T> Env with(Service<T> service, T value) {
-        return new Env(git, settings, recent, repositories, terminal, services.with(service, value));
+        return new Env(git, settings, recent, repositories, terminal, launcher, services.with(service, value));
     }
 
     /**
      * As this, with {@code more} as well: what it gives wins.
      */
     public Env with(Services more) {
-        return new Env(git, settings, recent, repositories, terminal, services.and(more));
+        return new Env(git, settings, recent, repositories, terminal, launcher, services.and(more));
     }
 
     /**

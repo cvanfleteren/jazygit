@@ -138,3 +138,6 @@ Amended by ADR 164: the settings panel edits the agents, which the app now write
 
 Amended by ADR 167: the stack of pull requests attaches its actions to the branches' scope from `features-github`,
 as the failed build's actions are.
+
+Amended by ADR 183: the agent is started by the kernel's `ProgramLauncher`, not through git's `Editor`, and fails as a
+`ProgramFailure`.

@@ -68,9 +68,10 @@ final class RepositoryEnv {
 
     /**
      * As {@code env}, but for the repository {@code git} reads, with the {@code settings} of the session, where ssh
-     * may ask the user as {@code ssh} lets it.
+     * may ask the user as {@code ssh} lets it, starting programs as {@code env} does.
      */
     static Env reopen(Env env, Git git, Settings settings, SshAsking ssh) {
-        return of(git, settings, env.settings(), env.recent(), env.repositories(), env.terminal(), ssh);
+        return of(git, settings, env.settings(), env.recent(), env.repositories(), env.terminal(), ssh)
+                .with(env.launcher());
     }
 }

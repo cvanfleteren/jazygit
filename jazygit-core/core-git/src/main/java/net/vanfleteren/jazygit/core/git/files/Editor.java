@@ -3,14 +3,14 @@ package net.vanfleteren.jazygit.core.git.files;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
 
 /**
- * Editing files, as git edits commit messages (ADR 69).
+ * Editing files, as git edits commit messages (ADR 69), in the editor git names. A program the user set, as an editor
+ * that opens a worktree, is not git's: a feature starts it with the kernel's {@code ProgramLauncher} (ADR 183).
  */
 public interface Editor {
 
@@ -35,18 +35,4 @@ public interface Editor {
      * the terminal, which the caller must have handed over. Fails as {@link #editMessage} does.
      */
     Either<GitFailure, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text);
-
-    /**
-     * Runs {@code commandLine}, an editor the user set, in {@code directory}, and waits until it is closed (ADR 110).
-     * It runs on the terminal, which the caller must have handed over. Fails with a {@link GitError.EditorNotStarted}
-     * or {@link GitError.EditorFailed}.
-     */
-    Either<GitFailure, List<ExecutedCommand>> open(Path directory, List<String> commandLine);
-
-    /**
-     * Starts {@code commandLine}, an editor the user set, in {@code directory}, and leaves it running, as a browser
-     * is (ADR 110): it gets no input, and its output is thrown away. Fails with a {@link GitError.EditorNotStarted}, or
-     * a {@link GitError.EditorExitedAtStart} when it exits with an error before it is taken to have started.
-     */
-    Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine);
 }

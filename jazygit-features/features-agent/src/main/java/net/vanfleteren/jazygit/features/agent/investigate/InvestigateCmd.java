@@ -1,14 +1,10 @@
 package net.vanfleteren.jazygit.features.agent.investigate;
 
 import io.vavr.collection.List;
-import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.core.git.process.GitFailure;
-import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.kernel.state.Env;
-import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
@@ -40,10 +36,9 @@ public record InvestigateCmd(AgentProgram agent, String worktree, FailedBuild bu
     public Msg run(Env env) {
         Path directory = Path.of(worktree);
         List<String> commandLine = agent.commandLine(worktree, prompt(env.forgeAccount()));
-        Either<GitFailure, List<ExecutedCommand>> started = agent.terminal()
-                ? env.terminal().handOver(() -> env.git().editor().open(directory, commandLine))
-                : env.git().editor().launch(directory, commandLine);
-        return started.mapLeft(Failure::of).fold(this::failed, this::succeeded);
+        return env.launcher()
+                .launch(agent, directory, commandLine)
+                .fold(this::failed, started -> succeeded(List.of(started)));
     }
 
     /**
