@@ -1,11 +1,13 @@
 package net.vanfleteren.jazygit.features.changes.panes.commits;
 
+import net.vanfleteren.jazygit.kernel.state.view.TabId;
 import net.vanfleteren.jazygit.kernel.ui.PaneKey;
+import net.vanfleteren.jazygit.kernel.ui.tabs.PaneTab;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PaneLine;
 
 /**
- * What the features can fill in the commits pane (ADR 172), which knows no feature. For each key, the first feature
- * that gives anything, in the order of the features, is the one shown.
+ * What the features can fill in the commits pane (ADR 172), which knows no feature. For the line and the listing, the
+ * first feature that gives anything, in the order of the features, is the one shown; every tab given is shown.
  */
 public final class CommitsPane {
 
@@ -19,6 +21,18 @@ public final class CommitsPane {
      */
     public static final PaneKey<CommitsListing> LISTING =
             PaneKey.of("changes.panes.commits.listing", CommitsListing.class);
+
+    /**
+     * The tabs the features add after the log, in the order of the features (ADR 185).
+     */
+    @SuppressWarnings("unchecked")
+    public static final PaneKey<PaneTab<?>> TABS =
+            PaneKey.of("changes.panes.commits.tabs", (Class<PaneTab<?>>) (Class<?>) PaneTab.class);
+
+    /**
+     * The pane's own first tab: the log of HEAD, or what is listed in its place.
+     */
+    public static final TabId LOG = new TabId("changes.panes.commits.log");
 
     private CommitsPane() {}
 }

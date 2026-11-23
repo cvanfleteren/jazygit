@@ -27,7 +27,9 @@ reflog entries. And the next feature to want a tab is in sight: tags (wanted.md)
   open value the feature gives, as it names a part; a pane with no selection shows its first tab. It is not saved, so
   a restart opens on the first tab; it stays when another worktree is opened.
 - **`[` and `]` switch tabs, and a click on a title selects it**, drawn and hit as in the branches pane, so the two
-  panes behave alike.
+  panes behave alike. The two keys are a scope of their own, `Scopes.PANE_TABS`, acting on the tabs shown
+  (`ShownTabs`); the pane's own scope hosts it (ADR 161), and so does the scope of each tab a feature adds, so the keys
+  work from every tab. While a pane shows only its first tab they act on nothing, and the help shows them dimmed.
 - **Commit search belongs to the Commits tab**: its line and listing (ADR 172) replace the log there, and the other
   tabs offer no search.
 - **The branches pane keeps its tabs for now.** The key leaves room for a pane's own tabs as well as the features', so

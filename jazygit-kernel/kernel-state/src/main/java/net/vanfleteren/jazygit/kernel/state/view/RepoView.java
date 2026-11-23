@@ -8,6 +8,7 @@ import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Focus;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.state.diff.Opened;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
@@ -27,6 +28,8 @@ import net.vanfleteren.jazygit.lib.lens.Lens;
  *                    popup gives it back to; none before the view reported one
  * @param areas       what each area of the content panel shows besides what it is given, by the id of the area; an
  *                    area that keeps nothing is not in it
+ * @param tabs        the tab each pane with tabs shows, by the id of the pane; a pane that is not in it shows its first
+ *                    (ADR 185)
  */
 @With
 public record RepoView(
@@ -35,7 +38,8 @@ public record RepoView(
         FilesView files,
         PreviewView preview,
         Option<Focus.OnScreen> focusedPane,
-        Map<AreaId, AreaView> areas) {
+        Map<AreaId, AreaView> areas,
+        Map<PaneId, TabId> tabs) {
 
     public static final Lens<RepoView, BranchesView> BRANCHES = Lens.of(RepoView::branches, RepoView::withBranches);
 
@@ -51,6 +55,7 @@ public record RepoView(
             FilesView.INITIAL,
             PreviewView.INITIAL,
             Option.none(),
+            HashMap.empty(),
             HashMap.empty());
 
     /**
@@ -79,6 +84,20 @@ public record RepoView(
      */
     public RepoView mapPreview(UnaryOperator<PreviewView> f) {
         return withPreview(f.apply(preview));
+    }
+
+    /**
+     * The tab {@code pane} shows, if it was ever switched; else it shows its first (ADR 185).
+     */
+    public Option<TabId> tab(PaneId pane) {
+        return tabs.get(pane);
+    }
+
+    /**
+     * This view with {@code pane} showing its tab {@code tab}.
+     */
+    public RepoView withTab(PaneId pane, TabId tab) {
+        return withTabs(tabs.put(pane, tab));
     }
 
     /**

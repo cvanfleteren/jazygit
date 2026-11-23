@@ -468,7 +468,8 @@ class WorktreeUpdateTest {
                 next.model().popup());
 
         assertEquals(
-                List.of(RecentReposCmd.SwitchTo.worktree("/repos/app-feature")),
+                List.of(RecentReposCmd.SwitchTo.worktree(
+                        "/repos/app-feature", next.model().repoView())),
                 Update.update(next.model(), new AddWorktreeMsg.SwitchConfirmed())
                         .cmds());
         Next stayed = Update.update(next.model(), new PopupMsg.Dismissed(SwitchToAddedPopup.class));

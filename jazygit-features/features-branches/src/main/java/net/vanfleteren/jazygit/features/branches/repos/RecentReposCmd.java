@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Landing;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
+import net.vanfleteren.jazygit.kernel.state.view.RepoView;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import org.slf4j.LoggerFactory;
 
@@ -76,10 +77,11 @@ public sealed interface RecentReposCmd extends Cmd {
         public static final Landing WORKTREES = new Landing(BranchesTab.WORKTREES, Option.of(Scopes.BRANCHES.pane()));
 
         /**
-         * Opens the worktree at {@code location}, shown on the worktrees.
+         * Opens the worktree at {@code location}, shown on the worktrees, its panes on the tabs they show in
+         * {@code view}.
          */
-        public static SwitchTo worktree(String location) {
-            return new SwitchTo(location, WORKTREES);
+        public static SwitchTo worktree(String location, RepoView view) {
+            return new SwitchTo(location, WORKTREES.keepingTabs(view));
         }
 
         @Override

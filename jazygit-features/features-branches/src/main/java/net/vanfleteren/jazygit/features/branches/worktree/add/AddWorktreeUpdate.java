@@ -72,7 +72,7 @@ public final class AddWorktreeUpdate {
                 model.popup(SwitchToAddedPopup.class)
                         .map(popup -> Next.of(
                                 model.withoutPopup(SwitchToAddedPopup.class).clearError(),
-                                RecentReposCmd.SwitchTo.worktree(popup.location())))
+                                RecentReposCmd.SwitchTo.worktree(popup.location(), model.repoView())))
                         .getOrElse(() -> Next.of(model));
         };
     }
@@ -103,7 +103,8 @@ public final class AddWorktreeUpdate {
     private static Next added(Model model, AddWorktreeCmd cmd, String location, List<ExecutedCommand> commands) {
         Option<Notice> kept = kept(cmd.source());
         if (cmd.switching()) {
-            Landing there = new Landing(BranchesTab.LOCAL, model.repoView().focusedPane());
+            Landing there =
+                    new Landing(BranchesTab.LOCAL, model.repoView().focusedPane()).keepingTabs(model.repoView());
             return OperationUpdate.succeeded(model, cmd, commands)
                     .and(new RecentReposCmd.SwitchTo(
                             location,
