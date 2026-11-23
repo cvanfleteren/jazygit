@@ -275,7 +275,7 @@ Each step is a PR of its own, with unit, Pilot and acceptance tests, and facts e
 learned.
 
 1. **ADR 185 and ADR 186**: done.
-2. **Read the reflog in core-git.**
+2. **Read the reflog in core-git**: done.
    - `ReflogEntry`, `Action` and its parser, and `History.reflog` with paging.
    - Unit tests for every subject kind, and integration tests against real repositories: empty, logAllRefUpdates
      off, a pruned commit, reftable, a worktree.
