@@ -1,7 +1,8 @@
 # Plan: the reflog and undo
 
-Status: proposal, to be grilled; once settled it becomes ADR 0183 (the reflog view) and ADR 0184 (undo). Written
-2026-11-23 against `main` at `a2a6d06`, and lazygit at `5edbd89`.
+Status: the read-only view is settled in ADR 185 and ADR 186; the actions on an entry, undo and the reflogs of
+branches are still a proposal, to be grilled. Written 2026-11-23 against `main` at `a2a6d06`, and lazygit at
+`5edbd89`.
 
 This is wanted.md item 5: "A reflog view with 'reset to here', plus an `undo` key that reverts the last operation the
 app ran, building on the command log."
@@ -131,97 +132,8 @@ current branch". lazygit's own comment says this is deliberate.
 
 ## 3. The reflog view
 
-### 3.1 Reading (core-git)
-
-- Add a method `History.reflog(ref, limit, skip)` that returns `List<ReflogEntry>`. `ref` is `HEAD` or `refs/heads/x`.
-- Build it on `CliHistory.read` and its `FIELDS`, so that each entry carries a full `Commit` from one process:
-
-  ```text
-  git log --walk-reflogs --date=unix -z --no-color --no-show-signature \
-      --format=%gd<SEP>%gs<SEP><FIELDS> -n <limit> --skip <skip> HEAD --
-  ```
-
-- `%gd` with `--date=unix` gives `HEAD@{1763900000}`, the time of the entry. The entry's index is its position.
-  `%gs` is the subject.
-- `ReflogEntry(Instant at, Action action, String subject, Commit commit, boolean byJazygit)` goes in core-repo, beside
-  `Commit` and `Stash`.
-- `Action` is a sealed type parsed from the subject:
-  - `Checkout(from, to)`
-  - `Commit(kind)`, where kind is plain, amend, initial or merge
-  - `Reset(to)`
-  - `Rebase(phase)`
-  - `Merge`, `Pull`, `CherryPick`, `Revert`, `Branch`, `Clone`
-  - `Other(text)`
-- git writes these subjects untranslated. Parse the English prefixes, and keep `Other` for whatever else appears.
-- `byJazygit` is true when the subject starts with `jazygit:` (§4.2).
-- The private `ReflogEntry` in `CliBranches` (`:523-537`) and the parser in `CliStashes` (`:75-91`) stay as they are.
-  They read other shapes for other ends. Share the selector and subject splitting with them only if that falls out
-  naturally.
-- Edge cases, each to be checked and written into `documentation/facts/git.md`:
-  - No commit yet, or `core.logAllRefUpdates=false`: an empty list, plus a flag that says why.
-  - A bare repository has no HEAD reflog by default.
-  - Entries whose commit was pruned by gc. Check what `git log -g` does with a missing object. It may stop or fail;
-    the reader must not lose the entries above it.
-  - Reftable repositories: `git log -g` works there, but the files under `logs/` do not exist.
-  - A worktree reads its own HEAD reflog, from `<gitDir>/logs/HEAD`. Branch reflogs are shared through `commonDir`.
-- Lost entries: one more process, over the shas of the shown page only.
-
-  ```text
-  git rev-list --no-walk=unsorted <shas…> --not --branches --tags --remotes --stdin
-  ```
-
-  Or `git merge-base --independent`, or `for-each-ref --contains`; measure them first. Every sha it lists is lost.
-  Run it after the list is drawn, as a second `Loadable`, so the list never waits for it.
-- Performance targets, measured into facts:
-  - The first page (limit 200) under 30 ms on jazygit's own repository.
-  - The lost check under 50 ms.
-  - Nothing read while the reflog is not shown.
-
-### 3.2 State and refresh (features-changes)
-
-- The reflog's state is a part of its own, `Part.of("changes.reflog")` (ADR 157). It is
-  `.rereading` and `.knowingCommits`, so that `model.commit(sha)` finds the entries' commits. That lets reset,
-  cherry-pick and the content panel work unchanged, as for commit search.
-- It is `.reacting` to `KernelEvent.LogRead` and `OperationDone`, and only while shown.
-- A change made outside the app (a commit from the CLI) needs a stamp:
-  - Add `logs/HEAD` of the worktree's `gitDir` to `GitMetadata`, or a stamp of the reftable directory when there is
-    one.
-  - Look at it only while the reflog is shown, so the branch read is untouched. ADR 56 kept `logs/refs/heads` out of
-    it for that reason.
-- The part is not `carrying`. Another worktree has another HEAD, and so another reflog (ADR 182).
-- Paging: reaching the end of the list asks for the next page, appended. The model keeps the entries and an
-  `exhausted` flag. Reading again rereads the first page and drops the rest; reflogs are short enough that there is no
-  need to merge.
-
-### 3.3 Where it shows
-
-The commits pane has no tabs. There are two ways in:
-
-- **A. A listing fill (recommended to start).**
-  - A key in the commits pane fills `CommitsPane.LISTING` with the reflog, as commit search does. `L`, for log of
-    HEAD, is free. Escape goes back to the log.
-  - `CommitsListing` holds only `Commit` today. Give it an optional text per row, or a row function, so it can show
-    the time, the action and the markers.
-  - This needs no change in the kernel.
-- **B. Tabs in the commits pane, as the branches pane has.**
-  - Commits | Reflog, with `[`/`]`, like lazygit. `BranchesTab` is a closed kernel enum.
-  - Making tabs a general `PaneKey` (a feature adds a tab to a pane) is the "add a general extension point" path that
-    agents.md prefers. Tags (wanted.md item 7) would use it next.
-  - Do this as soon as a second tab is wanted, and move the reflog onto it then.
-
-Row layout, using the width the commits pane has:
-
-```text
-◆ 3m   checkout  main → feature-x            a1b2c3d
-  1h   commit    Fix the parser              9f8e7d6
-✗ 2h   reset     to HEAD~2                   4c5d6e7   ← lost: no ref reaches it
-  2h ⚙ rebase    finish (3 commits)          …         ← ⚙ = by jazygit
-```
-
-- `◆` marks the entries at HEAD's commit; `✗` marks the lost ones. Both go in a `Legend` (ADR 168), so help explains
-  them.
-- The time is relative, with the absolute time in the properties of the content panel (ADR 170).
-- The pane's title says how many entries are shown, and whether there are more.
+The read-only view is decided: tabs in panes in [ADR 185](../adr/0185-a-pane-has-tabs-the-features-add.md), and
+the reflog of HEAD in [ADR 186](../adr/0186-the-reflog-of-head-read-only.md). What follows is still open.
 
 ### 3.4 Keys on an entry
 
@@ -362,32 +274,31 @@ Recommend (a), or neither, since the reflog view covers recovery after a restart
 Each step is a PR of its own, with unit, Pilot and acceptance tests, and facts entries for whatever git behaviour it
 learned.
 
-1. **ADR 0183 (the reflog view) and ADR 0184 (undo)**, written from the grilling. Check that the numbers are free on
-   `origin/main` and in open PRs.
+1. **ADR 185 and ADR 186**: done.
 2. **Read the reflog in core-git.**
    - `ReflogEntry`, `Action` and its parser, and `History.reflog` with paging.
    - Unit tests for every subject kind, and integration tests against real repositories: empty, logAllRefUpdates
      off, a pruned commit, reftable, a worktree.
    - Facts on timing and on the edge cases.
-3. **The reflog in the commits pane.**
-   - The part, the listing fill (extend `CommitsListing` with row text), `Scopes.REFLOG`, and the HEAD marker.
-   - Copy sha, for commits too.
-   - Bindings for reset, checkout, new branch and cherry-pick copy.
-   - A Pilot test of the rows, and an acceptance test that "reset to an entry" recovers a dropped commit.
+3. **Tabs in panes, and the reflog tab** (ADR 185, 186): the tab key, the selected tab in the model, the reflog's
+   part, paging ahead, `Scopes.REFLOG`, the HEAD marker, rereading, copy sha for commits too. A Pilot test of the tabs
+   and the rows.
 4. **Lost entries.** The second load and the `✗` marker, with a `Legend`.
 5. **Stamp `logs/HEAD`** so external commits show while the reflog is open.
-6. **`GIT_REFLOG_ACTION` on every operation**, and the `⚙` marker. Acceptance tests check the subjects git writes.
-7. **Snapshots on the command log.**
+6. **Actions on an entry**, after their own grilling: reset, checkout, new branch, cherry-pick copy, bound in
+   `Scopes.REFLOG`, with an acceptance test that a branch at an entry recovers a dropped commit.
+7. **`GIT_REFLOG_ACTION` on every operation**, and the `⚙` marker. Acceptance tests check the subjects git writes.
+8. **Snapshots on the command log.**
    - `RefSnapshot`, before and after, `Operation.undo` on every operation.
    - An `ArchUnit` or `FeaturesTest` check that no operation leaves `undo` unset.
-8. **Undo.**
+9. **Undo.**
    - `UndoUpdate` (pure, exhaustively unit tested): the guards, the plans, the stack.
    - `UndoCmd` (an update-ref transaction, then reset or checkout), the dialog, and the key.
    - Acceptance tests: undo each of commit, amend, drop, squash, reword, rebase onto, merge, pull, checkout, branch
      delete, branch rename, stash drop, hard reset on a clean tree. Undo after an outside commit must be refused.
      Then undo, undo, redo.
-9. **Redo**, and the multi-step undo dialog.
-10. **P2:** branch reflogs, restore a deleted branch, filtering, grouping rebases, tabs in the commits pane.
+10. **Redo**, and the multi-step undo dialog.
+11. **P2:** branch reflogs, restore a deleted branch, filtering, grouping rebases.
 
 ## 7. Questions for the grilling
 
