@@ -11,6 +11,8 @@ import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.Locale;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
@@ -35,6 +37,11 @@ public final class CliHistory implements History {
     // The mark %m prints for a boundary commit of git log --boundary.
     private static final String BOUNDARY = "-";
     private static final String MARKED_FORMAT = "%m" + GitOutput.PRETTY_FIELD_SEPARATOR + FORMAT;
+    // A reflog entry's selector, which --date=unix makes its time, and its subject, then the fields of its commit.
+    private static final String REFLOG_FORMAT =
+            "%gd" + GitOutput.PRETTY_FIELD_SEPARATOR + "%gs" + GitOutput.PRETTY_FIELD_SEPARATOR + FORMAT;
+    // How git config writes false: https://git-scm.com/docs/git-config#Documentation/git-config.txt-boolean
+    private static final Set<String> FALSE = HashSet.of("false", "no", "off", "0");
 
     private final Path worktree;
 
@@ -506,6 +513,87 @@ public final class CliHistory implements History {
                         List.of("--max-count=1", GitArgs.revision(revision), GitArgs.not(local))
                                 .appendAll(seen.map(sha -> GitArgs.not(new Revision.Commit(sha))))))
                 .map(missing -> missing == 0);
+    }
+
+    /**
+     * The entries of HEAD's reflog, read with {@code git log --walk-reflogs}. With {@code --date=unix}, {@code %gd}
+     * is the time of the entry, {@code HEAD@{1795463129}}, so the place of an entry is counted, from {@code skip};
+     * {@code --skip} counts the entries git shows, so the pages join up. git leaves out an entry whose commit is
+     * gone without saying so, and the places after it are one lower than git's own then, which only a prune that
+     * ignores the reflogs leads to (ADR 186).
+     */
+    @Override
+    public Either<GitError, Reflog> reflog(int skip, int max) {
+        Either<GitError, List<ReflogEntry>> read = GitProcess.read(
+                worktree,
+                GitCommand.reading(
+                        "log",
+                        "--walk-reflogs",
+                        "--no-color",
+                        "--no-show-signature",
+                        "-z",
+                        "--date=unix",
+                        "--skip=" + skip,
+                        "--max-count=" + max,
+                        "--format=" + REFLOG_FORMAT,
+                        "HEAD",
+                        "--"),
+                raw -> parseReflog(raw, skip));
+        return skip > 0
+                ? read.map(Reflog.Entries::new)
+                : read.fold(
+                        error -> Either.<GitError, Option<Sha>>narrow(
+                                        resolve(worktree, "HEAD").mapLeft(GitFailure::error))
+                                .flatMap(head ->
+                                        head.isEmpty() ? Either.right(Reflog.Empty.NO_COMMITS) : Either.left(error)),
+                        entries -> entries.isEmpty()
+                                ? reflogsOff(worktree).map(off -> off ? Reflog.Empty.OFF : new Reflog.Entries(entries))
+                                : Either.right(new Reflog.Entries(entries)));
+    }
+
+    /**
+     * Whether git keeps no reflogs in the repository of {@code worktree}: {@code core.logAllRefUpdates} says
+     * false, or is not set in a bare repository.
+     */
+    private static Either<GitError, Boolean> reflogsOff(Path worktree) {
+        return GitProcess.ask(worktree, GitCommand.reading("config", "--get", "core.logAllRefUpdates"))
+                .mapLeft(GitFailure::error)
+                .flatMap(answer -> answer.fold(
+                        () -> GitProcess.read(
+                                worktree,
+                                GitCommand.reading("rev-parse", "--is-bare-repository"),
+                                raw -> Either.right(raw.strip().equals("true"))),
+                        set -> Either.right(FALSE.contains(set.stdout().strip().toLowerCase(Locale.ROOT)))));
+    }
+
+    /**
+     * Parses {@code git log --walk-reflogs -z} output in the format of {@link #REFLOG_FORMAT}, the first entry
+     * being at {@code first}.
+     */
+    static Either<UnexpectedOutput, List<ReflogEntry>> parseReflog(String raw, int first) {
+        return Either.sequenceRight(GitOutput.records(raw)
+                        .zipWithIndex()
+                        .map(record -> GitOutput.fields(record._1, 3)
+                                .flatMap(fields -> entryTime(fields.get(0))
+                                        .flatMap(time -> commit(fields.get(2))
+                                                .map(commit -> new ReflogEntry(
+                                                        first + record._2,
+                                                        time,
+                                                        fields.get(1),
+                                                        ReflogSubjects.action(fields.get(1)),
+                                                        commit))))))
+                .map(Seq::toList);
+    }
+
+    /**
+     * The time in a reflog selector that {@code --date=unix} gives, {@code HEAD@{1795463129}}.
+     */
+    private static Either<UnexpectedOutput, Instant> entryTime(String selector) {
+        int open = selector.lastIndexOf("@{");
+        return open >= 0 && selector.endsWith("}")
+                ? GitOutput.epochSeconds(selector.substring(open + 2, selector.length() - 1))
+                        .mapLeft(_ -> new UnexpectedOutput(selector))
+                : Either.left(new UnexpectedOutput(selector));
     }
 
     /**

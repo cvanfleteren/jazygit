@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.copy;
 
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -17,6 +18,11 @@ public sealed interface CopyMsg extends Msg {
      * The user asked to copy what the cursor {@code at} is on (ADR 94).
      */
     record Asked(DiffCursorAt at) implements CopyMsg {}
+
+    /**
+     * The user asked to copy the full sha {@code sha} of a commit.
+     */
+    record ShaAsked(Sha sha) implements CopyMsg {}
 
     /**
      * The terminal was asked to copy, or could not be; {@code notice} tells the user which.

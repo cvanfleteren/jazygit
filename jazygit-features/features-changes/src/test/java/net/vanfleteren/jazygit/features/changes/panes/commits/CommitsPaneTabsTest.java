@@ -11,6 +11,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -63,13 +64,35 @@ class CommitsPaneTabsTest {
     }
 
     @Test
-    void theTitleNamesTheLogThenTheTabsTheFeaturesAdd() throws Exception {
+    void withTabsTheLogIsNamedShortAndALineAtItsBottomSaysWhatItIsTheLogOf() throws Exception {
         CommitsPanel panel = new CommitsPanel(msg -> {}, WITH_TAB);
 
-        String shown = rendered(panel, LOG);
+        java.util.List<String> lines = rendered(panel, LOG).lines().toList();
 
-        assertTrue(shown.contains("Commits of main │ Names"), shown);
+        assertTrue(lines.getFirst().contains("Commits │ Names"), lines.getFirst());
+        assertFalse(lines.getFirst().contains("main"), lines.getFirst());
         assertEquals(List.of("aaaaaaa"), panel.shownRows().map(row -> row.text().substring(0, 7)));
+        // The line just above the bottom border.
+        assertTrue(lines.get(lines.size() - 2).contains("main"), String.join("\n", lines));
+    }
+
+    @Test
+    void theLineAtTheBottomBelongsToTheLog() throws Exception {
+        CommitsPanel panel = new CommitsPanel(msg -> {}, WITH_TAB);
+
+        java.util.List<String> lines =
+                rendered(panel, shownOn(LOG, NAMES)).lines().toList();
+
+        assertFalse(lines.get(lines.size() - 2).contains("main"), String.join("\n", lines));
+    }
+
+    @Test
+    void aDetachedHeadIsNamedByItsCommit() {
+        Model detached = LOG.mapRepo(repo -> repo.withStatus(
+                repo.status().map(status -> status.withHead(new Head.Detached(new Sha("1234567890abcdef"))))));
+
+        assertEquals("detached at 1234567", CommitsPanel.headName(detached));
+        assertEquals("main", CommitsPanel.headName(LOG));
     }
 
     @Test
@@ -108,7 +131,10 @@ class CommitsPaneTabsTest {
         String onLog = rendered(panel, LOG);
         String onNames = rendered(panel, shownOn(LOG, NAMES));
 
-        assertTrue(onLog.contains("Found │ Names") && onLog.contains("/ ab"), onLog);
+        // What is listed in place of the log names itself in the line at the bottom, as the log does.
+        assertTrue(onLog.contains("Commits │ Names") && onLog.contains("/ ab"), onLog);
+        java.util.List<String> logLines = onLog.lines().toList();
+        assertTrue(logLines.get(logLines.size() - 2).contains("Found"), onLog);
         assertFalse(onNames.contains("/ ab"), onNames);
         assertTrue(onNames.contains("name ada"), onNames);
     }
@@ -132,7 +158,7 @@ class CommitsPaneTabsTest {
     void clickingTheNameOfATabShowsIt() throws Exception {
         java.util.List<Msg> sent = new java.util.ArrayList<>();
         CommitsPanel panel = new CommitsPanel(sent::add, WITH_TAB);
-        int log = "Commits of main".length();
+        int log = "Commits".length();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(LOG, CommitsPanel.PANE))) {
             RenderedText.of(testRunner, () -> panel.render(LOG, CommitsPanel.PANE));
             // The title starts after the corner of the border.

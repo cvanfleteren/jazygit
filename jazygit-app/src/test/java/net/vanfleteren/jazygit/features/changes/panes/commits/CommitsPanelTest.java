@@ -338,8 +338,9 @@ class CommitsPanelTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
             String shown = RenderedText.of(testRunner, () -> panel.render(model, CommitsPanel.PANE));
 
-            // The title names the branch whose log it lists.
-            assertTrue(shown.contains("Commits of main · 2 ahead of origin/ma"), shown);
+            // With the reflog's tab, the title names the tabs and a line at the bottom the branch whose log it lists.
+            assertTrue(shown.contains("Commits │ Reflog"), shown);
+            assertTrue(shown.contains("main · 2 ahead of origin/main"), shown);
             assertTrue(shown.contains("1/4"), shown);
             assertFalse(shown.contains("⑂"), shown);
             SettledPilot.of(testRunner).quit();

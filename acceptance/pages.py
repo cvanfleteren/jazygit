@@ -809,8 +809,9 @@ class CommitsPane:
         self.repo = ui.repo
 
     def shows_history(self) -> bool:
+        # The line at the bottom of the log says what it is the log of, which names the commit of a detached HEAD.
         shown = [match.group() for line in self.app.pane_text("Commits").splitlines()
-                 if (match := SHA.search(line))]
+                 if (match := SHA.search(line)) and not line.startswith("detached at ")]
         history = self.repo("log", "--format=%h", "--abbrev=7").splitlines() if self.repo.has_head() else []
         # The pane may be too short for all of them, but shows some as soon as there are any. In any order: the commits
         # all have the same date, and the app draws the parents of a merge in an order of its own.

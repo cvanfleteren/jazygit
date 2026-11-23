@@ -51,6 +51,15 @@ class CopyUpdateTest {
     private static final ScrolledContent CONTENT = new ScrolledContent.StashChanges(new Sha("5555"), CHANGES);
 
     @Test
+    void theShaOfACommitIsCopiedWhole() {
+        Sha sha = new Sha("c".repeat(40));
+
+        Next next = Update.update(loaded(), new CopyMsg.ShaAsked(sha));
+
+        assertEquals(List.of(new CopyCmd("c".repeat(40), new ShaCopied(sha))), next.cmds());
+    }
+
+    @Test
     void theLineOfTheCursorIsCopiedWithoutItsMarker() {
         Next next = Update.update(loaded(), new CopyMsg.Asked(at(right(10), Option.none())));
 

@@ -116,6 +116,21 @@ public final class LoadableList<T> {
             Line title,
             Option<StyledElement<?>> above,
             Consumer<PasteEvent> paste) {
+        return renderItems(value, items, focused, active, title, above, Option.none(), paste);
+    }
+
+    /**
+     * @param below a line drawn below the rows, inside the border, if there is one, as what the list is of
+     */
+    public Panel renderItems(
+            Loadable<T> value,
+            Function<T, List<Item>> items,
+            boolean focused,
+            boolean active,
+            Line title,
+            Option<StyledElement<?>> above,
+            Option<StyledElement<?>> below,
+            Consumer<PasteEvent> paste) {
         this.focused = focused;
         list.highlightStyle(highlights.of(active))
                 .highlightSymbol(active ? highlightSymbol : " ".repeat(highlightSymbol.length()));
@@ -146,8 +161,10 @@ public final class LoadableList<T> {
         shownItems = rows;
         // Only the list has its scrollbar on the right border: a line above it keeps the width inside it.
         Element bordered = BorderBar.of(list);
-        Element content = above.<Element>map(line -> new PasteTarget(column(line, bordered), list.id(), paste))
-                .getOrElse(bordered);
+        Element withBelow =
+                below.<Element>map(line -> new LineBelow(bordered, line)).getOrElse(bordered);
+        Element content = above.<Element>map(line -> new PasteTarget(column(line, withBelow), list.id(), paste))
+                .getOrElse(withBelow);
         return Pane.bordered(title, content, focused, selectedIndex(), count);
     }
 

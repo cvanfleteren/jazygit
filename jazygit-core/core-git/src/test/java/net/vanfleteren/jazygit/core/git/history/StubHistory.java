@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.CommitRange;
 import net.vanfleteren.jazygit.core.repo.Divergence;
+import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -74,6 +75,11 @@ public interface StubHistory extends History {
     @Override
     default Either<GitError, Boolean> everHad(BranchName branch, Revision revision) {
         return Either.right(true);
+    }
+
+    @Override
+    default Either<GitError, Reflog> reflog(int skip, int max) {
+        return Either.right(new Reflog.Entries(List.empty()));
     }
 
     @Override
