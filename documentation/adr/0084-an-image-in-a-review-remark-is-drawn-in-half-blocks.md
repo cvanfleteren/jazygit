@@ -60,3 +60,5 @@ any other.
 - A comment that holds a character of the private use area itself may have it drawn as a cell of a picture.
 
 Amended by ADR 187: the images of the comments of the conversation of a pull request are drawn too.
+
+Amended by ADR 188: where the terminal draws images, with the Kitty graphics protocol or Sixel, a picture is drawn sharp; half blocks stay where it does not.

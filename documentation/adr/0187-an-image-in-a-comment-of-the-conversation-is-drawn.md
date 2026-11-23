@@ -29,3 +29,5 @@ comment.
 - A screenshot in a comment of the conversation shows what it shows, as roughly as in a review remark.
 - Opening the dialog reads its images each time, as it reads its comments.
 - A comment with pictures is rendered whole on each frame, not only what is in view.
+
+Amended by ADR 188: where the terminal draws images, with the Kitty graphics protocol or Sixel, the pictures of the conversation are drawn sharp.

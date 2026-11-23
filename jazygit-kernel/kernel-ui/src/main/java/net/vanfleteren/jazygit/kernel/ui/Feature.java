@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
+import net.vanfleteren.jazygit.lib.image.Picture;
 
 /**
  * A feature, as the app knows it: its actions, which bring its keys and its popups, what it shows in the content
@@ -57,6 +58,7 @@ import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
  * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
  * @param legends     what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
  * @param fills       what it gives for the keys of the panes, as the line above a list or what a pane lists (ADR 172)
+ * @param picturing   the pictures its views may draw, which a terminal that draws images itself is sent (ADR 188)
  */
 public record Feature(
         List<FeatureAction> actions,
@@ -71,6 +73,7 @@ public record Feature(
         Running running,
         Predicate<Model> spinning,
         Function<Model, List<ShownTime>> clocking,
+        Function<Model, List<Picture>> picturing,
         Option<Applying> applying) {
 
     /**
@@ -92,6 +95,7 @@ public record Feature(
                 Running.NONE,
                 model -> false,
                 model -> List.empty(),
+                model -> List.empty(),
                 Option.none());
     }
 
@@ -112,6 +116,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -132,6 +137,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -152,6 +158,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -173,6 +180,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -194,6 +202,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -215,6 +224,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -236,6 +246,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -257,6 +268,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -278,6 +290,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -299,6 +312,7 @@ public record Feature(
                 running,
                 before.or(spinning),
                 clocking,
+                picturing,
                 applying);
     }
 
@@ -321,6 +335,30 @@ public record Feature(
                 running,
                 spinning,
                 model -> before.apply(model).appendAll(clocking.apply(model)),
+                picturing,
+                applying);
+    }
+
+    /**
+     * This feature, also telling which pictures {@code picturing} says its views may draw, which a terminal that draws
+     * images itself is sent once they are on the screen (ADR 188).
+     */
+    public Feature picturing(Function<Model, List<Picture>> picturing) {
+        Function<Model, List<Picture>> before = this.picturing;
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                screens,
+                legends,
+                fills,
+                running,
+                spinning,
+                clocking,
+                model -> before.apply(model).appendAll(picturing.apply(model)),
                 applying);
     }
 
@@ -353,6 +391,7 @@ public record Feature(
                 running,
                 spinning,
                 clocking,
+                picturing,
                 Option.of(new Applying(id, detect)));
     }
 
@@ -390,6 +429,7 @@ public record Feature(
                 running,
                 model -> model.on(id) && spinning.test(model),
                 model -> model.on(id) ? clocking.apply(model) : List.empty(),
+                model -> model.on(id) ? picturing.apply(model) : List.empty(),
                 Option.of(applying));
     }
 

@@ -217,3 +217,4 @@ another tool adds it there too.
 | 188 | [The reflog reads what keeps its commits with its page](0188-the-reflog-reads-what-keeps-its-commits-with-its-page.md) |  |
 | 189 | [The branches pane has the tabs of any pane](0189-the-branches-pane-has-the-tabs-of-any-pane.md) |  |
 | 187 | [An image in a comment of the conversation is drawn too](0187-an-image-in-a-comment-of-the-conversation-is-drawn.md) |  |
+| 188 | [The terminal draws a picture sharp where it can: Kitty, else Sixel, else half blocks](0188-the-terminal-draws-a-picture-sharp-where-it-can.md) |  |

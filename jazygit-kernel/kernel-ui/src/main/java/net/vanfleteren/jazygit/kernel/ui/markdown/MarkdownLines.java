@@ -185,7 +185,7 @@ public final class MarkdownLines {
             }
             int at = done._2().get(index).getOrElse(0);
             return Tuple.of(
-                    done._1().append(HalfBlocks.cell(pictures.get(index), at)),
+                    done._1().append(KittyGraphics.drawn(pictures.get(index), at)),
                     done._2().put(index, at + 1));
         });
     }

@@ -163,7 +163,7 @@ public final class MarkdownScroll {
             Spot at = cell._1()._1();
             Cell was = buffer.get(at.x(), at.y());
             Tuple2<Style, String> pixel =
-                    HalfBlocks.cell(pictures.get(cell._1()._2()), cell._2()._2());
+                    KittyGraphics.drawn(pictures.get(cell._1()._2()), cell._2()._2());
             Style style = pixel._1().bg().isPresent()
                     ? pixel._1()
                     : was.style().bg().map(pixel._1()::bg).orElse(pixel._1());

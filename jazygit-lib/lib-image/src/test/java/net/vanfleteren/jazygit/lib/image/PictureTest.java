@@ -62,6 +62,19 @@ class PictureTest {
         assertTrue(Picture.of(Arrays.copyOf(png(4, 4, 0xff000000), 20)).isLeft());
     }
 
+    @Test
+    void anImageIsKeptSharpAtAsManyPixelsAsItsCellsHaveAtMost() throws IOException {
+        Picture small = Picture.of(png(14, 14, 0xffe07828)).get();
+        Picture large = Picture.of(png(1600, 1200, 0xff112233)).get();
+
+        assertEquals(14, small.sharp().get().width());
+        assertEquals(14, small.sharp().get().height());
+        // No more than 24 rows of 16 pixels high, keeping its shape.
+        assertEquals(512, large.sharp().get().width());
+        assertEquals(384, large.sharp().get().height());
+        assertEquals(large.sharp(), large.fit(10, 10, 10, 10).sharp());
+    }
+
     private static byte[] png(int width, int height, int argb) throws IOException {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < height; y++) {

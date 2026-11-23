@@ -8,6 +8,7 @@ import dev.tamboui.terminal.BackendFactory;
 import dev.tamboui.terminal.KeyboardProtocol;
 import dev.tamboui.terminal.KittyKeyboardSupport;
 import dev.tamboui.tui.TuiConfig;
+import io.vavr.control.Option;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
@@ -64,6 +65,8 @@ final class HandOverBackend implements Backend {
     private final Deque<Integer> unread = new ArrayDeque<>();
     private volatile boolean keysPaused;
     private volatile boolean muted;
+    // What is written once a frame is drawn; only touched on the render thread.
+    private AfterDraw afterDraw = AfterDraw.NOTHING;
     // Whether the terminal has the focus, as it reported last, or a key read since says. Only the thread that reads
     // keys touches it.
     private boolean focused = true;
@@ -343,6 +346,7 @@ final class HandOverBackend implements Backend {
         if (!muted) {
             drawn.accept(diff.size());
             backend.draw(diff);
+            afterDraw.drawn(diff);
         }
     }
 
@@ -444,8 +448,20 @@ final class HandOverBackend implements Backend {
     @Override
     public void endSynchronizedUpdate() throws IOException {
         if (!muted) {
+            Option<String> painted = afterDraw.beforeEnd();
+            if (painted.isDefined()) {
+                backend.writeRaw(painted.get());
+            }
             backend.endSynchronizedUpdate();
         }
+    }
+
+    /**
+     * Has {@code after} told what a frame wrote, and write what it says before the frame ends; called on the render
+     * thread.
+     */
+    void afterDraw(AfterDraw after) {
+        afterDraw = after;
     }
 
     @Override
@@ -578,5 +594,34 @@ final class HandOverBackend implements Backend {
     @FunctionalInterface
     private interface Read {
         int within(int timeoutMs) throws IOException;
+    }
+
+    /**
+     * What is written once a frame is drawn, before it is shown: the images Sixel paints (ADR 188).
+     */
+    interface AfterDraw {
+
+        /**
+         * Nothing.
+         */
+        AfterDraw NOTHING = new AfterDraw() {
+            @Override
+            public void drawn(DiffResult diff) {}
+
+            @Override
+            public Option<String> beforeEnd() {
+                return Option.none();
+            }
+        };
+
+        /**
+         * Told the cells a frame wrote.
+         */
+        void drawn(DiffResult diff);
+
+        /**
+         * What to write before the frame ends, if anything.
+         */
+        Option<String> beforeEnd();
     }
 }
