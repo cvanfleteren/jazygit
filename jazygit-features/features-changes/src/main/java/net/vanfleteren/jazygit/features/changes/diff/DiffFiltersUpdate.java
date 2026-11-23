@@ -10,8 +10,8 @@ import net.vanfleteren.jazygit.kernel.state.preferences.SaveSettings;
 
 /**
  * Choosing the diff filters (ADR 144). Which are enabled is kept in the settings, and saved at each change; whether
- * all are switched off holds for this session only, in a part of the model. Either shows at once: the filters hide hunks as the diff is drawn,
- * so nothing is read again.
+ * all are switched off holds for this session only, in a part of the model. Either shows at once: the filters hide
+ * hunks as the diff is drawn, so nothing is read again.
  */
 public final class DiffFiltersUpdate {
 
