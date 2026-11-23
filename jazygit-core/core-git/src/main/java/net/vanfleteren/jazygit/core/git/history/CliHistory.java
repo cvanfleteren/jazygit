@@ -552,6 +552,25 @@ public final class CliHistory implements History {
     }
 
     /**
+     * The commits {@code git rev-list <commits> --not --branches --tags --remotes} lists, those of {@code commits}
+     * among them: it walks from them only as far as the first commit a ref reaches.
+     */
+    @Override
+    public Either<GitError, Set<Sha>> lost(Seq<Sha> commits) {
+        if (commits.isEmpty()) {
+            return Either.right(HashSet.empty());
+        }
+        Set<Sha> asked = HashSet.ofAll(commits);
+        return GitProcess.read(
+                worktree,
+                GitCommand.reading(List.of("rev-list")
+                        .appendAll(asked.toList().map(sha -> GitArgs.revision(new Revision.Commit(sha))))
+                        .appendAll(List.of("--not", "--branches", "--tags", "--remotes", "--"))),
+                raw -> Either.sequenceRight(GitOutput.nonBlankLines(raw).map(GitOutput::sha))
+                        .map(listed -> HashSet.ofAll(listed).filter(asked::contains)));
+    }
+
+    /**
      * Whether git keeps no reflogs in the repository of {@code worktree}: {@code core.logAllRefUpdates} says
      * false, or is not set in a bare repository.
      */

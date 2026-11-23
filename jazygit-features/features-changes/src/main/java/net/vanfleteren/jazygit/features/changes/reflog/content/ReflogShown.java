@@ -23,9 +23,10 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList.Seg;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
 
 /**
- * The reflog of HEAD as the commits pane shows it in a tab (ADR 186): a row an entry, newest first, with the time of
- * the entry, what was done, its subject made short and the short sha; and the commit of the highlighted entry in the
- * content panel, as for a commit of the log.
+ * The reflog of HEAD as the commits pane shows it in a tab (ADR 186): a row an entry, newest first, marked when it is
+ * at HEAD's commit or its commit is lost, with the time of the entry, what was done, its subject made short and the
+ * short sha; and the commit of the highlighted entry in the content panel, as for a commit of the log, under what the
+ * entry is ({@link ReflogSource}).
  */
 public final class ReflogShown {
 
@@ -35,9 +36,19 @@ public final class ReflogShown {
     static final String AT_HEAD = "◆";
 
     /**
+     * What marks an entry whose commit no branch, tag or remote reaches, unless HEAD is at it, which keeps it.
+     */
+    static final String LOST = "✗";
+
+    /**
      * What the mark of an entry at HEAD's commit means, under the keys of the reflog.
      */
     public static final Legend HEAD_LEGEND = new Legend(Scopes.REFLOG.id(), AT_HEAD, "changes.help.reflog.legend.head");
+
+    /**
+     * What the mark of an entry whose commit is lost means, under the keys of the reflog.
+     */
+    public static final Legend LOST_LEGEND = new Legend(Scopes.REFLOG.id(), LOST, "changes.help.reflog.legend.lost");
 
     private static final String REFS_HEADS = "refs/heads/";
     // Wide enough for the longest age, as "365d", and a space.
@@ -59,25 +70,35 @@ public final class ReflogShown {
                 Messages.get("changes.reflog.title"),
                 Scopes.REFLOG,
                 view.entries(),
-                entry -> LoadableList.Item.later(1, () -> row(entry, head, model.now())),
+                entry -> LoadableList.Item.later(1, () -> row(entry, head, view.isLost(entry), model.now())),
                 emptyText(view),
                 entry -> selected(model, view, entry),
                 entry -> Tuple.of(entry.time(), entry.subject(), entry.sha())));
     }
 
     /**
-     * The row of {@code entry}: marked when it is at {@code head}, its age at {@code now}, the action, its subject
-     * made short, which is cut first where the pane is narrow, and the short sha.
+     * The row of {@code entry}: marked when it is at {@code head}, else when it is {@code lost}, its age at
+     * {@code now}, the action, its subject made short, which is cut first where the pane is narrow, and the short sha.
      */
-    static LoadableList.Row row(ReflogEntry entry, Option<Sha> head, Instant now) {
-        String mark = head.contains(entry.sha()) ? AT_HEAD + " " : "  ";
+    static LoadableList.Row row(ReflogEntry entry, Option<Sha> head, boolean lost, Instant now) {
         String age = TimeText.age(Duration.between(entry.time(), now));
         return LoadableList.Row.of(
-                Seg.styled(mark, Theme.Classes.CURRENT_BRANCH),
+                mark(head.contains(entry.sha()), lost),
                 Seg.styled(pad(age, AGE_WIDTH), Theme.Classes.DIM),
                 Seg.styled(pad(action(entry.action()), ACTION_WIDTH), Theme.Classes.BOLD),
                 Seg.of(subject(entry.action()) + " ").shrinking(),
                 Seg.styled(entry.sha().shortSha(), Theme.Classes.SHA));
+    }
+
+    /**
+     * The mark of an entry, and a space: {@link #AT_HEAD} at HEAD's commit, which HEAD keeps whether a ref reaches it
+     * or not, else {@link #LOST} when no ref reaches it.
+     */
+    private static Seg mark(boolean atHead, boolean lost) {
+        if (atHead) {
+            return Seg.styled(AT_HEAD + " ", Theme.Classes.CURRENT_BRANCH);
+        }
+        return lost ? Seg.styled(LOST + " ", Theme.Classes.ERROR) : Seg.of("  ");
     }
 
     /**
@@ -139,7 +160,8 @@ public final class ReflogShown {
 
     /**
      * What highlighting {@code entry} asks for: its commit in the content panel, unless the model shows it already;
-     * then, once it is the oldest entry highlighted, that the reflog reads a page ahead of it.
+     * then that the reflog knows it is highlighted, unless it does, which reads a page ahead of it when it is the
+     * oldest highlighted.
      */
     static Option<Msg> selected(Model model, ReflogView view, Option<ReflogEntry> entry) {
         return entry.flatMap(highlighted -> PaneKeys.selectionChange(
@@ -147,7 +169,8 @@ public final class ReflogShown {
                         model.repoView().preview().commitDetail(),
                         SelectionMsg.CommitSelected::new)
                 .orElse(() -> Option.<Msg>when(
-                        highlighted.place() > view.reached(), new ReflogMsg.Reached(highlighted.place()))));
+                        !view.highlighted().contains(highlighted.place()),
+                        new ReflogMsg.Highlighted(highlighted.place()))));
     }
 
     private static String branch(String name) {

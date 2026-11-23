@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -158,6 +159,53 @@ class CliReflogTest {
     }
 
     @Test
+    void aCommitNoRefReachesIsLost() throws Exception {
+        Path repo = init("repo");
+        commitAt(repo, "One", 1_000);
+        Sha one = head(repo);
+        git(repo, 2_000, "checkout", "-q", "-b", "tmp");
+        commitAt(repo, "Dropped", 3_000);
+        Sha dropped = head(repo);
+        commitAt(repo, "Dropped too", 4_000);
+        Sha droppedToo = head(repo);
+        git(repo, 5_000, "checkout", "-q", "main");
+        git(repo, 0, "branch", "-q", "-D", "tmp");
+
+        assertEquals(
+                HashSet.of(dropped, droppedToo),
+                new CliHistory(repo)
+                        .lost(List.of(droppedToo, one, dropped, one))
+                        .get());
+    }
+
+    @Test
+    void aCommitATagOrARemoteReachesIsNotLost() throws Exception {
+        Path repo = init("repo");
+        commitAt(repo, "One", 1_000);
+        git(repo, 2_000, "checkout", "-q", "--detach");
+        commitAt(repo, "Tagged", 3_000);
+        Sha tagged = head(repo);
+        git(repo, 0, "tag", "kept");
+        commitAt(repo, "Pushed", 4_000);
+        Sha pushed = head(repo);
+        git(repo, 0, "update-ref", "refs/remotes/origin/pushed", pushed.value());
+        commitAt(repo, "Only at HEAD", 5_000);
+        Sha detached = head(repo);
+
+        assertEquals(
+                HashSet.of(detached),
+                new CliHistory(repo).lost(List.of(tagged, pushed, detached)).get());
+    }
+
+    @Test
+    void noCommitsAskedForNeedNoProcess() {
+        // No repository at all: a process would fail.
+        assertEquals(
+                HashSet.empty(),
+                new CliHistory(dir.resolve("nowhere")).lost(List.empty()).get());
+    }
+
+    @Test
     void anEntryIsParsedFromItsSelectorSubjectAndCommit() {
         String raw = String.join(
                         "\u001f",
@@ -192,6 +240,10 @@ class CliReflogTest {
 
     private static List<ReflogEntry> entries(io.vavr.control.Either<GitError, Reflog> read) {
         return ((Reflog.Entries) read.get()).entries();
+    }
+
+    private Sha head(Path repo) throws Exception {
+        return new Sha(git(repo, 0, "rev-parse", "HEAD").strip());
     }
 
     private Path init(String name) throws Exception {

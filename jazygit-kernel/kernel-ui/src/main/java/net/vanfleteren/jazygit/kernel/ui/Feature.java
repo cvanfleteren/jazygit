@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.forge.ForgeUpdate;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
+import net.vanfleteren.jazygit.kernel.ui.content.Heading;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
@@ -456,6 +457,11 @@ public record Feature(
         @Override
         public Option<Shown> shown(Model model, Mirrored pane) {
             return model.on(id) ? source.shown(model, pane) : Option.none();
+        }
+
+        @Override
+        public Option<Heading> heading(Model model, Mirrored pane) {
+            return model.on(id) ? source.heading(model, pane) : Option.none();
         }
 
         @Override

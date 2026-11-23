@@ -28,3 +28,30 @@ def test_the_reflog_tab_lists_where_head_has_been_and_follows_an_operation(repo,
     # Read again after the operation, while the tab is still shown.
     ui.app.wait_in("Commits", "feature → main")
     assert repo.current_branch() == "main"
+
+
+def test_a_commit_only_the_reflog_keeps_is_marked_lost(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("checkout", "-q", "-b", "tmp")
+    repo.commit("Add dropped", **{"dropped.txt": "dropped\n"})
+    dropped = repo.short("HEAD")
+    repo("checkout", "-q", "main")
+    repo("branch", "-q", "-D", "tmp")
+    ui = jazygit()
+    ui.app.wait_for("Add one")
+    ui.app.focus("Commits")
+
+    ui.app.press("]")
+
+    # The rows are drawn first; the lost commit is marked once the look for lost commits is done.
+    ui.app.wait_in("Commits", "✗")
+    rows = ui.app.pane_text("Commits").splitlines()
+    marked = [row for row in rows if "✗" in row]
+    assert marked and all(dropped in row for row in marked), rows
+    assert any("Add dropped" in row for row in marked), rows
+
+    ui.app.move_cursor("Commits", dropped)
+
+    # The content panel says what the entry is above its commit.
+    ui.app.wait_for("✗ Lost: no branch, tag or remote has this commit")
+    ui.app.wait_for("commit: Add dropped")

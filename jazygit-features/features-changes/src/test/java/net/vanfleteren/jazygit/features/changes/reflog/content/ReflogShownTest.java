@@ -46,10 +46,18 @@ class ReflogShownTest {
     void aRowMarksAnEntryAtHeadAndShowsItsAgeActionSubjectAndSha() {
         assertEquals(
                 "◆ 2m   checkout      main → feature-x " + HEAD.shortSha(),
-                ReflogShown.row(CHECKOUT, Option.of(HEAD), NOW).text());
+                ReflogShown.row(CHECKOUT, Option.of(HEAD), false, NOW).text());
         assertEquals(
                 "  2h   commit        Add a " + OTHER.shortSha(),
-                ReflogShown.row(COMMIT, Option.of(HEAD), NOW).text());
+                ReflogShown.row(COMMIT, Option.of(HEAD), false, NOW).text());
+    }
+
+    @Test
+    void aRowMarksAnEntryWhoseCommitIsLostUnlessHeadIsAtIt() {
+        assertEquals(
+                "✗ 2h   commit        Add a " + OTHER.shortSha(),
+                ReflogShown.row(COMMIT, Option.of(HEAD), true, NOW).text());
+        assertTrue(ReflogShown.row(CHECKOUT, Option.of(HEAD), true, NOW).text().startsWith("◆ "));
     }
 
     @Test
@@ -74,7 +82,7 @@ class ReflogShownTest {
     }
 
     @Test
-    void highlightingAnEntryShowsItsCommitThenSaysHowFarTheHighlightCame() {
+    void highlightingAnEntryShowsItsCommitThenSaysItIsHighlighted() {
         ReflogView view = ReflogView.NONE.withEntries(new Loadable.Loaded<>(List.of(CHECKOUT, COMMIT)));
         Model shown = LOADED.withPart(ReflogView.PART, view);
         Model showing = new SelectionMsg.CommitSelected(OTHER).apply(shown).model();
@@ -82,8 +90,9 @@ class ReflogShownTest {
         assertEquals(
                 Option.of(new SelectionMsg.CommitSelected(OTHER)),
                 ReflogShown.selected(shown, view, Option.of(COMMIT)));
-        assertEquals(Option.of(new ReflogMsg.Reached(1)), ReflogShown.selected(showing, view, Option.of(COMMIT)));
-        assertEquals(Option.none(), ReflogShown.selected(showing, view.withReached(1), Option.of(COMMIT)));
+        assertEquals(Option.of(new ReflogMsg.Highlighted(1)), ReflogShown.selected(showing, view, Option.of(COMMIT)));
+        assertEquals(
+                Option.none(), ReflogShown.selected(showing, view.withHighlighted(Option.of(1)), Option.of(COMMIT)));
     }
 
     private static ReflogEntry entry(int place, Instant time, String subject, Action action, Sha sha) {

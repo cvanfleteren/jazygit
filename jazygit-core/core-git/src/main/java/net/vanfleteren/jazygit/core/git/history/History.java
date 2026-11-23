@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.core.git.history;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.Blame;
@@ -103,6 +105,12 @@ public interface History {
      * out. Read from the top, a reflog without entries says why: HEAD has no commit yet, or git keeps no reflogs.
      */
     Either<GitError, Reflog> reflog(int skip, int max);
+
+    /**
+     * Which of {@code commits} no branch, tag or remote-tracking branch reaches: those only a reflog keeps, which are
+     * lost once it expires (ADR 186). One process for all of them, none for none.
+     */
+    Either<GitError, Set<Sha>> lost(Seq<Sha> commits);
 
     /**
      * Who last changed each line of the file {@code at} names, blamed with {@code options} (ADR 147).

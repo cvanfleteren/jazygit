@@ -286,7 +286,8 @@ learned.
    entry's commit as for any commit.
 4. **Lost entries.** The second load and the `✗` marker, with a `Legend`. With them, the entry's own properties in
    the content panel (its selector, time, whole subject, and whether it is lost or at HEAD), which need a
-   `ContentSource` of the reflog's own.
+   `ContentSource` of the reflog's own. Done: `History.lost` after each page, in the background, and the entry
+   above its commit through a heading a source puts above what another shows (ADR 187).
 5. **Stamp `logs/HEAD`** so external commits show while the reflog is open.
 6. **Actions on an entry**, after their own grilling: reset, checkout, new branch, cherry-pick copy, bound in
    `Scopes.REFLOG`, with an acceptance test that a branch at an entry recovers a dropped commit.

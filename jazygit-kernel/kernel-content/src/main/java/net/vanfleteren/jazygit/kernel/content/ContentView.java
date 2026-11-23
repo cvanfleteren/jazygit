@@ -44,7 +44,8 @@ public final class ContentView {
 
     /**
      * What the first of {@code sources} that answers for the pane {@code focus} is or belongs to gives, as
-     * {@link #of(Model, Option)} says; without one that answers, as without the app, it is loading.
+     * {@link #of(Model, Option)} says, under what each of them puts above it, in their order (ADR 187); without one
+     * that answers, as without the app, it is loading.
      */
     static Shown of(Model model, Option<Focus> focus, ContentSources sources) {
         Mirrored mirrored = mirrored(model, focus, sources);
@@ -53,6 +54,9 @@ public final class ContentView {
                 .flatMap(source -> source.shown(model, mirrored))
                 .headOption()
                 .map(shown -> Expanded.of(model, shown))
+                .map(shown -> sources.sources()
+                        .flatMap(source -> source.heading(model, mirrored))
+                        .foldRight(shown, (heading, headed) -> headed.headed(heading)))
                 .getOrElse(() -> Shown.loading(""));
     }
 

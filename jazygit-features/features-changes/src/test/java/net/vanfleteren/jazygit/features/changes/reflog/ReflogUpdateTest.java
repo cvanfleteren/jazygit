@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -82,7 +83,7 @@ class ReflogUpdateTest {
         Next next = read(reading(SHOWN, new ReadReflog(0, PAGE)), new ReadReflog(0, PAGE), entries(0, PAGE));
 
         assertEquals(entries(0, PAGE), view(next).entries().getOrElse(List.empty()));
-        assertEquals(List.of(new ReadReflog(PAGE, PAGE)), next.cmds());
+        assertEquals(List.of(lookAt(1, true, entries(0, PAGE)), new ReadReflog(PAGE, PAGE)), next.cmds());
     }
 
     @Test
@@ -90,10 +91,10 @@ class ReflogUpdateTest {
         Next next = read(reading(SHOWN, new ReadReflog(0, PAGE)), new ReadReflog(0, PAGE), entries(0, 3));
 
         assertTrue(view(next).ended());
-        assertEquals(List.empty(), next.cmds());
+        assertEquals(List.of(lookAt(1, true, entries(0, 3))), next.cmds());
         assertEquals(
                 List.empty(),
-                ReflogUpdate.update(next.model(), new ReflogMsg.Reached(2)).cmds());
+                ReflogUpdate.update(next.model(), new ReflogMsg.Highlighted(2)).cmds());
     }
 
     @Test
@@ -105,10 +106,11 @@ class ReflogUpdateTest {
 
         assertEquals(
                 List.empty(),
-                ReflogUpdate.update(twoPages, new ReflogMsg.Reached(PAGE - 1)).cmds());
+                ReflogUpdate.update(twoPages, new ReflogMsg.Highlighted(PAGE - 1))
+                        .cmds());
         assertEquals(
                 List.of(new ReadReflog(2 * PAGE, PAGE)),
-                ReflogUpdate.update(twoPages, new ReflogMsg.Reached(PAGE)).cmds());
+                ReflogUpdate.update(twoPages, new ReflogMsg.Highlighted(PAGE)).cmds());
     }
 
     @Test
@@ -127,7 +129,7 @@ class ReflogUpdateTest {
         Next next = read(hidden, new ReadReflog(0, PAGE), entries(0, PAGE));
 
         assertEquals(entries(0, PAGE), view(next).entries().getOrElse(List.empty()));
-        assertEquals(List.empty(), next.cmds());
+        assertEquals(List.of(lookAt(1, true, entries(0, PAGE))), next.cmds());
         assertEquals(Option.none(), view(next).reading());
     }
 
@@ -138,7 +140,7 @@ class ReflogUpdateTest {
 
         Next next = read(hide(asked), new ReadReflog(0, PAGE), entries(0, 5));
 
-        assertEquals(List.empty(), next.cmds());
+        assertEquals(List.of(lookAt(1, true, entries(0, 5))), next.cmds());
         assertFalse(view(next).again());
     }
 
@@ -150,7 +152,7 @@ class ReflogUpdateTest {
         Next done = read(asked.model(), new ReadReflog(0, PAGE), entries(0, 5));
 
         assertEquals(List.empty(), asked.cmds());
-        assertEquals(List.of(new ReadReflog(0, PAGE)), done.cmds());
+        assertEquals(List.of(lookAt(1, true, entries(0, 5)), new ReadReflog(0, PAGE)), done.cmds());
         assertFalse(view(done).again());
     }
 
@@ -197,6 +199,84 @@ class ReflogUpdateTest {
                 read.commit(entries(0, 3).get(1).sha()));
     }
 
+    @Test
+    void aLaterPageIsLookedAtForLostCommitsAloneAndAnEmptyOneNotAtAll() {
+        Model first = done(SHOWN, new ReadReflog(0, PAGE), entries(0, PAGE));
+
+        Next later = read(reading(first, new ReadReflog(PAGE, PAGE)), new ReadReflog(PAGE, PAGE), entries(PAGE, 10));
+        Next none = read(reading(first, new ReadReflog(PAGE, PAGE)), new ReadReflog(PAGE, PAGE), List.empty());
+
+        assertEquals(List.of(lookAt(2, false, entries(PAGE, 10))), later.cmds());
+        assertEquals(List.empty(), none.cmds());
+    }
+
+    @Test
+    void whatALookFoundLostIsMarkedAndALaterPageAddsToIt() {
+        List<ReflogEntry> top = entries(0, PAGE);
+        List<ReflogEntry> next = entries(PAGE, 10);
+        Model first = found(done(SHOWN, new ReadReflog(0, PAGE), top), lookAt(1, true, top), top.get(3));
+
+        Model both = found(done(first, new ReadReflog(PAGE, PAGE), next), lookAt(2, false, next), next.get(1));
+
+        assertTrue(view(both).isLost(top.get(3)));
+        assertTrue(view(both).isLost(next.get(1)));
+        assertFalse(view(both).isLost(top.get(4)));
+    }
+
+    @Test
+    void aLookAtAllTheEntriesReplacesWhatWasFoundBefore() {
+        List<ReflogEntry> top = entries(0, 5);
+        Model first = found(done(SHOWN, new ReadReflog(0, PAGE), top), lookAt(1, true, top), top.get(3));
+
+        Model again = found(done(first, new ReadReflog(0, PAGE), top), lookAt(2, true, top), top.get(1));
+
+        assertFalse(view(again).isLost(top.get(3)));
+        assertTrue(view(again).isLost(top.get(1)));
+    }
+
+    @Test
+    void anOlderLookThatEndsAfterANewerLookAtAllTheEntriesIsDropped() {
+        List<ReflogEntry> top = entries(0, 5);
+        Model newer = found(done(SHOWN, new ReadReflog(0, PAGE), top), lookAt(3, true, top), top.get(1));
+
+        Model older = found(newer, lookAt(2, false, top), top.get(4));
+
+        assertEquals(view(newer), view(older));
+    }
+
+    @Test
+    void aLookThatFailedMarksNothing() {
+        List<ReflogEntry> top = entries(0, 5);
+        Model read = done(SHOWN, new ReadReflog(0, PAGE), top);
+
+        Next next = ReflogUpdate.update(
+                read, new ReflogMsg.LostUnknown(lookAt(1, true, top), Failure.of(new GitError.UnexpectedOutput("x"))));
+
+        assertEquals(read, next.model());
+    }
+
+    @Test
+    void theHighlightedEntryIsKnown() {
+        List<ReflogEntry> top = entries(0, 5);
+
+        Model highlighted = ReflogUpdate.update(done(SHOWN, new ReadReflog(0, PAGE), top), new ReflogMsg.Highlighted(2))
+                .model();
+
+        assertEquals(Option.of(top.get(2)), highlighted.part(ReflogView.PART).highlightedEntry());
+    }
+
+    private static FindLost lookAt(int read, boolean all, List<ReflogEntry> entries) {
+        return new FindLost(read, all, entries.map(ReflogEntry::sha));
+    }
+
+    private static Model found(Model model, FindLost look, ReflogEntry... lost) {
+        return ReflogUpdate.update(
+                        model,
+                        new ReflogMsg.LostFound(
+                                look, HashSet.ofAll(List.of(lost).map(ReflogEntry::sha))))
+                .model();
+    }
+
     private static Model hide(Model model) {
         return model.mapRepoView(view -> view.withTab(CommitsPanel.PANE, CommitsPane.LOG));
     }
@@ -218,7 +298,11 @@ class ReflogUpdateTest {
     }
 
     private static ReflogView view(Next next) {
-        return next.model().part(ReflogView.PART);
+        return view(next.model());
+    }
+
+    private static ReflogView view(Model model) {
+        return model.part(ReflogView.PART);
     }
 
     /**

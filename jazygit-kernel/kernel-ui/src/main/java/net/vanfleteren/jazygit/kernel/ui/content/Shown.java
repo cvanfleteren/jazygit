@@ -50,6 +50,21 @@ public sealed interface Shown {
     }
 
     /**
+     * This with {@code heading} above its first area; a message has none, and shows no heading.
+     */
+    default Shown headed(Heading heading) {
+        return switch (this) {
+            case Message message -> message;
+            case Area area -> area.headed(heading);
+            case Stacked(List<Area> areas) ->
+                new Stacked(
+                        areas.isEmpty()
+                                ? areas
+                                : areas.tail().prepend(areas.head().headed(heading)));
+        };
+    }
+
+    /**
      * A panel titled {@code title} with only {@code text}: what is still loading, failed or is not there.
      */
     record Message(String title, String text, Tone tone) implements Shown {}
@@ -58,7 +73,15 @@ public sealed interface Shown {
      * The area {@code area}, titled {@code title}, showing {@code body}; where it is scrolled to holds for
      * {@code content}.
      */
-    record Area(ContentArea area, String title, ScrolledContent content, Body body) implements Shown {}
+    record Area(ContentArea area, String title, ScrolledContent content, Body body) implements Shown {
+
+        /**
+         * This area with {@code heading} above what it shows.
+         */
+        public Area headed(Heading heading) {
+            return new Area(area, title, content, new Headed(heading, body));
+        }
+    }
 
     /**
      * The areas one above the other.
