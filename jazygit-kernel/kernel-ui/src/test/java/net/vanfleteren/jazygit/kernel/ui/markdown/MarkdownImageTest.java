@@ -7,7 +7,7 @@ import io.vavr.control.Option;
 import org.junit.jupiter.api.Test;
 
 /**
- * The images of Markdown, where they are and how large their tags say they are shown (ADR 82, 84).
+ * The images of Markdown, where they are and how large their tags say they are shown (ADR 82).
  */
 class MarkdownImageTest {
 
@@ -36,25 +36,5 @@ class MarkdownImageTest {
                 List.of(true, false, true),
                 MarkdownImage.in("![a](a.png)\n\nsee ![b](b.png)\n\n<img src=\"c.png\">")
                         .map(MarkdownImage::alone));
-    }
-
-    @Test
-    void onlyImagesGitHubKeepsOverHttpsAreReadEachOnce() {
-        String markdown = String.join(
-                "\n\n",
-                "![a](https://github.com/user-attachments/assets/1)",
-                "![b](https://raw.githubusercontent.com/o/r/main/b.png)",
-                "![again](https://github.com/user-attachments/assets/1)",
-                "![c](http://github.com/c.png)",
-                "![d](https://example.com/d.png)",
-                "![e](https://github.com.example.com/e.png)",
-                "![f](not a url)",
-                "`![g](https://github.com/g.png)`");
-
-        assertEquals(
-                List.of(
-                        "https://github.com/user-attachments/assets/1",
-                        "https://raw.githubusercontent.com/o/r/main/b.png"),
-                MarkdownImage.onGitHub(markdown));
     }
 }

@@ -25,8 +25,6 @@ import net.vanfleteren.jazygit.kernel.settings.ThemeName;
  *                        to (ADR 70)
  * @param ignoreWhitespace whether the diffs leave out changes to whitespace only, for this session only
  * @param context       how many lines the diffs show around a change, for this session only (ADR 76)
- * @param filtersOff    whether the diff filters are all switched off for this session, whichever are enabled
- *                      (ADR 144)
  * @param dragged       the width the left column of a screen is dragged to, which is kept once it is let go
  * @param draggedHeights the heights the panes of the left column of a screen are dragged to, which are kept once
  *                       they are let go
@@ -49,7 +47,6 @@ public record Preferences(
         RepositoryTheme repositoryTheme,
         boolean ignoreWhitespace,
         DiffContext context,
-        boolean filtersOff,
         Option<Dragged> dragged,
         Option<DraggedHeights> draggedHeights,
         Option<Integer> columnRows,
@@ -65,7 +62,6 @@ public record Preferences(
             RepositoryTheme.NONE,
             false,
             DiffContext.DEFAULT,
-            false,
             Option.none(),
             Option.none(),
             Option.none(),
@@ -81,13 +77,6 @@ public record Preferences(
      */
     public DiffOptions diffOptions() {
         return new DiffOptions(ignoreWhitespace, settings.diffStyle().rich(), context);
-    }
-
-    /**
-     * The diff filters to choose from, those enabled, and whether they are switched off for this session (ADR 144).
-     */
-    public DiffFilters diffFilters() {
-        return DiffFilters.of(settings.filterDefinitions(), settings.diffFilters(), filtersOff);
     }
 
     /**

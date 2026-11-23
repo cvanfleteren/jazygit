@@ -8,6 +8,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -36,6 +37,15 @@ public final class SettingsFile implements SettingsStore {
      */
     public SettingsFile(Path file) {
         this(file, SettingKeys.KERNEL);
+    }
+
+    /**
+     * What the TOML {@code reader} reads holds at {@code key}, as the settings file is read: a table as a
+     * {@link java.util.Map}, also one in an array. A feature reads the settings that come with jazygit in a file of
+     * its own so, as the diff filters (ADR 144).
+     */
+    public static Try<Object> bundled(Reader reader, String key) {
+        return Try.of(() -> plain(TomlFile.parse(reader).get(key)));
     }
 
     @Override

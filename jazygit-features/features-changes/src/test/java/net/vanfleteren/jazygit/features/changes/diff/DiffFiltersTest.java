@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.state.preferences;
+package net.vanfleteren.jazygit.features.changes.diff;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -8,8 +8,6 @@ import net.vanfleteren.jazygit.core.git.model.DiffFilter;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
-import net.vanfleteren.jazygit.kernel.settings.FilterDefinition;
-import net.vanfleteren.jazygit.kernel.settings.FilterDefinitions;
 import org.junit.jupiter.api.Test;
 
 class DiffFiltersTest {

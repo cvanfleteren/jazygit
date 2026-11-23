@@ -10,6 +10,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.features.changes.diff.DiffFilterSettings;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.*;
@@ -364,8 +365,10 @@ class RichDiffContentTest {
                 -int a;
                 +int b;
                 """)
-                .mapPreferences(preferences -> preferences.withSettings(
-                        preferences.settings().withDiffStyle(DiffStyle.RICH).withDiffFilters(List.of("java-imports"))));
+                .mapPreferences(preferences -> preferences.withSettings(preferences
+                        .settings()
+                        .withDiffStyle(DiffStyle.RICH)
+                        .with(DiffFilterSettings.ENABLED, List.of("java-imports"))));
         AreaId area = clicking.areaOfPane(model, CommitsPanel.PANE).get();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> clicking.render(model, area))) {

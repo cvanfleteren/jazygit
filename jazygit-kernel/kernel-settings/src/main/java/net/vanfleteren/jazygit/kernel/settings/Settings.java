@@ -92,19 +92,6 @@ public record Settings(Map<String, Held<?>> held) {
      */
     public static final SettingKey<Boolean> AUTO_FETCH = SettingKey.of("git.auto-fetch", true, Codec.bool());
     /**
-     * The ids of the diff filters enabled (ADR 144), each once, in the order they were enabled.
-     */
-    public static final SettingKey<List<String>> DIFF_FILTERS =
-            SettingKey.of("ui.diff-filters", List.empty(), Codec.whole(Settings::ids, List::toJavaList));
-    /**
-     * The diff filters the user set (ADR 144); as the editors.
-     */
-    public static final SettingKey<FilterDefinitions> FILTER_DEFINITIONS =
-            SettingKey.userOwned(FilterDefinitions.KEY, FilterDefinitions.NONE, Codec.readOnly(value -> {
-                FilterDefinitions.Read read = FilterDefinitions.read(value, false);
-                return new Decoded<>(Option.some(read.filters()), read.invalid());
-            }));
-    /**
      * The setting at {@code path} of how wide the left column of a screen is kept, in percent of the width: one the
      * column may have, {@link #DEFAULT_WIDTH} until the user drags it (ADR 168).
      */
@@ -217,22 +204,6 @@ public record Settings(Map<String, Held<?>> held) {
         return with(AUTO_FETCH, on);
     }
 
-    public List<String> diffFilters() {
-        return get(DIFF_FILTERS);
-    }
-
-    public Settings withDiffFilters(List<String> ids) {
-        return with(DIFF_FILTERS, ids);
-    }
-
-    public FilterDefinitions filterDefinitions() {
-        return get(FILTER_DEFINITIONS);
-    }
-
-    public Settings withFilterDefinitions(FilterDefinitions filters) {
-        return with(FILTER_DEFINITIONS, filters);
-    }
-
     /**
      * {@code width} brought within the widths the left column may have.
      */
@@ -291,17 +262,6 @@ public record Settings(Map<String, Held<?>> held) {
                 .filter(heights -> heights.forAll(height -> height >= MIN_HEIGHT)
                         && 100 - heights.sum().longValue() >= MIN_HEIGHT)
                 .map(heights -> heights.map(Long::intValue));
-    }
-
-    /**
-     * The ids {@code value} holds, if it is an array of text: each once, in its order.
-     */
-    private static Option<List<String>> ids(Object value) {
-        return Option.of(value)
-                .filter(java.util.List.class::isInstance)
-                .map(array -> List.ofAll((java.util.List<?>) array))
-                .filter(items -> items.forAll(String.class::isInstance))
-                .map(items -> items.map(String.class::cast).distinct());
     }
 
     /**

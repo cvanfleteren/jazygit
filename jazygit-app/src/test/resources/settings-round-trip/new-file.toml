@@ -4,9 +4,9 @@ diff-style = "plain"
 diff-words = false
 diff-pairs = false
 repository-heights = [25, 25, 25]
-diff-filters = ["java-imports", "lockfiles"]
 pull-requests-width = 50
 pull-requests-heights = [40, 30]
+diff-filters = ["java-imports", "lockfiles"]
 
 [git]
 auto-refresh = false

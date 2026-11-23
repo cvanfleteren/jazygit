@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.features.changes.diff;
 
 import net.vanfleteren.jazygit.core.git.model.DiffContext;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
+import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
-import net.vanfleteren.jazygit.kernel.state.preferences.DiffFilters;
 import net.vanfleteren.jazygit.kernel.state.preferences.Preferences;
 
 /**
@@ -26,15 +26,16 @@ public record DiffOptionsPopup(
         implements Popup {
 
     /**
-     * The popup showing the options of {@code preferences}.
+     * The popup showing the options of {@code model}.
      */
-    public static DiffOptionsPopup of(Preferences preferences) {
+    public static DiffOptionsPopup of(Model model) {
+        Preferences preferences = model.preferences();
         return new DiffOptionsPopup(
                 preferences.settings().diffStyle(),
                 preferences.settings().diffWords(),
                 preferences.settings().diffPairs(),
                 preferences.ignoreWhitespace(),
                 preferences.context(),
-                preferences.diffFilters());
+                DiffFilterSettings.filters(model));
     }
 }

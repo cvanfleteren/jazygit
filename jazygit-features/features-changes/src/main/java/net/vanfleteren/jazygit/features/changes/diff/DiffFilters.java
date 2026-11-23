@@ -1,11 +1,9 @@
-package net.vanfleteren.jazygit.kernel.state.preferences;
+package net.vanfleteren.jazygit.features.changes.diff;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import lombok.With;
 import net.vanfleteren.jazygit.core.git.model.DiffFilter;
-import net.vanfleteren.jazygit.kernel.settings.FilterDefinition;
-import net.vanfleteren.jazygit.kernel.settings.FilterDefinitions;
 
 /**
  * The diff filters to choose from, those that come with jazygit and the user's, each as it can be used or why it

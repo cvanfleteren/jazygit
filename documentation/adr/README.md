@@ -210,3 +210,4 @@ another tool adds it there too.
 | 181 | [Merging on Forgejo when the checks succeed](0181-merging-on-forgejo-when-the-checks-succeed.md) |  |
 | 182 | [Another worktree of the repository opens with what the worktrees share](0182-another-worktree-opens-with-what-the-repository-shares.md) |  |
 | 183 | [The programs the user set are started through a launcher, not through git](0183-programs-are-started-through-a-launcher.md) |  |
+| 184 | [The diff filters are the diffs feature's](0184-the-diff-filters-are-the-diffs-features.md) |  |

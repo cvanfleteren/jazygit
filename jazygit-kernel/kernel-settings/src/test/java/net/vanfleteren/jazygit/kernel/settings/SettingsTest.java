@@ -31,8 +31,7 @@ class SettingsTest {
             .withRepositoryHeights(List.of(20, 20, 20))
             .withAnimations(false)
             .withAutoRefresh(false)
-            .withAutoFetch(false)
-            .withDiffFilters(List.of("java-imports", "lockfiles"));
+            .withAutoFetch(false);
 
     @Test
     void eachSettingTheAppWritesIsReadBackAsItWas() {
@@ -48,8 +47,7 @@ class SettingsTest {
                 .filter(key -> !key.changed(Settings.DEFAULT, CHANGED))
                 .map(SettingKey::path);
 
-        // Only the user writes the diff filters.
-        assertEquals(List.of(FilterDefinitions.KEY), same);
+        assertEquals(List.empty(), same);
     }
 
     @Test

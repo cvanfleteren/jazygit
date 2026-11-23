@@ -168,3 +168,6 @@ take a read of the attributes; renames without changes, which have no hunks to h
   the hidden hunks opened, by where they start in both files.
 - Staging or discarding a file, a directory or all of them takes their hidden hunks too.
 - `Ctrl+F` is taken, anywhere a diff shows.
+
+Amended by ADR 184: the filters, their settings and whether they are switched off are kept in `features-changes`;
+the kernel reads them as `HunkFilters`.

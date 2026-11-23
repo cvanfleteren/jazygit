@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.changes.diff;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;

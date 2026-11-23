@@ -37,7 +37,7 @@ public final class DiffOptionsUpdate {
             case DiffOptionsMsg m
             when model.popup().isDefined()
                     && model.popup(DiffOptionsPopup.class).isEmpty() -> Next.of(model);
-            case DiffOptionsMsg.Requested() -> Next.of(model.openPopup(DiffOptionsPopup.of(model.preferences())));
+            case DiffOptionsMsg.Requested() -> Next.of(model.openPopup(DiffOptionsPopup.of(model)));
             // A version blamed is blamed again, as whitespace changes whom a line is blamed on (ADR 147).
             case DiffOptionsMsg.WhitespaceToggled() ->
                 shown(changed(model.mapPreferences(
@@ -57,7 +57,7 @@ public final class DiffOptionsUpdate {
      */
     static Model shown(Model model) {
         return model.popup(DiffOptionsPopup.class)
-                .map(open -> model.openPopup(DiffOptionsPopup.of(model.preferences())))
+                .map(open -> model.openPopup(DiffOptionsPopup.of(model)))
                 .getOrElse(model);
     }
 

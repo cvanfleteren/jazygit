@@ -13,8 +13,6 @@ import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.HiddenHunks.Ranges;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget;
-import net.vanfleteren.jazygit.kernel.settings.FilterDefinition;
-import net.vanfleteren.jazygit.kernel.settings.FilterDefinitions;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -25,7 +23,6 @@ import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Opened;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
-import net.vanfleteren.jazygit.kernel.state.preferences.DiffFilters;
 import net.vanfleteren.jazygit.kernel.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -73,7 +70,7 @@ class DiffFiltersUpdateTest {
 
     @Test
     void whileAllAreSwitchedOffTheFiltersShowTheirBoxesDisabled() {
-        DiffFilters on = enabled(loaded()).preferences().diffFilters();
+        DiffFilters on = DiffFilterSettings.filters(enabled(loaded()));
         DiffFilters off = new DiffFilters(on.all(), true);
 
         assertEquals(
@@ -97,7 +94,7 @@ class DiffFiltersUpdateTest {
         Next next = Update.update(open, new DiffFiltersMsg.Toggled("java-imports"));
 
         assertEquals(
-                List.of("java-imports"), next.model().preferences().settings().diffFilters());
+                List.of("java-imports"), next.model().preferences().settings().get(DiffFilterSettings.ENABLED));
         assertEquals(
                 List.of(new SaveSettings(
                         open.preferences().settings(),
@@ -111,15 +108,17 @@ class DiffFiltersUpdateTest {
                 .exists(filter -> filter.id().equals("java-imports")));
 
         Next again = Update.update(next.model(), new DiffFiltersMsg.Toggled("java-imports"));
-        assertEquals(List.empty(), again.model().preferences().settings().diffFilters());
+        assertEquals(List.empty(), again.model().preferences().settings().get(DiffFilterSettings.ENABLED));
     }
 
     @Test
     void aFilterThatCannotBeUsedIsNotEnabled() {
         Model model = loaded().mapPreferences(preferences -> preferences.withSettings(preferences
                 .settings()
-                .withFilterDefinitions(new FilterDefinitions(List.of(new FilterDefinition(
-                        "broken", Option.none(), List.of("cobol"), List.empty(), Option.none(), false))))));
+                .with(
+                        DiffFilterSettings.DEFINITIONS,
+                        new FilterDefinitions(List.of(new FilterDefinition(
+                                "broken", Option.none(), List.of("cobol"), List.empty(), Option.none(), false))))));
 
         Next next = Update.update(model, new DiffFiltersMsg.Toggled("broken"));
 
@@ -134,15 +133,13 @@ class DiffFiltersUpdateTest {
 
         Next off = Update.update(model, new DiffFiltersMsg.AllToggled());
 
-        assertTrue(off.model().preferences().diffFilters().active().isEmpty());
+        assertTrue(DiffFilterSettings.hiding(off.model()).active().isEmpty());
         assertEquals(
-                List.of("java-imports"), off.model().preferences().settings().diffFilters());
+                List.of("java-imports"), off.model().preferences().settings().get(DiffFilterSettings.ENABLED));
         assertEquals(List.empty(), off.cmds());
         assertTrue(off.model().popup(DiffOptionsPopup.class).get().filters().off());
-        assertFalse(Update.update(off.model(), new DiffFiltersMsg.AllToggled())
-                .model()
-                .preferences()
-                .diffFilters()
+        assertFalse(DiffFilterSettings.hiding(Update.update(off.model(), new DiffFiltersMsg.AllToggled())
+                        .model())
                 .active()
                 .isEmpty());
     }
@@ -150,7 +147,7 @@ class DiffFiltersUpdateTest {
     @Test
     void theDialogListsTheFiltersByLanguageThenByPath() {
         List<PickDialog.Row<DiffFiltersMsg>> rows =
-                DiffFiltersDialog.rows(enabled(loaded()).preferences().diffFilters());
+                DiffFiltersDialog.rows(DiffFilterSettings.filters(enabled(loaded())));
 
         assertEquals(new DiffFiltersMsg.Toggled("java-imports"), rows.head().value());
         assertEquals("[x]", rows.head().cells().head().text());
@@ -193,15 +190,15 @@ class DiffFiltersUpdateTest {
     }
 
     @Test
-    void whatTheFiltersHideIsTheSameValueEachTimeItIsAskedFor() {
+    void theFiltersTheKernelHidesWithAreTheSameValueEachTimeTheyAreAskedFor() {
         Model model = enabled(loaded());
 
-        assertEquals(model.filtering(AREA, CONTENT), model.filtering(AREA, CONTENT));
+        assertEquals(DiffFilterSettings.hiding(model), DiffFilterSettings.hiding(model));
     }
 
     private static Model enabled(Model model) {
-        return model.mapPreferences(preferences ->
-                preferences.withSettings(preferences.settings().withDiffFilters(List.of("java-imports"))));
+        return model.mapPreferences(preferences -> preferences.withSettings(
+                preferences.settings().with(DiffFilterSettings.ENABLED, List.of("java-imports"))));
     }
 
     private static DiffCursorAt at(Anchor cursor) {

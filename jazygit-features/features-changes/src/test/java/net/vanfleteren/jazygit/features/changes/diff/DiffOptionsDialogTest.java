@@ -9,7 +9,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.DiffContext;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.state.preferences.DiffFilters;
 import org.junit.jupiter.api.Test;
 
 class DiffOptionsDialogTest {

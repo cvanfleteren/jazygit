@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.kernel.state.preferences.SaveSettings;
 
 /**
  * Choosing the diff filters (ADR 144). Which are enabled is kept in the settings, and saved at each change; whether
- * all are switched off holds for this session only. Either shows at once: the filters hide hunks as the diff is drawn,
+ * all are switched off holds for this session only, in a part of the model. Either shows at once: the filters hide hunks as the diff is drawn,
  * so nothing is read again.
  */
 public final class DiffFiltersUpdate {
@@ -24,16 +24,15 @@ public final class DiffFiltersUpdate {
             when model.popup().isDefined()
                     && model.popup(DiffOptionsPopup.class).isEmpty() -> Next.of(model);
             case DiffFiltersMsg.Requested() ->
-                Next.of(model.openPopup(new DiffFiltersPopup(model.preferences().diffFilters())));
+                Next.of(model.openPopup(new DiffFiltersPopup(DiffFilterSettings.filters(model))));
             case DiffFiltersMsg.Closed()
             when model.popup(DiffFiltersPopup.class).isEmpty() -> Next.of(model);
             case DiffFiltersMsg.Closed() ->
-                Next.of(model.openPopup(DiffOptionsPopup.of(model.preferences()))
+                Next.of(model.openPopup(DiffOptionsPopup.of(model))
                         .withListCursor(new ListCursor(Option.of(DiffOptionsDialog.FILTERS_ROW), Option.none())));
             case DiffFiltersMsg.Toggled(String id) -> toggled(model, id);
             case DiffFiltersMsg.AllToggled() -> {
-                Model switched =
-                        model.mapPreferences(preferences -> preferences.withFiltersOff(!preferences.filtersOff()));
+                Model switched = model.mapPart(DiffFilterSettings.OFF, off -> !off);
                 yield Next.of(shown(switched));
             }
         };
@@ -44,17 +43,17 @@ public final class DiffFiltersUpdate {
      * used is not enabled.
      */
     private static Next toggled(Model model, String id) {
-        boolean usable = model.preferences()
-                .diffFilters()
+        boolean usable = DiffFilterSettings.filters(model)
                 .all()
                 .exists(choice ->
                         choice.definition().id().equals(id) && choice.filter().isRight());
         Settings previous = model.preferences().settings();
-        List<String> enabled = previous.diffFilters();
+        List<String> enabled = previous.get(DiffFilterSettings.ENABLED);
         if (!usable && !enabled.contains(id)) {
             return Next.of(model);
         }
-        Settings chosen = previous.withDiffFilters(enabled.contains(id) ? enabled.remove(id) : enabled.append(id));
+        Settings chosen = previous.with(
+                DiffFilterSettings.ENABLED, enabled.contains(id) ? enabled.remove(id) : enabled.append(id));
         return Next.of(
                 shown(model.mapPreferences(preferences -> preferences.withSettings(chosen))),
                 new SaveSettings(previous, chosen));
@@ -66,8 +65,7 @@ public final class DiffFiltersUpdate {
      */
     private static Model shown(Model model) {
         return DiffOptionsUpdate.shown(model.popup(DiffFiltersPopup.class)
-                .map(open ->
-                        model.openPopup(new DiffFiltersPopup(model.preferences().diffFilters())))
+                .map(open -> model.openPopup(new DiffFiltersPopup(DiffFilterSettings.filters(model))))
                 .getOrElse(model));
     }
 }
