@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.kernel.state.view;
 
 import net.vanfleteren.jazygit.kernel.state.AreaId;
+import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.Focus;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
@@ -37,13 +39,17 @@ public sealed interface ViewMsg extends Msg {
     }
 
     /**
-     * The user asked {@code pane} to show its tab {@code tab} (ADR 185).
+     * The user asked {@code pane} to show its tab {@code tab} (ADR 185): the features are told when it was not shown
+     * (ADR 186).
      */
     record TabChosen(PaneId pane, TabId tab) implements ViewMsg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.Next.of(model.mapRepoView(view -> view.withTab(pane, tab)));
+            Update.Next chosen = Update.Next.of(model.mapRepoView(view -> view.withTab(pane, tab)));
+            return model.repoView().tab(pane).contains(tab)
+                    ? chosen
+                    : Events.happened(chosen, new KernelEvent.TabShown(pane, tab));
         }
     }
 }

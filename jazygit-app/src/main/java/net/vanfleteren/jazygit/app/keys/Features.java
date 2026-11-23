@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.features.changes.edit.EditFeature;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchFeature;
 import net.vanfleteren.jazygit.features.changes.files.FilesFeature;
 import net.vanfleteren.jazygit.features.changes.inprogress.InProgressFeature;
+import net.vanfleteren.jazygit.features.changes.reflog.ReflogFeature;
 import net.vanfleteren.jazygit.features.changes.stage.StageFeature;
 import net.vanfleteren.jazygit.features.changes.stash.StashFeature;
 import net.vanfleteren.jazygit.features.chrome.error.ErrorFeature;
@@ -50,6 +51,7 @@ public final class Features {
     private static final List<Feature> DECLARED = List.of(
                     StageFeature.FEATURE,
                     CommitFeature.FEATURE,
+                    ReflogFeature.FEATURE,
                     CherryPickFeature.FEATURE,
                     DiscardFeature.FEATURE,
                     EditFeature.FEATURE,

@@ -57,6 +57,10 @@ public final class Scopes {
      */
     public static final Scope<Commit> COMMITS = new Scope<>("commits", "panel.commits.title");
     /**
+     * The selected entry of the reflog of HEAD, a tab of the commits pane (ADR 186).
+     */
+    public static final Scope<ReflogEntry> REFLOG = new Scope<>("reflog", "panel.reflog.title");
+    /**
      * The selected stash.
      */
     public static final Scope<Stash> STASH = new Scope<>("stash", "panel.stash.title");

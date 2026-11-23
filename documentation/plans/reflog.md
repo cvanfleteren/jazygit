@@ -282,8 +282,11 @@ learned.
    - Facts on timing and on the edge cases.
 3. **Tabs in panes, and the reflog tab** (ADR 185, 186): the tab key, the selected tab in the model, the reflog's
    part, paging ahead, `Scopes.REFLOG`, the HEAD marker, rereading, copy sha for commits too. A Pilot test of the tabs
-   and the rows.
-4. **Lost entries.** The second load and the `✗` marker, with a `Legend`.
+   and the rows. Done: the tab is read when `KernelEvent.TabShown` says it is shown, and the content panel shows the
+   entry's commit as for any commit.
+4. **Lost entries.** The second load and the `✗` marker, with a `Legend`. With them, the entry's own properties in
+   the content panel (its selector, time, whole subject, and whether it is lost or at HEAD), which need a
+   `ContentSource` of the reflog's own.
 5. **Stamp `logs/HEAD`** so external commits show while the reflog is open.
 6. **Actions on an entry**, after their own grilling: reset, checkout, new branch, cherry-pick copy, bound in
    `Scopes.REFLOG`, with an acceptance test that a branch at an entry recovers a dropped commit.
