@@ -14,8 +14,8 @@ import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
- * How little width the tree of files spends on its layout: two cells a level, and a long directory shortened in the
- * middle.
+ * How little width the tree of files spends on its layout: two cells a level, without guide lines, and a long
+ * directory shortened in the middle.
  */
 class FilesPanelTreeLayoutTest {
 
@@ -31,16 +31,33 @@ class FilesPanelTreeLayoutTest {
         return List.of(screen.split("\n"));
     }
 
+    private static int column(String screen, String node) {
+        return rows(screen)
+                .find(row -> row.contains(node))
+                .map(row -> row.indexOf(node))
+                .getOrElse(-1);
+    }
+
     @Test
     void aLevelOfDepthTakesTwoCells() throws Exception {
         Model model = changed("src/main/A.java", "src/main/deep/B.java", "src/test/C.java");
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
 
-            assertTrue(rows(screen).exists(row -> row.contains("├─▼ main")), screen);
-            assertTrue(rows(screen).exists(row -> row.contains("│ ├─▼ deep")), screen);
-            assertTrue(rows(screen).exists(row -> row.contains("│ │ └─")), screen);
-            assertFalse(screen.contains("├──"), screen);
+            assertEquals(column(screen, "▼ src") + 2, column(screen, "▼ main"), screen);
+            assertEquals(column(screen, "▼ main") + 2, column(screen, "▼ deep"), screen);
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void theTreeDrawsNoGuideLines() throws Exception {
+        Model model = changed("src/main/A.java", "src/main/deep/B.java", "src/test/C.java");
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
+
+            assertFalse(rows(screen).exists(row -> row.matches("│.*[├└│─].*│")), screen);
+            assertTrue(rows(screen).exists(row -> row.matches("│\\s+▼ deep\\s+│")), screen);
             SettledPilot.of(testRunner).quit();
         }
     }
@@ -53,7 +70,7 @@ class FilesPanelTreeLayoutTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
             String screen = RenderedText.ofSize(testRunner, () -> panel.render(model, FilesPanel.PANE), 30, 8);
 
-            assertTrue(screen.contains("module/src...t/feature"), screen);
+            assertTrue(screen.contains("module/src/...ct/feature"), screen);
             SettledPilot.of(testRunner).quit();
         }
     }

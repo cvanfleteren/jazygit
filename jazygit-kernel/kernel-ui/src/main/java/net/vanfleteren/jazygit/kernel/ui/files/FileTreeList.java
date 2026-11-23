@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.kernel.ui.files;
 
 import dev.tamboui.layout.Rect;
 import dev.tamboui.toolkit.Toolkit;
+import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.TreeElement;
 import dev.tamboui.toolkit.event.EventResult;
@@ -45,10 +46,8 @@ final class FileTreeList<T extends Pathed> {
 
     // A virtual directory holding everything, so that all files can be acted on at once.
     private static final String ROOT_NAME = "/";
-    // TamboUI's default, which indents every node.
-    private static final String HIGHLIGHT_SYMBOL = "> ";
-    // The cells a level of depth takes: the guides shortened to "├─", "│ " and "└─", half of TamboUI's default, so
-    // that deep files keep room for their names.
+    // The cells a level of depth takes, half of TamboUI's default, so that deep files keep room for their names. The
+    // tree is drawn without its guide lines (Unguided).
     private static final int INDENT_WIDTH = 2;
 
     private final TreeElement<FileTree<T>> tree;
@@ -122,6 +121,8 @@ final class FileTreeList<T extends Pathed> {
                 .id(id)
                 .focusable()
                 .indentWidth(INDENT_WIDTH)
+                // The highlighted node shows by its colour alone, so that no column goes to a symbol in front of it.
+                .highlightSymbol("")
                 .scrollbar(ScrollBarPolicy.AS_NEEDED)
                 .scrollbarThumbColor(BorderBar.FOUND)
                 .nodeRenderer(this::drawNode);
@@ -162,7 +163,7 @@ final class FileTreeList<T extends Pathed> {
      *
      * @param active whether the pane is in use, which shows the highlighted node
      */
-    TreeElement<FileTree<T>> render(Object of, Loadable<List<T>> files, boolean active) {
+    Element render(Object of, Loadable<List<T>> files, boolean active) {
         return render(of, files, active, Placeholder.DEFAULT);
     }
 
@@ -172,7 +173,7 @@ final class FileTreeList<T extends Pathed> {
      *
      * @param active whether the pane is in use, which shows the highlighted node
      */
-    TreeElement<FileTree<T>> render(Object of, Loadable<List<T>> files, boolean active, Placeholder placeholder) {
+    Element render(Object of, Loadable<List<T>> files, boolean active, Placeholder placeholder) {
         return render(of, files, active, placeholder, Option.none());
     }
 
@@ -182,12 +183,11 @@ final class FileTreeList<T extends Pathed> {
      * before. The highlight then stays on its path, or else goes to the first file shown.
      *
      * @param filter what the files are filtered on, if anything
+     * @return the tree, drawn without its guide lines
      */
-    TreeElement<FileTree<T>> render(
-            Object of, Loadable<List<T>> files, boolean active, Placeholder placeholder, Option<String> filter) {
+    Element render(Object of, Loadable<List<T>> files, boolean active, Placeholder placeholder, Option<String> filter) {
         drawn = List.of();
-        tree.highlightStyle(highlights.of(active))
-                .highlightSymbol(active ? HIGHLIGHT_SYMBOL : " ".repeat(HIGHLIGHT_SYMBOL.length()));
+        tree.highlightStyle(highlights.of(active));
         if (!shownOf.contains(of)) {
             shownOf = Option.of(of);
             shown = Option.of(files);
@@ -239,7 +239,7 @@ final class FileTreeList<T extends Pathed> {
             carried.flatMap(carry -> nearest(carry._2())).forEach(this::highlight);
             carried = Option.none();
         }
-        return tree;
+        return new Unguided(tree, () -> drawn.map(d -> d.element().renderedArea()));
     }
 
     /**
