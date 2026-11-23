@@ -56,8 +56,9 @@ public final class CheckoutUpdate {
                                 new RecentReposCmd.SwitchTo(
                                         popup.worktree(),
                                         new Landing(
-                                                BranchesTab.LOCAL,
-                                                model.repoView().focusedPane()))))
+                                                        BranchesTab.LOCAL,
+                                                        model.repoView().focusedPane())
+                                                .keepingTabs(model.repoView()))))
                         .getOrElse(() -> Next.of(model));
             case Placed(CheckoutRequest request) -> place(model, request);
             case HereChosen() ->
@@ -84,6 +85,7 @@ public final class CheckoutUpdate {
                 .flatMap(popup -> popup.main().map(main -> {
                     Landing there = new Landing(
                                     BranchesTab.LOCAL, model.repoView().focusedPane())
+                            .keepingTabs(model.repoView())
                             .followedBy(popup.request().again());
                     return Next.of(
                             model.withoutPopup(CheckoutWherePopup.class).clearError(),

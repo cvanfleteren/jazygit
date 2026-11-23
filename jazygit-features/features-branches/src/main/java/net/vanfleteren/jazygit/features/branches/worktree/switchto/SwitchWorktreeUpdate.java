@@ -30,7 +30,9 @@ public final class SwitchWorktreeUpdate {
                         ? Next.of(model.fail(new WorktreeError.WorktreeShownAlready(worktree.name())))
                         : worktree.prunable()
                                 ? Next.of(model.fail(new WorktreeError.WorktreeMissing(worktree.name())))
-                                : Next.of(model.clearError(), RecentReposCmd.SwitchTo.worktree(location)))
+                                : Next.of(
+                                        model.clearError(),
+                                        RecentReposCmd.SwitchTo.worktree(location, model.repoView())))
                 .getOrElse(() -> Next.of(model));
     }
 }

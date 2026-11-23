@@ -211,3 +211,5 @@ another tool adds it there too.
 | 182 | [Another worktree of the repository opens with what the worktrees share](0182-another-worktree-opens-with-what-the-repository-shares.md) |  |
 | 183 | [The programs the user set are started through a launcher, not through git](0183-programs-are-started-through-a-launcher.md) |  |
 | 184 | [The diff filters are the diffs feature's](0184-the-diff-filters-are-the-diffs-features.md) |  |
+| 185 | [A pane has tabs the features add](0185-a-pane-has-tabs-the-features-add.md) |  |
+| 186 | [The reflog of HEAD, read only](0186-the-reflog-of-head-read-only.md) |  |

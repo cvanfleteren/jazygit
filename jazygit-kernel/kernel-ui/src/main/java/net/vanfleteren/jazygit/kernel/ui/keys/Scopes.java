@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.kernel.state.view.ShownTabs;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Scope;
 
 /**
@@ -65,6 +66,12 @@ public final class Scopes {
      * (ADR 161); a view gives it the failed build it shows.
      */
     public static final Scope<FailedBuild> FAILED_BUILD = new Scope<>("failedBuild", "panel.failedBuild.title");
+
+    /**
+     * The keys that switch the tabs of a pane, which the scopes of its tabs host (ADR 161, 185); a pane gives it the
+     * tabs it shows, while it shows more than one.
+     */
+    public static final Scope<ShownTabs> PANE_TABS = new Scope<>("paneTabs", "panel.paneTabs.title");
 
     private Scopes() {}
 }

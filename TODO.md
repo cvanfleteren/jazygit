@@ -18,6 +18,9 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
 
 ## Smaller items
 
+- [ ] **The branches pane onto the tabs of ADR 185.** Local, Remote and Worktrees are a closed `BranchesTab` in the
+  kernel, with their own titles, keys and clicks; they can become the pane's own tabs of the general tab key, so that
+  features can add tabs there too.
 - [ ] **Stronger types** for stash refs and remotes, which are now plain `String`s, like branch names are now
   `BranchName`. Also for the stage target, where `""` stands for the repository root; a sealed `Target` would
   be clearer. The `gh` layer keeps branch names as `String`s, as it knows nothing of git.
