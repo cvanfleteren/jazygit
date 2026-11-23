@@ -1,4 +1,6 @@
-package net.vanfleteren.jazygit.kernel.state.popup;
+package net.vanfleteren.jazygit.features.branches.worktree;
+
+import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**
  * A popup about one worktree, which the worktrees highlight while it is open: the one it is about is the one the

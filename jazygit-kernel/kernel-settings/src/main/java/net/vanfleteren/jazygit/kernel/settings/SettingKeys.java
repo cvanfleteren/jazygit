@@ -23,9 +23,7 @@ public record SettingKeys(List<SettingKey<?>> all) {
             Settings.REPOSITORY_HEIGHTS,
             Settings.ANIMATIONS,
             Settings.AUTO_REFRESH,
-            Settings.AUTO_FETCH,
-            Settings.DIFF_FILTERS,
-            Settings.FILTER_DEFINITIONS));
+            Settings.AUTO_FETCH));
 
     /**
      * These keys, then {@code more}, as the app gathers the kernel's and each feature's.

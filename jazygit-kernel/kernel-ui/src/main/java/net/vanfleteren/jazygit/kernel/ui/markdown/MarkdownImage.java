@@ -3,8 +3,6 @@ package net.vanfleteren.jazygit.kernel.ui.markdown;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.net.URI;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
@@ -69,27 +67,6 @@ public record MarkdownImage(
                 .build()
                 .parse(markdown);
         return found(document, markdown, false).sortBy(MarkdownImage::start);
-    }
-
-    /**
-     * Where the images of {@code markdown} are that GitHub keeps, over https, which are the ones read to be shown
-     * (ADR 84): an image elsewhere would tell its server who reads the comment.
-     */
-    public static List<String> onGitHub(String markdown) {
-        return in(markdown)
-                .flatMap(MarkdownImage::source)
-                .filter(MarkdownImage::isOnGitHub)
-                .distinct();
-    }
-
-    private static boolean isOnGitHub(String url) {
-        return Option.of(url)
-                .toTry()
-                .map(URI::create)
-                .filter(uri -> "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null)
-                .map(uri -> uri.getHost().toLowerCase(Locale.ROOT))
-                .filter(host -> host.equals("github.com") || host.endsWith(".githubusercontent.com"))
-                .isSuccess();
     }
 
     private static List<MarkdownImage> found(Node node, String markdown, boolean inLink) {

@@ -26,18 +26,19 @@ public final class DiffFeature {
                             '{', "changes.help.global.lessContext", DiffOptionsMsg.ContextNarrowed::new)));
 
     /**
-     * What the app knows of it: its keys and its popups.
+     * What the app knows of it: its keys, its popups, and the settings of the diff filters.
      */
     public static final Feature FEATURE = Feature.of(
-            CommitFilesAction.ACTION,
-            ExpandAction.ACTION,
-            FoldAction.ACTION,
-            VersionAction.ACTION,
-            ContentSearchAction.ACTION,
-            GoToLineAction.ACTION,
-            GLOBAL_KEYS,
-            FeatureAction.ofPopups(DiffOptionsDialog::popups),
-            FeatureAction.ofPopups(DiffFiltersDialog::popups));
+                    CommitFilesAction.ACTION,
+                    ExpandAction.ACTION,
+                    FoldAction.ACTION,
+                    VersionAction.ACTION,
+                    ContentSearchAction.ACTION,
+                    GoToLineAction.ACTION,
+                    GLOBAL_KEYS,
+                    FeatureAction.ofPopups(DiffOptionsDialog::popups),
+                    FeatureAction.ofPopups(DiffFiltersDialog::popups))
+            .keeping(DiffFilterSettings.ENABLED, DiffFilterSettings.DEFINITIONS);
 
     private DiffFeature() {}
 }

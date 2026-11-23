@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.changes.diff;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import net.vanfleteren.jazygit.kernel.settings.SettingsFile;
 
 /**
  * The diff filters as {@code [[diff-filters]]} tables list them, in their order (ADR 144): those that come with jazygit,
@@ -108,8 +109,9 @@ public record FilterDefinitions(List<FilterDefinition> all) {
         return Try.withResources(() -> new InputStreamReader(
                         Objects.requireNonNull(FilterDefinitions.class.getResourceAsStream(RESOURCE)),
                         StandardCharsets.UTF_8))
-                .of((Reader reader) -> TomlFile.parse(reader))
-                .map(config -> read(SettingsFile.plain(config.get(KEY)), true).filters())
+                .of((Reader reader) -> SettingsFile.bundled(reader, KEY))
+                .flatMap(value -> value)
+                .map(value -> read(value, true).filters())
                 .getOrElse(NONE);
     }
 

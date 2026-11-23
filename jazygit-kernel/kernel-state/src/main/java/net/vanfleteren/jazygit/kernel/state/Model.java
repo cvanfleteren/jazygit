@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffLines;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.state.diff.Filtering;
+import net.vanfleteren.jazygit.kernel.state.diff.HunkFilters;
 import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
@@ -297,19 +298,19 @@ public record Model(
      * for the files listed, whose hunks show; switched off for the session, they hide nothing, but are counted.
      */
     public Filtering filtering(AreaId area, ScrolledContent content) {
-        List<DiffFilter> filters = preferences.diffFilters().enabledFilters();
-        if (filters.isEmpty() || !preferences.settings().diffStyle().rich()) {
+        HunkFilters filters = HunkFilters.of(this);
+        if (filters.enabled().isEmpty() || !preferences.settings().diffStyle().rich()) {
             return Filtering.NONE;
         }
         List<RemarkThread> threads = content instanceof ScrolledContent.FileChanges
                 ? remarks().map(StatedRemarks::onLines).getOrElse(List.empty())
                 : List.empty();
         return new Filtering(
-                filters,
+                filters.enabled(),
                 repoView.opened(area, content),
                 threads,
                 content instanceof ScrolledContent.Diff,
-                preferences.diffFilters().off());
+                filters.off());
     }
 
     /**

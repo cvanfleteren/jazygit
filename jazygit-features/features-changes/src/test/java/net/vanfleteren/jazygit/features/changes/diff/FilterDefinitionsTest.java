@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.settings;
+package net.vanfleteren.jazygit.features.changes.diff;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -7,11 +7,18 @@ import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.kernel.settings.SettingKeys;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.settings.SettingsFile;
+import net.vanfleteren.jazygit.kernel.settings.SettingsProblem;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore.Loaded;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class FilterDefinitionsTest {
+
+    private static final SettingKeys KEYS =
+            SettingKeys.KERNEL.and(List.of(DiffFilterSettings.ENABLED, DiffFilterSettings.DEFINITIONS));
 
     @TempDir
     Path dir;
@@ -22,7 +29,7 @@ class FilterDefinitionsTest {
 
     private Loaded load(String content) throws IOException {
         Files.writeString(file(), content);
-        return new SettingsFile(file()).load();
+        return new SettingsFile(file(), KEYS).load();
     }
 
     @Test
@@ -66,7 +73,7 @@ class FilterDefinitionsTest {
                 """);
 
         assertEquals(Option.none(), loaded.problem());
-        assertEquals(List.of("java-imports", "mine"), loaded.settings().diffFilters());
+        assertEquals(List.of("java-imports", "mine"), loaded.settings().get(DiffFilterSettings.ENABLED));
         assertEquals(
                 List.of(
                         new FilterDefinition(
@@ -83,7 +90,7 @@ class FilterDefinitionsTest {
                                 List.empty(),
                                 Option.of(List.of("^\\s*log\\.debug\\(")),
                                 false)),
-                loaded.settings().filterDefinitions().all());
+                loaded.settings().get(DiffFilterSettings.DEFINITIONS).all());
     }
 
     @Test
@@ -112,7 +119,8 @@ class FilterDefinitionsTest {
                         file(), List.of("diff-filters[1].id", "diff-filters[2].lines", "diff-filters[4].id"))),
                 loaded.problem());
         assertEquals(
-                List.of("fine"), loaded.settings().filterDefinitions().all().map(FilterDefinition::id));
+                List.of("fine"),
+                loaded.settings().get(DiffFilterSettings.DEFINITIONS).all().map(FilterDefinition::id));
     }
 
     @Test
@@ -139,12 +147,14 @@ class FilterDefinitionsTest {
                 paths = ["*.gen"]
                 """).settings();
 
-        new SettingsFile(file()).save(loaded, loaded.withDiffFilters(List.of("mine", "lockfiles")));
+        new SettingsFile(file(), KEYS)
+                .save(loaded, loaded.with(DiffFilterSettings.ENABLED, List.of("mine", "lockfiles")));
 
-        Loaded reread = new SettingsFile(file()).load();
+        Loaded reread = new SettingsFile(file(), KEYS).load();
         assertEquals(Option.none(), reread.problem());
-        assertEquals(List.of("mine", "lockfiles"), reread.settings().diffFilters());
+        assertEquals(List.of("mine", "lockfiles"), reread.settings().get(DiffFilterSettings.ENABLED));
         assertEquals(
-                List.of("mine"), reread.settings().filterDefinitions().all().map(FilterDefinition::id));
+                List.of("mine"),
+                reread.settings().get(DiffFilterSettings.DEFINITIONS).all().map(FilterDefinition::id));
     }
 }

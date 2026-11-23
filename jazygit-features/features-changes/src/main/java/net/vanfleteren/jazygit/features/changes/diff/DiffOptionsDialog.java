@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.DiffContext;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.state.preferences.DiffFilters;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;

@@ -231,7 +231,7 @@ class DiffOptionsUpdateTest {
                         open.preferences().settings().diffPairs(),
                         true,
                         DiffContext.DEFAULT.wider(),
-                        open.preferences().diffFilters()),
+                        DiffFilterSettings.filters(open)),
                 split.popup(DiffOptionsPopup.class).get());
     }
 

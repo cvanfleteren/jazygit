@@ -25,7 +25,9 @@ class GitHubBundleTest {
 
     @Test
     void everyKeyTheCodeNamesIsInTheBundle() {
-        // The paths of the settings in the settings file, which start with the root but are no keys.
-        assertEquals(List.empty(), Bundles.missing("github", HashSet.of("github.executable", "github.browsers")));
+        // The paths of the settings in the settings file, and GitHub's host, which start with the root but are no keys.
+        assertEquals(
+                List.empty(),
+                Bundles.missing("github", HashSet.of("github.executable", "github.browsers", "github.com")));
     }
 }

@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.diff.DiffFilterSettings;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
@@ -273,7 +274,9 @@ class JazygitAppFileStepTest {
         TestApp app = new TestApp(
                 new Env(withImportsOnly()),
                 new SettingsStore.Loaded(
-                        Settings.DEFAULT.withDiffStyle(DiffStyle.RICH).withDiffFilters(List.of("java-imports")),
+                        Settings.DEFAULT
+                                .withDiffStyle(DiffStyle.RICH)
+                                .with(DiffFilterSettings.ENABLED, List.of("java-imports")),
                         Option.none()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);

@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.features.branches.branch.upstream.UpstreamMsg;
+import net.vanfleteren.jazygit.features.branches.worktree.WorktreePopup;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.features.branches.worktree.remove.RemoveWorktreeMsg;
 import net.vanfleteren.jazygit.features.branches.worktree.switchto.SwitchWorktreeMsg;

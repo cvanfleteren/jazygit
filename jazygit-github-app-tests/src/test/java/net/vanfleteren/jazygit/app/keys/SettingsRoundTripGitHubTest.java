@@ -17,6 +17,9 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
+import net.vanfleteren.jazygit.features.changes.diff.DiffFilterSettings;
+import net.vanfleteren.jazygit.features.changes.diff.FilterDefinition;
+import net.vanfleteren.jazygit.features.changes.diff.FilterDefinitions;
 import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.settings.AccountBrowsers;
@@ -24,8 +27,6 @@ import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
-import net.vanfleteren.jazygit.kernel.settings.FilterDefinition;
-import net.vanfleteren.jazygit.kernel.settings.FilterDefinitions;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsFile;
@@ -105,14 +106,16 @@ class SettingsRoundTripGitHubTest {
                     EditorSettings.EDITORS,
                     new Editors(List.of(
                             EditorProgram.ofDir("IntelliJ", List.of("idea", "{dir}"), false, Option.some('i')))))
-            .withDiffFilters(List.of("java-imports"))
-            .withFilterDefinitions(new FilterDefinitions(List.of(new FilterDefinition(
-                    "mine",
-                    Option.some("Generated sources"),
-                    List.empty(),
-                    List.of("**/generated/**"),
-                    Option.none(),
-                    false))));
+            .with(DiffFilterSettings.ENABLED, List.of("java-imports"))
+            .with(
+                    DiffFilterSettings.DEFINITIONS,
+                    new FilterDefinitions(List.of(new FilterDefinition(
+                            "mine",
+                            Option.some("Generated sources"),
+                            List.empty(),
+                            List.of("**/generated/**"),
+                            Option.none(),
+                            false))));
 
     /**
      * A change to each setting the app writes, in the order the file has them: to another value, to its default, or
@@ -131,9 +134,6 @@ class SettingsRoundTripGitHubTest {
             // The last key of its table: the table goes too.
             change(Settings.AUTO_FETCH.path(), settings -> settings.withAutoFetch(true)),
             change(
-                    Settings.DIFF_FILTERS.path(),
-                    settings -> settings.withDiffFilters(List.of("java-imports", "lockfiles"))),
-            change(
                     GitHubSettings.GH_EXECUTABLE.path(),
                     settings -> settings.with(GitHubSettings.GH_EXECUTABLE, Option.none())),
             change(
@@ -151,7 +151,10 @@ class SettingsRoundTripGitHubTest {
                             Agents.SETTING,
                             settings.get(Agents.SETTING)
                                     .added(new AgentProgram(
-                                            "Codex", List.of("codex"), true, Option.none(), Option.of("Fix it"))))));
+                                            "Codex", List.of("codex"), true, Option.none(), Option.of("Fix it"))))),
+            change(
+                    DiffFilterSettings.ENABLED.path(),
+                    settings -> settings.with(DiffFilterSettings.ENABLED, List.of("java-imports", "lockfiles"))));
 
     @TempDir
     Path dir;
@@ -168,7 +171,7 @@ class SettingsRoundTripGitHubTest {
         List<String> written = StandardSettings.keys()
                 .all()
                 .map(SettingKey::path)
-                .removeAll(List.of(EditorSettings.EDITORS.path(), Settings.FILTER_DEFINITIONS.path()));
+                .removeAll(List.of(EditorSettings.EDITORS.path(), DiffFilterSettings.DEFINITIONS.path()));
 
         assertEquals(written, CHANGES.keySet().toList());
     }
@@ -207,7 +210,7 @@ class SettingsRoundTripGitHubTest {
                 read,
                 Settings.DEFAULT
                         .with(EditorSettings.EDITORS, read.get(EditorSettings.EDITORS))
-                        .withFilterDefinitions(read.filterDefinitions()));
+                        .with(DiffFilterSettings.DEFINITIONS, read.get(DiffFilterSettings.DEFINITIONS)));
 
         assertWritten("back-to-default");
     }

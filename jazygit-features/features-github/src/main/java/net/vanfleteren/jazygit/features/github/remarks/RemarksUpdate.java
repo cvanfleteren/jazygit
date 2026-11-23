@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
-import net.vanfleteren.jazygit.kernel.ui.markdown.MarkdownImage;
 
 /**
  * Reading the review threads of the pull request whose files are listed (ADR 55): once its files are opened, again
@@ -125,7 +124,7 @@ public final class RemarksUpdate {
         List<String> urls = read.read()
                 .iterator()
                 .flatMap(ReviewThread::comments)
-                .flatMap(comment -> MarkdownImage.onGitHub(comment.body()))
+                .flatMap(comment -> GitHubImages.in(comment.body()))
                 .distinct()
                 .filter(url -> !read.pictures().containsKey(url))
                 .take(Math.max(0, MAX_PICTURES - read.pictures().size()))

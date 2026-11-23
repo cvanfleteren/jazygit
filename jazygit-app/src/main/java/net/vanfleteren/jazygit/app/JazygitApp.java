@@ -43,6 +43,7 @@ import net.vanfleteren.jazygit.kernel.settings.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
+import net.vanfleteren.jazygit.kernel.state.diff.HunkFilters;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
@@ -250,8 +251,7 @@ public class JazygitApp extends ToolkitApp {
         List<ScrolledContent> before =
                 contentPanel.filtered(model, focus.focus()).contents();
         if (leftColumn.stepFile(model, step)) {
-            stepping = Option.when(
-                    !model.preferences().diffFilters().active().isEmpty(), () -> new Stepping(step, before));
+            stepping = Option.when(!HunkFilters.of(model).active().isEmpty(), () -> new Stepping(step, before));
             requestRedraw();
         } else {
             stepping = Option.none();
