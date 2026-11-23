@@ -1,60 +1,63 @@
 package net.vanfleteren.jazygit.core.process;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.Tuple;
-import io.vavr.control.Option;
+import io.vavr.Tuple2;
+import io.vavr.control.Either;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 /**
- * Running two pieces of work at the same time, and waiting for both (ADR 188).
+ * Running two pieces of work at the same time, and waiting for both (ADR 188): how either fails is a value, never
+ * thrown.
  */
 class ParallelTest {
 
     @Test
     void bothAreGivenInOrder() {
-        assertEquals(Option.of(Tuple.of("a", 2)), Parallel.both(() -> "a", () -> 2));
+        assertEquals(Either.right(Tuple.of("a", 2)), Parallel.both(() -> "a", () -> 2));
     }
 
     @Test
     void theTwoRunAtTheSameTime() {
         CountDownLatch started = new CountDownLatch(2);
         // Each waits for the other to have started: run one after the other, neither would see it.
-        Option<?> both = Parallel.both(() -> meet(started), () -> meet(started));
+        Either<Throwable, Tuple2<Boolean, Boolean>> both = Parallel.both(() -> meet(started), () -> meet(started));
 
-        assertEquals(Option.of(Tuple.of(true, true)), both);
+        assertEquals(Either.right(Tuple.of(true, true)), both);
     }
 
     @Test
-    void whatOneThrowsIsThrownOnceBothAreDone() {
+    void whatOneThrowsIsItsFailureOnceBothAreDone() {
         AtomicBoolean secondDone = new AtomicBoolean();
+        IllegalArgumentException bug = new IllegalArgumentException("bug");
 
-        IllegalArgumentException thrown = assertThrows(
-                IllegalArgumentException.class,
-                () -> Parallel.both(
-                        () -> {
-                            throw new IllegalArgumentException("bug");
-                        },
-                        () -> {
-                            sleep(50);
-                            secondDone.set(true);
-                            return 1;
-                        }));
+        Either<Throwable, Tuple2<Object, Integer>> both = Parallel.both(
+                () -> {
+                    throw bug;
+                },
+                () -> {
+                    sleep(50);
+                    secondDone.set(true);
+                    return 1;
+                });
 
-        assertEquals("bug", thrown.getMessage());
+        assertEquals(bug, both.getLeft());
         assertTrue(secondDone.get());
     }
 
     @Test
-    void anInterruptedWaitGivesNoneAndKeepsTheInterrupt() {
+    void anInterruptedWaitFailsAndKeepsTheInterrupt() {
         Thread.currentThread().interrupt();
         try {
-            assertEquals(Option.none(), Parallel.both(() -> sleep(1_000), () -> 1));
+            Either<Throwable, Tuple2<Boolean, Integer>> both = Parallel.both(() -> sleep(1_000), () -> 1);
+
+            assertInstanceOf(InterruptedException.class, both.getLeft());
             assertTrue(Thread.currentThread().isInterrupted());
         } finally {
             Thread.interrupted();

@@ -247,6 +247,14 @@ class CliReflogTest {
     }
 
     @Test
+    void aLookThatWasInterruptedOrBrokeSaysSo() {
+        IllegalStateException bug = new IllegalStateException("bug");
+
+        assertEquals(new GitError.Interrupted("rev-list"), CliHistory.lookFailed(new InterruptedException()));
+        assertEquals(new GitError.Broke("rev-list", bug), CliHistory.lookFailed(bug));
+    }
+
+    @Test
     void noCommitsAskedForNeedNoProcess() {
         // No repository at all: a process would fail.
         assertEquals(

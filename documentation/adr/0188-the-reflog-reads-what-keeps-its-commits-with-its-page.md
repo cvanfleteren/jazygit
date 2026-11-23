@@ -35,8 +35,10 @@ with every reflog of the repository, and gives the same answer for each page.
   would fail.
 - **`Parallel.both` in `core-process`** runs the two, each on a virtual thread, and waits for both before it returns,
   in a `try` with resources: nothing it starts outlives the call. `StructuredTaskScope` is a preview in Java 25, and the
-  app uses no preview; when it is final, only `Parallel` changes. An interrupted wait gives none, and the thread stays
-  interrupted; what one of the two throws is thrown again, as a bug.
+  app uses no preview; when it is final, only `Parallel` changes. It throws nothing: it gives an `Either`, failed with an
+  `InterruptedException` when the wait is interrupted (the thread stays interrupted), or with what one of the two
+  threw (not a `Try`, which throws an `InterruptedException` again rather than hold it); `History.lost` makes those
+  `GitError.Interrupted` and `GitError.Broke`.
 
 ## Consequences
 

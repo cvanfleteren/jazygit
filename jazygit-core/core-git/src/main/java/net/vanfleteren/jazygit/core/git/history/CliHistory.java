@@ -565,9 +565,18 @@ public final class CliHistory implements History {
         }
         Set<Sha> asked = HashSet.ofAll(commits);
         return Parallel.both(() -> unreached(asked, List.empty()), () -> unreached(asked, List.of("HEAD")))
-                .<Either<GitError, Kept>>map(both ->
-                        both._1().flatMap(byRefs -> both._2().map(byAll -> new Kept(byAll, byRefs.removeAll(byAll)))))
-                .getOrElse(() -> Either.left(new GitError.Interrupted("rev-list")));
+                .mapLeft(CliHistory::lookFailed)
+                .flatMap(both ->
+                        both._1().flatMap(byRefs -> both._2().map(byAll -> new Kept(byAll, byRefs.removeAll(byAll)))));
+    }
+
+    /**
+     * The error of a look for lost commits that {@code thrown} ended: an interrupted wait, or a bug.
+     */
+    static GitError lookFailed(Throwable thrown) {
+        return thrown instanceof InterruptedException
+                ? new GitError.Interrupted("rev-list")
+                : new GitError.Broke("rev-list", thrown);
     }
 
     /**

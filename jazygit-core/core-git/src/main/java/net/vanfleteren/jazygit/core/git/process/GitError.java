@@ -46,6 +46,13 @@ public sealed interface GitError {
     record TooMuchOutput(String operation) implements GitError {}
 
     /**
+     * What ran {@code operation} next to another broke with {@code cause}, which a bug threw (ADR 188).
+     *
+     * @param operation the git subcommand, e.g. {@code rev-list}
+     */
+    record Broke(String operation, Throwable cause) implements GitError {}
+
+    /**
      * Git ran, but refused.
      *
      * @param explanation the line git printed about why, preferring its error output; none if it printed
