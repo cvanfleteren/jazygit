@@ -26,7 +26,8 @@ that a line is longer.
   none, its attributes, so the text under it keeps its colour.
 - **The commit description has a ruler at 72.** The summary, a one-line field, has none.
 - **Each theme colours the ruler as the header of a review thread**, a quiet background of its own; the theme without
-  colours reverses it.
+  colours underlines it. Not reversed: the text area draws its cursor as a reversed cell, which would not show on a
+  reversed ruler.
 
 Turned down:
 

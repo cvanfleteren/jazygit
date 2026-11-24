@@ -34,4 +34,4 @@ Span.search-match { text-style: underlined; }
 Span.search-current { text-style: bold underlined italic; }
 
 /* The column of a text area past the length its lines are to keep to (ADR 193). */
-Span.ruler { text-style: reversed; }
+Span.ruler { text-style: underlined; }

@@ -60,13 +60,29 @@ class SubmittableTextAreaTest {
     }
 
     @Test
-    void aThemeWithoutColoursReversesTheRuler() {
+    void aThemeWithoutColoursUnderlinesTheRuler() {
         TextAreaState state = new TextAreaState();
 
         Buffer buffer = render(area(state).ruler(10), ThemeName.NONE);
 
+        // Underlined, not reversed: the cursor of the area is a reversed cell, which would not show on the ruler.
         assertEquals(
-                Style.EMPTY.reversed().addModifiers(), buffer.get(11, 1).style().addModifiers());
+                Style.EMPTY.underlined().addModifiers(),
+                buffer.get(11, 1).style().addModifiers());
+    }
+
+    @Test
+    void theCursorOnTheRulerStillShowsInEveryTheme() {
+        for (ThemeName theme : ThemeName.values()) {
+            TextAreaState state = new TextAreaState();
+            // Ten characters put the cursor on the 11th column, the ruler's.
+            state.setText("abcdefghij");
+            state.moveCursorToEnd();
+
+            Buffer buffer = render(area(state).ruler(10), theme, true);
+
+            assertNotEquals(buffer.get(11, 2).style(), buffer.get(11, 1).style(), theme.id());
+        }
     }
 
     @Test
@@ -95,7 +111,15 @@ class SubmittableTextAreaTest {
     }
 
     private static Buffer render(SubmittableTextArea view, ThemeName theme) {
+        return render(view, theme, false);
+    }
+
+    // With the focus on the area, it draws its cursor.
+    private static Buffer render(SubmittableTextArea view, ThemeName theme, boolean focused) {
         FocusManager focus = new FocusManager();
+        if (focused) {
+            focus.setFocus("body");
+        }
         DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, new ElementRegistry()));
         context.setStyleEngine(engine(theme));
         Buffer buffer = Buffer.empty(AREA);
