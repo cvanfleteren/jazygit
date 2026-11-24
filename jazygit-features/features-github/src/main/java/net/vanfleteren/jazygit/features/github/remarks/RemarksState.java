@@ -32,7 +32,7 @@ public record RemarksState(Option<PrRemarks> open) {
      * What these state for {@code changes}: the threads they read, when those are the files of their pull request.
      */
     static Option<StatedRemarks> remarks(RemarksState state, Changes changes) {
-        return changes instanceof Changes.OfPullRequest(PullRequestCommits commits)
+        return changes instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
                 ? state.open
                         .filter(read -> read.number().value() == commits.number())
                         .map(read -> read.stated(commits))
@@ -51,7 +51,7 @@ public record RemarksState(Option<PrRemarks> open) {
      * of one.
      */
     static Option<PrFiles> files(Model model, CommitFilesView view) {
-        return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
+        return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
                 ? model.part(PART)
                         .open
                         .filter(read -> read.number().value() == commits.number())

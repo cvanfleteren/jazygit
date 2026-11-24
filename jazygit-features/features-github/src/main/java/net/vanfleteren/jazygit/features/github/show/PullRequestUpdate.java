@@ -163,8 +163,9 @@ public final class PullRequestUpdate {
      */
     private static Next filesChosen(Model model) {
         return model.popup(PullRequestPopup.class)
-                .flatMap(PullRequestPopup::commits)
-                .map(commits -> files(model.withoutPopup(PullRequestPopup.class), commits))
+                .flatMap(popup -> popup.commits()
+                        .map(commits -> files(
+                                model.withoutPopup(PullRequestPopup.class), popup.branch(), commits, popup.fromFork())))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -471,18 +472,36 @@ public final class PullRequestUpdate {
         return pullRequest
                 .commits()
                 .map(listed -> commits(pullRequest.number(), listed))
-                .map(commits -> files(model, commits))
+                .map(commits -> files(model, branch, commits, fromFork))
                 .getOrElse(() -> show(model, branch, pullRequest, fromFork, true));
     }
 
     /**
-     * The files of the pull request at {@code commits}, in the files pane of the repository screen, which the focus
-     * goes to; Escape there gives it to the branches pane (ADR 55).
+     * The files of the pull request at {@code commits}, of {@code branch}, in the files pane of the repository screen,
+     * which the focus goes to; Escape there gives it to the branches pane (ADR 55). They are edited in the working
+     * tree of that branch, when it is the local branch of the pull request (ADR 192).
      */
-    private static Next files(Model model, PullRequestCommits commits) {
+    private static Next files(Model model, BranchName branch, PullRequestCommits commits, boolean fromFork) {
         return CommitFilesUpdate.update(
                 model.withScreen(Screen.REPOSITORY),
-                new CommitFilesMsg.Opened(new Changes.OfPullRequest(commits), Scopes.BRANCHES.pane()));
+                new CommitFilesMsg.Opened(
+                        new Changes.OfPullRequest(commits, local(model, branch, commits.number(), fromFork)),
+                        Scopes.BRANCHES.pane()));
+    }
+
+    /**
+     * {@code branch}, when it is the local branch of the pull request numbered {@code number}: for a pull request from
+     * a fork, when {@code fromFork}, only one GitHub's part finds that pull request of, as the pull requests screen
+     * names it by its head branch in the fork, often {@code main}; else any local branch of that name, also once the
+     * pull request is closed (ADR 192).
+     */
+    private static Option<BranchName> local(Model model, BranchName branch, int number, boolean fromFork) {
+        GitHubState gitHub = model.part(GitHubState.PART);
+        return model.repo()
+                .branch(branch)
+                .filter(known -> !fromFork
+                        || gitHub.pullRequest(known).exists(pr -> pr.number().value() == number))
+                .map(known -> branch);
     }
 
     /**

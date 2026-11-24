@@ -104,7 +104,7 @@ public record ReadWholeFile(AreaId area, ScrolledContent content, Source source,
                             case Changes.OfStash(Sha sha) -> env.git().stashes().fileChanges(sha, List.of(file), whole);
                             case Changes.OfBranch(var branch, var base, Sha sha) ->
                                 env.git().diffs().rangeFileChanges(base.tip(), sha, List.of(file), whole);
-                            case Changes.OfPullRequest(PullRequestCommits commits) ->
+                            case Changes.OfPullRequest(PullRequestCommits commits, var _) ->
                                 env.git().diffs().pullRequestFileChanges(commits, List.of(file), whole);
                         };
                     // A file that is no text has no lines to show: no file is read, as for a binary one.

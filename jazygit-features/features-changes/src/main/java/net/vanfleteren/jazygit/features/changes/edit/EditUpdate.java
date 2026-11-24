@@ -3,11 +3,14 @@ package net.vanfleteren.jazygit.features.changes.edit;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
+import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffLines;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
@@ -24,6 +27,14 @@ public final class EditUpdate {
     public static Next update(Model model, EditMsg msg) {
         return switch (msg) {
             case EditMsg.Requested(String path) -> open(model, path, 1);
+            case EditMsg.ListedRequested(String path) ->
+                model.repoView()
+                        .files()
+                        .commitFiles()
+                        .map(view -> elsewhere(model, view.of())
+                                .map(error -> Next.of(model.fail(error)))
+                                .getOrElse(() -> open(model, path, 1)))
+                        .getOrElse(() -> Next.of(model));
             case EditMsg.AtCursor(DiffCursorAt at) ->
                 file(at.cursor())
                         .map(path -> open(model, path, line(model, at, at.cursor())))
@@ -48,6 +59,30 @@ public final class EditUpdate {
         return editors.all().size() == 1
                 ? start(model, editors.all().head(), path, line)
                 : Next.of(model.clearError().openPopup(new EditPopup(path, line, editors.lettered())));
+    }
+
+    /**
+     * Why the files of {@code changes} cannot be edited on disk in {@code model}, if they cannot: those of a branch or
+     * a pull request only while its branch is checked out, as the file on disk is else another branch's; those of a
+     * commit or a stash always, as a diff of them opens the file of the working tree too (ADR 145, 192).
+     */
+    static Option<EditError> elsewhere(Model model, Changes changes) {
+        Option<BranchName> current = model.repo().currentBranch().map(Branch::name);
+        return switch (changes) {
+            case Changes.OfCommit _, Changes.OfStash _ -> Option.none();
+            case Changes.OfBranch(BranchName branch, var _, var _) -> unless(current, branch);
+            case Changes.OfTip(BranchName branch, var _) -> unless(current, branch);
+            case Changes.OfPullRequest(var commits, var branch) ->
+                branch.map(of -> unless(current, of))
+                        .getOrElse(() -> Option.of(new EditError.NotCheckedOut("#" + commits.number())));
+        };
+    }
+
+    /**
+     * That {@code branch} is not checked out, unless it is the {@code current} one.
+     */
+    private static Option<EditError> unless(Option<BranchName> current, BranchName branch) {
+        return current.contains(branch) ? Option.none() : Option.of(new EditError.NotCheckedOut(branch.value()));
     }
 
     private static Next start(Model model, EditorProgram editor, String path, int line) {
