@@ -401,13 +401,75 @@ class PullRequestFilesUpdateTest {
 
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
-                Option.of(new BranchName("patch-1")));
+                Option.none());
         assertEquals(Option.none(), opened.model().popup());
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(
                 Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
                 opened.model().repoView().files().commitFiles());
         assertTrue(opened.cmds().contains(new LoadCommitFiles(of)));
+    }
+
+    /**
+     * A fork's head branch is named in the fork: one named like the branch checked out here is not that branch, and
+     * its files are not edited in it (ADR 192).
+     */
+    @Test
+    void theFilesOfAForkWhoseBranchIsNamedLikeOneHereAreOfNoBranchHere() {
+        PullRequestSummary fromForkMain = new PullRequestSummary(
+                "owner/repo",
+                new PrNumber(9),
+                "From a fork's main",
+                "bob",
+                new GhBranch("main"),
+                false,
+                true,
+                Checks.NONE,
+                Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/owner/repo/pull/9",
+                Option.none(),
+                Option.of(new Sha(BASE_OID)),
+                Option.of(new Sha(HEAD_OID)));
+        Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+
+        Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(fromForkMain));
+
+        assertEquals(
+                Option.of(new Changes.OfPullRequest(
+                        new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                        Option.none())),
+                opened.model().repoView().files().commitFiles().map(CommitFilesView::of));
+    }
+
+    @Test
+    void theFilesOfAPullRequestOfThisRepositoryAreOfTheLocalBranchOfItsName() {
+        PullRequestSummary fromMain = new PullRequestSummary(
+                "owner/repo",
+                new PrNumber(9),
+                "From main",
+                "bob",
+                new GhBranch("main"),
+                false,
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/owner/repo/pull/9",
+                Option.none(),
+                Option.of(new Sha(BASE_OID)),
+                Option.of(new Sha(HEAD_OID)));
+        Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+
+        Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(fromMain));
+
+        assertEquals(
+                Option.of(new Changes.OfPullRequest(
+                        new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                        Option.of(new BranchName("main")))),
+                opened.model().repoView().files().commitFiles().map(CommitFilesView::of));
     }
 
     @Test
@@ -433,7 +495,7 @@ class PullRequestFilesUpdateTest {
 
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
-                Option.of(new BranchName("patch-1")));
+                Option.none());
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(

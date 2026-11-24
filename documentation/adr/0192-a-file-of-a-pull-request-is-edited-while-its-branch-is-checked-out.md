@@ -30,9 +30,11 @@ it the pull request's.
   worktree having it).
 - The files of a commit or a stash open the file of the working tree whatever is checked out, as their diff does
   (ADR 145): they are of no branch to check.
-- A pull request's files know the local branch they were opened from: `Changes.OfPullRequest` keeps it, as
-  `OfBranch` and `OfTip` keep theirs, the branch `F` was pressed on, or the head branch of one listed on the pull
-  requests screen. It stays when the pull request moves on to other commits (ADR 60). One opened with no branch known
+- A pull request's files know its local branch: `Changes.OfPullRequest` keeps it, as `OfBranch` and `OfTip` keep
+  theirs. It is the branch `F` was pressed on, or the local branch named like the head branch of one listed on the
+  pull requests screen. For a pull request from a fork, that branch must be the one GitHub's part finds the pull
+  request of: a fork's head branch is named in the fork, often `main`, and a branch of that name here is another.
+  The branch stays when the pull request moves on to other commits (ADR 60). One opened with no branch known
   is not edited, and says so with its number: `#42 is not checked out…`. Not: matching its head commit with HEAD,
   which a commit made to answer the feedback, not pushed yet, would break at once.
 - The branch is compared by name with the checked-out one. Which pull request a branch has is the forge's to know
