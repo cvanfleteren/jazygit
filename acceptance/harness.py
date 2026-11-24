@@ -59,6 +59,16 @@ def eventually(check, description, timeout=TIMEOUT):
         time.sleep(0.05)
 
 
+def written(app, path: Path, description: str) -> str:
+    """Waits until a program has written whole lines to path, and returns its text. Waiting for the file is not
+    enough: the shell makes it empty before echo writes to it."""
+    def lines():
+        text = path.read_text() if path.exists() else ""
+        return text if text.endswith("\n") else None
+
+    return app.eventually(lines, description)
+
+
 class Git:
     """Runs git in one repository, with the isolated environment the app gets too."""
 

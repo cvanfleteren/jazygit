@@ -1,6 +1,8 @@
 """Opening a file in an editor of the settings that opens files (ADR 145)."""
 from pathlib import Path
 
+from harness import written
+
 
 def file_editors(env, *entries: tuple[str, str, str | None]):
     """Sets editors that open files in the settings, each (name, marker, shortcut): one that writes the file and the
@@ -16,8 +18,7 @@ def file_editors(env, *entries: tuple[str, str, str | None]):
 
 
 def opened(ui, marker: Path) -> str:
-    ui.app.eventually(marker.exists, f"the editor to write {marker.name}")
-    return marker.read_text().strip()
+    return written(ui.app, marker, f"the editor to write {marker.name}").strip()
 
 
 def test_a_file_opens_in_the_one_editor_set_to_open_files_at_its_start(repo, env, jazygit):
