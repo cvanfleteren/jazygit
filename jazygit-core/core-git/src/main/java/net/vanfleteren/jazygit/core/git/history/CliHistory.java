@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
+import net.vanfleteren.jazygit.core.process.Parallel;
 import net.vanfleteren.jazygit.core.repo.*;
 
 /**
@@ -549,6 +550,52 @@ public final class CliHistory implements History {
                         entries -> entries.isEmpty()
                                 ? reflogsOff(worktree).map(off -> off ? Reflog.Empty.OFF : new Reflog.Entries(entries))
                                 : Either.right(new Reflog.Entries(entries)));
+    }
+
+    /**
+     * Two {@code git rev-list --ignore-missing <commits> --not … --branches --tags --remotes} at the same time, one
+     * with {@code HEAD} among what it leaves out: those the first lists that the second does not, HEAD reaches. git
+     * resolves HEAD as it runs, so it is where HEAD is then; {@code --ignore-missing} makes a HEAD without a commit
+     * reach nothing. Each walks from the commits only as far as the first commit a ref reaches (ADR 188).
+     */
+    @Override
+    public Either<GitError, Kept> lost(Seq<Sha> commits) {
+        if (commits.isEmpty()) {
+            return Either.right(Kept.BY_REFS);
+        }
+        Set<Sha> asked = HashSet.ofAll(commits);
+        return Parallel.both(() -> unreached(asked, List.empty()), () -> unreached(asked, List.of("HEAD")))
+                .mapLeft(CliHistory::lookFailed)
+                .flatMap(both ->
+                        both._1().flatMap(byRefs -> both._2().map(byAll -> new Kept(byAll, byRefs.removeAll(byAll)))));
+    }
+
+    /**
+     * The error of a look for lost commits that {@code thrown} ended: an interrupted wait, or a bug.
+     */
+    static GitError lookFailed(Throwable thrown) {
+        return thrown instanceof InterruptedException
+                ? new GitError.Interrupted("rev-list")
+                : new GitError.Broke("rev-list", thrown);
+    }
+
+    /**
+     * Those of {@code commits} no branch, tag, remote or one of {@code also} reaches.
+     */
+    private Either<GitError, Set<Sha>> unreached(Set<Sha> commits, List<String> also) {
+        return GitProcess.read(
+                worktree,
+                lostCommand(commits, also),
+                raw -> Either.sequenceRight(GitOutput.nonBlankLines(raw).map(GitOutput::sha))
+                        .map(listed -> HashSet.ofAll(listed).filter(commits::contains)));
+    }
+
+    private static GitCommand lostCommand(Set<Sha> commits, List<String> also) {
+        return GitCommand.reading(List.of("rev-list", "--ignore-missing")
+                .appendAll(commits.toList().map(sha -> GitArgs.revision(new Revision.Commit(sha))))
+                .append("--not")
+                .appendAll(also)
+                .appendAll(List.of("--branches", "--tags", "--remotes", "--")));
     }
 
     /**

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.changes.reflog;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.history.History;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
@@ -14,7 +15,8 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 
 /**
  * Reading the reflog of HEAD while its tab is shown (ADR 186): when it is shown, after an operation of the app and
- * after the log is read again; a page ahead of the highlighted entry; one read at a time.
+ * after the log is read again; a page ahead of the highlighted entry; one read at a time, which finds which of the
+ * commits it read are lost as well (ADR 188).
  */
 public final class ReflogUpdate {
 
@@ -22,12 +24,14 @@ public final class ReflogUpdate {
 
     public static Next update(Model model, ReflogMsg msg) {
         return switch (msg) {
-            case ReflogMsg.Read(ReadReflog cmd, Reflog reflog) -> read(model, cmd, reflog);
+            case ReflogMsg.Read(ReadReflog cmd, Reflog reflog, Option<Kept> kept) -> read(model, cmd, reflog, kept);
             case ReflogMsg.Failed(ReadReflog cmd, Failure failure) -> failed(model, cmd, failure);
-            case ReflogMsg.Reached(int place) ->
+            case ReflogMsg.Highlighted(int place) ->
                 ahead(model.withPart(
                         ReflogView.PART,
-                        view(model).withReached(Math.max(view(model).reached(), place))));
+                        view(model)
+                                .withHighlighted(Option.of(place))
+                                .withReached(Math.max(view(model).reached(), place))));
         };
     }
 
@@ -52,7 +56,7 @@ public final class ReflogUpdate {
     /**
      * Whether the commits pane of {@code model} shows the reflog.
      */
-    static boolean shown(Model model) {
+    public static boolean shown(Model model) {
         return model.repoView().tab(CommitsPanel.PANE).contains(ReflogView.TAB);
     }
 
@@ -69,7 +73,11 @@ public final class ReflogUpdate {
         return Next.of(model.withPart(ReflogView.PART, view.withReading(Option.of(cmd))), cmd);
     }
 
-    private static Next read(Model model, ReadReflog cmd, Reflog reflog) {
+    /**
+     * {@code model} with what {@code cmd} read, {@code reflog}, and what keeps its commits, {@code kept}: from the top,
+     * in place of what was known; a later page, for its own commits. Unknown, nothing is marked of what it read.
+     */
+    private static Next read(Model model, ReadReflog cmd, Reflog reflog, Option<Kept> kept) {
         ReflogView view = view(model);
         if (!view.reading().contains(cmd)) {
             return Next.of(model);
@@ -81,11 +89,14 @@ public final class ReflogUpdate {
                     case Reflog.Empty empty ->
                         done.withEntries(new Loadable.Loaded<>(List.empty()))
                                 .withEmpty(Option.of(empty))
-                                .withEnded(true);
+                                .withEnded(true)
+                                .withKept(Kept.BY_REFS);
                     case Reflog.Entries(List<ReflogEntry> page) ->
                         done.withEntries(done.entries().reload(joined(view, cmd, page)))
                                 .withEmpty(Option.none())
-                                .withEnded(page.size() < cmd.max());
+                                .withEnded(page.size() < cmd.max())
+                                .withKept((cmd.skip() == 0 ? Kept.BY_REFS : view.kept())
+                                        .with(kept.getOrElse(Kept.BY_REFS), page.map(ReflogEntry::sha)));
                 });
     }
 

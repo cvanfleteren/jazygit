@@ -213,4 +213,6 @@ another tool adds it there too.
 | 184 | [The diff filters are the diffs feature's](0184-the-diff-filters-are-the-diffs-features.md) |  |
 | 185 | [A pane has tabs the features add](0185-a-pane-has-tabs-the-features-add.md) |  |
 | 186 | [The reflog of HEAD, read only](0186-the-reflog-of-head-read-only.md) |  |
+| 187 | [A source heads what another shows](0187-a-source-heads-what-another-shows.md) |  |
+| 188 | [The reflog reads what keeps its commits with its page](0188-the-reflog-reads-what-keeps-its-commits-with-its-page.md) |  |
 | 189 | [The branches pane has the tabs of any pane](0189-the-branches-pane-has-the-tabs-of-any-pane.md) |  |

@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.features.changes.reflog;
 
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -17,9 +19,10 @@ public sealed interface ReflogMsg extends Msg {
     }
 
     /**
-     * {@code cmd} read {@code reflog}.
+     * {@code cmd} read {@code reflog}, and what keeps those of its commits no ref reaches, {@code kept}; none when
+     * that could not be found (ADR 188).
      */
-    record Read(ReadReflog cmd, Reflog reflog) implements ReflogMsg {}
+    record Read(ReadReflog cmd, Reflog reflog, Option<Kept> kept) implements ReflogMsg {}
 
     /**
      * {@code cmd} could not read the reflog, for {@code failure}.
@@ -27,8 +30,7 @@ public sealed interface ReflogMsg extends Msg {
     record Failed(ReadReflog cmd, Failure failure) implements ReflogMsg {}
 
     /**
-     * The entry at {@code place} was highlighted, the oldest so far: the next page is read once it is in the last page
-     * read.
+     * The entry at {@code place} was highlighted: the next page is read once it is in the last page read.
      */
-    record Reached(int place) implements ReflogMsg {}
+    record Highlighted(int place) implements ReflogMsg {}
 }

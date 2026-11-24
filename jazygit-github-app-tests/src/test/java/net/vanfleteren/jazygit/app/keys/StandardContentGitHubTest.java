@@ -62,6 +62,7 @@ class StandardContentGitHubTest {
     void theAppAsksTheSourcesOfTheFeaturesBeforeTheContentPanelsOwn() {
         assertEquals(
                 List.of(
+                        "ReflogSource",
                         "BuildsSource",
                         "PullRequestSource",
                         "CommitFilesSource",

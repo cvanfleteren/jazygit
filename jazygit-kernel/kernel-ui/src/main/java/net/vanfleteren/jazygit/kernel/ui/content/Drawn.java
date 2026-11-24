@@ -130,6 +130,27 @@ public record Drawn(
     }
 
     /**
+     * These lines after {@code heading}, which belongs to their lead: the lead that comes before their first stop
+     * grows by as many lines, or the heading becomes the lead.
+     */
+    public Drawn headed(List<Line> heading) {
+        Drawn after = after(heading);
+        return after.stops
+                .headOption()
+                .filter(first -> first.row() == heading.size() && first.mark().anchor() instanceof Anchor.Lead)
+                .map(first -> new Drawn(
+                        after.rows,
+                        after.stops.tail().prepend(new Stop(first.mark().longer(heading.size()), 0)),
+                        after.places,
+                        after.widest,
+                        after.halves,
+                        after.kept,
+                        after.divider,
+                        after.note))
+                .getOrElse(after::withLead);
+    }
+
+    /**
      * These lines with the rule between the halves of the split view at column {@code column} of the area.
      */
     public Drawn withDivider(int column) {
@@ -187,6 +208,13 @@ public record Drawn(
          */
         public boolean is(Anchor anchor) {
             return this.anchor.equals(anchor) || also.contains(anchor);
+        }
+
+        /**
+         * This stop with {@code more} lines of its own.
+         */
+        public Mark longer(int more) {
+            return new Mark(anchor, lines + more, width, hunk, side, column, also, order);
         }
 
         /**

@@ -60,6 +60,8 @@ public final class ErrorText {
             case GitError.TimedOut(String operation, var worktree) -> Messages.get("git.timedOut", operation, worktree);
             case GitError.Interrupted(String operation) -> Messages.get("git.interrupted", operation);
             case GitError.TooMuchOutput(String operation) -> Messages.get("git.tooMuchOutput", operation);
+            case GitError.Broke(String operation, Throwable cause) ->
+                Messages.get("git.broke", operation, reason(cause));
             case GitError.CommandFailed(var explanation, int exitCode, var output) ->
                 explanation.getOrElse(() -> Messages.get("git.exitedWithCode", String.valueOf(exitCode)));
             case GitError.UnexpectedOutput(String output) -> Messages.get("git.unexpectedOutput", output);

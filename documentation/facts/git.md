@@ -200,6 +200,18 @@ learned, so a fact that has grown old can be checked again; see README.md.
 - A page of 200 entries of HEAD's reflog, with each whole commit, took 7 ms from the top and 32 ms after skipping 2800
   of a reflog of 3000. *Why it matters:* reading a page ahead costs nothing noticeable. — learned 2026-11-23 · [ADR
   0186](../adr/0186-the-reflog-of-head-read-only.md) · git 2.56
+- `git rev-list <shas> --not --branches --tags --remotes --` lists the commits of `<shas>` no branch, tag or
+  remote-tracking branch reaches, with those behind them up to the first a ref reaches; HEAD, the stash and other
+  worktrees' HEADs keep nothing out of it, unless named after `--not`. For the 196 distinct commits of a page of 200
+  entries of a reflog in a repository of 800 commits, it took 20 ms, and 5 ms for a page whose commits were all on a
+  branch. *Why it matters:* one process a page finds the lost entries, and one more beside it, with HEAD's commit
+  after `--not`, those only HEAD keeps. — learned 2026-11-23 · [ADR
+  0188](../adr/0188-the-reflog-reads-what-keeps-its-commits-with-its-page.md) · git 2.56
+- `git rev-list --reflog --not --branches --tags --remotes --` lists the lost commits of every reflog of the
+  repository without being told which: 44 ms over 2943 entries of all reflogs, against 20 ms for a page's 200 given
+  ones. *Why it matters:* it could run beside the read of a page, but costs more and grows with every reflog, so the
+  reflog looks at the commits of the page it read. — learned 2026-11-23 · [ADR
+  0188](../adr/0188-the-reflog-reads-what-keeps-its-commits-with-its-page.md) · git 2.56
 
 ## Fetch, pull and push
 

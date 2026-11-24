@@ -18,6 +18,14 @@ public interface ContentSource {
     Option<Shown> shown(Model model, Mirrored pane);
 
     /**
+     * What this source puts above what the content panel shows in {@code model} next to {@code pane}, whichever source
+     * shows it (ADR 187); none, as for most sources.
+     */
+    default Option<Heading> heading(Model model, Mirrored pane) {
+        return Option.none();
+    }
+
+    /**
      * The areas this source shows what it shows in: each can have the focus, and keeps where it is scrolled to.
      */
     List<ContentArea> areas();
