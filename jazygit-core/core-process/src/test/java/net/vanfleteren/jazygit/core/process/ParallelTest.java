@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Either;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -51,14 +52,20 @@ class ParallelTest {
         assertTrue(secondDone.get());
     }
 
+    /**
+     * The tasks are interrupted too, so the wait ends without waiting for them to end on their own.
+     */
     @Test
-    void anInterruptedWaitFailsAndKeepsTheInterrupt() {
+    void anInterruptedWaitFailsStopsTheTasksAndKeepsTheInterrupt() {
         Thread.currentThread().interrupt();
         try {
-            Either<Throwable, Tuple2<Boolean, Integer>> both = Parallel.both(() -> sleep(1_000), () -> 1);
+            long start = System.nanoTime();
+            Either<Throwable, Tuple2<Boolean, Integer>> both = Parallel.both(() -> sleep(5_000), () -> 1);
+            Duration took = Duration.ofNanos(System.nanoTime() - start);
 
             assertInstanceOf(InterruptedException.class, both.getLeft());
             assertTrue(Thread.currentThread().isInterrupted());
+            assertTrue(took.compareTo(Duration.ofSeconds(2)) < 0, "took " + took);
         } finally {
             Thread.interrupted();
         }

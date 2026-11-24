@@ -28,12 +28,16 @@ public final class Parallel {
         try (ExecutorService threads = Executors.newVirtualThreadPerTaskExecutor()) {
             Future<A> a = threads.submit(first::get);
             Future<B> b = threads.submit(second::get);
-            return Either.right(Tuple.of(a.get(), b.get()));
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return Either.left(e);
-        } catch (ExecutionException e) {
-            return Either.left(e.getCause());
+            try {
+                return Either.right(Tuple.of(a.get(), b.get()));
+            } catch (InterruptedException e) {
+                // Interrupted again before the executor closes, which then stops both tasks rather than wait for them,
+                // and leaves the thread interrupted.
+                Thread.currentThread().interrupt();
+                return Either.left(e);
+            } catch (ExecutionException e) {
+                return Either.left(e.getCause());
+            }
         }
     }
 }
