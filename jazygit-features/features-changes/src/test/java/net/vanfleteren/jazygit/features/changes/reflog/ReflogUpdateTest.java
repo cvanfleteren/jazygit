@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TerminalMsg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.TimerMsg;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -288,13 +289,30 @@ class ReflogUpdateTest {
 
     @Test
     void whileAwayTheTickLooksAsSeldomAsTheStatusIsRead() {
-        Model away = Update.update(done(SHOWN, readOf(0, PAGE), entries(0, 3)), new TerminalMsg.Focused(false))
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+        Model away = Update.update(
+                        done(SHOWN, readOf(0, PAGE), entries(0, 3)).withNow(now), new TerminalMsg.Focused(false))
                 .model();
 
         Next first = Update.update(away, new ReflogMsg.Tick());
-        Next second = Update.update(first.model(), new ReflogMsg.Tick());
+        Next soon = Update.update(first.model().withNow(now.plusSeconds(3)), new ReflogMsg.Tick());
+        Next later = Update.update(soon.model().withNow(now.plus(TimerMsg.Tick.WHILE_AWAY)), new ReflogMsg.Tick());
 
-        assertEquals(List.empty(), second.cmds());
+        assertEquals(List.empty(), first.cmds().appendAll(soon.cmds()));
+        assertEquals(List.of(new StampReflog()), later.cmds());
+    }
+
+    @Test
+    void aTickKeptWhileAwayLooksOnceTheFocusIsBack() {
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+        Model away = Update.update(
+                        done(SHOWN, readOf(0, PAGE), entries(0, 3)).withNow(now), new TerminalMsg.Focused(false))
+                .model();
+        Model kept = Update.update(away, new ReflogMsg.Tick()).model();
+
+        Next back = Update.update(kept.withNow(now.plusSeconds(3)), new TerminalMsg.Focused(true));
+
+        assertEquals(List.of(new StampReflog()), back.cmds().filter(StampReflog.class::isInstance));
     }
 
     @Test
