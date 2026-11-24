@@ -16,8 +16,12 @@ def file_editors(env, *entries: tuple[str, str, str | None]):
 
 
 def opened(ui, marker: Path) -> str:
-    ui.app.eventually(marker.exists, f"the editor to write {marker.name}")
-    return marker.read_text().strip()
+    """Waits for the editor's whole line, not only the file: the shell makes the file empty before echo writes it."""
+    def line():
+        text = marker.read_text() if marker.exists() else ""
+        return text if text.endswith("\n") else None
+
+    return ui.app.eventually(line, f"the editor to write {marker.name}").strip()
 
 
 def test_a_file_opens_in_the_one_editor_set_to_open_files_at_its_start(repo, env, jazygit):
