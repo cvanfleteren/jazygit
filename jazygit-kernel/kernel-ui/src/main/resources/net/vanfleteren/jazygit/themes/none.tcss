@@ -32,3 +32,6 @@ Span.diff-cursor { text-style: reversed; }
 /* The matches of the search of the content panel, and the one gone to (ADR 126). */
 Span.search-match { text-style: underlined; }
 Span.search-current { text-style: bold underlined italic; }
+
+/* The column of a text area past the length its lines are to keep to (ADR 193). */
+Span.ruler { text-style: reversed; }

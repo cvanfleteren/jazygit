@@ -218,3 +218,4 @@ another tool adds it there too.
 | 189 | [The branches pane has the tabs of any pane](0189-the-branches-pane-has-the-tabs-of-any-pane.md) |  |
 | 190 | [An image in a comment of the conversation is drawn too](0190-an-image-in-a-comment-of-the-conversation-is-drawn.md) |  |
 | 191 | [The terminal draws a picture sharp where it can: Kitty, else Sixel, else half blocks](0191-the-terminal-draws-a-picture-sharp-where-it-can.md) |  |
+| 193 | [A long line of a text box wraps, and the commit description marks column 72](0193-a-long-line-of-a-text-box-wraps.md) |  |

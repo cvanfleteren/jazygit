@@ -144,3 +144,6 @@ Span.blame-age-1 { color: #c98a52; }
 Span.blame-age-2 { color: #9c7a5c; }
 Span.blame-age-3 { color: #6f6660; }
 Span.blame-age-4 { color: #4a4a4a; }
+
+/* The column of a text area past the length its lines are to keep to (ADR 193). */
+Span.ruler { background: #13225a; }

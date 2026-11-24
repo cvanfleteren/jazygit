@@ -172,6 +172,20 @@ class ThemeTest {
     }
 
     @Test
+    void everyThemeMarksTheRulerOfATextArea() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            assertNotEquals(
+                    engine.resolve(new Node("Span", Set.of())).toStyle(),
+                    engine.resolve(new Node("Span", Set.of(Theme.Classes.RULER)))
+                            .toStyle(),
+                    name.id());
+        }
+    }
+
+    @Test
     void everyThemeBordersAPopupLikeAPane() {
         for (ThemeName name : ThemeName.values()) {
             var engine = Theme.createEngine().get();

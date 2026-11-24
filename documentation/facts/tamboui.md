@@ -91,6 +91,11 @@ when it was learned, so a fact that has grown old can be checked again; see READ
 - TamboUI's text area scrolls by lines, so a line it wraps by itself scrolls as one unit. *Why it matters:* the command
   log pre-wraps its lines (`TextWidth.wrapped`) as a word-wrapping `Paragraph` would. — learned 2026-11-22 · [ADR
   0129](../adr/0129-the-command-log-takes-the-focus.md)
+- TamboUI's editable text area (`TextAreaElement`) wraps lines itself since 0.7.0 (`wrapWord()`, `wrapCharacter()`):
+  Up and Down then move by the rows shown, against the width it last drew at, and its preferred height counts the
+  wrapped rows. It highlights syntax only when it does not wrap. *Why it matters:* the text boxes of the popups wrap by
+  turning it on, and keep a fixed height. — learned 2026-11-24 · [ADR
+  0193](../adr/0193-a-long-line-of-a-text-box-wraps.md)
 - A TamboUI list measures the text of every row on every frame unless the rows report their height. With 10 000 rows
   this made each key press in the commits pane take 70-230 ms. *Why it matters:* list rows declare their height. —
   learned 2026-11-22 · [ADR 0130](../adr/0130-the-log-reads-3000-commits.md)
