@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.core.git.history.History;
+import net.vanfleteren.jazygit.core.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
@@ -26,6 +27,8 @@ import net.vanfleteren.jazygit.kernel.state.view.TabId;
  * @param highlighted the place of the entry highlighted, once one is
  * @param kept        what keeps those of the commits of the entries no branch, tag or remote reaches, as far as that
  *                    was found: read with the entries, it is of the entries read (ADR 188)
+ * @param stamp       what the reflog was read from looked like when it was last read from the top; none when that
+ *                    could not be told, and it is then read again
  */
 @With
 public record ReflogView(
@@ -36,7 +39,8 @@ public record ReflogView(
         Option<ReadReflog> reading,
         boolean again,
         Option<Integer> highlighted,
-        Kept kept) {
+        Kept kept,
+        Option<MetadataStamp> stamp) {
 
     /**
      * The tab of the commits pane the reflog is shown in.
@@ -44,7 +48,15 @@ public record ReflogView(
     public static final TabId TAB = new TabId("changes.reflog");
 
     public static final ReflogView NONE = new ReflogView(
-            Loadable.loading(), Option.none(), false, 0, Option.none(), false, Option.none(), Kept.BY_REFS);
+            Loadable.loading(),
+            Option.none(),
+            false,
+            0,
+            Option.none(),
+            false,
+            Option.none(),
+            Kept.BY_REFS,
+            Option.none());
 
     /**
      * Where the model keeps the reflog. It is not carried to another worktree, which has a HEAD and a reflog of its

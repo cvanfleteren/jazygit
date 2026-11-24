@@ -37,6 +37,11 @@ public interface StubStatus extends Status {
     }
 
     @Override
+    default Option<MetadataStamp> reflogStamp() {
+        return Option.none();
+    }
+
+    @Override
     default Option<MetadataStamp> diffStamp(List<FileEntry> files) {
         return Option.none();
     }

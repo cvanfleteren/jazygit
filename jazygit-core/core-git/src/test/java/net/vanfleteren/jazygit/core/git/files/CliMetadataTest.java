@@ -165,6 +165,70 @@ class CliMetadataTest {
         assertEquals(Option.none(), diffStamp(List.of(new FileEntry("lib", ChangeType.MODIFIED, false, true))));
     }
 
+    @Test
+    void aCheckoutOfAnotherBranchAtTheSameCommitChangesTheStampOfTheReflogOfHead() throws Exception {
+        git(main, "branch", "other");
+        Option<MetadataStamp> before = reflogStamp(main);
+
+        git(main, "checkout", "-q", "other");
+
+        assertTrue(before.isDefined());
+        assertNotEquals(before, reflogStamp(main));
+    }
+
+    @Test
+    void whatLeavesHeadAloneLeavesTheStampOfItsReflogAlone() throws Exception {
+        Option<MetadataStamp> before = reflogStamp(main);
+
+        git(main, "branch", "other");
+        git(main, "branch", "-D", "other");
+        Files.writeString(main.resolve("a.txt"), "changed");
+        git(main, "add", "a.txt");
+
+        assertEquals(before, reflogStamp(main));
+    }
+
+    @Test
+    void eachWorktreeHasAStampOfItsOwnReflogOfHead() throws Exception {
+        Path linked = dir.resolve("linked");
+        git(main, "worktree", "add", "-q", "-b", "side", linked.toString());
+        Option<MetadataStamp> mainBefore = reflogStamp(main);
+        Option<MetadataStamp> linkedBefore = reflogStamp(linked);
+
+        commit(linked, "c.txt");
+
+        assertEquals(mainBefore, reflogStamp(main));
+        assertNotEquals(linkedBefore, reflogStamp(linked));
+    }
+
+    @Test
+    void aReftableRepositoryStampsTheReflogOfHeadByItsTables() throws Exception {
+        Path tables = dir.resolve("tables");
+        assumeTrue(reftableSupported(tables));
+        commit(tables, "a.txt");
+        git(tables, "branch", "other");
+        Option<MetadataStamp> before = reflogStamp(tables);
+
+        git(tables, "checkout", "-q", "other");
+
+        assertTrue(before.isDefined());
+        assertNotEquals(before, reflogStamp(tables));
+    }
+
+    @Test
+    void aReflogOfHeadWrittenJustNowTellsNothing() throws Exception {
+        git(main, "commit", "-q", "--allow-empty", "-m", "now");
+
+        assertEquals(Option.none(), CliMetadata.reflog(CliMetadata.locate(main).get(), Instant.now()));
+    }
+
+    // Looked at a while after the changes, so that they tell.
+    private static Option<MetadataStamp> reflogStamp(Path worktree) {
+        return CliMetadata.reflog(
+                CliMetadata.locate(worktree).get(),
+                Instant.now().plus(CliMetadata.SETTLED).plusSeconds(1));
+    }
+
     private Option<MetadataStamp> diffStamp(List<FileEntry> files) {
         return CliMetadata.diff(
                 CliMetadata.locate(main).get(),

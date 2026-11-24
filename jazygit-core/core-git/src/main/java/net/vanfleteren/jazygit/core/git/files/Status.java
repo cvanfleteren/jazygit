@@ -42,6 +42,13 @@ public interface Status {
     Option<MetadataStamp> diffStamp(List<FileEntry> files);
 
     /**
+     * A stamp of what the reflog of HEAD of this worktree is read from, taken without running git: its log file, or
+     * the list of tables of a reftable repository; none when that cannot be told, and then the reflog is to be read
+     * again (ADR 186).
+     */
+    Option<MetadataStamp> reflogStamp();
+
+    /**
      * The paths of all files of the working tree, sorted: those git tracks and the untracked ones it does not ignore,
      * each once. A file a sparse checkout leaves off the disk is left out; one kept on disk with the skip-worktree bit
      * stays (ADR 108).

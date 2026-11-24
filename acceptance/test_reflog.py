@@ -74,3 +74,18 @@ def test_on_a_detached_head_the_commits_behind_it_are_kept_by_head_not_lost(repo
 
     ui.app.wait_for("only HEAD, which is past it")
     assert "✗" not in ui.app.pane_text("Commits"), ui.app.pane_text("Commits")
+
+
+def test_a_checkout_outside_the_app_that_keeps_heads_commit_shows_while_the_reflog_is_open(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("branch", "other")
+    ui = jazygit()
+    ui.app.wait_for("Add one")
+    ui.app.focus("Commits")
+    ui.app.press("]")
+    ui.app.wait_in("Commits", "first commit")
+
+    # HEAD's commit stays the same, so the log is not read again: the stamp of the reflog tells (ADR 186).
+    repo("checkout", "-q", "other")
+
+    ui.app.wait_in("Commits", "main → other")
