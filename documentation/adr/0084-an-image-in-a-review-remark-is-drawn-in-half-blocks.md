@@ -61,4 +61,5 @@ any other.
 
 Amended by ADR 187: the images of the comments of the conversation of a pull request are drawn too.
 
-Amended by ADR 188: where the terminal draws images, with the Kitty graphics protocol or Sixel, a picture is drawn sharp; half blocks stay where it does not.
+Amended by ADR 188: where the terminal draws images, with the Kitty graphics protocol or Sixel, a picture is drawn
+sharp; half blocks stay where it does not.

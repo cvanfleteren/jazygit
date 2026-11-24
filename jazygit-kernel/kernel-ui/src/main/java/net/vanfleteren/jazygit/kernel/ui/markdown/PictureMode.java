@@ -21,10 +21,6 @@ public enum PictureMode {
     public static final PictureMode CURRENT =
             of(Option.of(System.getenv("JAZYGIT_IMAGES")), name -> Option.of(System.getenv(name)));
 
-    // The programs, as TERM_PROGRAM names them, and the terminals, as TERM starts, that draw Sixel.
-    private static final Set<String> SIXEL_PROGRAMS = HashSet.of("wezterm", "iterm.app", "mintty");
-    private static final Set<String> SIXEL_TERMS = HashSet.of("foot", "mlterm", "contour", "yaft");
-
     /**
      * How pictures are drawn when {@code asked} for ({@code kitty}, {@code sixel} or {@code halfblocks}), else in the
      * terminal the environment {@code env} tells of: half blocks inside tmux or screen, which pass neither protocol on
@@ -52,8 +48,8 @@ public enum PictureMode {
         if (term.exists(t -> t.equals("xterm-kitty") || t.equals("xterm-ghostty")) || program.contains("ghostty")) {
             return KITTY;
         }
-        boolean sixel = program.exists(SIXEL_PROGRAMS::contains)
-                || term.exists(t -> SIXEL_TERMS.exists(t::startsWith))
+        boolean sixel = program.exists(SixelTerminals.PROGRAMS::contains)
+                || term.exists(t -> SixelTerminals.TERMS.exists(t::startsWith))
                 || env.apply("KONSOLE_VERSION").isDefined()
                 || env.apply("WT_SESSION").isDefined();
         return sixel ? SIXEL : HALF_BLOCKS;
@@ -65,5 +61,15 @@ public enum PictureMode {
      */
     public boolean placeholders() {
         return this != HALF_BLOCKS;
+    }
+
+    /**
+     * The terminals that draw Sixel: the programs, as {@code TERM_PROGRAM} names them, and the terminals, as
+     * {@code TERM} starts. In a class of their own, made once {@link #CURRENT} asks for them: an enum's constants, and
+     * {@code CURRENT} with them, are made before any other of its static fields is set, which would still be null.
+     */
+    private static final class SixelTerminals {
+        static final Set<String> PROGRAMS = HashSet.of("wezterm", "iterm.app", "mintty");
+        static final Set<String> TERMS = HashSet.of("foot", "mlterm", "contour", "yaft");
     }
 }
