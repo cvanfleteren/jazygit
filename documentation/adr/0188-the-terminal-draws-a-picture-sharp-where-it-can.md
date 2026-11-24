@@ -52,7 +52,9 @@ where it can draw neither.
   `JAZYGIT_CELL_PIXELS=9x19` says; where neither tells, as on Windows, a picture is half blocks after all. An image is
   shrunk or grown to its cells in pixels and made at most 255 colours by median cut, without dithering; a pixel less
   than half opaque is left as it is (`P2=1`). The 16 images last painted are kept at their size, and the 16 parts last
-  written as Sixel.
+  written as Sixel. An image is as high as the whole bands of six pixels that fit its cells, as Konsole draws the
+  last band whole; and the column right of it and the row under it are written again after it, and when it goes, as
+  a terminal at a fractional scale draws a cell a fraction smaller than it tells it is.
 - **Half blocks** stay as ADR 84 has them: where neither protocol is, for a picture with no sharp image, and for one
   too large for an id to tell (more than 100 columns or 32 rows).
 - Popups, the colours of the selected text and the dimming behind a popup leave the colour of a placeholder as it is,

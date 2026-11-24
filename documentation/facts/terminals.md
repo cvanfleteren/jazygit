@@ -141,3 +141,9 @@ fact says when it was learned, so a fact that has grown old can be checked again
 - `TIOCGWINSZ` tells the size of the window in pixels as well as in cells, where the terminal tells it; not on Windows.
   *Why it matters:* Sixel draws in pixels, so a cell's size has to be known. — learned 2026-11-06 · [ADR
   0188](../adr/0188-the-terminal-draws-a-picture-sharp-where-it-can.md)
+- Konsole draws the last band of a Sixel image whole, six pixels high, past the height the raster attributes give.
+  At a fractional scale (125% on Wayland) it tells a cell as 10 x 21 pixels (`TIOCGWINSZ`, `CSI 16 t`) but draws it
+  about 12.46 device pixels wide, a fraction less than 10 x 1.25, so an image as wide as its cells by what it tells
+  goes past them. Text written over an image takes its place. *Why it matters:* an image is cut to whole bands, and
+  the cells right of and under it are written again after it. — learned 2026-11-24 · [ADR
+  0188](../adr/0188-the-terminal-draws-a-picture-sharp-where-it-can.md)
