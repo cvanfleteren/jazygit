@@ -34,7 +34,7 @@ public sealed interface CommentsMsg extends Msg {
 
     /**
      * The image at {@code url}, in the conversation on pull request {@code number}, was read: as the picture to show,
-     * or none when it could not be read or shown (ADR 187).
+     * or none when it could not be read or shown (ADR 190).
      */
     record PictureLoaded(PrNumber number, String url, Option<Picture> picture) implements CommentsMsg {}
 

@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 /**
- * An image as Sixel draws it (ADR 188).
+ * An image as Sixel draws it (ADR 191).
  */
 class SixelTest {
 

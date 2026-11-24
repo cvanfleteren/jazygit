@@ -43,7 +43,7 @@ public sealed interface CommentsCmd extends Cmd {
 
     /**
      * Reads the image at {@code url}, in the conversation on pull request {@code number}, as a picture to show it
-     * (ADR 187). It runs in the background, as it talks to GitHub. An image that cannot be read or shown is none, and
+     * (ADR 190). It runs in the background, as it talks to GitHub. An image that cannot be read or shown is none, and
      * stays the text that says it is there: it is no failure to tell.
      */
     record LoadPicture(PrNumber number, String url) implements CommentsCmd {

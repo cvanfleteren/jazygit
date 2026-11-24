@@ -29,7 +29,7 @@ public record Dimmed(Element content, Backdrop backdrop) implements Element {
         for (int y = dimmed.top(); y < dimmed.bottom(); y++) {
             for (int x = dimmed.left(); x < dimmed.right(); x++) {
                 Cell cell = buffer.get(x, y);
-                // A cell of an image says which image it is by its colour (ADR 188).
+                // A cell of an image says which image it is by its colour (ADR 191).
                 if (!KittyGraphics.isPlaceholder(cell)) {
                     buffer.set(x, y, cell.style(backdrop.dim(cell.style())));
                 }

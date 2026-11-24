@@ -10,7 +10,7 @@ import java.util.function.Consumer;
 
 /**
  * {@code content}, after which {@code images} is given the frame, to see which images its cells are of: to send them
- * with the Kitty graphics protocol, or to paint them with Sixel once the frame is written (ADR 188). It is to be the
+ * with the Kitty graphics protocol, or to paint them with Sixel once the frame is written (ADR 191). It is to be the
  * whole screen, so that a cell covered by a popup or changed after it is drawn is as it is shown.
  */
 record ImagesSent(Element content, Consumer<Frame> images) implements Element {

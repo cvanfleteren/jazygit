@@ -58,7 +58,7 @@ import net.vanfleteren.jazygit.lib.image.Picture;
  * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
  * @param legends     what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
  * @param fills       what it gives for the keys of the panes, as the line above a list or what a pane lists (ADR 172)
- * @param picturing   the pictures its views may draw, which a terminal that draws images itself is sent (ADR 188)
+ * @param picturing   the pictures its views may draw, which a terminal that draws images itself is sent (ADR 191)
  */
 public record Feature(
         List<FeatureAction> actions,
@@ -341,7 +341,7 @@ public record Feature(
 
     /**
      * This feature, also telling which pictures {@code picturing} says its views may draw, which a terminal that draws
-     * images itself is sent once they are on the screen (ADR 188).
+     * images itself is sent once they are on the screen (ADR 191).
      */
     public Feature picturing(Function<Model, List<Picture>> picturing) {
         Function<Model, List<Picture>> before = this.picturing;

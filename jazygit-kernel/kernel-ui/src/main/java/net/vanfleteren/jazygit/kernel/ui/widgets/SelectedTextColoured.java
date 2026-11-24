@@ -27,7 +27,7 @@ public record SelectedTextColoured(Element content, SelectedText selectedText) i
         for (int y = coloured.top(); y < coloured.bottom(); y++) {
             for (int x = coloured.left(); x < coloured.right(); x++) {
                 Cell cell = buffer.get(x, y);
-                // A cell of an image says which image it is by its colour (ADR 188).
+                // A cell of an image says which image it is by its colour (ADR 191).
                 if (!KittyGraphics.isPlaceholder(cell)) {
                     buffer.set(x, y, cell.style(selectedText.of(cell.style())));
                 }

@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.lib.image;
 import java.util.Arrays;
 
 /**
- * An image as Sixel draws it (ADR 188): at most 255 colours, chosen by median cut of its pixels to 5 bits a channel,
+ * An image as Sixel draws it (ADR 191): at most 255 colours, chosen by median cut of its pixels to 5 bits a channel,
  * each pixel in the nearest of them; a pixel less than half opaque is left out, so what is under it shows.
  */
 public final class Sixel {

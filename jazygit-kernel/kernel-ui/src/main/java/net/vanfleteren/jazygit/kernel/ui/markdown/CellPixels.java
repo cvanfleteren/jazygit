@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.kernel.ui.markdown;
 import io.vavr.control.Option;
 
 /**
- * How many pixels of the screen a cell of the terminal is, wide and high, which Sixel draws an image in (ADR 188).
+ * How many pixels of the screen a cell of the terminal is, wide and high, which Sixel draws an image in (ADR 191).
  */
 public record CellPixels(int width, int height) {
 

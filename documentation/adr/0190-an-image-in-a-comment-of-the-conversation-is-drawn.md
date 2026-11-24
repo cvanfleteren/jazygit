@@ -1,4 +1,4 @@
-# 187. An image in a comment of the conversation is drawn too
+# 190. An image in a comment of the conversation is drawn too
 
 Date: 2026-11-24
 
@@ -30,5 +30,5 @@ comment.
 - Opening the dialog reads its images each time, as it reads its comments.
 - A comment with pictures is rendered whole on each frame, not only what is in view.
 
-Amended by ADR 188: where the terminal draws images, with the Kitty graphics protocol or Sixel, the pictures of the
+Amended by ADR 191: where the terminal draws images, with the Kitty graphics protocol or Sixel, the pictures of the
 conversation are drawn sharp.

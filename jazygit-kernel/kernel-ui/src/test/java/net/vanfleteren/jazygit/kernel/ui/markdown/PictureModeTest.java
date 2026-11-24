@@ -13,7 +13,7 @@ import io.vavr.control.Option;
 import org.junit.jupiter.api.Test;
 
 /**
- * How pictures are drawn in a terminal: Kitty's protocol, else Sixel, else half blocks (ADR 188).
+ * How pictures are drawn in a terminal: Kitty's protocol, else Sixel, else half blocks (ADR 191).
  */
 class PictureModeTest {
 

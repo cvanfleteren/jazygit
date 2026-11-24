@@ -61,7 +61,7 @@ public record RemarksState(Option<PrRemarks> open) {
 
     /**
      * The pictures of the review threads read of the pull request whose files are listed in {@code model}, which they
-     * may draw (ADR 84, 188).
+     * may draw (ADR 84, 191).
      */
     public static List<Picture> pictures(Model model) {
         return files(model)

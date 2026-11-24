@@ -7,7 +7,7 @@ import dev.tamboui.backend.panama.unix.LibC;
 import org.junit.jupiter.api.Test;
 
 /**
- * Whether the system has the LibC the size of a cell is asked of (ADR 188).
+ * Whether the system has the LibC the size of a cell is asked of (ADR 191).
  */
 class CellSizeTest {
 

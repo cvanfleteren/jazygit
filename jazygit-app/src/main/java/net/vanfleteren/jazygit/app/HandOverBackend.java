@@ -597,7 +597,7 @@ final class HandOverBackend implements Backend {
     }
 
     /**
-     * What is written once a frame is drawn, before it is shown: the images Sixel paints (ADR 188).
+     * What is written once a frame is drawn, before it is shown: the images Sixel paints (ADR 191).
      */
     interface AfterDraw {
 

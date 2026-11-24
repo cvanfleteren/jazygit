@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.lib.image.Sixel;
 import org.junit.jupiter.api.Test;
 
 /**
- * Pictures painted with Sixel over the cells that say where they are (ADR 188).
+ * Pictures painted with Sixel over the cells that say where they are (ADR 191).
  */
 class SixelImagesTest {
 

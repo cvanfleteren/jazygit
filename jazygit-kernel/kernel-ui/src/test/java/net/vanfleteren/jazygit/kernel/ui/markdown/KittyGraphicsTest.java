@@ -27,7 +27,7 @@ import net.vanfleteren.jazygit.lib.image.Sharp;
 import org.junit.jupiter.api.Test;
 
 /**
- * Pictures drawn by the terminal with the Kitty graphics protocol and its Unicode placeholders (ADR 188).
+ * Pictures drawn by the terminal with the Kitty graphics protocol and its Unicode placeholders (ADR 191).
  */
 class KittyGraphicsTest {
 

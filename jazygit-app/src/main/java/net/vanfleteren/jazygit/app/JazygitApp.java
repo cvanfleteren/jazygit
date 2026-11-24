@@ -451,7 +451,7 @@ public class JazygitApp extends ToolkitApp {
 
     /**
      * The sharp images of the pictures the features say they may draw in {@code model}, which the terminal may be
-     * sent or painted with (ADR 188).
+     * sent or painted with (ADR 191).
      */
     private static List<Sharp> sharpPictures(Model model) {
         return Features.ALL.flatMap(feature -> feature.picturing().apply(model)).flatMap(Picture::sharp);

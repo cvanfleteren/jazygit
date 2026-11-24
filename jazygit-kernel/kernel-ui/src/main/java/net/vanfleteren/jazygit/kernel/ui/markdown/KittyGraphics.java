@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.lib.image.Picture;
 import net.vanfleteren.jazygit.lib.image.Sharp;
 
 /**
- * Pictures drawn by the terminal itself, with the Kitty graphics protocol and its Unicode placeholders (ADR 188).
+ * Pictures drawn by the terminal itself, with the Kitty graphics protocol and its Unicode placeholders (ADR 191).
  *
  * <p>Each cell of a picture is the character {@code U+10EEEE}, with a diacritic for its row, one for its column and
  * one for the highest 8 bits of the id of its image, in the colour whose 24 bits are the rest of that id. The terminal

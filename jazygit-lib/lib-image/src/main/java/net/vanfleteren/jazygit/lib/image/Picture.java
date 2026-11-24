@@ -9,7 +9,7 @@ import io.vavr.control.Option;
  * two high. Its pixels are ARGB, row by row; one less than half opaque is not drawn.
  *
  * <p>A picture read from an image also keeps it {@link #sharp}, at as many pixels as its cells have, for a terminal
- * that draws images itself, with the Kitty graphics protocol (ADR 188).
+ * that draws images itself, with the Kitty graphics protocol (ADR 191).
  *
  * @param width  how many pixels wide, as many columns
  * @param height how many pixels high, twice as many rows, rounded up

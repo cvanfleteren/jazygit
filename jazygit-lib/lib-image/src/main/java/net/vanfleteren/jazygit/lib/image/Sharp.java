@@ -9,7 +9,7 @@ import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
 /**
- * An image as the Kitty graphics protocol is sent it (ADR 188): its pixels as RGBA, 8 bits each, row by row,
+ * An image as the Kitty graphics protocol is sent it (ADR 191): its pixels as RGBA, 8 bits each, row by row,
  * compressed with zlib and then in base64, as {@code f=32,o=z} says. Only these pixels, read by jazygit itself, reach
  * the terminal, never the bytes of the image as it was written.
  *
@@ -44,7 +44,7 @@ public record Sharp(int width, int height, String rgba) {
     }
 
     /**
-     * Its pixels as ARGB, row by row, as they were before they were compressed, for Sixel to paint (ADR 188).
+     * Its pixels as ARGB, row by row, as they were before they were compressed, for Sixel to paint (ADR 191).
      */
     public int[] argb() {
         byte[] bytes;

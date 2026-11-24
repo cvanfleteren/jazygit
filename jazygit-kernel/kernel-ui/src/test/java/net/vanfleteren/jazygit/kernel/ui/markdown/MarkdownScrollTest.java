@@ -21,7 +21,7 @@ import net.vanfleteren.jazygit.lib.image.Picture;
 import org.junit.jupiter.api.Test;
 
 /**
- * Markdown that scrolls, with the pictures of its images drawn in it (ADR 187).
+ * Markdown that scrolls, with the pictures of its images drawn in it (ADR 190).
  */
 class MarkdownScrollTest {
 

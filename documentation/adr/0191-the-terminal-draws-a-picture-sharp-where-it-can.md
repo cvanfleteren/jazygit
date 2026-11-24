@@ -1,10 +1,10 @@
-# 188. The terminal draws a picture sharp where it can: Kitty, else Sixel, else half blocks
+# 191. The terminal draws a picture sharp where it can: Kitty, else Sixel, else half blocks
 
 Date: 2026-11-24
 
 ## Context
 
-An image of a review remark or of a comment of the conversation is drawn in half blocks (ADR 84, 187): a cell is a
+An image of a review remark or of a comment of the conversation is drawn in half blocks (ADR 84, 190): a cell is a
 pixel wide and two high, a pixel for each 8 by 8 of the image, enough to tell what a screenshot is, not to read its
 text. Many terminals can draw images themselves: Kitty and Ghostty with the Kitty graphics protocol; WezTerm, foot,
 iTerm2, mintty, mlterm, contour, Konsole and Windows Terminal with Sixel.

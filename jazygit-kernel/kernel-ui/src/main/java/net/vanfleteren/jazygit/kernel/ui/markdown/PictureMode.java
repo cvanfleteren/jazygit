@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.function.Function;
 
 /**
- * How pictures are drawn (ADR 188): by the terminal itself with the Kitty graphics protocol where it has it, else with
+ * How pictures are drawn (ADR 191): by the terminal itself with the Kitty graphics protocol where it has it, else with
  * Sixel where it has that, else in half blocks (ADR 84), which every terminal draws.
  */
 public enum PictureMode {

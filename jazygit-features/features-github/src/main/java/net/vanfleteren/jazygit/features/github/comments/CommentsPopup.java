@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.lib.image.Picture;
  * @param comments    the conversation as it was read, or why that failed; nothing while it is first read
  * @param highlighted the comment the user moved to; none for the newest, which the popup opens on
  * @param pictures    the images of the comments that are read to be shown, by where they are: none while one is
- *                    read, or when it could not be (ADR 187)
+ *                    read, or when it could not be (ADR 190)
  */
 @With
 public record CommentsPopup(

@@ -118,7 +118,7 @@ public final class CommentsDialog implements PopupView {
     }
 
     /**
-     * The pictures the dialog may draw in {@code model} (ADR 188): those of the comments, also while a comment is
+     * The pictures the dialog may draw in {@code model} (ADR 191): those of the comments, also while a comment is
      * written over them.
      */
     public static List<Picture> pictures(Model model) {

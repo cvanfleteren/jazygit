@@ -60,7 +60,7 @@ public final class MarkdownScroll {
 
     /**
      * {@code markdown}, as {@link #render(String)} renders it, with each image of which {@code pictures} has a picture,
-     * by where it is, drawn in half blocks as it is in a review remark (ADR 84, 187).
+     * by where it is, drawn in half blocks as it is in a review remark (ADR 84, 190).
      */
     public Element render(String markdown, Map<String, Picture> pictures) {
         String shown = withoutHtmlComments(markdown);

@@ -9,7 +9,7 @@ import java.lang.invoke.MethodHandles;
 import net.vanfleteren.jazygit.kernel.ui.markdown.CellPixels;
 
 /**
- * How many pixels a cell of the terminal is, which Sixel draws in (ADR 188): as {@code JAZYGIT_CELL_PIXELS} says, else
+ * How many pixels a cell of the terminal is, which Sixel draws in (ADR 191): as {@code JAZYGIT_CELL_PIXELS} says, else
  * as the terminal tells the system the size of its window, in cells and in pixels; none where it does not, as on
  * Windows, or tells no pixels. Without it, a picture is half blocks.
  */

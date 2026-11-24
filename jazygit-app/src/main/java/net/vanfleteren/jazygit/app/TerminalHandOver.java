@@ -34,9 +34,9 @@ final class TerminalHandOver implements Terminal {
     private Option<HandOverBackend> backend = Option.none();
     // The title of the terminal's window, once the app gave it one; only touched on the render thread.
     private Option<String> title = Option.none();
-    // The images sent to the terminal, with the Kitty graphics protocol (ADR 188); only touched on the render thread.
+    // The images sent to the terminal, with the Kitty graphics protocol (ADR 191); only touched on the render thread.
     private final KittyGraphics graphics = new KittyGraphics();
-    // The images painted with Sixel (ADR 188); only touched on the render thread.
+    // The images painted with Sixel (ADR 191); only touched on the render thread.
     private final SixelImages sixel = new SixelImages();
 
     /**
@@ -115,7 +115,7 @@ final class TerminalHandOver implements Terminal {
 
     /**
      * {@code screen}, with the images of {@code shown} it has cells of sent to the terminal first, when it draws them
-     * itself, or painted with Sixel once it is written; as it is, in half blocks, elsewhere (ADR 84, 188).
+     * itself, or painted with Sixel once it is written; as it is, in half blocks, elsewhere (ADR 84, 191).
      */
     Element withImages(Element screen, Traversable<Sharp> shown) {
         return switch (PictureMode.CURRENT) {

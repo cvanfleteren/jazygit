@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 /**
  * Reading the conversation on the pull request that is shown, in a popup of its own, opened from the pull request
  * dialog and going back to it. The comments are read each time it opens, and not kept; so are the images they show
- * (ADR 187).
+ * (ADR 190).
  */
 public final class CommentsUpdate {
 
@@ -87,7 +87,7 @@ public final class CommentsUpdate {
     /**
      * Where the images of {@code comments} are that are to be read to show them, as read on pull request
      * {@code number} in {@code model}: those GitHub keeps that are not read or being read yet, up to
-     * {@link #MAX_PICTURES} of them (ADR 187). None when the comments are not shown any more.
+     * {@link #MAX_PICTURES} of them (ADR 190). None when the comments are not shown any more.
      */
     private static List<String> pictures(Model model, PrNumber number, List<PullRequestComment> comments) {
         return shown(model, number)

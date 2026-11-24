@@ -24,7 +24,7 @@ import net.vanfleteren.jazygit.lib.image.Sharp;
 import net.vanfleteren.jazygit.lib.image.Sixel;
 
 /**
- * Pictures drawn with Sixel (ADR 188), over the placeholder cells Kitty's protocol draws them by (ADR 188).
+ * Pictures drawn with Sixel (ADR 191), over the placeholder cells Kitty's protocol draws them by (ADR 191).
  *
  * <p>Sixel has no images that cells refer to: an image is pixels written at the cursor, which text written there
  * later takes the place of. So the cells of a frame tell where each image is and which part of it shows, and are
