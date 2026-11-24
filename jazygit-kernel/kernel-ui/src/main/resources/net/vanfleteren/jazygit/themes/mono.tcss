@@ -140,3 +140,6 @@ MarkdownElement {
     task-checked-color: $good;
     html-color: $muted;
 }
+
+/* The column of a text area past the length its lines are to keep to (ADR 193). */
+Span.ruler { background: #1c1c1c; }

@@ -310,6 +310,11 @@ public final class Theme {
          * The colour of plain text behind an open popup.
          */
         public static final String BACKDROP = "backdrop";
+        /**
+         * The column of a text area past the length its lines are to keep to, as the commit description's 72
+         * (ADR 193): what the rule declares besides what every span gets, its background or else its attributes.
+         */
+        public static final String RULER = "ruler";
 
         private Classes() {}
     }

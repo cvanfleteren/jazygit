@@ -3,16 +3,28 @@ package net.vanfleteren.jazygit.features.changes.commit;
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.tamboui.buffer.Buffer;
+import dev.tamboui.css.engine.StyleEngine;
+import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Style;
+import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.DefaultRenderContext;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.ElementRegistry;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.toolkit.event.EventRouter;
+import dev.tamboui.toolkit.focus.FocusManager;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
@@ -28,6 +40,7 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -35,6 +48,8 @@ import org.junit.jupiter.api.Test;
  * cancels.
  */
 class CommitDialogTest {
+
+    private static final Rect SCREEN = new Rect(0, 0, 130, 30);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     // The message the popup held when each of the dispatched messages was sent.
@@ -89,6 +104,39 @@ class CommitDialogTest {
             String screen = RenderedText.ofLarge(runner, this::view);
             assertTrue(screen.lines().anyMatch(line -> line.contains("─ctrl+o: open in editor")), screen);
         }
+    }
+
+    @Test
+    void aLongLineOfTheDescriptionWrapsSoItIsSeenWhole() throws Exception {
+        String line = "start " + "word ".repeat(30) + "end";
+        open = Update.update(open, new MessageEdited(new CommitMessage("fix it", line)))
+                .model();
+        try (ToolkitTestRunner runner = start()) {
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("start word"), screen);
+            assertTrue(screen.contains("word end"), screen);
+        }
+        assertEquals(line, open.popup(CommitPopup.class).get().message().description());
+    }
+
+    @Test
+    void aRulerMarksTheColumnPastThe72ndCharacterOfTheDescription() {
+        Buffer buffer = Buffer.empty(SCREEN);
+        StyleEngine engine = Theme.createEngine().get();
+        FocusManager focus = new FocusManager();
+        DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, new ElementRegistry()));
+        context.setStyleEngine(engine);
+        view().render(Frame.forTesting(buffer), SCREEN, context);
+
+        // The top left corner of the description is the border cell before its title.
+        int top = IntStream.range(0, SCREEN.height())
+                .filter(y -> rowOf(buffer, y).contains("Commit description"))
+                .findFirst()
+                .getAsInt();
+        int left = rowOf(buffer, top).indexOf("Commit description") - 1;
+        Style ruler = Theme.spanStyles(engine).of(Theme.Classes.RULER);
+        assertEquals(ruler.bg(), buffer.get(left + 1 + 72, top + 1).style().bg());
+        assertNotEquals(ruler.bg(), buffer.get(left + 1 + 71, top + 1).style().bg());
     }
 
     @Test
@@ -371,5 +419,12 @@ class CommitDialogTest {
 
     private Element view() {
         return stack(text("background"), dialog.render(open).get());
+    }
+
+    // The symbols of a row of the buffer, one character to a cell, as the commit popup has only plain text.
+    private static String rowOf(Buffer buffer, int y) {
+        return IntStream.range(0, SCREEN.width())
+                .mapToObj(x -> buffer.get(x, y).symbol())
+                .collect(Collectors.joining());
     }
 }
