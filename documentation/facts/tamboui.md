@@ -140,8 +140,8 @@ when it was learned, so a fact that has grown old can be checked again; see READ
 - TamboUI keeps a combining character in the cell of the character before it only for some of them; the first 100
   of Kitty's row and column diacritics are among them. *Why it matters:* a placeholder of an image uses no others, so
   an id's highest byte is less than 100. — learned 2026-11-06 · [ADR
-  0188](../adr/0191-the-terminal-draws-a-picture-sharp-where-it-can.md)
+  0191](../adr/0191-the-terminal-draws-a-picture-sharp-where-it-can.md)
 - TamboUI writes only the cells of a frame that changed, and has no hook after them; drawing a widget with raw output
   has it write the frame in a synchronized update even when no cell changed. *Why it matters:* Sixel's images are
   written by the backend before the synchronized update ends. — learned 2026-11-06 · [ADR
-  0188](../adr/0191-the-terminal-draws-a-picture-sharp-where-it-can.md)
+  0191](../adr/0191-the-terminal-draws-a-picture-sharp-where-it-can.md)
