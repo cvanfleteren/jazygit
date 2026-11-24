@@ -196,7 +196,17 @@ public final class SixelImages {
         Set<Integer> cells = spots.map(
                         spot -> spot._1().y() * frame.area().width() + spot._1().x())
                 .toSet();
-        spots.forEach(spot -> frame.set(spot._1().x(), spot._1().y(), Cell.EMPTY));
+        // Blank in the background they had, which shows where the image leaves its cells undrawn.
+        spots.forEach(spot -> frame.set(
+                spot._1().x(),
+                spot._1().y(),
+                new Cell(
+                        " ",
+                        Option.ofOptional(frame.get(spot._1().x(), spot._1().y())
+                                        .style()
+                                        .bg())
+                                .map(Style.EMPTY::bg)
+                                .getOrElse(Style.EMPTY))));
         return Option.of(new Placed(id, image.get(), screen, left, top, cells));
     }
 
@@ -220,13 +230,7 @@ public final class SixelImages {
         int width = columns * cell.width();
         int height = rows * cell.height();
         Tuple2<Integer, CellPixels> key = Tuple.of(placed.id(), cell);
-        int[] whole = scaled.get(key)
-                .getOrElse(() -> Picture.resized(
-                        pixels.apply(placed.sharp()),
-                        placed.sharp().width(),
-                        placed.sharp().height(),
-                        width,
-                        height));
+        int[] whole = scaled.get(key).getOrElse(() -> fitted(placed.sharp(), width, height));
         scaled = kept(scaled.remove(key).put(key, whole));
         int cutLeft = placed.column() * cell.width();
         int cutTop = placed.row() * cell.height();
@@ -237,6 +241,23 @@ public final class SixelImages {
             System.arraycopy(whole, (cutTop + row) * width + cutLeft, cut, row * cutWidth, cutWidth);
         }
         return encoder.encode(cut, cutWidth, cutHeight);
+    }
+
+    /**
+     * {@code sharp} as large as fits in {@code width} by {@code height} pixels keeping its shape, at their top left:
+     * the cells of a picture are as many as it takes, rounded, at a cell that is about 1 by 2, which a terminal's need
+     * not be. What it leaves of them is not drawn, so the cells show there.
+     */
+    private int[] fitted(Sharp sharp, int width, int height) {
+        double scale = Math.min((double) width / sharp.width(), (double) height / sharp.height());
+        int fittedWidth = Math.clamp(Math.round(sharp.width() * scale), 1, width);
+        int fittedHeight = Math.clamp(Math.round(sharp.height() * scale), 1, height);
+        int[] image = Picture.resized(pixels.apply(sharp), sharp.width(), sharp.height(), fittedWidth, fittedHeight);
+        int[] whole = new int[width * height];
+        for (int row = 0; row < fittedHeight; row++) {
+            System.arraycopy(image, row * fittedWidth, whole, row * width, fittedWidth);
+        }
+        return whole;
     }
 
     /**

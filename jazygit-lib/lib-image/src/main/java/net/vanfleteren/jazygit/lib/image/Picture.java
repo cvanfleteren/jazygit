@@ -33,9 +33,11 @@ public record Picture(int width, int height, Vector<Integer> argb, Option<Sharp>
     public static final int MAX_ROWS = 24;
     // The most pixels read from an image, which a 4K screenshot has.
     private static final long MAX_PIXELS = 4096L * 4096L;
-    // How many pixels of the screen a cell is about, wide and high, which the sharp image is kept at at most.
-    private static final int CELL_WIDTH = 8;
-    private static final int CELL_HEIGHT = 16;
+    // Twice as many pixels as a cell is about, 8 wide and 16 high, which the sharp image is kept at at most: a screen
+    // at a larger scale has more pixels to a cell, and a terminal shrinks the image to its cells better than it grows
+    // it.
+    private static final int CELL_WIDTH = 16;
+    private static final int CELL_HEIGHT = 32;
 
     /**
      * A picture of only its half-block pixels.

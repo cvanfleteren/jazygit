@@ -6,6 +6,7 @@ import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;
 import dev.tamboui.buffer.DiffResult;
 import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
@@ -116,6 +117,39 @@ class SixelImagesTest {
 
         assertEquals("▀", frame.get(0, 0).symbol());
         assertEquals(Option.none(), images.paint());
+    }
+
+    @Test
+    void anImageKeepsItsShapeInItsCellsWhatItLeavesOfThemNotDrawn() {
+        // 24 x 32 pixels in cells of 3 x 2 at 10 x 21: 30 x 42, which it fits at 30 x 40, not stretched to 42 high.
+        Picture picture = KittyGraphicsTest.picture(3, 4);
+        java.util.List<int[]> encoded = new java.util.ArrayList<>();
+        SixelImages images = new SixelImages(Sharp::argb, (argb, width, height) -> {
+            encoded.add(argb);
+            return Sixel.encode(argb, width, height);
+        });
+
+        images.plan(
+                withPicture(picture, 0, 0, 0, 2), List.of(picture.sharp().get()), Option.of(new CellPixels(10, 21)));
+        images.paint();
+
+        int[] argb = encoded.getFirst();
+        assertEquals(30 * 42, argb.length);
+        assertEquals(0xff112233, argb[39 * 30 + 29]);
+        assertEquals(0, argb[40 * 30] >>> 24);
+        assertEquals(0, argb[41 * 30 + 29] >>> 24);
+    }
+
+    @Test
+    void theCellsOfAnImageAreBlankInTheBackgroundTheyHad() {
+        Picture picture = KittyGraphicsTest.picture(3, 4);
+        Buffer frame = withPicture(picture, 0, 0, 0, 2);
+        Color pane = Color.rgb(10, 20, 30);
+        frame.set(0, 0, frame.get(0, 0).patchStyle(Style.EMPTY.bg(pane)));
+
+        new SixelImages().plan(frame, List.of(picture.sharp().get()), CELL);
+
+        assertEquals(new Cell(" ", Style.EMPTY.bg(pane)), frame.get(0, 0));
     }
 
     @Test

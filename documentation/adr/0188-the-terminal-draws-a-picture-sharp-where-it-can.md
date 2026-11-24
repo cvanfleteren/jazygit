@@ -27,10 +27,12 @@ where it can draw neither.
   - Sixel in WezTerm, iTerm2 and mintty (`TERM_PROGRAM`), foot, mlterm, contour and yaft (`TERM`), Konsole
     (`KONSOLE_VERSION`) and Windows Terminal (`WT_SESSION`);
   - half blocks elsewhere.
-- **Kept sharp.** A picture read from an image keeps the image too, no larger than its most cells at 8 by 16 pixels
-  each (800 by 384), its pixels as RGBA, compressed with zlib, in base64 (`Sharp`). jazygit decodes and shrinks it
-  itself, as ADR 84 says, so still no AWT; only those pixels reach the terminal, never the bytes of the image as its
-  writer wrote them. A picture fitted to its place keeps it.
+- **Kept sharp.** A picture read from an image keeps the image too, no larger than its most cells at 16 by 32 pixels
+  each (1600 by 768), twice a cell's 8 by 16, as a screen at a larger scale has more pixels to a cell and a terminal
+  shrinks an image better than it grows it. Its pixels are RGBA, compressed with zlib, in base64 (`Sharp`): up to
+  some 4.9 MB of pixels before they are compressed. jazygit decodes and shrinks it itself, as ADR 84 says, so still
+  no AWT; only those pixels reach the terminal, never the bytes of the image as its writer wrote them. A picture
+  fitted to its place keeps it.
 - **Placeholder cells.** With either protocol, each cell of a picture is Kitty's Unicode placeholder in place of a half
   block: `U+10EEEE`, a diacritic for its row, one for its column and one for the highest byte of its image's id, in the
   colour of the rest of the id. The id says which image it is and in how many cells: 12 bits how many columns and rows,
@@ -50,7 +52,8 @@ where it can draw neither.
   first cell; then the cells over it, again. Only when an image moved, appeared, went, or TamboUI wrote a cell where
   one is or was. A cell is as many pixels as the terminal tells the system (`TIOCGWINSZ`), or as
   `JAZYGIT_CELL_PIXELS=9x19` says; where neither tells, as on Windows, a picture is half blocks after all. An image is
-  shrunk or grown to its cells in pixels and made at most 255 colours by median cut, without dithering; a pixel less
+  shrunk or grown to fit its cells in pixels keeping its shape, at their top left, what it leaves of them not drawn,
+  and made at most 255 colours by median cut, without dithering; a pixel less
   than half opaque is left as it is (`P2=1`). The 16 images last painted are kept at their size, and the 16 parts last
   written as Sixel. An image is as high as the whole bands of six pixels that fit its cells, as Konsole draws the
   last band whole; and the column right of it and the row under it are written again after it, and when it goes, as

@@ -63,15 +63,16 @@ class PictureTest {
     }
 
     @Test
-    void anImageIsKeptSharpAtAsManyPixelsAsItsCellsHaveAtMost() throws IOException {
+    void anImageIsKeptSharpAtTwiceAsManyPixelsAsItsCellsHaveAtMost() throws IOException {
         Picture small = Picture.of(png(14, 14, 0xffe07828)).get();
         Picture large = Picture.of(png(1600, 1200, 0xff112233)).get();
 
         assertEquals(14, small.sharp().get().width());
         assertEquals(14, small.sharp().get().height());
-        // No more than 24 rows of 16 pixels high, keeping its shape.
-        assertEquals(512, large.sharp().get().width());
-        assertEquals(384, large.sharp().get().height());
+        // No more than 24 rows of 32 pixels high, twice a cell of 16, as a screen may have twice the pixels; keeping
+        // its shape.
+        assertEquals(1024, large.sharp().get().width());
+        assertEquals(768, large.sharp().get().height());
         assertEquals(large.sharp(), large.fit(10, 10, 10, 10).sharp());
     }
 
