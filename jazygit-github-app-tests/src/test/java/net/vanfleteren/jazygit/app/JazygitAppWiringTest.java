@@ -291,7 +291,7 @@ class JazygitAppWiringTest {
         assertEquals(
                 List.of(
                         Tuple.of(Timers.REFRESH_INTERVAL, TimerMsg.Tick.class),
-                        Tuple.of(Duration.ofSeconds(3), ReflogMsg.Tick.class),
+                        Tuple.of(Timers.REFRESH_INTERVAL, ReflogMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), PullRequestMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), ChecksMsg.Tick.class),

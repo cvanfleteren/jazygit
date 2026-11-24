@@ -1,11 +1,11 @@
 package net.vanfleteren.jazygit.features.changes.reflog;
 
-import java.time.Duration;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPane;
 import net.vanfleteren.jazygit.features.changes.reflog.content.ReflogShown;
 import net.vanfleteren.jazygit.features.changes.reflog.content.ReflogSource;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
+import net.vanfleteren.jazygit.kernel.ui.Refresh;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
@@ -16,12 +16,6 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 public final class ReflogFeature {
 
     /**
-     * How often the reflog, while its tab is shown, is looked at for a change outside the app: as often as the app
-     * looks at the status.
-     */
-    private static final Duration LOOK_INTERVAL = Duration.ofSeconds(3);
-
-    /**
      * Its tab, which hosts the keys that switch the tabs of the pane; what it reads, while it is shown; and what its
      * mark means.
      */
@@ -29,7 +23,8 @@ public final class ReflogFeature {
                     FeatureAction.ofKeys(keys -> keys.host(Scopes.REFLOG, Scopes.PANE_TABS)))
             .filling(CommitsPane.TABS, ReflogShown::tab)
             .reacting(ReflogUpdate::reacting)
-            .every(LOOK_INTERVAL, ReflogMsg.Tick::new)
+            // As often as the app looks at the status.
+            .every(Refresh.INTERVAL, ReflogMsg.Tick::new)
             .showing(new ReflogSource())
             .explaining(ReflogShown.HEAD_LEGEND, ReflogShown.LOST_LEGEND);
 
