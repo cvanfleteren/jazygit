@@ -32,6 +32,9 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.SubmittableTextArea;
  * {@link MessageEdited} for every change. Only the carets, and where Up and Down are in the earlier summaries, are
  * kept here.
  *
+ * <p>A long line of the description wraps over the rows below it, and a ruler marks the column past its 72nd
+ * character, so a line that git would show as too long is seen to be (ADR 193).
+ *
  * <p>There are two flavours: {@link #commit} asks for the message of a new commit, {@link #reword}
  * for a new message of any commit, starting out with its current one.
  */
@@ -53,6 +56,8 @@ public final class CommitDialog implements PopupView {
     private static final int WIDTH = 110;
     private static final int INPUT_HEIGHT = 3;
     private static final int DESCRIPTION_HEIGHT = 10;
+    // How long the lines of a description are to be, as git's own tools and most projects keep them (ADR 193).
+    private static final int DESCRIPTION_LINE_LENGTH = 72;
 
     private final TextInputState summary = new TextInputState();
     private final TextAreaState description = new TextAreaState();
@@ -141,6 +146,7 @@ public final class CommitDialog implements PopupView {
                                         this::confirm)
                                 .onChange(text -> edited())
                                 .rows(DESCRIPTION_HEIGHT)
+                                .ruler(DESCRIPTION_LINE_LENGTH)
                                 .bottomTitle(Messages.get("changes.dialog.commit.hint"))
                                 .onKeyEvent(this::keys))
                 .borderType(BorderType.NONE)
