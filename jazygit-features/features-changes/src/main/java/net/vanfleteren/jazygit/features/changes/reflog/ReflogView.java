@@ -71,8 +71,8 @@ public record ReflogView(
                     .find(entry -> entry.sha().equals(sha))
                     .map(ReflogEntry::commit));
 
-    // A commit, as a subject names one: an object id, whole or abbreviated.
-    private static final Pattern COMMIT = Pattern.compile("^[0-9a-f]{7,64}$");
+    // A detached HEAD's object id, whole as git writes it (SHA-1 or SHA-256): a branch can be all hex, as a date.
+    private static final Pattern COMMIT = Pattern.compile("^(?:[0-9a-f]{40}|[0-9a-f]{64})$");
     // What git allows in no branch name, which a revision has: ~ ^ : ? * [ \ .. @{, a / or . at an end, .lock at its
     // end, and a . after a /.
     private static final Pattern NOT_IN_A_BRANCH =
@@ -118,8 +118,8 @@ public record ReflogView(
 
     /**
      * Whether {@code name}, as a checkout's subject names where HEAD came from, is the name of a branch: git names a
-     * detached HEAD by its commit, and a checkout of a revision as it was typed, as {@code HEAD~1} or {@code main^},
-     * which no branch name can hold (git check-ref-format).
+     * detached HEAD by its whole object id, and a checkout of a revision as it was typed, as {@code HEAD~1} or
+     * {@code main^}, which no branch name can hold (git check-ref-format).
      */
     static boolean readsAsBranch(String name) {
         return !name.equals("HEAD")

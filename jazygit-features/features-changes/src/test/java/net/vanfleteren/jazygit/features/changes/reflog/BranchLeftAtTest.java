@@ -44,7 +44,23 @@ class BranchLeftAtTest {
         assertTrue(ReflogView.readsAsBranch("main"));
         assertTrue(ReflogView.readsAsBranch("feature/login"));
         assertTrue(ReflogView.readsAsBranch("fix-12"));
-        List.of("HEAD", "0cca89e", "main^", "main~2", "HEAD@{1}", "a..b", "x.lock", "x/", "x.", ".x", "a:b", "a*")
+        // All hex, as a date or a ticket number: git names a detached HEAD by its whole id only.
+        assertTrue(ReflogView.readsAsBranch("20261124"));
+        assertTrue(ReflogView.readsAsBranch("deadbeef"));
+        List.of(
+                        "HEAD",
+                        "0cca89e3b2f1a8d0c4e5f6a7b8c9d0e1f2a3b4c5",
+                        "a".repeat(64),
+                        "main^",
+                        "main~2",
+                        "HEAD@{1}",
+                        "a..b",
+                        "x.lock",
+                        "x/",
+                        "x.",
+                        ".x",
+                        "a:b",
+                        "a*")
                 .forEach(name -> assertFalse(ReflogView.readsAsBranch(name), name));
     }
 
