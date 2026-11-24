@@ -109,6 +109,17 @@ public final class CliMetadata {
     }
 
     /**
+     * The stamp of what the reflog of HEAD of the working tree is read from, looked at {@code now}: its log file in
+     * the git directory of the worktree, and the list of tables there of a reftable repository, which keeps it in its
+     * tables. git appends to the log on every move of HEAD, also one that keeps its commit, as a checkout of another
+     * branch at the same commit (ADR 186).
+     */
+    static Option<MetadataStamp> reflog(Locations at, Instant now) {
+        return settled(
+                stamp(List.of(at.gitDir().resolve("logs/HEAD"), at.gitDir().resolve("reftable/tables.list"))), now);
+    }
+
+    /**
      * {@code stamp}, unless one of its files was modified too shortly before {@code now} to tell a later change apart.
      */
     private static Option<MetadataStamp> settled(MetadataStamp stamp, Instant now) {

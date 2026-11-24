@@ -1,11 +1,15 @@
 package net.vanfleteren.jazygit.features.changes.reflog;
 
 import io.vavr.control.Option;
+import java.time.Duration;
+import net.vanfleteren.jazygit.core.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.TimerMsg;
 import net.vanfleteren.jazygit.kernel.state.Update;
 
 /**
@@ -22,7 +26,7 @@ public sealed interface ReflogMsg extends Msg {
      * {@code cmd} read {@code reflog}, and what keeps those of its commits no ref reaches, {@code kept}; none when
      * that could not be found (ADR 188).
      */
-    record Read(ReadReflog cmd, Reflog reflog, Option<Kept> kept) implements ReflogMsg {}
+    record Read(ReadReflog cmd, Reflog reflog, Option<Kept> kept, Option<MetadataStamp> stamp) implements ReflogMsg {}
 
     /**
      * {@code cmd} could not read the reflog, for {@code failure}.
@@ -33,4 +37,27 @@ public sealed interface ReflogMsg extends Msg {
      * The entry at {@code place} was highlighted: the next page is read once it is in the last page read.
      */
     record Highlighted(int place) implements ReflogMsg {}
+
+    /**
+     * Time to look whether the reflog changed outside the app, while its tab is shown. A timer of the app as the one
+     * of the status is: off with {@code git.auto-refresh}, and as seldom while the terminal does not have the focus
+     * (ADR 67, 125). Once the focus is back, the status is read again anyway.
+     */
+    record Tick() implements ReflogMsg, Msg.Periodic {
+
+        @Override
+        public Duration whileAway() {
+            return TimerMsg.Tick.WHILE_AWAY;
+        }
+
+        @Override
+        public boolean on(Settings settings) {
+            return settings.autoRefresh();
+        }
+    }
+
+    /**
+     * What the reflog of HEAD is read from looked like, {@code stamp}; none when that cannot be told.
+     */
+    record Stamped(Option<MetadataStamp> stamp) implements ReflogMsg {}
 }

@@ -69,6 +69,11 @@ public final class CliStatus implements Status {
     }
 
     @Override
+    public Option<MetadataStamp> reflogStamp() {
+        return metadataAt.flatMap(at -> CliMetadata.reflog(at, Instant.now()));
+    }
+
+    @Override
     public Option<MetadataStamp> diffStamp(List<FileEntry> files) {
         return metadataAt.flatMap(at -> CliMetadata.diff(at, worktree, files, Instant.now()));
     }

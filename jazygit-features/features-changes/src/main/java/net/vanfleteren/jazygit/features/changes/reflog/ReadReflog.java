@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.changes.reflog;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.history.History;
+import net.vanfleteren.jazygit.core.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
@@ -26,9 +27,11 @@ public record ReadReflog(int skip, int max) implements Cmd {
     @Override
     public Msg run(Env env) {
         History history = env.git().history();
+        // Taken before the reflog is read, so that a move of HEAD while it is read shows as a change after it.
+        Option<MetadataStamp> stamp = skip == 0 ? env.git().status().reflogStamp() : Option.none();
         return history.reflog(skip, max)
                 .mapLeft(Failure::of)
-                .fold(this::failed, reflog -> new ReflogMsg.Read(this, reflog, kept(history, reflog)));
+                .fold(this::failed, reflog -> new ReflogMsg.Read(this, reflog, kept(history, reflog), stamp));
     }
 
     @Override

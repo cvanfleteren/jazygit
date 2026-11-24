@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.changes.reflog;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.history.History;
+import net.vanfleteren.jazygit.core.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.core.repo.Kept;
 import net.vanfleteren.jazygit.core.repo.Reflog;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
@@ -14,9 +15,9 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 
 /**
- * Reading the reflog of HEAD while its tab is shown (ADR 186): when it is shown, after an operation of the app and
- * after the log is read again; a page ahead of the highlighted entry; one read at a time, which finds which of the
- * commits it read are lost as well (ADR 188).
+ * Reading the reflog of HEAD while its tab is shown (ADR 186): when it is shown, after an operation of the app, after
+ * the log is read again, and once what it is read from changed outside the app; a page ahead of the highlighted
+ * entry; one read at a time, which finds which of the commits it read are lost as well (ADR 188).
  */
 public final class ReflogUpdate {
 
@@ -24,7 +25,8 @@ public final class ReflogUpdate {
 
     public static Next update(Model model, ReflogMsg msg) {
         return switch (msg) {
-            case ReflogMsg.Read(ReadReflog cmd, Reflog reflog, Option<Kept> kept) -> read(model, cmd, reflog, kept);
+            case ReflogMsg.Read(ReadReflog cmd, Reflog reflog, Option<Kept> kept, Option<MetadataStamp> stamp) ->
+                read(model, cmd, reflog, kept, stamp);
             case ReflogMsg.Failed(ReadReflog cmd, Failure failure) -> failed(model, cmd, failure);
             case ReflogMsg.Highlighted(int place) ->
                 ahead(model.withPart(
@@ -32,7 +34,27 @@ public final class ReflogUpdate {
                         view(model)
                                 .withHighlighted(Option.of(place))
                                 .withReached(Math.max(view(model).reached(), place))));
+            case ReflogMsg.Tick() -> looking(model) ? Next.of(model, new StampReflog()) : Next.of(model);
+            case ReflogMsg.Stamped(Option<MetadataStamp> stamp) -> stamped(model, stamp);
         };
+    }
+
+    /**
+     * Whether to look if the reflog changed outside the app: while its tab is shown, it is read, and no read runs.
+     * Hidden, it is not looked at, as showing it reads it again anyway.
+     */
+    private static boolean looking(Model model) {
+        ReflogView view = view(model);
+        return shown(model) && view.reading().isEmpty() && view.entries() instanceof Loadable.Loaded<?>;
+    }
+
+    /**
+     * The reflog read again once what it is read from looks other than when it was read, or cannot be told apart.
+     */
+    private static Next stamped(Model model, Option<MetadataStamp> stamp) {
+        return looking(model) && (stamp.isEmpty() || !stamp.equals(view(model).stamp()))
+                ? reread(model)
+                : Next.of(model);
     }
 
     /**
@@ -77,12 +99,13 @@ public final class ReflogUpdate {
      * {@code model} with what {@code cmd} read, {@code reflog}, and what keeps its commits, {@code kept}: from the top,
      * in place of what was known; a later page, for its own commits. Unknown, nothing is marked of what it read.
      */
-    private static Next read(Model model, ReadReflog cmd, Reflog reflog, Option<Kept> kept) {
+    private static Next read(
+            Model model, ReadReflog cmd, Reflog reflog, Option<Kept> kept, Option<MetadataStamp> stamp) {
         ReflogView view = view(model);
         if (!view.reading().contains(cmd)) {
             return Next.of(model);
         }
-        ReflogView done = view.withReading(Option.none());
+        ReflogView done = view.withReading(Option.none()).withStamp(cmd.skip() == 0 ? stamp : view.stamp());
         return next(
                 model,
                 switch (reflog) {

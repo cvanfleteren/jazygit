@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.features.changes.reflog.content.ReflogShown;
 import net.vanfleteren.jazygit.features.changes.reflog.content.ReflogSource;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
+import net.vanfleteren.jazygit.kernel.ui.Refresh;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
@@ -22,6 +23,8 @@ public final class ReflogFeature {
                     FeatureAction.ofKeys(keys -> keys.host(Scopes.REFLOG, Scopes.PANE_TABS)))
             .filling(CommitsPane.TABS, ReflogShown::tab)
             .reacting(ReflogUpdate::reacting)
+            // As often as the app looks at the status.
+            .every(Refresh.INTERVAL, ReflogMsg.Tick::new)
             .showing(new ReflogSource())
             .explaining(ReflogShown.HEAD_LEGEND, ReflogShown.LOST_LEGEND);
 

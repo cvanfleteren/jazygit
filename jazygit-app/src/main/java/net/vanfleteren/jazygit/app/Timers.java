@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TimerMsg;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.Feature.Timer;
+import net.vanfleteren.jazygit.kernel.ui.Refresh;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 
 /**
@@ -16,9 +17,8 @@ import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
  */
 final class Timers {
 
-    // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
-    // Every 3 s rather than every second: reading the status was most of what an idle app cost (ADR 125).
-    static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 3000));
+    // As often as the features look for changes made outside the app too.
+    static final Duration REFRESH_INTERVAL = Refresh.INTERVAL;
     // What is dispatched every so often: the repository read again, and what each feature asks for, as what the remotes
     // and the forge have. The time comes when a time shown changes (ADR 124).
     static final List<Timer> ALL =

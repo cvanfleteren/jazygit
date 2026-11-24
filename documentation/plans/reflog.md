@@ -288,7 +288,9 @@ learned.
    the content panel (its selector, time, whole subject, and whether it is lost or at HEAD), which need a
    `ContentSource` of the reflog's own. Done: `History.lost` with each page, in the same command (ADR 188), and
    the entry above its commit through a heading a source puts above what another shows (ADR 187).
-5. **Stamp `logs/HEAD`** so external commits show while the reflog is open.
+5. **Stamp `logs/HEAD`** so external commits show while the reflog is open. Done: a commit outside the app already
+   showed, as it moves HEAD's commit and the log is read again; the stamp, looked at every three seconds while the
+   tab is shown, adds the moves that keep HEAD's commit, as a checkout of another branch at it.
 6. **Actions on an entry**, after their own grilling: reset, checkout, new branch, cherry-pick copy, bound in
    `Scopes.REFLOG`, with an acceptance test that a branch at an entry recovers a dropped commit.
 7. **`GIT_REFLOG_ACTION` on every operation**, and the `⚙` marker. Acceptance tests check the subjects git writes.

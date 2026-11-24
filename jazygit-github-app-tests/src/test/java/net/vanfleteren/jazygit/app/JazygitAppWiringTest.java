@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.features.changes.commit.CommitDialog;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.changes.reflog.ReflogMsg;
 import net.vanfleteren.jazygit.features.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
@@ -290,6 +291,7 @@ class JazygitAppWiringTest {
         assertEquals(
                 List.of(
                         Tuple.of(Timers.REFRESH_INTERVAL, TimerMsg.Tick.class),
+                        Tuple.of(Timers.REFRESH_INTERVAL, ReflogMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), PullRequestMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), ChecksMsg.Tick.class),

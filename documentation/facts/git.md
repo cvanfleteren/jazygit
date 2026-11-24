@@ -200,6 +200,12 @@ learned, so a fact that has grown old can be checked again; see README.md.
 - A page of 200 entries of HEAD's reflog, with each whole commit, took 7 ms from the top and 32 ms after skipping 2800
   of a reflog of 3000. *Why it matters:* reading a page ahead costs nothing noticeable. — learned 2026-11-23 · [ADR
   0186](../adr/0186-the-reflog-of-head-read-only.md) · git 2.56
+- git appends to the log of HEAD of a worktree (`logs/HEAD` in its git directory) on every move of HEAD, also a
+  checkout of another branch at the same commit, which leaves HEAD's commit and so the log as they were; creating or
+  deleting a branch, and staging, leave it alone. A reftable repository writes its `reftable/tables.list` anew
+  instead. *Why it matters:* the app reads the log again only when HEAD's commit changes, so the reflog tab, while
+  shown, stamps that file to see such a move made outside the app. — learned 2026-11-24 · [ADR
+  0186](../adr/0186-the-reflog-of-head-read-only.md) · git 2.56
 - `git rev-list <shas> --not --branches --tags --remotes --` lists the commits of `<shas>` no branch, tag or
   remote-tracking branch reaches, with those behind them up to the first a ref reaches; HEAD, the stash and other
   worktrees' HEADs keep nothing out of it, unless named after `--not`. For the 196 distinct commits of a page of 200

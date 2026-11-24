@@ -7,9 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.history.History;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
+import net.vanfleteren.jazygit.core.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.Kept;
@@ -23,7 +26,10 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.TerminalMsg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.TimerMsg;
+import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +39,7 @@ import org.junit.jupiter.api.Test;
 class ReflogUpdateTest {
 
     private static final int PAGE = History.REFLOG_PAGE;
+    static final MetadataStamp STAMP = stamp(1);
     private static final Model HIDDEN = TestModels.loaded(SampleData.git());
     private static final Model SHOWN = HIDDEN.mapRepoView(view -> view.withTab(CommitsPanel.PANE, ReflogView.TAB));
 
@@ -167,7 +174,7 @@ class ReflogUpdateTest {
     void anEmptyReflogSaysWhy() {
         Next next = ReflogUpdate.update(
                 reading(SHOWN, readOf(0, PAGE)),
-                new ReflogMsg.Read(readOf(0, PAGE), Reflog.Empty.OFF, Option.of(Kept.BY_REFS)));
+                new ReflogMsg.Read(readOf(0, PAGE), Reflog.Empty.OFF, Option.of(Kept.BY_REFS), Option.none()));
 
         assertEquals(Option.of(Reflog.Empty.OFF), view(next).empty());
         assertEquals(new Loadable.Loaded<>(List.empty()), view(next).entries());
@@ -245,7 +252,7 @@ class ReflogUpdateTest {
 
         Model unknown = ReflogUpdate.update(
                         reading(first, readOf(0, PAGE)),
-                        new ReflogMsg.Read(readOf(0, PAGE), new Reflog.Entries(top), Option.none()))
+                        new ReflogMsg.Read(readOf(0, PAGE), new Reflog.Entries(top), Option.none(), Option.none()))
                 .model();
 
         assertEquals(top, view(unknown).entries().getOrElse(List.empty()));
@@ -260,6 +267,137 @@ class ReflogUpdateTest {
                 .model();
 
         assertEquals(Option.of(top.get(2)), highlighted.part(ReflogView.PART).highlightedEntry());
+    }
+
+    @Test
+    void whileShownAndReadTheTickLooksAtWhatTheReflogIsReadFrom() {
+        Model read = done(SHOWN, readOf(0, PAGE), entries(0, 3));
+
+        assertEquals(
+                List.of(new StampReflog()),
+                ReflogUpdate.update(read, new ReflogMsg.Tick()).cmds());
+    }
+
+    @Test
+    void withAutoRefreshOffTheTickLooksAtNothing() {
+        Model off = done(SHOWN, readOf(0, PAGE), entries(0, 3))
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withAutoRefresh(false)));
+
+        assertEquals(List.empty(), Update.update(off, new ReflogMsg.Tick()).cmds());
+    }
+
+    @Test
+    void whileAwayTheTickLooksAsSeldomAsTheStatusIsRead() {
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+        Model away = Update.update(
+                        done(SHOWN, readOf(0, PAGE), entries(0, 3)).withNow(now), new TerminalMsg.Focused(false))
+                .model();
+
+        Next first = Update.update(away, new ReflogMsg.Tick());
+        Next soon = Update.update(first.model().withNow(now.plusSeconds(3)), new ReflogMsg.Tick());
+        Next later = Update.update(soon.model().withNow(now.plus(TimerMsg.Tick.WHILE_AWAY)), new ReflogMsg.Tick());
+
+        assertEquals(List.empty(), first.cmds().appendAll(soon.cmds()));
+        assertEquals(List.of(new StampReflog()), later.cmds());
+    }
+
+    @Test
+    void aTickKeptWhileAwayLooksOnceTheFocusIsBack() {
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+        Model away = Update.update(
+                        done(SHOWN, readOf(0, PAGE), entries(0, 3)).withNow(now), new TerminalMsg.Focused(false))
+                .model();
+        Model kept = Update.update(away, new ReflogMsg.Tick()).model();
+
+        Next back = Update.update(kept.withNow(now.plusSeconds(3)), new TerminalMsg.Focused(true));
+
+        assertEquals(List.of(new StampReflog()), back.cmds().filter(StampReflog.class::isInstance));
+    }
+
+    @Test
+    void hiddenStillReadingOrNotReadYetTheTickLooksAtNothing() {
+        Model read = done(SHOWN, readOf(0, PAGE), entries(0, 3));
+
+        assertEquals(
+                List.empty(),
+                ReflogUpdate.update(hide(read), new ReflogMsg.Tick()).cmds());
+        assertEquals(
+                List.empty(),
+                ReflogUpdate.update(reading(read, readOf(0, PAGE)), new ReflogMsg.Tick())
+                        .cmds());
+        assertEquals(
+                List.empty(), ReflogUpdate.update(SHOWN, new ReflogMsg.Tick()).cmds());
+    }
+
+    @Test
+    void aReadFromTheTopKeepsItsStampAndALaterPageLeavesIt() {
+        Model top = stamped(SHOWN, Option.of(STAMP));
+        Model later = read(
+                        reading(top, readOf(PAGE, PAGE)),
+                        readOf(PAGE, PAGE),
+                        entries(PAGE, 3),
+                        Kept.BY_REFS,
+                        Option.none())
+                .model();
+
+        assertEquals(Option.of(STAMP), view(top).stamp());
+        assertEquals(Option.of(STAMP), view(later).stamp());
+    }
+
+    @Test
+    void theReflogIsReadAgainOnceWhatItIsReadFromLooksOther() {
+        Model read = stamped(SHOWN, Option.of(STAMP));
+
+        assertEquals(
+                List.empty(),
+                ReflogUpdate.update(read, new ReflogMsg.Stamped(Option.of(stamp(1))))
+                        .cmds());
+        assertEquals(
+                List.of(readOf(0, PAGE)),
+                ReflogUpdate.update(read, new ReflogMsg.Stamped(Option.of(stamp(2))))
+                        .cmds());
+    }
+
+    @Test
+    void aStampThatCannotBeToldReadsTheReflogAgain() {
+        assertEquals(
+                List.of(readOf(0, PAGE)),
+                ReflogUpdate.update(stamped(SHOWN, Option.of(STAMP)), new ReflogMsg.Stamped(Option.none()))
+                        .cmds());
+        assertEquals(
+                List.of(readOf(0, PAGE)),
+                ReflogUpdate.update(stamped(SHOWN, Option.none()), new ReflogMsg.Stamped(Option.of(STAMP)))
+                        .cmds());
+    }
+
+    @Test
+    void aStampThatArrivesOnceTheTabIsHiddenOrAReadRunsReadsNothing() {
+        Model read = stamped(SHOWN, Option.of(STAMP));
+        ReflogMsg.Stamped other = new ReflogMsg.Stamped(Option.of(stamp(2)));
+
+        assertEquals(List.empty(), ReflogUpdate.update(hide(read), other).cmds());
+        assertEquals(
+                List.empty(),
+                ReflogUpdate.update(reading(read, readOf(0, PAGE)), other).cmds());
+    }
+
+    /**
+     * {@code model} once a read from the top read three entries, what they were read from looking as {@code stamp}.
+     */
+    private static Model stamped(Model model, Option<MetadataStamp> stamp) {
+        Model read = read(reading(model, readOf(0, PAGE)), readOf(0, PAGE), entries(0, 3), Kept.BY_REFS, stamp)
+                .model();
+        return read.withPart(ReflogView.PART, read.part(ReflogView.PART).withReading(Option.none()));
+    }
+
+    /**
+     * A stamp of the log of HEAD as it looks with {@code size} bytes.
+     */
+    private static MetadataStamp stamp(long size) {
+        return new MetadataStamp(List.of(new MetadataStamp.Entry(
+                Path.of(".git/logs/HEAD"),
+                Option.of(new MetadataStamp.State(FileTime.fromMillis(1_000), size, Option.none())))));
     }
 
     private static ReadReflog readOf(int skip, int max) {
@@ -295,7 +433,12 @@ class ReflogUpdateTest {
     }
 
     private static Next read(Model model, ReadReflog cmd, List<ReflogEntry> entries, Kept kept) {
-        return ReflogUpdate.update(model, new ReflogMsg.Read(cmd, new Reflog.Entries(entries), Option.of(kept)));
+        return read(model, cmd, entries, kept, Option.none());
+    }
+
+    private static Next read(
+            Model model, ReadReflog cmd, List<ReflogEntry> entries, Kept kept, Option<MetadataStamp> stamp) {
+        return ReflogUpdate.update(model, new ReflogMsg.Read(cmd, new Reflog.Entries(entries), Option.of(kept), stamp));
     }
 
     private static ReflogView view(Next next) {
