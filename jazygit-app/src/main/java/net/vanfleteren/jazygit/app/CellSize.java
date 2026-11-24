@@ -16,7 +16,7 @@ final class CellSize {
 
     private static final Option<CellPixels> SAID = CellPixels.parse(Option.of(System.getenv("JAZYGIT_CELL_PIXELS")));
     // Whether the system has the LibC that is asked, found out once: without it, as on Windows, it is never asked.
-    private static final boolean LIBC = hasLibC();
+    private static final boolean LIBC = loads(LibC.class.getName());
 
     private CellSize() {}
 
@@ -27,11 +27,16 @@ final class CellSize {
         return SAID.orElse(() -> LIBC ? asked() : Option.none());
     }
 
-    // Not in a Try, which throws a LinkageError on, as where there is no LibC.
-    private static boolean hasLibC() {
+    /**
+     * Whether the class {@code name} is loaded and made: its static fields set, which is where LibC looks up what it
+     * calls in the system, and fails where it is not. Loaded by name, as a field of LibC is a constant javac copies in,
+     * and a call to it would be the call that fails. Not in a Try, which throws a LinkageError on.
+     */
+    static boolean loads(String name) {
         try {
-            return LibC.STDOUT_FILENO >= 0;
-        } catch (LinkageError noLibC) {
+            var _ = Class.forName(name, true, CellSize.class.getClassLoader());
+            return true;
+        } catch (LinkageError | ClassNotFoundException noLibC) {
             return false;
         }
     }
