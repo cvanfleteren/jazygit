@@ -26,7 +26,9 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.TerminalMsg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -273,6 +275,26 @@ class ReflogUpdateTest {
         assertEquals(
                 List.of(new StampReflog()),
                 ReflogUpdate.update(read, new ReflogMsg.Tick()).cmds());
+    }
+
+    @Test
+    void withAutoRefreshOffTheTickLooksAtNothing() {
+        Model off = done(SHOWN, readOf(0, PAGE), entries(0, 3))
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withAutoRefresh(false)));
+
+        assertEquals(List.empty(), Update.update(off, new ReflogMsg.Tick()).cmds());
+    }
+
+    @Test
+    void whileAwayTheTickLooksAsSeldomAsTheStatusIsRead() {
+        Model away = Update.update(done(SHOWN, readOf(0, PAGE), entries(0, 3)), new TerminalMsg.Focused(false))
+                .model();
+
+        Next first = Update.update(away, new ReflogMsg.Tick());
+        Next second = Update.update(first.model(), new ReflogMsg.Tick());
+
+        assertEquals(List.empty(), second.cmds());
     }
 
     @Test
