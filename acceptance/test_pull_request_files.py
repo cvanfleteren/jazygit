@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from harness import written
+
 DATE = "2026-01-01T00:00:00Z"
 # What the calls that read pull requests contain.
 LISTED = "pullRequests(states: OPEN"
@@ -167,9 +169,8 @@ def test_o_opens_the_browser_on_the_remark_of_the_cursor_or_else_on_the_pull_req
 
     # On the file: the pull request.
     ui.app.press("o")
-    ui.app.eventually(lambda: opened.exists(), "the browser to open the pull request")
     pull = f"https://github.com/{repository}/pull/1"
-    assert opened.read_text() == f"{pull}\n"
+    assert written(ui.app, opened, "the browser to open the pull request") == f"{pull}\n"
 
     # On the open thread: its first comment.
     ui.app.press("n")
@@ -208,8 +209,8 @@ def test_o_opens_the_browser_set_for_the_account_rather_than_the_one_gh_would(
 
     ui.app.press("o")
 
-    ui.app.eventually(lambda: opened.exists(), "the account's browser to open the pull request")
-    assert opened.read_text() == f"-P work https://github.com/{repository}/pull/1\n"
+    assert (written(ui.app, opened, "the account's browser to open the pull request")
+            == f"-P work https://github.com/{repository}/pull/1\n")
 
 
 def test_only_the_files_of_a_pull_request_with_remarks_can_be_listed(repo, origin, clone, gh, jazygit):
