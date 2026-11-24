@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.branches.branch.newbranch;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ReflogEntry;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -24,6 +25,11 @@ public sealed interface NewBranchMsg extends Msg {
      * The user asked for a new branch starting at the commit {@code sha}.
      */
     record RequestedAtCommit(Sha sha) implements NewBranchMsg {}
+
+    /**
+     * The user asked for a new branch starting at the commit of {@code entry} of the reflog of HEAD (ADR 194).
+     */
+    record RequestedAtEntry(ReflogEntry entry) implements NewBranchMsg {}
 
     /**
      * The user asked for a new branch starting at the remote branch {@code branch}.

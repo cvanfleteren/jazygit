@@ -5,7 +5,8 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
- * Checking out the selected branch, local or remote, or the selected commit, detached (ADR 137).
+ * Checking out the selected branch, local or remote, or the selected commit, detached (ADR 137), also of an entry of
+ * the reflog (ADR 194).
  */
 public final class CheckoutAction {
 
@@ -30,6 +31,12 @@ public final class CheckoutAction {
                                     " ",
                                     "branches.help.commits.checkout",
                                     commit -> new CheckoutMsg.CommitRequested(commit.sha())))
+                    .add(
+                            Scopes.REFLOG,
+                            Binding.onSelected(
+                                    " ",
+                                    "branches.help.commits.checkout",
+                                    entry -> new CheckoutMsg.CommitRequested(entry.sha())))
                     .add(
                             Scopes.REMOTE_BRANCHES,
                             Binding.onSelected(

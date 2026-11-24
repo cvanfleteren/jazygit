@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
- * Creating a branch at the selected branch, remote branch or commit.
+ * Creating a branch at the selected branch, remote branch or commit, or at the selected entry of the reflog (ADR 194).
  */
 public final class NewBranchAction {
 
@@ -21,7 +21,11 @@ public final class NewBranchAction {
                             Binding.onSelected(
                                     "n",
                                     "branches.help.commits.newBranch",
-                                    commit -> new NewBranchMsg.RequestedAtCommit(commit.sha()))),
+                                    commit -> new NewBranchMsg.RequestedAtCommit(commit.sha())))
+                    .add(
+                            Scopes.REFLOG,
+                            Binding.onSelected(
+                                    "n", "branches.help.reflog.newBranch", NewBranchMsg.RequestedAtEntry::new)),
             NewBranchDialogs::popups);
 
     private NewBranchAction() {}

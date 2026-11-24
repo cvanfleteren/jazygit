@@ -2,10 +2,12 @@ package net.vanfleteren.jazygit.features.branches.branch.newbranch;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ReflogEntry;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutUpdate;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchMsg.Requested;
+import net.vanfleteren.jazygit.features.changes.reflog.ReflogView;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 
@@ -21,6 +23,7 @@ public final class NewBranchUpdate {
             case Requested(BranchName base) ->
                 named(model, model.idleBranch(base).map(known -> new NewBranchPopup(base)));
             case NewBranchMsg.RequestedAtCommit(var sha) -> atCommit(model, sha);
+            case NewBranchMsg.RequestedAtEntry(var entry) -> atEntry(model, entry);
             case NewBranchMsg.RequestedAtRemote(var remote) ->
                 named(
                         model,
@@ -44,6 +47,22 @@ public final class NewBranchUpdate {
         return named(
                 model,
                 model.commit(sha).map(commit -> new NewBranchPopup(new Revision.Commit(commit.sha()), Option.none())));
+    }
+
+    /**
+     * Asks for the name of a new branch at the commit of {@code entry} of the reflog (ADR 194): it starts out as the
+     * branch HEAD left there, when the reflog says which and no branch has that name now, else as any new branch's
+     * does.
+     */
+    private static Next atEntry(Model model, ReflogEntry entry) {
+        return model.part(ReflogView.PART)
+                .branchLeftAt(entry)
+                .filter(left -> model.repo().branch(left).isEmpty())
+                .flatMap(left -> model.commit(entry.sha())
+                        .map(commit -> new NewBranchPopup(new Revision.Commit(commit.sha()), Option.none())
+                                .withText(left.value())))
+                .map(popup -> Next.of(model.clearError().openPopupIfFree(popup)))
+                .getOrElse(() -> atCommit(model, entry.sha()));
     }
 
     /**
