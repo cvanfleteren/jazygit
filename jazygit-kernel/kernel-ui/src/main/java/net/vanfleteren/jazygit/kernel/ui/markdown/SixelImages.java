@@ -18,6 +18,7 @@ import io.vavr.collection.Traversable;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.io.OutputStream;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.lib.image.Picture;
 import net.vanfleteren.jazygit.lib.image.Sharp;
 import net.vanfleteren.jazygit.lib.image.Sixel;
@@ -50,13 +51,33 @@ public final class SixelImages {
     // How many images, at the size of their cells, and how many parts of them as Sixel, are kept.
     private static final int KEPT = 16;
 
+    // How the pixels of an image are read, and made into Sixel.
+    private final Function<Sharp, int[]> pixels;
+    private final Encoder encoder;
     private Plan plan = Plan.NONE;
     private Plan painted = Plan.NONE;
     private Option<Buffer> buffer = Option.none();
     private boolean dirty;
     // The images at the size of their cells, and the parts of them as Sixel, the last used last.
     private LinkedHashMap<Tuple2<Integer, CellPixels>, int[]> scaled = LinkedHashMap.empty();
-    private LinkedHashMap<Tuple2<Placed, CellPixels>, String> encoded = LinkedHashMap.empty();
+    private LinkedHashMap<Tuple2<Cut, CellPixels>, String> encoded = LinkedHashMap.empty();
+    // The half blocks of the images drawn so where the size of a cell is not known, the last used last.
+    private LinkedHashMap<Integer, Picture> halves = LinkedHashMap.empty();
+
+    /**
+     * Images that read their pixels from their sharp image, and are made into Sixel by jazygit's own encoder.
+     */
+    public SixelImages() {
+        this(Sharp::argb, Sixel::encode);
+    }
+
+    /**
+     * Images whose pixels {@code pixels} reads, and which {@code encoder} makes into Sixel.
+     */
+    SixelImages(Function<Sharp, int[]> pixels, Encoder encoder) {
+        this.pixels = pixels;
+        this.encoder = encoder;
+    }
 
     /**
      * Finds the images in the cells of {@code frame}, of those {@code shown}, and blanks their cells, to be painted
@@ -69,9 +90,13 @@ public final class SixelImages {
                 .flatMap(y -> List.range(frame.area().left(), frame.area().right())
                         .flatMap(x -> KittyGraphics.spotOf(frame.get(x, y))
                                 .map(spot -> Tuple.of(new Rect(x, y, 1, 1), spot))));
-        List<Placed> placed = spots.groupBy(spot -> spot._2().id())
+        // Each copy of an image apart: its cells are of one image, and say the same first cell of it.
+        List<Placed> placed = spots.groupBy(spot -> Tuple.of(
+                        spot._2().id(),
+                        spot._1().x() - spot._2().column(),
+                        spot._1().y() - spot._2().row()))
                 .toList()
-                .flatMap(image -> place(frame, image._1(), image._2(), shown, cell));
+                .flatMap(image -> place(frame, image._1()._1(), image._2(), shown, cell));
         buffer = Option.of(frame);
         plan = new Plan(placed, cell.getOrNull());
     }
@@ -104,7 +129,7 @@ public final class SixelImages {
                         .append(';')
                         .append(now.screen().x() + 1)
                         .append('H');
-                Tuple2<Placed, CellPixels> key = Tuple.of(now, plan.cell());
+                Tuple2<Cut, CellPixels> key = Tuple.of(now.cut(), plan.cell());
                 String sixel = encoded.get(key).getOrElse(() -> sixel(now, plan.cell()));
                 encoded = kept(encoded.remove(key).put(key, sixel));
                 out.append(sixel);
@@ -137,7 +162,8 @@ public final class SixelImages {
             Option<CellPixels> cell) {
         Option<Sharp> image = KittyGraphics.imageOf(id, shown);
         if (image.isEmpty() || cell.isEmpty()) {
-            Option<Picture> half = image.map(sharp -> halfBlocks(id, sharp));
+            Option<Picture> half = image.map(sharp -> halves.get(id).getOrElse(() -> halfBlocks(id, sharp)));
+            half.forEach(picture -> halves = kept(halves.remove(id).put(id, picture)));
             spots.forEach(spot -> frame.set(
                     spot._1().x(),
                     spot._1().y(),
@@ -177,7 +203,7 @@ public final class SixelImages {
         Tuple2<Integer, CellPixels> key = Tuple.of(placed.id(), cell);
         int[] whole = scaled.get(key)
                 .getOrElse(() -> Picture.resized(
-                        placed.sharp().argb(),
+                        pixels.apply(placed.sharp()),
                         placed.sharp().width(),
                         placed.sharp().height(),
                         width,
@@ -191,7 +217,7 @@ public final class SixelImages {
         for (int row = 0; row < cutHeight; row++) {
             System.arraycopy(whole, (cutTop + row) * width + cutLeft, cut, row * cutWidth, cutWidth);
         }
-        return Sixel.encode(cut, cutWidth, cutHeight);
+        return encoder.encode(cut, cutWidth, cutHeight);
     }
 
     /**
@@ -224,13 +250,13 @@ public final class SixelImages {
     /**
      * Image {@code id} of {@code sharp} as the half blocks of its cells.
      */
-    private static Picture halfBlocks(int id, Sharp sharp) {
+    private Picture halfBlocks(int id, Sharp sharp) {
         int columns = KittyGraphics.columnsOf(id);
         int height = KittyGraphics.rowsOf(id) * 2;
         return new Picture(
                 columns,
                 height,
-                Vector.ofAll(Picture.resized(sharp.argb(), sharp.width(), sharp.height(), columns, height)));
+                Vector.ofAll(Picture.resized(pixels.apply(sharp), sharp.width(), sharp.height(), columns, height)));
     }
 
     // {@code used} without what was used longest ago, past KEPT.
@@ -242,7 +268,20 @@ public final class SixelImages {
      * An image placed to be painted: the part of it that shows, from {@code column} and {@code row} of its cells, at
      * {@code screen}, and which cells there are its own, as {@code y * width + x}; the others are of what is over it.
      */
-    record Placed(int id, Sharp sharp, Rect screen, int column, int row, Set<Integer> images) {}
+    record Placed(int id, Sharp sharp, Rect screen, int column, int row, Set<Integer> images) {
+
+        /**
+         * The part of its image that shows, which is what its Sixel is of.
+         */
+        Cut cut() {
+            return new Cut(id, column, row, screen.width(), screen.height());
+        }
+    }
+
+    /**
+     * A part of image {@code id}: {@code columns} by {@code rows} of its cells, from {@code column} and {@code row}.
+     */
+    record Cut(int id, int column, int row, int columns, int rows) {}
 
     /**
      * The images of a frame, and the size of a cell they are painted at.
@@ -254,6 +293,14 @@ public final class SixelImages {
         boolean covers(int x, int y) {
             return placed.exists(image -> image.screen().contains(x, y));
         }
+    }
+
+    /**
+     * Makes pixels, {@code width} by {@code height} row by row, into the Sixel that draws them.
+     */
+    @FunctionalInterface
+    interface Encoder {
+        String encode(int[] argb, int width, int height);
     }
 
     private static final class Written implements Widget, RawOutputCapable {

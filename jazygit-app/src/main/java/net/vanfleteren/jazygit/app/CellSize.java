@@ -15,6 +15,8 @@ import net.vanfleteren.jazygit.kernel.ui.markdown.CellPixels;
 final class CellSize {
 
     private static final Option<CellPixels> SAID = CellPixels.parse(Option.of(System.getenv("JAZYGIT_CELL_PIXELS")));
+    // Whether the system has the LibC that is asked, found out once: without it, as on Windows, it is never asked.
+    private static final boolean LIBC = hasLibC();
 
     private CellSize() {}
 
@@ -22,7 +24,16 @@ final class CellSize {
      * The size of a cell now: a font made larger changes it.
      */
     static Option<CellPixels> now() {
-        return SAID.orElse(CellSize::asked);
+        return SAID.orElse(() -> LIBC ? asked() : Option.none());
+    }
+
+    // Not in a Try, which throws a LinkageError on, as where there is no LibC.
+    private static boolean hasLibC() {
+        try {
+            return LibC.STDOUT_FILENO >= 0;
+        } catch (LinkageError noLibC) {
+            return false;
+        }
     }
 
     // As the terminal tells the system. Not in a Try, which throws a LinkageError on, as where there is no LibC.

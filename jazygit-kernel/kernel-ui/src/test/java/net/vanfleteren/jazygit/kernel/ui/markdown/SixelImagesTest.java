@@ -11,6 +11,8 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.lib.image.Picture;
+import net.vanfleteren.jazygit.lib.image.Sharp;
+import net.vanfleteren.jazygit.lib.image.Sixel;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -117,6 +119,58 @@ class SixelImagesTest {
     }
 
     @Test
+    void anImageScrolledAlongIsNotMadeIntoSixelAgain() {
+        Picture picture = KittyGraphicsTest.picture(3, 4);
+        java.util.List<Integer> encoded = new java.util.ArrayList<>();
+        SixelImages images = new SixelImages(Sharp::argb, (argb, width, height) -> {
+            encoded.add(width);
+            return Sixel.encode(argb, width, height);
+        });
+
+        images.plan(withPicture(picture, 2, 1, 0, 2), List.of(picture.sharp().get()), CELL);
+        String before = images.paint().get();
+        images.plan(withPicture(picture, 2, 2, 0, 2), List.of(picture.sharp().get()), CELL);
+        String after = images.paint().get();
+
+        assertEquals(1, encoded.size());
+        assertTrue(after.contains("\u001b[3;3H" + sixelOf(before)), after);
+    }
+
+    @Test
+    void twoCopiesOfAnImageArePaintedEach() {
+        Picture picture = KittyGraphicsTest.picture(3, 4);
+        Buffer frame = withPicture(picture, 0, 0, 0, 2);
+        put(frame, picture, 10, 4, 0, 2);
+        SixelImages images = new SixelImages();
+
+        images.plan(frame, List.of(picture.sharp().get()), CELL);
+        String painted = images.paint().get();
+
+        assertEquals(2, painted.split(java.util.regex.Pattern.quote(DCS), -1).length - 1, painted);
+        assertTrue(painted.contains("\u001b[1;1H" + DCS), painted);
+        assertTrue(painted.contains("\u001b[5;11H" + DCS), painted);
+    }
+
+    @Test
+    void withoutTheSizeOfACellTheHalfBlocksOfAnImageAreMadeOnce() {
+        Picture picture = KittyGraphicsTest.picture(3, 4);
+        java.util.List<Sharp> read = new java.util.ArrayList<>();
+        SixelImages images = new SixelImages(
+                sharp -> {
+                    read.add(sharp);
+                    return sharp.argb();
+                },
+                Sixel::encode);
+
+        images.plan(withPicture(picture, 0, 0, 0, 2), List.of(picture.sharp().get()), Option.none());
+        Buffer again = withPicture(picture, 0, 0, 0, 2);
+        images.plan(again, List.of(picture.sharp().get()), Option.none());
+
+        assertEquals(1, read.size());
+        assertEquals("▀", again.get(0, 0).symbol());
+    }
+
+    @Test
     void theCellsOfAnImageNotShownAreBlank() {
         Picture picture = KittyGraphicsTest.picture(3, 4);
         Buffer frame = withPicture(picture, 0, 0, 0, 2);
@@ -132,6 +186,15 @@ class SixelImagesTest {
      */
     private static Buffer withPicture(Picture picture, int x, int y, int from, int to) {
         Buffer frame = Buffer.empty(AREA);
+        put(frame, picture, x, y, from, to);
+        return frame;
+    }
+
+    /**
+     * {@code frame} with the rows {@code from} up to {@code to} of {@code picture}'s cells put in, its first cell at
+     * {@code x} and {@code y}; rows off the screen are left out.
+     */
+    private static void put(Buffer frame, Picture picture, int x, int y, int from, int to) {
         for (int row = from; row < to; row++) {
             for (int column = 0; column < picture.width(); column++) {
                 Tuple2<Style, String> cell = KittyGraphics.cell(picture, row * picture.width() + column);
@@ -140,6 +203,13 @@ class SixelImagesTest {
                 }
             }
         }
-        return frame;
+    }
+
+    /**
+     * The first Sixel image {@code painted} writes, from its {@code DCS} to its {@code ST}.
+     */
+    private static String sixelOf(String painted) {
+        int start = painted.indexOf(DCS);
+        return painted.substring(start, painted.indexOf("\u001b\\", start) + 2);
     }
 }
