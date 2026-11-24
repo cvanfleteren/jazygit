@@ -220,3 +220,4 @@ another tool adds it there too.
 | 191 | [The terminal draws a picture sharp where it can: Kitty, else Sixel, else half blocks](0191-the-terminal-draws-a-picture-sharp-where-it-can.md) |  |
 | 192 | [A file of a pull request is edited while its branch is checked out](0192-a-file-of-a-pull-request-is-edited-while-its-branch-is-checked-out.md) |  |
 | 193 | [A long line of a text box wraps, and the commit description marks column 72](0193-a-long-line-of-a-text-box-wraps.md) |  |
+| 194 | [A branch, a reset and a checkout at an entry of the reflog](0194-a-branch-a-reset-and-a-checkout-at-a-reflog-entry.md) |  |
