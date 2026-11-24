@@ -72,13 +72,13 @@ public record FilesLock(PaneId pane, In list, Option<Followed> at, int serial) {
             if (!branches) {
                 return LIST;
             }
-            if (shown.divergence().isDefined() && shown.tab() == BranchesTab.LOCAL) {
+            if (shown.divergence().isDefined() && view.branchesTab().contains(BranchesTab.LOCAL)) {
                 return DIVERGENCE;
             }
             if (shown.branchCommits().isDefined()) {
                 return BRANCH_COMMITS;
             }
-            return shown.tab() == BranchesTab.LOCAL ? LIST : OTHER_TAB;
+            return view.branchesTab().contains(BranchesTab.LOCAL) ? LIST : OTHER_TAB;
         }
     }
 }

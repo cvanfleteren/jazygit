@@ -9,6 +9,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Group;
@@ -18,6 +19,7 @@ import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.load.BranchFiles;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
 import net.vanfleteren.jazygit.kernel.state.view.NoLog;
+import net.vanfleteren.jazygit.kernel.state.view.ShownTabs;
 import net.vanfleteren.jazygit.kernel.state.view.Unlisted;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
@@ -63,6 +65,7 @@ class LocalBranchesList implements BranchesTabList {
      * @param highlights how the highlighted branch is shown, also when the pane is not in use
      * @param badges     what the features show of a branch
      * @param groups     the groups the features make of the branches
+     * @param tabs       what the keys that switch the tabs of the pane act on, which the list hosts (ADR 185)
      */
     LocalBranchesList(
             String id,
@@ -70,7 +73,8 @@ class LocalBranchesList implements BranchesTabList {
             Clock clock,
             Theme.Highlights highlights,
             BranchBadges badges,
-            BranchGroups groups) {
+            BranchGroups groups,
+            Supplier<Keymap.Hosted<ShownTabs>> tabs) {
         this.clock = clock;
         this.badges = badges;
         this.groups = groups;
@@ -80,7 +84,8 @@ class LocalBranchesList implements BranchesTabList {
         list.highlightSymbol("");
         // Escape lets go of the files locked to the branches, before it does anything else (ADR 149).
         list.onKey(event -> PaneKeys.sending(
-                locked && event.isCancel() ? Option.of(new SelectionMsg.FilesUnlocked()) : keys(event), dispatch));
+                locked && event.isCancel() ? Option.of(new SelectionMsg.FilesUnlocked()) : keys(event, tabs.get()),
+                dispatch));
     }
 
     /**
@@ -395,13 +400,13 @@ class LocalBranchesList implements BranchesTabList {
      * What {@code event} does on the highlighted node: on a header, what the keys of its group do, else what those of
      * the pane do that need no branch; on anything else, what the keys of a branch do.
      */
-    private Option<Msg> keys(KeyEvent event) {
+    private Option<Msg> keys(KeyEvent event, Keymap.Hosted<ShownTabs> tabs) {
         return selected()
                 .filter(BranchNode.Header.class::isInstance)
                 .map(node -> ((BranchNode.Header) node).group().keys())
                 .fold(
-                        () -> keymap.handle(Scopes.BRANCHES, event, selectedBranch()),
+                        () -> keymap.handle(Scopes.BRANCHES, event, selectedBranch(), tabs),
                         keys -> keys.handle(keymap, event)
-                                .orElse(() -> keymap.handle(Scopes.BRANCHES, event, Option.none())));
+                                .orElse(() -> keymap.handle(Scopes.BRANCHES, event, Option.none(), tabs)));
     }
 }

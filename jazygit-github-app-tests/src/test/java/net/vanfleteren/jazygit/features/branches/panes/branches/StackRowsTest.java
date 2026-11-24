@@ -236,7 +236,6 @@ class StackRowsTest {
     private static BranchesPanel withFills(java.util.function.Consumer<Msg> dispatch) {
         return new BranchesPanel(
                 dispatch,
-                tab -> {},
                 java.time.Clock.systemUTC(),
                 net.vanfleteren.jazygit.kernel.ui.theme.Theme.Highlights.DEFAULT,
                 net.vanfleteren.jazygit.app.keys.Features.FILLS);

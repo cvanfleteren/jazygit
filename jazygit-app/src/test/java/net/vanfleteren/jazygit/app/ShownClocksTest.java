@@ -34,9 +34,8 @@ class ShownClocksTest {
     @Test
     void withNoTimeShownTheAppIsNotWoken() {
         // The worktrees show no age, and nothing was fetched yet.
-        Model worktrees = TestModels.loaded()
-                .withNow(NOW)
-                .mapRepoView(view -> view.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES)));
+        Model worktrees =
+                TestModels.loaded().withNow(NOW).mapRepoView(view -> view.withBranchesTab(BranchesTab.WORKTREES));
 
         assertEquals(Option.none(), ShownClocks.next(worktrees, NOW));
     }

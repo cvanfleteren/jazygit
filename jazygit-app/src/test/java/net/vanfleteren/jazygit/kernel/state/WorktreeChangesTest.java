@@ -15,11 +15,11 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Worktree;
-import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.load.LoadWorktreeChanges;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
+import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -53,7 +53,7 @@ class WorktreeChangesTest {
     }
 
     private static Model onWorktreesTab(Model model) {
-        return model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES)));
+        return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES));
     }
 
     @Test
@@ -129,7 +129,11 @@ class WorktreeChangesTest {
 
     @Test
     void switchingToTheWorktreesReadsThemRightAway() {
-        Next next = TestModels.stepped(withWorktrees(), new BranchesTabMsg.Chosen(BranchesTab.WORKTREES));
+        Next next = TestModels.stepped(
+                withWorktrees()
+                        .withReactions(new net.vanfleteren.jazygit.kernel.state.Reactions(io.vavr.collection.List.of(
+                                net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabUpdate::reacting))),
+                new ViewMsg.TabChosen(PaneId.BRANCHES, BranchesTab.WORKTREES.id()));
 
         assertEquals(List.of(LOAD), next.cmds());
         assertTrue(next.model().jobs().runs(LOAD));

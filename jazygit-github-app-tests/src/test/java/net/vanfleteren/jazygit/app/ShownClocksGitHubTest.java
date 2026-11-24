@@ -53,7 +53,7 @@ class ShownClocksGitHubTest {
                 "https://github.com/owner/repo/pull/7");
         Model listed = TestModels.loaded()
                 .withNow(NOW)
-                .mapRepoView(view -> view.mapBranches(branches -> branches.withTab(BranchesTab.WORKTREES)))
+                .mapRepoView(view -> view.withBranchesTab(BranchesTab.WORKTREES))
                 .withPart(
                         PrOverview.PART,
                         PrOverview.INITIAL.withAuthored(

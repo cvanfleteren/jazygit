@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.features.branches.branch.push.PushAction;
 import net.vanfleteren.jazygit.features.branches.branch.rebase.RebaseAction;
 import net.vanfleteren.jazygit.features.branches.branch.rename.RenameBranchAction;
 import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabAction;
+import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabUpdate;
 import net.vanfleteren.jazygit.features.branches.branch.upstream.UpstreamAction;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 
@@ -27,20 +28,21 @@ public final class BranchFeature {
      * The operations, in the order their keys are listed in a panel.
      */
     public static final Feature FEATURE = Feature.of(
-            CheckoutAction.ACTION,
-            PushAction.ACTION,
-            PullAction.ACTION,
-            NewBranchAction.ACTION,
-            MoveAction.ACTION,
-            MergeAction.ACTION,
-            RebaseAction.ACTION,
-            RenameBranchAction.ACTION,
-            DeleteBranchAction.ACTION,
-            NukeBranchAction.ACTION,
-            BranchCommitsAction.ACTION,
-            UpstreamAction.ACTION,
-            BaseAction.ACTION,
-            BranchesTabAction.ACTION);
+                    CheckoutAction.ACTION,
+                    PushAction.ACTION,
+                    PullAction.ACTION,
+                    NewBranchAction.ACTION,
+                    MoveAction.ACTION,
+                    MergeAction.ACTION,
+                    RebaseAction.ACTION,
+                    RenameBranchAction.ACTION,
+                    DeleteBranchAction.ACTION,
+                    NukeBranchAction.ACTION,
+                    BranchCommitsAction.ACTION,
+                    UpstreamAction.ACTION,
+                    BaseAction.ACTION,
+                    BranchesTabAction.ACTION)
+            .reacting(BranchesTabUpdate::reacting);
 
     private BranchFeature() {}
 }

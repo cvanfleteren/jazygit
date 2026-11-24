@@ -100,7 +100,7 @@ class PanePositionTest {
 
     @Test
     void branchesShowSelectedPositionAndFollowSelection() throws Exception {
-        BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
+        BranchesPanel panel = new BranchesPanel(msg -> {});
         assertPositions(() -> panel.render(MODEL, BranchesPanel.PANE), BranchesPanel.ID, KeyCode.DOWN, "1/2", "2/2");
     }
 
@@ -113,7 +113,7 @@ class PanePositionTest {
 
     @Test
     void showsNoPositionWhileLoading() throws Exception {
-        BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
+        BranchesPanel panel = new BranchesPanel(msg -> {});
         Model loading = TestModels.loading("repo");
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(loading, BranchesPanel.PANE))) {

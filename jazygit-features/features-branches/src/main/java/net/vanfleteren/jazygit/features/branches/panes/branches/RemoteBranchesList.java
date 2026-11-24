@@ -8,9 +8,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.view.ShownTabs;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -39,7 +41,12 @@ class RemoteBranchesList implements BranchesTabList {
      * @param badges     what the features show of a branch
      */
     RemoteBranchesList(
-            String id, Consumer<Msg> dispatch, Clock clock, Theme.Highlights highlights, BranchBadges badges) {
+            String id,
+            Consumer<Msg> dispatch,
+            Clock clock,
+            Theme.Highlights highlights,
+            BranchBadges badges,
+            Supplier<Keymap.Hosted<ShownTabs>> tabs) {
         this.clock = clock;
         this.badges = badges;
         list = new LoadableList<>(
@@ -49,8 +56,8 @@ class RemoteBranchesList implements BranchesTabList {
                 highlights);
         list.highlightSymbol("");
         list.whenEmpty(Messages.get("branches.panes.branches.remoteBranches.empty"));
-        list.onKey(event ->
-                PaneKeys.sending(keymap.handle(Scopes.REMOTE_BRANCHES, event, selectedRemoteBranch()), dispatch));
+        list.onKey(event -> PaneKeys.sending(
+                keymap.handle(Scopes.REMOTE_BRANCHES, event, selectedRemoteBranch(), tabs.get()), dispatch));
     }
 
     /**

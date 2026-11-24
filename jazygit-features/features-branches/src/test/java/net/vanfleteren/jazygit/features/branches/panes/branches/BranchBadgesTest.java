@@ -69,11 +69,7 @@ class BranchBadgesTest {
     @Test
     void thePaneDrawsTheBadgesItIsGivenBelowEachBranch() throws Exception {
         BranchesPanel panel = new BranchesPanel(
-                msg -> {},
-                tab -> {},
-                Clock.systemUTC(),
-                Theme.Highlights.DEFAULT,
-                new BranchBadges(List.of(marking("★"))));
+                msg -> {}, Clock.systemUTC(), Theme.Highlights.DEFAULT, new BranchBadges(List.of(marking("★"))));
         Model model = TestModels.loaded();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> panel.render(model, BranchesPanel.PANE))) {

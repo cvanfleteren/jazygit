@@ -284,8 +284,7 @@ class ContentViewTest {
         Model loading = divergenceHighlighted();
 
         assertEquals(loading("Commit"), ContentView.of(loading, Scopes.BRANCHES.pane()));
-        Model remoteTab =
-                loading.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)));
+        Model remoteTab = loading.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE));
         // The remote branches show the log of the branch, which none is selected for here.
         assertEquals(loading("Log"), ContentView.of(remoteTab, Scopes.BRANCHES.pane()));
     }

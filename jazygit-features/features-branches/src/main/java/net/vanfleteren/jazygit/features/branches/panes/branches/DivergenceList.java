@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
@@ -39,7 +40,8 @@ class DivergenceList {
      * @param dispatch   receives the messages for the user's actions, on the render thread
      * @param highlights how the highlighted commit is shown, also when the pane is not in use
      */
-    DivergenceList(String id, Consumer<Msg> dispatch, Theme.Highlights highlights) {
+    DivergenceList(
+            String id, Consumer<Msg> dispatch, Theme.Highlights highlights, Supplier<Keymap.Hosted<ShownTabs>> tabs) {
         list = new LoadableList<>(
                 Messages.get("panel.divergence.title"),
                 id,
@@ -48,7 +50,8 @@ class DivergenceList {
                 highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
-        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.DIVERGENCE, event, selectedCommit()), dispatch));
+        list.onKey(event ->
+                PaneKeys.sending(keymap.handle(Scopes.DIVERGENCE, event, selectedCommit(), tabs.get()), dispatch));
     }
 
     /**

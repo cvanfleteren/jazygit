@@ -120,7 +120,7 @@ class JazygitAppPilotTest {
                 dispatched,
                 new ArrayList<>(),
                 new FilesPanel(dispatched::add, () -> {}),
-                new BranchesPanel(dispatched::add, tab -> {}),
+                new BranchesPanel(dispatched::add),
                 new CommitsPanel(dispatched::add),
                 new StashPanel(dispatched::add),
                 new AtomicReference<>());
@@ -207,8 +207,7 @@ class JazygitAppPilotTest {
     void rightMovesFromTheBranchesPaneIntoTheLogAndLeftGivesTheFocusBack() throws Exception {
         Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
-        assertRightEntersAndLeftLeaves(
-                model, Scopes.BRANCHES.pane(), new BranchesPanel(msg -> {}, tab -> {})::render, AreaId.LOG);
+        assertRightEntersAndLeftLeaves(model, Scopes.BRANCHES.pane(), new BranchesPanel(msg -> {})::render, AreaId.LOG);
     }
 
     @Test
@@ -306,7 +305,7 @@ class JazygitAppPilotTest {
         java.util.List<Msg> dispatched = new ArrayList<>();
         RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
         Model remote = TestModels.loaded(data)
-                .mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withTab(BranchesTab.REMOTE)))
+                .mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.REMOTE))
                 .mapRepo(repo -> repo.withRemoteBranches(new Loadable.Loaded<>(List.of(
                         new RemoteRef(feature, new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"), Instant.EPOCH)))));
         Fixture fixture = new Fixture(
@@ -315,7 +314,7 @@ class JazygitAppPilotTest {
                 dispatched,
                 new ArrayList<>(),
                 new FilesPanel(dispatched::add, () -> {}),
-                new BranchesPanel(dispatched::add, tab -> {}),
+                new BranchesPanel(dispatched::add),
                 new CommitsPanel(dispatched::add),
                 new StashPanel(dispatched::add),
                 new AtomicReference<>());
@@ -554,7 +553,7 @@ class JazygitAppPilotTest {
                     dispatched,
                     new ArrayList<>(),
                     new FilesPanel(dispatched::add, () -> {}),
-                    new BranchesPanel(dispatched::add, tab -> {}),
+                    new BranchesPanel(dispatched::add),
                     new CommitsPanel(dispatched::add),
                     new StashPanel(dispatched::add),
                     new AtomicReference<>());

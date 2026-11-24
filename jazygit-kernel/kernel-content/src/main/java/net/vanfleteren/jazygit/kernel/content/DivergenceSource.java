@@ -30,7 +30,7 @@ record DivergenceSource() implements ContentSource {
         return model.repoView()
                 .branches()
                 .divergence()
-                .filter(view -> model.repoView().branches().tab() == BranchesTab.LOCAL)
+                .filter(view -> model.repoView().branchesTab().contains(BranchesTab.LOCAL))
                 .map(view -> CommitSource.commit(
                         model,
                         AREA,

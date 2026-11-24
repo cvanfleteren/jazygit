@@ -1,34 +1,37 @@
 package net.vanfleteren.jazygit.features.branches.branch.tabs;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg.Chosen;
-import net.vanfleteren.jazygit.features.branches.branch.tabs.BranchesTabMsg.Switched;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.RereadUpdate;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
-import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
 
 /**
- * Switching the branches pane between the local branches, the remote ones and the worktrees. Switching closes the
- * divergence listed in place of the local branches, and the commits of a branch listed in place of the branches.
+ * What the branches pane does once another of its tabs is shown (ADR 185): it closes the divergence listed in place of
+ * the local branches and the commits of a branch listed in place of the branches, and, for the worktrees, reads which
+ * have changes right away rather than at the next tick.
  */
 public final class BranchesTabUpdate {
 
     private BranchesTabUpdate() {}
 
-    public static Next update(Model model, BranchesTabMsg msg) {
-        return switch (msg) {
-            case Switched(int by) ->
-                switched(model, model.repoView().branches().tab().shifted(by));
-            case Chosen(BranchesTab tab) -> switched(model, tab);
+    public static Next reacting(Model model, KernelEvent event) {
+        return switch (event) {
+            case KernelEvent.TabShown shown when shown.pane().equals(PaneId.BRANCHES) -> shown(model);
+            case KernelEvent.TabShown _,
+                    KernelEvent.LogRead _,
+                    KernelEvent.OperationDone _,
+                    KernelEvent.Fetched _,
+                    KernelEvent.RepositoryOpened _,
+                    KernelEvent.ScreenShown _,
+                    KernelEvent.ChangesOpened _,
+                    KernelEvent.Switched _ -> Next.of(model);
         };
     }
 
-    /**
-     * Shows {@code tab}; for the worktrees, reads which have changes right away rather than at the next tick.
-     */
-    private static Next switched(Model model, BranchesTab tab) {
+    private static Next shown(Model model) {
         return RereadUpdate.readWorktreeChanges(model.mapRepoView(repoView -> repoView.mapBranches(
-                branches -> branches.withTab(tab).withDivergence(Option.none()).withBranchCommits(Option.none()))));
+                branches -> branches.withDivergence(Option.none()).withBranchCommits(Option.none()))));
     }
 }

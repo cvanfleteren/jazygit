@@ -96,7 +96,7 @@ final class FollowedFiles {
         if (from.equals(Scopes.BRANCHES.pane())) {
             var view = model.repoView().branches();
             return view.divergence()
-                    .filter(divergence -> view.tab() == BranchesTab.LOCAL)
+                    .filter(divergence -> model.repoView().branchesTab().contains(BranchesTab.LOCAL))
                     .map(divergence -> commit(divergence.detail()))
                     .orElse(() -> view.branchCommits().map(commits -> commit(commits.detail())))
                     .map(Option::of)
