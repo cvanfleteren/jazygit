@@ -33,7 +33,7 @@ class SixelImagesTest {
         images.plan(frame, List.of(picture.sharp().get()), CELL);
         String painted = images.paint().get();
 
-        assertTrue(painted.startsWith("\u001b7\u001b[2;3H" + DCS + "\"1;1;12;16#"), painted);
+        assertTrue(painted.startsWith("\u001b7\u001b[2;3H" + DCS + "\"1;1;12;12#"), painted);
         assertTrue(painted.contains("\u001b\\"), painted);
         assertTrue(painted.endsWith("\u001b[0m\u001b8"), painted);
         assertEquals(Cell.EMPTY, frame.get(2, 1));
@@ -51,7 +51,7 @@ class SixelImagesTest {
 
         images.plan(frame, List.of(picture.sharp().get()), CELL);
 
-        assertTrue(images.paint().get().startsWith("\u001b7\u001b[1;1H" + DCS + "\"1;1;12;16#"));
+        assertTrue(images.paint().get().startsWith("\u001b7\u001b[1;1H" + DCS + "\"1;1;12;12#"));
     }
 
     @Test
@@ -116,6 +116,58 @@ class SixelImagesTest {
 
         assertEquals("▀", frame.get(0, 0).symbol());
         assertEquals(Option.none(), images.paint());
+    }
+
+    @Test
+    void anImageIsAsHighAsTheWholeBandsOfSixThatFitItsCells() {
+        // Konsole draws a band of six pixels whole, past the height the image says: so none goes past its cells.
+        Picture picture = KittyGraphicsTest.picture(3, 6);
+        java.util.List<Integer> heights = new java.util.ArrayList<>();
+        SixelImages images = new SixelImages(Sharp::argb, (argb, width, height) -> {
+            heights.add(height);
+            return Sixel.encode(argb, width, height);
+        });
+
+        images.plan(
+                withPicture(picture, 0, 0, 0, 3), List.of(picture.sharp().get()), Option.of(new CellPixels(10, 21)));
+        images.paint();
+
+        assertEquals(java.util.List.of(60), heights);
+    }
+
+    @Test
+    void theCellsRightOfAndUnderAnImageAreWrittenAfterItToEraseWhereItWentPastThem() {
+        // A terminal at a fractional scale tells a cell a fraction larger than it is: the image goes past its cells.
+        Picture picture = KittyGraphicsTest.picture(3, 4);
+        Buffer frame = withPicture(picture, 2, 1, 0, 2);
+        frame.set(5, 1, new Cell("r", Style.EMPTY));
+        frame.set(3, 3, new Cell("b", Style.EMPTY));
+        SixelImages images = new SixelImages();
+
+        images.plan(frame, List.of(picture.sharp().get()), CELL);
+        String painted = images.paint().get();
+
+        String after = painted.substring(painted.indexOf("\u001b\\"));
+        // The image takes columns 3 to 5 of rows 2 and 3 (1-based): column 6 of rows 2 to 4, and row 4, after it.
+        assertTrue(writes(after, 2, 6, "r"), painted);
+        assertTrue(writes(after, 4, 3, " b"), painted);
+    }
+
+    @Test
+    void whereAnImageWasTheCellsRightOfAndUnderItAreWrittenAgain() {
+        Picture picture = KittyGraphicsTest.picture(3, 4);
+        SixelImages images = new SixelImages();
+        images.plan(withPicture(picture, 0, 0, 0, 2), List.of(picture.sharp().get()), CELL);
+        images.paint();
+        Buffer gone = Buffer.empty(AREA);
+        gone.setString(3, 0, "r", Style.EMPTY);
+        gone.setString(0, 2, "bot", Style.EMPTY);
+
+        images.plan(gone, List.of(picture.sharp().get()), CELL);
+        String painted = images.paint().get();
+
+        assertTrue(writes(painted, 1, 4, "r"), painted);
+        assertTrue(writes(painted, 3, 1, "bot"), painted);
     }
 
     @Test
@@ -203,6 +255,16 @@ class SixelImagesTest {
                 }
             }
         }
+    }
+
+    /**
+     * Whether {@code painted} writes {@code text} from {@code row} and {@code column} (1-based), a style before it.
+     */
+    private static boolean writes(String painted, int row, int column, String text) {
+        return java.util.regex.Pattern.compile(java.util.regex.Pattern.quote("\u001b[" + row + ";" + column + "H")
+                        + "(\u001b\\[[0-9;]*m)*" + java.util.regex.Pattern.quote(text))
+                .matcher(painted)
+                .find();
     }
 
     /**

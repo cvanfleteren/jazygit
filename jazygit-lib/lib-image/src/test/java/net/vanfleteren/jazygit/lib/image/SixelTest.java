@@ -17,7 +17,7 @@ class SixelTest {
     void anImageIsItsSizeItsColoursAndItsSixelsBetweenDcsAndSt() {
         String sixel = Sixel.encode(new int[] {RED, RED}, 2, 1);
 
-        assertEquals("\u001bP0;1;0q\"1;1;2;1#0;2;100;0;0#0@@$-\u001b\\", sixel);
+        assertEquals("\u001bP0;1;0q\"1;1;2;1#0;2;100;0;0#0@@$\u001b\\", sixel);
     }
 
     @Test
@@ -33,7 +33,7 @@ class SixelTest {
         String sixel = Sixel.encode(new int[] {0x40ff0000, RED}, 2, 1);
 
         assertTrue(sixel.contains("#0?@$"), sixel);
-        assertEquals("\u001bP0;1;0q\"1;1;1;1-\u001b\\", Sixel.encode(new int[] {0}, 1, 1));
+        assertEquals("\u001bP0;1;0q\"1;1;1;1\u001b\\", Sixel.encode(new int[] {0}, 1, 1));
     }
 
     @Test
@@ -46,7 +46,7 @@ class SixelTest {
 
         String red = register(sixel, "100;0;0");
         String blue = register(sixel, "0;0;100");
-        assertTrue(sixel.endsWith("#" + red + "~$-#" + blue + "@$-\u001b\\"), sixel);
+        assertTrue(sixel.endsWith("#" + red + "~$-#" + blue + "@$\u001b\\"), sixel);
     }
 
     @Test

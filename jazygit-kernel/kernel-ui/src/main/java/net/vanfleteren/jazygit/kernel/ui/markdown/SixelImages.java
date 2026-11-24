@@ -114,15 +114,22 @@ public final class SixelImages {
 
     /**
      * What paints the images of the frame written last, if they have to be: the cells where images were written
-     * again, the images, then the cells of what is over them.
+     * again, the images, then the cells of what is over them, and those right of and under them. A terminal at a
+     * fractional scale tells a cell a fraction larger than it draws it, Konsole at 125% among them, so an image may go
+     * past its cells; a cell written takes the place of what of an image is there.
      */
     public Option<String> paint() {
         if (plan.equals(painted) && !dirty) {
             return Option.none();
         }
         StringBuilder out = new StringBuilder("\u001b7");
+        // The cells of the images painted now, which no cell written may take the place of.
+        Set<Integer> owned = plan.placed().flatMap(Placed::images).toSet();
         buffer.forEach(frame -> {
-            painted.placed().forEach(was -> cells(out, frame, was.screen(), HashSet.empty()));
+            painted.placed().forEach(was -> {
+                cells(out, frame, was.screen(), HashSet.empty());
+                edges(was.screen()).forEach(edge -> cells(out, frame, edge, owned));
+            });
             plan.placed().forEach(now -> {
                 out.append("\u001b[")
                         .append(now.screen().y() + 1)
@@ -134,6 +141,7 @@ public final class SixelImages {
                 encoded = kept(encoded.remove(key).put(key, sixel));
                 out.append(sixel);
                 cells(out, frame, now.screen(), now.images());
+                edges(now.screen()).forEach(edge -> cells(out, frame, edge, owned));
             });
         });
         out.append("\u001b[0m\u001b8");
@@ -193,7 +201,18 @@ public final class SixelImages {
     }
 
     /**
-     * The part of image {@code placed} that shows, as Sixel, at {@code cell} pixels a cell.
+     * The column right of {@code screen}, down to the row under it, and that row: where an image there may go past its
+     * cells.
+     */
+    private static List<Rect> edges(Rect screen) {
+        return List.of(
+                new Rect(screen.x() + screen.width(), screen.y(), 1, screen.height() + 1),
+                new Rect(screen.x(), screen.y() + screen.height(), screen.width(), 1));
+    }
+
+    /**
+     * The part of image {@code placed} that shows, as Sixel, at {@code cell} pixels a cell: as high as the whole bands
+     * of six pixels that fit in its cells, as a terminal draws the last band whole, past the height it is told.
      */
     private String sixel(Placed placed, CellPixels cell) {
         int columns = KittyGraphics.columnsOf(placed.id());
@@ -212,12 +231,19 @@ public final class SixelImages {
         int cutLeft = placed.column() * cell.width();
         int cutTop = placed.row() * cell.height();
         int cutWidth = placed.screen().width() * cell.width();
-        int cutHeight = placed.screen().height() * cell.height();
+        int cutHeight = bands(placed.screen().height() * cell.height());
         int[] cut = new int[cutWidth * cutHeight];
         for (int row = 0; row < cutHeight; row++) {
             System.arraycopy(whole, (cutTop + row) * width + cutLeft, cut, row * cutWidth, cutWidth);
         }
         return encoder.encode(cut, cutWidth, cutHeight);
+    }
+
+    /**
+     * {@code height} pixels cut to whole bands of six, but no less than one band, nor than it is.
+     */
+    private static int bands(int height) {
+        return height < 6 ? height : height / 6 * 6;
     }
 
     /**

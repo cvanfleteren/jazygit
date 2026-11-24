@@ -55,9 +55,12 @@ public final class Sixel {
         for (int i = 0; i < argb.length; i++) {
             index[i] = binOf[i] < 0 ? -1 : register[binOf[i]];
         }
+        // A '-' goes on to the next band, so none after the last: a terminal may take it as a band more.
         for (int top = 0; top < height; top += 6) {
+            if (top > 0) {
+                out.append('-');
+            }
             band(out, index, width, height, top, palette.length);
-            out.append('-');
         }
         return out.append("\u001b\\").toString();
     }
