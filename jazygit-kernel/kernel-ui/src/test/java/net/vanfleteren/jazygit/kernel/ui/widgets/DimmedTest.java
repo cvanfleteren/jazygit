@@ -15,6 +15,7 @@ import dev.tamboui.toolkit.element.RenderContext;
 import io.vavr.control.Option;
 import java.util.Optional;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.markdown.KittyGraphics;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme.Backdrop;
 import org.junit.jupiter.api.Test;
 
@@ -49,6 +50,18 @@ class DimmedTest {
             assertEquals(
                     java.util.List.of("popup"), runner.runner().focusManager().focusOrder());
         }
+    }
+
+    @Test
+    void aCellOfAnImageKeepsItsColourWhichSaysWhichImageItIs() {
+        Color id = Color.rgb(0x12, 0x34, 0x56);
+        String placeholder = KittyGraphics.placeholder(0, 0, 0x01123456);
+
+        Buffer buffer = render(new Dimmed(row(text(placeholder).fg(id).length(1), text("plain")), TERMINAL_DEFAULT));
+
+        assertEquals(placeholder, buffer.get(0, 0).symbol());
+        assertEquals(Style.EMPTY.fg(id), buffer.get(0, 0).style());
+        assertTrue(dim(buffer, 1, 0));
     }
 
     @Test

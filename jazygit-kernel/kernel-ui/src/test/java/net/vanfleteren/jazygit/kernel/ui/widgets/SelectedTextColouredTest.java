@@ -12,6 +12,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import io.vavr.control.Option;
 import java.util.Optional;
+import net.vanfleteren.jazygit.kernel.ui.markdown.KittyGraphics;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme.SelectedText;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +38,24 @@ class SelectedTextColouredTest {
         Buffer buffer = render(new SelectedTextColoured(text("plain").bg(ROW), TERMINAL_DEFAULT));
 
         assertEquals(Optional.of(BRIGHT), buffer.get(0, 0).style().fg());
+    }
+
+    @Test
+    void aCellOfAnImageOnAHighlightedRowKeepsItsColourWhichSaysWhichImageItIs() {
+        // Even when the id's colour is the theme's plain one, which a highlighted row colours.
+        Color id = Color.rgb(0xb8, 0xb8, 0xb8);
+        String placeholder = KittyGraphics.placeholder(0, 0, 0x01b8b8b8);
+        SelectedText selectedText = new SelectedText(Option.of(ROW), Option.of(id), Option.of(BRIGHT));
+
+        Buffer buffer = render(new SelectedTextColoured(
+                row(
+                        text(placeholder).fg(id).bg(ROW).length(1),
+                        text("plain").fg(id).bg(ROW)),
+                selectedText));
+
+        assertEquals(placeholder, buffer.get(0, 0).symbol());
+        assertEquals(Optional.of(id), buffer.get(0, 0).style().fg());
+        assertEquals(Optional.of(BRIGHT), buffer.get(1, 0).style().fg());
     }
 
     @Test

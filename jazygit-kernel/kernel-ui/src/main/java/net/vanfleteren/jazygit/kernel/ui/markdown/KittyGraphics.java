@@ -114,7 +114,7 @@ public final class KittyGraphics {
     /**
      * The symbol of the cell at {@code row} and {@code column} of image {@code id}.
      */
-    static String placeholder(int row, int column, int id) {
+    public static String placeholder(int row, int column, int id) {
         return PLACEHOLDER + DIACRITICS.get(row) + DIACRITICS.get(column) + DIACRITICS.get(id >>> 24);
     }
 
