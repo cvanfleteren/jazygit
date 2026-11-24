@@ -18,6 +18,10 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
 
 ## Smaller items
 
+- [ ] **One helper for the tabs of a pane.** `BranchesPanel` and `CommitsPanel` each keep the lists of the features'
+  tabs by `TabId`, and each work out the tabs shown as their own and the features', the kept one or else the first
+  (ADR 185, 189). A `PaneTabs` in `kernel-ui/tabs` doing both would keep them from drifting; the commits pane could then
+  also tell the model to show its log in place of a tab no feature gives any more, as the branches pane does.
 - [ ] **Stronger types** for stash refs and remotes, which are now plain `String`s, like branch names are now
   `BranchName`. Also for the stage target, where `""` stands for the repository root; a sealed `Target` would
   be clearer. The `gh` layer keeps branch names as `String`s, as it knows nothing of git.
