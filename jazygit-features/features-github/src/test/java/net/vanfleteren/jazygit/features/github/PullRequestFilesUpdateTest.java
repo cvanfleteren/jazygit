@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -440,6 +441,56 @@ class PullRequestFilesUpdateTest {
                 Option.of(new Changes.OfPullRequest(
                         new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
                         Option.none())),
+                opened.model().repoView().files().commitFiles().map(CommitFilesView::of));
+    }
+
+    /**
+     * The user's own fork as a remote, with a local branch pushed to it: that branch is the fork's pull request's,
+     * and its files are edited in it (ADR 177, 192).
+     */
+    @Test
+    void theFilesOfAPullRequestFromTheUsersForkAreOfTheLocalBranchPushedToIt() {
+        RemoteName fork = new RemoteName("fork");
+        Branch feature = Fixtures.branch(
+                new BranchName("feature"),
+                false,
+                new Sha("3"),
+                Instant.EPOCH,
+                true,
+                false,
+                Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch(fork, new BranchName("feature"))), 0, 0)));
+        PullRequestSummary fromFork = new PullRequestSummary(
+                "owner/repo",
+                new PrNumber(9),
+                "From my fork",
+                "me",
+                new GhBranch("feature"),
+                false,
+                true,
+                Checks.NONE,
+                Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/owner/repo/pull/9",
+                Option.none(),
+                Option.of(new Sha(BASE_OID)),
+                Option.of(new Sha(HEAD_OID)));
+        Model ofOwnerRepo = localBranchesRead(loaded(), List.of(feature))
+                .model()
+                .withScreen(PrOverview.SCREEN)
+                .mapPart(
+                        GitHubState.PART,
+                        gitHub -> gitHub.withRepository(Option.of("owner/repo"))
+                                .withListed(List.of(fromFork.pullRequest()))
+                                .withHeads(HashMap.of(new PrNumber(9), HashSet.of(fork)))
+                                .withForks(HashSet.of(new PrNumber(9)))
+                                .withBranchChecks(Option.of(new GitHubChecks(HashSet.of(fork), HashMap.empty()))));
+
+        Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(fromFork));
+
+        assertEquals(
+                Option.of(new Changes.OfPullRequest(
+                        new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                        Option.of(new BranchName("feature")))),
                 opened.model().repoView().files().commitFiles().map(CommitFilesView::of));
     }
 
