@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.github.remarks;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.core.gh.model.PrNumber;
@@ -9,6 +10,7 @@ import net.vanfleteren.jazygit.kernel.state.Part;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
 import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.lib.image.Picture;
 
 /**
  * GitHub's part of the review threads of the pull request whose files are listed (ADR 55, 171): it keeps what it read
@@ -55,6 +57,17 @@ public record RemarksState(Option<PrRemarks> open) {
                         .filter(read -> read.number().value() == commits.number())
                         .map(read -> new PrFiles(view, commits, read))
                 : Option.none();
+    }
+
+    /**
+     * The pictures of the review threads read of the pull request whose files are listed in {@code model}, which they
+     * may draw (ADR 84, 191).
+     */
+    public static List<Picture> pictures(Model model) {
+        return files(model)
+                .toList()
+                .flatMap(files -> files.read().pictures().values())
+                .flatMap(picture -> picture);
     }
 
     /**

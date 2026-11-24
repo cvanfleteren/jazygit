@@ -27,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
+import net.vanfleteren.jazygit.features.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.widgets.PullRequestSymbols;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -44,6 +45,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LargeDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ListKeys;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
+import net.vanfleteren.jazygit.lib.image.Picture;
 
 /**
  * Popup showing the conversation on a pull request, as big as the screen allows: a list of its description, comments
@@ -116,6 +118,20 @@ public final class CommentsDialog implements PopupView {
     }
 
     /**
+     * The pictures the dialog may draw in {@code model} (ADR 191): those of the comments, also while a comment is
+     * written over them.
+     */
+    public static List<Picture> pictures(Model model) {
+        return model.popup(CommentsPopup.class)
+                .orElse(() -> model.popup(CommentPopup.class)
+                        .map(CommentPopup::from)
+                        .filter(CommentsPopup.class::isInstance)
+                        .map(CommentsPopup.class::cast))
+                .toList()
+                .flatMap(popup -> popup.shownPictures().values());
+    }
+
+    /**
      * Whether the dialog shows a spinner in {@code model}: while the comments are read.
      */
     public static boolean showsSpinner(Model model) {
@@ -181,8 +197,9 @@ public final class CommentsDialog implements PopupView {
                                         Integer.MAX_VALUE)
                                 .addClass(Theme.Classes.ERROR),
                         comments -> highlighted
-                                .<Element>map(comment ->
-                                        scroll.render(MarkdownAutolinks.linked(body(comment), repository(popup))))
+                                .<Element>map(comment -> scroll.render(
+                                        MarkdownAutolinks.linked(body(comment), repository(popup)),
+                                        popup.shownPictures()))
                                 .getOrElse(() -> text(Messages.get("github.dialog.comments.none"))
                                         .addClass(Theme.Classes.DIM))))
                 .getOrElse(() -> row(

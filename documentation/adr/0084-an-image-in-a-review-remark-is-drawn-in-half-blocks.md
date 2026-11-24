@@ -58,3 +58,8 @@ any other.
 - A private repository's images that GitHub does not give the token of `gh` stay the placeholder.
 - Reading a PNG or GIF is jazygit's own code, some 500 lines, tested against what the JDK writes.
 - A comment that holds a character of the private use area itself may have it drawn as a cell of a picture.
+
+Amended by ADR 190: the images of the comments of the conversation of a pull request are drawn too.
+
+Amended by ADR 191: where the terminal draws images, with the Kitty graphics protocol or Sixel, a picture is drawn
+sharp; half blocks stay where it does not.

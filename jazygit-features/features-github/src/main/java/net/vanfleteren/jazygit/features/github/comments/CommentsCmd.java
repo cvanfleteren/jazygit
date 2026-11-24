@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Label;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.lib.image.Picture;
 
 /**
  * Reading the conversation on a pull request.
@@ -37,6 +38,41 @@ public sealed interface CommentsCmd extends Cmd {
         @Override
         public Msg failed(Failure failure) {
             return new CommentsMsg.LoadFailed(number, failure);
+        }
+    }
+
+    /**
+     * Reads the image at {@code url}, in the conversation on pull request {@code number}, as a picture to show it
+     * (ADR 190). It runs in the background, as it talks to GitHub. An image that cannot be read or shown is none, and
+     * stays the text that says it is there: it is no failure to tell.
+     */
+    record LoadPicture(PrNumber number, String url) implements CommentsCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("github.work.picture", String.valueOf(number.value())));
+        }
+
+        @Override
+        public boolean background() {
+            return true;
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return GitHubServices.of(env)
+                    .pullRequests()
+                    .image(url)
+                    .mapLeft(GitHubFailure::of)
+                    .fold(
+                            this::failed,
+                            bytes -> new CommentsMsg.PictureLoaded(
+                                    number, url, Picture.of(bytes).toOption()));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new CommentsMsg.PictureLoaded(number, url, Option.none());
         }
     }
 }

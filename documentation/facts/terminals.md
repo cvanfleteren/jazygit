@@ -121,3 +121,29 @@ fact says when it was learned, so a fact that has grown old can be checked again
 - A text editor shows the ANSI escapes in a file as raw characters unless it renders them. *Why it matters:* cached
   GitHub job logs opened in an editor show escape codes in most editors. — learned 2026-11-22 · [ADR
   0160](../adr/0160-the-log-of-a-check.md)
+
+## Images
+
+- Kitty and Ghostty draw an image with the Kitty graphics protocol's Unicode placeholders: an image sent once with an
+  id, as a virtual placement (`a=T,U=1`) of so many columns and rows, is drawn in each cell that is `U+10EEEE` with
+  diacritics for its row and column, in the colour whose 24 bits are the id; a third diacritic gives the id's highest
+  byte. WezTerm, Konsole and iTerm2 have no placeholders. *Why it matters:* a picture is cells like any other, which
+  scroll and are covered by popups, and only Kitty and Ghostty use the protocol. — learned 2026-11-06 · [ADR
+  0188](../adr/0191-the-terminal-draws-a-picture-sharp-where-it-can.md)
+- A Sixel image is pixels written at the cursor; the terminal keeps no image to refer to, and text written over its
+  pixels takes their place. `P2=1` leaves the pixels not drawn as they were. *Why it matters:* an image is written
+  again after the cells of each frame that changes near it. — learned 2026-11-06 · [ADR
+  0188](../adr/0191-the-terminal-draws-a-picture-sharp-where-it-can.md)
+- No variable tells that a terminal has Sixel; asking (DA1) is answered on stdin, among the keys. tmux and screen pass
+  neither protocol on without being set up to. *Why it matters:* the protocol is chosen from `TERM`, `TERM_PROGRAM`
+  and a few variables a terminal sets, and is half blocks inside a multiplexer. — learned 2026-11-24 · [ADR
+  0188](../adr/0191-the-terminal-draws-a-picture-sharp-where-it-can.md)
+- `TIOCGWINSZ` tells the size of the window in pixels as well as in cells, where the terminal tells it; not on Windows.
+  *Why it matters:* Sixel draws in pixels, so a cell's size has to be known. — learned 2026-11-06 · [ADR
+  0188](../adr/0191-the-terminal-draws-a-picture-sharp-where-it-can.md)
+- Konsole draws the last band of a Sixel image whole, six pixels high, past the height the raster attributes give.
+  At a fractional scale (125% on Wayland) it tells a cell as 10 x 21 pixels (`TIOCGWINSZ`, `CSI 16 t`) but draws it
+  about 12.46 device pixels wide, a fraction less than 10 x 1.25, so an image as wide as its cells by what it tells
+  goes past them. Text written over an image takes its place. *Why it matters:* an image is cut to whole bands, and
+  the cells right of and under it are written again after it. — learned 2026-11-24 · [ADR
+  0188](../adr/0191-the-terminal-draws-a-picture-sharp-where-it-can.md)

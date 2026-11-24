@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.kernel.ui.markdown;
 
 import dev.tamboui.buffer.Buffer;
+import dev.tamboui.buffer.Cell;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
@@ -12,12 +14,16 @@ import dev.tamboui.toolkit.markdown.MarkdownElement;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Iterator;
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.Locale;
+import java.util.function.IntFunction;
 import java.util.regex.Pattern;
+import net.vanfleteren.jazygit.lib.image.Picture;
 
 /**
  * Markdown that scrolls, as far as its end: how far that is is only known once it is rendered, at a width. Where it
@@ -49,7 +55,18 @@ public final class MarkdownScroll {
      * as it was, filling the area it gets.
      */
     public Element render(String markdown) {
-        return new Scrolled(MarkdownElement.markdown(MarkdownImages.asLinks(withoutHtmlComments(markdown))));
+        return render(markdown, HashMap.empty());
+    }
+
+    /**
+     * {@code markdown}, as {@link #render(String)} renders it, with each image of which {@code pictures} has a picture,
+     * by where it is, drawn in half blocks as it is in a review remark (ADR 84, 190).
+     */
+    public Element render(String markdown, Map<String, Picture> pictures) {
+        String shown = withoutHtmlComments(markdown);
+        return new Scrolled(width -> pictures.isEmpty()
+                ? new MarkdownImages.Drawn(MarkdownImages.asLinks(shown), List.empty())
+                : MarkdownImages.drawn(shown, pictures, width));
     }
 
     /**
@@ -120,28 +137,104 @@ public final class MarkdownScroll {
                                 .map(link -> Tuple.of(new Spot(x, y), link.url())))));
     }
 
-    private record Spot(int x, int y) {}
+    /**
+     * Each cell of {@code buffer} that stands for a cell of one of {@code pictures} (ADR 84) as that cell: the next of
+     * the picture, row by row, in the order they are read. A cell the picture leaves blank keeps the background it had.
+     */
+    private static void paint(Buffer buffer, List<Picture> pictures) {
+        Rect area = buffer.area();
+        // Where each cell of a picture is, and the picture it is of; then which cell of that picture each is.
+        List<Tuple2<Spot, Integer>> cells = Iterator.range(area.top(), area.bottom())
+                .flatMap(y -> Iterator.range(area.left(), area.right()).map(x -> new Spot(x, y)))
+                .flatMap(at ->
+                        pictureOf(buffer.get(at.x(), at.y()), pictures.size()).map(index -> Tuple.of(at, index)))
+                .toList();
+        List<Tuple2<Spot, Integer>> numbered = cells.foldLeft(
+                        Tuple.of(List.<Tuple2<Spot, Integer>>empty(), HashMap.<Integer, Integer>empty()),
+                        (done, cell) -> {
+                            int n = done._2().get(cell._2()).getOrElse(0);
+                            return Tuple.of(
+                                    done._1().prepend(Tuple.of(cell._1(), n)),
+                                    done._2().put(cell._2(), n + 1));
+                        })
+                ._1()
+                .reverse();
+        cells.zip(numbered).forEach(cell -> {
+            Spot at = cell._1()._1();
+            Cell was = buffer.get(at.x(), at.y());
+            Tuple2<Style, String> pixel =
+                    KittyGraphics.drawn(pictures.get(cell._1()._2()), cell._2()._2());
+            Style style = pixel._1().bg().isPresent()
+                    ? pixel._1()
+                    : was.style().bg().map(pixel._1()::bg).orElse(pixel._1());
+            buffer.set(at.x(), at.y(), new Cell(pixel._2(), style));
+        });
+    }
 
     /**
-     * The markdown, measured at the width it gets, so it scrolls no further than its end.
+     * Which of {@code count} pictures {@code cell} stands for a cell of, if any.
+     */
+    private static Option<Integer> pictureOf(Cell cell, int count) {
+        String symbol = cell.symbol();
+        return Option.when(
+                        !cell.isContinuation() && symbol.length() == 1, () -> symbol.charAt(0) - MarkdownImages.PICTURE)
+                .filter(index -> index >= 0 && index < count);
+    }
+
+    /**
+     * The markdown, made for the width it gets and measured at it, so it scrolls no further than its end.
      */
     private final class Scrolled implements Element {
 
-        private final MarkdownElement markdown;
+        private final IntFunction<MarkdownImages.Drawn> markdown;
 
-        Scrolled(MarkdownElement markdown) {
+        Scrolled(IntFunction<MarkdownImages.Drawn> markdown) {
             this.markdown = markdown;
         }
 
         @Override
         public void render(Frame frame, Rect area, RenderContext context) {
+            MarkdownImages.Drawn drawn = markdown.apply(area.width());
+            MarkdownElement element = MarkdownElement.markdown(drawn.markdown());
             int height =
-                    markdown.preferredSize(area.width(), area.height(), context).heightOr(area.height());
+                    element.preferredSize(area.width(), area.height(), context).heightOr(area.height());
             furthest = Math.max(0, height - area.height());
             page = area.height();
             offset = Math.min(offset, furthest);
-            context.renderChild(markdown.scroll(offset), frame, area);
+            if (drawn.pictures().isEmpty()) {
+                context.renderChild(element.scroll(offset), frame, area);
+            } else {
+                withPictures(element, drawn.pictures(), height, frame, area, context);
+            }
             links = linksIn(frame.buffer(), area);
+        }
+
+        /**
+         * {@code element} with {@code pictures} in it, scrolled to {@link #offset}: drawn whole, {@code height} high,
+         * off the screen over what {@code area} shows, so that a picture is drawn from its first cell even when that
+         * is scrolled out of view, and only what is in view copied to the screen.
+         */
+        private void withPictures(
+                MarkdownElement element,
+                List<Picture> pictures,
+                int height,
+                Frame frame,
+                Rect area,
+                RenderContext context) {
+            Rect whole = new Rect(0, 0, area.width(), Math.max(height, offset + area.height()));
+            Rect shown = area.intersection(frame.buffer().area());
+            Buffer off = Buffer.empty(whole);
+            List<Spot> inView = Iterator.range(shown.top(), shown.bottom())
+                    .flatMap(y -> Iterator.range(shown.left(), shown.right()).map(x -> new Spot(x, y)))
+                    .toList();
+            inView.forEach(at -> off.set(
+                    at.x() - area.left(),
+                    at.y() - area.top() + offset,
+                    frame.buffer().get(at.x(), at.y())));
+            element.render(Frame.forTesting(off), whole, context);
+            paint(off, pictures);
+            inView.forEach(at ->
+                    frame.buffer().set(at.x(), at.y(), off.get(at.x() - area.left(), at.y() - area.top() + offset)));
         }
 
         @Override
@@ -154,4 +247,6 @@ public final class MarkdownScroll {
             return Size.of(availableWidth, availableHeight);
         }
     }
+
+    private record Spot(int x, int y) {}
 }

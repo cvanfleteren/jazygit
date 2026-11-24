@@ -57,6 +57,8 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.*;
+import net.vanfleteren.jazygit.lib.image.Picture;
+import net.vanfleteren.jazygit.lib.image.Sharp;
 
 /**
  * jazygit, a lazygit-style terminal UI for Git built with TamboUI: lays out the panes, the content and the open
@@ -385,6 +387,7 @@ public class JazygitApp extends ToolkitApp {
     @Override
     protected void onStop() {
         asking.withdrawAll();
+        terminal.deleteImages();
         session.close();
     }
 
@@ -442,7 +445,16 @@ public class JazygitApp extends ToolkitApp {
         Element behind = shown.dimsBehind() ? new Dimmed(layout, Theme.backdrop(styleEngine)) : layout;
         Element screen = shown.dialog().<Element>map(d -> stack(behind, d)).getOrElse(layout);
         frameStats.rendered(started);
-        return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
+        return terminal.withImages(
+                new SelectedTextColoured(screen, Theme.selectedText(styleEngine)), sharpPictures(model));
+    }
+
+    /**
+     * The sharp images of the pictures the features say they may draw in {@code model}, which the terminal may be
+     * sent or painted with (ADR 191).
+     */
+    private static List<Sharp> sharpPictures(Model model) {
+        return Features.ALL.flatMap(feature -> feature.picturing().apply(model)).flatMap(Picture::sharp);
     }
 
     /**

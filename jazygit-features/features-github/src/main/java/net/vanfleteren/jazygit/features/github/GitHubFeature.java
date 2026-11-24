@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.features.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.features.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.features.github.prs.PrScopes;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
+import net.vanfleteren.jazygit.features.github.remarks.RemarksState;
 import net.vanfleteren.jazygit.features.github.review.ReviewAction;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsDialogs;
@@ -124,6 +125,8 @@ public final class GitHubFeature {
             .clocking(ChecksDialog::shownTimes)
             .clocking(PullRequestDialog::shownTimes)
             .clocking(CommentsDialog::shownTimes)
+            .picturing(RemarksState::pictures)
+            .picturing(CommentsDialog::pictures)
             // On with a remote on GitHub and gh found (ADR 171).
             .applying(ID, DetectGitHub::in);
 

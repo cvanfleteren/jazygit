@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.features.github.comments;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import lombok.With;
@@ -8,6 +10,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.lib.image.Picture;
 
 /**
  * Showing the conversation on the pull request of the dialog {@code shown}, which it was opened from and goes back
@@ -16,30 +19,42 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
  * @param shown       the pull request dialog
  * @param comments    the conversation as it was read, or why that failed; nothing while it is first read
  * @param highlighted the comment the user moved to; none for the newest, which the popup opens on
+ * @param pictures    the images of the comments that are read to be shown, by where they are: none while one is
+ *                    read, or when it could not be (ADR 190)
  */
 @With
 public record CommentsPopup(
         PullRequestPopup shown,
         Option<Either<Failure, List<PullRequestComment>>> comments,
-        Option<PullRequestComment.Id> highlighted)
+        Option<PullRequestComment.Id> highlighted,
+        Map<String, Option<Picture>> pictures)
         implements ShowsPullRequest {
 
     /**
      * The popup while the comments are read, with nothing highlighted.
      */
     public static CommentsPopup loading(PullRequestPopup shown) {
-        return new CommentsPopup(shown, Option.none(), Option.none());
+        return new CommentsPopup(shown, Option.none(), Option.none(), HashMap.empty());
     }
 
     /**
-     * The popup with the comments as they were read again; the highlight stays on its comment, if it is still there.
+     * The popup with the comments as they were read again; the highlight stays on its comment, if it is still there,
+     * and the images read stay read.
      */
     public CommentsPopup read(Either<Failure, List<PullRequestComment>> read) {
         return new CommentsPopup(
                 shown,
                 Option.of(read),
                 highlighted.filter(id ->
-                        read.exists(all -> all.exists(comment -> comment.id().equals(id)))));
+                        read.exists(all -> all.exists(comment -> comment.id().equals(id)))),
+                pictures);
+    }
+
+    /**
+     * The pictures of the images that were read, by where they are.
+     */
+    public Map<String, Picture> shownPictures() {
+        return pictures.filterValues(Option::isDefined).mapValues(Option::get);
     }
 
     /**

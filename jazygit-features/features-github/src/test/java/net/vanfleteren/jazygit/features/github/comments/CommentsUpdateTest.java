@@ -5,7 +5,9 @@ import static net.vanfleteren.jazygit.kernel.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -31,6 +33,7 @@ import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.lib.image.Picture;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -216,5 +219,88 @@ class CommentsUpdateTest {
         assertEquals(
                 Option.of(CONVERSATION),
                 read.popup(CommentPopup.class).map(CommentPopup::from).map(from -> ((CommentsPopup) from).all()));
+    }
+
+    @Test
+    void theImagesOfTheConversationReadAreReadToBeShown() {
+        String pasted = "https://github.com/user-attachments/assets/5a779fb0";
+        String icon = "https://avatars.githubusercontent.com/u/1";
+        List<PullRequestComment> withImages = List.of(
+                comment(PullRequestComment.DESCRIPTION.value(), Kind.DESCRIPTION, "![shot](" + pasted + ")"),
+                comment(
+                        "IC_1",
+                        Kind.COMMENT,
+                        "<img width=\"1854\" alt=\"image\" src=\"" + pasted + "\" />\n\n" + "<img src=\"" + icon
+                                + "\" width=\"14\"> and ![x](https://example.com/t.png)"));
+
+        Next read = Update.update(
+                loaded().openPopup(CommentsPopup.loading(SHOWN)), new CommentsMsg.Loaded(new PrNumber(42), withImages));
+
+        // Each once, and not one elsewhere, which would tell its server who reads the comment.
+        assertEquals(
+                List.of(
+                        new CommentsCmd.LoadPicture(new PrNumber(42), pasted),
+                        new CommentsCmd.LoadPicture(new PrNumber(42), icon)),
+                read.cmds());
+        assertEquals(
+                HashMap.of(pasted, Option.none(), icon, Option.none()),
+                read.model().popup(CommentsPopup.class).get().pictures());
+        // Read again, they are not read again.
+        assertEquals(
+                List.empty(),
+                Update.update(read.model(), new CommentsMsg.Loaded(new PrNumber(42), withImages))
+                        .cmds());
+
+        Picture picture = new Picture(1, 2, Vector.of(0xffff0000, 0xff00ff00));
+        Model shown = Update.update(
+                        read.model(), new CommentsMsg.PictureLoaded(new PrNumber(42), pasted, Option.of(picture)))
+                .model();
+        assertEquals(
+                HashMap.of(pasted, picture),
+                shown.popup(CommentsPopup.class).get().shownPictures());
+        // Kept when the conversation is read again.
+        assertEquals(
+                HashMap.of(pasted, picture),
+                Update.update(shown, new CommentsMsg.Loaded(new PrNumber(42), withImages))
+                        .model()
+                        .popup(CommentsPopup.class)
+                        .get()
+                        .shownPictures());
+    }
+
+    @Test
+    void atMostTwentyImagesOfAConversationAreRead() {
+        List<PullRequestComment> many = List.range(0, 25)
+                .map(n ->
+                        comment("IC_" + n, Kind.COMMENT, "![](https://github.com/user-attachments/assets/" + n + ")"));
+
+        Next read = Update.update(
+                loaded().openPopup(CommentsPopup.loading(SHOWN)), new CommentsMsg.Loaded(new PrNumber(42), many));
+
+        assertEquals(20, read.cmds().size());
+        assertEquals(
+                List.empty(),
+                Update.update(read.model(), new CommentsMsg.Loaded(new PrNumber(42), many))
+                        .cmds());
+    }
+
+    @Test
+    void anImageReadWhileCommentingShowsOnceBack() {
+        String pasted = "https://github.com/user-attachments/assets/5a779fb0";
+        Picture picture = new Picture(1, 2, Vector.of(0xffff0000, 0xff00ff00));
+        Model commenting = Update.update(
+                        reading(List.of(comment("IC_1", Kind.COMMENT, "![](" + pasted + ")"))),
+                        new CommentMsg.Requested())
+                .model();
+
+        Model read = Update.update(
+                        commenting, new CommentsMsg.PictureLoaded(new PrNumber(42), pasted, Option.of(picture)))
+                .model();
+
+        assertEquals(
+                Option.of(HashMap.of(pasted, picture)),
+                read.popup(CommentPopup.class)
+                        .map(CommentPopup::from)
+                        .map(from -> ((CommentsPopup) from).shownPictures()));
     }
 }
