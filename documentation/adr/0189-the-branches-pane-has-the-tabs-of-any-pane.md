@@ -33,5 +33,7 @@ the worktrees' changes are read on the tick only while they are shown.
 
 - One tab mechanism: the help lists the same "Previous tab" and "Next tab" for both panes.
 - An update test that switches the branches pane installs the branches feature's reaction, as the model carries none.
-- A tab kept by an id that no feature gives any more shows the local branches; `branchesTab()` says none until another
-  tab is shown.
+- A tab kept by an id that no feature gives any more shows the local branches, and the pane's `selectionChange` tells
+  the model to show them too, so that `branchesTab()` and the kernel's checks agree with what is drawn.
+- The pane keeps the lists of the features' tabs as the commits pane does, in a second copy of that bookkeeping; a
+  helper of `kernel-ui` that both use is in `TODO.md`.

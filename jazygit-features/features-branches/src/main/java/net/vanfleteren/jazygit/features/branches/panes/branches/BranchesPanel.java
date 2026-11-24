@@ -319,10 +319,18 @@ public class BranchesPanel implements LeftPane {
 
     /**
      * The message to send when the highlighted branch of the list shown is not the one whose log {@code model}
-     * holds, or what a feature's tab shown says for its row.
+     * holds, or what a feature's tab shown says for its row. While {@code model} keeps a tab no feature gives any more,
+     * which the pane shows the local branches in place of, it is first told to show the local branches, so that it
+     * says what the pane shows.
      */
     @Override
     public Option<Msg> selectionChange(Model model) {
+        boolean gone = model.repoView()
+                .tab(PANE)
+                .exists(kept -> tabs.exists(shown -> !shown.tabs().contains(kept)));
+        if (gone) {
+            return Option.of(new ViewMsg.TabChosen(PANE, BranchesTab.LOCAL.id()));
+        }
         return divergence(model)
                 .map(divergenceList::selectionChange)
                 .orElse(() -> model.repoView().branches().branchCommits().map(branchCommitsList::selectionChange))

@@ -92,6 +92,28 @@ class BranchesPaneTabsTest {
     }
 
     @Test
+    void aTabNoFeatureGivesAnyMoreIsReplacedInTheModelByTheLocalBranchesWhichThenFollowTheHighlight() throws Exception {
+        BranchesPanel panel = new BranchesPanel(msg -> {});
+        Model stale = shownOn(LOADED, NAMES);
+
+        rendered(panel, stale);
+        Option<Msg> first = panel.selectionChange(stale);
+        Model local = net.vanfleteren.jazygit.kernel.state.Update.update(stale, first.get())
+                .model();
+        rendered(panel, local);
+
+        // What the pane shows, the model says too: the kernel's checks then agree with it.
+        assertEquals(Option.of(new ViewMsg.TabChosen(BranchesPanel.PANE, BranchesTab.LOCAL.id())), first);
+        assertEquals(Option.of(BranchesTab.LOCAL), local.repoView().branchesTab());
+        assertTrue(
+                panel.selectionChange(local)
+                        .exists(
+                                net.vanfleteren.jazygit.kernel.state.load.SelectionMsg.BranchSelected.class
+                                        ::isInstance),
+                panel.selectionChange(local).toString());
+    }
+
+    @Test
     void clickingTheNameOfATabShowsIt() throws Exception {
         java.util.List<Msg> sent = new java.util.ArrayList<>();
         BranchesPanel panel = panel(sent::add);
