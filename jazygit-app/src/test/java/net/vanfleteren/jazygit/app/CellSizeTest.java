@@ -12,12 +12,23 @@ import org.junit.jupiter.api.Test;
 class CellSizeTest {
 
     @Test
-    void aClassThatCannotBeLoadedIsNoLibC() {
-        assertFalse(CellSize.loads("net.vanfleteren.jazygit.app.NoSuchLibC"));
+    void aClassWhoseStaticFieldsCannotBeMadeIsNoLibC() {
+        assertFalse(CellSize.loads(NoLibC.class));
     }
 
     @Test
-    void theLibCOfThisSystemIsLoadedAndMade() {
-        assertTrue(CellSize.loads(LibC.class.getName()));
+    void theLibCOfThisSystemIsMade() {
+        assertTrue(CellSize.loads(LibC.class));
+    }
+
+    /**
+     * As LibC where the system has none: making its static fields fails.
+     */
+    static final class NoLibC {
+        static final int FIELD = missing();
+
+        private static int missing() {
+            throw new UnsupportedOperationException("no LibC here");
+        }
     }
 }

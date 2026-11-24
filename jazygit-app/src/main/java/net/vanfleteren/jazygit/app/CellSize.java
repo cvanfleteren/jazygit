@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
+import java.lang.invoke.MethodHandles;
 import net.vanfleteren.jazygit.kernel.ui.markdown.CellPixels;
 
 /**
@@ -16,7 +17,7 @@ final class CellSize {
 
     private static final Option<CellPixels> SAID = CellPixels.parse(Option.of(System.getenv("JAZYGIT_CELL_PIXELS")));
     // Whether the system has the LibC that is asked, found out once: without it, as on Windows, it is never asked.
-    private static final boolean LIBC = loads(LibC.class.getName());
+    private static final boolean LIBC = loads(LibC.class);
 
     private CellSize() {}
 
@@ -28,15 +29,16 @@ final class CellSize {
     }
 
     /**
-     * Whether the class {@code name} is loaded and made: its static fields set, which is where LibC looks up what it
-     * calls in the system, and fails where it is not. Loaded by name, as a field of LibC is a constant javac copies in,
-     * and a call to it would be the call that fails. Not in a Try, which throws a LinkageError on.
+     * Whether {@code type} is made: its static fields set, which is where LibC looks up what it calls in the system,
+     * and fails where it is not. Made outright, as a field of LibC is a constant javac copies in, and a call to it
+     * would be the call that fails; not looked up by name, which the native image finds only for the classes it is
+     * told of. Not in a Try, which throws a LinkageError on.
      */
-    static boolean loads(String name) {
+    static boolean loads(Class<?> type) {
         try {
-            var _ = Class.forName(name, true, CellSize.class.getClassLoader());
+            var _ = MethodHandles.lookup().ensureInitialized(type);
             return true;
-        } catch (LinkageError | ClassNotFoundException noLibC) {
+        } catch (LinkageError | IllegalAccessException noLibC) {
             return false;
         }
     }
