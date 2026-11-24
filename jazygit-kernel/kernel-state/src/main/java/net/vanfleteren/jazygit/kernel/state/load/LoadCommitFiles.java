@@ -73,7 +73,7 @@ public record LoadCommitFiles(Changes of) implements Targeted<List<CommitFile>> 
             case Changes.OfStash(Sha sha) -> env.git().stashes().files(sha);
             case Changes.OfBranch(var branch, var base, Sha sha) ->
                 env.git().diffs().rangeFiles(base.tip(), sha);
-            case Changes.OfPullRequest(PullRequestCommits commits) ->
+            case Changes.OfPullRequest(PullRequestCommits commits, var _) ->
                 env.git().remotes().pullRequestFiles(commits);
         };
     }

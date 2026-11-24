@@ -92,3 +92,6 @@ git's editor is.
   until an editor has a `file-command`.
 - `e` in a rich diff goes from what is read to where it is in the editor, at the line.
 - `{line}` is only as good as the working tree is close to the diff: for a commit far back, the line may have moved.
+
+Amended by ADR 192: `e` on a file in the files of a commit, a stash, a branch or a pull request opens it too, those
+of a branch or a pull request only while its branch is checked out.

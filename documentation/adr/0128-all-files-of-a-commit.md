@@ -107,3 +107,7 @@ the object database, whatever is checked out and in whichever worktree.
 
 Amended by ADR 141: while the files follow the highlight, `a` goes back to the files changed at each move, and the
 main branch lists what its tip changed; `F` on it still lists all its files.
+
+Amended by ADR 192: `e` opens a file of the files of a commit, a stash, a branch or a pull request in the working
+tree, those of a branch or a pull request only while its branch is checked out: answering review feedback was a detour
+through the files pane.

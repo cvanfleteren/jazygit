@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
@@ -215,6 +216,24 @@ class RemarksUpdateTest {
         assertEquals(List.of(new LoadCommitFiles(now)), moved.cmds());
         // The files are read again at the commits the threads were read at.
         assertTrue(view.remarksAtItsCommits());
+    }
+
+    @Test
+    void aPullRequestThatMovedOnStaysOfTheBranchItWasOpenedFrom() {
+        Changes ofFeature = new Changes.OfPullRequest(COMMITS, Option.of(new BranchName("feature")));
+        Model opened = Update.update(
+                        loadedWithTheFeature(), new CommitFilesMsg.Opened(ofFeature, Scopes.BRANCHES.pane()))
+                .model();
+
+        Next moved = Update.update(
+                opened,
+                new RemarksMsg.Loaded(new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
+
+        assertEquals(
+                new Changes.OfPullRequest(
+                        new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("c".repeat(40))),
+                        Option.of(new BranchName("feature"))),
+                RemarksState.files(moved.model()).get().of());
     }
 
     @Test

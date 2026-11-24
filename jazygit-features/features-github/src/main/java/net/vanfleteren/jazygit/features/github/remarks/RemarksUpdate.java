@@ -69,7 +69,7 @@ public final class RemarksUpdate {
      * of its threads collapsed in an earlier session (ADR 55, 63); nothing for other changes.
      */
     public static Next opened(Model model, Changes changes) {
-        return changes instanceof Changes.OfPullRequest(PullRequestCommits commits)
+        return changes instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
                 ? new Next(
                         model.withPart(
                                 RemarksState.PART,
@@ -108,7 +108,7 @@ public final class RemarksUpdate {
                     // files stays (ADR 105, 128).
                     Next moved = moved(files, remarks)
                             .map(commits -> CommitFilesUpdate.update(
-                                    kept, new CommitFilesMsg.Moved(files.of(), new Changes.OfPullRequest(commits))))
+                                    kept, new CommitFilesMsg.Moved(files.of(), files.at(commits))))
                             .getOrElse(() -> Next.of(kept));
                     return moved.then(now -> pictures(now, read));
                 })
