@@ -84,7 +84,7 @@ class PullRequestFilesUpdateTest {
 
             Next opened = Update.update(shown, new PullRequestMsg.FilesChosen());
 
-            Changes of = new Changes.OfPullRequest(commits);
+            Changes of = new Changes.OfPullRequest(commits, Option.of(new BranchName("feature")));
             assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
             assertEquals(Screen.REPOSITORY, opened.model().screen());
             assertEquals(
@@ -146,7 +146,8 @@ class PullRequestFilesUpdateTest {
                         new PrNumber(42), lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
 
         Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
+                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                Option.of(new BranchName("feature")));
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(
@@ -197,7 +198,8 @@ class PullRequestFilesUpdateTest {
         Next opened = Update.update(shown, new PullRequestMsg.FilesRequested(FEATURE));
 
         Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
+                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                Option.of(new BranchName("feature")));
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(
                 Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
@@ -350,8 +352,10 @@ class PullRequestFilesUpdateTest {
         assertEquals(Option.none(), again.model().popup(PullRequestPopup.class));
         assertEquals(
                 Option.of(CommitFilesView.of(
-                        new Changes.OfPullRequest(new PullRequestCommits(
-                                42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID))),
+                        new Changes.OfPullRequest(
+                                new PullRequestCommits(
+                                        42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                                Option.of(new BranchName("feature"))),
                         new PaneId("branches"),
                         new PaneId("files"))),
                 again.model().repoView().files().commitFiles());
@@ -396,7 +400,8 @@ class PullRequestFilesUpdateTest {
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(listed));
 
         Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
+                new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                Option.of(new BranchName("patch-1")));
         assertEquals(Option.none(), opened.model().popup());
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(
@@ -427,7 +432,8 @@ class PullRequestFilesUpdateTest {
                         new PrNumber(42), lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
 
         Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
+                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                Option.of(new BranchName("patch-1")));
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(

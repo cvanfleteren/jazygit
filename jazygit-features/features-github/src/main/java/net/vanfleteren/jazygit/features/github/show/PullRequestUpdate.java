@@ -163,8 +163,8 @@ public final class PullRequestUpdate {
      */
     private static Next filesChosen(Model model) {
         return model.popup(PullRequestPopup.class)
-                .flatMap(PullRequestPopup::commits)
-                .map(commits -> files(model.withoutPopup(PullRequestPopup.class), commits))
+                .flatMap(popup -> popup.commits()
+                        .map(commits -> files(model.withoutPopup(PullRequestPopup.class), popup.branch(), commits)))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -471,18 +471,20 @@ public final class PullRequestUpdate {
         return pullRequest
                 .commits()
                 .map(listed -> commits(pullRequest.number(), listed))
-                .map(commits -> files(model, commits))
+                .map(commits -> files(model, branch, commits))
                 .getOrElse(() -> show(model, branch, pullRequest, fromFork, true));
     }
 
     /**
-     * The files of the pull request at {@code commits}, in the files pane of the repository screen, which the focus
-     * goes to; Escape there gives it to the branches pane (ADR 55).
+     * The files of the pull request at {@code commits}, of {@code branch}, in the files pane of the repository screen,
+     * which the focus goes to; Escape there gives it to the branches pane (ADR 55). They are edited in the working
+     * tree of that branch (ADR 192).
      */
-    private static Next files(Model model, PullRequestCommits commits) {
+    private static Next files(Model model, BranchName branch, PullRequestCommits commits) {
         return CommitFilesUpdate.update(
                 model.withScreen(Screen.REPOSITORY),
-                new CommitFilesMsg.Opened(new Changes.OfPullRequest(commits), Scopes.BRANCHES.pane()));
+                new CommitFilesMsg.Opened(
+                        new Changes.OfPullRequest(commits, Option.of(branch)), Scopes.BRANCHES.pane()));
     }
 
     /**

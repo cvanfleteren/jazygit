@@ -157,7 +157,7 @@ public record ReadBlame(AreaId area, WholeFile read, FileVersion version, List<B
                     case Changes.OfStash(Sha sha) -> ofStash(sha, file, original, path);
                     case Changes.OfBranch(var branch, var base, Sha sha) ->
                         ofRange(base.tip(), sha, file, original, path);
-                    case Changes.OfPullRequest(PullRequestCommits commits) ->
+                    case Changes.OfPullRequest(PullRequestCommits commits, var _) ->
                         ofRange(commits.base(), commits.head(), file, original, path);
                 };
             case Source.OnDisk(String onDisk) -> List.of(new BlameAt.OnDisk(onDisk));

@@ -56,7 +56,7 @@ public record LoadCommitFileDiff(Changes of, List<CommitFile> files, DiffOptions
                     case Changes.OfStash(Sha sha) -> env.git().stashes().fileChanges(sha, files, options);
                     case Changes.OfBranch(var branch, var base, Sha sha) ->
                         env.git().diffs().rangeFileChanges(base.tip(), sha, files, options);
-                    case Changes.OfPullRequest(PullRequestCommits commits) ->
+                    case Changes.OfPullRequest(PullRequestCommits commits, var _) ->
                         env.git().diffs().pullRequestFileChanges(commits, files, options);
                 })
                 .mapLeft(Failure::of)

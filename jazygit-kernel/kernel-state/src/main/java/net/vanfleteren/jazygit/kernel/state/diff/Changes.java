@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.kernel.state.diff;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -16,8 +17,8 @@ public sealed interface Changes {
      * same when its head or its base moved on, as after a force-push (ADR 60).
      */
     default boolean sameAs(Changes other) {
-        return this instanceof OfPullRequest(PullRequestCommits commits)
-                ? other instanceof OfPullRequest(PullRequestCommits those)
+        return this instanceof OfPullRequest(PullRequestCommits commits, var _)
+                ? other instanceof OfPullRequest(PullRequestCommits those, var _)
                         && those.number() == commits.number()
                         && those.repository().equals(commits.repository())
                         && those.host().equals(commits.host())
@@ -56,8 +57,19 @@ public sealed interface Changes {
     /**
      * The changes of a pull request on GitHub, as GitHub shows them: its head against the merge base of its head
      * and its base (ADR 55).
+     *
+     * @param commits the commits it is diffed between
+     * @param branch  the local branch it was opened from, whose working tree its files are edited in (ADR 192); none
+     *                when not known
      */
-    record OfPullRequest(PullRequestCommits commits) implements Changes {
+    record OfPullRequest(PullRequestCommits commits, Option<BranchName> branch) implements Changes {
+
+        /**
+         * The changes of the pull request at {@code commits}, of no local branch known.
+         */
+        public OfPullRequest(PullRequestCommits commits) {
+            this(commits, Option.none());
+        }
 
         /**
          * Its head commit.
@@ -65,6 +77,13 @@ public sealed interface Changes {
         @Override
         public Sha sha() {
             return commits.head();
+        }
+
+        /**
+         * The same pull request, of the same local branch, at the commits it moved on to.
+         */
+        public OfPullRequest at(PullRequestCommits moved) {
+            return new OfPullRequest(moved, branch);
         }
     }
 }

@@ -55,6 +55,7 @@ class KeymapGitHubTest {
     void thePanelsListTheKeysOfTheFeaturesInTheOrderOfTheFeatures() {
         assertEquals(
                 List.of(
+                        "changes.help.commitFiles.edit",
                         "github.help.commitFiles.refresh",
                         "changes.help.commitFiles.filter",
                         "changes.help.commitFiles.close",

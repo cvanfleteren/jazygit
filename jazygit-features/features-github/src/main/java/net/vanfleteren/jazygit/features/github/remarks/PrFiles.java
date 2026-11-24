@@ -34,6 +34,15 @@ public record PrFiles(CommitFilesView view, PullRequestCommits commits, PrRemark
     }
 
     /**
+     * The same pull request at the commits {@code moved} it moved on to, of the same local branch (ADR 192).
+     */
+    public Changes.OfPullRequest at(PullRequestCommits moved) {
+        return view.of() instanceof Changes.OfPullRequest pullRequest
+                ? pullRequest.at(moved)
+                : new Changes.OfPullRequest(moved);
+    }
+
+    /**
      * What changed in the files of the node highlighted, once one is.
      */
     public Option<Preview<List<CommitFile>, DiffText>> diff() {
