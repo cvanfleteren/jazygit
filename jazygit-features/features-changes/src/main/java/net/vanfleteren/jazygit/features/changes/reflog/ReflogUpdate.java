@@ -16,8 +16,8 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 
 /**
  * Reading the reflog of HEAD while its tab is shown (ADR 186): when it is shown, after an operation of the app, after
- * the log is read again, and once what it is read from changed outside the app; a page ahead of the highlighted entry; one read at a time, which finds which of the
- * commits it read are lost as well (ADR 188).
+ * the log is read again, and once what it is read from changed outside the app; a page ahead of the highlighted
+ * entry; one read at a time, which finds which of the commits it read are lost as well (ADR 188).
  */
 public final class ReflogUpdate {
 
