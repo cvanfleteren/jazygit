@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.changes.stage;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
+import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -28,4 +29,15 @@ public sealed interface StageMsg extends Msg {
             this(files, Option.none());
         }
     }
+
+    /**
+     * The files in conflict among {@code files} were read for conflict markers, before they are staged: {@code marked}
+     * are those that have some left (ADR 198).
+     */
+    record MarkersRead(List<FileEntry> files, Option<String> directory, List<MarkedFile> marked) implements StageMsg {}
+
+    /**
+     * The user chose to stage the files of the open {@link MarkersLeftPopup}, conflict markers and all.
+     */
+    record StagedAnyway() implements StageMsg {}
 }

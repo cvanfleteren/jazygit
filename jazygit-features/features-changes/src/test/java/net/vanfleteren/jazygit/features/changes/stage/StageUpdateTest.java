@@ -9,8 +9,10 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
+import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
+import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.features.changes.stage.StageCmd.Stage;
 import net.vanfleteren.jazygit.features.changes.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -26,6 +28,59 @@ import org.junit.jupiter.api.Test;
  * The staging transitions.
  */
 class StageUpdateTest {
+
+    private static final FileEntry CONFLICTED =
+            FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+    private static final FileEntry MODIFIED = Fixtures.fileEntry("b.txt", ChangeType.MODIFIED);
+
+    @Test
+    void stagingAFileInConflictReadsItForConflictMarkersFirst() {
+        Next next = Update.update(loaded(), new StageMsg.Requested(List.of(CONFLICTED, MODIFIED)));
+
+        assertEquals(
+                List.of(new ReadMarkersCmd(List.of(CONFLICTED, MODIFIED), Option.none(), List.of("a.txt"))),
+                next.cmds());
+    }
+
+    @Test
+    void aFileInConflictWithoutMarkersIsStaged() {
+        Next next = Update.update(
+                loaded(), new StageMsg.MarkersRead(List.of(CONFLICTED, MODIFIED), Option.none(), List.empty()));
+
+        assertEquals(List.of(new Stage(List.of("a.txt", "b.txt"))), next.cmds());
+    }
+
+    @Test
+    void aFileInConflictWithMarkersAsksFirst() {
+        List<MarkedFile> marked = List.of(new MarkedFile("a.txt", List.of(3, 9)));
+
+        Next next = Update.update(loaded(), new StageMsg.MarkersRead(List.of(CONFLICTED), Option.none(), marked));
+
+        assertEquals(List.empty(), next.cmds());
+        assertEquals(
+                Option.of(new MarkersLeftPopup(List.of(CONFLICTED), Option.none(), marked)),
+                next.model().popup(MarkersLeftPopup.class));
+    }
+
+    @Test
+    void stagingAnywayStagesWhatWasAskedAbout() {
+        List<MarkedFile> marked = List.of(new MarkedFile("a.txt", List.of(3)));
+        Model asked = Update.update(
+                        loaded(), new StageMsg.MarkersRead(List.of(CONFLICTED, MODIFIED), Option.none(), marked))
+                .model();
+
+        Next next = Update.update(asked, new StageMsg.StagedAnyway());
+
+        assertEquals(Option.none(), next.model().popup(MarkersLeftPopup.class));
+        assertEquals(List.of(new Stage(List.of("a.txt", "b.txt"))), next.cmds());
+    }
+
+    @Test
+    void stagingAnywayWithNothingAskedDoesNothing() {
+        assertEquals(
+                List.empty(),
+                Update.update(loaded(), new StageMsg.StagedAnyway()).cmds());
+    }
 
     @Test
     void toggleStagesTheFilesWithUnstagedChanges() {
