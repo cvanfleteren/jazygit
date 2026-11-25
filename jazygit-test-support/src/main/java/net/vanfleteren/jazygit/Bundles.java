@@ -30,7 +30,7 @@ public final class Bundles {
     // The name a part of the model, a service of the environment, a key of a pane or a tab of one is kept under, which
     // is shaped as a key but names no text (ADR 157, 169, 172, 185).
     private static final Pattern PART_NAME =
-            Pattern.compile("((?:Part|Service|PaneKey)\\.of|new TabId)\\(\\s*\"(?:[^\"\\\\]++|\\\\.)*+\"");
+            Pattern.compile("((?:Part|Service|Slot)\\.of|new TabId)\\(\\s*\"(?:[^\"\\\\]++|\\\\.)*+\"");
 
     private Bundles() {}
 

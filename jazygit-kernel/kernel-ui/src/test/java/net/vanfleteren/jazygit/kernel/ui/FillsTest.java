@@ -9,13 +9,13 @@ import net.vanfleteren.jazygit.kernel.state.TestModels;
 import org.junit.jupiter.api.Test;
 
 /**
- * What the features give for the keys of the panes (ADR 172): the first that gives anything, or all that do, in
- * their order.
+ * What the features give for the slots (ADR 172, 202): the first that is given, or all that is, in the order of the
+ * features.
  */
 class FillsTest {
 
-    private static final PaneKey<String> KEY = PaneKey.of("test.key", String.class);
-    private static final PaneKey<String> OTHER = PaneKey.of("test.other", String.class);
+    private static final Slot<String> KEY = Slot.of("test.key", String.class);
+    private static final Slot<String> OTHER = Slot.of("test.other", String.class);
     private static final Model MODEL = TestModels.loaded();
 
     @Test
@@ -49,6 +49,17 @@ class FillsTest {
     }
 
     @Test
+    void aFillerMayGiveSeveralWhichAllKeepsInTheirOrder() {
+        Fills fills = Fills.NONE
+                .with(KEY, model -> List.of("one", "two"))
+                .andThen(Fills.NONE.with(KEY, model -> List.empty()))
+                .andThen(Fills.NONE.with(KEY, model -> Option.of("three")));
+
+        assertEquals(List.of("one", "two", "three"), fills.all(KEY, MODEL));
+        assertEquals(Option.of("one"), fills.of(KEY, MODEL));
+    }
+
+    @Test
     void aFeatureFillingAKeyTwiceGivesItsFirstAnswerFirst() {
         Fills twice = Fills.NONE.with(KEY, model -> Option.of("one")).with(KEY, model -> Option.of("two"));
 
@@ -59,7 +70,7 @@ class FillsTest {
     void keysOfTheSameNameAndTypeAreTheSameKey() {
         Fills fills = Fills.NONE.with(KEY, model -> Option.of("filled"));
 
-        assertEquals(Option.of("filled"), fills.of(PaneKey.of("test.key", String.class), MODEL));
-        assertEquals(Option.none(), fills.of(PaneKey.of("test.key", CharSequence.class), MODEL));
+        assertEquals(Option.of("filled"), fills.of(Slot.of("test.key", String.class), MODEL));
+        assertEquals(Option.none(), fills.of(Slot.of("test.key", CharSequence.class), MODEL));
     }
 }

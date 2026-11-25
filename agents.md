@@ -79,7 +79,8 @@ panel (`ContentSource`); actions on another feature's subject go through a hoste
 `Scopes.FAILED_BUILD`); its state is a `Part` of its own (ADR 157); the settings it keeps in `config.toml` are
 `SettingKey`s (`Feature.settingKeys`, through `keeping`), and the rows it adds to the settings panel are
 `SettingsSection`s (`Feature.settings`, through `withSettings`) (ADR 163); what it shows in a pane that lives in a
-group fills a `PaneKey` the pane declares beside itself (`Feature.fills`, through `filling`), as the line and the
+group fills a `Slot` the pane declares beside itself (`Feature.fills`, through `filling`; the kernel's own, as whether a
+view spins, are in `KernelSlots`, ADR 202), as the line and the
 listing of the commits pane, and the badges of a branch and the groups of the local branches in the branches pane
 (`BranchBadges.KEY`, `BranchGroups.KEY`) (ADR 167, 172); a screen it brings beside the repository's is a
 `ScreenSpec` (`Feature.screens`, through `screen`), whose `Screen` is an open value, and what its symbols in a panel

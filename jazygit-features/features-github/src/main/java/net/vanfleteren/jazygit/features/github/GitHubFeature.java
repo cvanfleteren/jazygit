@@ -36,6 +36,7 @@ import net.vanfleteren.jazygit.features.github.verdict.VerdictAction;
 import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
+import net.vanfleteren.jazygit.kernel.ui.KernelSlots;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
@@ -119,14 +120,14 @@ public final class GitHubFeature {
             .explaining(BadgeLegend.BRANCHES.toJavaArray(Legend[]::new))
             .running(GitHubServices::running)
             // Its dialogs that read what GitHub has, and the times they show (ADR 124).
-            .spinning(ChecksDialog::showsSpinner)
-            .spinning(PullRequestDialog::showsSpinner)
-            .spinning(CommentsDialog::showsSpinner)
-            .clocking(ChecksDialog::shownTimes)
-            .clocking(PullRequestDialog::shownTimes)
-            .clocking(CommentsDialog::shownTimes)
-            .picturing(RemarksState::pictures)
-            .picturing(CommentsDialog::pictures)
+            .filling(KernelSlots.SPINNING, model -> Option.when(ChecksDialog.showsSpinner(model), true))
+            .filling(KernelSlots.SPINNING, model -> Option.when(PullRequestDialog.showsSpinner(model), true))
+            .filling(KernelSlots.SPINNING, model -> Option.when(CommentsDialog.showsSpinner(model), true))
+            .filling(KernelSlots.CLOCKING, ChecksDialog::shownTimes)
+            .filling(KernelSlots.CLOCKING, PullRequestDialog::shownTimes)
+            .filling(KernelSlots.CLOCKING, CommentsDialog::shownTimes)
+            .filling(KernelSlots.PICTURING, RemarksState::pictures)
+            .filling(KernelSlots.PICTURING, CommentsDialog::pictures)
             // On with a remote on GitHub and gh found (ADR 171).
             .applying(ID, DetectGitHub::in);
 

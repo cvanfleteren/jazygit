@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequestDialog;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestReactions;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ShowPullRequestAction;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
+import net.vanfleteren.jazygit.kernel.ui.KernelSlots;
 
 /**
  * How the builds of the branches on Forgejo went (ADR 174): a badge on each branch whose tip, or that of the branch
@@ -51,10 +52,10 @@ public final class ForgejoFeature {
             .explaining(BuildLegend.BRANCHES)
             .running(ForgejoServices::running)
             // Its dialog reads what Forgejo has, and shows how long ago (ADR 124).
-            .spinning(ForgejoPullRequestDialog::showsSpinner)
-            .clocking(ForgejoPullRequestDialog::shownTimes)
-            .spinning(ForgejoChecksDialog::showsSpinner)
-            .clocking(ForgejoChecksDialog::shownTimes)
+            .filling(KernelSlots.SPINNING, model -> Option.when(ForgejoPullRequestDialog.showsSpinner(model), true))
+            .filling(KernelSlots.CLOCKING, ForgejoPullRequestDialog::shownTimes)
+            .filling(KernelSlots.SPINNING, model -> Option.when(ForgejoChecksDialog.showsSpinner(model), true))
+            .filling(KernelSlots.CLOCKING, ForgejoChecksDialog::shownTimes)
             .applying(ID, model -> new DetectForgejo());
 
     private ForgejoFeature() {}

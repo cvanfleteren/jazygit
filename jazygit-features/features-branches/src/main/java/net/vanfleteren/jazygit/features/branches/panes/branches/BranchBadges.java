@@ -6,7 +6,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.ui.Fills;
-import net.vanfleteren.jazygit.kernel.ui.PaneKey;
+import net.vanfleteren.jazygit.kernel.ui.Slot;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
 /**
@@ -22,7 +22,7 @@ public record BranchBadges(List<Badge> badges) {
     /**
      * What a feature shows of a branch, beside what git says of it.
      */
-    public static final PaneKey<Badge> KEY = PaneKey.of("branches.panes.branches.badge", Badge.class);
+    public static final Slot<Badge> KEY = Slot.of("branches.panes.branches.badge", Badge.class);
 
     /**
      * No badges, as the tests of the views have them without the app.

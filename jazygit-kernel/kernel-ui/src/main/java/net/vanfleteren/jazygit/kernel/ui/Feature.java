@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.git.Git;
@@ -34,8 +33,6 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Legend;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
-import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
-import net.vanfleteren.jazygit.lib.image.Picture;
 
 /**
  * A feature, as the app knows it: its actions, which bring its keys and its popups, what it shows in the content
@@ -57,8 +54,8 @@ import net.vanfleteren.jazygit.lib.image.Picture;
  * @param reactions   what it answers of what happens in the kernel, whichever part it keeps (ADR 158)
  * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
  * @param legends     what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
- * @param fills       what it gives for the keys of the panes, as the line above a list or what a pane lists (ADR 172)
- * @param picturing   the pictures its views may draw, which a terminal that draws images itself is sent (ADR 191)
+ * @param fills       what it gives for the slots, as the line above a list, whether a view spins or the pictures
+ *                    its views may draw (ADR 172, 202)
  */
 public record Feature(
         List<FeatureAction> actions,
@@ -71,14 +68,11 @@ public record Feature(
         List<Legend> legends,
         Fills fills,
         Running running,
-        Predicate<Model> spinning,
-        Function<Model, List<ShownTime>> clocking,
-        Function<Model, List<Picture>> picturing,
         Option<Applying> applying) {
 
     /**
      * The feature of {@code actions}, in that order, which shows nothing in the content panel of its own, has no
-     * settings, dispatches nothing every so often, answers nothing, fills no key of a pane, brings no screen and adds
+     * settings, dispatches nothing every so often, answers nothing, fills no slot, brings no screen and adds
      * nothing to a legend.
      */
     public static Feature of(FeatureAction... actions) {
@@ -93,9 +87,6 @@ public record Feature(
                 List.empty(),
                 Fills.NONE,
                 Running.NONE,
-                model -> false,
-                model -> List.empty(),
-                model -> List.empty(),
                 Option.none());
     }
 
@@ -114,9 +105,6 @@ public record Feature(
                 legends,
                 fills,
                 running,
-                spinning,
-                clocking,
-                picturing,
                 applying);
     }
 
@@ -135,9 +123,6 @@ public record Feature(
                 legends,
                 fills,
                 running,
-                spinning,
-                clocking,
-                picturing,
                 applying);
     }
 
@@ -156,9 +141,6 @@ public record Feature(
                 legends,
                 fills,
                 running,
-                spinning,
-                clocking,
-                picturing,
                 applying);
     }
 
@@ -178,9 +160,6 @@ public record Feature(
                 legends,
                 fills,
                 running,
-                spinning,
-                clocking,
-                picturing,
                 applying);
     }
 
@@ -200,17 +179,15 @@ public record Feature(
                 legends,
                 fills,
                 running,
-                spinning,
-                clocking,
-                picturing,
                 applying);
     }
 
     /**
-     * This feature, also giving what {@code filler} makes of a model for {@code key} of a pane, after what the features
-     * before it give (ADR 172).
+     * This feature, also giving what {@code filler} makes of a model for {@code slot}, after what the features before it
+     * give (ADR 172, 202): one or nothing as an {@code Option}, or as many as a {@code List} holds. The kernel's own
+     * slots, as whether a view spins, are in {@link KernelSlots}.
      */
-    public <T> Feature filling(PaneKey<T> key, Function<Model, Option<T>> filler) {
+    public <T> Feature filling(Slot<T> slot, Function<Model, ? extends Iterable<? extends T>> filler) {
         return new Feature(
                 actions,
                 contents,
@@ -220,11 +197,8 @@ public record Feature(
                 reactions,
                 screens,
                 legends,
-                fills.with(key, filler),
+                fills.with(slot, filler),
                 running,
-                spinning,
-                clocking,
-                picturing,
                 applying);
     }
 
@@ -244,9 +218,6 @@ public record Feature(
                 legends,
                 fills,
                 running,
-                spinning,
-                clocking,
-                picturing,
                 applying);
     }
 
@@ -266,9 +237,6 @@ public record Feature(
                 this.legends.appendAll(List.of(legends)),
                 fills,
                 running,
-                spinning,
-                clocking,
-                picturing,
                 applying);
     }
 
@@ -288,77 +256,6 @@ public record Feature(
                 legends,
                 fills,
                 running,
-                spinning,
-                clocking,
-                picturing,
-                applying);
-    }
-
-    /**
-     * This feature, also keeping the spinner turning while {@code spinning} says one of its views shows one (ADR 171).
-     */
-    public Feature spinning(Predicate<Model> spinning) {
-        Predicate<Model> before = this.spinning;
-        return new Feature(
-                actions,
-                contents,
-                settingKeys,
-                settings,
-                timers,
-                reactions,
-                screens,
-                legends,
-                fills,
-                running,
-                before.or(spinning),
-                clocking,
-                picturing,
-                applying);
-    }
-
-    /**
-     * This feature, also waking the app when a time {@code clocking} says one of its popups shows changes, as a
-     * screen does (ADR 124, 168, 171).
-     */
-    public Feature clocking(Function<Model, List<ShownTime>> clocking) {
-        Function<Model, List<ShownTime>> before = this.clocking;
-        return new Feature(
-                actions,
-                contents,
-                settingKeys,
-                settings,
-                timers,
-                reactions,
-                screens,
-                legends,
-                fills,
-                running,
-                spinning,
-                model -> before.apply(model).appendAll(clocking.apply(model)),
-                picturing,
-                applying);
-    }
-
-    /**
-     * This feature, also telling which pictures {@code picturing} says its views may draw, which a terminal that draws
-     * images itself is sent once they are on the screen (ADR 191).
-     */
-    public Feature picturing(Function<Model, List<Picture>> picturing) {
-        Function<Model, List<Picture>> before = this.picturing;
-        return new Feature(
-                actions,
-                contents,
-                settingKeys,
-                settings,
-                timers,
-                reactions,
-                screens,
-                legends,
-                fills,
-                running,
-                spinning,
-                clocking,
-                model -> before.apply(model).appendAll(picturing.apply(model)),
                 applying);
     }
 
@@ -389,9 +286,6 @@ public record Feature(
                 legends,
                 fills,
                 running,
-                spinning,
-                clocking,
-                picturing,
                 Option.of(new Applying(id, detect)));
     }
 
@@ -427,9 +321,6 @@ public record Feature(
                 legends.map(legend -> legend.of(id)),
                 fills.gated(model -> model.on(id)),
                 running,
-                model -> model.on(id) && spinning.test(model),
-                model -> model.on(id) ? clocking.apply(model) : List.empty(),
-                model -> model.on(id) ? picturing.apply(model) : List.empty(),
                 Option.of(applying));
     }
 

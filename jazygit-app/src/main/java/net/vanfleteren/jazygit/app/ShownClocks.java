@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.kernel.content.ContentView;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.ui.FetchLine;
+import net.vanfleteren.jazygit.kernel.ui.KernelSlots;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
@@ -31,8 +32,8 @@ final class ShownClocks {
      */
     static Option<Instant> next(Model model, Instant now) {
         // The features' popups first: what moves on every second keeps the others from looking far ahead.
-        List<ShownTime> shown = Features.ALL
-                .flatMap(feature -> feature.clocking().apply(model))
+        List<ShownTime> shown = Features.FILLS
+                .all(KernelSlots.CLOCKING, model)
                 .appendAll(FetchLine.shownTimes(model))
                 .appendAll(ContentView.shownTimes(model))
                 .appendAll(BranchesPanel.shownTimes(model, BADGES))

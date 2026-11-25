@@ -79,3 +79,6 @@ where it can draw neither.
   area, or Sixel's sequences as text. One that has Sixel but is not on the list draws half blocks unless told.
 - Over ssh, `TERM` and `TERM_PROGRAM` come along when the ssh client passes them, and the terminal at the other end
   draws the images, if it can.
+
+Amended by ADR 202: a feature tells the pictures its views may draw by filling `KernelSlots.PICTURING`;
+`Feature.picturing` is gone.

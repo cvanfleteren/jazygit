@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.branches.panes.branches;
 
-import net.vanfleteren.jazygit.kernel.ui.PaneKey;
+import net.vanfleteren.jazygit.kernel.ui.Slot;
 import net.vanfleteren.jazygit.kernel.ui.tabs.PaneTab;
 
 /**
@@ -13,8 +13,8 @@ public final class BranchesPane {
      * The tabs the features add after the worktrees, in the order of the features.
      */
     @SuppressWarnings("unchecked")
-    public static final PaneKey<PaneTab<?>> TABS =
-            PaneKey.of("branches.panes.branches.tabs", (Class<PaneTab<?>>) (Class<?>) PaneTab.class);
+    public static final Slot<PaneTab<?>> TABS =
+            Slot.of("branches.panes.branches.tabs", (Class<PaneTab<?>>) (Class<?>) PaneTab.class);
 
     private BranchesPane() {}
 }

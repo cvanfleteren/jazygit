@@ -30,18 +30,18 @@ import org.junit.jupiter.api.Test;
  */
 class FeatureGatedTest {
 
-    private static final PaneKey<String> KEY = PaneKey.of("test.key", String.class);
+    private static final Slot<String> KEY = Slot.of("test.key", String.class);
 
     private static final Feature FEATURE = Feature.of()
             .every(Duration.ofMinutes(1), () -> new Probe("tick"))
             .reacting((model, event) -> Next.of(model, new Run("reacted")))
             .filling(KEY, model -> Option.of("filled"))
-            .spinning(model -> true)
+            .filling(KernelSlots.SPINNING, model -> Option.of(true))
             .applying("f", model -> new Run("detect"));
 
     @Test
     void aFeatureThatDecidesNothingIsAsItIs() {
-        Feature always = Feature.of().spinning(model -> true);
+        Feature always = Feature.of().filling(KernelSlots.SPINNING, model -> Option.of(true));
 
         assertSame(always, always.gated());
     }
@@ -81,12 +81,12 @@ class FeatureGatedTest {
                 List.of(new Run("reacted")),
                 gated.reactions().last().to(on, event).cmds());
         assertEquals(List.empty(), gated.reactions().last().to(off, event).cmds());
-        assertTrue(gated.spinning().test(on));
-        assertFalse(gated.spinning().test(off));
+        assertEquals(List.of(true), gated.fills().all(KernelSlots.SPINNING, on));
+        assertEquals(List.empty(), gated.fills().all(KernelSlots.SPINNING, off));
     }
 
     @Test
-    void whileItIsOffItGivesNothingForTheKeysOfThePanes() {
+    void whileItIsOffItGivesNothingForTheSlots() {
         Fills fills = FEATURE.gated().fills();
         Model on = TestModels.loaded();
 

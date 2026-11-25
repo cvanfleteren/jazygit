@@ -228,3 +228,4 @@ another tool adds it there too.
 | 199 | [The plan of an operation that stopped shows in the commits pane](0199-the-plan-of-an-operation-that-stopped-shows-in-the-commits-pane.md) |  |
 | 200 | [A dialog can tell what every choice does in it, and Enter resolves a file in conflict](0200-a-dialog-can-tell-what-every-choice-does-in-it.md) |  |
 | 201 | [A file in conflict is handed to a merge tool or to mergiraf, and opens at its first conflict](0201-a-file-in-conflict-is-handed-to-a-merge-tool-or-mergiraf.md) |  |
+| 202 | [A feature fills slots, which the kernel and the panes declare](0202-a-feature-fills-slots-the-kernel-and-the-panes-declare.md) |  |

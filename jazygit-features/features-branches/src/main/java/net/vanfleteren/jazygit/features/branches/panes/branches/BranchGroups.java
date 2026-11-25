@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.Fills;
-import net.vanfleteren.jazygit.kernel.ui.PaneKey;
+import net.vanfleteren.jazygit.kernel.ui.Slot;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
@@ -27,7 +27,7 @@ public record BranchGroups(List<Grouping> groupings) {
     /**
      * How a feature groups the local branches.
      */
-    public static final PaneKey<Grouping> KEY = PaneKey.of("branches.panes.branches.grouping", Grouping.class);
+    public static final Slot<Grouping> KEY = Slot.of("branches.panes.branches.grouping", Grouping.class);
 
     /**
      * No groups, as the tests of the views have them without the app.
