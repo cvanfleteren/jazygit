@@ -175,6 +175,7 @@ public final class ChoiceList<P extends Popup> {
      * @param opensAt the key of the option highlighted until the user moves, if not the first
      */
     public StyledElement<?> render(Model model, P popup, Option<Character> opensAt) {
+        Require.that(!inline, () -> "The inline list " + id + " wraps what its options do, so it is drawn at a width");
         return render(model, popup, opensAt, 0);
     }
 
@@ -240,6 +241,8 @@ public final class ChoiceList<P extends Popup> {
      * filter grows; in two columns, those of the first.
      */
     public int height(Model model, P popup) {
+        Require.that(
+                !inline, () -> "The inline list " + id + " wraps what its options do, so it is measured at a width");
         return height(model, popup, 0);
     }
 

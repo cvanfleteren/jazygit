@@ -415,6 +415,10 @@ class ChoiceDialogTest {
      * also with its command.
      */
     private Supplier<Element> inline() {
+        return inline(true);
+    }
+
+    private Supplier<Element> inline(boolean second) {
         ChoiceDialog<PickPopup> inline = new ChoiceDialog<>(
                 new ChoiceDialog.Spec<>(
                                 "pick",
@@ -435,7 +439,7 @@ class ChoiceDialogTest {
                         .inline(),
                 cursor);
         return () ->
-                stack(text("background"), inline.render(cursor.on(open(true))).get());
+                stack(text("background"), inline.render(cursor.on(open(second))).get());
     }
 
     @Test
@@ -486,6 +490,58 @@ class ChoiceDialogTest {
 
             assertTrue(dispatched.contains(new Picked("b")), dispatched.toString());
         }
+    }
+
+    @Test
+    void anInlineOptionThatDoesNotApplyStillTellsWhatItDoesButCannotBeChosen() throws Exception {
+        Supplier<Element> view = inline(false);
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            String screen = RenderedText.ofLarge(runner, view);
+            assertTrue(screen.contains("Keeps what is staged."), screen);
+            SettledPilot.of(runner).press('b');
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(), dispatched);
+    }
+
+    @Test
+    void anInlineDialogFilteredShowsOnlyTheMatchesWithWhatTheyDo() throws Exception {
+        Supplier<Element> view = inline();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            RenderedText.ofLarge(runner, view);
+            type(runner, "/uns");
+            String screen = RenderedText.ofLarge(runner, view);
+            assertTrue(screen.contains("/ uns"), screen);
+            assertTrue(screen.contains("Keeps what is staged."), screen);
+            assertFalse(screen.contains("Throws everything away."), screen);
+            assertFalse(screen.contains("git reset --hard"), screen);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("b")), dispatched);
+    }
+
+    @Test
+    void anInlineListIsOnlyDrawnAtAWidth() {
+        ChoiceList<PickPopup> inline = ChoiceList.inline(
+                "pick",
+                List.of(new Choice<PickPopup>('a', "changes.dialog.discard.all", () -> new Picked("a"))
+                        .withDetails(popup -> "Throws everything away.")),
+                () -> new Picked("cancel"),
+                msg -> {},
+                true);
+        Model model = open(true);
+        PickPopup popup = new PickPopup(true);
+
+        assertThrows(IllegalArgumentException.class, () -> inline.height(model, popup));
+        assertThrows(IllegalArgumentException.class, () -> inline.render(model, popup));
+        assertEquals(2, inline.height(model, popup, 50));
     }
 
     private static int indexOf(java.util.List<String> lines, String text) {
