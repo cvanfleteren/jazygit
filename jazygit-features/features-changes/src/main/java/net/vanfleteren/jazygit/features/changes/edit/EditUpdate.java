@@ -26,7 +26,10 @@ public final class EditUpdate {
 
     public static Next update(Model model, EditMsg msg) {
         return switch (msg) {
-            case EditMsg.Requested(String path) -> open(model, path, 1);
+            case EditMsg.Requested(String path) ->
+                inConflict(model, path)
+                        ? Next.of(model.clearError(), new ReadFirstConflictCmd(path))
+                        : open(model, path, 1);
             case EditMsg.ListedRequested(String path) ->
                 model.repoView()
                         .files()
@@ -39,11 +42,25 @@ public final class EditUpdate {
                 file(at.cursor())
                         .map(path -> open(model, path, line(model, at, at.cursor())))
                         .getOrElse(() -> Next.of(model));
+            case EditMsg.RequestedAt(String path, int line) -> open(model, path, line);
+            case EditMsg.FirstConflictRead(String path, Option<Integer> line) -> open(model, path, line.getOrElse(1));
             case EditMsg.Chosen(EditorProgram editor) ->
                 model.popup(EditPopup.class)
                         .map(popup -> start(model.withoutPopup(EditPopup.class), editor, popup.path(), popup.line()))
                         .getOrElse(() -> Next.of(model));
         };
+    }
+
+    /**
+     * Whether the file at {@code path} is in conflict, which opens at its first conflict, read first (ADR 201).
+     */
+    private static boolean inConflict(Model model, String path) {
+        return model.repo()
+                .status()
+                .toOption()
+                .exists(status -> status.files()
+                        .exists(file ->
+                                file.path().equals(path) && file.conflict().isDefined()));
     }
 
     /**
