@@ -221,3 +221,4 @@ another tool adds it there too.
 | 192 | [A file of a pull request is edited while its branch is checked out](0192-a-file-of-a-pull-request-is-edited-while-its-branch-is-checked-out.md) |  |
 | 193 | [A long line of a text box wraps, and the commit description marks column 72](0193-a-long-line-of-a-text-box-wraps.md) |  |
 | 194 | [A branch, a reset and a checkout at an entry of the reflog](0194-a-branch-a-reset-and-a-checkout-at-a-reflog-entry.md) |  |
+| 196 | [A program left running outlives the terminal jazygit runs in](0196-a-program-left-running-outlives-the-terminal.md) |  |
