@@ -27,6 +27,8 @@ public final class ResolveKeys {
                         "midway.help.files.keepTheirs",
                         file -> new ResolveMsg.Kept(file, Conflict.Version.THEIRS)),
                 onConflicted("r", "midway.help.files.resolve", ResolveMsg.Requested::new),
+                // Enter too, which opens the diff of any other file; Right still opens its diff (ADR 200).
+                onConflicted(Keymap.ENTER, "midway.help.files.resolve", ResolveMsg.Requested::new),
                 new Binding<>(
                         "u",
                         "midway.help.files.restore",

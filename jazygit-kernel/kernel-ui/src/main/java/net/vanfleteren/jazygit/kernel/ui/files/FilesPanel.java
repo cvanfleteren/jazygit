@@ -141,6 +141,12 @@ public class FilesPanel {
                                 .orElse(() -> locked && event.isCancel()
                                         ? PaneKeys.sending(Option.of(new SelectionMsg.FilesUnlocked()), dispatch)
                                         : Option.none())
+                                // A feature that binds Enter for what is highlighted has it before the diff, as the
+                                // resolving of a file in conflict does (ADR 200); Right still opens the diff.
+                                .orElse(() -> event.isConfirm()
+                                        ? PaneKeys.sending(
+                                                keymap.handle(Scopes.FILES, event, tree.selected()), dispatch)
+                                        : Option.none())
                                 .orElse(() -> opensDiff(event, tree)
                                         ? Option.of(openDiff)
                                         : PaneKeys.sending(

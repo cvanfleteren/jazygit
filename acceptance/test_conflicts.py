@@ -445,6 +445,27 @@ def test_the_resolve_dialog_names_the_sides_and_keeps_one(repo, jazygit):
     assert repo.conflicts() == []
 
 
+def test_enter_on_a_file_in_conflict_tells_what_each_choice_does_and_keeps_one(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    ui.files.select("one.txt")
+
+    ui.app.press("enter")
+    ui.app.wait_for("Resolve one.txt")
+    # Every choice says what it does and the command it runs, in the dialog (ADR 200).
+    ui.app.wait_for("git checkout --ours -- one.txt && git add -- one.txt")
+    ui.app.wait_for("git checkout --theirs -- one.txt && git add -- one.txt")
+    assert ui.app.text().count("Takes the file as it is there") == 2, ui.app.text()
+    ui.app.press("escape")
+
+    ui.changing_repo("one.txt resolved", lambda: (
+        ui.app.press("enter"), ui.confirm("Resolve one.txt", key="t")))
+
+    assert repo.read("one.txt") == "feature\n"
+    assert repo.conflicts() == []
+
+
 def test_the_resolve_dialog_opens_on_a_conflict_a_stash_left(repo, jazygit):
     repo.commit("Add one", **{"one.txt": "one\n"})
     repo.write("one.txt", "stashed\n")
