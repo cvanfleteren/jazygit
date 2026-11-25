@@ -254,6 +254,8 @@ class FilesPane:
         """Whether a row shows the file at path, staged and unstaged as git has it: the two columns before its
         name are blank or not where git's are."""
         name = path.split("/")[-1]
+        # A file resolved since the operation stopped is marked after its name (ADR 198).
+        rows = [row.removesuffix(" ✓") for row in rows]
         columns = [row[:-len(name) - 1][-2:] for row in rows if row.endswith(" " + name)]
         # A rename shows the path it came from between the columns and its name.
         return any(shown == "->" or (shown[:1] != " ", shown[1:] != " ") == (code[0] != " ", code[1] != " ")
@@ -282,6 +284,23 @@ class FilesPane:
         """Stages the changes to the file or directory at path, or to ALL files, when some are not staged."""
         self.select(path)
         self.ui.changing_repo(f"{path} to be staged", lambda: self.app.press("space"))
+
+    def keep(self, path: str, side: str):
+        """Resolves the file in conflict at path by keeping one side of it (ADR 198): "ours", HEAD's, with o, or
+        "theirs", the incoming one, with t."""
+        self.select(path)
+        self.ui.changing_repo(f"{side} of {path} kept", lambda: self.app.press("o" if side == "ours" else "t"))
+
+    def resolve(self, path: str, choice: str, title: str = None):
+        """Resolves the file in conflict at path from its dialog (r), with the key of the choice."""
+        self.select(path)
+        self.ui.changing_repo(f"{path} resolved", lambda: (
+            self.app.press("r"), self.ui.confirm(title or f"Resolve {path}", key=choice)))
+
+    def restore(self, path: str):
+        """Brings back the conflict of the file at path, resolved since the operation stopped (u)."""
+        self.select(path)
+        self.ui.changing_repo(f"the conflict of {path} brought back", lambda: self.app.press("u"))
 
     def unstage(self, path: str):
         """Unstages the file or directory at path, or ALL files, when all its changes are staged."""

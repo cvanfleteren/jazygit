@@ -32,9 +32,13 @@ public final class InProgressDialogs {
                                     popup -> popup.conflicts() > 0
                                             ? Messages.get(
                                                     "midway.dialog.inProgress.continueConflicts", popup.conflicts())
-                                            : Messages.get("midway.dialog.inProgress.continue"),
+                                            : popup.marked().isEmpty()
+                                                    ? Messages.get("midway.dialog.inProgress.continue")
+                                                    : Messages.get(
+                                                            "midway.dialog.inProgress.continueMarked",
+                                                            popup.marked().size()),
                                     () -> new InProgressMsg.Chosen(InProgressAction.CONTINUE))
-                            .withDetails(popup -> Messages.get(continueDetailsKey(popup.inProgress()))),
+                            .withDetails(InProgressDialogs::continueDetails),
                     new Choice<InProgressPopup>(
                                     'a',
                                     "midway.dialog.inProgress.abort",
@@ -65,6 +69,21 @@ public final class InProgressDialogs {
                     InProgressText.kind(popup.inProgress())));
 
     private InProgressDialogs() {}
+
+    /**
+     * What continuing does; and, when files resolved since it stopped still have conflict markers, that it commits
+     * them (ADR 198).
+     */
+    private static String continueDetails(InProgressPopup popup) {
+        String does = Messages.get(continueDetailsKey(popup.inProgress()));
+        return popup.marked().isEmpty()
+                ? does
+                : Messages.get(
+                                "midway.dialog.inProgress.marked",
+                                popup.marked().mkString(", "),
+                                popup.marked().size())
+                        + " " + does;
+    }
 
     /**
      * The message key of what continuing does: only a rebase has a next commit to go on with.

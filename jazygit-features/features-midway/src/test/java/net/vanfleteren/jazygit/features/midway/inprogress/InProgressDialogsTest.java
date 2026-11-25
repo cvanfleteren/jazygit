@@ -47,6 +47,20 @@ class InProgressDialogsTest {
         assertContinuing(new InProgress.Reverting(new Sha("cccc")), "Commits the revert");
     }
 
+    @Test
+    void continuingWithConflictMarkersLeftInAResolvedFileSaysItCommitsThem() throws Exception {
+        InProgress rebasing = new InProgress.Rebasing(Option.of(new BranchName("feature")), new Sha("aaaa"), 1, 2);
+        Model open =
+                TestModels.loaded().openPopup(new InProgressPopup(rebasing, 0, io.vavr.collection.List.of("b.txt")));
+        Supplier<Element> view =
+                () -> stack(text("background"), dialog.render(open).get());
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            String screen = RenderedText.ofLarge(runner, view);
+            assertTrue(screen.contains("Continue, with conflict markers in 1 file"), screen);
+            assertTrue(screen.contains("b.txt still has conflict markers"), screen);
+        }
+    }
+
     private void assertContinuing(InProgress inProgress, String details) throws Exception {
         Model open = TestModels.loaded().openPopup(new InProgressPopup(inProgress, 0));
         Supplier<Element> view =
