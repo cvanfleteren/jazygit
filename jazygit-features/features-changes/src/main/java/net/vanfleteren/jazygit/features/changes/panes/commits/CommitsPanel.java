@@ -6,7 +6,8 @@ import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.Tuple;
-import io.vavr.Tuple4;
+import io.vavr.Tuple2;
+import io.vavr.Tuple5;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -17,6 +18,7 @@ import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Focus;
+import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
@@ -62,7 +64,7 @@ public class CommitsPanel implements LeftPane {
 
     public static final String ID = PANE.id();
 
-    private final LoadableList<List<Commit>> list;
+    private final LoadableList<Listed> list;
     private final Keymap keymap = Keymap.standard();
     private final Fills fills;
     private final Consumer<Msg> dispatch;
@@ -71,6 +73,8 @@ public class CommitsPanel implements LeftPane {
     // What the last render showed: the line that was open, and what was listed in place of the log.
     private Option<PaneLine> line = Option.none();
     private Option<CommitsListing> listing = Option.none();
+    // What a feature listed above the log at the last render, as the steps of an operation that stopped (ADR 199).
+    private Option<CommitsAbove> above = Option.none();
     // The list of each tab of a feature shown so far, by its id: it keeps its highlighted row while another is shown.
     private Map<TabId, TabList<?>> tabLists = HashMap.empty();
     // What the last render showed: the tabs, while there was more than one, and the list of a feature's tab, while one
@@ -83,8 +87,10 @@ public class CommitsPanel implements LeftPane {
     private final Consumer<PasteEvent> paste;
     // The rows of the commits listed, worked out again only when what they are drawn from changes: the graph is not
     // laid out on every render.
-    private final Memo<Tuple4<List<Commit>, Boolean, Option<Sha>, AheadView>, List<LoadableList.Item>> drawn =
+    private final Memo<Tuple5<Listed, Boolean, Option<Sha>, AheadView, Option<Sha>>, List<LoadableList.Item>> drawn =
             new Memo<>();
+    // What is listed, the same instance while it stays equal: the list moves its highlight only when it changes.
+    private final Memo<Tuple2<Loadable<List<Commit>>, List<CommitsAbove.Row>>, Loadable<Listed>> listed = new Memo<>();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -153,11 +159,45 @@ public class CommitsPanel implements LeftPane {
     }
 
     /**
-     * The selection follows its commit when commits come on top, except on the newest one: it stays there, so a
-     * new commit gets highlighted.
+     * The selection follows its row when rows come on top, except on the newest one: it stays there, so a new commit,
+     * or the step a rebase goes on with, gets highlighted.
      */
-    private static int reselect(List<Commit> previous, List<Commit> next, int selected) {
-        return selected == 0 ? 0 : LoadableList.Reselect.following(Commit::sha).apply(previous, next, selected);
+    private static int reselect(Listed previous, Listed next, int selected) {
+        return selected == 0
+                ? 0
+                : LoadableList.Reselect.<Entry, String>following(Entry::key)
+                        .apply(previous.entries(), next.entries(), selected);
+    }
+
+    /**
+     * {@code items}, those of {@code commits}, with each commit above {@code doneAbove} marked done, a {@code ✓} in
+     * place of its {@code ○} (ADR 199); none when {@code doneAbove} is not among them.
+     */
+    static List<LoadableList.Item> done(List<LoadableList.Item> items, List<Commit> commits, Option<Sha> doneAbove) {
+        int done = doneAbove
+                .map(base -> commits.indexWhere(commit -> commit.sha().equals(base)))
+                .filter(index -> index > 0)
+                .getOrElse(0);
+        return items.zipWithIndex(
+                (item, at) -> at < done ? LoadableList.Item.later(item.height(), () -> checked(item.row())) : item);
+    }
+
+    /**
+     * {@code row} with the first {@code ○} or {@code ◎} of its graph a {@code ✓}.
+     */
+    static LoadableList.Row checked(LoadableList.Row row) {
+        int at = row.segs()
+                .indexWhere(seg -> seg.text().contains("○") || seg.text().contains("◎"));
+        return at < 0
+                ? row
+                : new LoadableList.Row(
+                        row.segs()
+                                .update(
+                                        at,
+                                        seg -> new LoadableList.Seg(
+                                                seg.text().replaceFirst("[○◎]", "✓"), seg.cssClass(), seg.shrinks())),
+                        row.detail(),
+                        row.note());
     }
 
     /**
@@ -194,14 +234,21 @@ public class CommitsPanel implements LeftPane {
         // The line and the listing belong to the log: a feature's tab shows neither.
         line = addedShown.isEmpty() ? fills.of(CommitsPane.LINE, model) : Option.none();
         listing = addedShown.isEmpty() ? fills.of(CommitsPane.LISTING, model) : Option.none();
+        // What a feature lists above the log goes with the log: not above what is listed in its place.
+        above = addedShown.isEmpty() && listing.isEmpty() ? fills.of(CommitsPane.ABOVE, model) : Option.none();
         locked = PaneKeys.lockedTo(model, PANE);
         AheadView ahead = new AheadView(AheadUpdate.head(model), AheadUpdate.headDistance(model));
-        String logTitle = ahead.title(listing.map(CommitsListing::title).getOrElse(() -> headTitle(model)));
+        // How far what is listed above the log got, after what the log is of (ADR 199).
+        String progress = above.flatMap(CommitsAbove::progress)
+                .map(done -> Messages.get("changes.panes.commits.progress", done))
+                .getOrElse("");
+        String logTitle = ahead.title(listing.map(CommitsListing::title).getOrElse(() -> headTitle(model))) + progress;
         // With tabs, the log is named short, so that the names of the others stay in view where the pane is narrow;
         // what it is the log of goes in a line at its bottom instead.
         Option<String> logOf = Option.when(
                         tabs.isDefined(),
-                        () -> ahead.title(listing.map(CommitsListing::title).getOrElse(() -> headName(model))))
+                        () -> ahead.title(listing.map(CommitsListing::title).getOrElse(() -> headName(model)))
+                                + progress)
                 .filter(text -> !text.isBlank());
         List<String> names = List.of(tabs.isDefined() ? Messages.get("panel.commits.title") : logTitle)
                 .appendAll(added.map(PaneTab::title));
@@ -228,16 +275,26 @@ public class CommitsPanel implements LeftPane {
     private Panel logPanel(
             Model model, AheadView ahead, boolean focused, boolean active, Line title, Option<String> logOf) {
         Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
-        boolean listed = listing.isDefined();
+        boolean found = listing.isDefined();
+        Option<Sha> doneAbove = above.flatMap(CommitsAbove::doneAbove);
         list.whenEmpty(listing.map(CommitsListing::emptyText));
+        Loadable<List<Commit>> commits = listing.map(CommitsListing::commits)
+                .getOrElse(() -> model.repo().commits());
         return list.renderItems(
-                listing.map(CommitsListing::commits)
-                        .getOrElse(() -> model.repo().commits()),
-                commits -> drawn.get(
-                        Tuple.of(commits, listed, copied, ahead),
-                        key -> listed
-                                ? foundItems(commits, copied, ahead)
-                                : CommitRows.graphed(commits, copied, ahead)),
+                listed.get(
+                        Tuple.of(commits, above.map(CommitsAbove::rows).getOrElse(List.empty())),
+                        key -> key._1().map(loaded -> new Listed(key._2(), loaded))),
+                shown -> drawn.get(
+                        Tuple.of(shown, found, copied, ahead, doneAbove),
+                        key -> shown.above()
+                                .map(row -> LoadableList.Item.of(row.row()))
+                                .appendAll(
+                                        found
+                                                ? foundItems(shown.commits(), copied, ahead)
+                                                : done(
+                                                        CommitRows.graphed(shown.commits(), copied, ahead),
+                                                        shown.commits(),
+                                                        doneAbove))),
                 focused,
                 active,
                 title,
@@ -326,7 +383,16 @@ public class CommitsPanel implements LeftPane {
      * The highlighted commit, once the commits are shown; none while a feature's tab is shown in place of the log.
      */
     public Option<Commit> selectedCommit() {
-        return tabShown.isDefined() ? Option.none() : list.selected(commits -> commits);
+        return selectedEntry()
+                .flatMap(entry -> entry instanceof Entry.Logged logged ? Option.of(logged.logged()) : Option.none());
+    }
+
+    /**
+     * The highlighted row of the log, a commit of it or a row above it; none while a feature's tab is shown in its
+     * place.
+     */
+    private Option<Entry> selectedEntry() {
+        return tabShown.isDefined() ? Option.none() : list.selected(Listed::entries);
     }
 
     /**
@@ -345,9 +411,62 @@ public class CommitsPanel implements LeftPane {
     public Option<Msg> selectionChange(Model model) {
         return tabShown.isDefined()
                 ? tabShown.flatMap(TabList::selectionChange)
+                // A row above the log shows the commit it is of, if any (ADR 199).
                 : PaneKeys.selectionChange(
-                        selectedCommit().map(Commit::sha),
+                        selectedEntry().flatMap(Entry::commit),
                         model.repoView().preview().commitDetail(),
                         SelectionMsg.CommitSelected::new);
+    }
+
+    /**
+     * What the log lists: the rows a feature lists above it, then its commits.
+     */
+    record Listed(List<CommitsAbove.Row> above, List<Commit> commits) {
+
+        List<Entry> entries() {
+            return above.<Entry>map(Entry.Above::new).appendAll(commits.map(Entry.Logged::new));
+        }
+    }
+
+    /**
+     * A row of the log: one a feature lists above it, or a commit of it.
+     */
+    sealed interface Entry {
+
+        /**
+         * What tells it from the other rows.
+         */
+        String key();
+
+        /**
+         * The commit the content panel shows while it is highlighted, if any.
+         */
+        Option<Sha> commit();
+
+        record Above(CommitsAbove.Row row) implements Entry {
+
+            @Override
+            public String key() {
+                return "above " + row.key();
+            }
+
+            @Override
+            public Option<Sha> commit() {
+                return row.commit();
+            }
+        }
+
+        record Logged(Commit logged) implements Entry {
+
+            @Override
+            public String key() {
+                return logged.sha().value();
+            }
+
+            @Override
+            public Option<Sha> commit() {
+                return Option.of(logged.sha());
+            }
+        }
     }
 }

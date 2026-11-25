@@ -660,6 +660,64 @@ class CommitsPanelTest {
         assertEquals("Commits · detached at abcdef0", CommitsPanel.headTitle(detachedRebase));
     }
 
+    @Test
+    void theRowsAFeatureListsAboveTheLogComeFirstAndTheCommitsMadeSinceItsBaseAreDone() throws Exception {
+        List<Commit> log = List.of(commit("s2", "s1"), commit("s1", "s0"), commit("s0"));
+        Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
+        CommitsAbove above = new CommitsAbove(
+                List.of(
+                        new CommitsAbove.Row(LoadableList.Row.of("next step"), Option.of(new Sha("n0000")), "next"),
+                        new CommitsAbove.Row(LoadableList.Row.of("stopped step"), Option.none(), "stopped")),
+                Option.of(commit("s0").sha()),
+                Option.of("2/3"));
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        CommitsPanel panel = new CommitsPanel(
+                sent::add,
+                net.vanfleteren.jazygit.kernel.ui.Fills.NONE.with(CommitsPane.ABOVE, given -> Option.of(above)));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.PANE))) {
+            String shown = RenderedText.ofLarge(testRunner, () -> panel.render(model, CommitsPanel.PANE));
+
+            assertEquals(
+                    List.of(
+                            "next step",
+                            "stopped step",
+                            "s20000 Ad ✓ msg s2",
+                            "s10000 Ad ✓ msg s1",
+                            "s00000 Ad ○ msg s0"),
+                    panel.shownRows().map(LoadableList.Row::text));
+            assertTrue(shown.contains("Commits of main · 2/3"), shown);
+            // The top row is above the log: no commit of it, though the content panel shows its commit.
+            assertEquals(Option.none(), panel.selectedCommit());
+            assertEquals(Option.of(new SelectionMsg.CommitSelected(new Sha("n0000"))), panel.selectionChange(model));
+
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> panel.render(model, CommitsPanel.PANE));
+            // A row without a commit leaves what the content panel shows.
+            assertEquals(Option.none(), panel.selectionChange(model));
+
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> panel.render(model, CommitsPanel.PANE));
+            assertEquals(
+                    Option.of(commit("s2", "s1").sha()), panel.selectedCommit().map(Commit::sha));
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void aBaseThatIsNotInTheLogMarksNoneDone() {
+        List<Commit> log = List.of(commit("s1", "s0"), commit("s0"));
+
+        assertEquals(
+                List.of("s10000 Ad ○ msg s1", "s00000 Ad ○ msg s0"),
+                CommitsPanel.done(CommitRows.graphed(log, Option.none(), NO_BASE), log, Option.of(new Sha("x0000")))
+                        .map(item -> item.row().text()));
+    }
+
     private static Model withCommits() {
         return TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0")))));

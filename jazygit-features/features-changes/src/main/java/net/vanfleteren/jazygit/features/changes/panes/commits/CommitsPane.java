@@ -23,6 +23,12 @@ public final class CommitsPane {
             PaneKey.of("changes.panes.commits.listing", CommitsListing.class);
 
     /**
+     * What is listed above the log of HEAD, as the steps of an operation that stopped (ADR 199). Not above what a
+     * feature lists in its place.
+     */
+    public static final PaneKey<CommitsAbove> ABOVE = PaneKey.of("changes.panes.commits.above", CommitsAbove.class);
+
+    /**
      * The tabs the features add after the log, in the order of the features (ADR 185).
      */
     @SuppressWarnings("unchecked")

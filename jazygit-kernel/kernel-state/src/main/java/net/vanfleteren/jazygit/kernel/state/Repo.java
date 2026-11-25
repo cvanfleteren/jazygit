@@ -123,11 +123,19 @@ public record Repo(
     }
 
     /**
-     * The commit {@code sha} in the log of HEAD, if the log is loaded and has it.
+     * The commit {@code sha} in the log of HEAD, if the log is loaded and has it: one HEAD has.
      */
     public Option<Commit> commit(Sha sha) {
         return commits.toOption()
                 .flatMap(loaded -> loaded.find(commit -> commit.sha().equals(sha)));
+    }
+
+    /**
+     * The commit {@code sha} of a step of the operation the repository stopped in the middle of, listed above the log
+     * (ADR 199), if its commits were read. A step still to come is not one HEAD has.
+     */
+    public Option<Commit> stepCommit(Sha sha) {
+        return status.toOption().flatMap(RepoStatus::plan).flatMap(plan -> plan.commit(sha));
     }
 
     /**

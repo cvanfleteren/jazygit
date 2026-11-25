@@ -60,3 +60,5 @@ bisect works on from them), so it can be read for every worktree without running
 - The header still cuts off a long line in a narrow column; the lists now say the same, in more room.
 - Conflicts left without an operation, as after a stash that did not apply cleanly, are shown for the worktree shown
   only, as before: another worktree is only counted when it is in the middle of something.
+
+Amended by ADR 199: the header says what is in progress on a line of its own, no longer cut off.

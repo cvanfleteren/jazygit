@@ -62,7 +62,7 @@ class StatusPanelTest {
     }
 
     @Test
-    void showsWhatTheRepositoryIsInTheMiddleOfAndItsConflicts() throws Exception {
+    void showsWhatTheRepositoryIsInTheMiddleOfOnALineOfItsOwn() throws Exception {
         FileEntry conflicted =
                 FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
         FileEntry alsoConflicted =
@@ -70,46 +70,55 @@ class StatusPanelTest {
         Head main = Head.onBranch(new BranchName("main"), new Sha("aaaa"));
 
         assertEquals(
-                "repo → REBASING feature 1/2 onto main · 2 conflicts",
-                statusLine(new RepoStatus(
+                List.of("repo → (rebasing) feature", "REBASING 1/2 onto main · 2 conflicts"),
+                statusLines(new RepoStatus(
                         new Head.Detached(new Sha("bbbb")),
                         List.of(conflicted, alsoConflicted),
                         Option.of(new InProgress.Rebasing(
                                 Option.of(new BranchName("feature")), new Sha("aaaa"), 1, 2)))));
         assertEquals(
-                "repo → REBASING 1/2 onto 0123456",
-                statusLine(new RepoStatus(
+                List.of("repo → (rebasing)", "REBASING 1/2 onto 0123456 · ready to continue"),
+                statusLines(new RepoStatus(
                         new Head.Detached(new Sha("bbbb")),
                         List.of(),
                         Option.of(new InProgress.Rebasing(Option.none(), new Sha("0123456789"), 1, 2)))));
         assertEquals(
-                "repo → main · MERGING feature · 1 conflict",
-                statusLine(
+                List.of("repo → main", "MERGING feature · 1 conflict"),
+                statusLines(
                         new RepoStatus(main, List.of(conflicted), Option.of(new InProgress.Merging(new Sha("ffff"))))));
         assertEquals(
-                "repo → main · CHERRY-PICKING 0123456",
-                statusLine(new RepoStatus(
+                List.of("repo → main", "CHERRY-PICKING 0123456 · ready to continue"),
+                statusLines(new RepoStatus(
                         main, List.of(), Option.of(new InProgress.CherryPicking(new Sha("0123456789"))))));
         assertEquals(
-                "repo → main · REVERTING 0123456",
-                statusLine(
+                List.of("repo → main", "REVERTING 0123456 · ready to continue"),
+                statusLines(
                         new RepoStatus(main, List.of(), Option.of(new InProgress.Reverting(new Sha("0123456789"))))));
-        assertEquals("repo → main · CONFLICTS (1)", statusLine(new RepoStatus(main, List.of(conflicted))));
+        assertEquals(List.of("repo → main", "CONFLICTS (1)"), statusLines(new RepoStatus(main, List.of(conflicted))));
+    }
+
+    @Test
+    void inTheMiddleOfNothingThePanelIsOneLine() throws Exception {
+        assertEquals(
+                List.of("repo → main"),
+                statusLines(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), List.of())));
     }
 
     /**
-     * The line the status panel shows for {@code status}, with the sample branches main and feature.
+     * The lines the status panel shows for {@code status}, with the sample branches main and feature: from the one
+     * naming the repository to the bottom border.
      */
-    private static String statusLine(RepoStatus status) throws Exception {
+    private static List<String> statusLines(RepoStatus status) throws Exception {
         Model model = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(status))
                 .model();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
             String screen = RenderedText.ofLarge(testRunner, () -> StatusPanel.render(model));
             SettledPilot.of(testRunner).quit();
             return List.of(screen.split("\n"))
+                    .dropUntil(line -> line.contains("repo →"))
+                    .takeWhile(line -> !line.contains("╰") && !line.contains("└"))
                     .map(line -> line.replaceAll("^[│ ]+|[│ ]+$", ""))
-                    .find(line -> line.startsWith("repo →"))
-                    .getOrElse(screen);
+                    .takeWhile(line -> !line.isEmpty());
         }
     }
 }

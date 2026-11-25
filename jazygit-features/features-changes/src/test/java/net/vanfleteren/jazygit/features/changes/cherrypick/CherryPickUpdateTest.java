@@ -9,13 +9,18 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
+import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Plan;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import org.junit.jupiter.api.Test;
 
@@ -128,6 +133,31 @@ class CherryPickUpdateTest {
 
         assertEquals(Option.none(), next.model().popup(CherryPickPopup.class));
         assertEquals(Option.of("aaaa is already on the checked out branch"), errorText(next.model()));
+    }
+
+    @Test
+    void aCommitThatIsAStepStillToComeIsNotOnTheBranchYet() {
+        Plan plan = new Plan(
+                new Sha("aaaa"),
+                Plan.Step.pick(new Sha("ffff"), "Feature"),
+                List.of(Plan.Step.pick(FIRST.sha(), FIRST.message().summary())),
+                1,
+                2,
+                List.of(FIRST));
+        RepoStatus status = new RepoStatus(
+                Head.onBranch(new BranchName("feature"), new Sha("ffff")),
+                List.empty(),
+                Option.of(new InProgress.CherryPicking(new Sha("ffff"))),
+                List.empty(),
+                Option.of(plan));
+        Model stopped = Update.update(onFeature(copied()), new LoadMsg.StatusLoaded(status))
+                .model();
+
+        Next next = Update.update(stopped, new CherryPickMsg.Requested());
+
+        assertEquals(
+                Option.of(new CherryPickPopup(FIRST, Option.of(new BranchName("feature")))),
+                next.model().popup(CherryPickPopup.class));
     }
 
     @Test

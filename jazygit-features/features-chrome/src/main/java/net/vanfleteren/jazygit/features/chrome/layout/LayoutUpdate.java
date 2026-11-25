@@ -242,7 +242,7 @@ public final class LayoutUpdate {
                 .map(column -> {
                     int stash = LeftPanes.sized(model, screen, heights, column).last();
                     int above = heights.take(commits).sum().intValue();
-                    int bottom = Math.round((column - LeftPanes.STATUS_ROWS - stash) * 100f / column);
+                    int bottom = Math.round((column - LeftPanes.statusRows(model) - stash) * 100f / column);
                     return heights.update(
                             commits,
                             Math.max(heights.get(commits), Math.min(bottom, 100 - Settings.MIN_HEIGHT) - above));
