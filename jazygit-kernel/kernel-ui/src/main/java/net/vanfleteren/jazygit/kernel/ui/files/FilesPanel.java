@@ -14,6 +14,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
+import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Focus;
@@ -70,6 +71,8 @@ public class FilesPanel {
     private final Consumer<PasteEvent> paste;
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
+    // The files resolved since the operation in progress stopped, marked as such (ADR 198); read each render.
+    private List<String> resolved = List.empty();
     // Whether the files of a commit the pane lists are counted in place of their tree, as there are many (ADR 141).
     private boolean held;
     // Whether the pane was locked to a list at the last render, which Escape in the working tree lets go of (ADR 149).
@@ -104,13 +107,13 @@ public class FilesPanel {
         statusTree = new FileTreeList<>(
                 ID,
                 file -> file.entry().type().marker() + " " + name(file),
-                FilesPanel::drawEntry,
+                this::drawEntry,
                 highlights,
                 FileTreeList::first);
         allTree = new FileTreeList<>(
                 ID,
                 file -> file.entry().type().marker() + " " + name(file),
-                FilesPanel::drawEntry,
+                this::drawEntry,
                 highlights,
                 FileTreeList::first,
                 FilesPanel::unchangedDirectories);
@@ -208,7 +211,27 @@ public class FilesPanel {
      * the unstaged change in red. Untracked files show a red {@code ??}. Files in a merge conflict show a
      * {@code U} for each branch that updated them: green for the current branch, red for the other.
      */
-    private static StyledElement<?> drawEntry(FileTree.File<FileEntry> file) {
+    private StyledElement<?> drawEntry(FileTree.File<FileEntry> file) {
+        FileEntry entry = file.entry();
+        // A file resolved since the operation stopped says so before its name (ADR 198).
+        if (resolved.contains(entry.path()) && entry.conflict().isEmpty()) {
+            return Toolkit.row(plainEntry(file), Toolkit.text(" ✓").addClass(Theme.Classes.STAGED));
+        }
+        return plainEntry(file);
+    }
+
+    /**
+     * How far the resolving of the conflicts of the operation in progress got, once one of them is resolved:
+     * {@code · 2 of 4 resolved} (ADR 198).
+     */
+    static Option<String> resolvedTitle(RepoStatus status) {
+        int done = status.resolved().size();
+        return Option.when(
+                status.inProgress().isDefined() && done > 0,
+                () -> Messages.get("panel.files.resolved", done, done + status.conflicts()));
+    }
+
+    private static StyledElement<?> plainEntry(FileTree.File<FileEntry> file) {
         FileEntry entry = file.entry();
         // A file without changes, among all files, has no marker: its name lines up with those that have one.
         if (!entry.changed()) {
@@ -600,8 +623,11 @@ public class FilesPanel {
                     Loadable<List<FileEntry>> files = workingFiles(model.repo(), all);
                     FileTreeList<FileEntry> tree = workingTree(model.repoView());
                     switching(ID, tree, all ? statusTree : allTree);
+                    Option<RepoStatus> status = model.repo().status().toOption();
+                    resolved = status.map(RepoStatus::resolved).getOrElse(List.empty());
                     return Pane.bordered(
                             Messages.get("panel.files.title")
+                                    + status.flatMap(FilesPanel::resolvedTitle).getOrElse("")
                                     + (all ? Messages.get("panel.files.all") : "")
                                     + filteredTitle()
                                     + lockedTitle(model),

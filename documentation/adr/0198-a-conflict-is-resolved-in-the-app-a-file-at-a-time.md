@@ -37,7 +37,8 @@ not when a merge is committed.
      editor (`e`, ADR 145). Not `enter`, which opens the diff of a file in the files pane.
    - Only on a single file in conflict. A directory, or a file that is not in conflict, does nothing: a whole directory
      on one side is a choice to make file by file.
-   - After a file is resolved, the files pane moves to the next file in conflict, if any.
+   - The highlight stays on the file once it is resolved. Not yet: moving it to the next file in conflict, which
+     the files pane would have to be told from an update, as only the app moves its highlight now (ADR 117).
 3. **`u` brings a conflict back**, on a file resolved since the operation stopped (`git checkout -m -- <path>`). It is
    how a wrong pick is undone, and works however the file was resolved: in the app, in an editor, by `git add`.
 4. **Staging a file with conflict markers asks first.** Staging owns `space` (ADR 69): before it stages a file in
@@ -54,7 +55,7 @@ not when a merge is committed.
    the conflicts when the stop is first seen, which a restart, or a stop the app never saw, would lose.
    - The title of the files pane says how far it is: `Files · 2 of 4 resolved`. It is the kernel's files pane that
      says it, from the status, as it lists the conflicts already; no feature fills it.
-   - A resolved file is marked on its row in the files pane, `✓` before its path.
+   - A resolved file is marked on its row in the files pane, with a `✓` after its path.
 6. **Continuing with markers left is warned of.** The `M` dialog's continue says which staged files still have
    conflict markers, read when the dialog opens, and continuing then commits them.
 
