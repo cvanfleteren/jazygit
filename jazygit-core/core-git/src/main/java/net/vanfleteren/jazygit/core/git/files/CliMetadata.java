@@ -147,9 +147,6 @@ public final class CliMetadata {
     }
 
     /**
-     * What is right inside the directory {@code dir}; nothing when it is not there.
-     */
-    /**
      * What tells what the worktree whose git directory is {@code gitDir} is in the middle of (ADR 197): the files git
      * keeps while it is, each appearing and going, and a rebase's directory, whose files git replaces at each step.
      * Its index too, while it is in the middle of something, so that the conflicts it has left are counted again as
@@ -160,6 +157,9 @@ public final class CliMetadata {
         return markers.exists(Files::exists) ? markers.append(gitDir.resolve("index")) : markers;
     }
 
+    /**
+     * What is right inside the directory {@code dir}; nothing when it is not there.
+     */
     private static List<Path> children(Path dir) {
         return Try.of(() -> {
                     try (Stream<Path> listed = Files.list(dir)) {
