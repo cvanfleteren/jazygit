@@ -1,7 +1,12 @@
 package net.vanfleteren.jazygit.features.midway.resolve;
 
+import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
+import net.vanfleteren.jazygit.core.git.model.MarkedFile;
+import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -32,6 +37,30 @@ public sealed interface ResolveMsg extends Msg {
      * The user chose to open the file of the open {@link ResolvePopup} in an editor.
      */
     record EditChosen() implements ResolveMsg {}
+
+    /**
+     * What the file at {@code path} can be handed to was read, and where its first conflict starts, for its resolve
+     * dialog (ADR 201).
+     */
+    record ToolsRead(String path, ConflictTools tools, Option<Integer> firstConflict) implements ResolveMsg {}
+
+    /**
+     * The user chose to hand the file of the open {@link ResolvePopup} to git's merge tool.
+     */
+    record MergeToolChosen() implements ResolveMsg {}
+
+    /**
+     * The user chose to solve the file of the open {@link ResolvePopup} with mergiraf.
+     */
+    record MergirafChosen() implements ResolveMsg {}
+
+    /**
+     * {@code cmd} handed the file at {@code path} to a tool and got it back, running {@code commands}: still in
+     * conflict or not, and with the markers left in it, if any (ADR 201).
+     */
+    record HandedBack(
+            ResolveCmd cmd, List<ExecutedCommand> commands, String path, boolean unmerged, Option<MarkedFile> marked)
+            implements ResolveMsg {}
 
     /**
      * The user asked to bring back the conflict of the file at {@code path}.

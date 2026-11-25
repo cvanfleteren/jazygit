@@ -3,12 +3,14 @@ package net.vanfleteren.jazygit.features.midway.resolve;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.localBranchesRead;
 import static net.vanfleteren.jazygit.kernel.ui.text.ErrorTexts.errorText;
+import static net.vanfleteren.jazygit.kernel.ui.text.NoticeTexts.noticeText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
@@ -20,6 +22,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
 import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
+import net.vanfleteren.jazygit.features.changes.edit.ReadFirstConflictCmd;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveCmd.Keep;
@@ -56,6 +59,101 @@ class ResolveUpdateTest {
         return stopped(REBASING, new Head.Detached(ONTO), List.empty());
     }
 
+    private static final ConflictTools ALL = new ConflictTools(true, false, true);
+
+    /**
+     * {@link #rebasing()} with the dialog open on {@code a.txt}, once what it can be handed to and its first conflict
+     * were read.
+     */
+    private static Model asked() {
+        Model opened =
+                Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED)).model();
+        return Update.update(opened, new ResolveMsg.ToolsRead("a.txt", ALL, Option.of(4)))
+                .model();
+    }
+
+    @Test
+    void openingTheDialogReadsWhatTheFileCanBeHandedToAndItsFirstConflict() {
+        Next next = Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED));
+
+        assertEquals(List.of(new ReadToolsCmd("a.txt")), next.cmds());
+    }
+
+    @Test
+    void whatWasReadShowsInTheOpenDialog() {
+        assertEquals(
+                Option.of(List.of(ALL, Option.of(4))),
+                asked().popup(ResolvePopup.class).map(popup -> List.of(popup.tools(), popup.firstConflict())));
+    }
+
+    @Test
+    void whatWasReadOfAnotherFileLeavesTheDialogAsItIs() {
+        Model opened =
+                Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED)).model();
+
+        Model read = Update.update(opened, new ResolveMsg.ToolsRead("other.txt", ALL, Option.of(4)))
+                .model();
+
+        assertEquals(opened.popup(ResolvePopup.class), read.popup(ResolvePopup.class));
+    }
+
+    @Test
+    void theMergeToolIsHandedTheFileAndTheDialogCloses() {
+        Next next = Update.update(asked(), new ResolveMsg.MergeToolChosen());
+
+        assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
+        assertEquals(List.of(new ResolveCmd.MergeTool("a.txt", ALL)), next.cmds());
+    }
+
+    @Test
+    void mergirafIsHandedTheFileAndTheDialogCloses() {
+        Next next = Update.update(asked(), new ResolveMsg.MergirafChosen());
+
+        assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
+        assertEquals(List.of(new ResolveCmd.Solve("a.txt")), next.cmds());
+    }
+
+    @Test
+    void editingOpensTheFileAtItsFirstConflict() {
+        Next next = Update.update(asked(), new ResolveMsg.EditChosen());
+
+        assertEquals(
+                Update.update(rebasing(), new EditMsg.RequestedAt("a.txt", 4)).cmds(), next.cmds());
+    }
+
+    @Test
+    void aFileHandedBackInConflictWithoutMarkersSaysSpaceStagesIt() {
+        Next next = Update.update(
+                rebasing(),
+                new ResolveMsg.HandedBack(new ResolveCmd.Solve("a.txt"), List.empty(), "a.txt", true, Option.none()));
+
+        assertEquals(Option.of("a.txt has no conflict markers left: space stages it"), noticeText(next.model()));
+    }
+
+    @Test
+    void aFileHandedBackWithMarkersSaysWhereTheFirstIs() {
+        Next next = Update.update(
+                rebasing(),
+                new ResolveMsg.HandedBack(
+                        new ResolveCmd.Solve("a.txt"),
+                        List.empty(),
+                        "a.txt",
+                        true,
+                        Option.of(new MarkedFile("a.txt", List.of(12, 30)))));
+
+        assertEquals(Option.of("a.txt still has 2 conflicts, the first at line 12"), noticeText(next.model()));
+    }
+
+    @Test
+    void aFileHandedBackResolvedSaysNothing() {
+        Next next = Update.update(
+                rebasing(),
+                new ResolveMsg.HandedBack(
+                        new ResolveCmd.MergeTool("a.txt", ALL), List.empty(), "a.txt", false, Option.none()));
+
+        assertEquals(Option.none(), noticeText(next.model()));
+    }
+
     @Test
     void keepingASideOfAFileInConflictKeepsIt() {
         Next next = Update.update(rebasing(), new ResolveMsg.Kept(CONFLICTED, Conflict.Version.THEIRS));
@@ -81,7 +179,9 @@ class ResolveUpdateTest {
                 Option.of(new ResolvePopup(
                         CONFLICTED,
                         new Sides(new SideName.Branch(new BranchName("main")), new SideName.Rebased()),
-                        new FileEditor.GitEditor())),
+                        new FileEditor.GitEditor(),
+                        ConflictTools.NONE,
+                        Option.none())),
                 next.model().popup(ResolvePopup.class));
     }
 
@@ -199,14 +299,14 @@ class ResolveUpdateTest {
     }
 
     @Test
-    void editingFromTheDialogOpensTheFile() {
+    void editingFromTheDialogBeforeItsFirstConflictIsReadReadsItFirst() {
         Model asked =
                 Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED)).model();
 
         Next next = Update.update(asked, new ResolveMsg.EditChosen());
 
         assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
-        assertEquals(Update.update(rebasing(), new EditMsg.Requested("a.txt")).cmds(), next.cmds());
+        assertEquals(List.of(new ReadFirstConflictCmd("a.txt")), next.cmds());
     }
 
     @Test
@@ -251,6 +351,7 @@ class ResolveUpdateTest {
         Next next = Update.update(asked, new ResolveMsg.MarkedEditChosen());
 
         assertEquals(Option.none(), next.model().popup(MarkersLeftPopup.class));
-        assertEquals(Update.update(rebasing(), new EditMsg.Requested("a.txt")).cmds(), next.cmds());
+        assertEquals(
+                Update.update(rebasing(), new EditMsg.RequestedAt("a.txt", 4)).cmds(), next.cmds());
     }
 }

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.midway.resolve;
 import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.process.CommandLine;
 import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
@@ -23,8 +24,8 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 public final class ResolveDialogs {
 
     /**
-     * How to resolve the file of the popup: keep one side, or edit it; each choice tells what it does and the command
-     * it runs (ADR 200).
+     * How to resolve the file of the popup: keep one side, edit it, or hand it to git's merge tool or to mergiraf when
+     * there are (ADR 201); each choice tells what it does and the command it runs (ADR 200).
      */
     public static final ChoiceDialog.Spec<ResolvePopup> RESOLVE = new ChoiceDialog.Spec<>(
                     "resolve",
@@ -57,8 +58,26 @@ public final class ResolveDialogs {
                                             Conflict.Version.THEIRS))
                                     .withCommand(popup -> keepCommand(popup, Conflict.Version.THEIRS)),
                             new Choice<ResolvePopup>('e', "midway.dialog.resolve.edit", ResolveMsg.EditChosen::new)
-                                    .withDetails("midway.dialog.resolve.edit.details")
-                                    .withCommand(ResolveDialogs::editCommand)),
+                                    .withDetails(ResolveDialogs::editDetails)
+                                    .withCommand(ResolveDialogs::editCommand),
+                            new Choice<ResolvePopup>(
+                                            'g', "midway.dialog.resolve.mergeTool", ResolveMsg.MergeToolChosen::new)
+                                    .shownWhen((model, popup) -> popup.tools()
+                                            .mergesWithTool(
+                                                    popup.file().conflict().get()))
+                                    .withDetails("midway.dialog.resolve.mergeTool.details")
+                                    .withCommand(popup -> CommandLine.format(
+                                            popup.tools().mergeTool(popup.file().path()))),
+                            new Choice<ResolvePopup>(
+                                            'm', "midway.dialog.resolve.mergiraf", ResolveMsg.MergirafChosen::new)
+                                    .shownWhen((model, popup) -> popup.tools()
+                                            .solvesWithMergiraf(
+                                                    popup.file().conflict().get()))
+                                    .withDetails("midway.dialog.resolve.mergiraf.details")
+                                    .withCommand(popup -> ConflictTools.mergiraf(
+                                                    popup.file().path())
+                                            .map(CommandLine::format)
+                                            .mkString(" && "))),
                     // Wide enough for what a choice does to take two lines or so, and its command one.
                     72)
             .inline();
@@ -119,15 +138,27 @@ public final class ResolveDialogs {
     }
 
     /**
+     * What editing the file of {@code popup} does: open it at its first conflict, which git's editor cannot, as it
+     * takes no line (ADR 201).
+     */
+    private static String editDetails(ResolvePopup popup) {
+        return popup.firstConflict()
+                .filter(line -> popup.editor() instanceof FileEditor.GitEditor)
+                .map(line -> Messages.get("midway.dialog.resolve.edit.details.gitEditor", line))
+                .getOrElse(() -> Messages.get("midway.dialog.resolve.edit.details"));
+    }
+
+    /**
      * What editing the file of {@code popup} runs: the command of the one editor set, a choice of those set, or
      * git's editor, as {@code e} opens it (ADR 145).
      */
     private static String editCommand(ResolvePopup popup) {
         String path = CommandLine.format(List.of(popup.file().path()));
         return switch (popup.editor()) {
-            // As e opens it, at its first line; the worktree is where the command runs.
+            // As e opens it, at its first conflict; the worktree is where the command runs.
             case FileEditor.One(EditorProgram editor) ->
-                CommandLine.format(editor.fileCommandLine(".", popup.file().path(), 1)
+                CommandLine.format(editor.fileCommandLine(
+                                ".", popup.file().path(), popup.firstConflict().getOrElse(1))
                         .getOrElse(() -> List.of(editor.name(), popup.file().path())));
             case FileEditor.Several _ -> Messages.get("midway.dialog.resolve.edit.command.chosen", path);
             case FileEditor.GitEditor _ -> Messages.get("midway.dialog.resolve.edit.command", path);

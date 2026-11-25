@@ -11,6 +11,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -33,13 +34,16 @@ class ResolveDialogsTest {
 
     private static final FileEditor GIT = new FileEditor.GitEditor();
 
+    private static final FileEntry BOTH =
+            FileEntry.conflicted("a b", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+
     private static final Sides REBASE = new Sides(new SideName.Branch(new BranchName("main")), new SideName.Rebased());
 
     @Test
     void theSidesOfARebaseAreNamedByWhatTheyAre() throws Exception {
         FileEntry file = FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
-        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE, GIT));
+        String screen = render(ResolveDialogs.RESOLVE, popup(file, GIT));
 
         assertTrue(screen.contains("Resolve a.txt"), screen);
         assertTrue(screen.contains("Keep main's version"), screen);
@@ -53,7 +57,8 @@ class ResolveDialogsTest {
         Sides merge =
                 new Sides(new SideName.Branch(new BranchName("feature")), new SideName.Commit(new Sha("abcdef1234")));
 
-        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, merge, GIT));
+        String screen =
+                render(ResolveDialogs.RESOLVE, new ResolvePopup(file, merge, GIT, ConflictTools.NONE, Option.none()));
 
         assertTrue(screen.contains("Delete it, as feature did"), screen);
         assertTrue(screen.contains("Keep abcdef1's version"), screen);
@@ -63,7 +68,7 @@ class ResolveDialogsTest {
     void theCommandsQuoteAPathAsAShellNeedsIt() throws Exception {
         FileEntry file = FileEntry.conflicted("a b", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
-        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE, GIT));
+        String screen = render(ResolveDialogs.RESOLVE, popup(file, GIT));
 
         assertTrue(screen.contains("git checkout --ours -- 'a b' && git add -- 'a b'"), screen);
         assertTrue(screen.contains("$(git var GIT_EDITOR) 'a b'"), screen);
@@ -73,7 +78,7 @@ class ResolveDialogsTest {
     void deletingTheFileSaysTheCommandThatDeletesIt() throws Exception {
         FileEntry file = FileEntry.conflicted("gone.txt", new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
 
-        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE, GIT));
+        String screen = render(ResolveDialogs.RESOLVE, popup(file, GIT));
 
         assertTrue(screen.contains("git rm --quiet -- gone.txt"), screen);
     }
@@ -84,9 +89,8 @@ class ResolveDialogsTest {
 
         String screen = render(
                 ResolveDialogs.RESOLVE,
-                new ResolvePopup(
+                popup(
                         file,
-                        REBASE,
                         new FileEditor.One(
                                 EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}"), true, Option.none()))));
 
@@ -100,14 +104,74 @@ class ResolveDialogsTest {
 
         String screen = render(
                 ResolveDialogs.RESOLVE,
-                new ResolvePopup(
+                popup(
                         file,
-                        REBASE,
                         new FileEditor.Several(new Editors(List.of(
                                 EditorProgram.ofFile("Neovim", List.of("nvim"), true, Option.none()),
                                 EditorProgram.ofFile("Code", List.of("code"), false, Option.none()))))));
 
         assertTrue(screen.contains("in the editor you choose of those set"), screen);
+    }
+
+    @Test
+    void theMergeToolAndMergirafAreOfferedWhenThereAreWithTheirCommands() throws Exception {
+        String screen = render(
+                ResolveDialogs.RESOLVE,
+                new ResolvePopup(BOTH, REBASE, GIT, new ConflictTools(true, false, true), Option.of(4)));
+
+        assertTrue(screen.contains("g  Merge it in git's merge tool"), screen);
+        assertTrue(screen.contains("git -c mergetool.keepBackup=false mergetool -- 'a b'"), screen);
+        assertTrue(screen.contains("m  Solve it with mergiraf"), screen);
+        assertTrue(screen.contains("git checkout --conflict=diff3 -- 'a b' && mergiraf solve"), screen);
+    }
+
+    @Test
+    void neitherIsOfferedWithoutThem() throws Exception {
+        String screen = render(ResolveDialogs.RESOLVE, popup(BOTH, GIT));
+
+        assertFalse(screen.contains("merge tool"), screen);
+        assertFalse(screen.contains("mergiraf"), screen);
+    }
+
+    @Test
+    void neitherIsOfferedOnAFileOneSideDeleted() throws Exception {
+        FileEntry file = FileEntry.conflicted("gone.txt", new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
+
+        String screen = render(
+                ResolveDialogs.RESOLVE,
+                new ResolvePopup(file, REBASE, GIT, new ConflictTools(true, false, true), Option.none()));
+
+        assertFalse(screen.contains("merge tool"), screen);
+        assertFalse(screen.contains("mergiraf"), screen);
+    }
+
+    @Test
+    void editingOpensAtTheFirstConflictInTheEditorSet() throws Exception {
+        String screen = render(
+                ResolveDialogs.RESOLVE,
+                new ResolvePopup(
+                        BOTH,
+                        REBASE,
+                        new FileEditor.One(
+                                EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}"), true, Option.none())),
+                        ConflictTools.NONE,
+                        Option.of(4)));
+
+        assertTrue(screen.contains("nvim +4 'a b'"), screen);
+        assertTrue(screen.contains("at its first conflict"), screen);
+    }
+
+    @Test
+    void gitsEditorSaysItOpensAtTheStartAndWhereTheFirstConflictIs() throws Exception {
+        String screen =
+                render(ResolveDialogs.RESOLVE, new ResolvePopup(BOTH, REBASE, GIT, ConflictTools.NONE, Option.of(4)));
+
+        assertTrue(screen.contains("Opens it in git's editor, at its start: its first conflict is at"), screen);
+        assertTrue(screen.contains("line 4. Staging"), screen);
+    }
+
+    private static ResolvePopup popup(FileEntry file, FileEditor editor) {
+        return new ResolvePopup(file, REBASE, editor, ConflictTools.NONE, Option.none());
     }
 
     @Test
