@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.kernel.ui;
 
+import static dev.tamboui.toolkit.Toolkit.column;
 import static dev.tamboui.toolkit.Toolkit.panel;
-import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
 
 import dev.tamboui.layout.Rect;
@@ -32,7 +32,6 @@ import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.text.InProgressText;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
-import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
@@ -42,12 +41,6 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
  */
 public final class StatusPanel {
 
-    /**
-     * Rows of the panel, borders included.
-     */
-    public static final int HEIGHT = LeftPanes.STATUS_ROWS;
-
-    private static final String SEPARATOR = " · ";
     private static final String TITLE_SEPARATOR = " │ ";
 
     private StatusPanel() {}
@@ -66,29 +59,24 @@ public final class StatusPanel {
         String branch = switch (model.repo().status()) {
             case Loadable.Loading<RepoStatus>() -> Placeholders.loading();
             case Loadable.Failed<RepoStatus>(Failure failure) -> Placeholders.error(failure);
-            // A rebase checks out a detached HEAD, which says nothing the rebase does not.
-            case Loadable.Loaded<RepoStatus>(RepoStatus status) ->
-                status.inProgress().exists(InProgress.Rebasing.class::isInstance) ? "" : branchLabel(status.head());
+            case Loadable.Loaded<RepoStatus>(RepoStatus status) -> checkedOut(status);
         };
         Option<String> unfinished = model.repo()
                 .status()
                 .toOption()
                 .flatMap(status -> unfinishedLabel(
                         status, model.repo().branches().toOption().getOrElse(List.empty())));
-        String line = Messages.get("status.line", model.repositoryName(), branch)
-                + unfinished
-                        .filter(label -> !branch.isEmpty())
-                        .map(label -> SEPARATOR)
-                        .getOrElse("");
-        TextElement repository = text(line);
+        TextElement repository =
+                text(Messages.get("status.line", model.repositoryName(), branch).strip());
+        // What the repository is in the middle of goes on a line of its own, which the panel is a row taller for
+        // (ADR 199): after the name of the repository and the branch, it was cut off.
         Panel panel = panel(unfinished
-                        // The row would share its width out evenly, cutting off what is in progress.
-                        .<StyledElement<?>>map(label -> row(
-                                repository.length(TextWidth.of(line)),
-                                text(label).addClass(Theme.Classes.IN_PROGRESS)))
+                        .<StyledElement<?>>map(label -> column(
+                                repository.length(1),
+                                text(label).addClass(Theme.Classes.IN_PROGRESS).length(1)))
                         .getOrElse(repository))
                 .title(title(model.screen(), names, styles))
-                .length(HEIGHT);
+                .length(LeftPanes.statusRows(model));
         return panel.onMouseEvent(event -> titleClick(panel.renderedArea(), event, names, screenClicked));
     }
 
@@ -158,9 +146,22 @@ public final class StatusPanel {
      */
     static Option<String> unfinishedLabel(RepoStatus status, List<Branch> branches) {
         return status.inProgress()
-                .map(inProgress -> InProgressText.label(new Midway(inProgress, status.conflicts()), branches))
+                .map(inProgress -> InProgressText.ofItsCheckout(new Midway(inProgress, status.conflicts()), branches))
                 .orElse(() -> Option.when(
                         status.conflicts() > 0, () -> Messages.get("status.conflictsOnly", status.conflicts())));
+    }
+
+    /**
+     * What is checked out, as the first line says it: the branch a rebase works on while it detaches HEAD, as the
+     * branches pane shows it checked out (ADR 197, 199), or else the branch or the detached HEAD.
+     */
+    static String checkedOut(RepoStatus status) {
+        return status.inProgress()
+                .filter(InProgress.Rebasing.class::isInstance)
+                .map(rebasing -> status.rebasedBranch()
+                        .map(rebased -> Messages.get("status.rebasingBranch", rebased.value()))
+                        .getOrElse(() -> Messages.get("status.rebasingHead")))
+                .getOrElse(() -> branchLabel(status.head()));
     }
 
     /**

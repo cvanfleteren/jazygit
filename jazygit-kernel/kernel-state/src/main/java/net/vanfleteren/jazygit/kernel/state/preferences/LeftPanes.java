@@ -28,10 +28,29 @@ public final class LeftPanes {
      * between the panes are rounded to a row, not the panes, so moving one border leaves the others where they are.
      */
     public static List<Integer> rows(List<Integer> heights, int column) {
+        return rows(heights, column, STATUS_ROWS);
+    }
+
+    /**
+     * As {@link #rows(List, int)}, under a status {@code status} rows tall.
+     */
+    public static List<Integer> rows(List<Integer> heights, int column, int status) {
         List<Integer> borders = heights.scanLeft(0, Integer::sum).map(border -> Math.round(column * border / 100f));
         return borders.tail()
                 .zipWith(borders, (bottom, top) -> bottom - top)
-                .append(Math.max(0, column - STATUS_ROWS - borders.last()));
+                .append(Math.max(0, column - status - borders.last()));
+    }
+
+    /**
+     * The rows of the status pane of {@code model}: a row more while the repository is in the middle of something,
+     * or has conflicts left without an operation, which it says on a line of its own (ADR 199).
+     */
+    public static int statusRows(Model model) {
+        boolean midway = model.repo()
+                .status()
+                .toOption()
+                .exists(status -> status.inProgress().isDefined() || status.conflicts() > 0);
+        return midway ? STATUS_ROWS + 1 : STATUS_ROWS;
     }
 
     /**
@@ -51,7 +70,7 @@ public final class LeftPanes {
      * what it leaves of its share.
      */
     public static List<Integer> sized(Model model, Screen screen, List<Integer> heights, int column) {
-        List<Integer> rows = rows(heights, column);
+        List<Integer> rows = rows(heights, column, statusRows(model));
         if (!screen.equals(Screen.REPOSITORY)) {
             return rows;
         }
@@ -77,7 +96,7 @@ public final class LeftPanes {
      */
     public static Option<List<Integer>> maximized(Model model, Screen screen, int column) {
         int panes = model.preferences().leftHeights(screen).size() + 1;
-        int rest = column - STATUS_ROWS - COLLAPSED_ROWS * (panes - 1);
+        int rest = column - statusRows(model) - COLLAPSED_ROWS * (panes - 1);
         return model.preferences()
                 .maximizedPane(screen)
                 .filter(pane -> pane < panes && rest >= COLLAPSED_ROWS)
