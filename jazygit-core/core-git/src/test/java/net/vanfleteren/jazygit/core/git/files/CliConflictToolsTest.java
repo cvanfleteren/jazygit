@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.git.files;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.vavr.collection.List;
 import java.nio.file.Files;
@@ -57,16 +58,19 @@ class CliConflictToolsTest {
 
     @Test
     void theToolsAreWhatTheConfigSetsAndWhetherMergirafRuns() throws Exception {
-        assertEquals(new ConflictTools(false, false, true), index.tools().get());
+        assertEquals(
+                new ConflictTools(false, false, mergirafRuns()), index.tools().get());
 
         git("config", "merge.tool", "mine");
         git("config", "mergetool.keepBackup", "true");
 
-        assertEquals(new ConflictTools(true, true, true), index.tools().get());
+        assertEquals(
+                new ConflictTools(true, true, mergirafRuns()), index.tools().get());
     }
 
     @Test
     void mergirafSolvesWhatItCanInPlaceAndStagesNothing() throws Exception {
+        assumeTrue(mergirafRuns(), "mergiraf is not installed");
         List<String> ran = index.solve("imports.py").get().map(ExecutedCommand::line);
 
         assertEquals("import a\nimport c\nimport b\n\n\ndef f():\n    return 1\n", read("imports.py"));
@@ -80,6 +84,7 @@ class CliConflictToolsTest {
 
     @Test
     void conflictsMergirafLeavesAreNoFailure() throws Exception {
+        assumeTrue(mergirafRuns(), "mergiraf is not installed");
         assertTrue(index.solve("value.py").isRight());
 
         assertEquals(1, index.markers(List.of("value.py")).get().size());
@@ -116,6 +121,21 @@ class CliConflictToolsTest {
 
         assertTrue(error instanceof GitError.ProgramFailed, error.toString());
         assertEquals(List.of("value.py"), index.unmerged(List.of("value.py")).get());
+    }
+
+    /**
+     * Whether mergiraf runs here: the dev shell has it; elsewhere the tests that need it are skipped.
+     */
+    private static boolean mergirafRuns() {
+        try {
+            return new ProcessExecutor()
+                            .command("mergiraf", "--version")
+                            .execute()
+                            .getExitValue()
+                    == 0;
+        } catch (Exception notThere) {
+            return false;
+        }
     }
 
     private void write(String name, String content) throws Exception {

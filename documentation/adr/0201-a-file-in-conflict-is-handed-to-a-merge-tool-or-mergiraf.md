@@ -52,7 +52,8 @@ untracked file.
    the file as the operation stopped with it, the conflicts mergiraf could not solve, with its own labels (`ours`,
    `base`, `theirs`). The help of `u` says "as the operation stopped with it". Not: running `checkout -m` without the
    driver, which would bring back conflicts the user never saw.
-7. **The dev shell has mergiraf**, and CI installs it beside git, for the tests of `m`.
+7. **The dev shell has mergiraf**, for the tests of `m`. Where it is not installed, the tests that need it are
+   skipped; CI runs them once it installs mergiraf beside git.
 
 This amends ADR 198, whose dialog kept a side or opened the file at its first line, and whose consequences left
 merging the sides of a file to an editor.

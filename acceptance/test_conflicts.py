@@ -2,9 +2,13 @@
 app leaves them stopped; the conflicts are resolved with git, or in the app a file at a time (ADR 198), and the
 operation continued, skipped or aborted from the app (M)."""
 
+import shutil
 import subprocess
 
 import pytest
+
+# The dev shell has mergiraf; where it is not installed, the tests that need it are skipped (ADR 201).
+needs_mergiraf = pytest.mark.skipif(shutil.which("mergiraf") is None, reason="mergiraf is not installed")
 
 
 def diverged(repo):
@@ -609,6 +613,7 @@ def test_the_merge_tool_takes_a_file_in_conflict_and_git_stages_it(repo, jazygit
     assert not (repo.path / "one.txt.orig").exists()
 
 
+@needs_mergiraf
 def test_mergiraf_solves_what_it_can_and_leaves_the_file_for_the_user_to_stage(repo, jazygit):
     python_conflicts(repo)
     ui = jazygit()
@@ -625,6 +630,7 @@ def test_mergiraf_solves_what_it_can_and_leaves_the_file_for_the_user_to_stage(r
     assert not (repo.path / "imports.py.orig").exists()
 
 
+@needs_mergiraf
 def test_what_mergiraf_cannot_solve_is_left_in_conflict(repo, jazygit):
     python_conflicts(repo)
     ui = jazygit()
@@ -656,6 +662,7 @@ def test_a_file_in_conflict_opens_in_the_editor_set_at_its_first_conflict(repo, 
     assert opened(ui, repo.path / "opened") == f"{repo.path / 'three.txt'}:3"
 
 
+@needs_mergiraf
 def test_with_mergiraf_as_gits_merge_driver_u_brings_back_what_it_made_of_the_file(repo, jazygit):
     repo("config", "merge.mergiraf.name", "mergiraf")
     repo("config", "merge.mergiraf.driver", "mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L")
