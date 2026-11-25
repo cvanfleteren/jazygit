@@ -53,7 +53,36 @@ public final class CliStatus implements Status {
                         GitCommand.reading("status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all")
                                 .withTimeout(TIMEOUT),
                         CliStatus::parse)
-                .map(status -> status.withInProgress(CliInProgress.read(markers)));
+                .map(status -> status.withInProgress(CliInProgress.read(markers)))
+                .map(status -> status.inProgress().isDefined() ? status.withResolved(resolved(status)) : status);
+    }
+
+    /**
+     * The files of {@code status} whose conflicts were resolved since it stopped: those the index keeps what they
+     * were in conflict with for, {@code git ls-files --resolve-undo}, that are not in conflict again (ADR 198). Git
+     * drops that when a rebase, cherry-pick or revert moves on to its next commit. None when it cannot be read: it
+     * only says how far the user got.
+     */
+    private List<String> resolved(RepoStatus status) {
+        List<String> conflicted =
+                status.files().filter(file -> file.conflict().isDefined()).map(FileEntry::path);
+        return GitProcess.read(
+                        worktree,
+                        GitCommand.reading("ls-files", "--resolve-undo", "-z").withTimeout(TIMEOUT),
+                        raw -> Either.right(resolveUndo(raw)))
+                .getOrElse(List.empty())
+                .filter(path -> !conflicted.contains(path));
+    }
+
+    /**
+     * The paths of {@code git ls-files --resolve-undo -z}: {@code <mode> <object> <stage>\t<path>}, one for each
+     * stage a file had, each ended by a NUL.
+     */
+    static List<String> resolveUndo(String raw) {
+        return List.of(raw.split("\0"))
+                .filter(entry -> entry.contains("\t"))
+                .map(entry -> entry.substring(entry.indexOf('\t') + 1))
+                .distinct();
     }
 
     @Override

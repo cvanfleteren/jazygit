@@ -14,15 +14,24 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  *
  * @param files      the changed and untracked files, sorted by path
  * @param inProgress the operation the repository is in the middle of, if any
+ * @param resolved   the files whose conflicts were resolved since it stopped, which git keeps what they were in
+ *                   conflict with for (ADR 198); none when it is in the middle of nothing
  */
 @With
-public record RepoStatus(Head head, List<FileEntry> files, Option<InProgress> inProgress) {
+public record RepoStatus(Head head, List<FileEntry> files, Option<InProgress> inProgress, List<String> resolved) {
+
+    /**
+     * The status of a repository in the middle of {@code inProgress}, if anything, with no conflict resolved yet.
+     */
+    public RepoStatus(Head head, List<FileEntry> files, Option<InProgress> inProgress) {
+        this(head, files, inProgress, List.empty());
+    }
 
     /**
      * The status of a repository that is in the middle of nothing.
      */
     public RepoStatus(Head head, List<FileEntry> files) {
-        this(head, files, Option.none());
+        this(head, files, Option.none(), List.empty());
     }
 
     /**
