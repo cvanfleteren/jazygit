@@ -410,6 +410,91 @@ class ChoiceDialogTest {
         }
     }
 
+    /**
+     * The view of the dialog of {@link #telling()} drawn with what every option does under it (ADR 200), the first
+     * also with its command.
+     */
+    private Supplier<Element> inline() {
+        ChoiceDialog<PickPopup> inline = new ChoiceDialog<>(
+                new ChoiceDialog.Spec<>(
+                                "pick",
+                                PickPopup.class,
+                                popup -> "Pick one",
+                                List.of(
+                                        new Choice<PickPopup>('a', "changes.dialog.discard.all", () -> new Picked("a"))
+                                                .withDetails(popup -> "Throws everything away.")
+                                                .withCommand(popup -> "git reset --hard"),
+                                        new Choice<PickPopup>(
+                                                        'b',
+                                                        "changes.dialog.discard.unstaged",
+                                                        () -> new Picked("b"),
+                                                        (model, popup) -> popup.second())
+                                                .withDetails(popup -> "Keeps what is staged."),
+                                        new Choice<>('c', "changes.dialog.reset.mixed", () -> new Picked("c"))),
+                                50)
+                        .inline(),
+                cursor);
+        return () ->
+                stack(text("background"), inline.render(cursor.on(open(true))).get());
+    }
+
+    @Test
+    void anInlineDialogTellsWhatEveryOptionDoesUnderItsLabelWithItsCommand() throws Exception {
+        Supplier<Element> view = inline();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            java.util.List<String> lines =
+                    RenderedText.ofLarge(runner, view).lines().toList();
+            int a = indexOf(lines, "a  Discard all changes");
+            int b = indexOf(lines, "b  Discard unstaged changes");
+            int c = indexOf(lines, "c  ");
+            String screen = String.join("\n", lines);
+
+            // The label is one column in from the border, what it does and its command under it, aligned with it.
+            int label = lines.get(a).indexOf("Discard all changes");
+            assertEquals(
+                    lines.get(a).indexOf('│') + 2,
+                    lines.get(a).indexOf('a', lines.get(a).indexOf('│')),
+                    screen);
+            assertEquals(label, lines.get(a + 1).indexOf("Throws everything away."), screen);
+            assertEquals(label, lines.get(a + 2).indexOf("git reset --hard"), screen);
+            // A blank line before the next option, whose details show too though it is not highlighted.
+            assertEquals(
+                    "",
+                    lines.get(a + 3).replace("│", "").replace("background", "").strip(),
+                    screen);
+            assertEquals(a + 4, b, screen);
+            assertEquals(label, lines.get(b + 1).indexOf("Keeps what is staged."), screen);
+            assertEquals(b + 3, c, screen);
+            // No box under the dialog: it is all in it.
+            assertEquals(1, screen.split("Throws everything away\\.", -1).length - 1, screen);
+            assertTrue(c < indexOf(lines, "(esc) cancel"), screen);
+        }
+    }
+
+    @Test
+    void anInlineDialogIsChosenFromAsAnyOther() throws Exception {
+        Supplier<Element> view = inline();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            RenderedText.ofLarge(runner, view);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+
+            assertTrue(dispatched.contains(new Picked("b")), dispatched.toString());
+        }
+    }
+
+    private static int indexOf(java.util.List<String> lines, String text) {
+        return java.util.stream.IntStream.range(0, lines.size())
+                .filter(index -> lines.get(index).contains(text))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(text + " not in\n" + String.join("\n", lines)));
+    }
+
     private ToolkitTestRunner start(boolean second) throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(second));
         SettledPilot.focus(runner, "pick");

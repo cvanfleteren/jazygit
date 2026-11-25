@@ -49,6 +49,9 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 
 .bold { text-style: bold; }
 .dim { text-style: dim; }
+/* The letter of a choice in a dialog that tells what each does, and the command it runs (ADR 200). */
+.choice-key { color: $accent; }
+.choice-command { text-style: dim italic; }
 .error { color: $bad; }
 .notice { color: $running; }
 .in-progress { color: $bad; text-style: bold; }

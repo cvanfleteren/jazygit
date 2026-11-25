@@ -232,6 +232,11 @@ public final class Theme {
         public static final String ERROR = "error";
         public static final String NOTICE = "notice";
         public static final String DISABLED = "disabled";
+        /** The letter of an option in a dialog that tells what each of its options does (ADR 200). */
+        public static final String CHOICE_KEY = "choice-key";
+        /** The command an option runs, in such a dialog (ADR 200). */
+        public static final String CHOICE_COMMAND = "choice-command";
+
         public static final String STAGED = "staged";
         public static final String UNSTAGED = "unstaged";
         public static final String SPINNER = "spinner";
