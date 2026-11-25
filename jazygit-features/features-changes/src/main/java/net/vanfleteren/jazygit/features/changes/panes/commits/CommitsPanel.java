@@ -12,11 +12,9 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Head;
-import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -281,7 +279,7 @@ public class CommitsPanel implements LeftPane {
         return model.repo()
                 .status()
                 .toOption()
-                .map(status -> rebased(status)
+                .map(status -> status.rebasedBranch()
                         .map(branch -> Messages.get("changes.panes.commits.titleRebasing", branch.value()))
                         .getOrElse(() -> switch (status.head()) {
                             case Head.OnBranch(BranchName branch, var tip) ->
@@ -300,7 +298,7 @@ public class CommitsPanel implements LeftPane {
         return model.repo()
                 .status()
                 .toOption()
-                .map(status -> rebased(status)
+                .map(status -> status.rebasedBranch()
                         .map(branch -> Messages.get("changes.panes.commits.rebasing", branch.value()))
                         .getOrElse(() -> switch (status.head()) {
                             case Head.OnBranch(BranchName branch, var tip) -> branch.value();
@@ -308,17 +306,6 @@ public class CommitsPanel implements LeftPane {
                                 Messages.get("changes.panes.commits.detachedAt", at.shortSha());
                         }))
                 .getOrElse("");
-    }
-
-    /**
-     * The branch a rebase works on, with HEAD detached meanwhile, if one does.
-     */
-    private static Option<BranchName> rebased(RepoStatus status) {
-        return status.head() instanceof Head.Detached
-                ? status.inProgress()
-                        .flatMap(inProgress ->
-                                inProgress instanceof InProgress.Rebasing rebasing ? rebasing.branch() : Option.none())
-                : Option.none();
     }
 
     /**

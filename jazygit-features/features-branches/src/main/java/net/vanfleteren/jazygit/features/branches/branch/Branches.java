@@ -6,7 +6,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Midway;
 import net.vanfleteren.jazygit.core.repo.Worktree;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
@@ -56,12 +55,7 @@ public final class Branches {
      * which is shown as checked out (ADR 197).
      */
     public static Option<BranchName> rebasedHere(Model model) {
-        return model.repo()
-                .status()
-                .toOption()
-                .flatMap(RepoStatus::inProgress)
-                .flatMap(inProgress ->
-                        inProgress instanceof InProgress.Rebasing rebasing ? rebasing.branch() : Option.none());
+        return model.repo().status().toOption().flatMap(RepoStatus::rebasedBranch);
     }
 
     /**
@@ -78,11 +72,7 @@ public final class Branches {
                                 worktrees.find(worktree -> worktree.path().equals(location)))
                         .flatMap(Worktree::midway))
                 .getOrElse(() -> branch.current() || rebasedHere(model).contains(branch.name())
-                        ? model.repo()
-                                .status()
-                                .toOption()
-                                .flatMap(status -> status.inProgress()
-                                        .map(inProgress -> new Midway(inProgress, status.conflicts())))
+                        ? model.repo().status().toOption().flatMap(RepoStatus::midway)
                         : Option.none());
     }
 }

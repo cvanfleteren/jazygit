@@ -494,6 +494,44 @@ class CliMetadataTest {
     }
 
     @Test
+    void anotherWorktreeStoppingOnAMergeStagingItsResolutionAndAbortingItEachChangeTheWorktrees() throws Exception {
+        // ADR 197: what another worktree is in the middle of, and its conflicts, are listed with the worktrees.
+        git(main, "branch", "feature");
+        Files.writeString(main.resolve("a.txt"), "main");
+        git(main, "commit", "-am", "main");
+        Path linked = dir.resolve("linked");
+        git(main, "worktree", "add", linked.toString(), "feature");
+        Files.writeString(linked.resolve("a.txt"), "feature");
+        git(linked, "commit", "-am", "feature");
+        GitMetadata before = metadata(main);
+
+        assertNotEquals(0, exitOf(linked, "merge", "main"));
+        GitMetadata stopped = metadata(main);
+        Files.writeString(linked.resolve("a.txt"), "both");
+        git(linked, "add", "a.txt");
+        GitMetadata resolved = metadata(main);
+        git(linked, "merge", "--abort");
+
+        assertNotEquals(before.worktrees(), stopped.worktrees());
+        assertNotEquals(stopped.worktrees(), resolved.worktrees());
+        assertNotEquals(resolved.worktrees(), metadata(main).worktrees());
+    }
+
+    private static int exitOf(Path in, String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
+                "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
+        command.addAll(java.util.List.of(args));
+        return new ProcessExecutor()
+                .command(command)
+                .directory(in.toFile())
+                .redirectErrorStream(true)
+                .readOutput(true)
+                .exitValueAny()
+                .execute()
+                .getExitValue();
+    }
+
+    @Test
     void aDirectoryWithoutAGitDirectoryHasNothingToLookAt() throws Exception {
         Path plain = Files.createDirectories(dir.resolve("plain"));
 

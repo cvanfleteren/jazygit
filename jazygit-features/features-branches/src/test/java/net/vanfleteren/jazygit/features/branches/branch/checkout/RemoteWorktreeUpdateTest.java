@@ -231,6 +231,22 @@ class RemoteWorktreeUpdateTest {
     }
 
     @Test
+    void aFollowerRebasedHereAsksForANewBranchFollowingItAsOneCheckedOutHereDoes() {
+        // ADR 197: git takes the branch a rebase works on as in use in the worktree that rebases it.
+        Sha onto = new Sha("aaaa");
+        Model model = TestModels.localBranchesRead(shown(), List.of(follower(MINE, 0, 0, false, Option.none())))
+                .model()
+                .mapRepo(repo -> repo.withStatus(new Loadable.Loaded<>(new RepoStatus(
+                        new Head.Detached(onto),
+                        List.empty(),
+                        Option.of(new InProgress.Rebasing(Option.of(MINE), onto, 1, 2))))));
+
+        assertEquals(
+                Option.of(new NewWorktreeBranchPopup("origin/feat", "feat", new NewBranchStart.Following(ORIGIN_FEAT))),
+                asked(model));
+    }
+
+    @Test
     void aLocalBranchOfItsNameThatFollowsSomethingElseAsksForAName() {
         assertEquals(
                 Option.of(new NewWorktreeBranchPopup("origin/feat", "feat", new NewBranchStart.Following(ORIGIN_FEAT))),

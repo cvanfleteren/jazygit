@@ -78,12 +78,23 @@ class WorktreesList implements BranchesTabList {
      */
     private static List<LoadableList.Seg> working(Repo repo, Worktree worktree) {
         List<Branch> branches = repo.branches().toOption().getOrElse(List.empty());
-        List<LoadableList.Seg> midway = worktree.midway()
-                .map(operation -> note(InProgressText.label(operation, branches), Theme.Classes.IN_PROGRESS)
+        Option<Midway> operation = midway(repo, worktree);
+        List<LoadableList.Seg> midway = operation
+                .map(stopped -> note(InProgressText.label(stopped, branches), Theme.Classes.IN_PROGRESS)
                         .shrinking())
                 .toList();
-        boolean rebasing = worktree.midway().exists(operation -> operation.inProgress() instanceof InProgress.Rebasing);
+        boolean rebasing = operation.exists(stopped -> stopped.inProgress() instanceof InProgress.Rebasing);
         return rebasing ? midway : midway.prepend(checkedOut(worktree));
+    }
+
+    /**
+     * What the worktree is in the middle of: for the one shown, as its status has it once read, which is read again
+     * more often than the worktrees, so that it says what the header says; for another one, as it was listed.
+     */
+    static Option<Midway> midway(Repo repo, Worktree worktree) {
+        return worktree.current()
+                ? repo.status().toOption().map(RepoStatus::midway).getOrElse(worktree.midway())
+                : worktree.midway();
     }
 
     /**

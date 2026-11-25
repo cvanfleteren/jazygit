@@ -12,6 +12,9 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.SwitchWorktreePopup;
+import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.features.branches.worktree.add.LocationAsked;
+import net.vanfleteren.jazygit.features.branches.worktree.add.NewWorktreeBranchPopup;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -108,5 +111,16 @@ class RebasingBranchUpdateTest {
         assertEquals(
                 Option.of(new SwitchWorktreePopup(FEATURE, LINKED.toString(), Option.of(new Midway(REBASING, 1)))),
                 asked.model().popup());
+    }
+
+    @Test
+    void aNewWorktreeForTheBranchRebasedHereAsksForANewBranchMadeFromItAsForTheCheckedOutOne() {
+        // Git takes it as in use here, so it would refuse to check it out in another worktree.
+        Next next = LocationAsked.located(Update.update(rebasingHere(), new AddWorktreeMsg.Requested(FEATURE)));
+
+        assertEquals(
+                Option.of(new NewWorktreeBranchPopup(
+                        "feature", "", new NewBranchStart.From(new BranchRef.Local(FEATURE), Option.of(FEATURE)))),
+                next.model().popup());
     }
 }

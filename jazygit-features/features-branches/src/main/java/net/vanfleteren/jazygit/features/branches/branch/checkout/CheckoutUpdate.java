@@ -141,8 +141,8 @@ public final class CheckoutUpdate {
     /**
      * Checks out the local branch that follows {@code remote} in a new worktree, as {@link #remoteRequested} picks
      * it, without asking where (ADR 109). One that another worktree has checked out is offered to be switched to; the
-     * one checked out here a worktree cannot check out twice, so a new branch following {@code remote} is asked for,
-     * as when a local branch that follows something else has its name.
+     * one checked out here, or rebased here (ADR 197), a worktree cannot check out twice, so a new branch following
+     * {@code remote} is asked for, as when a local branch that follows something else has its name.
      */
     private static Next remoteInNewWorktree(Model model, RemoteBranch remote) {
         if (!isIdleRemote(model, remote)) {
@@ -153,9 +153,10 @@ public final class CheckoutUpdate {
                 .map(local -> local.worktreeLocation()
                         .map(worktree -> PopupUpdate.ask(
                                 model, new SwitchWorktreePopup(local.name(), worktree, Branches.midway(model, local))))
-                        .getOrElse(() -> local.current()
-                                ? namedFollowing(model, remote)
-                                : AddWorktreeUpdate.forBranch(model, local.name(), CatchUp.of(local), false)))
+                        .getOrElse(() ->
+                                local.current() || Branches.rebasedHere(model).contains(local.name())
+                                        ? namedFollowing(model, remote)
+                                        : AddWorktreeUpdate.forBranch(model, local.name(), CatchUp.of(local), false)))
                 .getOrElse(() -> model.repo().branch(remote.branch()).isDefined()
                         ? namedFollowing(model, remote)
                         : AddWorktreeUpdate.ask(
