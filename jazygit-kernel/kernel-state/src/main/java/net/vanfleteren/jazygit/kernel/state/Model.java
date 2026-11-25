@@ -154,9 +154,21 @@ public record Model(
      */
     public Model withShownPane(Focus.OnScreen focus) {
         // Which files the files pane lists for the pane that has the focus is the panes' to say (ADR 141).
-        return screen.equals(Screen.REPOSITORY)
+        Model focused = screen.equals(Screen.REPOSITORY)
                 ? withRepoView(repoView.withFocusedPane(Option.of(focus)))
                 : withScreenFocus(screenFocus.put(screen, focusOn(screen).on(focus, screen)));
+        return focused.followingMaximized(focus);
+    }
+
+    /**
+     * PROTOTYPE: while a pane of the left column is maximized, the pane of the left column that gets the focus is
+     * maximized in its stead, so the maximized pane follows the focus.
+     */
+    private Model followingMaximized(Focus.OnScreen focus) {
+        int pane = screen.panes().indexWhere(focus::equals);
+        return pane >= 0 && preferences.maximizedPane(screen).exists(maximized -> maximized != pane)
+                ? mapPreferences(chosen -> chosen.withMaximizedPane(screen, Option.of(pane)))
+                : this;
     }
 
     /**
