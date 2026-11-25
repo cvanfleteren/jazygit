@@ -63,6 +63,22 @@ class HttpForgejoChecksTest {
             answer(exchange, 204, "");
         });
         server.createContext("/api/v1/repos/cvf/old/actions/runs", exchange -> answer(exchange, 404, ""));
+        // A Forgejo that does not filter the runs by their number: the newest comes first, whatever was asked.
+        server.createContext("/api/v1/repos/cvf/unfiltered/actions/runs", exchange -> {
+            if (exchange.getRequestURI().getPath().endsWith("/runs")) {
+                answer(exchange, 200, """
+                        {"total_count":2,"workflow_runs":[{"id":346,"index_in_repo":13},{"id":345,"index_in_repo":12}]}""");
+            } else {
+                answer(exchange, 200, """
+                        [{"id":%d}]""".formatted(
+                                exchange.getRequestURI().getPath().contains("/345/") ? 902 : 912));
+            }
+        });
+        server.createContext("/api/v1/repos/cvf/unfiltered/actions/jobs", exchange -> {
+            asked.add("unfiltered " + exchange.getRequestMethod() + " "
+                    + exchange.getRequestURI().getPath());
+            answer(exchange, exchange.getRequestMethod().equals("POST") ? 204 : 200, "log");
+        });
         server.start();
     }
 
@@ -115,6 +131,24 @@ class HttpForgejoChecksTest {
     void aForgejoWithoutTheActionsApiRefusesIt() {
         assertTrue(forgejo().jobLog(repository("old"), JOB).getLeft() instanceof ForgejoError.Refused refused
                 && refused.status() == 404);
+    }
+
+    @Test
+    void aJobIsFoundInTheRunWithItsNumberThoughTheServerListsOthersFirst() {
+        ForgejoCheck.ActionsJob first = new ForgejoCheck.ActionsJob(12, 0);
+
+        assertEquals(Option.none(), forgejo().rerunJob(repository("unfiltered"), first));
+        assertTrue(
+                asked.contains("unfiltered POST /api/v1/repos/cvf/unfiltered/actions/jobs/902/rerun"), asked::toString);
+    }
+
+    @Test
+    void aJobOfARunTheServerDoesNotListIsNeitherReadNorRunAgain() {
+        ForgejoCheck.ActionsJob gone = new ForgejoCheck.ActionsJob(7, 0);
+
+        assertTrue(forgejo().jobLog(repository("unfiltered"), gone).isLeft());
+        assertTrue(forgejo().rerunJob(repository("unfiltered"), gone).isDefined());
+        assertTrue(asked.stream().noneMatch(request -> request.startsWith("unfiltered")), asked::toString);
     }
 
     @Test

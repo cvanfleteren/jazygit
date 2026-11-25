@@ -11,6 +11,8 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 
 import io.vavr.Lazy;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -74,9 +76,11 @@ public final class HttpForgejo implements Forgejo {
             field("created_at", instant()),
             ForgejoCheck.Posted::new));
 
-    // The ids of the runs of Actions listed, and of the jobs of a run.
-    private static final Decoder<List<Long>> RUNS =
-            optionalField("workflow_runs", list(field("id", longValue()))).map(runs -> runs.getOrElse(List.empty()));
+    // The runs of Actions listed, each its id and its number in the repository; and the ids of the jobs of a run.
+    private static final Decoder<List<Tuple2<Long, Long>>> RUNS = optionalField(
+                    "workflow_runs",
+                    list(map2(field("id", longValue()), field("index_in_repo", longValue()), Tuple::of)))
+            .map(runs -> runs.getOrElse(List.empty()));
     private static final Decoder<List<Long>> JOBS = list(field("id", longValue()));
 
     private final Supplier<FjKeys> keys;
@@ -332,12 +336,14 @@ public final class HttpForgejo implements Forgejo {
 
     /**
      * The id of {@code job}: the run with its number, then its job at its place among those of the run, by id, as
-     * Forgejo numbers them in its links.
+     * Forgejo numbers them in its links. The run is the one listed with that number, not the first listed: a server
+     * that does not filter by it lists others, and running a job of another run again would change the forge.
      */
     private Either<ForgejoError, Long> jobId(ForgejoRepository repository, ForgejoCheck.ActionsJob job) {
         return get(repository, repo(repository) + "/actions/runs?run_number=" + job.run())
                 .flatMap(body -> decoded(RUNS, body))
-                .flatMap(runs -> runs.headOption()
+                .flatMap(runs -> runs.find(run -> run._2() == job.run())
+                        .map(Tuple2::_1)
                         .toEither(() -> (ForgejoError) new ForgejoError.Unreadable("no run #" + job.run())))
                 .flatMap(run -> get(repository, repo(repository) + "/actions/runs/" + run + "/jobs"))
                 .flatMap(body -> decoded(JOBS, body))
