@@ -1,9 +1,12 @@
 package net.vanfleteren.jazygit.core.forgejo;
 
 import static net.vanfleteren.jazygit.lib.json.Decoder.field;
+import static net.vanfleteren.jazygit.lib.json.Decoder.instant;
 import static net.vanfleteren.jazygit.lib.json.Decoder.list;
+import static net.vanfleteren.jazygit.lib.json.Decoder.longValue;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map2;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map3;
+import static net.vanfleteren.jazygit.lib.json.Decoder.map6;
 import static net.vanfleteren.jazygit.lib.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 
@@ -60,6 +63,21 @@ public final class HttpForgejo implements Forgejo {
             CommitStatus::new);
 
     private static final Decoder<String> VERSION = field("version", string());
+
+    // A status posted for a commit, of all of them (ADR 195).
+    private static final Decoder<List<ForgejoCheck.Posted>> POSTED = list(map6(
+            field("id", longValue()),
+            optionalField("context", string()).map(context -> context.getOrElse("")),
+            optionalField("status", string()).map(status -> status.getOrElse("")),
+            optionalField("description", string()).map(description -> description.getOrElse("")),
+            optionalField("target_url", string()).map(url -> url.filter(link -> !link.isBlank())),
+            field("created_at", instant()),
+            ForgejoCheck.Posted::new));
+
+    // The ids of the runs of Actions listed, and of the jobs of a run.
+    private static final Decoder<List<Long>> RUNS =
+            optionalField("workflow_runs", list(field("id", longValue()))).map(runs -> runs.getOrElse(List.empty()));
+    private static final Decoder<List<Long>> JOBS = list(field("id", longValue()));
 
     private final Supplier<FjKeys> keys;
     private final Lazy<HttpClient> client;
@@ -267,6 +285,66 @@ public final class HttpForgejo implements Forgejo {
                         NO_CONTENT)
                 .swap()
                 .toOption();
+    }
+
+    /**
+     * {@inheritDoc} All the statuses posted for it are read, a page of {@value #PAGE} at a time, so that each check is
+     * timed from its first status.
+     */
+    @Override
+    public Either<ForgejoError, List<ForgejoCheck>> checks(ForgejoRepository repository, Sha sha) {
+        return pages(
+                        repository,
+                        repo(repository) + "/commits/" + encoded(sha.value()) + "/statuses?",
+                        POSTED,
+                        1,
+                        List.<ForgejoCheck.Posted>empty())
+                .map(ForgejoCheck::of);
+    }
+
+    /**
+     * {@inheritDoc} Its id is found from its run's number and its place among the jobs of the run.
+     */
+    @Override
+    public Either<ForgejoError, String> jobLog(ForgejoRepository repository, ForgejoCheck.ActionsJob job) {
+        return jobId(repository, job)
+                .flatMap(id -> send(
+                        repository,
+                        repo(repository) + "/actions/jobs/" + id + "/logs",
+                        request -> request.setHeader("Accept", "text/plain").GET(),
+                        OK));
+    }
+
+    /**
+     * {@inheritDoc} With fj's token, which Forgejo needs for it; answered with 204.
+     */
+    @Override
+    public Option<ForgejoError> rerunJob(ForgejoRepository repository, ForgejoCheck.ActionsJob job) {
+        return jobId(repository, job)
+                .flatMap(id -> send(
+                        repository,
+                        repo(repository) + "/actions/jobs/" + id + "/rerun",
+                        request -> request.POST(HttpRequest.BodyPublishers.noBody()),
+                        NO_CONTENT))
+                .swap()
+                .toOption();
+    }
+
+    /**
+     * The id of {@code job}: the run with its number, then its job at its place among those of the run, by id, as
+     * Forgejo numbers them in its links.
+     */
+    private Either<ForgejoError, Long> jobId(ForgejoRepository repository, ForgejoCheck.ActionsJob job) {
+        return get(repository, repo(repository) + "/actions/runs?run_number=" + job.run())
+                .flatMap(body -> decoded(RUNS, body))
+                .flatMap(runs -> runs.headOption()
+                        .toEither(() -> (ForgejoError) new ForgejoError.Unreadable("no run #" + job.run())))
+                .flatMap(run -> get(repository, repo(repository) + "/actions/runs/" + run + "/jobs"))
+                .flatMap(body -> decoded(JOBS, body))
+                .flatMap(jobs -> jobs.sorted()
+                        .drop(job.job())
+                        .headOption()
+                        .toEither(() -> new ForgejoError.Unreadable("no job " + job.job() + " in run #" + job.run())));
     }
 
     private static Option<ForgejoMerged> branchKept(ForgejoError error) {
