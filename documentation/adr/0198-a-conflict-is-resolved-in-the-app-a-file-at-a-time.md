@@ -37,7 +37,8 @@ not when a merge is committed.
      deleted, and the dialog says which deletes it.
    - `r` opens a dialog of the choices for the file, each with what it does: keep ours, keep theirs, and open it in the
      editor (`e`, ADR 145). Not `enter`, which opens the diff of a file in the files pane (amended by ADR 200: `enter`
-     opens it on a file in conflict).
+     opens it on a file in conflict). Amended by ADR 201: the editor opens it at its first conflict, and the dialog
+     hands it to git's merge tool (`g`) or to mergiraf (`m`).
    - Only on a single file in conflict. A directory, or a file that is not in conflict, does nothing: a whole directory
      on one side is a choice to make file by file.
    - The highlight stays on the file once it is resolved. Not yet: moving it to the next file in conflict, which
@@ -72,7 +73,8 @@ not when a merge is committed.
 ## Consequences
 
 - A conflict is resolved without leaving the app when one side of the whole file is right. Merging the two inside a
-  file is still done in an editor (`e`), or, later, in the app, block by block.
+  file is still done in an editor (`e`), or, later, in the app, block by block (amended by ADR 201: or in a merge
+  tool, or by mergiraf).
 - `features-midway` is one more module in the build, and the text of `M` moved bundle.
 - While an operation is in progress the files pane is no longer exactly `git status`: it also lists the files
   resolved back to HEAD, dimmed.
