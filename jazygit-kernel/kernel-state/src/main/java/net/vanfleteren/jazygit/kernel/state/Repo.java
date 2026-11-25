@@ -123,14 +123,19 @@ public record Repo(
     }
 
     /**
-     * The commit {@code sha} in the log of HEAD, if the log is loaded and has it; or of a step of the operation the
-     * repository stopped in the middle of (ADR 199).
+     * The commit {@code sha} in the log of HEAD, if the log is loaded and has it: one HEAD has.
      */
     public Option<Commit> commit(Sha sha) {
         return commits.toOption()
-                .flatMap(loaded -> loaded.find(commit -> commit.sha().equals(sha)))
-                // A step of the operation that stopped, listed above the log (ADR 199).
-                .orElse(() -> status.toOption().flatMap(read -> read.plan()).flatMap(plan -> plan.commit(sha)));
+                .flatMap(loaded -> loaded.find(commit -> commit.sha().equals(sha)));
+    }
+
+    /**
+     * The commit {@code sha} of a step of the operation the repository stopped in the middle of, listed above the log
+     * (ADR 199), if its commits were read. A step still to come is not one HEAD has.
+     */
+    public Option<Commit> stepCommit(Sha sha) {
+        return status.toOption().flatMap(RepoStatus::plan).flatMap(plan -> plan.commit(sha));
     }
 
     /**
