@@ -91,6 +91,8 @@
               (pkgs.python3.withPackages (p: [ p.pexpect p.pyte p.pytest p.pytest-xdist ]))
               # Checks that Markdown wraps at 120 columns, as CI does.
               pkgs.markdownlint-cli2
+              # Solves conflicts by the syntax of the file, for the resolve dialog's m and its tests (ADR 201).
+              pkgs.mergiraf
             ];
             JAVA_HOME = jdk.home;
           };
