@@ -250,13 +250,16 @@ public final class ChecksUpdate {
 
     /**
      * {@code model} reading the checks shown again, as {@code reading} tells, when they can be and {@code due}; else
-     * as it is. They are read on the tip their branch has now, as after a fetch or a push.
+     * as it is. Those of a branch are read on the tip it has now, as after a fetch or a push; those of a pull request
+     * on the commit it merges, as Forgejo said, which its remote branch may not have caught up with.
      */
     private static Next readAgain(Model model, Predicate<ForgejoChecksPopup> due, Reading reading) {
         return model.popup(ForgejoChecksPopup.class)
                 .filter(popup -> popup.refreshable() && due.test(popup))
                 .map(popup -> {
-                    Sha tip = tip(model, popup.onForgejo()).getOrElse(popup.tip());
+                    Sha tip = popup.from().isDefined()
+                            ? popup.tip()
+                            : tip(model, popup.onForgejo()).getOrElse(popup.tip());
                     return Next.of(
                             model.openPopup(popup.readingAgain(reading, tip, model.now())),
                             new LoadChecks(popup.onForgejo(), tip));

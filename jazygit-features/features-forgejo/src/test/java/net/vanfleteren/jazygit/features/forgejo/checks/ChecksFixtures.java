@@ -6,10 +6,14 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoCheck;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequestPopup;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ShownPullRequest;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 
 /**
@@ -73,7 +77,46 @@ final class ChecksFixtures {
     }
 
     static Either<Failure, ChecksRead> readOf(List<ForgejoCheck> checks) {
-        return Either.right(new ChecksRead("cvf/nix", TIP, checks));
+        return readOf(TIP, checks);
+    }
+
+    static Either<Failure, ChecksRead> readOf(Sha sha, List<ForgejoCheck> checks) {
+        return Either.right(new ChecksRead("cvf/nix", sha, checks));
+    }
+
+    /**
+     * The commit a pull request merges on Forgejo, pushed after {@code origin/feature} was last fetched, which still
+     * points to {@link #TIP}.
+     */
+    static final Sha PR_HEAD = new Sha("9".repeat(40));
+
+    /**
+     * The dialog of the pull request that merges {@code origin/feature}, read, its head at {@link #PR_HEAD} with a
+     * status.
+     */
+    static ForgejoPullRequestPopup pullRequest() {
+        ForgejoPullRequestDetails details = new ForgejoPullRequestDetails(
+                12,
+                "Show the checks",
+                "cvf",
+                new ForgejoPullRequestDetails.Status(ForgejoPullRequestDetails.State.OPEN, false, true),
+                new ForgejoPullRequestDetails.Branches("feature", "main", PR_HEAD),
+                new ForgejoPullRequestDetails.Activity(NOW.minusSeconds(3_600), NOW.minusSeconds(60)),
+                new ForgejoPullRequestDetails.Size(1, 1, 1),
+                new ForgejoPullRequestDetails.Conversation(0, List.empty(), List.empty()),
+                "https://code.example.net/cvf/nix/pulls/12");
+        ForgejoPullRequest listed = new ForgejoPullRequest(
+                12, "Show the checks", "feature", Option.of("cvf/nix"), "main", false, details.url());
+        return ForgejoPullRequestPopup.loading(new BranchName("feature"), FEATURE.remote(), FEATURE, listed, 1)
+                .with(
+                        Either.right(new ShownPullRequest(
+                                details,
+                                Option.none(),
+                                new CommitStatus(
+                                        CommitStatus.State.RUNNING,
+                                        List.of(new CommitStatus.Status(
+                                                "ci / test (push)", CommitStatus.State.RUNNING, ""))))),
+                        1);
     }
 
     static ForgejoChecksPopup read(List<ForgejoCheck> checks) {

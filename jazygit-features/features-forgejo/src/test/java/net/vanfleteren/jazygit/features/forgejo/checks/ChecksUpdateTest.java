@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.forgejo.checks;
 
 import static net.vanfleteren.jazygit.features.forgejo.checks.ChecksFixtures.FEATURE;
 import static net.vanfleteren.jazygit.features.forgejo.checks.ChecksFixtures.NOW;
+import static net.vanfleteren.jazygit.features.forgejo.checks.ChecksFixtures.PR_HEAD;
 import static net.vanfleteren.jazygit.features.forgejo.checks.ChecksFixtures.TIP;
 import static net.vanfleteren.jazygit.features.forgejo.checks.ChecksFixtures.job;
 import static net.vanfleteren.jazygit.features.forgejo.checks.ChecksFixtures.read;
@@ -24,6 +25,7 @@ import net.vanfleteren.jazygit.features.forgejo.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.forgejo.builds.BuildsUpdateTest;
 import net.vanfleteren.jazygit.features.forgejo.builds.Tip;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoFailure;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -170,6 +172,64 @@ class ChecksUpdateTest {
 
         assertTrue(answered.outcome().error().isDefined());
         assertFalse(answered.popup(ForgejoChecksPopup.class).get().rerunAwaited(NOW));
+    }
+
+    @Test
+    void fromThePullRequestDialogTheChecksAreOfTheCommitItMerges() {
+        ForgejoPullRequestPopup dialog = ChecksFixtures.pullRequest();
+
+        Next next = new ChecksMsg.PullRequestChecksRequested()
+                .apply(model(CommitStatus.State.RUNNING).openPopup(dialog));
+
+        assertEquals(
+                Option.of(dialog), next.model().popup(ForgejoChecksPopup.class).flatMap(ForgejoChecksPopup::from));
+        assertEquals(List.of(new LoadChecks(FEATURE, PR_HEAD)), next.cmds().filter(LoadChecks.class::isInstance));
+    }
+
+    @Test
+    void fromThePullRequestDialogTheyAreReadAgainOnTheCommitItMergesThoughTheRemoteBranchIsBehind() {
+        // origin/feature is still at TIP: what was pushed to the pull request since was not fetched.
+        Model opened = new ChecksMsg.PullRequestChecksRequested()
+                .apply(model(CommitStatus.State.RUNNING).openPopup(ChecksFixtures.pullRequest()))
+                .model();
+        Model read = new ChecksMsg.Read(
+                        FEATURE,
+                        readOf(PR_HEAD, List.of(job("b", CommitStatus.State.RUNNING, 12, 0, 30, Option.none()))))
+                .apply(opened)
+                .model();
+
+        assertEquals(
+                List.of(new LoadChecks(FEATURE, PR_HEAD)),
+                new ChecksMsg.Tick().apply(read).cmds().filter(LoadChecks.class::isInstance));
+        assertEquals(
+                List.of(new LoadChecks(FEATURE, PR_HEAD)),
+                new ChecksMsg.RefreshChosen().apply(read).cmds().filter(LoadChecks.class::isInstance));
+    }
+
+    @Test
+    void escapeGoesBackToThePullRequestDialogTheyWereOpenedFrom() {
+        ForgejoPullRequestPopup dialog = ChecksFixtures.pullRequest();
+        Model opened = new ChecksMsg.PullRequestChecksRequested()
+                .apply(model(CommitStatus.State.RUNNING).openPopup(dialog))
+                .model();
+
+        assertEquals(
+                Option.of(dialog), new ChecksMsg.Closed().apply(opened).model().popup(ForgejoPullRequestPopup.class));
+    }
+
+    @Test
+    void aClickPicksTheCheckByItsName() {
+        Model model = showing(List.of(
+                job("a", CommitStatus.State.PASSED, 12, 0, 30, Option.of(5)),
+                job("b", CommitStatus.State.FAILED, 12, 1, 30, Option.of(5))));
+
+        Model clicked = new ChecksMsg.Clicked("a").apply(model).model();
+
+        assertEquals(
+                Option.of("a"),
+                clicked.popup(ForgejoChecksPopup.class)
+                        .flatMap(ForgejoChecksPopup::pickedCheck)
+                        .map(ForgejoCheck::name));
     }
 
     @Test
