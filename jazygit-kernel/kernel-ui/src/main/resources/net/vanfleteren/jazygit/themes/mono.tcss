@@ -58,6 +58,9 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 
 .bold { color: $bright; text-style: bold; }
 .dim { color: $muted; }
+/* The letter of a choice in a dialog that tells what each does, and the command it runs (ADR 200). */
+.choice-key { color: $accent; }
+.choice-command { color: $muted; text-style: italic; }
 .error { color: $bad; }
 .notice { color: $running; }
 .in-progress { color: $bad; text-style: bold; }

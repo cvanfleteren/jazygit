@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.core.git.model;
 
+import io.vavr.collection.List;
+
 /**
  * What each side of a merge did to a file that is in conflict.
  *
@@ -25,6 +27,17 @@ public record Conflict(Side ours, Side theirs) {
      */
     public Side did(Version version) {
         return version == Version.OURS ? ours : theirs;
+    }
+
+    /**
+     * The git commands keeping {@code version}'s side of the file runs, in order, each as its arguments after
+     * {@code git} and before {@code -- <path>}: {@code checkout --ours|--theirs}, then {@code add}; or
+     * {@code rm --quiet} when that side deleted it (ADR 198). The resolve dialog says them as they are run (ADR 200).
+     */
+    public List<List<String>> keeping(Version version) {
+        return did(version) == Side.DELETED
+                ? List.of(List.of("rm", "--quiet"))
+                : List.of(List.of("checkout", version == Version.OURS ? "--ours" : "--theirs"), List.of("add"));
     }
 
     /**

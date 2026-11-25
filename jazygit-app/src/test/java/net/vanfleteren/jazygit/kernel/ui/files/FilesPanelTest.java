@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -277,6 +278,30 @@ class FilesPanelTest {
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).pause();
             assertEquals(3, opened.get());
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void enterOnAFileInConflictAsksHowToResolveItWhileRightStillMovesIntoItsDiff() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger opened = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.List<Msg> sent = new java.util.concurrent.CopyOnWriteArrayList<>();
+        FilesPanel opening = new FilesPanel(sent::add, opened::incrementAndGet);
+        FileEntry conflicted = FileEntry.conflicted("both.txt", Conflict.of('U', 'U'));
+        Model model = TestModels.loaded(fixed(List.of(conflicted)));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(model, FilesPanel.PANE))) {
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            RenderedText.of(testRunner, () -> opening.tree().selected(1));
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(0, opened.get());
+            assertTrue(sent.contains(new ResolveMsg.Requested(conflicted)), sent.toString());
+
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(1, opened.get());
 
             SettledPilot.of(testRunner).quit();
         }

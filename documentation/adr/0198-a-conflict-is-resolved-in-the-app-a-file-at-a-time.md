@@ -36,7 +36,8 @@ not when a merge is committed.
      `git add`); a side that deleted it removes it (`git rm`), so `o` and `t` mean the same on a file one side
      deleted, and the dialog says which deletes it.
    - `r` opens a dialog of the choices for the file, each with what it does: keep ours, keep theirs, and open it in the
-     editor (`e`, ADR 145). Not `enter`, which opens the diff of a file in the files pane.
+     editor (`e`, ADR 145). Not `enter`, which opens the diff of a file in the files pane (amended by ADR 200: `enter`
+     opens it on a file in conflict).
    - Only on a single file in conflict. A directory, or a file that is not in conflict, does nothing: a whole directory
      on one side is a choice to make file by file.
    - The highlight stays on the file once it is resolved. Not yet: moving it to the next file in conflict, which

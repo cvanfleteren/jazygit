@@ -4,8 +4,11 @@ import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
+import net.vanfleteren.jazygit.core.process.CommandLine;
+import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
+import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
@@ -20,33 +23,45 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 public final class ResolveDialogs {
 
     /**
-     * How to resolve the file of the popup: keep one side, or edit it.
+     * How to resolve the file of the popup: keep one side, or edit it; each choice tells what it does and the command
+     * it runs (ADR 200).
      */
     public static final ChoiceDialog.Spec<ResolvePopup> RESOLVE = new ChoiceDialog.Spec<>(
-            "resolve",
-            ResolvePopup.class,
-            popup -> Messages.get("midway.dialog.resolve.title", popup.file().path()),
-            List.of(
-                    new Choice<ResolvePopup>(
-                                    'o',
-                                    popup -> keepLabel(
-                                            popup.sides().ours(),
+                    "resolve",
+                    ResolvePopup.class,
+                    popup -> Messages.get(
+                            "midway.dialog.resolve.title", popup.file().path()),
+                    List.of(
+                            new Choice<ResolvePopup>(
+                                            'o',
+                                            popup -> keepLabel(
+                                                    popup.sides().ours(),
+                                                    popup.file().conflict().get(),
+                                                    Conflict.Version.OURS),
+                                            () -> new ResolveMsg.Chosen(Conflict.Version.OURS))
+                                    .withDetails(popup -> keepDetails(
+                                            popup.sides(),
                                             popup.file().conflict().get(),
-                                            Conflict.Version.OURS),
-                                    () -> new ResolveMsg.Chosen(Conflict.Version.OURS))
-                            .withDetails(popup -> keepDetails(
-                                    popup.sides(), popup.file().conflict().get(), Conflict.Version.OURS)),
-                    new Choice<ResolvePopup>(
-                                    't',
-                                    popup -> keepLabel(
-                                            popup.sides().theirs(),
+                                            Conflict.Version.OURS))
+                                    .withCommand(popup -> keepCommand(popup, Conflict.Version.OURS)),
+                            new Choice<ResolvePopup>(
+                                            't',
+                                            popup -> keepLabel(
+                                                    popup.sides().theirs(),
+                                                    popup.file().conflict().get(),
+                                                    Conflict.Version.THEIRS),
+                                            () -> new ResolveMsg.Chosen(Conflict.Version.THEIRS))
+                                    .withDetails(popup -> keepDetails(
+                                            popup.sides(),
                                             popup.file().conflict().get(),
-                                            Conflict.Version.THEIRS),
-                                    () -> new ResolveMsg.Chosen(Conflict.Version.THEIRS))
-                            .withDetails(popup -> keepDetails(
-                                    popup.sides(), popup.file().conflict().get(), Conflict.Version.THEIRS)),
-                    new Choice<ResolvePopup>('e', "midway.dialog.resolve.edit", ResolveMsg.EditChosen::new)
-                            .withDetails("midway.dialog.resolve.edit.details")));
+                                            Conflict.Version.THEIRS))
+                                    .withCommand(popup -> keepCommand(popup, Conflict.Version.THEIRS)),
+                            new Choice<ResolvePopup>('e', "midway.dialog.resolve.edit", ResolveMsg.EditChosen::new)
+                                    .withDetails("midway.dialog.resolve.edit.details")
+                                    .withCommand(ResolveDialogs::editCommand)),
+                    // Wide enough for what a choice does to take two lines or so, and its command one.
+                    72)
+            .inline();
 
     /**
      * What to do with files asked to be staged that still have conflict markers: resolve the one file, edit it, or
@@ -86,6 +101,38 @@ public final class ResolveDialogs {
                             .withDetails("midway.dialog.markersLeft.stage.details")));
 
     private ResolveDialogs() {}
+
+    /**
+     * The commands keeping {@code version}'s side of the file of {@code popup} runs, as {@code CliIndex} runs them,
+     * with the path quoted as a shell needs it: {@code git checkout --ours -- 'my notes.txt' && git add -- …}.
+     */
+    private static String keepCommand(ResolvePopup popup, Conflict.Version version) {
+        return popup.file()
+                .conflict()
+                .get()
+                .keeping(version)
+                .map(arguments -> CommandLine.format(arguments
+                        .prepend("git")
+                        .append("--")
+                        .append(popup.file().path())))
+                .mkString(" && ");
+    }
+
+    /**
+     * What editing the file of {@code popup} runs: the command of the one editor set, a choice of those set, or
+     * git's editor, as {@code e} opens it (ADR 145).
+     */
+    private static String editCommand(ResolvePopup popup) {
+        String path = CommandLine.format(List.of(popup.file().path()));
+        return switch (popup.editor()) {
+            // As e opens it, at its first line; the worktree is where the command runs.
+            case FileEditor.One(EditorProgram editor) ->
+                CommandLine.format(editor.fileCommandLine(".", popup.file().path(), 1)
+                        .getOrElse(() -> List.of(editor.name(), popup.file().path())));
+            case FileEditor.Several _ -> Messages.get("midway.dialog.resolve.edit.command.chosen", path);
+            case FileEditor.GitEditor _ -> Messages.get("midway.dialog.resolve.edit.command", path);
+        };
+    }
 
     /**
      * Keeping a side, named by what it is; or, for a side that deleted the file, deleting it.

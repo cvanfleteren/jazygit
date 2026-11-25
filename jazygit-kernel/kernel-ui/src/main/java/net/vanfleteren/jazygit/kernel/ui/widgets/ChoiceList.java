@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.kernel.ui.widgets;
 
+import static dev.tamboui.toolkit.Toolkit.column;
 import static dev.tamboui.toolkit.Toolkit.list;
 import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
@@ -11,6 +12,7 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
+import io.vavr.Lazy;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -35,12 +37,19 @@ import net.vanfleteren.jazygit.lib.base.Require;
  * opens a {@link ListFilter}, and only the options whose text contains it stay shown; while it is open, the
  * letters go into it, and Escape closes it instead of cancelling. A list can be in two columns, without headings or a
  * filter: the options fill the first column down, then the second, the arrows to the sides go to the other column,
- * and Up and Down go on from one column to the other. The highlighted line and the filter live in the
- * {@link Model}, as its {@link ListCursor}.
+ * and Up and Down go on from one column to the other. A list can be inline: then every option shows what choosing it
+ * does and the command it runs under its label, with a blank line before the next (ADR 200). The highlighted line and
+ * the filter live in the {@link Model}, as its {@link ListCursor}.
  *
  * @param <P> the popup the list is shown in
  */
 public final class ChoiceList<P extends Popup> {
+
+    // In an inline list, the columns before the label of an option: a space, its letter and two spaces; what it does
+    // and its command start there too, under the label.
+    private static final int INDENT = 4;
+    // In an inline list, the column kept free after the text of an option, as before its letter.
+    private static final int END = 1;
 
     private final String id;
     private final List<Choice<P>> choices;
@@ -50,6 +59,7 @@ public final class ChoiceList<P extends Popup> {
     private final boolean filterable;
     // The width two columns share, for a list in two columns.
     private final Option<Integer> columnsWidth;
+    private final boolean inline;
     private final FilterLine filter = new FilterLine();
 
     /**
@@ -68,7 +78,7 @@ public final class ChoiceList<P extends Popup> {
      */
     public ChoiceList(
             String id, List<Choice<P>> choices, Supplier<Msg> onCancel, Consumer<Msg> dispatch, boolean filterable) {
-        this(id, choices, onCancel, dispatch, filterable, Option.none());
+        this(id, choices, onCancel, dispatch, filterable, Option.none(), false);
     }
 
     private ChoiceList(
@@ -77,7 +87,8 @@ public final class ChoiceList<P extends Popup> {
             Supplier<Msg> onCancel,
             Consumer<Msg> dispatch,
             boolean filterable,
-            Option<Integer> columnsWidth) {
+            Option<Integer> columnsWidth,
+            boolean inline) {
         List<Character> shared = choices.map(Choice::key)
                 .groupBy(key -> key)
                 .filterValues(keys -> keys.size() > 1)
@@ -94,6 +105,7 @@ public final class ChoiceList<P extends Popup> {
         this.dispatch = dispatch;
         this.filterable = filterable;
         this.columnsWidth = columnsWidth;
+        this.inline = inline;
         this.list = list().id(id).focusable().highlightSymbol("");
     }
 
@@ -110,14 +122,26 @@ public final class ChoiceList<P extends Popup> {
      */
     public static <P extends Popup> ChoiceList<P> inTwoColumns(
             String id, List<Choice<P>> choices, Supplier<Msg> onCancel, Consumer<Msg> dispatch, int width) {
-        return new ChoiceList<>(id, choices, onCancel, dispatch, false, Option.of(width));
+        return new ChoiceList<>(id, choices, onCancel, dispatch, false, Option.of(width), false);
+    }
+
+    /**
+     * An inline list: every option shows what choosing it does and the command it runs under its label, wrapped at
+     * the width it is drawn in, with a blank line before the next option (ADR 200).
+     *
+     * @throws IllegalArgumentException when two options have the same letter
+     */
+    public static <P extends Popup> ChoiceList<P> inline(
+            String id, List<Choice<P>> choices, Supplier<Msg> onCancel, Consumer<Msg> dispatch, boolean filterable) {
+        return new ChoiceList<>(id, choices, onCancel, dispatch, filterable, Option.none(), true);
     }
 
     /**
      * The lines that show the options of {@code choices} at {@code visible}: a heading starts a group that has
-     * one of them, after a blank line unless it is the first line. Without options, it says nothing matches.
+     * one of them, after a blank line unless it is the first line; when {@code spaced}, every option but the first
+     * comes after a blank line too. Without options, it says nothing matches.
      */
-    private static <P> List<Line> lines(List<Choice<P>> choices, List<Integer> visible) {
+    private static <P> List<Line> lines(List<Choice<P>> choices, List<Integer> visible, boolean spaced) {
         if (visible.isEmpty()) {
             return List.of(new NoMatches());
         }
@@ -133,7 +157,7 @@ public final class ChoiceList<P extends Popup> {
                     Option.when(starts && start >= 0, () -> choices.get(start)).flatMap(Choice::heading);
             List<Line> before = heading.map(key -> List.<Line>of(new Heading(Messages.get(key))))
                     .getOrElse(List.empty())
-                    .prependAll(position > 0 && heading.isDefined() ? List.of(new Blank()) : List.empty());
+                    .prependAll(position > 0 && (spaced || heading.isDefined()) ? List.of(new Blank()) : List.empty());
             return before.append(new OptionLine(index));
         });
     }
@@ -151,16 +175,26 @@ public final class ChoiceList<P extends Popup> {
      * @param opensAt the key of the option highlighted until the user moves, if not the first
      */
     public StyledElement<?> render(Model model, P popup, Option<Character> opensAt) {
+        Require.that(!inline, () -> "The inline list " + id + " wraps what its options do, so it is drawn at a width");
+        return render(model, popup, opensAt, 0);
+    }
+
+    /**
+     * The list for {@code popup}, drawn {@code width} columns wide, which an inline list wraps what its options do at.
+     *
+     * @param opensAt the key of the option highlighted until the user moves, if not the first
+     */
+    public StyledElement<?> render(Model model, P popup, Option<Character> opensAt, int width) {
         List<Row> rows = rows(model, popup);
         FilteredCursor<Line> view = view(rows, model.listCursor(), opensAt);
-        List<StyledElement<?>> elements = view.lines().map(line -> element(line, rows));
+        List<StyledElement<?>> elements = view.lines().map(line -> element(line, rows, popup, width));
         StyledElement<?> shown = down(rows)
                 .<StyledElement<?>>map(first -> columns(view, rows, elements, first))
                 .getOrElse(() -> list.elements(elements.toJavaArray(StyledElement[]::new))
                         .selected(view.selected())
                         .onKeyEvent(event -> handleKey(view, rows, Option.none(), event))
                         .onMouseEvent(event -> wheel(view, event))
-                        .length(height(model, popup)));
+                        .length(height(model, popup, width)));
         // While the filter is open, a paste goes in it.
         return view.cursor().filter().isDefined()
                 ? new PasteTarget(
@@ -207,8 +241,24 @@ public final class ChoiceList<P extends Popup> {
      * filter grows; in two columns, those of the first.
      */
     public int height(Model model, P popup) {
+        Require.that(
+                !inline, () -> "The inline list " + id + " wraps what its options do, so it is measured at a width");
+        return height(model, popup, 0);
+    }
+
+    /**
+     * How many lines the list takes for {@code popup} drawn {@code width} columns wide: for an inline list, each
+     * option takes as many as what it does and its command wrap to, under its label.
+     */
+    public int height(Model model, P popup, int width) {
         List<Row> rows = rows(model, popup);
-        return down(rows).getOrElse(() -> unfiltered(rows).size());
+        return down(rows)
+                .getOrElse(() -> unfiltered(rows)
+                        .map(line -> line instanceof OptionLine(int index) && inline
+                                ? optionLines(index, popup, width).size()
+                                : 1)
+                        .sum()
+                        .intValue());
     }
 
     /**
@@ -299,7 +349,7 @@ public final class ChoiceList<P extends Popup> {
      * The lines of the options shown for {@code rows}, whatever the filter.
      */
     private List<Line> unfiltered(List<Row> rows) {
-        return lines(choices, visible(rows, Option.none()));
+        return lines(choices, visible(rows, Option.none()), inline);
     }
 
     /**
@@ -308,7 +358,7 @@ public final class ChoiceList<P extends Popup> {
      */
     private FilteredCursor<Line> view(List<Row> rows, ListCursor cursor, Option<Character> opensAt) {
         return FilteredCursor.of(
-                filter -> lines(choices, visible(rows, filter)),
+                filter -> lines(choices, visible(rows, filter), inline),
                 // A heading, a blank line, and the line saying nothing matches are not options.
                 OptionLine.class::isInstance,
                 lines -> opensAt.flatMap(key -> choices.indexWhereOption(choice -> choice.key() == key))
@@ -325,8 +375,10 @@ public final class ChoiceList<P extends Popup> {
                         && ListFilter.matches(filter, rows.get(index).label()));
     }
 
-    private StyledElement<?> element(Line line, List<Row> rows) {
+    private StyledElement<?> element(Line line, List<Row> rows, P popup, int width) {
         return switch (line) {
+            case OptionLine(int index)
+            when inline -> inlineOption(index, rows.get(index).enabled(), popup, width);
             case OptionLine(int index) when rows.get(index).enabled() -> text(lineText(line, rows));
             case OptionLine(int index) -> text(lineText(line, rows)).addClass(Theme.Classes.DISABLED);
             case Heading(String heading) -> text(heading).addClass(Theme.Classes.BOLD);
@@ -335,8 +387,48 @@ public final class ChoiceList<P extends Popup> {
         };
     }
 
+    /**
+     * The option at {@code index} of an inline list, {@code width} columns wide: its letter and label, then what
+     * choosing it does, dimmed, and the command it runs, each wrapped under the label. All its lines are one item of
+     * the list, which the highlight covers whole.
+     */
+    private StyledElement<?> inlineOption(int index, boolean enabled, P popup, int width) {
+        Choice<P> choice = choices.get(index);
+        StyledElement<?> key =
+                text(" " + choice.key()).addClass(enabled ? Theme.Classes.CHOICE_KEY : Theme.Classes.DISABLED);
+        StyledElement<?> label = text("  " + choice.label().apply(popup));
+        StyledElement<?> first = row(key.length(2), enabled ? label : label.addClass(Theme.Classes.DISABLED));
+        List<StyledElement<?>> under = optionLines(index, popup, width)
+                .tail()
+                .map(below -> text(" ".repeat(INDENT) + below.text()).addClass(below.cssClass()));
+        return new KnownHeight(
+                Lazy.of(() ->
+                        under.isEmpty() ? first : column(under.prepend(first).toJavaArray(StyledElement[]::new))),
+                1 + under.size());
+    }
+
+    /**
+     * The lines of the option at {@code index} of an inline list {@code width} columns wide: its label, then what
+     * choosing it does and its command, wrapped to fit under the label, each with the class it is drawn in.
+     */
+    private List<Below> optionLines(int index, P popup, int width) {
+        Choice<P> choice = choices.get(index);
+        int room = Math.max(1, width - INDENT - END);
+        return List.of(new Below(choice.label().apply(popup), ""))
+                .appendAll(choice.details()
+                        .toList()
+                        .flatMap(details -> TextWidth.wrapped(details.apply(popup), room))
+                        .map(text -> new Below(text, Theme.Classes.DIM)))
+                .appendAll(choice.command()
+                        .toList()
+                        .flatMap(command -> TextWidth.wrapped(command.apply(popup), room))
+                        .map(text -> new Below(text, Theme.Classes.CHOICE_COMMAND)));
+    }
+
     private String lineText(Line line, List<Row> rows) {
         return switch (line) {
+            case OptionLine(int index)
+            when inline -> " ".repeat(INDENT) + rows.get(index).label() + " ".repeat(END);
             case OptionLine(int index) ->
                 Messages.get(
                         "dialog.choice.row",
@@ -453,6 +545,11 @@ public final class ChoiceList<P extends Popup> {
     private record OptionLine(int index) implements Line {}
 
     private record Heading(String text) implements Line {}
+
+    /**
+     * A line of an option of an inline list, and the class it is drawn in.
+     */
+    private record Below(String text, String cssClass) {}
 
     private record Blank() implements Line {}
 

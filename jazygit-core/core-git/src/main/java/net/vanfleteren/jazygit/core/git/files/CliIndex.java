@@ -74,20 +74,13 @@ public final class CliIndex implements Index {
     }
 
     /**
-     * {@code git checkout --ours|--theirs -- <path>}, then {@code git add -- <path>}; or {@code git rm -- <path>} when
-     * that side deleted the file.
+     * The commands of {@link Conflict#keeping}, each on {@code -- <path>}: {@code git checkout --ours|--theirs}, then
+     * {@code git add}; or {@code git rm --quiet} when that side deleted the file.
      */
     @Override
     public Either<GitFailure, List<ExecutedCommand>> keep(String path, Conflict conflict, Conflict.Version version) {
-        List<String> one = List.of(path);
-        return conflict.did(version) == Conflict.Side.DELETED
-                ? onPaths(worktree, List.of("rm", "--quiet"), one)
-                : GitFailure.sequence(
-                        () -> onPaths(
-                                worktree,
-                                List.of("checkout", version == Conflict.Version.OURS ? "--ours" : "--theirs"),
-                                one),
-                        () -> stage(one));
+        return GitFailure.sequence(
+                conflict.keeping(version).map(arguments -> () -> onPaths(worktree, arguments, List.of(path))));
     }
 
     /**

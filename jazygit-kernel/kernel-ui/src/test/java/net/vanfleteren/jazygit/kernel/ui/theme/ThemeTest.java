@@ -186,6 +186,40 @@ class ThemeTest {
     }
 
     @Test
+    void everyThemeColoursTheLetterOfAChoiceLikeTheBorderOfItsPopup() {
+        for (ThemeName name : styledThemes()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            assertEquals(
+                    engine.resolve(new Node("DialogElement", Set.of())).borderColor(),
+                    engine.resolve(new Node("TextElement", Set.of(Theme.Classes.CHOICE_KEY)))
+                            .foreground(),
+                    name.id());
+        }
+    }
+
+    @Test
+    void everyThemeSetsTheLetterAndTheCommandOfAChoiceApart() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            var plain = engine.resolve(new Node("TextElement", Set.of())).toStyle();
+            assertNotEquals(
+                    plain,
+                    engine.resolve(new Node("TextElement", Set.of(Theme.Classes.CHOICE_KEY)))
+                            .toStyle(),
+                    name.id());
+            assertNotEquals(
+                    plain,
+                    engine.resolve(new Node("TextElement", Set.of(Theme.Classes.CHOICE_COMMAND)))
+                            .toStyle(),
+                    name.id());
+        }
+    }
+
+    @Test
     void everyThemeBordersAPopupLikeAPane() {
         for (ThemeName name : ThemeName.values()) {
             var engine = Theme.createEngine().get();

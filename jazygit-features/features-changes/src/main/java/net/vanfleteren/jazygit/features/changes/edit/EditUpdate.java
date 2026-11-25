@@ -51,14 +51,12 @@ public final class EditUpdate {
      * opens it at its start; else in the one set, or the one chosen of those.
      */
     private static Next open(Model model, String path, int line) {
-        Editors editors =
-                model.preferences().settings().get(EditorSettings.EDITORS).files();
-        if (editors.isEmpty()) {
-            return OperationUpdate.start(model.clearError(), new EditCmd(List.of(path)));
-        }
-        return editors.all().size() == 1
-                ? start(model, editors.all().head(), path, line)
-                : Next.of(model.clearError().openPopup(new EditPopup(path, line, editors.lettered())));
+        return switch (FileEditor.of(model)) {
+            case FileEditor.GitEditor _ -> OperationUpdate.start(model.clearError(), new EditCmd(List.of(path)));
+            case FileEditor.One(EditorProgram editor) -> start(model, editor, path, line);
+            case FileEditor.Several(Editors editors) ->
+                Next.of(model.clearError().openPopup(new EditPopup(path, line, editors.lettered())));
+        };
     }
 
     /**

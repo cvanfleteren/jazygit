@@ -18,10 +18,14 @@ import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
+import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
+import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveCmd.Keep;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveCmd.Restore;
+import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
+import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -75,7 +79,9 @@ class ResolveUpdateTest {
 
         assertEquals(
                 Option.of(new ResolvePopup(
-                        CONFLICTED, new Sides(new SideName.Branch(new BranchName("main")), new SideName.Rebased()))),
+                        CONFLICTED,
+                        new Sides(new SideName.Branch(new BranchName("main")), new SideName.Rebased()),
+                        new FileEditor.GitEditor())),
                 next.model().popup(ResolvePopup.class));
     }
 
@@ -137,6 +143,48 @@ class ResolveUpdateTest {
                         .model()
                         .popup(ResolvePopup.class)
                         .map(ResolvePopup::sides));
+    }
+
+    @Test
+    void theDialogSaysGitsEditorWithoutAnEditorSet() {
+        assertEquals(
+                Option.of(new FileEditor.GitEditor()),
+                Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED))
+                        .model()
+                        .popup(ResolvePopup.class)
+                        .map(ResolvePopup::editor));
+    }
+
+    @Test
+    void theDialogSaysTheCommandOfTheOneEditorSetToOpenFiles() {
+        EditorProgram nvim = EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}", "{file}"), true, Option.none());
+        Model model = withEditors(rebasing(), nvim);
+
+        assertEquals(
+                Option.of(new FileEditor.One(nvim)),
+                Update.update(model, new ResolveMsg.Requested(CONFLICTED))
+                        .model()
+                        .popup(ResolvePopup.class)
+                        .map(ResolvePopup::editor));
+    }
+
+    @Test
+    void theDialogSaysAnEditorIsChosenOfSeveralSet() {
+        EditorProgram nvim = EditorProgram.ofFile("Neovim", List.of("nvim", "{file}"), true, Option.none());
+        EditorProgram code = EditorProgram.ofFile("Code", List.of("code", "{file}"), false, Option.none());
+        Model model = withEditors(rebasing(), nvim, code);
+
+        assertEquals(
+                Option.of(new FileEditor.Several(new Editors(List.of(nvim, code)))),
+                Update.update(model, new ResolveMsg.Requested(CONFLICTED))
+                        .model()
+                        .popup(ResolvePopup.class)
+                        .map(ResolvePopup::editor));
+    }
+
+    private static Model withEditors(Model model, EditorProgram... editors) {
+        return model.mapPreferences(preferences -> preferences.withSettings(
+                preferences.settings().with(EditorSettings.EDITORS, new Editors(List.of(editors)))));
     }
 
     @Test

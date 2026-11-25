@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.midway.resolve;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -14,7 +15,10 @@ import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
+import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
+import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
@@ -27,13 +31,15 @@ import org.junit.jupiter.api.Test;
  */
 class ResolveDialogsTest {
 
+    private static final FileEditor GIT = new FileEditor.GitEditor();
+
     private static final Sides REBASE = new Sides(new SideName.Branch(new BranchName("main")), new SideName.Rebased());
 
     @Test
     void theSidesOfARebaseAreNamedByWhatTheyAre() throws Exception {
         FileEntry file = FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
-        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE));
+        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE, GIT));
 
         assertTrue(screen.contains("Resolve a.txt"), screen);
         assertTrue(screen.contains("Keep main's version"), screen);
@@ -47,10 +53,61 @@ class ResolveDialogsTest {
         Sides merge =
                 new Sides(new SideName.Branch(new BranchName("feature")), new SideName.Commit(new Sha("abcdef1234")));
 
-        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, merge));
+        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, merge, GIT));
 
         assertTrue(screen.contains("Delete it, as feature did"), screen);
         assertTrue(screen.contains("Keep abcdef1's version"), screen);
+    }
+
+    @Test
+    void theCommandsQuoteAPathAsAShellNeedsIt() throws Exception {
+        FileEntry file = FileEntry.conflicted("a b", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+
+        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE, GIT));
+
+        assertTrue(screen.contains("git checkout --ours -- 'a b' && git add -- 'a b'"), screen);
+        assertTrue(screen.contains("$(git var GIT_EDITOR) 'a b'"), screen);
+    }
+
+    @Test
+    void deletingTheFileSaysTheCommandThatDeletesIt() throws Exception {
+        FileEntry file = FileEntry.conflicted("gone.txt", new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
+
+        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE, GIT));
+
+        assertTrue(screen.contains("git rm --quiet -- gone.txt"), screen);
+    }
+
+    @Test
+    void editingSaysTheCommandOfTheOneEditorSet() throws Exception {
+        FileEntry file = FileEntry.conflicted("a b", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+
+        String screen = render(
+                ResolveDialogs.RESOLVE,
+                new ResolvePopup(
+                        file,
+                        REBASE,
+                        new FileEditor.One(
+                                EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}"), true, Option.none()))));
+
+        assertTrue(screen.contains("nvim +1 'a b'"), screen);
+        assertFalse(screen.contains("GIT_EDITOR"), screen);
+    }
+
+    @Test
+    void editingWithSeveralEditorsSetSaysOneIsChosen() throws Exception {
+        FileEntry file = FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+
+        String screen = render(
+                ResolveDialogs.RESOLVE,
+                new ResolvePopup(
+                        file,
+                        REBASE,
+                        new FileEditor.Several(new Editors(List.of(
+                                EditorProgram.ofFile("Neovim", List.of("nvim"), true, Option.none()),
+                                EditorProgram.ofFile("Code", List.of("code"), false, Option.none()))))));
+
+        assertTrue(screen.contains("in the editor you choose of those set"), screen);
     }
 
     @Test

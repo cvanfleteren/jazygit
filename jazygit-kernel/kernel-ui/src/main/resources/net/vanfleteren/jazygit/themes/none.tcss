@@ -16,6 +16,9 @@ Panel.focused, Panel.choices:focus, RichTextAreaElement:focus, TextInputElement:
 .checkbox:focus { text-style: reversed; }
 
 .disabled { text-style: crossed-out; }
+/* The letter of a choice in a dialog that tells what each does, and the command it runs (ADR 200). */
+.choice-key { text-style: bold; }
+.choice-command { text-style: italic; }
 
 /* The rich view of a diff (ADR 44): the bar of each file and the changed words are reversed. */
 Span.diff-file-header { text-style: reversed; }

@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
  * The standard popup offering a choice between several options, as a {@link ChoiceList} that {@code /} filters.
  * Whether the popup is open lives in the {@link Model}, as a popup of type {@code P}, and so does where the user is in
  * its options. When options tell what choosing them does, that of the highlighted one shows in a box under the dialog,
- * as the help does.
+ * as the help does; or, in a dialog that is {@link Spec#inline() inline}, that of every option under it (ADR 200).
  *
  * @param <P> the popup that makes this dialog show
  */
@@ -32,7 +32,9 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      */
     public ChoiceDialog(Spec<P> spec, Consumer<Msg> dispatch) {
         this.spec = spec;
-        this.list = new ChoiceList<>(spec.id(), spec.choices(), spec.onCancel(), dispatch, true);
+        this.list = spec.inlined()
+                ? ChoiceList.inline(spec.id(), spec.choices(), spec.onCancel(), dispatch, true)
+                : new ChoiceList<>(spec.id(), spec.choices(), spec.onCancel(), dispatch, true);
     }
 
     @Override
@@ -45,28 +47,50 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        return model.popup(spec.popupType()).map(popup -> {
-            StyledElement<?> rows = list.render(model, popup, spec.opensAt().apply(popup));
-            String title = spec.title().apply(popup);
-            // The title sits in the top border, between its corners, and is cut off where it does not fit. It is
-            // wide enough for the hint, which would wrap otherwise.
-            int width = Math.max(
-                    spec.minWidth(),
-                    Math.max(
-                            Math.max(list.width(model, popup), list.hintWidth()) + DialogFrame.FRAME,
-                            TextWidth.of(title) + 2));
-            List<StyledElement<?>> filter = list.filterField(model.listCursor()).toList();
-            Element dialog = DialogFrame.withHint(title, width, list.hintKey(model.listCursor()), filter.append(rows))
-                    // The filter, the options whatever the filter, the blank line and the hint, plus the border.
-                    .length(filter.size() + list.height(model, popup) + 2 + 2);
-            List<String> details = list.details(model, popup);
-            return details.isEmpty()
-                    ? dialog
-                    : new WithDetails(
-                            dialog,
-                            list.highlightedDetails(model, popup, spec.opensAt().apply(popup)),
-                            details);
-        });
+        return model.popup(spec.popupType()).map(popup -> spec.inlined() ? inline(model, popup) : boxed(model, popup));
+    }
+
+    /**
+     * The dialog for {@code popup} with every option telling what it does under it, wrapped at its width (ADR 200).
+     */
+    private Element inline(Model model, P popup) {
+        String title = spec.title().apply(popup);
+        int width = Math.max(
+                spec.minWidth(),
+                Math.max(
+                        Math.max(list.width(model, popup), list.hintWidth()) + DialogFrame.FRAME,
+                        TextWidth.of(title) + 2));
+        int inside = DialogFrame.contentWidth(width);
+        StyledElement<?> rows = list.render(model, popup, spec.opensAt().apply(popup), inside);
+        List<StyledElement<?>> filter = list.filterField(model.listCursor()).toList();
+        return DialogFrame.withHint(title, width, list.hintKey(model.listCursor()), filter.append(rows))
+                .length(filter.size() + list.height(model, popup, inside) + 2 + 2);
+    }
+
+    /**
+     * The dialog for {@code popup}, with what the highlighted option does in a box under it, if it tells.
+     */
+    private Element boxed(Model model, P popup) {
+        StyledElement<?> rows = list.render(model, popup, spec.opensAt().apply(popup));
+        String title = spec.title().apply(popup);
+        // The title sits in the top border, between its corners, and is cut off where it does not fit. It is
+        // wide enough for the hint, which would wrap otherwise.
+        int width = Math.max(
+                spec.minWidth(),
+                Math.max(
+                        Math.max(list.width(model, popup), list.hintWidth()) + DialogFrame.FRAME,
+                        TextWidth.of(title) + 2));
+        List<StyledElement<?>> filter = list.filterField(model.listCursor()).toList();
+        Element dialog = DialogFrame.withHint(title, width, list.hintKey(model.listCursor()), filter.append(rows))
+                // The filter, the options whatever the filter, the blank line and the hint, plus the border.
+                .length(filter.size() + list.height(model, popup) + 2 + 2);
+        List<String> details = list.details(model, popup);
+        return details.isEmpty()
+                ? dialog
+                : new WithDetails(
+                        dialog,
+                        list.highlightedDetails(model, popup, spec.opensAt().apply(popup)),
+                        details);
     }
 
     /**
@@ -80,7 +104,10 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param onHighlight the message for highlighting it with the arrow keys, if it shows what choosing it does
      * @param shown       whether it is in the list at all, given the model and the open popup; one that is not
      *                    takes no line and cannot be chosen
-     * @param details     what choosing it does, given the open popup, shown under the dialog while it is highlighted
+     * @param details     what choosing it does, given the open popup, shown under the dialog while it is highlighted,
+     *                    or under the option itself in a dialog that is {@link Spec#inline() inline}
+     * @param command     the command choosing it runs, given the open popup, shown under what it does in a dialog that
+     *                    is inline (ADR 200)
      */
     public record Choice<P>(
             char key,
@@ -90,13 +117,23 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
             Option<String> heading,
             Option<Supplier<Msg>> onHighlight,
             BiPredicate<Model, P> shown,
-            Option<Function<P, String>> details) {
+            Option<Function<P, String>> details,
+            Option<Function<P, String>> command) {
 
         /**
          * An option with a text that depends on the popup, without a heading.
          */
         public Choice(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled) {
-            this(key, label, msg, enabled, Option.none(), Option.none(), (model, popup) -> true, Option.none());
+            this(
+                    key,
+                    label,
+                    msg,
+                    enabled,
+                    Option.none(),
+                    Option.none(),
+                    (model, popup) -> true,
+                    Option.none(),
+                    Option.none());
         }
 
         /**
@@ -124,14 +161,14 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
          * This option, starting a group of options under the heading with the message key {@code headingKey}.
          */
         public Choice<P> withHeading(String headingKey) {
-            return new Choice<>(key, label, msg, enabled, Option.of(headingKey), onHighlight, shown, details);
+            return new Choice<>(key, label, msg, enabled, Option.of(headingKey), onHighlight, shown, details, command);
         }
 
         /**
          * This option, sending {@code preview} when it is highlighted, so what choosing it does shows before.
          */
         public Choice<P> withPreview(Supplier<Msg> preview) {
-            return new Choice<>(key, label, msg, enabled, heading, Option.of(preview), shown, details);
+            return new Choice<>(key, label, msg, enabled, heading, Option.of(preview), shown, details, command);
         }
 
         /**
@@ -139,7 +176,7 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
          * popups rather than not applying for now.
          */
         public Choice<P> shownWhen(BiPredicate<Model, P> shown) {
-            return new Choice<>(key, label, msg, enabled, heading, onHighlight, shown, details);
+            return new Choice<>(key, label, msg, enabled, heading, onHighlight, shown, details, command);
         }
 
         /**
@@ -153,7 +190,15 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
          * This option, telling what choosing it does in the text {@code details} gives for the open popup.
          */
         public Choice<P> withDetails(Function<P, String> details) {
-            return new Choice<>(key, label, msg, enabled, heading, onHighlight, shown, Option.of(details));
+            return new Choice<>(key, label, msg, enabled, heading, onHighlight, shown, Option.of(details), command);
+        }
+
+        /**
+         * This option, telling the command choosing it runs, in the text {@code command} gives for the open popup:
+         * shown only in a dialog that is {@link Spec#inline() inline} (ADR 200).
+         */
+        public Choice<P> withCommand(Function<P, String> command) {
+            return new Choice<>(key, label, msg, enabled, heading, onHighlight, shown, details, Option.of(command));
         }
     }
 
@@ -167,6 +212,8 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param onCancel  the message for cancelling, by Escape; by default a {@link PopupMsg.Dismissed}
      * @param minWidth  the width it takes at least, borders included, so it does not grow as the options change
      * @param opensAt   the key of the option highlighted when the dialog opens, given the popup; else the first
+     * @param inlined   whether every option shows what it does and its command under it, rather than the highlighted
+     *                  one only in a box under the dialog (ADR 200)
      */
     public record Spec<P extends Popup>(
             String id,
@@ -175,7 +222,8 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
             List<Choice<P>> choices,
             Supplier<Msg> onCancel,
             int minWidth,
-            Function<P, Option<Character>> opensAt) {
+            Function<P, Option<Character>> opensAt,
+            boolean inlined) {
 
         /**
          * A dialog that opens with its first option highlighted, which Escape only closes (ADR 38).
@@ -188,7 +236,8 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
                     choices,
                     () -> new PopupMsg.Dismissed(popupType),
                     minWidth,
-                    popup -> Option.none());
+                    popup -> Option.none(),
+                    false);
         }
 
         /**
@@ -202,14 +251,23 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
          * This dialog, opening with the option of the key {@code opensAt} gives highlighted.
          */
         public Spec<P> openingAt(Function<P, Option<Character>> opensAt) {
-            return new Spec<>(id, popupType, title, choices, onCancel, minWidth, opensAt);
+            return new Spec<>(id, popupType, title, choices, onCancel, minWidth, opensAt, inlined);
         }
 
         /**
          * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
          */
         public Spec<P> cancelledBy(Supplier<Msg> onCancel) {
-            return new Spec<>(id, popupType, title, choices, onCancel, minWidth, opensAt);
+            return new Spec<>(id, popupType, title, choices, onCancel, minWidth, opensAt, inlined);
+        }
+
+        /**
+         * This dialog, showing under every option what choosing it does and the command it runs, with a blank line
+         * between options, rather than what the highlighted one does in a box under the dialog (ADR 200). For a
+         * dialog of few options: each takes several lines.
+         */
+        public Spec<P> inline() {
+            return new Spec<>(id, popupType, title, choices, onCancel, minWidth, opensAt, true);
         }
     }
 }
