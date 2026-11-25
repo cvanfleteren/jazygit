@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.features.github.checks.ChecksDialog;
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestAction;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestAction;
 import net.vanfleteren.jazygit.features.github.panes.PullRequestsScreen;
 import net.vanfleteren.jazygit.features.github.panes.StackGroups;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
@@ -96,7 +96,7 @@ public final class GitHubFeature {
                     CheckoutPullRequestAction.ACTION,
                     REFRESH,
                     SCREEN,
-                    CreatePullRequestAction.ACTION,
+                    GitHubCreatePullRequestAction.ACTION,
                     StackAction.ACTION,
                     BrowseAction.ACTION,
                     ReviewAction.ACTION,

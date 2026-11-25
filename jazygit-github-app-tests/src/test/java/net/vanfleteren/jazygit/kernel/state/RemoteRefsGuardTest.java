@@ -18,13 +18,14 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.PushFirst;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestCmd;
 import net.vanfleteren.jazygit.features.github.checkout.PullRequestWorktree;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.PushFirst;
+import net.vanfleteren.jazygit.features.github.create.AskPullRequest;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -43,7 +44,9 @@ class RemoteRefsGuardTest {
         assertEquals(GUARDED, new PullCmd.FastForward(FEATURE, new BranchRef.Remote(UPSTREAM)).guard());
         assertEquals(GUARDED, new PushCmd.Push(FEATURE, UPSTREAM, PushMode.FAST_FORWARD).guard());
         assertEquals(GUARDED, new PushCmd.PushSettingUpstream(FEATURE, UPSTREAM).guard());
-        assertEquals(GUARDED, new PushFirst(new PushCmd.PushSettingUpstream(FEATURE, UPSTREAM)).guard());
+        assertEquals(
+                GUARDED,
+                new PushFirst(new PushCmd.PushSettingUpstream(FEATURE, UPSTREAM), new AskPullRequest()).guard());
     }
 
     @Test

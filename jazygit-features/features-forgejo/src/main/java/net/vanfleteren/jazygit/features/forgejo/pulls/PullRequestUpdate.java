@@ -87,7 +87,7 @@ public final class PullRequestUpdate {
 
     private static Next unknown(Model model, Branch branch, ForgejoPullRequests prs, RemoteName home) {
         if (prs.read(home)) {
-            return CreatePullRequestUpdate.start(model, branch, home);
+            return ForgejoCreatePullRequestUpdate.start(model, branch, home);
         }
         Model failed = model.fail(prs.failure()
                 .filter(failure -> prs.home().contains(home))

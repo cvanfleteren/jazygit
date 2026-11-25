@@ -20,10 +20,17 @@
             <groupId>net.vanfleteren</groupId>
             <artifactId>core-forgejo</artifactId>
         </dependency>
-        <!-- Pushing a branch before its pull request is created (ADR 25, 178). -->
+        <!-- Pushing a branch before its pull request is created, and its title (ADR 18, 25, 178). -->
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>features-branches</artifactId>
+        </dependency>
+        <!-- The contract both forges' creating of a pull request keeps (CreatePullRequestContract). -->
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>features-branches</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

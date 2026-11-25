@@ -19,7 +19,6 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.BranchCmd;
 import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
-import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.OnGitHub;
@@ -28,23 +27,13 @@ import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 
 /**
- * Creating the pull request of a branch: pushing it first when it is not on its remote, reading the branch it came
- * from, reading the title it starts out with for a base, and creating it.
+ * Creating the pull request of a branch on GitHub: reading the branch it came from, recording it to stack its pull
+ * request, and creating it. Pushing it first and reading its title are {@code CreatePullRequestCmd}'s.
  */
-public sealed interface CreatePullRequestCmd extends Cmd {
+public sealed interface GitHubCreatePullRequestCmd extends Cmd {
 
     Operation CREATE_PR = Operation.of("github.log.title.createPr", "github.error.createPr.failed")
             .labelledWhenBusy("github.branches.busy.pullRequest");
-
-    /**
-     * The subject of the oldest commit of {@code branch} that is not on {@code baseRef}, if it could be read.
-     */
-    private static Option<String> firstSubject(Env env, BranchName branch, BranchRef baseRef) {
-        return env.git()
-                .history()
-                .firstSubject(new BranchRef.Local(branch), baseRef)
-                .getOrElse(Option.none());
-    }
 
     /**
      * A branch a pull request can merge into, as {@code name}, and {@code ref}, the branch it is on its remote.
@@ -96,7 +85,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * one the fewest of its commits are not on. On a tie, the earliest of {@code bases} wins. Without it, the user
      * still gets to choose.
      */
-    record ReadParent(BranchName branch, List<Base> bases) implements CreatePullRequestCmd {
+    record ReadParent(BranchName branch, List<Base> bases) implements GitHubCreatePullRequestCmd {
 
         // Further away than this, a base is too far to tell apart from the others; it also bounds the walk.
         public static final int MAX_DISTANCE = 1000;
@@ -142,64 +131,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         }
 
         private Msg read(Option<BranchName> parent) {
-            return new CreatePullRequestMsg.ParentRead(branch, parent);
-        }
-    }
-
-    /**
-     * Reads the title a new pull request of {@code branch} starts out with, to ask what it says: the subject of its
-     * oldest commit that is not on {@code baseRef}, the branch the first of {@code bases} is on its remote. Without
-     * it, the user still gets to enter one.
-     *
-     * @param head  the name the branch has on its remote
-     * @param bases the branches it can merge into, the one it is read for first
-     */
-    record ReadTitle(BranchName branch, RemoteBranch head, List<BranchName> bases, BranchRef baseRef)
-            implements CreatePullRequestCmd {
-
-        @Override
-        public Option<Label> label() {
-            return Option.of(Label.of("github.work.title", branch.value()));
-        }
-
-        @Override
-        public Msg run(Env env) {
-            return read(firstSubject(env, branch, baseRef));
-        }
-
-        @Override
-        public Msg failed(Failure failure) {
-            return read(Option.none());
-        }
-
-        private Msg read(Option<String> subject) {
-            return new CreatePullRequestMsg.TitleRead(branch, head, bases, subject);
-        }
-    }
-
-    /**
-     * Reads the title a new pull request of {@code branch} starts out with again, for {@code base}, which the user
-     * picked instead, as {@link ReadTitle} does.
-     */
-    record RereadTitle(BranchName branch, BranchName base, BranchRef baseRef) implements CreatePullRequestCmd {
-
-        @Override
-        public Option<Label> label() {
-            return Option.of(Label.of("github.work.title", branch.value()));
-        }
-
-        @Override
-        public Msg run(Env env) {
-            return read(firstSubject(env, branch, baseRef));
-        }
-
-        @Override
-        public Msg failed(Failure failure) {
-            return read(Option.none());
-        }
-
-        private Msg read(Option<String> subject) {
-            return new CreatePullRequestMsg.BaseTitleRead(branch, base, subject);
+            return new GitHubCreatePullRequestMsg.ParentRead(branch, parent);
         }
     }
 
@@ -207,7 +139,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * Records the base of a branch as its parent, as {@code set} does, before its pull request is created to put it on
      * a stack (ADR 148): the create dialog then offers that base first, also after pushing the branch.
      */
-    record RecordParent(SetBaseCmd set) implements CreatePullRequestCmd, BranchCmd {
+    record RecordParent(SetBaseCmd set) implements GitHubCreatePullRequestCmd, BranchCmd {
 
         @Override
         public BranchName branch() {
@@ -226,43 +158,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         @Override
         public Msg succeeded(List<ExecutedCommand> commands) {
-            return new CreatePullRequestMsg.ParentRecorded(this, commands);
-        }
-    }
-
-    /**
-     * Pushes a branch as {@code push} does, before its pull request is created, which its success leads to.
-     */
-    record PushFirst(PushCmd push) implements CreatePullRequestCmd, BranchCmd.KeepsBranchBusy {
-
-        @Override
-        public BranchName branch() {
-            return push.branch();
-        }
-
-        @Override
-        public Operation operation() {
-            return push.operation();
-        }
-
-        @Override
-        public boolean changesForge() {
-            return push.changesForge();
-        }
-
-        @Override
-        public Option<Guard> guard() {
-            return push.guard();
-        }
-
-        @Override
-        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
-            return push.perform(git);
-        }
-
-        @Override
-        public Msg succeeded(List<ExecutedCommand> commands) {
-            return new CreatePullRequestMsg.Pushed(this, commands);
+            return new GitHubCreatePullRequestMsg.ParentRecorded(this, commands);
         }
     }
 
@@ -276,7 +172,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
             RemoteBranch base,
             NewPullRequest pullRequest,
             Option<Stacking> stacking)
-            implements CreatePullRequestCmd, OperationCmd {
+            implements GitHubCreatePullRequestCmd, OperationCmd {
 
         /**
          * One that is stacked on nothing.
@@ -308,7 +204,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
                     .mapLeft(GitHubFailure::of)
                     .fold(
                             this::failed,
-                            created -> new CreatePullRequestMsg.Created(
+                            created -> new GitHubCreatePullRequestMsg.Created(
                                     this,
                                     created.number()
                                             .map(number -> new PullRequest(

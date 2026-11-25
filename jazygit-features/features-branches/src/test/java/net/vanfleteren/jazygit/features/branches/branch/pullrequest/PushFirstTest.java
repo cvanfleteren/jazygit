@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.create;
+package net.vanfleteren.jazygit.features.branches.branch.pullrequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
+import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -30,7 +31,8 @@ class PushFirstTest {
 
     @Test
     void itPushesAsItsPushDoes() {
-        CreatePullRequestCmd.PushFirst first = new CreatePullRequestCmd.PushFirst(PUSH);
+        CreatePullRequestCmd.PushFirst first =
+                new CreatePullRequestCmd.PushFirst(PUSH, (model, branch) -> Next.of(model));
         Git git = StubGit.of().withRemotes(new StubRemotes() {
             @Override
             public Either<GitFailure, List<ExecutedCommand>> push(

@@ -23,8 +23,8 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.CreatePullRequest;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.Stacking;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.Stacking;
 import net.vanfleteren.jazygit.features.github.stack.StackCmd;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -78,8 +78,8 @@ class StackedPullRequestTest {
                                 2, new PrNumber(95), State.OPEN, new GhBranch("other"), new GhBranch("feat/a"))));
     }
 
-    private static NewPullRequestPopup popup(BranchName base, boolean stacked) {
-        return new NewPullRequestPopup(
+    private static GitHubNewPullRequestPopup popup(BranchName base, boolean stacked) {
+        return new GitHubNewPullRequestPopup(
                 FEATURE,
                 new RemoteBranch("origin", FEATURE),
                 List.of(FEAT_A, MAIN),
@@ -91,14 +91,14 @@ class StackedPullRequestTest {
 
     @Test
     void aBaseWithoutAPullRequestOffersNoStack() {
-        assertEquals(Option.none(), CreatePullRequestUpdate.stackOn(model(Option.none()), MAIN));
+        assertEquals(Option.none(), GitHubCreatePullRequestUpdate.stackOn(model(Option.none()), MAIN));
     }
 
     @Test
     void onAPullRequestInNoStackTheTwoMakeOne() {
         assertEquals(
                 Option.of(Either.right(new Stacking(new PrNumber(96), Option.none()))),
-                CreatePullRequestUpdate.stackOn(model(Option.none()), FEAT_A));
+                GitHubCreatePullRequestUpdate.stackOn(model(Option.none()), FEAT_A));
     }
 
     @Test
@@ -112,25 +112,26 @@ class StackedPullRequestTest {
 
         assertEquals(
                 Option.of(Either.right(new Stacking(new PrNumber(96), Option.of(12)))),
-                CreatePullRequestUpdate.stackOn(model(Option.of(top)), FEAT_A));
+                GitHubCreatePullRequestUpdate.stackOn(model(Option.of(top)), FEAT_A));
     }
 
     @Test
     void notOnTheTopOfAStackItSaysWhy() {
         assertEquals(
-                Option.of(Either.left(new CreatePullRequestCmd.NotTop(new PrNumber(96), 12))),
-                CreatePullRequestUpdate.stackOn(model(Option.of(stackOf(1))), FEAT_A));
+                Option.of(Either.left(new GitHubCreatePullRequestCmd.NotTop(new PrNumber(96), 12))),
+                GitHubCreatePullRequestUpdate.stackOn(model(Option.of(stackOf(1))), FEAT_A));
     }
 
     @Test
     void creatingItTickedCarriesTheStackingAndUntickedNone() {
         Model model = model(Option.none());
 
-        Update.Next ticked = Update.update(model.openPopup(popup(FEAT_A, true)), new CreatePullRequestMsg.Confirmed());
+        Update.Next ticked =
+                Update.update(model.openPopup(popup(FEAT_A, true)), new GitHubCreatePullRequestMsg.Confirmed());
         Update.Next unticked = Update.update(
-                Update.update(model.openPopup(popup(FEAT_A, true)), new CreatePullRequestMsg.StackToggled())
+                Update.update(model.openPopup(popup(FEAT_A, true)), new GitHubCreatePullRequestMsg.StackToggled())
                         .model(),
-                new CreatePullRequestMsg.Confirmed());
+                new GitHubCreatePullRequestMsg.Confirmed());
 
         assertEquals(
                 List.of(Option.of(new Stacking(new PrNumber(96), Option.none()))),
@@ -151,7 +152,8 @@ class StackedPullRequestTest {
 
         Update.Next created = Update.update(
                 running,
-                new CreatePullRequestMsg.Created(cmd, Option.of(pr(101, "feature", Option.none())), List.empty()));
+                new GitHubCreatePullRequestMsg.Created(
+                        cmd, Option.of(pr(101, "feature", Option.none())), List.empty()));
 
         assertTrue(
                 created.cmds()
@@ -169,13 +171,13 @@ class StackedPullRequestTest {
     }
 
     private static String render(Model open) throws Exception {
-        NewPullRequestDialog dialog = new NewPullRequestDialog(msg -> {});
+        GitHubNewPullRequestDialog dialog = new GitHubNewPullRequestDialog(msg -> {});
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(dialog, open))) {
             return RenderedText.ofLarge(runner, () -> view(dialog, open));
         }
     }
 
-    private static Element view(NewPullRequestDialog dialog, Model model) {
+    private static Element view(GitHubNewPullRequestDialog dialog, Model model) {
         return stack(text("background"), dialog.render(model).get());
     }
 }

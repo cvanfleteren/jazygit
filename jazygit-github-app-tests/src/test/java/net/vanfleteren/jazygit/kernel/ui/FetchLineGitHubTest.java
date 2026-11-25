@@ -10,8 +10,9 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd;
+import net.vanfleteren.jazygit.features.github.create.GitHubNewPullRequestPopup;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
@@ -61,7 +62,10 @@ class FetchLineGitHubTest {
         assertEquals(
                 "Reading the title of feature",
                 FetchLine.labelText(new CreatePullRequestCmd.ReadTitle(
-                                feature, new RemoteBranch("origin", feature), List.empty(), base)
+                                feature,
+                                base,
+                                new GitHubNewPullRequestPopup.Opening(
+                                        feature, new RemoteBranch("origin", feature), List.of(new BranchName("main"))))
                         .label()
                         .get()));
         assertEquals(

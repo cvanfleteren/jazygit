@@ -13,6 +13,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
@@ -84,7 +85,7 @@ public final class ForgejoNewPullRequestDialog implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        return model.popup(NewPullRequestPopup.class).map(open -> {
+        return model.popup(ForgejoNewPullRequestPopup.class).map(open -> {
             // The fields show what the model has: what was typed in them, or what the popup opened with.
             if (!title.text().equals(open.title())) {
                 title.setText(open.title());
@@ -172,7 +173,7 @@ public final class ForgejoNewPullRequestDialog implements PopupView {
      */
     private EventResult keys(KeyEvent event) {
         if (event.isCancel()) {
-            dispatch.accept(new PopupMsg.Dismissed(NewPullRequestPopup.class));
+            dispatch.accept(new PopupMsg.Dismissed(ForgejoNewPullRequestPopup.class));
             return EventResult.HANDLED;
         }
         if (event.hasCtrl() && event.isChar(CONFIRM_KEY)) {
@@ -187,11 +188,11 @@ public final class ForgejoNewPullRequestDialog implements PopupView {
      * far, also those typed since the model was last rendered.
      */
     private void edited(boolean draft) {
-        dispatch.accept(new CreatePullRequestMsg.Edited(title.text(), body.text(), draft));
+        dispatch.accept(new ForgejoCreatePullRequestMsg.Edited(title.text(), body.text(), draft));
     }
 
     private void confirm() {
-        // A blank title keeps the popup open, see CreatePullRequestUpdate.
-        dispatch.accept(new CreatePullRequestMsg.Confirmed());
+        // A blank title keeps the popup open, see ForgejoCreatePullRequestUpdate.
+        dispatch.accept(new ForgejoCreatePullRequestMsg.Confirmed());
     }
 }

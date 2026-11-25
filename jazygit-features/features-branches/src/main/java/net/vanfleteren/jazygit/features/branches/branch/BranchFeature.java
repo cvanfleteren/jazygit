@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.features.branches.branch.movecommits.MoveAction;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchAction;
 import net.vanfleteren.jazygit.features.branches.branch.nuke.NukeBranchAction;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullAction;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestAction;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushAction;
 import net.vanfleteren.jazygit.features.branches.branch.rebase.RebaseAction;
 import net.vanfleteren.jazygit.features.branches.branch.rename.RenameBranchAction;
@@ -41,7 +42,8 @@ public final class BranchFeature {
                     BranchCommitsAction.ACTION,
                     UpstreamAction.ACTION,
                     BaseAction.ACTION,
-                    BranchesTabAction.ACTION)
+                    BranchesTabAction.ACTION,
+                    CreatePullRequestAction.ACTION)
             .reacting(BranchesTabUpdate::reacting);
 
     private BranchFeature() {}

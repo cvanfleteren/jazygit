@@ -21,7 +21,7 @@ import net.vanfleteren.jazygit.features.changes.diff.CommitFilesUpdate;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.checks.ChecksPopup;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestUpdate;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestUpdate;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
@@ -446,7 +446,7 @@ public final class PullRequestUpdate {
                                 ? Next.of(model.fail(gitHub.pullRequestsFailure()
                                         .<AppError>map(PullRequestsError.Unavailable::new)
                                         .getOrElse(PullRequestsError.NotRead::new)))
-                                : CreatePullRequestUpdate.askPushed(model, known)))
+                                : GitHubCreatePullRequestUpdate.askPushed(model, known)))
                 .getOrElse(() -> Next.of(model));
     }
 

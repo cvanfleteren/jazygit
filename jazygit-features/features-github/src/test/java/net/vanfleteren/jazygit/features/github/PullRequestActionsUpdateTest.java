@@ -33,7 +33,7 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;

@@ -24,7 +24,7 @@ import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestCmd;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestMsg;
 import net.vanfleteren.jazygit.features.github.checkout.PullRequestCheckout;
 import net.vanfleteren.jazygit.features.github.checkout.PullRequestWorktree;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;

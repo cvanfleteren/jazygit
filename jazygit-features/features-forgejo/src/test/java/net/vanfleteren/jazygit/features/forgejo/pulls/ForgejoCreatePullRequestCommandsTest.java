@@ -19,8 +19,8 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestCmd.CheckHead;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoCreatePullRequestCmd.CheckHead;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoCreatePullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Checking where a branch is pushed to, and creating its pull request on Forgejo (ADR 178).
  */
-class CreatePullRequestCommandsTest {
+class ForgejoCreatePullRequestCommandsTest {
 
     private static final BranchName BRANCH = new BranchName("feature");
     private static final BranchName MAIN = new BranchName("main");
@@ -66,7 +66,7 @@ class CreatePullRequestCommandsTest {
     @Test
     void aBranchPushedToARemoteOnTheHostOfTheHomeCanHaveOne() {
         assertEquals(
-                new CreatePullRequestMsg.HeadChecked(BRANCH, Option.none()),
+                new ForgejoCreatePullRequestMsg.HeadChecked(BRANCH, Option.none()),
                 new CheckHead(UPSTREAM, BRANCH, FEATURE)
                         .run(answering(Either.right(CREATED)).env(FORKED)));
     }
@@ -77,7 +77,8 @@ class CreatePullRequestCommandsTest {
         Map<RemoteName, String> urls = HashMap.of(ORIGIN, URL, onGitHub.remote(), "git@github.com:cvf/nix.git");
 
         assertEquals(
-                new CreatePullRequestMsg.HeadChecked(BRANCH, Option.of(new CreateError.Elsewhere(BRANCH, onGitHub))),
+                new ForgejoCreatePullRequestMsg.HeadChecked(
+                        BRANCH, Option.of(new CreateError.Elsewhere(BRANCH, onGitHub))),
                 new CheckHead(ORIGIN, BRANCH, onGitHub)
                         .run(answering(Either.right(CREATED)).env(urls)));
     }
@@ -88,7 +89,7 @@ class CreatePullRequestCommandsTest {
 
         Msg created = cmd.run(answering(Either.right(CREATED)).ahead(HashMap.of(ORIGIN, URL), 2));
 
-        assertEquals(new CreatePullRequestMsg.Created(cmd, CREATED), created);
+        assertEquals(new ForgejoCreatePullRequestMsg.Created(cmd, CREATED), created);
         ForgejoNewPullRequest pullRequest = List.ofAll(sent).single();
         assertEquals(new ForgejoNewPullRequest("feature", "main", "Create it", "Why", true), pullRequest);
         assertEquals("WIP: Create it", pullRequest.sentTitle());
@@ -116,7 +117,7 @@ class CreatePullRequestCommandsTest {
                 409, "{\"message\":\"pull request already exists for these targets [id: 81, issue_id: 7]\"}");
 
         assertEquals(
-                new CreatePullRequestMsg.AlreadyOpen(cmd, 7),
+                new ForgejoCreatePullRequestMsg.AlreadyOpen(cmd, 7),
                 cmd.run(answering(Either.left(taken)).ahead(HashMap.of(ORIGIN, URL), 2)));
     }
 

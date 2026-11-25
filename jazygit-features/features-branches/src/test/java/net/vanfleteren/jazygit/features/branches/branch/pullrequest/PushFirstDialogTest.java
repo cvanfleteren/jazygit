@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.create;
+package net.vanfleteren.jazygit.features.branches.branch.pullrequest;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
@@ -28,11 +29,12 @@ class PushFirstDialogTest {
 
     private static final BranchName BRANCH = new BranchName("stack-1");
     private static final RemoteBranch TARGET = new RemoteBranch("origin", BRANCH);
+    private static final AfterPush THEN = (model, branch) -> Next.of(model);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ConfirmDialog<PushFirstPopup> dialog =
             new ConfirmDialog<>(CreatePullRequestDialogs.PUSH_FIRST, dispatched::add);
-    private Model open = TestModels.loaded().openPopup(new PushFirstPopup(BRANCH, TARGET, Option.of(1)));
+    private Model open = TestModels.loaded().openPopup(new PushFirstPopup(BRANCH, TARGET, Option.of(1), THEN));
 
     @Test
     void enterConfirms() throws Exception {
@@ -65,7 +67,7 @@ class PushFirstDialogTest {
 
     @Test
     void saysWhereABranchThatTracksNoRemoteBranchGoes() throws Exception {
-        open = TestModels.loaded().openPopup(new PushFirstPopup(BRANCH, TARGET, Option.none()));
+        open = TestModels.loaded().openPopup(new PushFirstPopup(BRANCH, TARGET, Option.none(), THEN));
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
             assertTrue(screen.contains("This branch does not track a remote branch."), screen);
@@ -77,8 +79,8 @@ class PushFirstDialogTest {
     void theTitleNamesALongBranchWholeWhenItsTargetIsNamedOtherwise() throws Exception {
         BranchName longName = new BranchName("feature/a-rather-long-descriptive-branch-name-for-the-push-first-dialog");
         open = TestModels.loaded()
-                .openPopup(
-                        new PushFirstPopup(longName, new RemoteBranch("origin", new BranchName("fx")), Option.none()));
+                .openPopup(new PushFirstPopup(
+                        longName, new RemoteBranch("origin", new BranchName("fx")), Option.none(), THEN));
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
             assertTrue(screen.contains("Push " + longName.value() + " first"), screen);

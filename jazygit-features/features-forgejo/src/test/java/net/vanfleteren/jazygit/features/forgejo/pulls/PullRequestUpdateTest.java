@@ -133,7 +133,8 @@ class PullRequestUpdateTest {
 
         Next next = requested(listedNone, "feature");
         assertEquals(
-                List.of(new CreatePullRequestCmd.CheckHead(ORIGIN, new BranchName("feature"), FEATURE)), next.cmds());
+                List.of(new ForgejoCreatePullRequestCmd.CheckHead(ORIGIN, new BranchName("feature"), FEATURE)),
+                next.cmds());
         assertEquals(Option.none(), next.model().popup(ForgejoPullRequestPopup.class));
     }
 
@@ -149,7 +150,7 @@ class PullRequestUpdateTest {
 
         assertEquals(LISTED, popup(requested(listedAlone, "alone").model()).pullRequest());
         assertEquals(
-                List.of(new CreatePullRequestCmd.CheckHead(
+                List.of(new ForgejoCreatePullRequestCmd.CheckHead(
                         ORIGIN, new BranchName("alone"), new RemoteBranch(ORIGIN, new BranchName("alone")))),
                 requested(listed(), "alone").cmds());
     }
