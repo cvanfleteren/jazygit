@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.changes.inprogress;
+package net.vanfleteren.jazygit.features.midway.inprogress;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.changes.inprogress;
+package net.vanfleteren.jazygit.features.midway.inprogress;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;

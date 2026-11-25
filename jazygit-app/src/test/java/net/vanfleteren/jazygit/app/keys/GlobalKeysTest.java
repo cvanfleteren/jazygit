@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.features.changes.inprogress.InProgressMsg;
+import net.vanfleteren.jazygit.features.midway.inprogress.InProgressMsg;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import org.junit.jupiter.api.Test;
 

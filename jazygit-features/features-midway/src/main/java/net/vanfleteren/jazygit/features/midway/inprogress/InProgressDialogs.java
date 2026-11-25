@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.changes.inprogress;
+package net.vanfleteren.jazygit.features.midway.inprogress;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
@@ -25,27 +25,27 @@ public final class InProgressDialogs {
     public static final ChoiceDialog.Spec<InProgressPopup> CHOICE = new ChoiceDialog.Spec<>(
             "in-progress",
             InProgressPopup.class,
-            popup -> Messages.get("changes.dialog.inProgress.title", InProgressText.kind(popup.inProgress())),
+            popup -> Messages.get("midway.dialog.inProgress.title", InProgressText.kind(popup.inProgress())),
             List.of(
                     new Choice<InProgressPopup>(
                                     'c',
                                     popup -> popup.conflicts() > 0
                                             ? Messages.get(
-                                                    "changes.dialog.inProgress.continueConflicts", popup.conflicts())
-                                            : Messages.get("changes.dialog.inProgress.continue"),
+                                                    "midway.dialog.inProgress.continueConflicts", popup.conflicts())
+                                            : Messages.get("midway.dialog.inProgress.continue"),
                                     () -> new InProgressMsg.Chosen(InProgressAction.CONTINUE))
                             .withDetails(popup -> Messages.get(continueDetailsKey(popup.inProgress()))),
                     new Choice<InProgressPopup>(
                                     'a',
-                                    "changes.dialog.inProgress.abort",
+                                    "midway.dialog.inProgress.abort",
                                     () -> new InProgressMsg.Chosen(InProgressAction.ABORT))
-                            .withDetails("changes.dialog.inProgress.abort.details"),
+                            .withDetails("midway.dialog.inProgress.abort.details"),
                     new Choice<InProgressPopup>(
                                     's',
-                                    "changes.dialog.inProgress.skip",
+                                    "midway.dialog.inProgress.skip",
                                     () -> new InProgressMsg.Chosen(InProgressAction.SKIP),
                                     (model, popup) -> popup.inProgress().skippable())
-                            .withDetails("changes.dialog.inProgress.skip.details")));
+                            .withDetails("midway.dialog.inProgress.skip.details")));
 
     /**
      * Asks to confirm aborting or skipping, which throws work away.
@@ -55,13 +55,13 @@ public final class InProgressDialogs {
             InProgressConfirmPopup.class,
             popup -> Messages.get(
                     popup.action() == InProgressAction.SKIP
-                            ? "changes.dialog.inProgress.skipTitle"
-                            : "changes.dialog.inProgress.abortTitle",
+                            ? "midway.dialog.inProgress.skipTitle"
+                            : "midway.dialog.inProgress.abortTitle",
                     InProgressText.kind(popup.inProgress())),
             popup -> Messages.get(
                     popup.action() == InProgressAction.SKIP
-                            ? "changes.dialog.inProgress.skipMessage"
-                            : "changes.dialog.inProgress.abortMessage",
+                            ? "midway.dialog.inProgress.skipMessage"
+                            : "midway.dialog.inProgress.abortMessage",
                     InProgressText.kind(popup.inProgress())));
 
     private InProgressDialogs() {}
@@ -71,10 +71,10 @@ public final class InProgressDialogs {
      */
     private static String continueDetailsKey(InProgress inProgress) {
         return switch (inProgress) {
-            case InProgress.Merging m -> "changes.dialog.inProgress.continue.merge.details";
-            case InProgress.Rebasing r -> "changes.dialog.inProgress.continue.rebase.details";
-            case InProgress.CherryPicking c -> "changes.dialog.inProgress.continue.cherryPick.details";
-            case InProgress.Reverting r -> "changes.dialog.inProgress.continue.revert.details";
+            case InProgress.Merging m -> "midway.dialog.inProgress.continue.merge.details";
+            case InProgress.Rebasing r -> "midway.dialog.inProgress.continue.rebase.details";
+            case InProgress.CherryPicking c -> "midway.dialog.inProgress.continue.cherryPick.details";
+            case InProgress.Reverting r -> "midway.dialog.inProgress.continue.revert.details";
         };
     }
 

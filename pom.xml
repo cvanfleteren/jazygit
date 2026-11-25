@@ -225,6 +225,11 @@
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
+                <artifactId>features-midway</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
                 <artifactId>jazygit-test-support</artifactId>
                 <version>${project.version}</version>
             </dependency>

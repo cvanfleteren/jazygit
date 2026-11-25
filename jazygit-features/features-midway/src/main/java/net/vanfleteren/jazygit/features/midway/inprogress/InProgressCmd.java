@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.changes.inprogress;
+package net.vanfleteren.jazygit.features.midway.inprogress;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -16,12 +16,11 @@ import net.vanfleteren.jazygit.kernel.state.operation.Operation;
  */
 public record InProgressCmd(InProgress inProgress, InProgressAction action) implements GitOperationCmd {
 
-    public static final Operation CONTINUE =
-            Operation.of("changes.log.title.continue", "changes.error.continue.failed");
+    public static final Operation CONTINUE = Operation.of("midway.log.title.continue", "midway.error.continue.failed");
 
-    public static final Operation ABORT = Operation.of("changes.log.title.abort", "changes.error.abort.failed");
+    public static final Operation ABORT = Operation.of("midway.log.title.abort", "midway.error.abort.failed");
 
-    public static final Operation SKIP = Operation.of("changes.log.title.skip", "changes.error.skip.failed");
+    public static final Operation SKIP = Operation.of("midway.log.title.skip", "midway.error.skip.failed");
 
     @Override
     public Operation operation() {
