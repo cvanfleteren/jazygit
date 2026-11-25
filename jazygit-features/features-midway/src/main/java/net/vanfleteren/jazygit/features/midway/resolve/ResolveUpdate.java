@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
 import net.vanfleteren.jazygit.features.changes.edit.EditUpdate;
+import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.Chosen;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.EditChosen;
@@ -32,8 +33,7 @@ public final class ResolveUpdate {
                 PopupUpdate.ask(
                         model,
                         file.conflict().isDefined()
-                                ? Sides.of(model)
-                                        .map(sides -> new ResolvePopup(file, sides, EditWith.of(model, file.path())))
+                                ? Sides.of(model).map(sides -> new ResolvePopup(file, sides, FileEditor.of(model)))
                                 : Option.none());
             case Chosen(Conflict.Version version) ->
                 model.popup(ResolvePopup.class)

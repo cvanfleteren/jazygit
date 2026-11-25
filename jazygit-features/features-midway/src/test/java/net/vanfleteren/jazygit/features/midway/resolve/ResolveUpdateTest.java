@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
 import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
+import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveCmd.Keep;
@@ -78,7 +79,9 @@ class ResolveUpdateTest {
 
         assertEquals(
                 Option.of(new ResolvePopup(
-                        CONFLICTED, new Sides(new SideName.Branch(new BranchName("main")), new SideName.Rebased()))),
+                        CONFLICTED,
+                        new Sides(new SideName.Branch(new BranchName("main")), new SideName.Rebased()),
+                        new FileEditor.GitEditor())),
                 next.model().popup(ResolvePopup.class));
     }
 
@@ -145,39 +148,38 @@ class ResolveUpdateTest {
     @Test
     void theDialogSaysGitsEditorWithoutAnEditorSet() {
         assertEquals(
-                Option.of(new EditWith.GitEditor()),
+                Option.of(new FileEditor.GitEditor()),
                 Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED))
                         .model()
                         .popup(ResolvePopup.class)
-                        .map(ResolvePopup::editing));
+                        .map(ResolvePopup::editor));
     }
 
     @Test
     void theDialogSaysTheCommandOfTheOneEditorSetToOpenFiles() {
-        Model model = withEditors(
-                rebasing(), EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}", "{file}"), true, Option.none()));
+        EditorProgram nvim = EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}", "{file}"), true, Option.none());
+        Model model = withEditors(rebasing(), nvim);
 
         assertEquals(
-                Option.of(new EditWith.Program(List.of("nvim", "+1", "a.txt"))),
+                Option.of(new FileEditor.One(nvim)),
                 Update.update(model, new ResolveMsg.Requested(CONFLICTED))
                         .model()
                         .popup(ResolvePopup.class)
-                        .map(ResolvePopup::editing));
+                        .map(ResolvePopup::editor));
     }
 
     @Test
     void theDialogSaysAnEditorIsChosenOfSeveralSet() {
-        Model model = withEditors(
-                rebasing(),
-                EditorProgram.ofFile("Neovim", List.of("nvim", "{file}"), true, Option.none()),
-                EditorProgram.ofFile("Code", List.of("code", "{file}"), false, Option.none()));
+        EditorProgram nvim = EditorProgram.ofFile("Neovim", List.of("nvim", "{file}"), true, Option.none());
+        EditorProgram code = EditorProgram.ofFile("Code", List.of("code", "{file}"), false, Option.none());
+        Model model = withEditors(rebasing(), nvim, code);
 
         assertEquals(
-                Option.of(new EditWith.Chosen()),
+                Option.of(new FileEditor.Several(new Editors(List.of(nvim, code)))),
                 Update.update(model, new ResolveMsg.Requested(CONFLICTED))
                         .model()
                         .popup(ResolvePopup.class)
-                        .map(ResolvePopup::editing));
+                        .map(ResolvePopup::editor));
     }
 
     private static Model withEditors(Model model, EditorProgram... editors) {

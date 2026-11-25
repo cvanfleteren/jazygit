@@ -5,8 +5,10 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.process.CommandLine;
+import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
+import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
@@ -122,10 +124,13 @@ public final class ResolveDialogs {
      */
     private static String editCommand(ResolvePopup popup) {
         String path = CommandLine.format(List.of(popup.file().path()));
-        return switch (popup.editing()) {
-            case EditWith.Program program -> CommandLine.format(program.commandLine());
-            case EditWith.Chosen chosen -> Messages.get("midway.dialog.resolve.edit.command.chosen", path);
-            case EditWith.GitEditor git -> Messages.get("midway.dialog.resolve.edit.command", path);
+        return switch (popup.editor()) {
+            // As e opens it, at its first line; the worktree is where the command runs.
+            case FileEditor.One(EditorProgram editor) ->
+                CommandLine.format(editor.fileCommandLine(".", popup.file().path(), 1)
+                        .getOrElse(() -> List.of(editor.name(), popup.file().path())));
+            case FileEditor.Several _ -> Messages.get("midway.dialog.resolve.edit.command.chosen", path);
+            case FileEditor.GitEditor _ -> Messages.get("midway.dialog.resolve.edit.command", path);
         };
     }
 
