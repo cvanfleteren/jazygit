@@ -47,6 +47,28 @@ public sealed interface ForgejoFailure extends Failure.Phrased {
     }
 
     /**
+     * The remote {@code remote}, whose checks were asked for, is not, or no longer, on Forgejo (ADR 195).
+     */
+    record NotOnForgejo(String remote) implements ForgejoFailure {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("forgejo.error.notOnForgejo", remote);
+        }
+    }
+
+    /**
+     * The log of a check could not be kept in {@code file}, as {@code why} says (ADR 195).
+     */
+    record LogNotKept(String file, String why) implements ForgejoFailure {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("forgejo.error.logNotKept", file, why);
+        }
+    }
+
+    /**
      * No browser could be found to open a link in.
      */
     record NoBrowser() implements ForgejoFailure {

@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview.Verdict;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
+import net.vanfleteren.jazygit.features.forgejo.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forgejo.checks.ChecksUpdate;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -89,6 +91,13 @@ public final class ForgejoPullRequestDialog implements PopupView {
                         merge('r', ForgejoMergeStyle.REBASE),
                         merge('M', ForgejoMergeStyle.REBASE_MERGE),
                         merge('f', ForgejoMergeStyle.FAST_FORWARD_ONLY),
+                        // On the key GitHub's lists its checks on (ADR 195).
+                        new Choice<ForgejoPullRequestPopup>(
+                                        'C',
+                                        "forgejo.dialog.pullRequest.viewChecks",
+                                        ChecksMsg.PullRequestChecksRequested::new,
+                                        (model, popup) -> ChecksUpdate.ofPullRequest(popup))
+                                .withDetails("forgejo.dialog.pullRequest.viewChecks.details"),
                         new Choice<ForgejoPullRequestPopup>(
                                         'R',
                                         "forgejo.dialog.pullRequest.refresh",
