@@ -17,6 +17,9 @@ from pathlib import Path
 from harness import App, AppExited, Git
 
 SHA = re.compile(r"\b[0-9a-f]{7}\b")
+# A step of an operation that stopped, listed above the log (ADR 199): its commit, no author, and its mark under the
+# graph, where a commit of the log has its author's initials.
+STEP = re.compile(r"(?:\b[0-9a-f]{7}| {7}) {4}[○✗·] ")
 
 
 class Jazygit:
@@ -830,12 +833,21 @@ class CommitsPane:
 
     def shows_history(self) -> bool:
         # The line at the bottom of the log says what it is the log of, which names the commit of a detached HEAD.
-        shown = [match.group() for line in self.app.pane_text("Commits").splitlines()
+        shown = [match.group() for line in self.log_lines()
                  if (match := SHA.search(line)) and not line.startswith("detached at ")]
         history = self.repo("log", "--format=%h", "--abbrev=7").splitlines() if self.repo.has_head() else []
         # The pane may be too short for all of them, but shows some as soon as there are any. In any order: the commits
         # all have the same date, and the app draws the parents of a merge in an order of its own.
         return sorted(shown) == sorted(history[:len(shown)]) and bool(shown) == bool(history)
+
+    def log_lines(self) -> list:
+        """The lines of the pane but the steps of an operation that stopped, listed above the log (ADR 199)."""
+        return [line for line in self.app.pane_text("Commits").splitlines() if not STEP.search(line)]
+
+    def steps(self) -> list:
+        """The steps of an operation that stopped, listed above the log, top first, without the cursor (ADR 199)."""
+        # Each row starts with the column of the cursor, "> " on its row.
+        return [line[2:].rstrip() for line in self.app.pane_text("Commits").splitlines() if STEP.search(line)]
 
     def select(self, subject: str):
         """Focuses the pane and moves to the commit with this subject."""
