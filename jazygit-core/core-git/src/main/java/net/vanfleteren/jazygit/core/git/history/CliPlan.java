@@ -144,7 +144,7 @@ public final class CliPlan {
 
     /**
      * The full commits of the objects {@code lines} name, as git abbreviated them in a sequence: what a line names in
-     * full is taken as it is, the others are asked of git together. One that git does not find is left out.
+     * full is taken as it is, the others are asked of git together. One that git does not find is left out, and only it.
      */
     private static Map<String, Sha> resolved(Path worktree, List<Line> lines) {
         List<String> objects = lines.flatMap(Line::object).distinct();
@@ -155,17 +155,19 @@ public final class CliPlan {
     }
 
     /**
-     * {@code git rev-parse} of {@code objects}, which answers with their full commits, a line each, in their order.
+     * The full commits of the abbreviated {@code objects}, read with {@code git log --no-walk --ignore-missing}, each
+     * matched to the abbreviation it starts with. One that git does not find is left out, and only it: {@code rev-parse}
+     * would fail them all.
      */
     private static Map<String, Sha> revParsed(Path worktree, List<String> objects) {
-        return GitProcess.read(
+        List<Sha> found = GitProcess.read(
                         worktree,
-                        reading(objects.map(object -> object + "^{commit}").prepend("rev-parse")),
-                        raw -> Either.right(List.of(raw.split("\n")).flatMap(Sha::parse)))
-                .toOption()
-                .filter(shas -> shas.size() == objects.size())
-                .<Map<String, Sha>>map(shas -> HashMap.ofEntries(objects.zip(shas)))
-                .getOrElse(HashMap.empty());
+                        reading(objects.prependAll(List.of("log", "--no-walk", "--ignore-missing", "--format=%H"))),
+                        raw -> Either.right(
+                                List.of(raw.split("\n")).map(String::strip).flatMap(Sha::parse)))
+                .getOrElse(List.empty());
+        return HashMap.ofEntries(objects.flatMap(
+                object -> found.find(sha -> sha.value().startsWith(object)).map(sha -> Map.entry(object, sha))));
     }
 
     private static Step step(Line line, Map<String, Sha> shas) {

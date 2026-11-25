@@ -2,11 +2,13 @@ package net.vanfleteren.jazygit.core.git.history;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.git.history.CliPlan.Line;
+import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Plan;
 import net.vanfleteren.jazygit.core.repo.Plan.Step;
@@ -174,6 +176,86 @@ class CliPlanTest {
         gitAnyExit("merge", "feature");
 
         assertEquals(Option.none(), plan());
+    }
+
+    @Test
+    void aSequenceOfRevertsHasItsRevertsAsSteps() throws Exception {
+        diverged();
+        commit("f", "later\n", "later touches f");
+        Sha start = sha("HEAD");
+        Sha touches = sha("HEAD~2");
+        Sha five = sha("HEAD~1");
+
+        gitAnyExit("revert", "--no-edit", touches.value(), five.value());
+
+        assertEquals(
+                Option.of(new Plan(
+                        start,
+                        new Step("revert", Option.of(touches), "feat touches f"),
+                        List.of(new Step("revert", Option.of(five), "feat 5")),
+                        1,
+                        2)),
+                plan());
+    }
+
+    @Test
+    void aRebaseOfTheApplyBackendHasNoPlan() throws Exception {
+        diverged();
+
+        gitAnyExit("rebase", "--apply", "main");
+
+        assertEquals(Option.none(), plan());
+    }
+
+    @Test
+    void aRebaseStoppedByACommandThatFailedStoppedAtThatCommand() throws Exception {
+        diverged();
+
+        gitAnyExit("-c", "sequence.editor=sed -i -e '1a exec false'", "rebase", "-i", "main");
+
+        assertEquals(Option.of(new Step("exec", Option.none(), "false")), plan().map(Plan::stopped));
+    }
+
+    @Test
+    void aRebaseStoppedAtABreakStoppedThere() throws Exception {
+        diverged();
+
+        gitAnyExit("-c", "sequence.editor=sed -i -e '1a break'", "rebase", "-i", "main");
+
+        assertEquals(Option.of(new Step("break", Option.none(), "")), plan().map(Plan::stopped));
+    }
+
+    @Test
+    void aCommitGitDoesNotFindCostsOnlyItsOwnStep() throws Exception {
+        diverged();
+        gitAnyExit("rebase", "main");
+        Path todo = repo.resolve(".git/rebase-merge/git-rebase-todo");
+        Files.writeString(todo, Files.readString(todo) + "pick 0123456789abcdef0123456789abcdef01234567 # ghost\n");
+        CliInProgress.Markers markers = CliInProgress.markers(repo).get();
+
+        Plan plan = CliPlan.read(repo, markers, CliInProgress.read(markers).get(), Option.of(sha("HEAD")))
+                .get();
+
+        assertEquals(
+                HashSet.of(sha("feature~1"), sha("feature")),
+                plan.commits().map(Commit::sha).toSet());
+    }
+
+    @Test
+    void anAbbreviatedCommitGitDoesNotFindCostsOnlyItsOwnStep() throws Exception {
+        diverged();
+        git("switch", "-q", "main");
+        gitAnyExit("cherry-pick", "main..feature");
+        Path todo = repo.resolve(".git/sequencer/todo");
+        Files.writeString(todo, Files.readString(todo) + "pick deadbee ghost\n");
+
+        Option<Plan> plan = plan();
+
+        assertEquals(Option.of(Step.pick(sha("feature~1"), "feat touches f")), plan.map(Plan::stopped));
+        assertEquals(
+                Option.of(
+                        List.of(Step.pick(sha("feature"), "feat 5"), new Step("pick", Option.none(), "deadbee ghost"))),
+                plan.map(Plan::todo));
     }
 
     private Option<Plan> plan() {

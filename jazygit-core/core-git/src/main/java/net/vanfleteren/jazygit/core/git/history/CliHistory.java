@@ -340,10 +340,15 @@ public final class CliHistory implements History {
     }
 
     /**
-     * The commits {@code shas}, as {@code git log --no-walk} lists them: those git does not find left out.
+     * The commits {@code shas}, as {@code git log --no-walk --ignore-missing} lists them: those git does not find left
+     * out, rather than failing the whole read, as a list of steps edited by hand may name one.
      */
     static Either<GitError, List<Commit>> listed(Path worktree, List<Sha> shas) {
-        return read(worktree, shas.map(Sha::value).prepend("--no-walk"), List.empty(), shas.size());
+        return read(
+                worktree,
+                shas.map(Sha::value).prepend("--ignore-missing").prepend("--no-walk"),
+                List.empty(),
+                shas.size());
     }
 
     /**

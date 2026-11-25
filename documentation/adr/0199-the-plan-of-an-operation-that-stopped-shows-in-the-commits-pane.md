@@ -38,11 +38,13 @@ still to come, and `head`, where it started). Each line of those is a command an
    - Each step is its command and the rest of its line: the commit and its subject, as git wrote them, or what an
      `exec`, `label`, `reset` or `merge` does. A command written short (`f`, `x`) is named in full, and the options
      of a `fixup` are left out.
-   - The commits of the steps are read with one `git log --no-walk`, for the content panel to show them (3), and
-     `Repo.commit` finds them there as it finds those of the log. A line written by hand may have no subject; it takes
-     its commit's. A sequence abbreviates its commits (`pick a01227b feat 1`), which `git rev-parse` gives in full,
-     as the app hands git only full ones (ADR 40); a commit git does not find leaves the step without one, shown as
-     it was written.
+   - The commits of the steps are read with one `git log --no-walk --ignore-missing`, for the content panel to show
+     them (3), and `Model.commit` finds them there after those of the log. `Repo.commit` does not: it answers what
+     HEAD has, which a step still to come is not, as pasting a copied commit asks (`AlreadyPicked`). A line written by
+     hand may have no subject; it takes its commit's. A sequence abbreviates its commits (`pick a01227b feat 1`),
+     which a `git log --no-walk --ignore-missing --format=%H` of them gives in full, as the app hands git only full
+     ones (ADR 40). A commit git does not find leaves that step without one, shown as it was written, and only that
+     step: `rev-parse`, or a `log` without `--ignore-missing`, would fail on it and lose them all.
 2. **The commits pane lists the plan above the log**, newest on top, as the log is: the last step to come at the top,
    down to the next one, then the step it stopped at, then the log of HEAD, whose commits made since the base are
    marked done with a `✓`. They are the commits listed above the base, which are not matched to the steps; nor do they
@@ -84,7 +86,7 @@ still to come, and `head`, where it started). Each line of those is a command an
   the log down while an operation is in progress; the highlight starts on the top row, as before.
 - A step's tag and its subject are what git wrote: a todo edited by hand shows what it was edited to.
 - Each status read while a rebase, cherry-pick or revert is stopped runs one more git process, the `log --no-walk` of
-  its steps' commits; a sequence of cherry-picks or reverts also `rev-list --count`, and `rev-parse` for its
+  its steps' commits; a sequence of cherry-picks or reverts also `rev-list --count`, and a `log --no-walk` of its
   abbreviated commits. A merge, and a repository in the middle of nothing, none.
 - The layout of the left column takes the height of the repository panel from the model (`LeftPanes.statusRows`):
   the borders the user dragged stay where they are, and the last pane gives up the row.
