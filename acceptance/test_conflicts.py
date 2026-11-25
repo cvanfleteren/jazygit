@@ -2,6 +2,10 @@
 app leaves them stopped; the conflicts are resolved with git, or in the app a file at a time (ADR 198), and the
 operation continued, skipped or aborted from the app (M)."""
 
+import subprocess
+
+import pytest
+
 
 def diverged(repo):
     """Main and a branch feature that each change one.txt since they parted, feature checked out."""
@@ -439,6 +443,27 @@ def test_the_resolve_dialog_names_the_sides_and_keeps_one(repo, jazygit):
 
     assert repo.read("one.txt") == "feature\n"
     assert repo.conflicts() == []
+
+
+def test_the_resolve_dialog_opens_on_a_conflict_a_stash_left(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.write("one.txt", "stashed\n")
+    repo("stash", "push")
+    repo.commit("Change one", **{"one.txt": "committed\n"})
+    with pytest.raises(subprocess.CalledProcessError):
+        repo("stash", "pop")
+    assert repo.in_progress() is None
+    assert repo.conflicts() == ["one.txt"]
+    ui = jazygit()
+
+    ui.files.select("one.txt")
+    ui.app.press("r")
+    ui.app.wait_for("Keep main's version")
+    ui.app.wait_for("Keep the incoming side's version")
+    ui.app.press("t")
+
+    ui.app.eventually(lambda: repo.conflicts() == [], "the stash's side was kept")
+    assert repo.read("one.txt") == "stashed\n"
 
 
 def test_a_side_that_deleted_the_file_deletes_it(repo, jazygit):

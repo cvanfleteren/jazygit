@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.git.files;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.collection.TreeMap;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -64,8 +65,10 @@ public final class CliStatus implements Status {
      * only says how far the user got.
      */
     private List<String> resolved(RepoStatus status) {
-        List<String> conflicted =
-                status.files().filter(file -> file.conflict().isDefined()).map(FileEntry::path);
+        Set<String> conflicted = status.files()
+                .filter(file -> file.conflict().isDefined())
+                .map(FileEntry::path)
+                .toSet();
         return GitProcess.read(
                         worktree,
                         GitCommand.reading("ls-files", "--resolve-undo", "-z").withTimeout(TIMEOUT),

@@ -95,6 +95,25 @@ class ResolveUpdateTest {
     }
 
     @Test
+    void theDialogOpensOnAConflictLeftWithNoOperationInProgress() {
+        Model branches = localBranchesRead(loaded(), List.of(Fixtures.branch(new BranchName("main"), false, ONTO)))
+                .model();
+        RepoStatus status = new RepoStatus(
+                Head.onBranch(new BranchName("feature"), new Sha("3333333333")),
+                List.of(CONFLICTED),
+                Option.none(),
+                List.empty());
+        Model model = Update.update(branches, new LoadMsg.StatusLoaded(status)).model();
+
+        assertEquals(
+                Option.of(new Sides(new SideName.Branch(new BranchName("feature")), new SideName.Incoming())),
+                Update.update(model, new ResolveMsg.Requested(CONFLICTED))
+                        .model()
+                        .popup(ResolvePopup.class)
+                        .map(ResolvePopup::sides));
+    }
+
+    @Test
     void choosingASideInTheDialogKeepsItAndClosesIt() {
         Model asked =
                 Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED)).model();

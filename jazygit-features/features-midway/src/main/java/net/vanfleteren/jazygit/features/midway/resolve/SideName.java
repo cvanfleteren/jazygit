@@ -23,4 +23,10 @@ public sealed interface SideName {
      * The commit a rebase stopped at, which the app does not read yet.
      */
     record Rebased() implements SideName {}
+
+    /**
+     * What was brought onto HEAD when no operation is in progress to say what it is: a stash that was popped, a
+     * squash merge or a patch applied with three-way merges.
+     */
+    record Incoming() implements SideName {}
 }

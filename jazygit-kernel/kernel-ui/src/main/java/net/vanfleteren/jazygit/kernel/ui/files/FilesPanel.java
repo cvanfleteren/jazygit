@@ -9,7 +9,9 @@ import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.PasteEvent;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.*;
@@ -72,7 +74,7 @@ public class FilesPanel {
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
     // The files resolved since the operation in progress stopped, marked as such (ADR 198); read each render.
-    private List<String> resolved = List.empty();
+    private Set<String> resolved = HashSet.empty();
     // Whether the files of a commit the pane lists are counted in place of their tree, as there are many (ADR 141).
     private boolean held;
     // Whether the pane was locked to a list at the last render, which Escape in the working tree lets go of (ADR 149).
@@ -630,7 +632,9 @@ public class FilesPanel {
                     FileTreeList<FileEntry> tree = workingTree(model.repoView());
                     switching(ID, tree, all ? statusTree : allTree);
                     Option<RepoStatus> status = model.repo().status().toOption();
-                    resolved = status.map(RepoStatus::resolved).getOrElse(List.empty());
+                    resolved = status.map(RepoStatus::resolved)
+                            .getOrElse(List.empty())
+                            .toSet();
                     return Pane.bordered(
                             Messages.get("panel.files.title")
                                     + status.flatMap(FilesPanel::resolvedTitle).getOrElse("")

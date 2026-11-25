@@ -29,7 +29,9 @@ not when a merge is committed.
    - `o` keeps *ours*, the side of HEAD: the branch checked out, or, in a rebase, what it rebases onto with the commits
      rebased so far. `t` keeps *theirs*: the merged branch, or the commit being rebased, cherry-picked or reverted. The
      help and the dialog name the sides by what they are, as `InProgressText` does, never as ours and theirs: in a
-     rebase git's *ours* is the other branch, which reads backwards.
+     rebase git's *ours* is the other branch, which reads backwards. A conflict left with no operation in progress,
+     as by a stash that was popped, a squash merge or `git apply --3way`, names HEAD's side as ever and the other as
+     the incoming side: nothing says what it was.
    - A side that kept the file is checked out and staged (`git checkout --ours|--theirs -- <path>`, then
      `git add`); a side that deleted it removes it (`git rm`), so `o` and `t` mean the same on a file one side
      deleted, and the dialog says which deletes it.

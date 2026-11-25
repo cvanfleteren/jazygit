@@ -118,6 +118,7 @@ public final class ResolveDialogs {
             case SideName.Branch branch -> branch.name().value();
             case SideName.Commit commit -> commit.sha().shortSha();
             case SideName.Rebased rebased -> Messages.get("midway.side.rebased");
+            case SideName.Incoming incoming -> Messages.get("midway.side.incoming");
         };
     }
 
