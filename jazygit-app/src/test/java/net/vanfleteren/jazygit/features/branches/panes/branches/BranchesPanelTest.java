@@ -240,6 +240,27 @@ class BranchesPanelTest {
         }
     }
 
+    @Test
+    void theBranchRebasedHereIsListedFirstAndListsTheFilesOfTheWorkingTree() throws Exception {
+        // ADR 197: it is the one worked on here, while the rebase detaches HEAD.
+        Model branches =
+                with(before, List.of(FEATURE, Fixtures.branch(new BranchName("main"), false, new Sha("1")), OLD));
+        Model rebasing = Update.update(
+                        branches,
+                        new LoadMsg.StatusLoaded(new RepoStatus(
+                                new Head.Detached(new Sha("1")),
+                                List.empty(),
+                                Option.of(new InProgress.Rebasing(Option.of(FEATURE.name()), new Sha("1"), 1, 2)))))
+                .model();
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(rebasing, Scopes.BRANCHES.pane()))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(rebasing, Scopes.BRANCHES.pane()));
+            assertTrue(screen.contains("REBASING 1/2 onto main"), screen);
+            assertEquals(Option.of(new Followed.WorkingTree()), panel.followed(rebasing));
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
     /**
      * {@link #before} once HEAD was detached at {@code at}: no branch is checked out.
      */

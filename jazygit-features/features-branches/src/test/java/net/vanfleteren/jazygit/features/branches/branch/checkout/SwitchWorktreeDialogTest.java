@@ -7,9 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
+import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.Arrays;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Midway;
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -72,6 +76,26 @@ class SwitchWorktreeDialogTest {
                 CheckoutDialogs.SWITCH_WORKTREE
                         .message()
                         .apply(home.popup(SwitchWorktreePopup.class).get()));
+    }
+
+    @Test
+    void saysWhatThatWorktreeStoppedInTheMiddleOfWithItsConflicts() {
+        Sha main = new Sha("aaaa");
+        SwitchWorktreePopup popup = new SwitchWorktreePopup(
+                new BranchName("feature"),
+                "/repos/linked",
+                Option.of(new Midway(new InProgress.Rebasing(Option.of(new BranchName("feature")), main, 1, 2), 2)));
+        SwitchWorktreePopup merging = new SwitchWorktreePopup(
+                new BranchName("feature"), "/repos/linked", Option.of(new Midway(new InProgress.Merging(main), 0)));
+
+        assertEquals(
+                "This branch is checked out in the worktree at\n/repos/linked\n\nwhich stopped in the middle of a"
+                        + " rebase, on 2 conflicts.\n\nSwitch to that worktree?",
+                CheckoutDialogs.SWITCH_WORKTREE.message().apply(popup));
+        assertEquals(
+                "This branch is checked out in the worktree at\n/repos/linked\n\nwhich stopped in the middle of a"
+                        + " merge.\n\nSwitch to that worktree?",
+                CheckoutDialogs.SWITCH_WORKTREE.message().apply(merging));
     }
 
     private Element view() {

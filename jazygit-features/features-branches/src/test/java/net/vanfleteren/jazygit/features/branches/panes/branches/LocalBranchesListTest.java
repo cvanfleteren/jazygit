@@ -58,6 +58,45 @@ class LocalBranchesListTest {
     }
 
     @Test
+    void aBranchAWorktreeIsInTheMiddleOfSaysSoAfterItsWorktreeAndTheOneRebasedHereIsDrawnAsCheckedOut() {
+        Branch elsewhere = new Branch(
+                new BranchName("feature"),
+                false,
+                new Sha("1"),
+                Instant.EPOCH,
+                Option.none(),
+                false,
+                false,
+                new Tracking.None(),
+                Option.of(Path.of("/repos/linked")));
+        LoadableList.Row there = LocalBranchesList.row(
+                elsewhere,
+                false,
+                Duration.ofDays(3),
+                Option.none(),
+                Option.none(),
+                List.empty(),
+                Option.none(),
+                Option.of("REBASING 1/2 onto main · 1 conflict"));
+        LoadableList.Row here = LocalBranchesList.row(
+                Fixtures.branch(new BranchName("feature"), false, new Sha("1")),
+                true,
+                Duration.ofDays(3),
+                Option.none(),
+                Option.none(),
+                List.empty(),
+                Option.none(),
+                Option.of("REBASING 1/2 onto main · 1 conflict"));
+
+        assertEquals(Option.of("  3d  wt REBASING 1/2 onto main · 1 conflict"), there.detailText());
+        assertEquals(
+                Option.of(Theme.Classes.IN_PROGRESS),
+                there.detail().get().last().cssClass());
+        assertEquals(Option.of("  3d  REBASING 1/2 onto main · 1 conflict"), here.detailText());
+        assertEquals(List.of(Option.of(Theme.Classes.CURRENT)), here.segs().map(LoadableList.Seg::cssClass));
+    }
+
+    @Test
     void aBranchShowsItsNameAndSpinnerAboveItsAgeSyncBaseDistancePullRequestAndWorktree() {
         Branch branch = new Branch(
                 new BranchName("feature"),

@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.CommitGraph;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tag;
@@ -638,6 +639,25 @@ class CommitsPanelTest {
 
         assertEquals("Commits · detached at abcdef0", CommitsPanel.headTitle(detached));
         assertEquals("Commits of main", CommitsPanel.headTitle(withCommits()));
+    }
+
+    @Test
+    void whileARebaseDetachesHeadTheLogIsNamedAfterTheBranchItRebases() {
+        Sha onto = new Sha("abcdef0123");
+        Model rebasing = withCommits()
+                .mapRepo(repo -> repo.withStatus(new Loadable.Loaded<>(new RepoStatus(
+                        new Head.Detached(onto),
+                        List.empty(),
+                        Option.of(new InProgress.Rebasing(Option.of(new BranchName("feature")), onto, 1, 2))))));
+        Model detachedRebase = withCommits()
+                .mapRepo(repo -> repo.withStatus(new Loadable.Loaded<>(new RepoStatus(
+                        new Head.Detached(onto),
+                        List.empty(),
+                        Option.of(new InProgress.Rebasing(Option.none(), onto, 1, 2))))));
+
+        assertEquals("Commits · rebasing feature", CommitsPanel.headTitle(rebasing));
+        assertEquals("rebasing feature", CommitsPanel.headName(rebasing));
+        assertEquals("Commits · detached at abcdef0", CommitsPanel.headTitle(detachedRebase));
     }
 
     private static Model withCommits() {

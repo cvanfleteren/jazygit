@@ -114,4 +114,34 @@ class WorktreesListTest {
                 "x feature locked: on usb",
                 WorktreesList.row(Repo.LOADING, locked).text());
     }
+
+    @Test
+    void aWorktreeInTheMiddleOfSomethingSaysWhatInPlaceOfTheHeadARebaseDetaches() {
+        Sha main = new Sha("1234567890");
+        Worktree rebasing = new Worktree(
+                        java.nio.file.Path.of("/repos/x"),
+                        Option.of(new Head.Detached(main)),
+                        false,
+                        false,
+                        Option.none(),
+                        false)
+                .withMidway(Option.of(
+                        new Midway(new InProgress.Rebasing(Option.of(new BranchName("feature")), main, 1, 2), 1)));
+        Worktree merging = new Worktree(
+                        java.nio.file.Path.of("/repos/y"),
+                        Option.of(new Head.OnBranch(new BranchName("topic"), Option.of(main))),
+                        false,
+                        false,
+                        Option.none(),
+                        false)
+                .withMidway(Option.of(new Midway(new InProgress.Merging(main), 0)));
+        Repo repo = Repo.LOADING.withBranches(
+                new Loadable.Loaded<>(List.of(Fixtures.branch(new BranchName("main"), true, main))));
+
+        LoadableList.Row row = WorktreesList.row(repo, rebasing);
+
+        assertEquals("x REBASING feature 1/2 onto main · 1 conflict", row.text());
+        assertEquals(Option.of(Theme.Classes.IN_PROGRESS), row.segs().last().cssClass());
+        assertEquals("y topic MERGING main", WorktreesList.row(repo, merging).text());
+    }
 }

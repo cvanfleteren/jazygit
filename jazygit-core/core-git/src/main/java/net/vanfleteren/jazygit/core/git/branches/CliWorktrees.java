@@ -9,6 +9,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.core.git.history.CliInProgress;
 import net.vanfleteren.jazygit.core.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
@@ -45,7 +46,8 @@ public final class CliWorktrees implements Worktrees {
     /**
      * Runs {@code git worktree list --porcelain -z}: the worktrees, {@code worktree}, the one that is current, first,
      * then the others as git lists them, the main one first. Each one with its HEAD detached has the branch it rebases
-     * or bisects, read from its git directory (ADR 110).
+     * or bisects, read from its git directory (ADR 110); each one that is there, what it is in the middle of, with its
+     * conflicts (ADR 197).
      */
     @Override
     public Either<GitError, List<Worktree>> list() {
@@ -53,9 +55,13 @@ public final class CliWorktrees implements Worktrees {
                         worktree,
                         GitCommand.reading("worktree", "list", "--porcelain", "-z"),
                         raw -> parse(raw, worktree))
-                .map(worktrees -> worktrees.map(listed -> listed.branch().isEmpty() && !listed.prunable()
-                        ? listed.withBusyWith(BranchesInUse.busyIn(listed.path()))
-                        : listed));
+                .map(worktrees -> worktrees.map(listed -> listed.prunable()
+                        ? listed
+                        : listed.withMidway(CliInProgress.midway(listed.path()))
+                                .withBusyWith(
+                                        listed.branch().isEmpty()
+                                                ? BranchesInUse.busyIn(listed.path())
+                                                : Option.none())));
     }
 
     /**

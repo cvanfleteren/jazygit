@@ -28,6 +28,18 @@ public sealed interface BranchError extends AppError {
     }
 
     /**
+     * Checking out {@code branch} was asked for, but the worktree shown is rebasing it, with its HEAD detached
+     * meanwhile: it is the branch worked on here already, and the rebase is to be continued or aborted (ADR 197).
+     */
+    record RebasingHere(BranchName branch) implements BranchError {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("branches.error.checkout.rebasingHere", branch.value());
+        }
+    }
+
+    /**
      * A push was asked for, but the branch is behind its upstream, which has commits the branch never had, as
      * someone else pushed them: a force push would drop them, so it is to be pulled first (ADR 116).
      *

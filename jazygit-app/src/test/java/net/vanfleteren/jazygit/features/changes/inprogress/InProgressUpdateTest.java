@@ -142,7 +142,10 @@ class InProgressUpdateTest {
 
     @Test
     void operationsThatChangeTheHistoryWaitUntilItIsDone() {
-        Model model = inMiddleOf(Option.of(REBASING), List.of());
+        // Of another branch: the one rebased here says so itself (ADR 197).
+        Model model = inMiddleOf(
+                Option.of(new InProgress.Rebasing(Option.of(new BranchName("topic")), new Sha("aaaa"), 1, 2)),
+                List.of());
 
         Next next = Update.update(model, new CheckoutMsg.Requested(new BranchName("feature")));
 

@@ -223,3 +223,4 @@ another tool adds it there too.
 | 194 | [A branch, a reset and a checkout at an entry of the reflog](0194-a-branch-a-reset-and-a-checkout-at-a-reflog-entry.md) |  |
 | 195 | [The checks of a branch on Forgejo, one by one](0195-the-checks-of-a-branch-on-forgejo-one-by-one.md) |  |
 | 196 | [A program left running outlives the terminal jazygit runs in](0196-a-program-left-running-outlives-the-terminal.md) |  |
+| 197 | [A rebase that stopped shows where it stopped, in every worktree](0197-a-rebase-that-stopped-shows-where-it-stopped.md) |  |

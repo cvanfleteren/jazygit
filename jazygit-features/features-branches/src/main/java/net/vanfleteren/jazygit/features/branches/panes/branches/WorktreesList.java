@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.kernel.state.view.ShownTabs;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.ui.text.InProgressText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
@@ -54,7 +55,7 @@ class WorktreesList implements BranchesTabList {
                                 ? LoadableList.Seg.styled(worktree.name(), Theme.Classes.CURRENT)
                                 : LoadableList.Seg.of(worktree.name()))
                 .appendAll(changes(repo, worktree))
-                .append(checkedOut(worktree))
+                .appendAll(working(repo, worktree))
                 .appendAll(worktree.branch().flatMap(repo::branch).toList().flatMap(BranchSegs::sync))
                 .appendAll(flags(worktree)));
     }
@@ -68,6 +69,21 @@ class WorktreesList implements BranchesTabList {
                         repo.hasChanges(worktree).contains(true),
                         () -> LoadableList.Seg.styled(" ●", Theme.Classes.UNSTAGED))
                 .toList();
+    }
+
+    /**
+     * What the worktree works on, each with a leading space: what it has checked out, then what it is in the middle of,
+     * if anything, in the style of the header (ADR 197). A rebase names the branch it rebases, so it stands in for the
+     * detached HEAD it rebases on.
+     */
+    private static List<LoadableList.Seg> working(Repo repo, Worktree worktree) {
+        List<Branch> branches = repo.branches().toOption().getOrElse(List.empty());
+        List<LoadableList.Seg> midway = worktree.midway()
+                .map(operation -> note(InProgressText.label(operation, branches), Theme.Classes.IN_PROGRESS)
+                        .shrinking())
+                .toList();
+        boolean rebasing = worktree.midway().exists(operation -> operation.inProgress() instanceof InProgress.Rebasing);
+        return rebasing ? midway : midway.prepend(checkedOut(worktree));
     }
 
     /**

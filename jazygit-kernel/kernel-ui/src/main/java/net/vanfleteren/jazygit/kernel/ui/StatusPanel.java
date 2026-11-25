@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Midway;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -29,6 +30,7 @@ import net.vanfleteren.jazygit.kernel.state.preferences.LeftPanes;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
+import net.vanfleteren.jazygit.kernel.ui.text.InProgressText;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -152,38 +154,13 @@ public final class StatusPanel {
 
     /**
      * What the repository is in the middle of, with how many files still have conflicts; or just those, when
-     * conflicts are left without an operation, as after a stash that did not apply cleanly. Commits are named
-     * by the local branch they are the tip of, if any.
+     * conflicts are left without an operation, as after a stash that did not apply cleanly.
      */
     static Option<String> unfinishedLabel(RepoStatus status, List<Branch> branches) {
-        Option<String> conflicts =
-                Option.when(status.conflicts() > 0, () -> Messages.get("status.conflicts", status.conflicts()));
         return status.inProgress()
-                .map(inProgress -> conflicts
-                        .map(text -> operationLabel(inProgress, branches) + SEPARATOR + text)
-                        .getOrElse(() -> operationLabel(inProgress, branches)))
+                .map(inProgress -> InProgressText.label(new Midway(inProgress, status.conflicts()), branches))
                 .orElse(() -> Option.when(
                         status.conflicts() > 0, () -> Messages.get("status.conflictsOnly", status.conflicts())));
-    }
-
-    private static String operationLabel(InProgress inProgress, List<Branch> branches) {
-        return switch (inProgress) {
-            case InProgress.Merging(Sha theirs) -> Messages.get("status.merging", name(theirs, branches));
-            case InProgress.Rebasing(Option<BranchName> branch, Sha onto, int step, int total) ->
-                branch.map(name -> Messages.get("status.rebasing", name.value(), step, total, name(onto, branches)))
-                        .getOrElse(() -> Messages.get("status.rebasingDetached", step, total, name(onto, branches)));
-            case InProgress.CherryPicking(Sha commit) -> Messages.get("status.cherryPicking", name(commit, branches));
-            case InProgress.Reverting(Sha commit) -> Messages.get("status.reverting", name(commit, branches));
-        };
-    }
-
-    /**
-     * The local branch {@code commit} is the tip of, or else its short sha.
-     */
-    private static String name(Sha commit, List<Branch> branches) {
-        return branches.find(branch -> branch.tip().equals(commit))
-                .map(branch -> branch.name().value())
-                .getOrElse(commit::shortSha);
     }
 
     /**
