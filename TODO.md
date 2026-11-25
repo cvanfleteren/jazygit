@@ -37,10 +37,11 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   - Commit signing with a terminal pinentry still prompts on the TUI's terminal.
   - The pull requests are read up to 200 at a time.
   - Opening the app from inside `.git` reports a failed command, not that there is no working tree.
-- [ ] **Resolve conflicts in the app.** A merge, rebase, cherry-pick or revert in progress is shown in the status
-  panel, and can be continued, aborted or skipped (M); operations started in the app that stop on conflicts are left
-  so. But the conflicts themselves are resolved outside the app. Picking ours or theirs per file, and opening a file
-  in `$EDITOR` (suspending the TUI), would make that possible here.
+- [ ] **Resolve conflicts in the app.** A file in conflict is resolved by keeping one side of it (`o`, `t`, `r`),
+  and staging one with conflict markers asks first (ADR 198). Still outside the app: merging both sides within a
+  file, block by block; `e` opens a file at its first line, not at its first conflict; and `git mergetool`.
+- [ ] **Stage all from the commit dialog skips the check for conflict markers.** Committing with nothing staged
+  offers to stage all, which stages a file in conflict without reading it for markers, as space does (ADR 198).
 - [ ] **Commit with the message git prepared.** After resolving a squash merge, or a merge that is committed instead
   of continued, git keeps a message in `.git/SQUASH_MSG` or `.git/MERGE_MSG` (listing the squashed commits, or naming
   the merged branch). The commit dialog starts empty instead; it could start from that message, without git's `#`

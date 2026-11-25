@@ -9,6 +9,10 @@ Features to consider, roughly most valuable first.
    does not apply: stage from a diff read without `--ignore-all-space`, or refuse while whitespace is ignored, as
    lazygit does.
 2. **Resolve conflicts in the app.** Pick ours or theirs per file, or open the file in `$EDITOR` (see TODO.md).
+   - [x] Keep one side of a file (`o`, `t`, `r`), bring a conflict back (`u`), and ask before staging a file with
+     conflict markers (ADR 198).
+   - [ ] Show the plan of a rebase or cherry-pick: what is done, where it stopped, what comes next.
+   - [ ] Open a file at its first conflict, and hand a file to `git mergetool`.
 3. **Open in `$EDITOR`.** Suspend the TUI and open the file, or the commit message, in your editor. Conflict
    resolution and longer commit messages both need it, and it works around the missing word-editing keys in text
    fields.
