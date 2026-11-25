@@ -396,9 +396,17 @@ public final class LoadableList<T> {
     }
 
     /**
-     * A row of the list: consecutive pieces, each with its own colour, and maybe a second line below them.
+     * A row of the list: consecutive pieces, each with its own colour, and maybe a second line below them, and a third
+     * below that one.
+     *
+     * @param note a third line, of what the row says only now and then, as what the worktree of a branch is in the
+     *             middle of (ADR 197); only below a second line
      */
-    public record Row(List<Seg> segs, Option<List<Seg>> detail) {
+    public record Row(List<Seg> segs, Option<List<Seg>> detail, Option<List<Seg>> note) {
+
+        public Row(List<Seg> segs, Option<List<Seg>> detail) {
+            this(segs, detail, Option.none());
+        }
 
         public Row(List<Seg> segs) {
             this(segs, Option.none());
@@ -424,7 +432,16 @@ public final class LoadableList<T> {
          * of their own dimmed. The pieces of both lines are cut off with an ellipsis when they do not fit.
          */
         public Row withDetail(List<Seg> pieces) {
-            return new Row(segs, Option.of(pieces));
+            return new Row(segs, Option.of(pieces), note);
+        }
+
+        /**
+         * This row with a third line of {@code pieces} below its second, still one item of the list: the pieces
+         * without a colour of their own dimmed, cut off with an ellipsis when they do not fit. A row without a second
+         * line gets none.
+         */
+        public Row withNote(List<Seg> pieces) {
+            return new Row(segs, detail, detail.map(line -> pieces));
         }
 
         public String text() {
@@ -439,17 +456,24 @@ public final class LoadableList<T> {
         }
 
         /**
+         * The text of the third line, if it has one.
+         */
+        public Option<String> noteText() {
+            return note.map(pieces -> pieces.map(Seg::text).mkString());
+        }
+
+        /**
          * The number of lines the row takes.
          */
         public int height() {
-            return detail.isDefined() ? 2 : 1;
+            return 1 + (detail.isDefined() ? 1 : 0) + (note.isDefined() ? 1 : 0);
         }
 
         public StyledElement<?> element() {
             StyledElement<?> first = line(segs, Option.none(), detail.isDefined());
-            return detail.<StyledElement<?>>map(
-                            pieces -> column(first, line(pieces, Option.of(Theme.Classes.DIM), true)))
-                    .getOrElse(first);
+            List<StyledElement<?>> below =
+                    detail.toList().appendAll(note).map(pieces -> line(pieces, Option.of(Theme.Classes.DIM), true));
+            return below.isEmpty() ? first : column(below.prepend(first).toJavaArray(StyledElement[]::new));
         }
 
         /**

@@ -461,7 +461,8 @@ def test_a_worktree_stopped_on_a_rebase_says_so_from_everywhere_and_its_branch_i
     ui.app.eventually(lambda: "repo-feature ● REBASING feature 1/1 onto main" in ui.app.pane_text("Branches"),
                       "the worktree that stopped to say so")
     ui.branches.show_tab("Branches")
-    ui.app.eventually(lambda: "wt REBASING 1/1 onto main" in ui.app.pane_text("Branches"),
+    # On a line of its own under the branch, where it fits whole.
+    ui.app.eventually(lambda: "  REBASING 1/1 onto main · 1 conflict" in ui.app.pane_text("Branches").splitlines(),
                       "the branch rebased there to say so")
 
     shown = ui.worktrees.switch_to("repo-feature")

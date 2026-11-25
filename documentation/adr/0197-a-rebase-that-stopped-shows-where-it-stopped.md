@@ -39,8 +39,13 @@ bisect works on from them), so it can be read for every worktree without running
 4. **The lists say it.**
    - The worktrees list shows the operation of a worktree in place of `(detached at <sha>)`, the one shown too:
      `wt REBASING feature 1/2 onto main · 1 conflict`, styled as in the header.
-   - A branch that another worktree rebases shows it after the worktree mark: `wt REBASING 1/2 onto main · 1
-     conflict`.
+   - A branch whose worktree is in the middle of something, here or in another worktree, shows it on a third line
+     of its own, under the second, in the style of the header: `REBASING 1/2 onto main · 1 conflict`. After the
+     badges on line 2 it was cut first, in a column of usual width; on a line of its own it fits. That a branch takes
+     two lines always (ADR 45) gives way for it: the rows below move down when a worktree stops, and back up once it
+     is done. That happens when the repository changes, not when the highlight moves or the column is resized,
+     which is what ADR 45 kept the rhythm for, and to few branches at a time. The `wt` mark on line 2 still says
+     which worktree it is in, when it is another.
    - Asking to switch to the worktree a branch is in, when checking it out (ADR 68), says what that worktree is in
      the middle of.
 5. **The texts are the header's.** What an operation is called, and its conflicts, is said in one place

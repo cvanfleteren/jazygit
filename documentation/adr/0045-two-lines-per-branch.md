@@ -86,6 +86,9 @@ emoji are gone.
 
 Amended by ADR 72: a stack has a header of one line, with its branches under it, indented.
 
+Amended by ADR 197: a branch whose worktree is in the middle of a merge, rebase, cherry-pick or revert takes a third
+line, saying so.
+
 ## Folded in: ADR 48 (2026-11-22)
 
 ADR 48 made the symbols one column wide of this ADR the only ones: they show wherever the state of a pull request

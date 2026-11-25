@@ -125,8 +125,8 @@ class LocalBranchesList implements BranchesTabList {
 
     /**
      * A branch on two lines, as {@link #row(Branch, Duration, Option, Option, List, Option)}, drawn as the checked out
-     * one when {@code current}, as the branch rebased here is, and with what the worktree that works on it is in the
-     * middle of after the worktree it is in, if anything (ADR 197).
+     * one when {@code current}, as the branch rebased here is (ADR 197), and with what the worktree that works on it is
+     * in the middle of on a third line, if anything, where it has the width to itself (ADR 197).
      *
      * @param midway what the worktree that works on it is in the middle of, as {@link InProgressText#ofItsBranch}
      *               says it
@@ -140,7 +140,7 @@ class LocalBranchesList implements BranchesTabList {
             List<LoadableList.Seg> badges,
             Option<String> spinner,
             Option<String> midway) {
-        return new LoadableList.Row(List.of(
+        LoadableList.Row row = new LoadableList.Row(List.of(
                                 current
                                         ? LoadableList.Seg.styled(b.name().value(), Theme.Classes.CURRENT)
                                         : LoadableList.Seg.of(b.name().value()))
@@ -151,10 +151,10 @@ class LocalBranchesList implements BranchesTabList {
                         .appendAll(BranchSegs.group(
                                 BranchSegs.baseDistance(b, distance).appendAll(BranchSegs.parent(parent))))
                         .appendAll(BranchSegs.group(badges))
-                        .appendAll(BranchSegs.group(BranchSegs.worktree(b)
-                                .appendAll(midway.map(
-                                        text -> LoadableList.Seg.styled(" " + text, Theme.Classes.IN_PROGRESS)
-                                                .shrinking())))));
+                        .appendAll(BranchSegs.group(BranchSegs.worktree(b))));
+        return midway.map(
+                        text -> row.withNote(List.of(LoadableList.Seg.styled("  " + text, Theme.Classes.IN_PROGRESS))))
+                .getOrElse(row);
     }
 
     /**
@@ -279,12 +279,13 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     /**
-     * {@code row} indented under the header of its stack, both its lines.
+     * {@code row} indented under the header of its stack, each of its lines.
      */
     static LoadableList.Row indented(LoadableList.Row row) {
         return new LoadableList.Row(
                 row.segs().prepend(LoadableList.Seg.of(INDENT)),
-                row.detail().map(detail -> detail.prepend(LoadableList.Seg.of(INDENT))));
+                row.detail().map(detail -> detail.prepend(LoadableList.Seg.of(INDENT))),
+                row.note().map(note -> note.prepend(LoadableList.Seg.of(INDENT))));
     }
 
     /**

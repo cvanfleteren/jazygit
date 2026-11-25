@@ -58,7 +58,7 @@ class LocalBranchesListTest {
     }
 
     @Test
-    void aBranchAWorktreeIsInTheMiddleOfSaysSoAfterItsWorktreeAndTheOneRebasedHereIsDrawnAsCheckedOut() {
+    void aBranchAWorktreeIsInTheMiddleOfSaysSoOnAThirdLineAndTheOneRebasedHereIsDrawnAsCheckedOut() {
         Branch elsewhere = new Branch(
                 new BranchName("feature"),
                 false,
@@ -88,12 +88,35 @@ class LocalBranchesListTest {
                 Option.none(),
                 Option.of("REBASING 1/2 onto main · 1 conflict"));
 
-        assertEquals(Option.of("  3d  wt REBASING 1/2 onto main · 1 conflict"), there.detailText());
+        // On a third line, of its own width (ADR 197); the second says where, as it does.
+        assertEquals(Option.of("  3d  wt"), there.detailText());
+        assertEquals(Option.of("  REBASING 1/2 onto main · 1 conflict"), there.noteText());
+        assertEquals(3, there.height());
         assertEquals(
-                Option.of(Theme.Classes.IN_PROGRESS),
-                there.detail().get().last().cssClass());
-        assertEquals(Option.of("  3d  REBASING 1/2 onto main · 1 conflict"), here.detailText());
+                Option.of(Theme.Classes.IN_PROGRESS), there.note().get().head().cssClass());
+        assertEquals(Option.of("  3d"), here.detailText());
+        assertEquals(Option.of("  REBASING 1/2 onto main · 1 conflict"), here.noteText());
         assertEquals(List.of(Option.of(Theme.Classes.CURRENT)), here.segs().map(LoadableList.Seg::cssClass));
+        // Under the header of a stack, every line is indented.
+        assertEquals(
+                Option.of("      REBASING 1/2 onto main · 1 conflict"),
+                LocalBranchesList.indented(here).noteText());
+    }
+
+    @Test
+    void aBranchWhoseWorktreeIsInTheMiddleOfNothingKeepsToTwoLines() {
+        LoadableList.Row row = LocalBranchesList.row(
+                Fixtures.branch(new BranchName("feature"), false, new Sha("1")),
+                false,
+                Duration.ofDays(3),
+                Option.none(),
+                Option.none(),
+                List.empty(),
+                Option.none(),
+                Option.none());
+
+        assertEquals(2, row.height());
+        assertEquals(Option.none(), row.noteText());
     }
 
     @Test
