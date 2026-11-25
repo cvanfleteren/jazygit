@@ -25,8 +25,8 @@ class AppBundleTest {
             "github.dialog.review.titleEdit");
 
     private static final List<String> ROOTS =
-            // GitHub's, unless it was deleted (ADR 171).
-            List.of("ui", "state", "content", "changes", "branches", "github", "chrome", "app")
+            // GitHub's and Forgejo's, unless they were deleted (ADR 171).
+            List.of("ui", "state", "content", "changes", "branches", "github", "forgejo", "chrome", "app")
                     .filter(Bundles::exists);
 
     @Test
@@ -52,6 +52,15 @@ class AppBundleTest {
     @Test
     void everyKeyTheCodeOfAnyModuleNamesIsFound() {
         assertEquals(List.empty(), Bundles.unknown(Path.of(".."), ROOTS, NOT_KEYS));
+    }
+
+    /**
+     * Every module's bundle is kept by the native image, which keeps only the bundles its metadata lists: one left out
+     * shows each of its keys as {@code !key!} there, though the JVM finds them.
+     */
+    @Test
+    void everyBundleIsKeptByTheNativeImage() {
+        assertEquals(List.empty(), Bundles.unregistered(Path.of("..")));
     }
 
     /**
