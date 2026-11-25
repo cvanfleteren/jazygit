@@ -1,9 +1,14 @@
 package net.vanfleteren.jazygit.features.forgejo.pulls;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.kernel.state.popup.Popup;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.FormOpening;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestForm;
+import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
 
 /**
  * Asking what the new pull request of {@code branch} on Forgejo says (ADR 178): which of {@code bases} it merges into,
@@ -25,7 +30,7 @@ public record NewPullRequestPopup(
         String title,
         String body,
         boolean draft)
-        implements Popup {
+        implements NewPullRequestForm {
 
     /**
      * The popup as it opens, with {@code title} read for the first of {@code bases}.
@@ -34,10 +39,27 @@ public record NewPullRequestPopup(
         return new NewPullRequestPopup(branch, bases, bases.head(), title, title, "", false);
     }
 
+    @Override
+    public NewPullRequestPopup titled(String title) {
+        return withTitleRead(title).withTitle(title);
+    }
+
     /**
-     * Whether the title is still the one read, which reading it for another base then replaces.
+     * The branch {@code base} is on the home's remote; none without a home.
      */
-    boolean titleUntouched() {
-        return title.equals(titleRead);
+    @Override
+    public Option<BranchRef> baseRef(Model model, BranchName base) {
+        return ForgeHome.of(model).map(home -> CreatePullRequestUpdate.baseRef(home, base));
+    }
+
+    /**
+     * Opening the popup for {@code branch} into the first of {@code bases}, once its title is read.
+     */
+    public record Opening(BranchName branch, List<BranchName> bases) implements FormOpening {
+
+        @Override
+        public NewPullRequestPopup titled(String title) {
+            return opening(branch, bases, title);
+        }
     }
 }

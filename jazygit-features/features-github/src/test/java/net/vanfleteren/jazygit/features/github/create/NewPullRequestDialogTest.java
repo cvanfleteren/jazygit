@@ -19,6 +19,7 @@ import java.util.Optional;
 import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -54,7 +55,7 @@ class NewPullRequestDialogTest {
     // As in the app, an edit or a move changes the model the popup shows; the other messages are only kept.
     private final NewPullRequestDialog dialog = new NewPullRequestDialog(msg -> {
         dispatched.add(msg);
-        if (msg instanceof CreatePullRequestMsg.PullRequestEdited || msg instanceof CreatePullRequestMsg.BaseMoved) {
+        if (msg instanceof CreatePullRequestMsg.PullRequestEdited || msg instanceof NewPullRequestMsg.BaseMoved) {
             model = Update.update(model, msg).model();
         }
     });
@@ -197,8 +198,8 @@ class NewPullRequestDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(new CreatePullRequestMsg.BaseMoved(
-                        ListCursor.START.at(1), Option.of(new BranchName("release")))),
+                java.util.List.of(
+                        new NewPullRequestMsg.BaseMoved(ListCursor.START.at(1), Option.of(new BranchName("release")))),
                 dispatched);
     }
 

@@ -18,13 +18,9 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.core.repo.Tracking;
-import net.vanfleteren.jazygit.core.repo.Upstream;
-import net.vanfleteren.jazygit.features.branches.branch.BranchError;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
 import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestCmd.CreatePullRequest;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestCmd.PushFirst;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestCmd.ReadTitle;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestCmd.RereadTitle;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -33,12 +29,11 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.forge.ForgeCandidate;
 import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
-import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import org.junit.jupiter.api.Test;
 
 /**
- * Creating the pull request of a branch on Forgejo: where it is pushed to, pushing it first, the dialog, and what
- * creating it does (ADR 178).
+ * Creating the pull request of a branch on Forgejo: where it is pushed to, the bases, the dialog, and what creating it
+ * does (ADR 178). What it does alike on every forge is {@link ForgejoNewPullRequestContractTest}'s.
  */
 class CreatePullRequestUpdateTest {
 
@@ -51,20 +46,6 @@ class CreatePullRequestUpdateTest {
 
     private static RemoteRef remote(RemoteName remote, String name) {
         return new RemoteRef(new RemoteBranch(remote, new BranchName(name)), new Sha("e".repeat(40)), TIME);
-    }
-
-    private static Branch ahead(String name, int ahead, int behind) {
-        return new Branch(
-                new BranchName(name),
-                false,
-                new Sha("f".repeat(40)),
-                TIME,
-                Option.none(),
-                true,
-                false,
-                new Tracking.Tracks(new Upstream(
-                        new BranchRef.Remote(new RemoteBranch(ORIGIN, new BranchName(name))), ahead, behind)),
-                Option.none());
     }
 
     private static Branch main() {
@@ -117,7 +98,12 @@ class CreatePullRequestUpdateTest {
      * {@link #model()} with the dialog open for {@code feature}, its title read as {@code Create it}.
      */
     private static Model asked() {
-        return update(model(), new CreatePullRequestMsg.TitleRead(BRANCH, List.of(MAIN, NEXT), Option.of("Create it")))
+        return Update.update(
+                        model(),
+                        new NewPullRequestMsg.TitleRead(
+                                BRANCH,
+                                new NewPullRequestPopup.Opening(BRANCH, List.of(MAIN, NEXT)),
+                                Option.of("Create it")))
                 .model();
     }
 
@@ -137,7 +123,9 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 List.of(new ReadTitle(
-                        BRANCH, List.of(MAIN, NEXT), new BranchRef.Remote(new RemoteBranch(ORIGIN, MAIN)))),
+                        BRANCH,
+                        new BranchRef.Remote(new RemoteBranch(ORIGIN, MAIN)),
+                        new NewPullRequestPopup.Opening(BRANCH, List.of(MAIN, NEXT)))),
                 next.cmds());
     }
 
@@ -164,78 +152,10 @@ class CreatePullRequestUpdateTest {
     }
 
     @Test
-    void aBranchWithoutAnUpstreamIsAskedToBePushedFirst() {
-        Model model = model(List.of(following("alone", Option.none()), main()));
-
-        Next next = update(model, new CreatePullRequestMsg.HeadChecked(new BranchName("alone"), Option.none()));
-
-        assertEquals(
-                Option.of(new PushFirstPopup(
-                        new BranchName("alone"), new RemoteBranch(ORIGIN, new BranchName("alone")), Option.none())),
-                next.model().popup(PushFirstPopup.class));
-    }
-
-    @Test
-    void aBranchAheadOfItsUpstreamIsAskedToBePushedFirstAndADivergedOneIsRefused() {
-        Model ahead = model(List.of(ahead("feature", 2, 0), main()));
-        Model diverged = model(List.of(ahead("feature", 2, 1), main()));
-
-        assertEquals(
-                Option.of(new PushFirstPopup(BRANCH, FEATURE, Option.of(2))),
-                update(ahead, new CreatePullRequestMsg.HeadChecked(BRANCH, Option.none()))
-                        .model()
-                        .popup(PushFirstPopup.class));
-        assertEquals(
-                Option.<AppError>of(new BranchError.Diverged(BRANCH, FEATURE)),
-                update(diverged, new CreatePullRequestMsg.HeadChecked(BRANCH, Option.none()))
-                        .model()
-                        .outcome()
-                        .error());
-    }
-
-    @Test
-    void confirmingThePushPushesIt() {
-        Model ahead = model(List.of(ahead("feature", 2, 0), main()));
-        Model asked = update(ahead, new CreatePullRequestMsg.HeadChecked(BRANCH, Option.none()))
-                .model();
-
-        Next next = update(asked, new CreatePullRequestMsg.PushFirstConfirmed());
-
-        assertEquals(Option.none(), next.model().popup(PushFirstPopup.class));
-        assertEquals(1, next.cmds().count(PushFirst.class::isInstance));
-    }
-
-    @Test
     void theDialogOpensWithTheTitleReadAndAnEmptyBody() {
         assertEquals(
                 new NewPullRequestPopup(BRANCH, List.of(MAIN, NEXT), MAIN, "Create it", "Create it", "", false),
                 popup(asked()));
-    }
-
-    @Test
-    void anotherBaseHasTheTitleReadAgainWhileItIsTheOneRead() {
-        Next moved = update(asked(), new CreatePullRequestMsg.BaseMoved(ListCursor.START.at(1), Option.of(NEXT)));
-
-        assertEquals(NEXT, popup(moved.model()).base());
-        assertEquals(
-                List.of(new RereadTitle(BRANCH, NEXT, new BranchRef.Remote(new RemoteBranch(ORIGIN, NEXT)))),
-                moved.cmds());
-        assertEquals(
-                "Other",
-                popup(update(moved.model(), new CreatePullRequestMsg.BaseTitleRead(BRANCH, NEXT, Option.of("Other")))
-                                .model())
-                        .title());
-    }
-
-    @Test
-    void aTitleOfTheUsersOwnIsNotReadAgain() {
-        Model typed = update(asked(), new CreatePullRequestMsg.Edited("Mine", "", false))
-                .model();
-
-        Next moved = update(typed, new CreatePullRequestMsg.BaseMoved(ListCursor.START.at(1), Option.of(NEXT)));
-
-        assertEquals(List.empty(), moved.cmds());
-        assertEquals("Mine", popup(moved.model()).title());
     }
 
     @Test
@@ -248,17 +168,6 @@ class CreatePullRequestUpdateTest {
         assertEquals(Option.none(), next.model().popup(NewPullRequestPopup.class));
         assertEquals(
                 List.of(new CreatePullRequest(ORIGIN, BRANCH, FEATURE, MAIN, "Create it", "Why", true)), next.cmds());
-    }
-
-    @Test
-    void aBlankTitleKeepsTheDialogOpen() {
-        Model blank = update(asked(), new CreatePullRequestMsg.Edited("  ", "", false))
-                .model();
-
-        Next next = update(blank, new CreatePullRequestMsg.Confirmed());
-
-        assertTrue(next.model().popup(NewPullRequestPopup.class).isDefined());
-        assertEquals(List.empty(), next.cmds());
     }
 
     @Test

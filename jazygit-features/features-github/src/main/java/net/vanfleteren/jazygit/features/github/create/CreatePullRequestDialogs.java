@@ -10,27 +10,10 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
 
 /**
- * The popups of creating a pull request: whether to create it to put it on a stack, whether to push the branch first,
- * and what it merges into and what it says.
+ * The popups of creating a pull request on GitHub: whether to create it to put it on a stack, and what it merges into
+ * and what it says. Whether to push the branch first is {@code NewPullRequestDialogs}'.
  */
 public final class CreatePullRequestDialogs {
-
-    /**
-     * Asks to push a branch that is not on its remote, or not with all its commits, before creating its pull request.
-     */
-    public static final ConfirmDialog.Spec<PushFirstPopup> PUSH_FIRST = new ConfirmDialog.Spec<>(
-            "push-first",
-            PushFirstPopup.class,
-            popup ->
-                    Messages.get("github.dialog.pushFirst.title", popup.branch().value()),
-            popup -> popup.unpushed()
-                    .map(commits -> Messages.get(
-                            "github.dialog.pushFirst.unpushed",
-                            commits,
-                            popup.target().shortName()))
-                    .getOrElse(() -> Messages.get(
-                            "github.dialog.pushFirst.untracked", popup.target().shortName())),
-            CreatePullRequestMsg.PushFirstConfirmed::new);
 
     /**
      * Asks to create the pull request of a branch without one, to put it on a stack (ADR 148): the stack menu opens it,
@@ -68,7 +51,6 @@ public final class CreatePullRequestDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ConfirmDialog<>(PUSH_FIRST, dispatch)),
                 PopupSlot.returningToFocus(new ConfirmDialog<>(CREATE_FIRST, dispatch)),
                 PopupSlot.returningTo(Scopes.BRANCHES.pane(), new NewPullRequestDialog(dispatch)));
     }

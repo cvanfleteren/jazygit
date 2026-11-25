@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.PushFirstPopup;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.RecordParent;
 import net.vanfleteren.jazygit.features.github.stack.StackPopups;
 import net.vanfleteren.jazygit.kernel.state.Model;

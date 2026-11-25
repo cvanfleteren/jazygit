@@ -1,11 +1,15 @@
 package net.vanfleteren.jazygit.features.github.create;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
-import net.vanfleteren.jazygit.kernel.state.popup.Popup;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.FormOpening;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestForm;
+import net.vanfleteren.jazygit.kernel.state.Model;
 
 /**
  * Asking what the new pull request of {@code branch} says: which of {@code bases} it merges into, its title, its
@@ -27,12 +31,37 @@ public record NewPullRequestPopup(
         String titleRead,
         NewPullRequest pullRequest,
         boolean stack)
-        implements Popup {
+        implements NewPullRequestForm {
+
+    @Override
+    public String title() {
+        return pullRequest.title();
+    }
+
+    @Override
+    public NewPullRequestPopup titled(String title) {
+        return withTitleRead(title).withPullRequest(new NewPullRequest(title, pullRequest.body(), pullRequest.draft()));
+    }
 
     /**
-     * Whether the title is still the one read, which reading it for another base then replaces.
+     * The branch {@code base} is on its remote, which a pull request merges into; the local one when it has no
+     * upstream there.
      */
-    boolean titleUntouched() {
-        return pullRequest.title().equals(titleRead);
+    @Override
+    public Option<BranchRef> baseRef(Model model, BranchName base) {
+        return Option.of(CreatePullRequestUpdate.baseRef(model, base));
+    }
+
+    /**
+     * Opening the popup for {@code branch}, which pushes to {@code head}, into the first of {@code bases}, once its
+     * title is read: stacked on the pull request of its base, where it has one.
+     */
+    public record Opening(BranchName branch, RemoteBranch head, List<BranchName> bases) implements FormOpening {
+
+        @Override
+        public NewPullRequestPopup titled(String title) {
+            return new NewPullRequestPopup(
+                    branch, head, bases, bases.head(), title, new NewPullRequest(title, "", false), true);
+        }
     }
 }

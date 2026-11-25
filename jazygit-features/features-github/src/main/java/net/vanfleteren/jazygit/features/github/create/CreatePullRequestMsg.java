@@ -6,15 +6,14 @@ import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 
 /**
- * Creating the pull request of a branch that has none: reading the branch it came from and the title it starts out
- * with, then asking what it merges into and what it says, in one popup.
+ * Creating the pull request of a branch that has none on GitHub: reading the branch it came from, then asking what it
+ * merges into and what it says, in one popup. Pushing it first and the title that follows the base are
+ * {@code NewPullRequestMsg}'s.
  */
 public sealed interface CreatePullRequestMsg extends Msg {
 
@@ -27,28 +26,6 @@ public sealed interface CreatePullRequestMsg extends Msg {
      * The branch {@code branch} was made from was read, if it could be told: the base that is offered first.
      */
     record ParentRead(BranchName branch, Option<BranchName> parent) implements CreatePullRequestMsg {}
-
-    /**
-     * The user moved in the list of bases, to {@code cursor}: the highlighted base, if the filter shows any, is the
-     * one the pull request merges into.
-     */
-    record BaseMoved(ListCursor cursor, Option<BranchName> base) implements CreatePullRequestMsg {}
-
-    /**
-     * The title a new pull request of {@code branch} starts out with was read, for the first of {@code bases}: the
-     * subject of its oldest commit not on it, if one was found.
-     *
-     * @param head  the branch on its remote that it pushes to
-     * @param bases the branches it can merge into, the one it was read for first
-     */
-    record TitleRead(BranchName branch, RemoteBranch head, List<BranchName> bases, Option<String> subject)
-            implements CreatePullRequestMsg {}
-
-    /**
-     * The title of the new pull request of {@code branch} was read again, for {@code base}, which the user picked
-     * instead.
-     */
-    record BaseTitleRead(BranchName branch, BranchName base, Option<String> subject) implements CreatePullRequestMsg {}
 
     /**
      * The user changed what the new pull request says.
@@ -77,16 +54,6 @@ public sealed interface CreatePullRequestMsg extends Msg {
      * The user confirmed what the new pull request says.
      */
     record Confirmed() implements CreatePullRequestMsg {}
-
-    /**
-     * The user confirmed pushing the branch before creating its pull request.
-     */
-    record PushFirstConfirmed() implements CreatePullRequestMsg {}
-
-    /**
-     * The branch was pushed by running {@code commands}, so its pull request can be created now.
-     */
-    record Pushed(CreatePullRequestCmd.PushFirst cmd, List<ExecutedCommand> commands) implements CreatePullRequestMsg {}
 
     /**
      * The pull request was created by running {@code commands}.

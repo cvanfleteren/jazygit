@@ -10,8 +10,9 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd;
+import net.vanfleteren.jazygit.features.github.create.NewPullRequestPopup;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
@@ -60,13 +61,16 @@ class FetchLineGitHubTest {
         BranchRef base = new BranchRef.Local(new BranchName("main"));
         assertEquals(
                 "Reading the title of feature",
-                FetchLine.labelText(new CreatePullRequestCmd.ReadTitle(
-                                feature, new RemoteBranch("origin", feature), List.empty(), base)
+                FetchLine.labelText(new NewPullRequestCmd.ReadTitle(
+                                feature,
+                                base,
+                                new NewPullRequestPopup.Opening(
+                                        feature, new RemoteBranch("origin", feature), List.of(new BranchName("main"))))
                         .label()
                         .get()));
         assertEquals(
                 "Reading the title of feature",
-                FetchLine.labelText(new CreatePullRequestCmd.RereadTitle(feature, new BranchName("main"), base)
+                FetchLine.labelText(new NewPullRequestCmd.RereadTitle(feature, new BranchName("main"), base)
                         .label()
                         .get()));
         assertEquals(

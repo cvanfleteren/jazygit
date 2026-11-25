@@ -25,11 +25,14 @@ import net.vanfleteren.jazygit.core.git.history.StubHistory;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.RereadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg.BaseMoved;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg.BaseMoved;
 import net.vanfleteren.jazygit.features.github.create.NewPullRequestPopup;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
@@ -94,9 +97,11 @@ class CreatePullRequestUpdateTest {
         assertEquals(
                 List.of(new ReadTitle(
                         FEATURE,
-                        new RemoteBranch("origin", FEATURE),
-                        List.of(MAIN.name(), RELEASE.name(), AHEAD.name()),
-                        remote("main"))),
+                        remote("main"),
+                        new NewPullRequestPopup.Opening(
+                                FEATURE,
+                                new RemoteBranch("origin", FEATURE),
+                                List.of(MAIN.name(), RELEASE.name(), AHEAD.name())))),
                 reading.cmds());
         assertEquals(Option.none(), reading.model().popup());
     }
@@ -108,9 +113,11 @@ class CreatePullRequestUpdateTest {
         assertEquals(
                 List.of(new ReadTitle(
                         FEATURE,
-                        new RemoteBranch("origin", FEATURE),
-                        List.of(AHEAD.name(), MAIN.name(), RELEASE.name()),
-                        remote("ahead"))),
+                        remote("ahead"),
+                        new NewPullRequestPopup.Opening(
+                                FEATURE,
+                                new RemoteBranch("origin", FEATURE),
+                                List.of(AHEAD.name(), MAIN.name(), RELEASE.name())))),
                 reading.cmds());
     }
 
@@ -121,9 +128,11 @@ class CreatePullRequestUpdateTest {
         assertEquals(
                 List.of(new ReadTitle(
                         FEATURE,
-                        new RemoteBranch("origin", FEATURE),
-                        List.of(MAIN.name(), RELEASE.name(), AHEAD.name()),
-                        remote("main"))),
+                        remote("main"),
+                        new NewPullRequestPopup.Opening(
+                                FEATURE,
+                                new RemoteBranch("origin", FEATURE),
+                                List.of(MAIN.name(), RELEASE.name(), AHEAD.name())))),
                 reading.cmds());
     }
 
@@ -135,7 +144,10 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 List.of(new ReadTitle(
-                        FEATURE, new RemoteBranch("origin", FEATURE), List.of(MAIN.name()), remote("main"))),
+                        FEATURE,
+                        remote("main"),
+                        new NewPullRequestPopup.Opening(
+                                FEATURE, new RemoteBranch("origin", FEATURE), List.of(MAIN.name())))),
                 reading.cmds());
     }
 
@@ -173,15 +185,6 @@ class CreatePullRequestUpdateTest {
                 next.model().outcome().error());
         assertEquals(Option.none(), next.model().popup(NewPullRequestPopup.class));
         assertEquals(List.empty(), next.cmds());
-    }
-
-    @Test
-    void theTitleReadDoesNotTakeAwayAnotherPopup() {
-        Model busy = creating();
-
-        assertEquals(
-                busy.popup(),
-                Update.update(busy, titleRead(Option.of("Other"))).model().popup());
     }
 
     @Test
@@ -293,11 +296,13 @@ class CreatePullRequestUpdateTest {
     /**
      * The title of the feature branch was read for main, offered first, then release and ahead.
      */
-    private static CreatePullRequestMsg.TitleRead titleRead(Option<String> subject) {
-        return new CreatePullRequestMsg.TitleRead(
+    private static NewPullRequestMsg.TitleRead titleRead(Option<String> subject) {
+        return new NewPullRequestMsg.TitleRead(
                 FEATURE,
-                new RemoteBranch("origin", FEATURE),
-                List.of(MAIN.name(), RELEASE.name(), AHEAD.name()),
+                new NewPullRequestPopup.Opening(
+                        FEATURE,
+                        new RemoteBranch("origin", FEATURE),
+                        List.of(MAIN.name(), RELEASE.name(), AHEAD.name())),
                 subject);
     }
 
@@ -319,72 +324,7 @@ class CreatePullRequestUpdateTest {
     }
 
     @Test
-    void withoutACommitOfItsOwnTheTitleIsTheBranch() {
-        Next asking = Update.update(model(), titleRead(Option.none()));
-
-        assertEquals(
-                Option.of(new NewPullRequest("feature", "", false)),
-                asking.model().popup(NewPullRequestPopup.class).map(NewPullRequestPopup::pullRequest));
-    }
-
-    @Test
-    void movingToAnotherBasePicksItAndReadsTheTitleForIt() {
-        ListCursor cursor = ListCursor.START.at(1);
-
-        Next moved = Update.update(creating(), new BaseMoved(cursor, Option.of(RELEASE.name())));
-
-        assertEquals(
-                Option.of(RELEASE.name()),
-                moved.model().popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
-        assertEquals(cursor, moved.model().listCursor());
-        assertEquals(List.of(new RereadTitle(FEATURE, RELEASE.name(), remote("release"))), moved.cmds());
-    }
-
-    @Test
-    void movingAfterTheTitleWasTypedReadsNoTitle() {
-        Model typed = Update.update(
-                        creating(), new CreatePullRequestMsg.PullRequestEdited(new NewPullRequest("Mine", "", false)))
-                .model();
-
-        Next moved = Update.update(typed, new BaseMoved(ListCursor.START.at(1), Option.of(RELEASE.name())));
-
-        assertEquals(
-                Option.of(RELEASE.name()),
-                moved.model().popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
-        assertEquals(List.empty(), moved.cmds());
-    }
-
-    @Test
-    void aFilterThatShowsNoBaseKeepsTheBase() {
-        ListCursor cursor = new ListCursor(Option.of(0), Option.of("nothing"));
-
-        Next moved = Update.update(creating(), new BaseMoved(cursor, Option.none()));
-
-        assertEquals(
-                Option.of(MAIN.name()),
-                moved.model().popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
-        assertEquals(cursor, moved.model().listCursor());
-        assertEquals(List.empty(), moved.cmds());
-    }
-
-    @Test
-    void theTitleReadForThePickedBaseReplacesTheUntouchedTitle() {
-        Model release = Update.update(creating(), new BaseMoved(ListCursor.START.at(1), Option.of(RELEASE.name())))
-                .model();
-
-        Model read = Update.update(
-                        release,
-                        new CreatePullRequestMsg.BaseTitleRead(FEATURE, RELEASE.name(), Option.of("Fix release")))
-                .model();
-
-        assertEquals(
-                Option.of(new NewPullRequest("Fix release", "", false)),
-                read.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::pullRequest));
-        assertEquals(ListCursor.START.at(1), read.listCursor());
-    }
-
-    @Test
-    void aTitleTypedBackToTheOneReadIsReplacedAgain() {
+    void aTitleReadAgainKeepsTheBodyAndTheDraft() {
         Model typed = Update.update(
                         creating(),
                         new CreatePullRequestMsg.PullRequestEdited(new NewPullRequest("Add login", "Why", true)))
@@ -393,7 +333,7 @@ class CreatePullRequestUpdateTest {
         Next moved = Update.update(typed, new BaseMoved(ListCursor.START.at(1), Option.of(RELEASE.name())));
         Model read = Update.update(
                         moved.model(),
-                        new CreatePullRequestMsg.BaseTitleRead(FEATURE, RELEASE.name(), Option.of("Fix release")))
+                        new NewPullRequestMsg.BaseTitleRead(FEATURE, RELEASE.name(), Option.of("Fix release")))
                 .model();
 
         assertEquals(List.of(new RereadTitle(FEATURE, RELEASE.name(), remote("release"))), moved.cmds());
@@ -403,79 +343,16 @@ class CreatePullRequestUpdateTest {
     }
 
     @Test
-    void aTitleReadForABaseNoLongerPickedIsDropped() {
-        Model release = Update.update(creating(), new BaseMoved(ListCursor.START.at(1), Option.of(RELEASE.name())))
-                .model();
-        Model ahead = Update.update(release, new BaseMoved(ListCursor.START.at(2), Option.of(AHEAD.name())))
-                .model();
-
-        assertEquals(
-                ahead,
-                Update.update(
-                                ahead,
-                                new CreatePullRequestMsg.BaseTitleRead(
-                                        FEATURE, RELEASE.name(), Option.of("Fix release")))
-                        .model());
-    }
-
-    @Test
-    void aTitleReadAfterTheTitleWasTypedIsDropped() {
-        Model release = Update.update(creating(), new BaseMoved(ListCursor.START.at(1), Option.of(RELEASE.name())))
-                .model();
-        Model typed = Update.update(
-                        release, new CreatePullRequestMsg.PullRequestEdited(new NewPullRequest("Mine", "", false)))
-                .model();
-
-        assertEquals(
-                typed,
-                Update.update(
-                                typed,
-                                new CreatePullRequestMsg.BaseTitleRead(
-                                        FEATURE, RELEASE.name(), Option.of("Fix release")))
-                        .model());
-    }
-
-    @Test
-    void aTitleReadAfterThePopupClosedOpensNothing() {
-        Model closed = Update.update(creating(), new PopupMsg.Dismissed(NewPullRequestPopup.class))
-                .model();
-
-        assertEquals(
-                Option.none(),
-                Update.update(closed, new CreatePullRequestMsg.BaseTitleRead(FEATURE, MAIN.name(), Option.of("x")))
-                        .model()
-                        .popup());
-    }
-
-    @Test
-    void theTitleIsReadAgainFromTheFirstCommitNotOnThePickedBase() {
-        Git git = StubGit.of().withHistory(new StubHistory() {
-            @Override
-            public Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
-                return Either.right(Option.of(
-                        branch.equals(new BranchRef.Local(FEATURE)) && base.equals(remote("release"))
-                                ? "Fix release"
-                                : "wrong"));
-            }
-        });
-
-        assertEquals(
-                new CreatePullRequestMsg.BaseTitleRead(FEATURE, RELEASE.name(), Option.of("Fix release")),
-                new RereadTitle(FEATURE, RELEASE.name(), remote("release"))
-                        .run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
-    }
-
-    @Test
     void aBaseIsMergedIntoUnderItsNameOnTheRemote() {
         Model branches = localBranchesRead(loaded(), List.of(PUSHED, DEV, MAIN)).model();
         Model loaded = Update.update(branches, PullRequestFixtures.listed(List.empty()))
                 .model();
         Model asked = Update.update(
                         loaded,
-                        new CreatePullRequestMsg.TitleRead(
+                        new NewPullRequestMsg.TitleRead(
                                 FEATURE,
-                                new RemoteBranch("origin", FEATURE),
-                                List.of(MAIN.name(), DEV.name()),
+                                new NewPullRequestPopup.Opening(
+                                        FEATURE, new RemoteBranch("origin", FEATURE), List.of(MAIN.name(), DEV.name())),
                                 Option.of("Add login")))
                 .model();
         Model picked = Update.update(asked, new BaseMoved(ListCursor.START.at(1), Option.of(DEV.name())))
@@ -572,14 +449,6 @@ class CreatePullRequestUpdateTest {
     }
 
     @Test
-    void aBlankTitleKeepsThePopupOpen() {
-        Next next = confirmed(new NewPullRequest(" ", "", false));
-
-        assertEquals(List.empty(), next.cmds());
-        assertTrue(next.model().popup(NewPullRequestPopup.class).isDefined());
-    }
-
-    @Test
     void editingKeepsWhatThePullRequestSaysInThePopup() {
         NewPullRequest edited = new NewPullRequest("Add login!", "Why", true);
 
@@ -588,26 +457,6 @@ class CreatePullRequestUpdateTest {
         assertEquals(
                 Option.of(edited), next.model().popup(NewPullRequestPopup.class).map(NewPullRequestPopup::pullRequest));
         assertEquals(List.empty(), next.cmds());
-    }
-
-    @Test
-    void anEditAfterThePopupClosedIsIgnored() {
-        Model closed = Update.update(creating(), new PopupMsg.Dismissed(NewPullRequestPopup.class))
-                .model();
-
-        assertEquals(
-                closed,
-                Update.update(closed, new CreatePullRequestMsg.PullRequestEdited(new NewPullRequest("x", "", false)))
-                        .model());
-    }
-
-    @Test
-    void cancellingTheNewPullRequestClosesThePopup() {
-        assertEquals(
-                Option.none(),
-                Update.update(creating(), new PopupMsg.Dismissed(NewPullRequestPopup.class))
-                        .model()
-                        .popup());
     }
 
     /**

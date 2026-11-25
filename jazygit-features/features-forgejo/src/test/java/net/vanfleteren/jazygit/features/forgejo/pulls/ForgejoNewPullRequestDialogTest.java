@@ -10,6 +10,7 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -34,7 +35,7 @@ class ForgejoNewPullRequestDialogTest {
     // As in the app, an edit or a move changes the model the popup shows; the other messages are only kept.
     private final ForgejoNewPullRequestDialog dialog = new ForgejoNewPullRequestDialog(msg -> {
         dispatched.add(msg);
-        if (msg instanceof CreatePullRequestMsg.Edited || msg instanceof CreatePullRequestMsg.BaseMoved) {
+        if (msg instanceof CreatePullRequestMsg.Edited || msg instanceof NewPullRequestMsg.BaseMoved) {
             model = Update.update(model, msg).model();
         }
     });

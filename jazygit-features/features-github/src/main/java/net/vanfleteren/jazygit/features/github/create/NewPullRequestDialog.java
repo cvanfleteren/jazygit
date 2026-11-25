@@ -14,6 +14,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
@@ -109,7 +110,7 @@ public final class NewPullRequestDialog implements PopupView {
                                     open.bases(),
                                     open.base(),
                                     model.listCursor(),
-                                    CreatePullRequestMsg.BaseMoved::new,
+                                    NewPullRequestMsg.BaseMoved::new,
                                     this::keys),
                             new LineEditInput(
                                             textInput(title)
