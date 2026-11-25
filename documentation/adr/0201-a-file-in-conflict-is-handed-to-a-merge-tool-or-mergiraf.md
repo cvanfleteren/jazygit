@@ -62,6 +62,6 @@ merging the sides of a file to an editor.
 
 - A file is merged in the user's merge tool, or by mergiraf, without leaving the app.
 - Opening the resolve dialog reads `merge.tool` and `mergetool.keepBackup`, tries `mergiraf --version`, and reads the
-  file for markers: four processes and a file read, each time it opens.
+  file for markers: three processes and a file read, each time it opens.
 - Opening a file in conflict in an editor reads it for markers first.
 - A file that has `<<<<<<< ` at the start of a line where it belongs opens there too.
