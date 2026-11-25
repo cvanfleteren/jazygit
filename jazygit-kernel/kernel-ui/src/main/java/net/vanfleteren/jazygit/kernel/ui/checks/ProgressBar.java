@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.widgets;
+package net.vanfleteren.jazygit.kernel.ui.checks;
 
 import static dev.tamboui.toolkit.Toolkit.text;
 

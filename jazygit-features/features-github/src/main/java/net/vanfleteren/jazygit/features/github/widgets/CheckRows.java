@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckProgress;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.core.gh.timing.Eta;
 import net.vanfleteren.jazygit.features.github.state.CheckTimes;
+import net.vanfleteren.jazygit.kernel.ui.checks.ChecksFrame;
+import net.vanfleteren.jazygit.kernel.ui.checks.ProgressBar;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -68,18 +70,13 @@ public final class CheckRows {
             int width,
             int doingWidth,
             boolean took) {
-        List<Symbol> symbols = PullRequestSymbols.check(check).toList();
-        int left =
-                width - symbols.map(symbol -> TextWidth.of(symbol.text())).sum().intValue() - 1;
-        return symbols.<StyledElement<?>>map(Symbol::element)
-                .appendAll(doing(check, all, times, now, took)
-                        .map(text -> {
-                            TextElement name = text(" " + padded(check.name(), left - 2 - doingWidth) + "  ");
-                            return List.<StyledElement<?>>of(
-                                    check.queued() ? name.addClass(Theme.Classes.DIM) : name,
-                                    text(TextWidth.alignRight(text, doingWidth)).addClass(Theme.Classes.DIM));
-                        })
-                        .getOrElse(() -> List.of(text(" " + TextWidth.cut(check.name(), left)))));
+        return ChecksFrame.filling(
+                PullRequestSymbols.check(check).toList(),
+                check.name(),
+                check.queued(),
+                doing(check, all, times, now, took),
+                width,
+                doingWidth);
     }
 
     /**
@@ -87,8 +84,7 @@ public final class CheckRows {
      * check picked (ADR 160).
      */
     public static List<StyledElement<?>> picked(Check check, List<StyledElement<?>> row) {
-        int name = PullRequestSymbols.check(check).toList().size();
-        return name < row.size() ? row.update(name, row.get(name).addClass(Theme.Classes.BOLD)) : row;
+        return ChecksFrame.picked(PullRequestSymbols.check(check).toList().size(), row);
     }
 
     /**
@@ -141,7 +137,7 @@ public final class CheckRows {
                 - barWidth
                 - 2
                 - doingWidth;
-        TextElement named = text(" " + padded(check.name(), name) + "  ");
+        TextElement named = text(" " + ChecksFrame.padded(check.name(), name) + "  ");
         String doing = barredDoing(check, all, times, now).getOrElse("");
         return symbols.<StyledElement<?>>map(Symbol::element)
                 .append(check.queued() ? named.addClass(Theme.Classes.DIM) : named)
@@ -219,7 +215,7 @@ public final class CheckRows {
                     case Eta.Expected expected when expected.overdue(now) -> Theme.Classes.CHECKS_RUNNING;
                     case Eta.Expected expected -> Theme.Classes.CHECKS_PROGRESS;
                 };
-        String percent = Messages.get("github.dialog.checks.progress", String.valueOf(ProgressBar.percent(progress)));
+        String percent = Messages.get("checks.dialog.progress", String.valueOf(ProgressBar.percent(progress)));
         return ProgressBar.of(progress, width - 1 - PERCENT, done)
                 .append(text(" " + TextWidth.alignRight(percent, PERCENT)));
     }
@@ -240,13 +236,5 @@ public final class CheckRows {
 
     private static boolean learning(Option<CheckTimes> times) {
         return times.exists(CheckTimes::toppingUp);
-    }
-
-    /**
-     * {@code name}, cut to {@code width} columns, or with spaces after it to take them, so what follows lines up.
-     */
-    private static String padded(String name, int width) {
-        String cut = TextWidth.cut(name, width);
-        return cut + " ".repeat(Math.max(0, width - TextWidth.of(cut)));
     }
 }
