@@ -104,7 +104,8 @@ public final class CliBranches implements Branches {
                 .flatMap(created -> GitProcess.read(
                         worktree,
                         GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
-                        raw -> parseAll(raw, created, BranchesInUse.elsewhere(worktree))));
+                        raw -> parseAll(
+                                raw, created, BranchesInUse.elsewhere(worktree), BranchesInUse.busyIn(worktree))));
     }
 
     /**
@@ -316,9 +317,22 @@ public final class CliBranches implements Branches {
      */
     static Either<UnexpectedOutput, AllBranches> parseAll(
             String raw, Map<BranchName, Creation> created, Map<BranchName, Path> inUse) {
+        return parseAll(raw, created, inUse, Option.none());
+    }
+
+    /**
+     * The branches in {@code raw}, as {@link #parseAll(String, Map, Map)} reads them, with {@code busyHere}, the
+     * branch the worktree they are read in rebases or bisects with its HEAD detached meanwhile, listed first, where
+     * the checked out branch would be (ADR 197).
+     */
+    static Either<UnexpectedOutput, AllBranches> parseAll(
+            String raw, Map<BranchName, Creation> created, Map<BranchName, Path> inUse, Option<BranchName> busyHere) {
+        Comparator<Branch> order = Comparator.comparing((Branch branch) -> busyHere.contains(branch.name()))
+                .reversed()
+                .thenComparing(ORDER);
         return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse))
                 .map(Seq::toList)
-                .map(refs -> new AllBranches(branches(refs, created, inUse), remoteRefs(refs)));
+                .map(refs -> new AllBranches(branches(refs, created, inUse).sorted(order), remoteRefs(refs)));
     }
 
     /**

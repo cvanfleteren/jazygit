@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.core.repo.AllBranches;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Midway;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Worktree;
@@ -389,5 +391,53 @@ class CliWorktreesTest {
         assertEquals(main.resolveSibling("detached"), detached.path());
         assertEquals(Option.none(), detached.branch());
         assertInstanceOf(Head.Detached.class, detached.head().get());
+    }
+
+    @Test
+    void aWorktreeThatStoppedRebasingIsReadWithItsConflictsAndItsBranchFirstThere() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git(main, "init", "-q", "-b", "main");
+        Files.writeString(main.resolve("f.txt"), "base\n");
+        git(main, "add", "f.txt");
+        git(main, "commit", "-q", "-m", "base");
+        git(main, "branch", "feature");
+        Files.writeString(main.resolve("f.txt"), "main\n");
+        git(main, "commit", "-q", "-am", "main");
+        Path linked = main.resolveSibling("linked");
+        git(main, "worktree", "add", "-q", linked.toString(), "feature");
+        Files.writeString(linked.resolve("f.txt"), "feature\n");
+        git(linked, "commit", "-q", "-am", "feature");
+        git(linked, "commit", "-q", "--allow-empty", "-m", "second");
+        // Stops on the conflict in f.txt, at the first of its two commits.
+        assertNotEquals(0, gitExit(linked, "rebase", "--merge", "main"));
+
+        List<Worktree> fromMain = CliGit.open(main).get().worktrees().list().get();
+        List<Worktree> fromLinked = CliGit.open(linked).get().worktrees().list().get();
+        Sha onto = ((Head.OnBranch) fromMain.head().head().get()).tip().get();
+
+        Midway rebasing = new Midway(new InProgress.Rebasing(Option.of(new BranchName("feature")), onto, 1, 2), 1);
+        assertEquals(List.of(Option.none(), Option.of(rebasing)), fromMain.map(Worktree::midway));
+        assertEquals(Option.of(new BranchName("feature")), fromMain.last().busyWith());
+        assertEquals(List.of(Option.of(rebasing), Option.none()), fromLinked.map(Worktree::midway));
+        assertEquals(
+                new BranchName("feature"),
+                CliGit.open(linked).get().branches().all().get().local().head().name());
+        assertEquals(
+                new BranchName("main"),
+                CliGit.open(main).get().branches().all().get().local().head().name());
+    }
+
+    private static int gitExit(Path in, String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
+                "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
+        command.addAll(java.util.List.of(args));
+        return new ProcessExecutor()
+                .command(command)
+                .directory(in.toFile())
+                .redirectErrorStream(true)
+                .readOutput(true)
+                .exitValueAny()
+                .execute()
+                .getExitValue();
     }
 }

@@ -3,8 +3,10 @@ package net.vanfleteren.jazygit.core.git.model;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Midway;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -28,6 +30,24 @@ public record RepoStatus(Head head, List<FileEntry> files, Option<InProgress> in
      */
     public int conflicts() {
         return files.count(file -> file.conflict().isDefined());
+    }
+
+    /**
+     * What the repository is in the middle of, if anything, with how many files still have conflicts (ADR 197).
+     */
+    public Option<Midway> midway() {
+        return inProgress.map(operation -> new Midway(operation, conflicts()));
+    }
+
+    /**
+     * The branch a rebase works on while it detaches HEAD, if one does: the branch worked on here meanwhile, which
+     * the app shows as checked out (ADR 197). None for a rebase of a detached HEAD.
+     */
+    public Option<BranchName> rebasedBranch() {
+        return head instanceof Head.Detached
+                ? inProgress.flatMap(operation ->
+                        operation instanceof InProgress.Rebasing rebasing ? rebasing.branch() : Option.none())
+                : Option.none();
     }
 
     /**

@@ -17,9 +17,11 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
+import net.vanfleteren.jazygit.core.git.process.HeadFile;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Midway;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -49,6 +51,19 @@ public final class CliInProgress {
      */
     public static Option<InProgress> read(Markers markers) {
         return inProgress(markers);
+    }
+
+    /**
+     * What the worktree at {@code root} is in the middle of, if anything, with how many files there still have
+     * conflicts (ADR 197). What it is in the middle of is read from the files of its git directory, without running
+     * git, as each of them is the worktree's own; the conflicts are counted with {@code git ls-files --unmerged} only
+     * when it is in the middle of something, and taken as none when that fails. Only asked, so not logged.
+     */
+    public static Option<Midway> midway(Path root) {
+        return HeadFile.gitDir(root)
+                .flatMap(gitDir -> inProgress(new Markers(MARKERS.map(gitDir::resolve))))
+                .map(inProgress ->
+                        new Midway(inProgress, CliIntegrate.conflicts(root).getOrElse(0)));
     }
 
     /**

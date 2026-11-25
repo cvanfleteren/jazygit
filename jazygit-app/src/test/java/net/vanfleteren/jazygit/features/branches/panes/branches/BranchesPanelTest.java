@@ -126,6 +126,22 @@ class BranchesPanelTest {
     }
 
     @Test
+    void onceTheBranchShownIsOneRebasedHereItIsHighlightedAsACheckedOutOneWouldBe() throws Exception {
+        // ADR 197: as when switching to the worktree that stopped rebasing it, whose HEAD is detached meanwhile.
+        Model branches =
+                with(before, List.of(FEATURE, Fixtures.branch(new BranchName("main"), false, new Sha("1")), OLD));
+        Model rebasing = Update.update(
+                        branches,
+                        new LoadMsg.StatusLoaded(new RepoStatus(
+                                new Head.Detached(new Sha("1")),
+                                List.empty(),
+                                Option.of(new InProgress.Rebasing(Option.of(FEATURE.name()), new Sha("1"), 1, 2)))))
+                .model();
+
+        assertEquals(selecting("feature"), highlightedAfterMovingTo(2, rebasing));
+    }
+
+    @Test
     void aDetachedHeadIsListedFirstAndHighlightedOnceDetachedWithoutALog() throws Exception {
         Sha at = new Sha("89eeda75aaaaaaaa");
         Model detached = detachedAt(at);
@@ -236,6 +252,27 @@ class BranchesPanelTest {
                 ToolkitTestRunner.runTest(() -> panel.render(detached, Scopes.BRANCHES.pane()))) {
             RenderedText.of(testRunner, () -> panel.render(detached, Scopes.BRANCHES.pane()));
             assertEquals(Option.of(new Followed.WorkingTree()), panel.followed(detached));
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void theBranchRebasedHereIsListedFirstAndListsTheFilesOfTheWorkingTree() throws Exception {
+        // ADR 197: it is the one worked on here, while the rebase detaches HEAD.
+        Model branches =
+                with(before, List.of(FEATURE, Fixtures.branch(new BranchName("main"), false, new Sha("1")), OLD));
+        Model rebasing = Update.update(
+                        branches,
+                        new LoadMsg.StatusLoaded(new RepoStatus(
+                                new Head.Detached(new Sha("1")),
+                                List.empty(),
+                                Option.of(new InProgress.Rebasing(Option.of(FEATURE.name()), new Sha("1"), 1, 2)))))
+                .model();
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(rebasing, Scopes.BRANCHES.pane()))) {
+            String screen = RenderedText.of(testRunner, () -> panel.render(rebasing, Scopes.BRANCHES.pane()));
+            assertTrue(screen.contains("REBASING 1/2 onto main"), screen);
+            assertEquals(Option.of(new Followed.WorkingTree()), panel.followed(rebasing));
             SettledPilot.of(testRunner).quit();
         }
     }

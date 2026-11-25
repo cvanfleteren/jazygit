@@ -1,7 +1,10 @@
 """Adding worktrees, for a branch, a new branch or a commit, and switching to, removing, locking and pruning them."""
 
 import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 from harness import Git
 
@@ -440,3 +443,33 @@ def test_open_the_worktree_of_a_branch(repo, env, tmp_path, jazygit):
     ui.branches.open_in_editor("feature")
 
     ui.app.eventually(lambda: (tmp_path / "repo-feature" / "opened").exists(), "the worktree opened in the editor")
+
+
+def test_a_worktree_stopped_on_a_rebase_says_so_from_everywhere_and_its_branch_is_the_one_worked_on_there(
+        repo, tmp_path, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("branch", "feature")
+    repo.commit("Change one on main", **{"one.txt": "main\n"})
+    there = worktree(repo, tmp_path, "feature")
+    there.commit("Change one on feature", **{"one.txt": "feature\n"})
+    with pytest.raises(subprocess.CalledProcessError):
+        there("rebase", "main")
+    ui = jazygit()
+
+    ui.worktrees.show()
+    # Its changes marked between its name and what it stopped in the middle of.
+    ui.app.eventually(lambda: "repo-feature ● REBASING feature 1/1 onto main" in ui.app.pane_text("Branches"),
+                      "the worktree that stopped to say so")
+    ui.branches.show_tab("Branches")
+    # On a line of its own under the branch, where it fits whole.
+    ui.app.eventually(lambda: "  REBASING 1/1 onto main · 1 conflict" in ui.app.pane_text("Branches").splitlines(),
+                      "the branch rebased there to say so")
+
+    shown = ui.worktrees.switch_to("repo-feature")
+    shown.branches.select("feature")
+    assert shown.app.pane_text("Branches").splitlines()[0].strip() == "feature"
+    shown.app.press("space")
+
+    shown.app.wait_for("feature is being rebased here")
+    assert there.in_progress() == "rebase"
+    assert there.conflicts() == ["one.txt"]

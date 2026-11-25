@@ -3,8 +3,11 @@ package net.vanfleteren.jazygit.features.branches.branch;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Midway;
+import net.vanfleteren.jazygit.core.repo.Worktree;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -45,5 +48,31 @@ public final class Branches {
      */
     public static boolean isOtherIdleBranch(Model model, BranchName name) {
         return model.idleBranch(name).exists(branch -> !branch.current());
+    }
+
+    /**
+     * The branch the worktree shown rebases, with its HEAD detached meanwhile, if it does: the one it works on,
+     * which is shown as checked out (ADR 197).
+     */
+    public static Option<BranchName> rebasedHere(Model model) {
+        return model.repo().status().toOption().flatMap(RepoStatus::rebasedBranch);
+    }
+
+    /**
+     * What the worktree that works on {@code branch} is in the middle of, if anything (ADR 197): this one, for the
+     * branch checked out or rebased here; another one, for a branch checked out or rebased there, once the worktrees
+     * are read.
+     */
+    public static Option<Midway> midway(Model model, Branch branch) {
+        return branch.worktree()
+                .map(location -> model.repo()
+                        .worktrees()
+                        .toOption()
+                        .flatMap(worktrees ->
+                                worktrees.find(worktree -> worktree.path().equals(location)))
+                        .flatMap(Worktree::midway))
+                .getOrElse(() -> branch.current() || rebasedHere(model).contains(branch.name())
+                        ? model.repo().status().toOption().flatMap(RepoStatus::midway)
+                        : Option.none());
     }
 }

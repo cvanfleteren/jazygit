@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
@@ -139,13 +140,18 @@ public final class AddWorktreeUpdate {
      * Asks where to check out {@code branch}, a known branch that no operation runs on, in a new worktree, starting
      * out at {@link #location}, once {@code catchUp} is done to it; once added, the app switches to it without asking
      * when {@code switching} (ADR 68). The branch checked out here git keeps from being checked out twice, so a new
-     * branch made from it is asked for instead; one that another worktree has checked out git would refuse too, which
-     * is said.
+     * branch made from it is asked for instead, as for the branch rebased here, which git takes as in use here (ADR
+     * 197); one that another worktree has checked out git would refuse too, which is said.
      */
     public static Next forBranch(Model model, BranchName branch, CatchUp catchUp, boolean switching) {
         WorktreeSource source = new WorktreeSource.Existing(branch, catchUp);
+        boolean rebasedHere = model.repo()
+                .status()
+                .toOption()
+                .flatMap(RepoStatus::rebasedBranch)
+                .contains(branch);
         return model.idleBranch(branch)
-                .map(known -> known.current()
+                .map(known -> known.current() || rebasedHere
                         ? update(model, new NewBranchRequested(branch))
                         : known.worktreeLocation()
                                 .map(worktree -> Next.of(model.fail(new WorktreeError.CheckedOutElsewhere(

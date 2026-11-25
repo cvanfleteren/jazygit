@@ -16,6 +16,7 @@ import java.nio.file.Path;
  * @param locked   why it is locked, which keeps git from removing it, if it is; empty when no reason was given
  * @param prunable whether its directory is gone, so that git only remembers it
  * @param busyWith the branch it rebases or bisects, with its HEAD detached meanwhile, if it does (ADR 110)
+ * @param midway   what it is in the middle of, if anything, with its conflicts (ADR 197)
  */
 public record Worktree(
         Path path,
@@ -24,21 +25,29 @@ public record Worktree(
         boolean current,
         Option<String> locked,
         boolean prunable,
-        Option<BranchName> busyWith) {
+        Option<BranchName> busyWith,
+        Option<Midway> midway) {
 
     /**
-     * A worktree that rebases and bisects nothing.
+     * A worktree that rebases and bisects nothing, and is in the middle of nothing.
      */
     public Worktree(
             Path path, Option<Head> head, boolean main, boolean current, Option<String> locked, boolean prunable) {
-        this(path, head, main, current, locked, prunable, Option.none());
+        this(path, head, main, current, locked, prunable, Option.none(), Option.none());
     }
 
     /**
      * This worktree, rebasing or bisecting {@code branch}, if any.
      */
     public Worktree withBusyWith(Option<BranchName> branch) {
-        return new Worktree(path, head, main, current, locked, prunable, branch);
+        return new Worktree(path, head, main, current, locked, prunable, branch, midway);
+    }
+
+    /**
+     * This worktree, in the middle of {@code operation}, if anything.
+     */
+    public Worktree withMidway(Option<Midway> operation) {
+        return new Worktree(path, head, main, current, locked, prunable, busyWith, operation);
     }
 
     /**

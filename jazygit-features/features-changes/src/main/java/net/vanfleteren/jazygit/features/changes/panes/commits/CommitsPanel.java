@@ -272,33 +272,39 @@ public class CommitsPanel implements LeftPane {
     }
 
     /**
-     * The title of the commits listed, naming what is checked out, whose log they are: a branch, or a detached HEAD;
-     * plain until that is read.
+     * The title of the commits listed, naming what is checked out, whose log they are: a branch, or a detached HEAD,
+     * or the branch a rebase works on while it detaches HEAD (ADR 197); plain until that is read.
      */
     static String headTitle(Model model) {
         return model.repo()
                 .status()
                 .toOption()
-                .map(status -> switch (status.head()) {
-                    case Head.OnBranch(BranchName branch, var tip) ->
-                        Messages.get("changes.panes.commits.titleOf", branch.value());
-                    case Head.Detached(Sha at) -> Messages.get("changes.panes.commits.titleDetached", at.shortSha());
-                })
+                .map(status -> status.rebasedBranch()
+                        .map(branch -> Messages.get("changes.panes.commits.titleRebasing", branch.value()))
+                        .getOrElse(() -> switch (status.head()) {
+                            case Head.OnBranch(BranchName branch, var tip) ->
+                                Messages.get("changes.panes.commits.titleOf", branch.value());
+                            case Head.Detached(Sha at) ->
+                                Messages.get("changes.panes.commits.titleDetached", at.shortSha());
+                        }))
                 .getOrElse(() -> Messages.get("panel.commits.title"));
     }
 
     /**
      * What is checked out, whose log the commits are, as the line at the bottom of the log names it: a branch, or a
-     * detached HEAD; nothing until that is read.
+     * detached HEAD, or the branch a rebase works on while it detaches HEAD (ADR 197); nothing until that is read.
      */
     static String headName(Model model) {
         return model.repo()
                 .status()
                 .toOption()
-                .map(status -> switch (status.head()) {
-                    case Head.OnBranch(BranchName branch, var tip) -> branch.value();
-                    case Head.Detached(Sha at) -> Messages.get("changes.panes.commits.detachedAt", at.shortSha());
-                })
+                .map(status -> status.rebasedBranch()
+                        .map(branch -> Messages.get("changes.panes.commits.rebasing", branch.value()))
+                        .getOrElse(() -> switch (status.head()) {
+                            case Head.OnBranch(BranchName branch, var tip) -> branch.value();
+                            case Head.Detached(Sha at) ->
+                                Messages.get("changes.panes.commits.detachedAt", at.shortSha());
+                        }))
                 .getOrElse("");
     }
 

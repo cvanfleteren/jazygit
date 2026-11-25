@@ -58,6 +58,68 @@ class LocalBranchesListTest {
     }
 
     @Test
+    void aBranchAWorktreeIsInTheMiddleOfSaysSoOnAThirdLineAndTheOneRebasedHereIsDrawnAsCheckedOut() {
+        Branch elsewhere = new Branch(
+                new BranchName("feature"),
+                false,
+                new Sha("1"),
+                Instant.EPOCH,
+                Option.none(),
+                false,
+                false,
+                new Tracking.None(),
+                Option.of(Path.of("/repos/linked")));
+        LoadableList.Row there = LocalBranchesList.row(
+                elsewhere,
+                false,
+                Duration.ofDays(3),
+                Option.none(),
+                Option.none(),
+                List.empty(),
+                Option.none(),
+                Option.of("REBASING 1/2 onto main · 1 conflict"));
+        LoadableList.Row here = LocalBranchesList.row(
+                Fixtures.branch(new BranchName("feature"), false, new Sha("1")),
+                true,
+                Duration.ofDays(3),
+                Option.none(),
+                Option.none(),
+                List.empty(),
+                Option.none(),
+                Option.of("REBASING 1/2 onto main · 1 conflict"));
+
+        // On a third line, of its own width (ADR 197); the second says where, as it does.
+        assertEquals(Option.of("  3d  wt"), there.detailText());
+        assertEquals(Option.of("  REBASING 1/2 onto main · 1 conflict"), there.noteText());
+        assertEquals(3, there.height());
+        assertEquals(
+                Option.of(Theme.Classes.IN_PROGRESS), there.note().get().head().cssClass());
+        assertEquals(Option.of("  3d"), here.detailText());
+        assertEquals(Option.of("  REBASING 1/2 onto main · 1 conflict"), here.noteText());
+        assertEquals(List.of(Option.of(Theme.Classes.CURRENT)), here.segs().map(LoadableList.Seg::cssClass));
+        // Under the header of a stack, every line is indented.
+        assertEquals(
+                Option.of("      REBASING 1/2 onto main · 1 conflict"),
+                LocalBranchesList.indented(here).noteText());
+    }
+
+    @Test
+    void aBranchWhoseWorktreeIsInTheMiddleOfNothingKeepsToTwoLines() {
+        LoadableList.Row row = LocalBranchesList.row(
+                Fixtures.branch(new BranchName("feature"), false, new Sha("1")),
+                false,
+                Duration.ofDays(3),
+                Option.none(),
+                Option.none(),
+                List.empty(),
+                Option.none(),
+                Option.none());
+
+        assertEquals(2, row.height());
+        assertEquals(Option.none(), row.noteText());
+    }
+
+    @Test
     void aBranchShowsItsNameAndSpinnerAboveItsAgeSyncBaseDistancePullRequestAndWorktree() {
         Branch branch = new Branch(
                 new BranchName("feature"),

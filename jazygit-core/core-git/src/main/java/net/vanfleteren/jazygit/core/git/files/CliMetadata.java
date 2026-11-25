@@ -40,6 +40,9 @@ public final class CliMetadata {
     static final Duration SETTLED = Duration.ofSeconds(2);
     // What the lock git takes on a ref while it writes it ends with.
     private static final String LOCK = ".lock";
+    // In the git directory of a worktree, while it is in the middle of a merge, a rebase, a cherry-pick or a revert.
+    private static final List<String> MIDWAY =
+            List.of("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply");
 
     private CliMetadata() {}
 
@@ -85,8 +88,9 @@ public final class CliMetadata {
         // has its HEAD in the tables of the branches, so there a commit lists the worktrees again.
         MetadataStamp worktreeList = stamp(heads.append(common.resolve("reftable/tables.list"))
                 .append(common.resolve("worktrees"))
-                .appendAll(worktrees.flatMap(
-                        worktree -> List.of(worktree.resolve("gitdir"), worktree.resolve("locked")))));
+                .appendAll(
+                        worktrees.flatMap(worktree -> List.of(worktree.resolve("gitdir"), worktree.resolve("locked"))))
+                .appendAll(worktrees.prepend(common).flatMap(CliMetadata::midway)));
         MetadataStamp index = stamp(List.of(at.gitDir().resolve("index")));
         return new GitMetadata(
                 settled(branches, now), settled(stashes, now), settled(worktreeList, now), settled(index, now));
@@ -140,6 +144,17 @@ public final class CliMetadata {
                 .toOption()
                 .map(attributes ->
                         new State(attributes.lastModifiedTime(), attributes.size(), Option.of(attributes.fileKey())));
+    }
+
+    /**
+     * What tells what the worktree whose git directory is {@code gitDir} is in the middle of (ADR 197): the files git
+     * keeps while it is, each appearing and going, and a rebase's directory, whose files git replaces at each step.
+     * Its index too, while it is in the middle of something, so that the conflicts it has left are counted again as
+     * they are resolved; not otherwise, so that staging lists the worktrees again only then.
+     */
+    private static List<Path> midway(Path gitDir) {
+        List<Path> markers = MIDWAY.map(gitDir::resolve);
+        return markers.exists(Files::exists) ? markers.append(gitDir.resolve("index")) : markers;
     }
 
     /**

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.HomeDir;
+import net.vanfleteren.jazygit.kernel.ui.text.InProgressText;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
@@ -37,7 +38,14 @@ public final class CheckoutDialogs {
             SwitchWorktreePopup.class,
             popup -> Messages.get(
                     "branches.dialog.switchWorktree.title", popup.branch().value()),
-            popup -> Messages.get("branches.dialog.switchWorktree.message", HomeDir.shown(popup.worktree())),
+            popup -> popup.midway()
+                    .map(midway -> Messages.get(
+                            "branches.dialog.switchWorktree.midway",
+                            HomeDir.shown(popup.worktree()),
+                            InProgressText.kind(midway.inProgress()),
+                            midway.conflicts()))
+                    .getOrElse(() ->
+                            Messages.get("branches.dialog.switchWorktree.message", HomeDir.shown(popup.worktree()))),
             CheckoutMsg.SwitchWorktreeConfirmed::new);
 
     /**

@@ -12,6 +12,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.features.branches.branch.Branches;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Group;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -24,6 +25,7 @@ import net.vanfleteren.jazygit.kernel.state.view.Unlisted;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.ui.text.InProgressText;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -118,8 +120,28 @@ class LocalBranchesList implements BranchesTabList {
             Option<BranchName> parent,
             List<LoadableList.Seg> badges,
             Option<String> spinner) {
-        return new LoadableList.Row(List.of(
-                                b.current()
+        return row(b, b.current(), since, distance, parent, badges, spinner, Option.none());
+    }
+
+    /**
+     * A branch on two lines, as {@link #row(Branch, Duration, Option, Option, List, Option)}, drawn as the checked out
+     * one when {@code current}, as the branch rebased here is (ADR 197), and with what the worktree that works on it is
+     * in the middle of on a third line, if anything, where it has the width to itself (ADR 197).
+     *
+     * @param midway what the worktree that works on it is in the middle of, as {@link InProgressText#ofItsBranch}
+     *               says it
+     */
+    static LoadableList.Row row(
+            Branch b,
+            boolean current,
+            Duration since,
+            Option<BaseDistance> distance,
+            Option<BranchName> parent,
+            List<LoadableList.Seg> badges,
+            Option<String> spinner,
+            Option<String> midway) {
+        LoadableList.Row row = new LoadableList.Row(List.of(
+                                current
                                         ? LoadableList.Seg.styled(b.name().value(), Theme.Classes.CURRENT)
                                         : LoadableList.Seg.of(b.name().value()))
                         .appendAll(
@@ -130,6 +152,9 @@ class LocalBranchesList implements BranchesTabList {
                                 BranchSegs.baseDistance(b, distance).appendAll(BranchSegs.parent(parent))))
                         .appendAll(BranchSegs.group(badges))
                         .appendAll(BranchSegs.group(BranchSegs.worktree(b))));
+        return midway.map(
+                        text -> row.withNote(List.of(LoadableList.Seg.styled("  " + text, Theme.Classes.IN_PROGRESS))))
+                .getOrElse(row);
     }
 
     /**
@@ -221,6 +246,26 @@ class LocalBranchesList implements BranchesTabList {
         return after.contains(name) || added.size() != 1 ? name : added.head();
     }
 
+    /**
+     * {@code branches}, with the one this worktree rebases, if any, as the checked out one: it is the one worked on
+     * here, drawn as checked out, and the selection goes to it as to the branch checked out, as when the app switches
+     * to a worktree that stopped rebasing it (ADR 197). Only the list takes it so; the repository does not.
+     */
+    static List<Branch> workedOnHere(List<Branch> branches, Option<BranchName> rebased) {
+        return branches.map(branch -> rebased.contains(branch.name()) && !branch.current()
+                ? new Branch(
+                        branch.name(),
+                        true,
+                        branch.tip(),
+                        branch.tipTime(),
+                        branch.created(),
+                        branch.hasRemote(),
+                        branch.isDefault(),
+                        branch.tracking(),
+                        branch.worktree())
+                : branch);
+    }
+
     private static Option<BranchName> current(List<BranchNode> nodes) {
         return branches(nodes).find(Branch::current).map(Branch::name);
     }
@@ -254,12 +299,13 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     /**
-     * {@code row} indented under the header of its stack, both its lines.
+     * {@code row} indented under the header of its stack, each of its lines.
      */
     static LoadableList.Row indented(LoadableList.Row row) {
         return new LoadableList.Row(
                 row.segs().prepend(LoadableList.Seg.of(INDENT)),
-                row.detail().map(detail -> detail.prepend(LoadableList.Seg.of(INDENT))));
+                row.detail().map(detail -> detail.prepend(LoadableList.Seg.of(INDENT))),
+                row.note().map(note -> note.prepend(LoadableList.Seg.of(INDENT))));
     }
 
     /**
@@ -287,7 +333,7 @@ class LocalBranchesList implements BranchesTabList {
         Loadable<List<BranchNode>> read = model.repo()
                 .branches()
                 .map(branches -> BranchNode.of(
-                        branches,
+                        workedOnHere(branches, Branches.rebasedHere(model)),
                         grouping,
                         model.repoView().branches().grouped(),
                         model.repoView().branches().closedGroups()))
@@ -295,13 +341,17 @@ class LocalBranchesList implements BranchesTabList {
                         .map(at -> branchNodes.prepend(new BranchNode.Detached(at)))
                         .getOrElse(branchNodes));
         nodes = read.equals(nodes) ? nodes : read;
+        Option<BranchName> rebasedHere = Branches.rebasedHere(model);
+        List<Branch> known = model.repo().branches().toOption().getOrElse(List.empty());
         Function<Branch, LoadableList.Row> rowOf = b -> row(
                 b,
+                b.current() || rebasedHere.contains(b.name()),
                 Duration.between(b.lastActivity(), model.now()),
                 model.repo().baseDistance().get(b.name()),
                 shownParent(model, b, grouping),
                 badges.of(model, new BranchRef.Local(b.name())).segs(),
-                spinnerOf.apply(new BranchRef.Local(b.name())));
+                spinnerOf.apply(new BranchRef.Local(b.name())),
+                Branches.midway(model, b).map(midway -> InProgressText.ofItsBranch(midway, known)));
         return list.render(
                 nodes,
                 listed -> listed.map(node -> switch (node) {
@@ -354,11 +404,15 @@ class LocalBranchesList implements BranchesTabList {
     /**
      * What the files pane lists for the highlighted row (ADR 141): a branch its files against its base, the main
      * branch what its tip changed, what is checked out here, a branch or a detached HEAD, the files of the working
-     * tree; a group and what belongs to it but is not checked out here have none.
+     * tree, as the branch rebased here is, with its conflicts (ADR 197); a group and what belongs to it but is not
+     * checked out here have none.
      */
     @Override
     public Option<Followed> followed(Model model) {
+        Option<BranchName> rebasedHere = Branches.rebasedHere(model);
         return selected().flatMap(node -> switch (node) {
+            case BranchNode.Leaf leaf
+            when rebasedHere.contains(leaf.branch().name()) -> Option.<Followed>of(new Followed.WorkingTree());
             case BranchNode.Leaf leaf -> BranchFiles.of(model, leaf.branch().name());
             case BranchNode.Header header -> Option.<Followed>of(new Followed.Nothing(new Unlisted.Group()));
             case BranchNode.Other other -> Option.<Followed>of(new Followed.Nothing(new Unlisted.NotHere()));
