@@ -63,10 +63,12 @@ still to come, and `head`, where it started). Each line of those is a command an
 5. **Where it is goes in the titles and the dialogs.**
    - The title of the commits pane says which step of how many, `Commits · rebasing feature · 2/3`, when there are
      more than one.
-   - `M`'s dialog says where it stopped in its title, `Rebase stopped at 2 of 3: feat touches f`, and what continuing
-     goes on with: `Next: 2b5a554 feat 5`.
-   - The resolve dialog (ADR 198) names the side of a rebase by the commit it stopped at, or the branch it is the tip
-     of, rather than as "the rebased commit"; the latter is left for a rebase without a plan.
+   - `M`'s dialog says where it stopped, `Stopped at 2 of 3: 1466668 feat touches f.`, and what continuing goes on
+     with, `Next: 2b5a554 feat 5.`, in what continuing and skipping do, under the dialog. Its title stays the
+     question it asks. Not: saying it in the title, which a long subject would cut off.
+   - The resolve dialog (ADR 198) names the side of a rebase being rebased by the commit it stopped at, by its sha,
+     rather than as "the rebased commit": a branch whose tip it is would be the branch rebased, which reads as the
+     other side. "The rebased commit" is left for a rebase without a plan.
 6. **The repository panel says what is in progress on a line of its own.** While an operation is in progress, or
    conflicts are left without one, the panel on top of the left column is a row taller, and the panes under it a row
    shorter, as a branch takes a third line (ADR 197):

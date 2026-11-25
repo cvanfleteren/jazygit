@@ -61,6 +61,28 @@ class InProgressDialogsTest {
         }
     }
 
+    @Test
+    void continuingSaysWhereItStoppedAndWhatItGoesOnWith() throws Exception {
+        Sha onto = new Sha("0".repeat(40));
+        InProgress rebasing = new InProgress.Rebasing(Option.of(new BranchName("feature")), onto, 2, 3);
+        net.vanfleteren.jazygit.core.repo.Plan plan = new net.vanfleteren.jazygit.core.repo.Plan(
+                onto,
+                net.vanfleteren.jazygit.core.repo.Plan.Step.pick(new Sha("1".repeat(40)), "feat touches f"),
+                io.vavr.collection.List.of(
+                        net.vanfleteren.jazygit.core.repo.Plan.Step.pick(new Sha("2".repeat(40)), "feat 5")),
+                2,
+                3);
+        Model open = TestModels.loaded()
+                .openPopup(new InProgressPopup(rebasing, 0, io.vavr.collection.List.empty(), Option.of(plan)));
+        Supplier<Element> view =
+                () -> stack(text("background"), dialog.render(open).get());
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            String screen = RenderedText.ofLarge(runner, view).replaceAll("\\s+", " ");
+            assertTrue(screen.contains("Stopped at 2 of 3: 1111111 feat touches f."), screen);
+            assertTrue(screen.contains("Next: 2222222 feat 5."), screen);
+        }
+    }
+
     private void assertContinuing(InProgress inProgress, String details) throws Exception {
         Model open = TestModels.loaded().openPopup(new InProgressPopup(inProgress, 0));
         Supplier<Element> view =

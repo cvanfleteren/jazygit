@@ -51,7 +51,8 @@ public final class InProgressUpdate {
                         .status()
                         .toOption()
                         .flatMap(status -> status.inProgress()
-                                .map(inProgress -> new InProgressPopup(inProgress, status.conflicts(), marked))));
+                                .map(inProgress ->
+                                        new InProgressPopup(inProgress, status.conflicts(), marked, status.plan()))));
     }
 
     /**
