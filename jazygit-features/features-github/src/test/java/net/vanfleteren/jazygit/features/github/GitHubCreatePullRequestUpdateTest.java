@@ -25,15 +25,15 @@ import net.vanfleteren.jazygit.core.git.history.StubHistory;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.RereadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg.BaseMoved;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.RereadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg.BaseMoved;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg;
-import net.vanfleteren.jazygit.features.github.create.NewPullRequestPopup;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestMsg;
+import net.vanfleteren.jazygit.features.github.create.GitHubNewPullRequestPopup;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
@@ -51,7 +51,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Creating a pull request: which base it is offered against, its title, and confirming it.
  */
-class CreatePullRequestUpdateTest {
+class GitHubCreatePullRequestUpdateTest {
 
     private static final Branch DEV = Fixtures.branch(
             new BranchName("dev"),
@@ -92,13 +92,13 @@ class CreatePullRequestUpdateTest {
 
     @Test
     void withoutAParentTheTitleIsReadForTheDefaultBranchOfferedFirst() {
-        Next reading = Update.update(model(), new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()));
+        Next reading = Update.update(model(), new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.none()));
 
         assertEquals(
                 List.of(new ReadTitle(
                         FEATURE,
                         remote("main"),
-                        new NewPullRequestPopup.Opening(
+                        new GitHubNewPullRequestPopup.Opening(
                                 FEATURE,
                                 new RemoteBranch("origin", FEATURE),
                                 List.of(MAIN.name(), RELEASE.name(), AHEAD.name())))),
@@ -108,13 +108,14 @@ class CreatePullRequestUpdateTest {
 
     @Test
     void theParentIsOfferedFirstThenTheDefaultBranch() {
-        Next reading = Update.update(model(), new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(AHEAD.name())));
+        Next reading =
+                Update.update(model(), new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(AHEAD.name())));
 
         assertEquals(
                 List.of(new ReadTitle(
                         FEATURE,
                         remote("ahead"),
-                        new NewPullRequestPopup.Opening(
+                        new GitHubNewPullRequestPopup.Opening(
                                 FEATURE,
                                 new RemoteBranch("origin", FEATURE),
                                 List.of(AHEAD.name(), MAIN.name(), RELEASE.name())))),
@@ -123,13 +124,14 @@ class CreatePullRequestUpdateTest {
 
     @Test
     void aParentThatCannotBeChosenIsIgnored() {
-        Next reading = Update.update(model(), new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(UNPUSHED.name())));
+        Next reading =
+                Update.update(model(), new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(UNPUSHED.name())));
 
         assertEquals(
                 List.of(new ReadTitle(
                         FEATURE,
                         remote("main"),
-                        new NewPullRequestPopup.Opening(
+                        new GitHubNewPullRequestPopup.Opening(
                                 FEATURE,
                                 new RemoteBranch("origin", FEATURE),
                                 List.of(MAIN.name(), RELEASE.name(), AHEAD.name())))),
@@ -146,7 +148,7 @@ class CreatePullRequestUpdateTest {
                 List.of(new ReadTitle(
                         FEATURE,
                         remote("main"),
-                        new NewPullRequestPopup.Opening(
+                        new GitHubNewPullRequestPopup.Opening(
                                 FEATURE, new RemoteBranch("origin", FEATURE), List.of(MAIN.name())))),
                 reading.cmds());
     }
@@ -167,7 +169,7 @@ class CreatePullRequestUpdateTest {
     void theParentReadOfABranchThatIsGoneAsksNothing() {
         Model gone = localBranchesRead(model(), List.of(RELEASE, MAIN)).model();
 
-        Next next = Update.update(gone, new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()));
+        Next next = Update.update(gone, new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.none()));
 
         assertEquals(Option.none(), next.model().popup());
         assertEquals(List.empty(), next.cmds());
@@ -178,12 +180,12 @@ class CreatePullRequestUpdateTest {
         // While the parent was read, the other branches left their remote.
         Model left = localBranchesRead(model(), List.of(PUSHED, UNPUSHED)).model();
 
-        Next next = Update.update(left, new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(MAIN.name())));
+        Next next = Update.update(left, new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(MAIN.name())));
 
         assertEquals(
                 Option.of(new GitHubError.NoBase(FEATURE)),
                 next.model().outcome().error());
-        assertEquals(Option.none(), next.model().popup(NewPullRequestPopup.class));
+        assertEquals(Option.none(), next.model().popup(GitHubNewPullRequestPopup.class));
         assertEquals(List.empty(), next.cmds());
     }
 
@@ -204,21 +206,21 @@ class CreatePullRequestUpdateTest {
                 });
 
         assertEquals(
-                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(RELEASE.name())),
+                new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(RELEASE.name())),
                 readParent().run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
     @Test
     void withoutARecordedParentTheClosestBaseIsTheParent() {
         assertEquals(
-                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(RELEASE.name())),
+                new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(RELEASE.name())),
                 readParent().run(distances(5, 2, 3)));
     }
 
     @Test
     void onATieTheEarliestBaseIsTheParent() {
         assertEquals(
-                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(MAIN.name())),
+                new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(MAIN.name())),
                 readParent().run(distances(2, 2, 3)));
     }
 
@@ -226,7 +228,7 @@ class CreatePullRequestUpdateTest {
     void basesTooFarAwayAreNoParent() {
         int far = ReadParent.MAX_DISTANCE;
         assertEquals(
-                new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()),
+                new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.none()),
                 readParent().run(distances(far, far, far)));
     }
 
@@ -247,7 +249,7 @@ class CreatePullRequestUpdateTest {
                 });
 
         assertEquals(
-                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(AHEAD.name())),
+                new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(AHEAD.name())),
                 readParent().run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
@@ -261,7 +263,7 @@ class CreatePullRequestUpdateTest {
         });
 
         assertEquals(
-                new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()),
+                new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.none()),
                 readParent().run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
@@ -296,10 +298,10 @@ class CreatePullRequestUpdateTest {
     /**
      * The title of the feature branch was read for main, offered first, then release and ahead.
      */
-    private static NewPullRequestMsg.TitleRead titleRead(Option<String> subject) {
-        return new NewPullRequestMsg.TitleRead(
+    private static CreatePullRequestMsg.TitleRead titleRead(Option<String> subject) {
+        return new CreatePullRequestMsg.TitleRead(
                 FEATURE,
-                new NewPullRequestPopup.Opening(
+                new GitHubNewPullRequestPopup.Opening(
                         FEATURE,
                         new RemoteBranch("origin", FEATURE),
                         List.of(MAIN.name(), RELEASE.name(), AHEAD.name())),
@@ -311,7 +313,7 @@ class CreatePullRequestUpdateTest {
         Next asking = Update.update(model(), titleRead(Option.of("Add login")));
 
         assertEquals(
-                Option.of(new NewPullRequestPopup(
+                Option.of(new GitHubNewPullRequestPopup(
                         FEATURE,
                         new RemoteBranch("origin", FEATURE),
                         List.of(MAIN.name(), RELEASE.name(), AHEAD.name()),
@@ -327,19 +329,19 @@ class CreatePullRequestUpdateTest {
     void aTitleReadAgainKeepsTheBodyAndTheDraft() {
         Model typed = Update.update(
                         creating(),
-                        new CreatePullRequestMsg.PullRequestEdited(new NewPullRequest("Add login", "Why", true)))
+                        new GitHubCreatePullRequestMsg.PullRequestEdited(new NewPullRequest("Add login", "Why", true)))
                 .model();
 
         Next moved = Update.update(typed, new BaseMoved(ListCursor.START.at(1), Option.of(RELEASE.name())));
         Model read = Update.update(
                         moved.model(),
-                        new NewPullRequestMsg.BaseTitleRead(FEATURE, RELEASE.name(), Option.of("Fix release")))
+                        new CreatePullRequestMsg.BaseTitleRead(FEATURE, RELEASE.name(), Option.of("Fix release")))
                 .model();
 
         assertEquals(List.of(new RereadTitle(FEATURE, RELEASE.name(), remote("release"))), moved.cmds());
         assertEquals(
                 Option.of(new NewPullRequest("Fix release", "Why", true)),
-                read.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::pullRequest));
+                read.popup(GitHubNewPullRequestPopup.class).map(GitHubNewPullRequestPopup::pullRequest));
     }
 
     @Test
@@ -349,16 +351,16 @@ class CreatePullRequestUpdateTest {
                 .model();
         Model asked = Update.update(
                         loaded,
-                        new NewPullRequestMsg.TitleRead(
+                        new CreatePullRequestMsg.TitleRead(
                                 FEATURE,
-                                new NewPullRequestPopup.Opening(
+                                new GitHubNewPullRequestPopup.Opening(
                                         FEATURE, new RemoteBranch("origin", FEATURE), List.of(MAIN.name(), DEV.name())),
                                 Option.of("Add login")))
                 .model();
         Model picked = Update.update(asked, new BaseMoved(ListCursor.START.at(1), Option.of(DEV.name())))
                 .model();
 
-        Next created = Update.update(picked, new CreatePullRequestMsg.Confirmed());
+        Next created = Update.update(picked, new GitHubCreatePullRequestMsg.Confirmed());
 
         assertEquals(
                 List.of(new CreatePullRequest(
@@ -388,7 +390,7 @@ class CreatePullRequestUpdateTest {
                 FEATURE, List.of(new Base(MAIN.name(), remote("main")), new Base(DEV.name(), remote("development"))));
 
         assertEquals(
-                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
+                new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
                 read.run(new Env(git).with(GitHubServices.GH, StubGitHub.of())));
     }
 
@@ -398,7 +400,7 @@ class CreatePullRequestUpdateTest {
                 FEATURE, List.of(new Base(MAIN.name(), remote("main")), new Base(DEV.name(), remote("development"))));
 
         assertEquals(
-                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
+                new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
                 read.run(new Env(parentRecorded("dev")).with(GitHubServices.GH, StubGitHub.of())));
     }
 
@@ -409,7 +411,7 @@ class CreatePullRequestUpdateTest {
                 List.of(new Base(new BranchName("stable"), remote("main")), new Base(MAIN.name(), remote("trunk"))));
 
         assertEquals(
-                new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(new BranchName("stable"))),
+                new GitHubCreatePullRequestMsg.ParentRead(FEATURE, Option.of(new BranchName("stable"))),
                 read.run(new Env(parentRecorded("main")).with(GitHubServices.GH, StubGitHub.of())));
     }
 
@@ -444,7 +446,7 @@ class CreatePullRequestUpdateTest {
                 created.cmds());
         assertEquals(Option.none(), created.model().popup());
         assertEquals(
-                Option.of(CreatePullRequestCmd.CREATE_PR),
+                Option.of(GitHubCreatePullRequestCmd.CREATE_PR),
                 created.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
     }
 
@@ -452,10 +454,11 @@ class CreatePullRequestUpdateTest {
     void editingKeepsWhatThePullRequestSaysInThePopup() {
         NewPullRequest edited = new NewPullRequest("Add login!", "Why", true);
 
-        Next next = Update.update(creating(), new CreatePullRequestMsg.PullRequestEdited(edited));
+        Next next = Update.update(creating(), new GitHubCreatePullRequestMsg.PullRequestEdited(edited));
 
         assertEquals(
-                Option.of(edited), next.model().popup(NewPullRequestPopup.class).map(NewPullRequestPopup::pullRequest));
+                Option.of(edited),
+                next.model().popup(GitHubNewPullRequestPopup.class).map(GitHubNewPullRequestPopup::pullRequest));
         assertEquals(List.empty(), next.cmds());
     }
 
@@ -463,9 +466,9 @@ class CreatePullRequestUpdateTest {
      * Confirming {@code pullRequest} as what the new pull request of the feature branch into main says.
      */
     private static Next confirmed(NewPullRequest pullRequest) {
-        Model edited = Update.update(creating(), new CreatePullRequestMsg.PullRequestEdited(pullRequest))
+        Model edited = Update.update(creating(), new GitHubCreatePullRequestMsg.PullRequestEdited(pullRequest))
                 .model();
-        return TestModels.stepped(edited, new CreatePullRequestMsg.Confirmed());
+        return TestModels.stepped(edited, new GitHubCreatePullRequestMsg.Confirmed());
     }
 
     /**
@@ -508,7 +511,8 @@ class CreatePullRequestUpdateTest {
                 new PullRequest(new PrNumber(43), new GhBranch("feature"), false, Checks.NONE, Review.NONE);
         Model creating = confirmed(cmd.pullRequest()).model();
 
-        Next done = Update.update(creating, new CreatePullRequestMsg.Created(cmd, Option.of(created), List.empty()));
+        Next done =
+                Update.update(creating, new GitHubCreatePullRequestMsg.Created(cmd, Option.of(created), List.empty()));
 
         assertEquals(
                 Option.of(created),

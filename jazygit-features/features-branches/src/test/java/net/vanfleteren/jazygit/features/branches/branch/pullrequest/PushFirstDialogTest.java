@@ -33,7 +33,7 @@ class PushFirstDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ConfirmDialog<PushFirstPopup> dialog =
-            new ConfirmDialog<>(NewPullRequestDialogs.PUSH_FIRST, dispatched::add);
+            new ConfirmDialog<>(CreatePullRequestDialogs.PUSH_FIRST, dispatched::add);
     private Model open = TestModels.loaded().openPopup(new PushFirstPopup(BRANCH, TARGET, Option.of(1), THEN));
 
     @Test
@@ -43,7 +43,7 @@ class PushFirstDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new NewPullRequestMsg.PushFirstConfirmed()), dispatched);
+        assertEquals(java.util.List.of(new CreatePullRequestMsg.PushFirstConfirmed()), dispatched);
     }
 
     @Test
@@ -89,7 +89,7 @@ class PushFirstDialogTest {
 
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, NewPullRequestDialogs.PUSH_FIRST.id());
+        SettledPilot.focus(runner, CreatePullRequestDialogs.PUSH_FIRST.id());
         RenderedText.of(runner, this::view);
         return runner;
     }

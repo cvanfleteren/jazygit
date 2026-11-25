@@ -12,9 +12,9 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.AfterPush;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestContract;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.FormOpening;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestContract;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -27,7 +27,7 @@ import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
  * Creating a pull request on Forgejo does what it does alike on every forge (ADR 175): once where the branch is
  * pushed to is checked, its popup and its messages.
  */
-class ForgejoNewPullRequestContractTest extends NewPullRequestContract {
+class ForgejoCreatePullRequestContractTest extends CreatePullRequestContract {
 
     /**
      * The local {@code branches}, and the branches of origin, the home, they track.
@@ -51,7 +51,7 @@ class ForgejoNewPullRequestContractTest extends NewPullRequestContract {
      */
     @Override
     protected Next asked(Model model, BranchName branch) {
-        return Update.update(model, new CreatePullRequestMsg.HeadChecked(branch, Option.none()));
+        return Update.update(model, new ForgejoCreatePullRequestMsg.HeadChecked(branch, Option.none()));
     }
 
     @Override
@@ -67,7 +67,7 @@ class ForgejoNewPullRequestContractTest extends NewPullRequestContract {
 
     @Override
     protected FormOpening opening(BranchName branch, List<BranchName> bases) {
-        return new NewPullRequestPopup.Opening(branch, bases);
+        return new ForgejoNewPullRequestPopup.Opening(branch, bases);
     }
 
     @Override
@@ -77,13 +77,13 @@ class ForgejoNewPullRequestContractTest extends NewPullRequestContract {
 
     @Override
     protected Msg typed(Model model, String title) {
-        return model.popup(NewPullRequestPopup.class)
-                .map(popup -> new CreatePullRequestMsg.Edited(title, popup.body(), popup.draft()))
-                .getOrElse(() -> new CreatePullRequestMsg.Edited(title, "", false));
+        return model.popup(ForgejoNewPullRequestPopup.class)
+                .map(popup -> new ForgejoCreatePullRequestMsg.Edited(title, popup.body(), popup.draft()))
+                .getOrElse(() -> new ForgejoCreatePullRequestMsg.Edited(title, "", false));
     }
 
     @Override
     protected Msg confirmed() {
-        return new CreatePullRequestMsg.Confirmed();
+        return new ForgejoCreatePullRequestMsg.Confirmed();
     }
 }

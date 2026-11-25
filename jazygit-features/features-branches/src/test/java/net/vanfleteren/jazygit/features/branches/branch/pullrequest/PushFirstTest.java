@@ -31,7 +31,8 @@ class PushFirstTest {
 
     @Test
     void itPushesAsItsPushDoes() {
-        NewPullRequestCmd.PushFirst first = new NewPullRequestCmd.PushFirst(PUSH, (model, branch) -> Next.of(model));
+        CreatePullRequestCmd.PushFirst first =
+                new CreatePullRequestCmd.PushFirst(PUSH, (model, branch) -> Next.of(model));
         Git git = StubGit.of().withRemotes(new StubRemotes() {
             @Override
             public Either<GitFailure, List<ExecutedCommand>> push(

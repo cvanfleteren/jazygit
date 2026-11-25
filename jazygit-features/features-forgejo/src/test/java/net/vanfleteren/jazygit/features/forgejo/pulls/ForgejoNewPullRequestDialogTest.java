@@ -10,7 +10,7 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -28,14 +28,14 @@ class ForgejoNewPullRequestDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model model = TestModels.loaded()
-            .openPopup(NewPullRequestPopup.opening(
+            .openPopup(ForgejoNewPullRequestPopup.opening(
                     new BranchName("feature"),
                     List.of(new BranchName("main"), new BranchName("release")),
                     "Add login"));
     // As in the app, an edit or a move changes the model the popup shows; the other messages are only kept.
     private final ForgejoNewPullRequestDialog dialog = new ForgejoNewPullRequestDialog(msg -> {
         dispatched.add(msg);
-        if (msg instanceof CreatePullRequestMsg.Edited || msg instanceof NewPullRequestMsg.BaseMoved) {
+        if (msg instanceof ForgejoCreatePullRequestMsg.Edited || msg instanceof CreatePullRequestMsg.BaseMoved) {
             model = Update.update(model, msg).model();
         }
     });
@@ -64,7 +64,7 @@ class ForgejoNewPullRequestDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new CreatePullRequestMsg.Confirmed()), dispatched);
+        assertEquals(java.util.List.of(new ForgejoCreatePullRequestMsg.Confirmed()), dispatched);
     }
 
     @Test
@@ -78,7 +78,7 @@ class ForgejoNewPullRequestDialogTest {
             assertTrue(screen.contains("[x] Draft?"), screen);
         }
 
-        assertEquals(java.util.List.of(new CreatePullRequestMsg.Edited("Add login", "", true)), dispatched);
+        assertEquals(java.util.List.of(new ForgejoCreatePullRequestMsg.Edited("Add login", "", true)), dispatched);
     }
 
     @Test
@@ -88,7 +88,7 @@ class ForgejoNewPullRequestDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new PopupMsg.Dismissed(NewPullRequestPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(ForgejoNewPullRequestPopup.class)), dispatched);
     }
 
     private ToolkitTestRunner start() throws Exception {

@@ -18,9 +18,9 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoCreatePullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -33,9 +33,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Creating the pull request of a branch on Forgejo: where it is pushed to, the bases, the dialog, and what creating it
- * does (ADR 178). What it does alike on every forge is {@link ForgejoNewPullRequestContractTest}'s.
+ * does (ADR 178). What it does alike on every forge is {@link ForgejoCreatePullRequestContractTest}'s.
  */
-class CreatePullRequestUpdateTest {
+class ForgejoCreatePullRequestUpdateTest {
 
     private static final BranchName BRANCH = new BranchName("feature");
     private static final BranchName MAIN = new BranchName("main");
@@ -86,12 +86,12 @@ class CreatePullRequestUpdateTest {
         return model(List.of(following("feature", Option.of("feature")), main()));
     }
 
-    private static Next update(Model model, CreatePullRequestMsg msg) {
+    private static Next update(Model model, ForgejoCreatePullRequestMsg msg) {
         return Update.update(model, msg);
     }
 
-    private static NewPullRequestPopup popup(Model model) {
-        return model.popup(NewPullRequestPopup.class).get();
+    private static ForgejoNewPullRequestPopup popup(Model model) {
+        return model.popup(ForgejoNewPullRequestPopup.class).get();
     }
 
     /**
@@ -100,9 +100,9 @@ class CreatePullRequestUpdateTest {
     private static Model asked() {
         return Update.update(
                         model(),
-                        new NewPullRequestMsg.TitleRead(
+                        new CreatePullRequestMsg.TitleRead(
                                 BRANCH,
-                                new NewPullRequestPopup.Opening(BRANCH, List.of(MAIN, NEXT)),
+                                new ForgejoNewPullRequestPopup.Opening(BRANCH, List.of(MAIN, NEXT)),
                                 Option.of("Create it")))
                 .model();
     }
@@ -111,7 +111,7 @@ class CreatePullRequestUpdateTest {
     void aHeadElsewhereIsRefusedSayingWhy() {
         CreateError elsewhere = new CreateError.Elsewhere(BRANCH, new RemoteBranch(UPSTREAM, BRANCH));
 
-        Next next = update(model(), new CreatePullRequestMsg.HeadChecked(BRANCH, Option.of(elsewhere)));
+        Next next = update(model(), new ForgejoCreatePullRequestMsg.HeadChecked(BRANCH, Option.of(elsewhere)));
 
         assertEquals(Option.<AppError>of(elsewhere), next.model().outcome().error());
         assertEquals(List.empty(), next.cmds());
@@ -119,13 +119,13 @@ class CreatePullRequestUpdateTest {
 
     @Test
     void aPushedBranchHasTheTitleReadForTheBaseOfferedFirstTheDefaultBranch() {
-        Next next = update(model(), new CreatePullRequestMsg.HeadChecked(BRANCH, Option.none()));
+        Next next = update(model(), new ForgejoCreatePullRequestMsg.HeadChecked(BRANCH, Option.none()));
 
         assertEquals(
                 List.of(new ReadTitle(
                         BRANCH,
                         new BranchRef.Remote(new RemoteBranch(ORIGIN, MAIN)),
-                        new NewPullRequestPopup.Opening(BRANCH, List.of(MAIN, NEXT)))),
+                        new ForgejoNewPullRequestPopup.Opening(BRANCH, List.of(MAIN, NEXT)))),
                 next.cmds());
     }
 
@@ -135,7 +135,7 @@ class CreatePullRequestUpdateTest {
 
         assertEquals(
                 List.of(NEXT, MAIN),
-                CreatePullRequestUpdate.bases(
+                ForgejoCreatePullRequestUpdate.bases(
                         withParent, ORIGIN, withParent.repo().branch(BRANCH).get()));
     }
 
@@ -144,7 +144,7 @@ class CreatePullRequestUpdateTest {
         Model none = model().withRepo(
                         model().repo().withRemoteBranches(new Loadable.Loaded<>(List.of(remote(ORIGIN, "feature")))));
 
-        Next next = update(none, new CreatePullRequestMsg.HeadChecked(BRANCH, Option.none()));
+        Next next = update(none, new ForgejoCreatePullRequestMsg.HeadChecked(BRANCH, Option.none()));
 
         assertEquals(
                 Option.<AppError>of(new CreateError.NoBase(BRANCH)),
@@ -154,18 +154,18 @@ class CreatePullRequestUpdateTest {
     @Test
     void theDialogOpensWithTheTitleReadAndAnEmptyBody() {
         assertEquals(
-                new NewPullRequestPopup(BRANCH, List.of(MAIN, NEXT), MAIN, "Create it", "Create it", "", false),
+                new ForgejoNewPullRequestPopup(BRANCH, List.of(MAIN, NEXT), MAIN, "Create it", "Create it", "", false),
                 popup(asked()));
     }
 
     @Test
     void confirmingCreatesItFromWhereTheBranchIsPushedIntoTheBasePicked() {
-        Model typed = update(asked(), new CreatePullRequestMsg.Edited("  Create it  ", "Why", true))
+        Model typed = update(asked(), new ForgejoCreatePullRequestMsg.Edited("  Create it  ", "Why", true))
                 .model();
 
-        Next next = update(typed, new CreatePullRequestMsg.Confirmed());
+        Next next = update(typed, new ForgejoCreatePullRequestMsg.Confirmed());
 
-        assertEquals(Option.none(), next.model().popup(NewPullRequestPopup.class));
+        assertEquals(Option.none(), next.model().popup(ForgejoNewPullRequestPopup.class));
         assertEquals(
                 List.of(new CreatePullRequest(ORIGIN, BRANCH, FEATURE, MAIN, "Create it", "Why", true)), next.cmds());
     }
@@ -175,8 +175,8 @@ class CreatePullRequestUpdateTest {
         Model listed = PullRequestFixtures.listed();
         CreatePullRequest cmd = new CreatePullRequest(ORIGIN, BRANCH, FEATURE, MAIN, "Create it", "", false);
 
-        Model done =
-                update(listed, new CreatePullRequestMsg.Created(cmd, CREATED)).model();
+        Model done = update(listed, new ForgejoCreatePullRequestMsg.Created(cmd, CREATED))
+                .model();
 
         assertEquals(
                 Option.of(CREATED),
@@ -188,7 +188,7 @@ class CreatePullRequestUpdateTest {
     void oneOpenAlreadyIsNamedAndThePullRequestsAreReadAgain() {
         CreatePullRequest cmd = new CreatePullRequest(ORIGIN, BRANCH, FEATURE, MAIN, "Create it", "", false);
 
-        Next next = update(model(), new CreatePullRequestMsg.AlreadyOpen(cmd, 7));
+        Next next = update(model(), new ForgejoCreatePullRequestMsg.AlreadyOpen(cmd, 7));
 
         assertEquals(
                 Option.of(new CreateFailure.AlreadyOpen(BRANCH, 7)),

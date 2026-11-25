@@ -11,9 +11,9 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
 
 /**
  * The popups of creating a pull request on GitHub: whether to create it to put it on a stack, and what it merges into
- * and what it says. Whether to push the branch first is {@code NewPullRequestDialogs}'.
+ * and what it says. Whether to push the branch first is {@code CreatePullRequestDialogs}'.
  */
-public final class CreatePullRequestDialogs {
+public final class GitHubCreatePullRequestDialogs {
 
     /**
      * Asks to create the pull request of a branch without one, to put it on a stack (ADR 148): the stack menu opens it,
@@ -29,10 +29,10 @@ public final class CreatePullRequestDialogs {
                             "github.dialog.createFirst.titleNew",
                             popup.branch().value(),
                             String.valueOf(popup.below().value()))),
-            CreatePullRequestDialogs::createFirst,
-            CreatePullRequestMsg.StackRequested::new);
+            GitHubCreatePullRequestDialogs::createFirst,
+            GitHubCreatePullRequestMsg.StackRequested::new);
 
-    private CreatePullRequestDialogs() {}
+    private GitHubCreatePullRequestDialogs() {}
 
     /**
      * What confirming {@code popup} does: the pull request it creates, and where that goes.
@@ -52,6 +52,6 @@ public final class CreatePullRequestDialogs {
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
                 PopupSlot.returningToFocus(new ConfirmDialog<>(CREATE_FIRST, dispatch)),
-                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new NewPullRequestDialog(dispatch)));
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new GitHubNewPullRequestDialog(dispatch)));
     }
 }

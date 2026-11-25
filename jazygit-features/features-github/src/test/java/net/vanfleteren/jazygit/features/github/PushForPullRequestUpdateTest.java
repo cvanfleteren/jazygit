@@ -13,14 +13,14 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.SwitchWorktreePopup;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.PushFirst;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.PushFirst;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd.PushSettingUpstream;
 import net.vanfleteren.jazygit.features.github.create.AskPullRequest;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.*;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg;
-import net.vanfleteren.jazygit.features.github.create.NewPullRequestPopup;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestMsg;
+import net.vanfleteren.jazygit.features.github.create.GitHubNewPullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.kernel.state.*;
@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Pushing a branch before its pull request is created, as far as GitHub's way on from there goes: what pushing it
- * first does on every forge is {@code GitHubNewPullRequestContractTest}'s.
+ * first does on every forge is {@code GitHubCreatePullRequestContractTest}'s.
  */
 class PushForPullRequestUpdateTest {
 
@@ -57,15 +57,15 @@ class PushForPullRequestUpdateTest {
                         PullRequestFixtures.listed(List.empty()))
                 .model();
 
-        Next reading = Update.update(model, new CreatePullRequestMsg.ParentRead(login.name(), Option.none()));
+        Next reading = Update.update(model, new GitHubCreatePullRequestMsg.ParentRead(login.name(), Option.none()));
         ReadTitle readTitle = (ReadTitle) reading.cmds().single();
-        assertEquals(pushedAs, ((NewPullRequestPopup.Opening) readTitle.opening()).head());
+        assertEquals(pushedAs, ((GitHubNewPullRequestPopup.Opening) readTitle.opening()).head());
         Model asked = Update.update(reading.model(), readTitle.run(env())).model();
-        Next confirmed = TestModels.stepped(asked, new CreatePullRequestMsg.Confirmed());
+        Next confirmed = TestModels.stepped(asked, new GitHubCreatePullRequestMsg.Confirmed());
         CreatePullRequest create = (CreatePullRequest) confirmed.cmds().single();
 
         assertEquals(pushedAs, create.head());
-        CreatePullRequestMsg.Created created = (CreatePullRequestMsg.Created) create.run(env());
+        GitHubCreatePullRequestMsg.Created created = (GitHubCreatePullRequestMsg.Created) create.run(env());
         assertTrue(
                 created.commands().exists(command -> command.line().contains("--head feature/login --base main")),
                 created.commands().toString());
@@ -111,13 +111,14 @@ class PushForPullRequestUpdateTest {
         Model pushed = Update.update(other, push.succeeded(StubGit.executed("git push -u origin local")))
                 .model();
 
-        Model parentRead = Update.update(pushed, new CreatePullRequestMsg.ParentRead(UNPUSHED.name(), Option.none()))
+        Model parentRead = Update.update(
+                        pushed, new GitHubCreatePullRequestMsg.ParentRead(UNPUSHED.name(), Option.none()))
                 .model();
         Model titleRead = Update.update(
                         parentRead,
-                        new NewPullRequestMsg.TitleRead(
+                        new CreatePullRequestMsg.TitleRead(
                                 UNPUSHED.name(),
-                                new NewPullRequestPopup.Opening(
+                                new GitHubNewPullRequestPopup.Opening(
                                         UNPUSHED.name(),
                                         new RemoteBranch("origin", UNPUSHED.name()),
                                         List.of(MAIN.name())),

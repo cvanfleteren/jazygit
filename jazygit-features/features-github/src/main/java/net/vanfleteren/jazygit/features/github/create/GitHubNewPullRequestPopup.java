@@ -23,7 +23,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
  * @param stack       whether it is stacked on the pull request of its base, when that has one (ADR 73)
  */
 @With
-public record NewPullRequestPopup(
+public record GitHubNewPullRequestPopup(
         BranchName branch,
         RemoteBranch head,
         List<BranchName> bases,
@@ -39,7 +39,7 @@ public record NewPullRequestPopup(
     }
 
     @Override
-    public NewPullRequestPopup titled(String title) {
+    public GitHubNewPullRequestPopup titled(String title) {
         return withTitleRead(title).withPullRequest(new NewPullRequest(title, pullRequest.body(), pullRequest.draft()));
     }
 
@@ -49,7 +49,7 @@ public record NewPullRequestPopup(
      */
     @Override
     public Option<BranchRef> baseRef(Model model, BranchName base) {
-        return Option.of(CreatePullRequestUpdate.baseRef(model, base));
+        return Option.of(GitHubCreatePullRequestUpdate.baseRef(model, base));
     }
 
     /**
@@ -59,8 +59,8 @@ public record NewPullRequestPopup(
     public record Opening(BranchName branch, RemoteBranch head, List<BranchName> bases) implements FormOpening {
 
         @Override
-        public NewPullRequestPopup titled(String title) {
-            return new NewPullRequestPopup(
+        public GitHubNewPullRequestPopup titled(String title) {
+            return new GitHubNewPullRequestPopup(
                     branch, head, bases, bases.head(), title, new NewPullRequest(title, "", false), true);
         }
     }

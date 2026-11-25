@@ -25,7 +25,7 @@
             <groupId>net.vanfleteren</groupId>
             <artifactId>features-branches</artifactId>
         </dependency>
-        <!-- The contract both forges' creating of a pull request keeps (NewPullRequestContract). -->
+        <!-- The contract both forges' creating of a pull request keeps (CreatePullRequestContract). -->
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>features-branches</artifactId>

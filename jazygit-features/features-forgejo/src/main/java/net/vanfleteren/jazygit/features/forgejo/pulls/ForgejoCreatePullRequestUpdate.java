@@ -9,11 +9,11 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestUpdate;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestCmd.CheckHead;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestCmd.CreatePullRequest;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestMsg.*;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestUpdate;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoCreatePullRequestCmd.CheckHead;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoCreatePullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoCreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
@@ -25,16 +25,16 @@ import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
  * Creating the pull request on Forgejo of a branch that has none (ADR 178): checking that it is pushed to a remote
  * on the host of the home, pushing it first when it is not on its remote, reading the title it starts out with, then
  * asking what it merges into and what it says, in one popup. Pushing it first and the title that follows the base are
- * {@link NewPullRequestUpdate}'s.
+ * {@link CreatePullRequestUpdate}'s.
  */
-public final class CreatePullRequestUpdate {
+public final class ForgejoCreatePullRequestUpdate {
 
     // A remote's own pointer to its default branch, which is no branch to merge into.
     private static final BranchName REMOTE_HEAD = new BranchName("HEAD");
 
-    private CreatePullRequestUpdate() {}
+    private ForgejoCreatePullRequestUpdate() {}
 
-    public static Next update(Model model, CreatePullRequestMsg msg) {
+    public static Next update(Model model, ForgejoCreatePullRequestMsg msg) {
         return switch (msg) {
             case HeadChecked(var branch, var error) -> headChecked(model, branch, error);
             case Edited(var title, var body, var draft) -> edited(model, title, body, draft);
@@ -59,7 +59,7 @@ public final class CreatePullRequestUpdate {
     private static Next headChecked(Model model, BranchName branch, Option<CreateError> error) {
         return error.map(why -> Next.of(model.fail(why)))
                 .getOrElse(() -> model.idleBranch(branch)
-                        .map(known -> NewPullRequestUpdate.askPushed(model, known, new AskPullRequest()))
+                        .map(known -> CreatePullRequestUpdate.askPushed(model, known, new AskPullRequest()))
                         .getOrElse(() -> Next.of(model)));
     }
 
@@ -77,7 +77,7 @@ public final class CreatePullRequestUpdate {
                                     new ReadTitle(
                                             branch.name(),
                                             baseRef(home, first),
-                                            new NewPullRequestPopup.Opening(branch.name(), bases))))
+                                            new ForgejoNewPullRequestPopup.Opening(branch.name(), bases))))
                             .getOrElse(() -> Next.of(model.fail(new CreateError.NoBase(branch.name()))));
                 })
                 .getOrElse(() -> Next.of(model.fail(new CreateError.NoHome())));
@@ -124,7 +124,7 @@ public final class CreatePullRequestUpdate {
     }
 
     private static Next edited(Model model, String title, String body, boolean draft) {
-        return Next.of(model.popup(NewPullRequestPopup.class)
+        return Next.of(model.popup(ForgejoNewPullRequestPopup.class)
                 .map(popup ->
                         model.openPopup(popup.withTitle(title).withBody(body).withDraft(draft)))
                 .getOrElse(model));
@@ -134,13 +134,14 @@ public final class CreatePullRequestUpdate {
      * Creates the pull request the popup describes. A blank title keeps the popup open, as Forgejo needs one.
      */
     private static Next confirmed(Model model) {
-        if (model.popup(NewPullRequestPopup.class).exists(popup -> popup.title().isBlank())) {
+        if (model.popup(ForgejoNewPullRequestPopup.class)
+                .exists(popup -> popup.title().isBlank())) {
             return Next.of(model);
         }
         return ForgeHome.of(model)
                 .map(home -> PopupUpdate.confirm(
                         model,
-                        NewPullRequestPopup.class,
+                        ForgejoNewPullRequestPopup.class,
                         popup -> model.repo()
                                 .branch(popup.branch())
                                 .map(known -> new CreatePullRequest(

@@ -20,9 +20,9 @@ import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
 
 /**
  * Creating the pull request of a branch on Forgejo (ADR 178): checking where it is pushed to, and creating it. Pushing
- * it first and reading its title are {@code NewPullRequestCmd}'s.
+ * it first and reading its title are {@code CreatePullRequestCmd}'s.
  */
-public sealed interface CreatePullRequestCmd extends Cmd {
+public sealed interface ForgejoCreatePullRequestCmd extends Cmd {
 
     Operation CREATE = Operation.of("forgejo.log.title.createPullRequest", "forgejo.error.createPullRequest.failed")
             .labelledWhenBusy("forgejo.branches.busy.pullRequest");
@@ -31,7 +31,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * Checks that {@code target}, where {@code branch} is pushed to, is in a remote on the host of {@code home}, the
      * remote the pull requests are opened against (ADR 177).
      */
-    record CheckHead(RemoteName home, BranchName branch, RemoteBranch target) implements CreatePullRequestCmd {
+    record CheckHead(RemoteName home, BranchName branch, RemoteBranch target) implements ForgejoCreatePullRequestCmd {
 
         @Override
         public Option<Label> label() {
@@ -53,7 +53,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         }
 
         private Msg checked(Option<CreateError> error) {
-            return new CreatePullRequestMsg.HeadChecked(branch, error);
+            return new ForgejoCreatePullRequestMsg.HeadChecked(branch, error);
         }
     }
 
@@ -70,7 +70,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
             String title,
             String body,
             boolean draft)
-            implements CreatePullRequestCmd, OperationCmd {
+            implements ForgejoCreatePullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -124,12 +124,12 @@ public sealed interface CreatePullRequestCmd extends Cmd {
             return forgejo.createPullRequest(home, new ForgejoNewPullRequest(head, base.value(), title, body, draft))
                     .fold(
                             error -> refused(error, home, fork),
-                            created -> new CreatePullRequestMsg.Created(this, created));
+                            created -> new ForgejoCreatePullRequestMsg.Created(this, created));
         }
 
         private Msg refused(ForgejoError error, ForgejoRepository home, Option<String> fork) {
             Option<Long> existing = error instanceof ForgejoError.Refused refused ? refused.existing() : Option.none();
-            return existing.<Msg>map(number -> new CreatePullRequestMsg.AlreadyOpen(this, number))
+            return existing.<Msg>map(number -> new ForgejoCreatePullRequestMsg.AlreadyOpen(this, number))
                     .getOrElse(() -> failed(new CreateFailure.Refused(error, home.host(), named(home), fork)));
         }
 

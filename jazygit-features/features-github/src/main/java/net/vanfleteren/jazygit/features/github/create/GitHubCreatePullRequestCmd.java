@@ -28,9 +28,9 @@ import net.vanfleteren.jazygit.kernel.state.operation.*;
 
 /**
  * Creating the pull request of a branch on GitHub: reading the branch it came from, recording it to stack its pull
- * request, and creating it. Pushing it first and reading its title are {@code NewPullRequestCmd}'s.
+ * request, and creating it. Pushing it first and reading its title are {@code CreatePullRequestCmd}'s.
  */
-public sealed interface CreatePullRequestCmd extends Cmd {
+public sealed interface GitHubCreatePullRequestCmd extends Cmd {
 
     Operation CREATE_PR = Operation.of("github.log.title.createPr", "github.error.createPr.failed")
             .labelledWhenBusy("github.branches.busy.pullRequest");
@@ -85,7 +85,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * one the fewest of its commits are not on. On a tie, the earliest of {@code bases} wins. Without it, the user
      * still gets to choose.
      */
-    record ReadParent(BranchName branch, List<Base> bases) implements CreatePullRequestCmd {
+    record ReadParent(BranchName branch, List<Base> bases) implements GitHubCreatePullRequestCmd {
 
         // Further away than this, a base is too far to tell apart from the others; it also bounds the walk.
         public static final int MAX_DISTANCE = 1000;
@@ -131,7 +131,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         }
 
         private Msg read(Option<BranchName> parent) {
-            return new CreatePullRequestMsg.ParentRead(branch, parent);
+            return new GitHubCreatePullRequestMsg.ParentRead(branch, parent);
         }
     }
 
@@ -139,7 +139,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * Records the base of a branch as its parent, as {@code set} does, before its pull request is created to put it on
      * a stack (ADR 148): the create dialog then offers that base first, also after pushing the branch.
      */
-    record RecordParent(SetBaseCmd set) implements CreatePullRequestCmd, BranchCmd {
+    record RecordParent(SetBaseCmd set) implements GitHubCreatePullRequestCmd, BranchCmd {
 
         @Override
         public BranchName branch() {
@@ -158,7 +158,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
 
         @Override
         public Msg succeeded(List<ExecutedCommand> commands) {
-            return new CreatePullRequestMsg.ParentRecorded(this, commands);
+            return new GitHubCreatePullRequestMsg.ParentRecorded(this, commands);
         }
     }
 
@@ -172,7 +172,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
             RemoteBranch base,
             NewPullRequest pullRequest,
             Option<Stacking> stacking)
-            implements CreatePullRequestCmd, OperationCmd {
+            implements GitHubCreatePullRequestCmd, OperationCmd {
 
         /**
          * One that is stacked on nothing.
@@ -204,7 +204,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
                     .mapLeft(GitHubFailure::of)
                     .fold(
                             this::failed,
-                            created -> new CreatePullRequestMsg.Created(
+                            created -> new GitHubCreatePullRequestMsg.Created(
                                     this,
                                     created.number()
                                             .map(number -> new PullRequest(

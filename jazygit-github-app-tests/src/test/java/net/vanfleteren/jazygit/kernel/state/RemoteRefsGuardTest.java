@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.PushFirst;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.PushFirst;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.WorktreeSource;

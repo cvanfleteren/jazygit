@@ -19,8 +19,8 @@ import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.SwitchWorktreePopup;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.PushFirst;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.RereadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.PushFirst;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.RereadTitle;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd.PushSettingUpstream;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
  * popup by extending it; what a forge does on its own, as which bases it offers and what it sends, its own tests
  * check.
  */
-public abstract class NewPullRequestContract {
+public abstract class CreatePullRequestContract {
 
     /**
      * The default branch, on origin.
@@ -153,7 +153,7 @@ public abstract class NewPullRequestContract {
     }
 
     private Msg titleRead(Option<String> subject) {
-        return new NewPullRequestMsg.TitleRead(
+        return new CreatePullRequestMsg.TitleRead(
                 FEATURE.name(), opening(FEATURE.name(), List.of(MAIN.name(), RELEASE.name())), subject);
     }
 
@@ -162,11 +162,11 @@ public abstract class NewPullRequestContract {
     }
 
     private static Msg moved(int at, BranchName base) {
-        return new NewPullRequestMsg.BaseMoved(ListCursor.START.at(at), Option.of(base));
+        return new CreatePullRequestMsg.BaseMoved(ListCursor.START.at(at), Option.of(base));
     }
 
     private static Msg baseTitleRead(BranchName base, String subject) {
-        return new NewPullRequestMsg.BaseTitleRead(FEATURE.name(), base, Option.of(subject));
+        return new CreatePullRequestMsg.BaseTitleRead(FEATURE.name(), base, Option.of(subject));
     }
 
     private PushFirst pushFirst(Branch branch) {
@@ -223,7 +223,7 @@ public abstract class NewPullRequestContract {
     void confirmingPushesABranchWithoutAnUpstreamToItsPushTargetWhichItThenTracks() {
         Model asking = asked(standard(), LOCAL.name()).model();
 
-        Next pushing = TestModels.stepped(asking, new NewPullRequestMsg.PushFirstConfirmed());
+        Next pushing = TestModels.stepped(asking, new CreatePullRequestMsg.PushFirstConfirmed());
 
         assertEquals(List.of(pushFirst(LOCAL)), pushing.cmds());
         assertEquals(Option.none(), pushing.model().popup());
@@ -234,7 +234,7 @@ public abstract class NewPullRequestContract {
     void confirmingPushesTheCommitsOfABranchAheadOfItsUpstream() {
         Model asking = asked(standard(), AHEAD.name()).model();
 
-        Next pushing = Update.update(asking, new NewPullRequestMsg.PushFirstConfirmed());
+        Next pushing = Update.update(asking, new CreatePullRequestMsg.PushFirstConfirmed());
 
         assertEquals(
                 List.of(new PushFirst(
@@ -260,7 +260,7 @@ public abstract class NewPullRequestContract {
                         asking, List.of(RELEASE, FEATURE, LOCAL, tracking("ahead", false, 0, 0), MAIN))
                 .model();
 
-        Next confirmed = Update.update(pushedElsewhere, new NewPullRequestMsg.PushFirstConfirmed());
+        Next confirmed = Update.update(pushedElsewhere, new CreatePullRequestMsg.PushFirstConfirmed());
 
         assertTrue(confirmed.model().popup(PushFirstPopup.class).isEmpty());
         assertFalse(
@@ -276,7 +276,7 @@ public abstract class NewPullRequestContract {
                         asking, List.of(RELEASE, FEATURE, LOCAL, tracking("ahead", false, 2, 1), MAIN))
                 .model();
 
-        Next confirmed = Update.update(diverged, new NewPullRequestMsg.PushFirstConfirmed());
+        Next confirmed = Update.update(diverged, new CreatePullRequestMsg.PushFirstConfirmed());
 
         assertTrue(confirmed.model().popup(PushFirstPopup.class).isEmpty());
         assertEquals(
@@ -410,7 +410,7 @@ public abstract class NewPullRequestContract {
     void aFilterThatShowsNoBaseKeepsTheBase() {
         ListCursor cursor = new ListCursor(Option.of(0), Option.of("nothing"));
 
-        Next moved = Update.update(creating(), new NewPullRequestMsg.BaseMoved(cursor, Option.none()));
+        Next moved = Update.update(creating(), new CreatePullRequestMsg.BaseMoved(cursor, Option.none()));
 
         assertEquals(MAIN.name(), form(moved.model()).base());
         assertEquals(cursor, moved.model().listCursor());

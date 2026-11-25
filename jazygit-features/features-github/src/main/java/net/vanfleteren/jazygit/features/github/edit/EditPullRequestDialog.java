@@ -12,7 +12,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
-import net.vanfleteren.jazygit.features.github.create.NewPullRequestDialog;
+import net.vanfleteren.jazygit.features.github.create.GitHubNewPullRequestDialog;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.edit.LineEditInput;
@@ -161,13 +161,13 @@ public final class EditPullRequestDialog implements PopupView {
     private Element draft(EditPullRequestPopup popup) {
         boolean ticked = popup.fields().draft();
         Element box = popup.draftChangeable()
-                ? text(NewPullRequestDialog.box(ticked))
+                ? text(GitHubNewPullRequestDialog.box(ticked))
                         .id(DRAFT_ID)
-                        .addClass(NewPullRequestDialog.CHECKBOX)
+                        .addClass(GitHubNewPullRequestDialog.CHECKBOX)
                         .focusable()
                         .length(BOX_WIDTH)
                         .onKeyEvent(event -> draftKeys(event, ticked))
-                : text(NewPullRequestDialog.box(ticked))
+                : text(GitHubNewPullRequestDialog.box(ticked))
                         .addClass(Theme.Classes.DIM)
                         .length(BOX_WIDTH);
         Element label = popup.draftChangeable()

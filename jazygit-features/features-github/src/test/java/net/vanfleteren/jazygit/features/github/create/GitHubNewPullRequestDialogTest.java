@@ -19,7 +19,7 @@ import java.util.Optional;
 import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -38,13 +38,13 @@ import org.junit.jupiter.api.Test;
  * the title starts out as given, the body empty and the draft box below them unticked; Enter in the title or Ctrl+S
  * anywhere creates it, Escape cancels.
  */
-class NewPullRequestDialogTest {
+class GitHubNewPullRequestDialogTest {
 
     private static final Rect THEMED_AREA = new Rect(0, 0, 120, 30);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model model = TestModels.loaded()
-            .openPopup(new NewPullRequestPopup(
+            .openPopup(new GitHubNewPullRequestPopup(
                     new BranchName("feature"),
                     new RemoteBranch("origin", new BranchName("feature")),
                     List.of(new BranchName("main"), new BranchName("release"), new BranchName("ahead")),
@@ -53,9 +53,10 @@ class NewPullRequestDialogTest {
                     new NewPullRequest("Add login", "", false),
                     true));
     // As in the app, an edit or a move changes the model the popup shows; the other messages are only kept.
-    private final NewPullRequestDialog dialog = new NewPullRequestDialog(msg -> {
+    private final GitHubNewPullRequestDialog dialog = new GitHubNewPullRequestDialog(msg -> {
         dispatched.add(msg);
-        if (msg instanceof CreatePullRequestMsg.PullRequestEdited || msg instanceof NewPullRequestMsg.BaseMoved) {
+        if (msg instanceof GitHubCreatePullRequestMsg.PullRequestEdited
+                || msg instanceof CreatePullRequestMsg.BaseMoved) {
             model = Update.update(model, msg).model();
         }
     });
@@ -98,7 +99,7 @@ class NewPullRequestDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new CreatePullRequestMsg.Confirmed()), dispatched);
+        assertEquals(java.util.List.of(new GitHubCreatePullRequestMsg.Confirmed()), dispatched);
     }
 
     @Test
@@ -115,7 +116,7 @@ class NewPullRequestDialogTest {
             type(runner, "Why");
             SettledPilot.of(runner).press(KeyCode.ENTER);
             type(runner, "it matters");
-            SettledPilot.focus(runner, NewPullRequestDialog.DRAFT_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.DRAFT_ID);
             SettledPilot.of(runner).press(' ');
             SettledPilot.of(runner).pause();
             String screen = RenderedText.ofLarge(runner, this::view);
@@ -126,8 +127,8 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 Option.of(new NewPullRequest("Add login!", "Why\nit matters", true)),
-                model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::pullRequest));
-        assertEquals(new CreatePullRequestMsg.Confirmed(), dispatched.getLast());
+                model.popup(GitHubNewPullRequestPopup.class).map(GitHubNewPullRequestPopup::pullRequest));
+        assertEquals(new GitHubCreatePullRequestMsg.Confirmed(), dispatched.getLast());
     }
 
     @Test
@@ -137,7 +138,7 @@ class NewPullRequestDialogTest {
                 () -> stack(new Dimmed(panel(text("files")).id("files").focusable(), Theme.Backdrop.DIM_ONLY), view());
         java.util.List<String> focused = new ArrayList<>();
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(screen::get)) {
-            SettledPilot.focus(runner, NewPullRequestDialog.ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.ID);
             RenderedText.ofLarge(runner, screen::get);
             for (int i = 0; i < 4; i++) {
                 SettledPilot.of(runner).press(KeyCode.TAB);
@@ -151,11 +152,11 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 java.util.List.of(
-                        NewPullRequestDialog.BODY_ID,
-                        NewPullRequestDialog.DRAFT_ID,
-                        NewPullRequestDialog.BASES_ID,
-                        NewPullRequestDialog.ID,
-                        NewPullRequestDialog.BASES_ID),
+                        GitHubNewPullRequestDialog.BODY_ID,
+                        GitHubNewPullRequestDialog.DRAFT_ID,
+                        GitHubNewPullRequestDialog.BASES_ID,
+                        GitHubNewPullRequestDialog.ID,
+                        GitHubNewPullRequestDialog.BASES_ID),
                 focused);
     }
 
@@ -169,28 +170,28 @@ class NewPullRequestDialogTest {
                             ? EventResult.HANDLED
                             : EventResult.UNHANDLED);
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
-            SettledPilot.focus(runner, NewPullRequestDialog.BODY_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.BODY_ID);
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
-            SettledPilot.focus(runner, NewPullRequestDialog.DRAFT_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.DRAFT_ID);
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
-            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.BASES_ID);
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
         }
 
         assertEquals(
                 java.util.List.of(
-                        new PopupMsg.Dismissed(NewPullRequestPopup.class),
-                        new PopupMsg.Dismissed(NewPullRequestPopup.class),
-                        new PopupMsg.Dismissed(NewPullRequestPopup.class),
-                        new PopupMsg.Dismissed(NewPullRequestPopup.class)),
+                        new PopupMsg.Dismissed(GitHubNewPullRequestPopup.class),
+                        new PopupMsg.Dismissed(GitHubNewPullRequestPopup.class),
+                        new PopupMsg.Dismissed(GitHubNewPullRequestPopup.class),
+                        new PopupMsg.Dismissed(GitHubNewPullRequestPopup.class)),
                 dispatched);
     }
 
     @Test
     void theArrowsInTheBasesPickTheBase() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.BASES_ID);
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).pause();
             String screen = RenderedText.ofLarge(runner, this::view);
@@ -198,15 +199,15 @@ class NewPullRequestDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(
-                        new NewPullRequestMsg.BaseMoved(ListCursor.START.at(1), Option.of(new BranchName("release")))),
+                java.util.List.of(new CreatePullRequestMsg.BaseMoved(
+                        ListCursor.START.at(1), Option.of(new BranchName("release")))),
                 dispatched);
     }
 
     @Test
     void typingInTheBasesFiltersThemAndPicksTheFirstShown() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.BASES_ID);
             type(runner, "rel");
             String screen = RenderedText.ofLarge(runner, this::view);
 
@@ -217,13 +218,13 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 Option.of(new BranchName("release")),
-                model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
+                model.popup(GitHubNewPullRequestPopup.class).map(GitHubNewPullRequestPopup::base));
     }
 
     @Test
     void aFilterThatShowsNoBaseKeepsTheBaseInTheBorder() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.BASES_ID);
             type(runner, "zz");
             String screen = RenderedText.ofLarge(runner, this::view);
 
@@ -233,13 +234,13 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 Option.of(new BranchName("main")),
-                model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
+                model.popup(GitHubNewPullRequestPopup.class).map(GitHubNewPullRequestPopup::base));
     }
 
     @Test
     void theBaseComesBackWhenTheFilterShowsItAgain() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.BASES_ID);
             SettledPilot.of(runner).press(KeyCode.END);
             type(runner, "az");
             SettledPilot.of(runner).press(KeyCode.BACKSPACE);
@@ -251,13 +252,13 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 Option.of(new BranchName("ahead")),
-                model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
+                model.popup(GitHubNewPullRequestPopup.class).map(GitHubNewPullRequestPopup::base));
     }
 
     @Test
     void theFilterOfTheBasesOnlyTakesWhatIsTypedAtItsEnd() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.BASES_ID);
             type(runner, "rel");
             // There is no cursor shown to move, so the arrows to the sides do nothing.
             SettledPilot.of(runner).press(KeyCode.LEFT);
@@ -280,7 +281,7 @@ class NewPullRequestDialogTest {
     @Test
     void escapeInTheBasesClearsTheFilterBeforeItCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.BASES_ID);
             type(runner, "rel");
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
@@ -296,11 +297,13 @@ class NewPullRequestDialogTest {
     @Test
     void enterInTheBasesGoesOnToTheTitle() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.focus(runner, GitHubNewPullRequestDialog.BASES_ID);
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
 
-            assertEquals(NewPullRequestDialog.ID, runner.runner().focusManager().focusedId());
+            assertEquals(
+                    GitHubNewPullRequestDialog.ID,
+                    runner.runner().focusManager().focusedId());
         }
 
         assertEquals(java.util.List.of(), dispatched);
@@ -308,16 +311,16 @@ class NewPullRequestDialogTest {
 
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, NewPullRequestDialog.ID);
+        SettledPilot.focus(runner, GitHubNewPullRequestDialog.ID);
         RenderedText.ofLarge(runner, this::view);
         return runner;
     }
 
     @Test
     void theFieldWithTheFocusIsBorderedAsThePaneInUse() {
-        ThemedBorders title = themed(NewPullRequestDialog.ID);
-        ThemedBorders bases = themed(NewPullRequestDialog.BASES_ID);
-        ThemedBorders draft = themed(NewPullRequestDialog.DRAFT_ID);
+        ThemedBorders title = themed(GitHubNewPullRequestDialog.ID);
+        ThemedBorders bases = themed(GitHubNewPullRequestDialog.BASES_ID);
+        ThemedBorders draft = themed(GitHubNewPullRequestDialog.DRAFT_ID);
 
         assertEquals(Optional.of(Color.CYAN), title.borderLeftOf("Title"));
         assertEquals(Optional.of(Color.DARK_GRAY), title.borderLeftOf("Into: main"));

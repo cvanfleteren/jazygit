@@ -7,12 +7,12 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 
 /**
  * Once a branch is on its remote with all its commits, asking what its pull request on GitHub merges into and what it
- * says, as {@link CreatePullRequestUpdate#ask} does.
+ * says, as {@link GitHubCreatePullRequestUpdate#ask} does.
  */
 public record AskPullRequest() implements AfterPush {
 
     @Override
     public Next next(Model model, Branch branch) {
-        return CreatePullRequestUpdate.ask(model, branch);
+        return GitHubCreatePullRequestUpdate.ask(model, branch);
     }
 }

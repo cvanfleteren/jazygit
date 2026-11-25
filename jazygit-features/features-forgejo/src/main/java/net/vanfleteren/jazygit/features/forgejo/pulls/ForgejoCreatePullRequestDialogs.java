@@ -8,11 +8,11 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
  * The popups of creating a pull request on Forgejo (ADR 178): what it merges into and what it says. Whether to push
- * the branch first is {@code NewPullRequestDialogs}'.
+ * the branch first is {@code CreatePullRequestDialogs}'.
  */
-public final class CreatePullRequestDialogs {
+public final class ForgejoCreatePullRequestDialogs {
 
-    private CreatePullRequestDialogs() {}
+    private ForgejoCreatePullRequestDialogs() {}
 
     static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ForgejoNewPullRequestDialog(dispatch)));

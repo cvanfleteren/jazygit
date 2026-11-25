@@ -7,9 +7,9 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.PushFirst;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.RereadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg.*;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.PushFirst;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.RereadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd.PushSettingUpstream;
@@ -24,11 +24,11 @@ import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
  * remote with all its commits (ADR 25), then, once the forge asks, opening its popup with the title read, where the
  * title follows the base picked until the user types one (ADR 18).
  */
-public final class NewPullRequestUpdate {
+public final class CreatePullRequestUpdate {
 
-    private NewPullRequestUpdate() {}
+    private CreatePullRequestUpdate() {}
 
-    public static Next update(Model model, NewPullRequestMsg msg) {
+    public static Next update(Model model, CreatePullRequestMsg msg) {
         return switch (msg) {
             case PushFirstConfirmed() -> pushFirstConfirmed(model);
             case Pushed(var cmd, var commands) -> pushed(model, cmd, commands);

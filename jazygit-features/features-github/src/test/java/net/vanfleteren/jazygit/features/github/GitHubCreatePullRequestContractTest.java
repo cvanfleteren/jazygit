@@ -7,13 +7,13 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.AfterPush;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestContract;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.FormOpening;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestContract;
 import net.vanfleteren.jazygit.features.github.create.AskPullRequest;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.ReadParent;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg;
-import net.vanfleteren.jazygit.features.github.create.NewPullRequestPopup;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.ReadParent;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestMsg;
+import net.vanfleteren.jazygit.features.github.create.GitHubNewPullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -25,7 +25,7 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
  * Creating a pull request on GitHub does what it does alike on every forge (ADR 175): {@code o} on a branch without
  * one, its popup and its messages.
  */
-class GitHubNewPullRequestContractTest extends NewPullRequestContract {
+class GitHubCreatePullRequestContractTest extends CreatePullRequestContract {
 
     @Override
     protected Model model(List<Branch> branches) {
@@ -57,7 +57,7 @@ class GitHubNewPullRequestContractTest extends NewPullRequestContract {
 
     @Override
     protected FormOpening opening(BranchName branch, List<BranchName> bases) {
-        return new NewPullRequestPopup.Opening(branch, new RemoteBranch("origin", branch), bases);
+        return new GitHubNewPullRequestPopup.Opening(branch, new RemoteBranch("origin", branch), bases);
     }
 
     @Override
@@ -67,14 +67,14 @@ class GitHubNewPullRequestContractTest extends NewPullRequestContract {
 
     @Override
     protected Msg typed(Model model, String title) {
-        NewPullRequest typed = model.popup(NewPullRequestPopup.class)
-                .map(NewPullRequestPopup::pullRequest)
+        NewPullRequest typed = model.popup(GitHubNewPullRequestPopup.class)
+                .map(GitHubNewPullRequestPopup::pullRequest)
                 .getOrElse(new NewPullRequest("", "", false));
-        return new CreatePullRequestMsg.PullRequestEdited(new NewPullRequest(title, typed.body(), typed.draft()));
+        return new GitHubCreatePullRequestMsg.PullRequestEdited(new NewPullRequest(title, typed.body(), typed.draft()));
     }
 
     @Override
     protected Msg confirmed() {
-        return new CreatePullRequestMsg.Confirmed();
+        return new GitHubCreatePullRequestMsg.Confirmed();
     }
 }

@@ -10,15 +10,15 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestUpdate;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestUpdate;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.features.github.GitHubError;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.Base;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.CreatePullRequest;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.ReadParent;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.RecordParent;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestMsg.*;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.Base;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.CreatePullRequest;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.ReadParent;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.RecordParent;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestMsg.*;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.stack.StackPopups;
 import net.vanfleteren.jazygit.features.github.state.*;
@@ -31,13 +31,13 @@ import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 /**
  * Creating the pull request of a branch on GitHub: pushing it first when it is not on its remote, reading the branch
  * it came from and the title it starts out with, then asking what it merges into and what it says, in one popup.
- * Pushing it first and the title that follows the base are {@link NewPullRequestUpdate}'s.
+ * Pushing it first and the title that follows the base are {@link CreatePullRequestUpdate}'s.
  */
-public final class CreatePullRequestUpdate {
+public final class GitHubCreatePullRequestUpdate {
 
-    private CreatePullRequestUpdate() {}
+    private GitHubCreatePullRequestUpdate() {}
 
-    public static Next update(Model model, CreatePullRequestMsg msg) {
+    public static Next update(Model model, GitHubCreatePullRequestMsg msg) {
         return switch (msg) {
             case ParentRead(var branch, var parent) -> parentRead(model, branch, parent);
             case PullRequestEdited(NewPullRequest pullRequest) -> pullRequestEdited(model, pullRequest);
@@ -65,7 +65,7 @@ public final class CreatePullRequestUpdate {
      * The popup with what the new pull request says as the user changed it.
      */
     private static Next pullRequestEdited(Model model, NewPullRequest pullRequest) {
-        return Next.of(model.popup(NewPullRequestPopup.class)
+        return Next.of(model.popup(GitHubNewPullRequestPopup.class)
                 .map(popup -> model.openPopup(popup.withPullRequest(pullRequest)))
                 .getOrElse(model));
     }
@@ -74,7 +74,7 @@ public final class CreatePullRequestUpdate {
      * The popup with stacking on the pull request of its base ticked or unticked.
      */
     private static Next stackToggled(Model model) {
-        return Next.of(model.popup(NewPullRequestPopup.class)
+        return Next.of(model.popup(GitHubNewPullRequestPopup.class)
                 .map(popup -> model.openPopup(popup.withStack(!popup.stack())))
                 .getOrElse(model));
     }
@@ -83,13 +83,13 @@ public final class CreatePullRequestUpdate {
      * Creates the pull request the popup describes. A blank title keeps the popup open, as GitHub needs one.
      */
     private static Next confirmed(Model model) {
-        if (model.popup(NewPullRequestPopup.class)
+        if (model.popup(GitHubNewPullRequestPopup.class)
                 .exists(popup -> popup.pullRequest().title().isBlank())) {
             return Next.of(model);
         }
         return PopupUpdate.confirm(
                 model,
-                NewPullRequestPopup.class,
+                GitHubNewPullRequestPopup.class,
                 popup -> model.repo()
                         .branch(popup.branch())
                         .map(known -> new CreatePullRequest(
@@ -159,19 +159,20 @@ public final class CreatePullRequestUpdate {
      * Where a new pull request on {@code base} goes in a stack (ADR 73): none when {@code base} has no open pull
      * request; why it cannot when that one is in a stack but not on its top.
      */
-    static Option<Either<CreatePullRequestCmd.NotTop, CreatePullRequestCmd.Stacking>> stackOn(
+    static Option<Either<GitHubCreatePullRequestCmd.NotTop, GitHubCreatePullRequestCmd.Stacking>> stackOn(
             Model model, BranchName base) {
         return model.repo()
                 .branch(base)
                 .flatMap(model.part(GitHubState.PART)::pullRequest)
                 .map(below -> below.stack()
                         .map(stack -> stack.isTop()
-                                ? Either.<CreatePullRequestCmd.NotTop, CreatePullRequestCmd.Stacking>right(
-                                        new CreatePullRequestCmd.Stacking(below.number(), Option.of(stack.number())))
-                                : Either.<CreatePullRequestCmd.NotTop, CreatePullRequestCmd.Stacking>left(
-                                        new CreatePullRequestCmd.NotTop(below.number(), stack.number())))
-                        .getOrElse(
-                                () -> Either.right(new CreatePullRequestCmd.Stacking(below.number(), Option.none()))));
+                                ? Either.<GitHubCreatePullRequestCmd.NotTop, GitHubCreatePullRequestCmd.Stacking>right(
+                                        new GitHubCreatePullRequestCmd.Stacking(
+                                                below.number(), Option.of(stack.number())))
+                                : Either.<GitHubCreatePullRequestCmd.NotTop, GitHubCreatePullRequestCmd.Stacking>left(
+                                        new GitHubCreatePullRequestCmd.NotTop(below.number(), stack.number())))
+                        .getOrElse(() ->
+                                Either.right(new GitHubCreatePullRequestCmd.Stacking(below.number(), Option.none()))));
     }
 
     /**
@@ -187,7 +188,7 @@ public final class CreatePullRequestUpdate {
      * there (ADR 25).
      */
     public static Next askPushed(Model model, Branch branch) {
-        return NewPullRequestUpdate.askPushed(model, branch, new AskPullRequest());
+        return CreatePullRequestUpdate.askPushed(model, branch, new AskPullRequest());
     }
 
     /**
@@ -215,7 +216,7 @@ public final class CreatePullRequestUpdate {
                         new ReadTitle(
                                 branch.name(),
                                 baseRef(model, first),
-                                new NewPullRequestPopup.Opening(branch.name(), branch.pushTarget(), bases))))
+                                new GitHubNewPullRequestPopup.Opening(branch.name(), branch.pushTarget(), bases))))
                 .getOrElse(() -> Next.of(model.fail(new GitHubError.NoBase(branch.name()))));
     }
 

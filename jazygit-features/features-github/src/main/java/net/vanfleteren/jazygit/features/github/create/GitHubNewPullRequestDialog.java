@@ -14,7 +14,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestMsg;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
@@ -38,7 +38,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.SubmittableTextArea;
  * Escape clears the filter, or else cancels. What is picked, typed and ticked lives in the {@link Model}, which every
  * change is sent to; the fields only keep where their cursor is.
  */
-public final class NewPullRequestDialog implements PopupView {
+public final class GitHubNewPullRequestDialog implements PopupView {
 
     /**
      * The id of the title field, which gets the focus when the popup opens.
@@ -72,7 +72,7 @@ public final class NewPullRequestDialog implements PopupView {
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
-    public NewPullRequestDialog(Consumer<Msg> dispatch) {
+    public GitHubNewPullRequestDialog(Consumer<Msg> dispatch) {
         this.bases = new BasesField<>(BASES_ID, BranchName::value, dispatch);
         this.dispatch = dispatch;
     }
@@ -90,7 +90,7 @@ public final class NewPullRequestDialog implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        return model.popup(NewPullRequestPopup.class).map(open -> {
+        return model.popup(GitHubNewPullRequestPopup.class).map(open -> {
             NewPullRequest pullRequest = open.pullRequest();
             // The fields show what the model has: what was typed in them, or what the popup opened with.
             if (!title.text().equals(pullRequest.title())) {
@@ -110,7 +110,7 @@ public final class NewPullRequestDialog implements PopupView {
                                     open.bases(),
                                     open.base(),
                                     model.listCursor(),
-                                    NewPullRequestMsg.BaseMoved::new,
+                                    CreatePullRequestMsg.BaseMoved::new,
                                     this::keys),
                             new LineEditInput(
                                             textInput(title)
@@ -160,8 +160,8 @@ public final class NewPullRequestDialog implements PopupView {
      * The box that stacks the pull request on the one of its base, after the draft box, when the base has one
      * (ADR 73): ticked or not; or, when that one is not on the top of its stack, the line off and dimmed, with why.
      */
-    private List<StyledElement<?>> stack(Model model, NewPullRequestPopup open) {
-        return CreatePullRequestUpdate.stackOn(model, open.base())
+    private List<StyledElement<?>> stack(Model model, GitHubNewPullRequestPopup open) {
+        return GitHubCreatePullRequestUpdate.stackOn(model, open.base())
                 .map(on -> on.fold(
                         notTop -> List.<StyledElement<?>>of(text(GAP
                                         + box(false)
@@ -195,7 +195,7 @@ public final class NewPullRequestDialog implements PopupView {
      */
     private EventResult stackKeys(KeyEvent event) {
         if (event.isConfirm() || KeyTrigger.ch(' ').matches(event)) {
-            dispatch.accept(new CreatePullRequestMsg.StackToggled());
+            dispatch.accept(new GitHubCreatePullRequestMsg.StackToggled());
             return EventResult.HANDLED;
         }
         return keys(event);
@@ -225,7 +225,7 @@ public final class NewPullRequestDialog implements PopupView {
      */
     private EventResult keys(KeyEvent event) {
         if (event.isCancel()) {
-            dispatch.accept(new PopupMsg.Dismissed(NewPullRequestPopup.class));
+            dispatch.accept(new PopupMsg.Dismissed(GitHubNewPullRequestPopup.class));
             return EventResult.HANDLED;
         }
         if (event.hasCtrl() && event.isChar(CONFIRM_KEY)) {
@@ -241,11 +241,11 @@ public final class NewPullRequestDialog implements PopupView {
      */
     private void edited(boolean draft) {
         dispatch.accept(
-                new CreatePullRequestMsg.PullRequestEdited(new NewPullRequest(title.text(), body.text(), draft)));
+                new GitHubCreatePullRequestMsg.PullRequestEdited(new NewPullRequest(title.text(), body.text(), draft)));
     }
 
     private void confirm() {
-        // A blank title keeps the popup open, see CreatePullRequestUpdate.
-        dispatch.accept(new CreatePullRequestMsg.Confirmed());
+        // A blank title keeps the popup open, see GitHubCreatePullRequestUpdate.
+        dispatch.accept(new GitHubCreatePullRequestMsg.Confirmed());
     }
 }

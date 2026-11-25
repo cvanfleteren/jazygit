@@ -13,8 +13,8 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.ReadTitle;
-import net.vanfleteren.jazygit.features.branches.branch.pullrequest.NewPullRequestCmd.RereadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
+import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.RereadTitle;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -25,10 +25,10 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
 /**
- * {@link NewPullRequestContract} on a forge of the test's own, which asks what a pull request says with the title read
+ * {@link CreatePullRequestContract} on a forge of the test's own, which asks what a pull request says with the title read
  * for main: what the forges share, without a forge. Also what git is asked for the title.
  */
-class NewPullRequestContractTest extends NewPullRequestContract {
+class CreatePullRequestContractTest extends CreatePullRequestContract {
 
     private static BranchRef ref(BranchName base) {
         return new BranchRef.Remote(new RemoteBranch("origin", base));
@@ -42,7 +42,7 @@ class NewPullRequestContractTest extends NewPullRequestContract {
     @Override
     protected Next asked(Model model, BranchName branch) {
         return model.idleBranch(branch)
-                .map(known -> NewPullRequestUpdate.askPushed(model, known, afterPush()))
+                .map(known -> CreatePullRequestUpdate.askPushed(model, known, afterPush()))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -91,10 +91,10 @@ class NewPullRequestContractTest extends NewPullRequestContract {
         Opening opening = new Opening(FEATURE.name(), List.of(RELEASE.name()));
 
         assertEquals(
-                new NewPullRequestMsg.TitleRead(FEATURE.name(), opening, Option.of("Fix release")),
+                new CreatePullRequestMsg.TitleRead(FEATURE.name(), opening, Option.of("Fix release")),
                 new ReadTitle(FEATURE.name(), ref(RELEASE.name()), opening).run(new Env(git)));
         assertEquals(
-                new NewPullRequestMsg.BaseTitleRead(FEATURE.name(), RELEASE.name(), Option.of("Fix release")),
+                new CreatePullRequestMsg.BaseTitleRead(FEATURE.name(), RELEASE.name(), Option.of("Fix release")),
                 new RereadTitle(FEATURE.name(), RELEASE.name(), ref(RELEASE.name())).run(new Env(git)));
     }
 
@@ -109,9 +109,10 @@ class NewPullRequestContractTest extends NewPullRequestContract {
         Opening opening = new Opening(FEATURE.name(), List.of(MAIN.name()));
         ReadTitle read = new ReadTitle(FEATURE.name(), ref(MAIN.name()), opening);
 
-        assertEquals(new NewPullRequestMsg.TitleRead(FEATURE.name(), opening, Option.none()), read.run(new Env(git)));
         assertEquals(
-                new NewPullRequestMsg.TitleRead(FEATURE.name(), opening, Option.none()),
+                new CreatePullRequestMsg.TitleRead(FEATURE.name(), opening, Option.none()), read.run(new Env(git)));
+        assertEquals(
+                new CreatePullRequestMsg.TitleRead(FEATURE.name(), opening, Option.none()),
                 read.failed(TestModels.refused("boom")));
     }
 

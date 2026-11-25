@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.PushFirstPopup;
-import net.vanfleteren.jazygit.features.github.create.CreatePullRequestCmd.RecordParent;
+import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.RecordParent;
 import net.vanfleteren.jazygit.features.github.stack.StackPopups;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -38,7 +38,7 @@ class CreateFirstTest {
 
     @Test
     void confirmingRecordsTheBaseAsTheParentOfTheBranch() {
-        Update.Next confirmed = Update.update(MODEL.openPopup(ON_TOP), new CreatePullRequestMsg.StackRequested());
+        Update.Next confirmed = Update.update(MODEL.openPopup(ON_TOP), new GitHubCreatePullRequestMsg.StackRequested());
 
         assertEquals(List.of(new RecordParent(new SetBaseCmd(FEATURE, Option.of(FEAT_A)))), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
@@ -49,7 +49,7 @@ class CreateFirstTest {
     void onceRecordedThePullRequestIsAskedAbout() {
         Update.Next recorded = Update.update(
                 MODEL,
-                new CreatePullRequestMsg.ParentRecorded(
+                new GitHubCreatePullRequestMsg.ParentRecorded(
                         new RecordParent(new SetBaseCmd(FEATURE, Option.of(FEAT_A))), List.empty()));
 
         assertInstanceOf(PushFirstPopup.class, recorded.model().popup().get());
@@ -60,11 +60,11 @@ class CreateFirstTest {
         assertEquals(
                 "feature has no pull request yet. Create one on feat/a, recorded as the branch feature is built on, "
                         + "then put it on the top of stack #12?",
-                CreatePullRequestDialogs.createFirst(ON_TOP));
+                GitHubCreatePullRequestDialogs.createFirst(ON_TOP));
         assertEquals(
                 "feature has no pull request yet. Create one on feat/a, recorded as the branch feature is built on, "
                         + "then stack it on #96?",
-                CreatePullRequestDialogs.createFirst(
+                GitHubCreatePullRequestDialogs.createFirst(
                         new StackPopups.CreateFirst(FEATURE, FEAT_A, new PrNumber(96), Option.none())));
     }
 }

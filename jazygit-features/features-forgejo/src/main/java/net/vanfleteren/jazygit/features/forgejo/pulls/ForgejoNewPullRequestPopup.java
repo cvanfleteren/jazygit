@@ -22,7 +22,7 @@ import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
  * @param draft     whether it is a draft
  */
 @With
-public record NewPullRequestPopup(
+public record ForgejoNewPullRequestPopup(
         BranchName branch,
         List<BranchName> bases,
         BranchName base,
@@ -35,12 +35,12 @@ public record NewPullRequestPopup(
     /**
      * The popup as it opens, with {@code title} read for the first of {@code bases}.
      */
-    static NewPullRequestPopup opening(BranchName branch, List<BranchName> bases, String title) {
-        return new NewPullRequestPopup(branch, bases, bases.head(), title, title, "", false);
+    static ForgejoNewPullRequestPopup opening(BranchName branch, List<BranchName> bases, String title) {
+        return new ForgejoNewPullRequestPopup(branch, bases, bases.head(), title, title, "", false);
     }
 
     @Override
-    public NewPullRequestPopup titled(String title) {
+    public ForgejoNewPullRequestPopup titled(String title) {
         return withTitleRead(title).withTitle(title);
     }
 
@@ -49,7 +49,7 @@ public record NewPullRequestPopup(
      */
     @Override
     public Option<BranchRef> baseRef(Model model, BranchName base) {
-        return ForgeHome.of(model).map(home -> CreatePullRequestUpdate.baseRef(home, base));
+        return ForgeHome.of(model).map(home -> ForgejoCreatePullRequestUpdate.baseRef(home, base));
     }
 
     /**
@@ -58,7 +58,7 @@ public record NewPullRequestPopup(
     public record Opening(BranchName branch, List<BranchName> bases) implements FormOpening {
 
         @Override
-        public NewPullRequestPopup titled(String title) {
+        public ForgejoNewPullRequestPopup titled(String title) {
             return opening(branch, bases, title);
         }
     }

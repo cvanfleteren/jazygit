@@ -22,7 +22,7 @@ import net.vanfleteren.jazygit.kernel.state.operation.Operation;
  * What creating a pull request asks of git, on any forge: pushing the branch first when it is not on its remote
  * (ADR 25), and reading the title it starts out with for a base (ADR 18).
  */
-public sealed interface NewPullRequestCmd extends Cmd {
+public sealed interface CreatePullRequestCmd extends Cmd {
 
     /**
      * The subject of the oldest commit of {@code branch} that is not on {@code baseRef}, if it could be read.
@@ -39,7 +39,7 @@ public sealed interface NewPullRequestCmd extends Cmd {
      * oldest commit that is not on {@code baseRef}, the branch the base offered first is on its remote. Without it, the
      * user still gets to enter one, in the popup {@code opening} opens.
      */
-    record ReadTitle(BranchName branch, BranchRef baseRef, FormOpening opening) implements NewPullRequestCmd {
+    record ReadTitle(BranchName branch, BranchRef baseRef, FormOpening opening) implements CreatePullRequestCmd {
 
         @Override
         public Option<Label> label() {
@@ -57,7 +57,7 @@ public sealed interface NewPullRequestCmd extends Cmd {
         }
 
         private Msg read(Option<String> subject) {
-            return new NewPullRequestMsg.TitleRead(branch, opening, subject);
+            return new CreatePullRequestMsg.TitleRead(branch, opening, subject);
         }
     }
 
@@ -65,7 +65,7 @@ public sealed interface NewPullRequestCmd extends Cmd {
      * Reads the title a new pull request of {@code branch} starts out with again, for {@code base}, which the user
      * picked instead, as {@link ReadTitle} does.
      */
-    record RereadTitle(BranchName branch, BranchName base, BranchRef baseRef) implements NewPullRequestCmd {
+    record RereadTitle(BranchName branch, BranchName base, BranchRef baseRef) implements CreatePullRequestCmd {
 
         @Override
         public Option<Label> label() {
@@ -83,7 +83,7 @@ public sealed interface NewPullRequestCmd extends Cmd {
         }
 
         private Msg read(Option<String> subject) {
-            return new NewPullRequestMsg.BaseTitleRead(branch, base, subject);
+            return new CreatePullRequestMsg.BaseTitleRead(branch, base, subject);
         }
     }
 
@@ -91,7 +91,7 @@ public sealed interface NewPullRequestCmd extends Cmd {
      * Pushes a branch as {@code push} does, before its pull request is created, which its success leads to: what
      * {@code then} does.
      */
-    record PushFirst(PushCmd push, AfterPush then) implements NewPullRequestCmd, BranchCmd.KeepsBranchBusy {
+    record PushFirst(PushCmd push, AfterPush then) implements CreatePullRequestCmd, BranchCmd.KeepsBranchBusy {
 
         @Override
         public BranchName branch() {
@@ -120,7 +120,7 @@ public sealed interface NewPullRequestCmd extends Cmd {
 
         @Override
         public Msg succeeded(List<ExecutedCommand> commands) {
-            return new NewPullRequestMsg.Pushed(this, commands);
+            return new CreatePullRequestMsg.Pushed(this, commands);
         }
     }
 }

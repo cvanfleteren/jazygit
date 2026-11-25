@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.features.forgejo.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.forgejo.checks.ForgejoChecksDialog;
 import net.vanfleteren.jazygit.features.forgejo.checks.ShowChecksAction;
-import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestAction;
+import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoCreatePullRequestAction;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequestDialog;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestReactions;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ShowPullRequestAction;
@@ -41,7 +41,7 @@ public final class ForgejoFeature {
      * 177).
      */
     public static final Feature FEATURE = Feature.of(
-                    ShowPullRequestAction.ACTION, CreatePullRequestAction.ACTION, ShowChecksAction.ACTION)
+                    ShowPullRequestAction.ACTION, ForgejoCreatePullRequestAction.ACTION, ShowChecksAction.ACTION)
             .every(READ_INTERVAL, BuildsMsg.Tick::new)
             // The checks shown read again while one runs, as GitHub's are (ADR 34, 195).
             .every(READ_INTERVAL, ChecksMsg.Tick::new)
