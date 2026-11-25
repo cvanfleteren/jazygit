@@ -10,6 +10,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictFile;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
@@ -33,6 +34,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
+import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -66,9 +68,16 @@ class ResolveUpdateTest {
      * were read.
      */
     private static Model asked() {
+        return asked(ConflictFile.AS_WRITTEN);
+    }
+
+    /**
+     * {@link #rebasing()} with the dialog open on {@code a.txt}, standing as {@code written} against git's conflict.
+     */
+    private static Model asked(ConflictFile written) {
         Model opened =
                 Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED)).model();
-        return Update.update(opened, new ResolveMsg.ToolsRead("a.txt", ALL, Option.of(4)))
+        return Update.update(opened, new ResolveMsg.ToolsRead("a.txt", ALL, Option.of(4), written))
                 .model();
     }
 
@@ -91,7 +100,8 @@ class ResolveUpdateTest {
         Model opened =
                 Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED)).model();
 
-        Model read = Update.update(opened, new ResolveMsg.ToolsRead("other.txt", ALL, Option.of(4)))
+        Model read = Update.update(
+                        opened, new ResolveMsg.ToolsRead("other.txt", ALL, Option.of(4), ConflictFile.AS_WRITTEN))
                 .model();
 
         assertEquals(opened.popup(ResolvePopup.class), read.popup(ResolvePopup.class));
@@ -110,7 +120,44 @@ class ResolveUpdateTest {
         Next next = Update.update(asked(), new ResolveMsg.MergirafChosen());
 
         assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
-        assertEquals(List.of(new ResolveCmd.Solve("a.txt")), next.cmds());
+        assertEquals(List.of(new ResolveCmd.Solve("a.txt", true)), next.cmds());
+    }
+
+    @Test
+    void mergirafReadsAFileWithItsBasesAsItIs() {
+        Next next = Update.update(asked(ConflictFile.WITH_BASE), new ResolveMsg.MergirafChosen());
+
+        assertEquals(List.of(new ResolveCmd.Solve("a.txt", false)), next.cmds());
+    }
+
+    @Test
+    void mergirafOnAnEditedFileAsksFirstAsItLosesTheEdits() {
+        Next next = Update.update(asked(ConflictFile.EDITED), new ResolveMsg.MergirafChosen());
+
+        assertEquals(List.empty(), next.cmds());
+        assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
+        assertEquals(Option.of(new SolveOverEditsPopup("a.txt")), next.model().popup(SolveOverEditsPopup.class));
+    }
+
+    @Test
+    void solvingOverTheEditsOnceConfirmedWritesTheConflictAgain() {
+        Model asking = Update.update(asked(ConflictFile.EDITED), new ResolveMsg.MergirafChosen())
+                .model();
+
+        Next next = Update.update(asking, new PopupMsg.Confirmed(SolveOverEditsPopup.class));
+
+        assertEquals(List.of(new ResolveCmd.Solve("a.txt", true)), next.cmds());
+    }
+
+    @Test
+    void solvingOverTheEditsCancelledDoesNothing() {
+        Model asking = Update.update(asked(ConflictFile.EDITED), new ResolveMsg.MergirafChosen())
+                .model();
+
+        Next next = Update.update(asking, new PopupMsg.Dismissed(SolveOverEditsPopup.class));
+
+        assertEquals(List.empty(), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
     }
 
     @Test
@@ -125,7 +172,8 @@ class ResolveUpdateTest {
     void aFileHandedBackInConflictWithoutMarkersSaysSpaceStagesIt() {
         Next next = Update.update(
                 rebasing(),
-                new ResolveMsg.HandedBack(new ResolveCmd.Solve("a.txt"), List.empty(), "a.txt", true, Option.none()));
+                new ResolveMsg.HandedBack(
+                        new ResolveCmd.Solve("a.txt", true), List.empty(), "a.txt", true, Option.none()));
 
         assertEquals(Option.of("a.txt has no conflict markers left: space stages it"), noticeText(next.model()));
     }
@@ -135,7 +183,7 @@ class ResolveUpdateTest {
         Next next = Update.update(
                 rebasing(),
                 new ResolveMsg.HandedBack(
-                        new ResolveCmd.Solve("a.txt"),
+                        new ResolveCmd.Solve("a.txt", true),
                         List.empty(),
                         "a.txt",
                         true,
@@ -181,7 +229,8 @@ class ResolveUpdateTest {
                         new Sides(new SideName.Branch(new BranchName("main")), new SideName.Rebased()),
                         new FileEditor.GitEditor(),
                         ConflictTools.NONE,
-                        Option.none())),
+                        Option.none(),
+                        ConflictFile.AS_WRITTEN)),
                 next.model().popup(ResolvePopup.class));
     }
 

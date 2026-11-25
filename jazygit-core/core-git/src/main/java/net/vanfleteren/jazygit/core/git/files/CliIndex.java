@@ -11,11 +11,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictFile;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.RefusedPath;
+import net.vanfleteren.jazygit.core.git.process.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.CommandLine;
@@ -160,16 +162,81 @@ public final class CliIndex implements Index {
     }
 
     /**
-     * {@code git checkout --conflict=diff3 -- <path>}, then {@code mergiraf solve --keep-backup=false <path>}, as
-     * {@link ConflictTools#mergiraf} says. Mergiraf exits with 2 when it left conflicts, which is what it does, not a
-     * failure.
+     * The file at {@code path} against the conflict {@code git merge-file -p} writes of its stages in the index,
+     * which is what {@code git checkout --merge} writes, made in a directory of its own so the working tree is left as
+     * it is. A file with no base, added on both sides, is merged from an empty one.
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> solve(String path) {
-        List<List<String>> steps = ConflictTools.mergiraf(path);
-        return GitFailure.sequence(
-                () -> GitProcess.log(worktree, git(steps.head().tail()).withLiteralPaths()),
-                () -> mergiraf(steps.get(1)));
+    public Either<GitError, ConflictFile> conflictFile(String path) {
+        Path root = worktree.toAbsolutePath().normalize();
+        return inside(root, path)
+                .<GitError>mapLeft(refused -> refused)
+                .flatMap(file -> Try.of(() -> Files.readString(file)).toEither().mapLeft(failure ->
+                        (GitError) new GitError.Unreadable(path, String.valueOf(failure))))
+                .flatMap(working -> written(path).map(conflict -> ConflictFile.of(working, conflict)));
+    }
+
+    /**
+     * The conflict git writes of the stages of {@code path}: {@code git merge-file -p} of ours, the base and theirs,
+     * which exits with the number of conflicts it wrote.
+     */
+    private Either<GitError, String> written(String path) {
+        return Try.of(() -> Files.createTempDirectory("jazygit-conflict"))
+                .toEither()
+                .mapLeft(failure -> (GitError) new GitError.TempFileFailed(failure))
+                .flatMap(directory -> {
+                    Either<GitError, String> merged = writeStage(path, 2, directory.resolve("ours"))
+                            .flatMap(ours -> writeStage(path, 1, directory.resolve("base"))
+                                    .flatMap(base -> writeStage(path, 3, directory.resolve("theirs"))
+                                            .flatMap(theirs -> mergeFile(ours, base, theirs))));
+                    // Leftover temporary files are harmless.
+                    List.of("ours", "base", "theirs")
+                            .forEach(name -> Try.run(() -> Files.deleteIfExists(directory.resolve(name))));
+                    Try.run(() -> Files.deleteIfExists(directory));
+                    return merged;
+                });
+    }
+
+    /**
+     * Stage {@code number} of {@code path} written to {@code file}; empty when the index has no such stage, as a file
+     * added on both sides has no base.
+     */
+    private Either<GitError, Path> writeStage(String path, int number, Path file) {
+        String content = GitProcess.read(
+                        worktree,
+                        reading("show", ":" + number + ":" + path).withTimeout(TIMEOUT),
+                        Either::<UnexpectedOutput, String>right)
+                .getOrElse("");
+        return Try.of(() -> Files.writeString(file, content)).toEither().mapLeft(failure ->
+                (GitError) new GitError.TempFileFailed(failure));
+    }
+
+    private Either<GitError, String> mergeFile(Path ours, Path base, Path theirs) {
+        List<String> commandLine =
+                List.of("git", "merge-file", "-p", ours.toString(), base.toString(), theirs.toString());
+        return Exec.run(worktree, commandLine, HashMap.empty(), TIMEOUT)
+                .fold(
+                        failure -> failure instanceof ExecFailure.NonZero(int conflicts, var stderr, String stdout)
+                                        && conflicts > 0
+                                        && conflicts < 128
+                                ? Either.right(stdout)
+                                : Either.left(new GitError.Unreadable(ours.toString(), failure.toString())),
+                        Either::right);
+    }
+
+    /**
+     * {@link ConflictTools#mergiraf}: {@code git checkout --conflict=diff3 -- <path>} when {@code rewrite}, then
+     * {@code mergiraf solve --keep-backup=false <path>}. Mergiraf exits with 2 when it left conflicts, which is what
+     * it does, not a failure.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> solve(String path, boolean rewrite) {
+        List<List<String>> steps = ConflictTools.mergiraf(path, rewrite);
+        return rewrite
+                ? GitFailure.sequence(
+                        () -> GitProcess.log(worktree, git(steps.head().tail()).withLiteralPaths()),
+                        () -> mergiraf(steps.last()))
+                : mergiraf(steps.last());
     }
 
     private Either<GitFailure, List<ExecutedCommand>> mergiraf(List<String> commandLine) {

@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
+import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
 
 /**
  * The choices for resolving a file in conflict, and the question staging asks of files with conflict markers left in
@@ -73,14 +74,24 @@ public final class ResolveDialogs {
                                     .shownWhen((model, popup) -> popup.tools()
                                             .solvesWithMergiraf(
                                                     popup.file().conflict().get()))
-                                    .withDetails("midway.dialog.resolve.mergiraf.details")
+                                    .withDetails(ResolveDialogs::mergirafDetails)
                                     .withCommand(popup -> ConflictTools.mergiraf(
-                                                    popup.file().path())
+                                                    popup.file().path(), popup.rewrites())
                                             .map(CommandLine::format)
                                             .mkString(" && "))),
                     // Wide enough for what a choice does to take two lines or so, and its command one.
                     72)
             .inline();
+
+    /**
+     * Asks whether to solve a file with mergiraf though it was edited since git wrote its conflict, which writing it
+     * again loses (ADR 201).
+     */
+    public static final ConfirmDialog.Spec<SolveOverEditsPopup> SOLVE_OVER_EDITS = ConfirmDialog.Spec.confirming(
+            "solve-over-edits",
+            SolveOverEditsPopup.class,
+            popup -> Messages.get("midway.dialog.solveOverEdits.title", popup.path()),
+            popup -> Messages.get("midway.dialog.solveOverEdits.message", popup.path()));
 
     /**
      * What to do with files asked to be staged that still have conflict markers: resolve the one file, edit it, or
@@ -135,6 +146,18 @@ public final class ResolveDialogs {
                         .append("--")
                         .append(popup.file().path())))
                 .mkString(" && ");
+    }
+
+    /**
+     * What solving the file of {@code popup} with mergiraf does: from the file as it is when it has its bases; from
+     * the conflict written again otherwise, which loses what was edited of it, and says so (ADR 201).
+     */
+    private static String mergirafDetails(ResolvePopup popup) {
+        return switch (popup.written()) {
+            case WITH_BASE -> Messages.get("midway.dialog.resolve.mergiraf.details.withBase");
+            case AS_WRITTEN -> Messages.get("midway.dialog.resolve.mergiraf.details");
+            case EDITED -> Messages.get("midway.dialog.resolve.mergiraf.details.edited");
+        };
     }
 
     /**
@@ -211,6 +234,7 @@ public final class ResolveDialogs {
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
                 PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(RESOLVE, dispatch)),
-                PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(MARKERS_LEFT, dispatch)));
+                PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(MARKERS_LEFT, dispatch)),
+                PopupSlot.returningTo(FilesPanel.PANE, new ConfirmDialog<>(SOLVE_OVER_EDITS, dispatch)));
     }
 }

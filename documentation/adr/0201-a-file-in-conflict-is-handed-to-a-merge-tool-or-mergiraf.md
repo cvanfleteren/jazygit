@@ -41,6 +41,18 @@ untracked file.
    - Offered only when a program `mergiraf` runs, tried when the dialog opens, and only on a file both sides changed.
    - Mergiraf's exit code 2, conflicts left, is not a failure: the file has fewer of them, and the user goes on with
      `e`, `o` or `t`.
+   - Writing the conflict again loses what the user edited of the file since git wrote it, as when they merged half
+     its conflicts by hand in `e` and leave the rest to mergiraf. So when the dialog opens it reads how the file
+     stands (`ConflictFile`):
+     - every conflict in it has its base (`||||||| `), as diff3 writes it: mergiraf reads it as it is, with the edits,
+       without the `checkout`;
+     - as git wrote it, compared, but for the labels of its markers, with what `git merge-file -p` writes of its
+       stages in the index, in a directory of its own: the conflict is written again, as nothing is lost;
+     - edited: `m` asks first, "Solving with mergiraf starts again from the conflict: your edits to <file> are lost.
+       Solve anyway?", and writes it again only on yes.
+
+     The dialog says which, and its command line leaves the `checkout` out when it does not run. What cannot be
+     read is taken as edited, so it asks rather than lose anything.
 4. **After `g` or `m`, the app says where the file is.** It reads the file for markers and whether it is still in
    conflict: still in conflict without markers, it says that `space` stages it; with markers left, where the first
    is; resolved, nothing, as the files pane marks it so.
@@ -62,6 +74,7 @@ merging the sides of a file to an editor.
 
 - A file is merged in the user's merge tool, or by mergiraf, without leaving the app.
 - Opening the resolve dialog reads `merge.tool` and `mergetool.keepBackup`, tries `mergiraf --version`, and reads the
-  file for markers: three processes and a file read, each time it opens.
+  file for markers: three processes and a file read, each time it opens. When mergiraf runs, it also reads the three
+  stages of the file and merges them, four more processes, to tell whether the file was edited.
 - Opening a file in conflict in an editor reads it for markers first.
 - A file that has `<<<<<<< ` at the start of a line where it belongs opens there too.

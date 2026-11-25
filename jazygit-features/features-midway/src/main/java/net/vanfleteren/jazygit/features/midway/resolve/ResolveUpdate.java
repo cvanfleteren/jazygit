@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictFile;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
@@ -40,10 +41,10 @@ public final class ResolveUpdate {
         return switch (msg) {
             case Kept(FileEntry file, Conflict.Version version) -> keep(model, file, version);
             case Requested(FileEntry file) -> requested(model, file);
-            case ToolsRead(String path, ConflictTools tools, Option<Integer> firstConflict) ->
+            case ToolsRead(String path, ConflictTools tools, Option<Integer> firstConflict, ConflictFile written) ->
                 Next.of(model.popup(ResolvePopup.class)
                         .filter(popup -> popup.file().path().equals(path))
-                        .map(popup -> model.openPopup(popup.read(tools, firstConflict)))
+                        .map(popup -> model.openPopup(popup.read(tools, firstConflict, written)))
                         .getOrElse(model));
             case MergeToolChosen() ->
                 handOver(
@@ -51,12 +52,7 @@ public final class ResolveUpdate {
                         popup -> popup.tools()
                                 .mergesWithTool(popup.file().conflict().get()),
                         popup -> new ResolveCmd.MergeTool(popup.file().path(), popup.tools()));
-            case MergirafChosen() ->
-                handOver(
-                        model,
-                        popup -> popup.tools()
-                                .solvesWithMergiraf(popup.file().conflict().get()),
-                        popup -> new ResolveCmd.Solve(popup.file().path()));
+            case MergirafChosen() -> solve(model);
             case HandedBack(
                     ResolveCmd cmd,
                     List<ExecutedCommand> commands,
@@ -131,8 +127,28 @@ public final class ResolveUpdate {
     private static Next requested(Model model, FileEntry file) {
         Option<ResolvePopup> popup = file.conflict()
                 .flatMap(conflict -> Sides.of(model))
-                .map(sides -> new ResolvePopup(file, sides, FileEditor.of(model), ConflictTools.NONE, Option.none()));
+                .map(sides -> new ResolvePopup(
+                        file, sides, FileEditor.of(model), ConflictTools.NONE, Option.none(), ConflictFile.AS_WRITTEN));
         return popup.map(open -> PopupUpdate.ask(model, open).and(new ReadToolsCmd(file.path())))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Solves the file of the resolve dialog with mergiraf: as it is when it has its bases, after writing its conflict
+     * again when it is as git wrote it; and, when it was edited since, which writing it again loses, once the user
+     * confirmed that (ADR 201).
+     */
+    private static Next solve(Model model) {
+        return model.popup(ResolvePopup.class)
+                .filter(popup ->
+                        popup.tools().solvesWithMergiraf(popup.file().conflict().get()))
+                .map(popup -> popup.written() == ConflictFile.EDITED
+                        ? PopupUpdate.ask(
+                                model.withoutPopup(ResolvePopup.class),
+                                new SolveOverEditsPopup(popup.file().path()))
+                        : OperationUpdate.start(
+                                model.withoutPopup(ResolvePopup.class).clearError(),
+                                new ResolveCmd.Solve(popup.file().path(), popup.rewrites())))
                 .getOrElse(() -> Next.of(model));
     }
 

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.midway.resolve;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictFile;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
@@ -39,10 +40,11 @@ public sealed interface ResolveMsg extends Msg {
     record EditChosen() implements ResolveMsg {}
 
     /**
-     * What the file at {@code path} can be handed to was read, and where its first conflict starts, for its resolve
-     * dialog (ADR 201).
+     * What the file at {@code path} can be handed to was read, where its first conflict starts, and how it stands
+     * against the conflict git wrote of it, for its resolve dialog (ADR 201).
      */
-    record ToolsRead(String path, ConflictTools tools, Option<Integer> firstConflict) implements ResolveMsg {}
+    record ToolsRead(String path, ConflictTools tools, Option<Integer> firstConflict, ConflictFile written)
+            implements ResolveMsg {}
 
     /**
      * The user chose to hand the file of the open {@link ResolvePopup} to git's merge tool.

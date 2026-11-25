@@ -681,3 +681,59 @@ def test_with_mergiraf_as_gits_merge_driver_u_brings_back_what_it_made_of_the_fi
     # with it, with mergiraf's own labels, not git's.
     assert repo.conflicts() == ["value.py"]
     assert "<<<<<<< ours" in repo.read("value.py")
+
+
+@needs_mergiraf
+def test_mergiraf_asks_before_it_loses_edits_made_to_the_file_and_leaves_them_when_told_not_to(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    edited = repo.read("imports.py").replace("return 1", "return 9")
+    repo.write("imports.py", edited)
+    ui.files.select("imports.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.wait_for("your edits to it")
+    ui.app.press("m")
+    ui.app.wait_for("Solving with mergiraf starts again from the conflict")
+    ui.app.press("escape")
+
+    ui.caught_up()
+    assert repo.read("imports.py") == edited
+
+
+@needs_mergiraf
+def test_mergiraf_solves_an_edited_file_once_told_to(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    repo.write("imports.py", repo.read("imports.py").replace("return 1", "return 9"))
+    ui.files.select("imports.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.press("m")
+    ui.confirm("Solve imports.py with mergiraf?")
+    ui.app.wait_for("imports.py has no conflict markers left: space stages it")
+
+    assert repo.read("imports.py") == "import a\nimport c\nimport b\n\n\ndef f():\n    return 1\n"
+
+
+@needs_mergiraf
+def test_mergiraf_reads_a_file_with_its_bases_as_it_is_keeping_its_edits(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    repo("checkout", "--conflict=diff3", "--", "imports.py")
+    repo.write("imports.py", repo.read("imports.py").replace("return 1", "return 9"))
+    ui.files.select("imports.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.wait_for("with what you edited")
+    ui.app.press("m")
+    ui.app.wait_for("imports.py has no conflict markers left: space stages it")
+
+    assert "Solving with mergiraf starts again" not in ui.app.text()
+    assert repo.read("imports.py") == "import a\nimport c\nimport b\n\n\ndef f():\n    return 9\n"

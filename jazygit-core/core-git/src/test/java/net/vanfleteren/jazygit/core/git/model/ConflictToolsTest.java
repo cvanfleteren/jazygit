@@ -24,7 +24,10 @@ class ConflictToolsTest {
                 List.of(
                         List.of("git", "checkout", "--conflict=diff3", "--", "a b"),
                         List.of("mergiraf", "solve", "--keep-backup=false", "a b")),
-                ConflictTools.mergiraf("a b"));
+                ConflictTools.mergiraf("a b", true));
+        assertEquals(
+                List.of(List.of("mergiraf", "solve", "--keep-backup=false", "a b")),
+                ConflictTools.mergiraf("a b", false));
     }
 
     @Test

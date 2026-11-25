@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import io.vavr.collection.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.core.git.model.ConflictFile;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
@@ -71,7 +72,7 @@ class CliConflictToolsTest {
     @Test
     void mergirafSolvesWhatItCanInPlaceAndStagesNothing() throws Exception {
         assumeTrue(mergirafRuns(), "mergiraf is not installed");
-        List<String> ran = index.solve("imports.py").get().map(ExecutedCommand::line);
+        List<String> ran = index.solve("imports.py", true).get().map(ExecutedCommand::line);
 
         assertEquals("import a\nimport c\nimport b\n\n\ndef f():\n    return 1\n", read("imports.py"));
         assertEquals(
@@ -85,10 +86,42 @@ class CliConflictToolsTest {
     @Test
     void conflictsMergirafLeavesAreNoFailure() throws Exception {
         assumeTrue(mergirafRuns(), "mergiraf is not installed");
-        assertTrue(index.solve("value.py").isRight());
+        assertTrue(index.solve("value.py", true).isRight());
 
         assertEquals(1, index.markers(List.of("value.py")).get().size());
         assertFalse(Files.exists(repo.resolve("value.py.orig")));
+    }
+
+    @Test
+    void aFileAsGitWroteItIsAsWritten() {
+        assertEquals(ConflictFile.AS_WRITTEN, index.conflictFile("value.py").get());
+    }
+
+    @Test
+    void aFileMergedByHandIsEdited() throws Exception {
+        write("value.py", "def f():\n    return 23\n");
+
+        assertEquals(ConflictFile.EDITED, index.conflictFile("value.py").get());
+    }
+
+    @Test
+    void aFileWrittenWithItsBasesIsReadAsItIsThoughEdited() throws Exception {
+        git("checkout", "--conflict=diff3", "--", "imports.py");
+        write("imports.py", read("imports.py").replace("return 1", "return 9"));
+
+        assertEquals(ConflictFile.WITH_BASE, index.conflictFile("imports.py").get());
+    }
+
+    @Test
+    void mergirafSolvesAFileWithItsBasesAsItIsKeepingItsEdits() throws Exception {
+        assumeTrue(mergirafRuns(), "mergiraf is not installed");
+        git("checkout", "--conflict=diff3", "--", "imports.py");
+        write("imports.py", read("imports.py").replace("return 1", "return 9"));
+
+        List<String> ran = index.solve("imports.py", false).get().map(ExecutedCommand::line);
+
+        assertEquals("import a\nimport c\nimport b\n\n\ndef f():\n    return 9\n", read("imports.py"));
+        assertEquals(List.of("mergiraf solve --keep-backup=false imports.py"), ran);
     }
 
     @Test

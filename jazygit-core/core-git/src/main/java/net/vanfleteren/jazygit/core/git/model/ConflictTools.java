@@ -41,13 +41,12 @@ public record ConflictTools(boolean mergeTool, boolean backupSet, boolean mergir
     }
 
     /**
-     * The conflict of {@code path} written again with its base, which mergiraf reads, then solved by mergiraf in
-     * place, without a backup.
+     * {@code path} solved by mergiraf in place, without a backup: when {@code rewrite}, after its conflict is written
+     * again with its base, which mergiraf reads; else as it is, as when it has its bases already (ADR 201).
      */
-    public static List<List<String>> mergiraf(String path) {
-        return List.of(
-                List.of("git", "checkout", "--conflict=diff3", "--", path),
-                List.of("mergiraf", "solve", "--keep-backup=false", path));
+    public static List<List<String>> mergiraf(String path, boolean rewrite) {
+        List<String> solve = List.of("mergiraf", "solve", "--keep-backup=false", path);
+        return rewrite ? List.of(List.of("git", "checkout", "--conflict=diff3", "--", path), solve) : List.of(solve);
     }
 
     private static boolean changedOnBothSides(Conflict conflict) {

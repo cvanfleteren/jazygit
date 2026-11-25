@@ -108,9 +108,10 @@ public sealed interface ResolveCmd extends GitOperationCmd {
     }
 
     /**
-     * Solves what mergiraf can of the conflict of the file at {@code path} (ADR 201).
+     * Solves what mergiraf can of the conflict of the file at {@code path}: written again with its bases first when
+     * {@code rewrite}, which loses what was edited of it (ADR 201).
      */
-    record Solve(String path) implements ResolveCmd {
+    record Solve(String path, boolean rewrite) implements ResolveCmd {
         @Override
         public Operation operation() {
             return SOLVE;
@@ -123,7 +124,7 @@ public sealed interface ResolveCmd extends GitOperationCmd {
 
         @Override
         public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
-            return git.index().solve(path);
+            return git.index().solve(path, rewrite);
         }
 
         @Override

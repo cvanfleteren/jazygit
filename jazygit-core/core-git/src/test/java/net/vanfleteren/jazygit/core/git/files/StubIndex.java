@@ -5,6 +5,7 @@ import static net.vanfleteren.jazygit.core.git.StubGit.ran;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictFile;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
@@ -63,7 +64,12 @@ public interface StubIndex extends Index {
     }
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> solve(String path) {
+    default Either<GitError, ConflictFile> conflictFile(String path) {
+        return Either.right(ConflictFile.AS_WRITTEN);
+    }
+
+    @Override
+    default Either<GitFailure, List<ExecutedCommand>> solve(String path, boolean rewrite) {
         return ran();
     }
 }
