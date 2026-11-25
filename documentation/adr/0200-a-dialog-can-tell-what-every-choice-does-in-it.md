@@ -32,10 +32,17 @@ In the files pane, `enter` opened the diff of the highlighted file, as `→` doe
    headings and the hint work as before. What is behind the dialog is dimmed already (`backdrop`), as for any popup.
 2. **Every other dialog is drawn as before**: a dialog asks for it, none does by default. A long list would grow two
    to four times as tall.
-3. **The resolve dialog asks for it**, and says the command of each option: `git checkout --theirs -- <path> && git add
-   <path>` for keeping a side, `git rm -- <path>` for a side that deleted it, `$EDITOR <path>` for editing it. Not yet:
-   the question staging asks of a file with markers (ADR 198) and `M`, which stay as they are until this is seen in
-   use.
+3. **The resolve dialog asks for it**, and says the command of each option as it runs, the path quoted as a shell
+   needs it:
+   - `git checkout --theirs -- <path> && git add -- <path>` for keeping a side, and `git rm --quiet -- <path>` for a
+     side that deleted the file. `Conflict.keeping` says these commands, and both `CliIndex`, which runs them, and
+     the dialog take them from it, so the two cannot drift apart.
+   - For editing it, what `e` opens it with (ADR 145): the command of the one editor set to open files; that the user
+     chooses one, when several are; or `$(git var GIT_EDITOR) <path>`, git's editor, when none is. Not: `$EDITOR`,
+     which is only one of what git's editor may be, and not what opens it when an editor is set.
+
+   Not yet: the question staging asks of a file with markers (ADR 198) and `M`, which stay as they are until this is
+   seen in use.
 4. **`enter` on a file in conflict opens the resolve dialog**, in the files pane; `→` still opens its diff, and
    `enter` on any other file or a directory does as before. `r` stays. This amends ADR 198, which kept `enter` for the
    diff.

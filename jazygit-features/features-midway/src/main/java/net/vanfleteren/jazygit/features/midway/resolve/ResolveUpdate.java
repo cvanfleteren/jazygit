@@ -32,7 +32,8 @@ public final class ResolveUpdate {
                 PopupUpdate.ask(
                         model,
                         file.conflict().isDefined()
-                                ? Sides.of(model).map(sides -> new ResolvePopup(file, sides))
+                                ? Sides.of(model)
+                                        .map(sides -> new ResolvePopup(file, sides, EditWith.of(model, file.path())))
                                 : Option.none());
             case Chosen(Conflict.Version version) ->
                 model.popup(ResolvePopup.class)

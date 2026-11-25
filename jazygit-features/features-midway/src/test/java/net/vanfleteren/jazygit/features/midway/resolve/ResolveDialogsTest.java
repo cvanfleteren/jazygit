@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.midway.resolve;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -51,6 +52,46 @@ class ResolveDialogsTest {
 
         assertTrue(screen.contains("Delete it, as feature did"), screen);
         assertTrue(screen.contains("Keep abcdef1's version"), screen);
+    }
+
+    @Test
+    void theCommandsQuoteAPathAsAShellNeedsIt() throws Exception {
+        FileEntry file = FileEntry.conflicted("a b", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+
+        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE));
+
+        assertTrue(screen.contains("git checkout --ours -- 'a b' && git add -- 'a b'"), screen);
+        assertTrue(screen.contains("$(git var GIT_EDITOR) 'a b'"), screen);
+    }
+
+    @Test
+    void deletingTheFileSaysTheCommandThatDeletesIt() throws Exception {
+        FileEntry file = FileEntry.conflicted("gone.txt", new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
+
+        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE));
+
+        assertTrue(screen.contains("git rm --quiet -- gone.txt"), screen);
+    }
+
+    @Test
+    void editingSaysTheCommandOfTheOneEditorSet() throws Exception {
+        FileEntry file = FileEntry.conflicted("a b", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+
+        String screen = render(
+                ResolveDialogs.RESOLVE,
+                new ResolvePopup(file, REBASE, new EditWith.Program(List.of("nvim", "+1", "a b"))));
+
+        assertTrue(screen.contains("nvim +1 'a b'"), screen);
+        assertFalse(screen.contains("GIT_EDITOR"), screen);
+    }
+
+    @Test
+    void editingWithSeveralEditorsSetSaysOneIsChosen() throws Exception {
+        FileEntry file = FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+
+        String screen = render(ResolveDialogs.RESOLVE, new ResolvePopup(file, REBASE, new EditWith.Chosen()));
+
+        assertTrue(screen.contains("in the editor you choose of those set"), screen);
     }
 
     @Test

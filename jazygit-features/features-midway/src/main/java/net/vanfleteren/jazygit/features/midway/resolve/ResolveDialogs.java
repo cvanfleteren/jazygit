@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
+import net.vanfleteren.jazygit.core.process.CommandLine;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -55,9 +56,7 @@ public final class ResolveDialogs {
                                     .withCommand(popup -> keepCommand(popup, Conflict.Version.THEIRS)),
                             new Choice<ResolvePopup>('e', "midway.dialog.resolve.edit", ResolveMsg.EditChosen::new)
                                     .withDetails("midway.dialog.resolve.edit.details")
-                                    .withCommand(popup -> Messages.get(
-                                            "midway.dialog.resolve.edit.command",
-                                            popup.file().path()))),
+                                    .withCommand(ResolveDialogs::editCommand)),
                     // Wide enough for what a choice does to take two lines or so, and its command one.
                     72)
             .inline();
@@ -102,17 +101,32 @@ public final class ResolveDialogs {
     private ResolveDialogs() {}
 
     /**
-     * The command keeping {@code version}'s side of the file of {@code popup} runs, as {@code CliIndex} runs it.
+     * The commands keeping {@code version}'s side of the file of {@code popup} runs, as {@code CliIndex} runs them,
+     * with the path quoted as a shell needs it: {@code git checkout --ours -- 'my notes.txt' && git add -- …}.
      */
     private static String keepCommand(ResolvePopup popup, Conflict.Version version) {
-        String path = popup.file().path();
-        return popup.file().conflict().get().did(version) == Conflict.Side.DELETED
-                ? Messages.get("midway.dialog.resolve.delete.command", path)
-                : Messages.get(
-                        version == Conflict.Version.OURS
-                                ? "midway.dialog.resolve.keepOurs.command"
-                                : "midway.dialog.resolve.keepTheirs.command",
-                        path);
+        return popup.file()
+                .conflict()
+                .get()
+                .keeping(version)
+                .map(arguments -> CommandLine.format(arguments
+                        .prepend("git")
+                        .append("--")
+                        .append(popup.file().path())))
+                .mkString(" && ");
+    }
+
+    /**
+     * What editing the file of {@code popup} runs: the command of the one editor set, a choice of those set, or
+     * git's editor, as {@code e} opens it (ADR 145).
+     */
+    private static String editCommand(ResolvePopup popup) {
+        String path = CommandLine.format(List.of(popup.file().path()));
+        return switch (popup.editing()) {
+            case EditWith.Program program -> CommandLine.format(program.commandLine());
+            case EditWith.Chosen chosen -> Messages.get("midway.dialog.resolve.edit.command.chosen", path);
+            case EditWith.GitEditor git -> Messages.get("midway.dialog.resolve.edit.command", path);
+        };
     }
 
     /**
