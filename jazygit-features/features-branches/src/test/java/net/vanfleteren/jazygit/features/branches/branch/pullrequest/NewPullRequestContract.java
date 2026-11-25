@@ -427,6 +427,14 @@ public abstract class NewPullRequestContract {
                 Update.update(closed, baseTitleRead(MAIN.name(), "x")).model().popup());
     }
 
+    @Test
+    void anEditOnceThePopupClosedIsIgnored() {
+        Model closed = Update.update(creating(), new PopupMsg.Dismissed(NewPullRequestForm.class))
+                .model();
+
+        assertEquals(closed, Update.update(closed, typed(creating(), "x")).model());
+    }
+
     // Confirming.
 
     @Test
