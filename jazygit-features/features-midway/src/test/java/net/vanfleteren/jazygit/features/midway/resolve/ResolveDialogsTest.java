@@ -170,6 +170,42 @@ class ResolveDialogsTest {
         assertTrue(screen.contains("line 4. Staging"), screen);
     }
 
+    @Test
+    void gitsEditorWithoutAFirstConflictReadSaysNothingOfOne() throws Exception {
+        String screen = render(ResolveDialogs.RESOLVE, popup(BOTH, GIT));
+
+        assertTrue(screen.contains("Opens it in your editor, to merge both sides by hand"), screen);
+        assertFalse(screen.contains("first conflict"), screen);
+    }
+
+    @Test
+    void anEditorSetWithoutAFirstConflictReadSaysNothingOfOne() throws Exception {
+        String screen = render(
+                ResolveDialogs.RESOLVE,
+                popup(
+                        BOTH,
+                        new FileEditor.One(
+                                EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}"), true, Option.none()))));
+
+        assertTrue(screen.contains("Opens it in your editor, to merge both sides by hand"), screen);
+        assertFalse(screen.contains("first conflict"), screen);
+    }
+
+    @Test
+    void anEditorSetSaysTheLineOfTheFirstConflictItOpensAt() throws Exception {
+        String screen = render(
+                ResolveDialogs.RESOLVE,
+                new ResolvePopup(
+                        BOTH,
+                        REBASE,
+                        new FileEditor.One(
+                                EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}"), true, Option.none())),
+                        ConflictTools.NONE,
+                        Option.of(4)));
+
+        assertTrue(screen.contains("at its first conflict, line 4"), screen);
+    }
+
     private static ResolvePopup popup(FileEntry file, FileEditor editor) {
         return new ResolvePopup(file, REBASE, editor, ConflictTools.NONE, Option.none());
     }

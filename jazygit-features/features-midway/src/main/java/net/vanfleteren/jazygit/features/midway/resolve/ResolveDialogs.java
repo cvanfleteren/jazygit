@@ -138,13 +138,14 @@ public final class ResolveDialogs {
     }
 
     /**
-     * What editing the file of {@code popup} does: open it at its first conflict, which git's editor cannot, as it
-     * takes no line (ADR 201).
+     * What editing the file of {@code popup} does: an editor set opens it at its first conflict, once that was read;
+     * git's editor, which takes no line, at its start, and the dialog says where the conflict is (ADR 201).
      */
     private static String editDetails(ResolvePopup popup) {
         return popup.firstConflict()
-                .filter(line -> popup.editor() instanceof FileEditor.GitEditor)
-                .map(line -> Messages.get("midway.dialog.resolve.edit.details.gitEditor", line))
+                .map(line -> popup.editor() instanceof FileEditor.GitEditor
+                        ? Messages.get("midway.dialog.resolve.edit.details.gitEditor", line)
+                        : Messages.get("midway.dialog.resolve.edit.details.atConflict", line))
                 .getOrElse(() -> Messages.get("midway.dialog.resolve.edit.details"));
     }
 
