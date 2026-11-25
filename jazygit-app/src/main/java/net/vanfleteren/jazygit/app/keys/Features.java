@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.features.chrome.theme.ThemeFeature;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.features.midway.inprogress.InProgressFeature;
+import net.vanfleteren.jazygit.features.midway.plan.PlanFeature;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveFeature;
 import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
@@ -72,6 +73,7 @@ public final class Features {
                     RecentReposFeature.FEATURE,
                     SettingsFeature.FEATURE,
                     InProgressFeature.FEATURE,
+                    PlanFeature.FEATURE,
                     HelpFeature.FEATURE,
                     ErrorFeature.FEATURE)
             // As the app runs them: a feature that is off for a repository shows and runs nothing (ADR 171).

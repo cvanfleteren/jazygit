@@ -64,6 +64,21 @@ class LeftPanesTest {
     }
 
     @Test
+    void whileTheRepositoryIsInTheMiddleOfSomethingTheStatusTakesARowFromTheCommits() {
+        Model stopped = Update.update(
+                        withStashes(2),
+                        new LoadMsg.StatusLoaded(new net.vanfleteren.jazygit.core.git.model.RepoStatus(
+                                new net.vanfleteren.jazygit.core.repo.Head.Detached(new Sha("bbbb")),
+                                List.empty(),
+                                Option.of(new net.vanfleteren.jazygit.core.repo.InProgress.Merging(new Sha("aaaa"))))))
+                .model();
+
+        assertEquals(4, LeftPanes.statusRows(stopped));
+        assertEquals(3, LeftPanes.statusRows(withStashes(2)));
+        assertEquals(List.of(25, 20, 47, 4), LeftPanes.shown(stopped, Screen.REPOSITORY, 100));
+    }
+
+    @Test
     void theCommitsTakeWhatTheStashLeavesOfItsShare() {
         assertEquals(List.of(25, 20, 48, 4), LeftPanes.shown(withStashes(2), Screen.REPOSITORY, 100));
     }

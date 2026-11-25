@@ -80,6 +80,32 @@ class ResolveUpdateTest {
     }
 
     @Test
+    void theDialogNamesTheSideOfARebaseByTheCommitItStoppedAtOnceItsStepsAreKnown() {
+        Sha stoppedAt = new Sha("4".repeat(40));
+        Model branches = localBranchesRead(loaded(), List.of(Fixtures.branch(new BranchName("main"), false, ONTO)))
+                .model();
+        RepoStatus status = new RepoStatus(
+                new Head.Detached(ONTO),
+                List.of(CONFLICTED),
+                Option.of(REBASING),
+                List.empty(),
+                Option.of(new net.vanfleteren.jazygit.core.repo.Plan(
+                        ONTO,
+                        net.vanfleteren.jazygit.core.repo.Plan.Step.pick(stoppedAt, "feat"),
+                        List.empty(),
+                        2,
+                        3)));
+        Model model = Update.update(branches, new LoadMsg.StatusLoaded(status)).model();
+
+        assertEquals(
+                Option.of(new Sides(new SideName.Branch(new BranchName("main")), new SideName.Commit(stoppedAt))),
+                Update.update(model, new ResolveMsg.Requested(CONFLICTED))
+                        .model()
+                        .popup(ResolvePopup.class)
+                        .map(ResolvePopup::sides));
+    }
+
+    @Test
     void theDialogNamesTheSidesOfAMergeAfterTheBranches() {
         Model model = stopped(
                 new InProgress.Merging(MERGED),

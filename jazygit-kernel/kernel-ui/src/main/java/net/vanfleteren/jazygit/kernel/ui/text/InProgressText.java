@@ -44,6 +44,15 @@ public final class InProgressText {
         return withConflicts(operation(midway.inProgress(), false, branches), midway.conflicts());
     }
 
+    /**
+     * As {@link #ofItsBranch}, on the line of the repository panel under what is checked out, which says too that
+     * nothing is left to resolve: {@code REBASING 2/3 onto main · ready to continue} (ADR 199).
+     */
+    public static String ofItsCheckout(Midway midway, List<Branch> branches) {
+        String said = ofItsBranch(midway, branches);
+        return midway.conflicts() > 0 ? said : said + SEPARATOR + Messages.get("status.readyToContinue");
+    }
+
     private static String withConflicts(String operation, int conflicts) {
         return conflicts > 0 ? operation + SEPARATOR + Messages.get("status.conflicts", conflicts) : operation;
     }

@@ -30,9 +30,9 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  */
 public final class CliInProgress {
 
-    // --git-path finds them in a linked worktree too.
+    // --git-path finds them in a linked worktree too. The sequencer tells no operation: its steps (ADR 199).
     private static final List<String> MARKERS =
-            List.of("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD");
+            List.of("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD", "sequencer");
     private static final String BRANCH_REF = "refs/heads/";
     // Left by jazygit next to git's own files of a rebase that amends an older commit; git deletes it with them.
     private static final String AMENDING = "jazygit-amending";
@@ -221,6 +221,13 @@ public final class CliInProgress {
 
         Path revertHead() {
             return paths.get(4);
+        }
+
+        /**
+         * Where a cherry-pick or revert of several commits keeps the commits still to come (ADR 199).
+         */
+        Path sequencer() {
+            return paths.get(5);
         }
     }
 }

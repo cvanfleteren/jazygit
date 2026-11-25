@@ -225,3 +225,4 @@ another tool adds it there too.
 | 196 | [A program left running outlives the terminal jazygit runs in](0196-a-program-left-running-outlives-the-terminal.md) |  |
 | 197 | [A rebase that stopped shows where it stopped, in every worktree](0197-a-rebase-that-stopped-shows-where-it-stopped.md) |  |
 | 198 | [A conflict is resolved in the app, a file at a time](0198-a-conflict-is-resolved-in-the-app-a-file-at-a-time.md) |  |
+| 199 | [The plan of an operation that stopped shows in the commits pane](0199-the-plan-of-an-operation-that-stopped-shows-in-the-commits-pane.md) |  |

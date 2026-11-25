@@ -1,9 +1,11 @@
 package net.vanfleteren.jazygit.features.midway.inprogress;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.features.midway.plan.content.PlanRows;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -49,7 +51,9 @@ public final class InProgressDialogs {
                                     "midway.dialog.inProgress.skip",
                                     () -> new InProgressMsg.Chosen(InProgressAction.SKIP),
                                     (model, popup) -> popup.inProgress().skippable())
-                            .withDetails("midway.dialog.inProgress.skip.details")));
+                            .withDetails(popup ->
+                                    where(popup).map(where -> where + " ").getOrElse("")
+                                            + Messages.get("midway.dialog.inProgress.skip.details"))));
 
     /**
      * Asks to confirm aborting or skipping, which throws work away.
@@ -75,7 +79,12 @@ public final class InProgressDialogs {
      * them (ADR 198).
      */
     private static String continueDetails(InProgressPopup popup) {
-        String does = Messages.get(continueDetailsKey(popup.inProgress()));
+        String does = where(popup).map(where -> where + " ").getOrElse("")
+                + popup.plan()
+                        .flatMap(plan -> plan.todo().headOption())
+                        .map(next -> Messages.get("midway.dialog.inProgress.next", PlanRows.named(next)) + " ")
+                        .getOrElse("")
+                + Messages.get(continueDetailsKey(popup.inProgress()));
         return popup.marked().isEmpty()
                 ? does
                 : Messages.get(
@@ -83,6 +92,21 @@ public final class InProgressDialogs {
                                 popup.marked().mkString(", "),
                                 popup.marked().size())
                         + " " + does;
+    }
+
+    /**
+     * Where it stopped, as its steps say (ADR 199): {@code Stopped at 2 of 3: 1466668 feat touches f.}; nothing for an
+     * operation whose steps git keeps no list of, as a merge.
+     */
+    private static Option<String> where(InProgressPopup popup) {
+        return popup.plan()
+                .map(plan -> plan.total() > 1
+                        ? Messages.get(
+                                "midway.dialog.inProgress.stoppedAt",
+                                plan.step(),
+                                plan.total(),
+                                PlanRows.named(plan.stopped()))
+                        : Messages.get("midway.dialog.inProgress.stoppedAtOnly", PlanRows.named(plan.stopped())));
     }
 
     /**

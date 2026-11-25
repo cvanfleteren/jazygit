@@ -58,6 +58,7 @@ public final class AppRules {
         "..jazygit.features.branches..content..",
         "..jazygit.features.github..content..",
         "..jazygit.features.chrome..content..",
+        "..jazygit.features.midway..content..",
         "..jazygit.features.changes.panes..",
         "..jazygit.features.branches.panes..",
         "..jazygit.features.github.panes..",

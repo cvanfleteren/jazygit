@@ -20,7 +20,7 @@ public sealed interface SideName {
     record Commit(Sha sha) implements SideName {}
 
     /**
-     * The commit a rebase stopped at, which the app does not read yet.
+     * The commit a rebase stopped at, when its steps are not known (ADR 199).
      */
     record Rebased() implements SideName {}
 

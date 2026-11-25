@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.Plan;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 
@@ -34,13 +35,22 @@ public record Sides(SideName ours, SideName theirs) {
             case Head.Detached detached -> named(detached.at(), branches);
         };
         return status.inProgress()
-                .map(inProgress -> of(head, inProgress, branches))
+                .map(inProgress -> of(head, inProgress, status.plan(), branches))
                 .getOrElse(() -> new Sides(head, new SideName.Incoming()));
     }
 
-    private static Sides of(SideName head, InProgress inProgress, List<Branch> branches) {
+    /**
+     * The side of a rebase being rebased is the commit it stopped at, as its steps say (ADR 199): by its sha, as the
+     * branch it may be the tip of is the one rebased. Without its steps, it is the rebased commit.
+     */
+    private static Sides of(SideName head, InProgress inProgress, Option<Plan> plan, List<Branch> branches) {
         return switch (inProgress) {
-            case InProgress.Rebasing rebasing -> new Sides(named(rebasing.onto(), branches), new SideName.Rebased());
+            case InProgress.Rebasing rebasing ->
+                new Sides(
+                        named(rebasing.onto(), branches),
+                        plan.flatMap(steps -> steps.stopped().commit())
+                                .<SideName>map(SideName.Commit::new)
+                                .getOrElse(SideName.Rebased::new));
             case InProgress.Merging merging -> new Sides(head, named(merging.theirs(), branches));
             case InProgress.CherryPicking picking -> new Sides(head, named(picking.commit(), branches));
             case InProgress.Reverting reverting -> new Sides(head, named(reverting.commit(), branches));

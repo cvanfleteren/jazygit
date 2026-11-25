@@ -436,7 +436,8 @@ def test_the_resolve_dialog_names_the_sides_and_keeps_one(repo, jazygit):
     ui.files.select("one.txt")
     ui.app.press("r")
     ui.app.wait_for("Keep main's version")
-    ui.app.wait_for("Keep the rebased commit's version")
+    # The commit being rebased, by its sha, as the rebase's steps name it (ADR 199).
+    ui.app.wait_for(f"Keep {repo.short(repo.find('Change one on feature', 'feature'))}'s version")
     ui.app.press("escape")
 
     ui.files.resolve("one.txt", "t")
