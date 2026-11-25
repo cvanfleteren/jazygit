@@ -230,7 +230,8 @@ public final class Exec {
     /**
      * Starts {@code commandLine} in {@code directory} and leaves it running, like a browser (ADR 85): with its input
      * closed and its output thrown away, so it takes nothing from the terminal. It is waited for only {@code settle}:
-     * still running by then, it is taken to have started well.
+     * still running by then, it is taken to have started well. It runs in a session of its own where it can, so that it
+     * outlives the terminal jazygit runs in (ADR 196).
      *
      * @return the command as it was run, when it is still running after {@code settle}, or exited with 0
      */
@@ -243,7 +244,8 @@ public final class Exec {
     private static Either<ExecFailure, ExecutedCommand> detach(
             Path directory, List<String> commandLine, Duration settle) {
         try {
-            Process process = new ProcessBuilder(commandLine.toJavaList())
+            Process process = new ProcessBuilder(
+                            OwnSession.of(directory, commandLine).toJavaList())
                     .directory(directory.toFile())
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)

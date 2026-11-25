@@ -4,12 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
@@ -224,6 +227,17 @@ class ExecTest {
 
         assertEquals(Either.right(new ExecutedCommand(sleeping)), Exec.launch(dir, sleeping, Duration.ofMillis(200)));
         assertTrue(Duration.ofNanos(System.nanoTime() - started).compareTo(Duration.ofSeconds(4)) < 0);
+    }
+
+    @Test
+    void aLaunchedProgramLeadsASessionOfItsOwnSoThatTheTerminalsHangupMissesIt() throws IOException {
+        assumeTrue(OwnSession.of(dir, List.of("sh")).head().equals("setsid"), "no setsid on the PATH");
+        Path leader = dir.resolve("leader");
+        List<String> checking =
+                List.of("sh", "-c", "[ \"$(ps -o sid= -p $$ | tr -d ' ')\" = \"$$\" ] && echo yes > leader");
+
+        assertEquals(Either.right(new ExecutedCommand(checking)), Exec.launch(dir, checking, SETTLE));
+        assertEquals("yes\n", Files.readString(leader));
     }
 
     @Test
