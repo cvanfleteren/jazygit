@@ -29,7 +29,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.CommandLog;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
-import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
+import net.vanfleteren.jazygit.kernel.state.popup.CheckList;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
 /**
@@ -121,11 +121,8 @@ public final class ChecksUpdate {
                     List<Check> ordered = popup.ordered(model);
                     int at = popup.pickedCheck(model).map(ordered::indexOf).getOrElse(0);
                     int to = Math.clamp((long) at + by, 0, ordered.size() - 1);
-                    ListCursor cursor = model.listCursor();
-                    int last = Math.max(0, ordered.size() - ChecksPopup.VISIBLE_CHECKS);
-                    int first = Math.clamp(cursor.line().getOrElse(0), 0, last);
-                    int shown = Math.clamp(first, Math.max(0, to - ChecksPopup.VISIBLE_CHECKS + 1), Math.min(to, last));
-                    return model.openPopup(popup.withPicked(ordered.get(to))).withListCursor(cursor.at(shown));
+                    return model.openPopup(popup.withPicked(ordered.get(to)))
+                            .withListCursor(CheckList.scrolledTo(model.listCursor(), to, ordered.size()));
                 })
                 .getOrElse(model);
     }

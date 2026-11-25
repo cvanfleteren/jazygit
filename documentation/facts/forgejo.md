@@ -42,6 +42,20 @@ says when it was learned, so a fact that has grown old can be checked again; see
 - Forgejo Actions posts one commit status per job, named `<workflow> / <job> (<event>)`. Other CIs post theirs the same
   way. *Why it matters:* statuses are shown by name as checks. — learned 2026-11-22 · [ADR
   0174](../adr/0174-how-the-last-build-on-forgejo-went.md)
+- `GET /repos/{owner}/{repo}/commits/{ref}/statuses` lists every status posted for a commit, paged, each with `id`,
+  `context`, `status`, `description`, `target_url` and `created_at`; the combined status keeps only the last of each
+  context. *Why it matters:* the checks popup folds all of them, to time each check from its first status. — learned
+  2026-11-25 · [ADR 0195](../adr/0195-the-checks-of-a-branch-on-forgejo-one-by-one.md) · Forgejo 17.0.2 swagger
+- Forgejo Actions posts a job's status when it is made (`Waiting to run`, or `Blocked by required conditions`), when it
+  starts (`Has started running`) and when it ends (`Successful in …`, `Failing after …`, `Has been skipped`, `Has been
+  cancelled`), and anew when it is run again; these texts are not translated. Its link is
+  `…/actions/runs/<run number>/jobs/<place in the run>`, maybe with `/attempt/<n>`. *Why it matters:* a check is queued,
+  started and done as these say, and its job is found from its link. — learned 2026-11-25 · [ADR
+  0195](../adr/0195-the-checks-of-a-branch-on-forgejo-one-by-one.md) · Forgejo 17.0.2 binary
+- Forgejo 17 has `GET /actions/runs?run_number=`, `GET /actions/runs/{id}/jobs`, `GET /actions/jobs/{id}/logs` (plain
+  text) and `POST /actions/jobs/{id}/rerun` (204; a done job and the jobs that need it). *Why it matters:* `e` and `r`
+  in the checks popup use them; an older Forgejo answers 404. — learned 2026-11-25 · [ADR
+  0195](../adr/0195-the-checks-of-a-branch-on-forgejo-one-by-one.md) · Forgejo 17.0.2 swagger
 - A public repository's API can be read without a token, but a private repository without a token fails on every
   request. *Why it matters:* a failed read is retried only after the next fetch, not every 10 s. — learned 2026-11-22 ·
   [ADR 0174](../adr/0174-how-the-last-build-on-forgejo-went.md)

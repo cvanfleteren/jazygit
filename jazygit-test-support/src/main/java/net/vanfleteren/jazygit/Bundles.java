@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit;
 
+import io.vavr.Tuple;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -104,6 +105,55 @@ public final class Bundles {
                         !known(bundles.get(first(text)).getOrElse(HashSet.empty()), text) && !known(views, text))
                 .distinct()
                 .sorted();
+    }
+
+    /**
+     * The bundles of the modules under {@code project} that the native image would leave out: a module's
+     * {@code messages.properties} whose name its {@code reachability-metadata.json} does not list. The native image
+     * keeps only the bundles listed, so every key of such a bundle would show as {@code !key!} there, though it is
+     * found on the JVM.
+     */
+    public static List<String> unregistered(Path project) {
+        Path resources = Path.of("src", "main", "resources");
+        return Try.of(() -> {
+                    try (Stream<Path> paths = Files.walk(project, 12)) {
+                        return List.ofAll(paths.filter(
+                                        path -> path.getFileName().toString().equals("messages.properties")
+                                                && path.toString().contains(resources.toString()))
+                                .toList());
+                    }
+                })
+                .get()
+                .filter(bundle -> !bundle.toString().contains("/target/"))
+                .map(bundle -> {
+                    String path = bundle.toString();
+                    int at = path.indexOf(resources.toString());
+                    Path root =
+                            Path.of(path.substring(0, at + resources.toString().length()));
+                    String name = root.relativize(bundle)
+                            .toString()
+                            .replace(".properties", "")
+                            .replace('/', '.');
+                    return Tuple.of(root, name);
+                })
+                .filter(bundle -> !registered(bundle._1(), bundle._2()))
+                .map(bundle -> bundle._2())
+                .sorted();
+    }
+
+    // Whether a reachability-metadata.json under the resources root names the bundle.
+    private static boolean registered(Path resources, String name) {
+        Path images = resources.resolve("META-INF").resolve("native-image");
+        return Files.isDirectory(images)
+                && Try.of(() -> {
+                            try (Stream<Path> files = Files.walk(images)) {
+                                return List.ofAll(files.filter(file ->
+                                                file.getFileName().toString().equals("reachability-metadata.json"))
+                                        .toList());
+                            }
+                        })
+                        .get()
+                        .exists(file -> read(file).contains("\"" + name + "\""));
     }
 
     // A key, or the start of one that the code finishes at run time: up to a dot, so a key cut short is not known.

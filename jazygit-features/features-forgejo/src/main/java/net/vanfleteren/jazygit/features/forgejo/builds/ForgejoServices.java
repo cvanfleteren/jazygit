@@ -25,7 +25,20 @@ public final class ForgejoServices {
      */
     public static final Env.Service<Browser> BROWSER = Env.Service.of("forgejo.browser", Browser.NONE);
 
+    /**
+     * Where the logs of checks are kept to be opened (ADR 195); without it given, in the directory of temporary files.
+     */
+    public static final Env.Service<Path> LOGS =
+            Env.Service.of("forgejo.logs", Path.of(System.getProperty("java.io.tmpdir"), "jazygit", "logs"));
+
     private ForgejoServices() {}
+
+    /**
+     * Where the logs of checks are kept, as {@code env} has it.
+     */
+    public static Path logs(Env env) {
+        return env.service(LOGS);
+    }
 
     /**
      * Forgejo, as {@code env} asks it.
@@ -44,7 +57,7 @@ public final class ForgejoServices {
     /**
      * What Forgejo runs against for the repository {@code opening} opens: its API, with fj's keys read once they are
      * first needed, and which hosts are Forgejo found out again for each repository; and the browser of
-     * {@code $BROWSER}, or the desktop's, run in the repository.
+     * {@code $BROWSER}, or the desktop's, run in the repository; and where the logs of checks are kept, in the cache.
      */
     public static Feature.Contribution running(Feature.RepositoryOpening opening) {
         return new Feature.Contribution(
@@ -59,7 +72,8 @@ public final class ForgejoServices {
                                 Browser.of(
                                         opening.git().worktree(),
                                         Option.of(System.getenv("BROWSER")),
-                                        System.getProperty("os.name", ""))),
+                                        System.getProperty("os.name", "")))
+                        .with(LOGS, opening.cacheDir().resolve("logs").resolve("forgejo")),
                 Option.none());
     }
 }

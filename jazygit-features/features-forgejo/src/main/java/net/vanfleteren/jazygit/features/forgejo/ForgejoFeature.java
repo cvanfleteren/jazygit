@@ -9,6 +9,9 @@ import net.vanfleteren.jazygit.features.forgejo.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.forgejo.builds.DetectForgejo;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoReactions;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
+import net.vanfleteren.jazygit.features.forgejo.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forgejo.checks.ForgejoChecksDialog;
+import net.vanfleteren.jazygit.features.forgejo.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.forgejo.pulls.CreatePullRequestAction;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequestDialog;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestReactions;
@@ -17,8 +20,8 @@ import net.vanfleteren.jazygit.kernel.ui.Feature;
 
 /**
  * How the builds of the branches on Forgejo went (ADR 174): a badge on each branch whose tip, or that of the branch
- * it follows, is on Forgejo, with what it means in the help; and the pull request that merges a branch (ADR 176),
- * created when it has none (ADR 178).
+ * it follows, is on Forgejo, with what it means in the help; the pull request that merges a branch (ADR 176),
+ * created when it has none (ADR 178); and the checks on the tip of a branch, one by one (ADR 195).
  */
 public final class ForgejoFeature {
 
@@ -37,8 +40,11 @@ public final class ForgejoFeature {
      * from Forgejo's API, with fj's token; on when the kernel chose Forgejo as the forge of the repository (ADR
      * 177).
      */
-    public static final Feature FEATURE = Feature.of(ShowPullRequestAction.ACTION, CreatePullRequestAction.ACTION)
+    public static final Feature FEATURE = Feature.of(
+                    ShowPullRequestAction.ACTION, CreatePullRequestAction.ACTION, ShowChecksAction.ACTION)
             .every(READ_INTERVAL, BuildsMsg.Tick::new)
+            // The checks shown read again while one runs, as GitHub's are (ADR 34, 195).
+            .every(READ_INTERVAL, ChecksMsg.Tick::new)
             .reacting(ForgejoReactions::to)
             .reacting(PullRequestReactions::to)
             .filling(BranchBadges.KEY, model -> Option.some(ForgejoBadge::of))
@@ -47,6 +53,8 @@ public final class ForgejoFeature {
             // Its dialog reads what Forgejo has, and shows how long ago (ADR 124).
             .spinning(ForgejoPullRequestDialog::showsSpinner)
             .clocking(ForgejoPullRequestDialog::shownTimes)
+            .spinning(ForgejoChecksDialog::showsSpinner)
+            .clocking(ForgejoChecksDialog::shownTimes)
             .applying(ID, model -> new DetectForgejo());
 
     private ForgejoFeature() {}

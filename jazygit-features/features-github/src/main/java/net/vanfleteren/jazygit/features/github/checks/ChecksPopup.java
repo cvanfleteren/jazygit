@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.features.github.state.PendingChecks;
 import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.popup.CheckList;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**
@@ -57,7 +58,7 @@ public record ChecksPopup(
     /**
      * The checks listed at once; the others are scrolled to.
      */
-    public static final int VISIBLE_CHECKS = 16;
+    public static final int VISIBLE_CHECKS = CheckList.VISIBLE;
 
     /**
      * The popup while the checks are first read, from {@code now}.

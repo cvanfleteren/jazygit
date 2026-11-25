@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.FjKeys;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoBranchRules;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoCheck;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMerge;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeSettings;
@@ -249,6 +250,21 @@ final class PullRequestFixtures {
         @Override
         public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
             return merging.cancel();
+        }
+
+        @Override
+        public Either<ForgejoError, List<ForgejoCheck>> checks(ForgejoRepository repository, Sha sha) {
+            return Either.left(new ForgejoError.Refused(404, "not found"));
+        }
+
+        @Override
+        public Either<ForgejoError, String> jobLog(ForgejoRepository repository, ForgejoCheck.ActionsJob job) {
+            return Either.left(new ForgejoError.Refused(404, "not found"));
+        }
+
+        @Override
+        public Option<ForgejoError> rerunJob(ForgejoRepository repository, ForgejoCheck.ActionsJob job) {
+            return Option.of(new ForgejoError.Refused(404, "not found"));
         }
 
         @Override

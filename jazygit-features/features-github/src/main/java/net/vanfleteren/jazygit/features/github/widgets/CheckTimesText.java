@@ -7,6 +7,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.Eta;
+import net.vanfleteren.jazygit.kernel.ui.checks.CheckDurations;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 
@@ -28,8 +29,7 @@ public final class CheckTimesText {
      * second, {@code 0s}, {@code 47s}, {@code 2m}, {@code 7m 41s}; from an hour on to the minute, {@code 1h 5m}.
      */
     public static String duration(Duration since) {
-        long seconds = Math.max(0, since.toSeconds());
-        return seconds >= 3600 ? minutes(seconds / 60) : minutesAndSeconds(seconds);
+        return CheckDurations.exact(since);
     }
 
     /**
@@ -40,21 +40,9 @@ public final class CheckTimesText {
         long seconds = Math.round(left.toSeconds() / 5.0) * 5;
         return Messages.get(
                 "github.checks.about",
-                seconds >= TO_THE_SECOND ? minutes(Math.round(left.toSeconds() / 60.0)) : minutesAndSeconds(seconds));
-    }
-
-    /**
-     * {@code seconds}, under an hour: {@code 45s}, {@code 2m}, {@code 2m 5s}.
-     */
-    private static String minutesAndSeconds(long seconds) {
-        return seconds < 60
-                ? Messages.get("github.checks.seconds", String.valueOf(seconds))
-                : seconds % 60 == 0
-                        ? minutes(seconds / 60)
-                        : Messages.get(
-                                "github.checks.minutesSeconds",
-                                String.valueOf(seconds / 60),
-                                String.valueOf(seconds % 60));
+                seconds >= TO_THE_SECOND
+                        ? CheckDurations.minutes(Math.round(left.toSeconds() / 60.0))
+                        : CheckDurations.minutesAndSeconds(seconds));
     }
 
     /**
@@ -72,7 +60,7 @@ public final class CheckTimesText {
     private static String leftInMinutes(Duration left) {
         return left.toSeconds() < 60
                 ? Messages.get("github.checks.underAMinute")
-                : Messages.get("github.checks.about", minutes(Math.round(left.toSeconds() / 60.0)));
+                : Messages.get("github.checks.about", CheckDurations.minutes(Math.round(left.toSeconds() / 60.0)));
     }
 
     /**
@@ -80,20 +68,9 @@ public final class CheckTimesText {
      * is exact, {@code 3m}, {@code 1h 5m}, or {@code <1m} (ADR 35).
      */
     public static String waited(Duration since) {
-        return since.toSeconds() < 60 ? Messages.get("github.checks.underAMinute") : minutes(since.toMinutes());
-    }
-
-    /**
-     * {@code minutes}, one or more: {@code 2m}, {@code 1h}, {@code 1h 5m}; a whole hour without its {@code 0m}, as a
-     * whole minute is without its {@code 0s}.
-     */
-    private static String minutes(long minutes) {
-        return minutes < 60
-                ? Messages.get("github.checks.minutes", String.valueOf(minutes))
-                : minutes % 60 == 0
-                        ? Messages.get("github.checks.wholeHours", String.valueOf(minutes / 60))
-                        : Messages.get(
-                                "github.checks.hours", String.valueOf(minutes / 60), String.valueOf(minutes % 60));
+        return since.toSeconds() < 60
+                ? Messages.get("github.checks.underAMinute")
+                : CheckDurations.minutes(since.toMinutes());
     }
 
     /**

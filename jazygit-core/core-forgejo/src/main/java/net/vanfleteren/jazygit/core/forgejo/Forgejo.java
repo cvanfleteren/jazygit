@@ -76,6 +76,21 @@ public interface Forgejo {
         public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
             return Option.of(new ForgejoError.Unreachable("no Forgejo"));
         }
+
+        @Override
+        public Either<ForgejoError, List<ForgejoCheck>> checks(ForgejoRepository repository, Sha sha) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
+
+        @Override
+        public Either<ForgejoError, String> jobLog(ForgejoRepository repository, ForgejoCheck.ActionsJob job) {
+            return Either.left(new ForgejoError.Unreachable("no Forgejo"));
+        }
+
+        @Override
+        public Option<ForgejoError> rerunJob(ForgejoRepository repository, ForgejoCheck.ActionsJob job) {
+            return Option.of(new ForgejoError.Unreachable("no Forgejo"));
+        }
     };
 
     /**
@@ -160,4 +175,21 @@ public interface Forgejo {
      * (ADR 181): none once cancelled, else why not, as the 404 of one that is no longer scheduled.
      */
     Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number);
+
+    /**
+     * The checks on {@code sha} in {@code repository}, one for each context a status was posted for, timed from its
+     * statuses (ADR 195).
+     */
+    Either<ForgejoError, List<ForgejoCheck>> checks(ForgejoRepository repository, Sha sha);
+
+    /**
+     * The log of the latest attempt of {@code job} of Forgejo Actions in {@code repository}, as plain text (ADR 195).
+     */
+    Either<ForgejoError, String> jobLog(ForgejoRepository repository, ForgejoCheck.ActionsJob job);
+
+    /**
+     * Runs {@code job} of Forgejo Actions in {@code repository}, which is done, again, with the jobs that need it (ADR
+     * 195): none once Forgejo started it, else why not.
+     */
+    Option<ForgejoError> rerunJob(ForgejoRepository repository, ForgejoCheck.ActionsJob job);
 }
