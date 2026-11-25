@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.features.changes.discard.DiscardFeature;
 import net.vanfleteren.jazygit.features.changes.edit.EditFeature;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchFeature;
 import net.vanfleteren.jazygit.features.changes.files.FilesFeature;
-import net.vanfleteren.jazygit.features.changes.inprogress.InProgressFeature;
 import net.vanfleteren.jazygit.features.changes.reflog.ReflogFeature;
 import net.vanfleteren.jazygit.features.changes.stage.StageFeature;
 import net.vanfleteren.jazygit.features.changes.stash.StashFeature;
@@ -27,6 +26,8 @@ import net.vanfleteren.jazygit.features.chrome.settings.SettingsFeature;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeFeature;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
+import net.vanfleteren.jazygit.features.midway.inprogress.InProgressFeature;
+import net.vanfleteren.jazygit.features.midway.resolve.ResolveFeature;
 import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.Fills;
@@ -54,6 +55,7 @@ public final class Features {
                     ReflogFeature.FEATURE,
                     CherryPickFeature.FEATURE,
                     DiscardFeature.FEATURE,
+                    ResolveFeature.FEATURE,
                     EditFeature.FEATURE,
                     StashFeature.FEATURE,
                     BranchFeature.FEATURE,

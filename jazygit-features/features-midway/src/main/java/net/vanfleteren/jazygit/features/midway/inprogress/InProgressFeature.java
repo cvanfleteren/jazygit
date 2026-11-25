@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.changes.inprogress;
+package net.vanfleteren.jazygit.features.midway.inprogress;
 
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
@@ -14,7 +14,7 @@ public final class InProgressFeature {
      * wherever the focus is.
      */
     private static final FeatureAction GLOBAL_KEY = FeatureAction.ofKeys(keys -> keys.global(
-            Keymap.Global.Dispatching.ofChar('M', "changes.help.global.inProgress", InProgressMsg.Requested::new)));
+            Keymap.Global.Dispatching.ofChar('M', "midway.help.global.inProgress", InProgressMsg.Requested::new)));
 
     /**
      * What the app knows of it: its keys and its popups.

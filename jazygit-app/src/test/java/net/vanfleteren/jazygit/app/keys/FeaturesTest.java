@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test;
  * Each feature package declares its {@link Feature} once, and {@link Features} lists it (ADR 127): among the features
  * it runs without {@code --without}, as {@link Features#ALL} leaves the forges out in this module's tests (ADR 173,
  * 174). The feature packages are those of the groups of features (ADR 136): each package right under
- * {@code changes}, {@code branches} and {@code chrome}, and {@code github}, {@code forgejo} (ADR 174) and
- * {@code agent} (ADR 161) as a whole.
+ * {@code changes}, {@code branches}, {@code chrome} and {@code midway} (ADR 198), and {@code github},
+ * {@code forgejo} (ADR 174) and {@code agent} (ADR 161) as a whole.
  */
 class FeaturesTest {
 
@@ -33,7 +33,7 @@ class FeaturesTest {
     /**
      * The groups whose packages are features each.
      */
-    private static final List<String> GROUPS = List.of("changes", "branches", "chrome");
+    private static final List<String> GROUPS = List.of("changes", "branches", "chrome", "midway");
 
     /**
      * The groups that are one feature each.

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.changes.inprogress;
+package net.vanfleteren.jazygit.features.midway.inprogress;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;
+import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
@@ -50,6 +51,30 @@ class InProgressUpdateTest {
         assertEquals(
                 Option.of(new InProgressPopup(REBASING, 1)),
                 Update.update(model, new InProgressMsg.Requested()).model().popup(InProgressPopup.class));
+    }
+
+    @Test
+    void withFilesResolvedTheyAreReadForConflictMarkersFirst() {
+        RepoStatus status = new RepoStatus(
+                new Head.Detached(new Sha("bbbb")), List.of(), Option.of(REBASING), List.of("b.txt", "c.txt"));
+        Model model = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(status))
+                .model();
+
+        Next next = Update.update(model, new InProgressMsg.Requested());
+
+        assertEquals(Option.none(), next.model().popup(InProgressPopup.class));
+        assertEquals(List.of(new ReadResolvedMarkersCmd(List.of("b.txt", "c.txt"))), next.cmds());
+    }
+
+    @Test
+    void theFilesResolvedWithMarkersLeftAreAskedWith() {
+        Model model = inMiddleOf(Option.of(REBASING), List.of());
+
+        Next next = Update.update(model, new InProgressMsg.MarkersRead(List.of(new MarkedFile("b.txt", List.of(3)))));
+
+        assertEquals(
+                Option.of(new InProgressPopup(REBASING, 0, List.of("b.txt"))),
+                next.model().popup(InProgressPopup.class));
     }
 
     @Test

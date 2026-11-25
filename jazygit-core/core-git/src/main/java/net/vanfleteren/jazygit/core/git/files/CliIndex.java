@@ -4,8 +4,13 @@ import static net.vanfleteren.jazygit.core.git.process.GitCommand.git;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Try;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.DiscardPlan;
+import net.vanfleteren.jazygit.core.git.model.MarkedFile;
+import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.RefusedPath;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
@@ -66,6 +71,45 @@ public final class CliIndex implements Index {
      */
     static Either<GitFailure, List<ExecutedCommand>> removeAdded(Path worktree, List<String> paths) {
         return onPaths(worktree, List.of("rm", "--force", "--quiet"), paths);
+    }
+
+    /**
+     * {@code git checkout --ours|--theirs -- <path>}, then {@code git add -- <path>}; or {@code git rm -- <path>} when
+     * that side deleted the file.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> keep(String path, Conflict conflict, Conflict.Version version) {
+        List<String> one = List.of(path);
+        return conflict.did(version) == Conflict.Side.DELETED
+                ? onPaths(worktree, List.of("rm", "--quiet"), one)
+                : GitFailure.sequence(
+                        () -> onPaths(
+                                worktree,
+                                List.of("checkout", version == Conflict.Version.OURS ? "--ours" : "--theirs"),
+                                one),
+                        () -> stage(one));
+    }
+
+    /**
+     * {@code git checkout --merge -- <path>}: the conflict again, from what the index keeps of it once resolved.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> restoreConflict(String path) {
+        return onPaths(worktree, List.of("checkout", "--merge"), List.of(path));
+    }
+
+    /**
+     * Reads each file for blocks of conflict markers; a file that cannot be read, as one that is not there, has none.
+     */
+    @Override
+    public Either<GitError, List<MarkedFile>> markers(List<String> paths) {
+        Path root = worktree.toAbsolutePath().normalize();
+        return Either.right(paths.flatMap(path -> inside(root, path)
+                .toOption()
+                .flatMap(file -> Try.of(() -> Files.readString(file)).toOption())
+                .map(MarkedFile::blockStarts)
+                .filter(lines -> !lines.isEmpty())
+                .map(lines -> new MarkedFile(path, lines))));
     }
 
     /**

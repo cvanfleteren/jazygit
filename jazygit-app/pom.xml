@@ -45,6 +45,10 @@
             <groupId>net.vanfleteren</groupId>
             <artifactId>features-agent</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>features-midway</artifactId>
+        </dependency>
         <!-- The content panel and the rich diff, which no feature draws. -->
         <dependency>
             <groupId>net.vanfleteren</groupId>

@@ -21,6 +21,13 @@ public record Conflict(Side ours, Side theirs) {
     }
 
     /**
+     * What {@code version}'s side did to the file.
+     */
+    public Side did(Version version) {
+        return version == Version.OURS ? ours : theirs;
+    }
+
+    /**
      * What a branch did to the file.
      */
     public enum Side {
@@ -29,5 +36,15 @@ public record Conflict(Side ours, Side theirs) {
          */
         UPDATED,
         DELETED
+    }
+
+    /**
+     * Which side's version of a file in conflict is kept (ADR 198): {@code OURS} is the side of HEAD, the branch checked
+     * out or, in a rebase, what it rebases onto; {@code THEIRS} is the other, the branch merged or the commit being
+     * rebased, cherry-picked or reverted.
+     */
+    public enum Version {
+        OURS,
+        THEIRS
     }
 }

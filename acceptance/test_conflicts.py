@@ -1,6 +1,10 @@
 """Operations that stop on conflicts: merging, rebasing, cherry-picking, reverting, pulling and rewriting commits. The
-app leaves them stopped; the conflicts are resolved with git, and the operation continued, skipped or aborted from
-the app (M)."""
+app leaves them stopped; the conflicts are resolved with git, or in the app a file at a time (ADR 198), and the
+operation continued, skipped or aborted from the app (M)."""
+
+import subprocess
+
+import pytest
 
 
 def diverged(repo):
@@ -394,3 +398,155 @@ def test_abort_a_pull_that_stops_on_conflicts_while_merging(repo, origin, clone,
     assert repo("rev-parse", "main") == before
     assert repo.read("one.txt") == "mine\n"
     assert repo.sync("main") == "ahead 1, behind 1"
+
+
+def test_a_rebase_is_resolved_by_keeping_the_side_of_what_it_rebases_onto(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+
+    # In a rebase, HEAD's side is main's: git's ours.
+    ui.files.keep("one.txt", "ours")
+
+    assert repo.conflicts() == []
+    assert repo.read("one.txt") == "main\n"
+    ui.app.wait_for("1 of 1 resolved")
+    ui.continue_in_progress()
+    assert repo.in_progress() is None
+    assert repo.read("one.txt") == "main\n"
+
+
+def test_a_merge_is_resolved_by_keeping_the_side_of_the_merged_branch(repo, jazygit):
+    diverged(repo)
+    repo("switch", "main")
+    ui = jazygit()
+    ui.branches.merge("feature")
+
+    ui.files.keep("one.txt", "theirs")
+
+    assert repo.conflicts() == []
+    assert repo.read("one.txt") == "feature\n"
+    assert repo.status() == {"one.txt": "M "}
+
+
+def test_the_resolve_dialog_names_the_sides_and_keeps_one(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    ui.files.select("one.txt")
+    ui.app.press("r")
+    ui.app.wait_for("Keep main's version")
+    ui.app.wait_for("Keep the rebased commit's version")
+    ui.app.press("escape")
+
+    ui.files.resolve("one.txt", "t")
+
+    assert repo.read("one.txt") == "feature\n"
+    assert repo.conflicts() == []
+
+
+def test_the_resolve_dialog_opens_on_a_conflict_a_stash_left(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.write("one.txt", "stashed\n")
+    repo("stash", "push")
+    repo.commit("Change one", **{"one.txt": "committed\n"})
+    with pytest.raises(subprocess.CalledProcessError):
+        repo("stash", "pop")
+    assert repo.in_progress() is None
+    assert repo.conflicts() == ["one.txt"]
+    ui = jazygit()
+
+    ui.files.select("one.txt")
+    ui.app.press("r")
+    ui.app.wait_for("Keep main's version")
+    ui.app.wait_for("Keep the incoming side's version")
+    ui.app.press("t")
+
+    ui.app.eventually(lambda: repo.conflicts() == [], "the stash's side was kept")
+    assert repo.read("one.txt") == "stashed\n"
+
+
+def test_a_side_that_deleted_the_file_deletes_it(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("switch", "--create", "feature")
+    repo.commit("Change one on feature", **{"one.txt": "feature\n"})
+    repo("switch", "main")
+    repo("rm", "-q", "one.txt")
+    repo("commit", "-qm", "Remove one on main")
+    repo("switch", "feature")
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    assert repo.conflicts() == ["one.txt"]
+
+    ui.files.keep("one.txt", "ours")
+
+    assert repo.conflicts() == []
+    assert repo.read("one.txt") is None
+
+
+def test_a_resolved_conflict_is_brought_back(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    ui.files.keep("one.txt", "theirs")
+
+    ui.files.restore("one.txt")
+
+    assert repo.conflicts() == ["one.txt"]
+    assert "<<<<<<< " in repo.read("one.txt")
+
+
+def test_a_conflict_resolved_to_heads_side_stays_listed_and_is_brought_back(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    # In a rebase, HEAD's side is main's: once kept, git lists no change for the file.
+    ui.files.keep("one.txt", "ours")
+    assert repo.status() == {}
+
+    # It stays listed among the changed files, so it is found without listing all files (ADR 198).
+    ui.app.wait_for("one.txt ✓")
+    ui.files.restore("one.txt")
+
+    assert repo.conflicts() == ["one.txt"]
+    assert "<<<<<<< " in repo.read("one.txt")
+
+
+def test_staging_a_file_with_conflict_markers_asks_first(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    ui.files.select("one.txt")
+    ui.app.press("space")
+
+    ui.app.wait_for("one.txt still has conflict markers")
+    assert repo.conflicts() == ["one.txt"]
+    ui.changing_repo("one.txt staged anyway", lambda: ui.app.press("s"))
+
+    assert repo.conflicts() == []
+    assert "<<<<<<< " in repo.read("one.txt")
+
+
+def test_staging_a_file_in_conflict_without_markers_stages_it(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    repo.write("one.txt", "both\n")
+
+    ui.files.stage("one.txt")
+
+    assert repo.conflicts() == []
+    assert repo.read("one.txt") == "both\n"
+
+
+def test_continuing_with_conflict_markers_staged_says_it_commits_them(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    repo("add", "one.txt")
+
+    ui.caught_up()
+    ui.app.press("M")
+
+    ui.app.wait_for("Continue, with conflict markers in 1 file")
+    ui.app.wait_for("one.txt still has conflict markers")

@@ -1,6 +1,8 @@
-package net.vanfleteren.jazygit.features.changes.inprogress;
+package net.vanfleteren.jazygit.features.midway.inprogress;
 
+import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;
+import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -21,4 +23,9 @@ public sealed interface InProgressMsg extends Msg {
      * The user chose what to do with it.
      */
     record Chosen(InProgressAction action) implements InProgressMsg {}
+
+    /**
+     * The files resolved since it stopped were read for conflict markers: {@code marked} are those with some left.
+     */
+    record MarkersRead(List<MarkedFile> marked) implements InProgressMsg {}
 }
