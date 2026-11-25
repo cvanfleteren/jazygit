@@ -292,7 +292,9 @@ learned.
    showed, as it moves HEAD's commit and the log is read again; the stamp, looked at every three seconds while the
    tab is shown, adds the moves that keep HEAD's commit, as a checkout of another branch at it.
 6. **Actions on an entry**, after their own grilling: reset, checkout, new branch, cherry-pick copy, bound in
-   `Scopes.REFLOG`, with an acceptance test that a branch at an entry recovers a dropped commit.
+   `Scopes.REFLOG`, with an acceptance test that a branch at an entry recovers a dropped commit. Done but for the
+   cherry-pick copy (ADR 194): `n`, `g` and space are the commit actions as they are, and a new branch at the entry
+   HEAD left a branch from starts out with that branch's name.
 7. **`GIT_REFLOG_ACTION` on every operation**, and the `⚙` marker. Acceptance tests check the subjects git writes.
 8. **Snapshots on the command log.**
    - `RefSnapshot`, before and after, `Operation.undo` on every operation.

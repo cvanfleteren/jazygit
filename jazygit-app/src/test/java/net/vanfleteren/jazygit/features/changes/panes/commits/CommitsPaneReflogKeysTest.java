@@ -11,6 +11,9 @@ import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry;
 import net.vanfleteren.jazygit.core.repo.ReflogEntry.Action;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchMsg;
+import net.vanfleteren.jazygit.features.changes.commit.reset.ResetMsg;
 import net.vanfleteren.jazygit.features.changes.copy.CopyMsg;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.reflog.ReflogView;
@@ -27,8 +30,9 @@ import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
- * The keys of the reflog's tab of the commits pane, with the app's keymap (ADR 186): Enter opens the files of the
- * entry's commit, {@code y} copies its sha, as it does on the log, and the brackets go back to the log.
+ * The keys of the reflog's tab of the commits pane, with the app's keymap (ADR 186, 194): Enter opens the files of the
+ * entry's commit, {@code y} copies its sha, {@code n}, {@code g} and space make a branch at it, reset to it and check
+ * it out, as they do on the log, and the brackets go back to the log.
  */
 class CommitsPaneReflogKeysTest {
 
@@ -58,6 +62,16 @@ class CommitsPaneReflogKeysTest {
 
         assertEquals(List.of(new CopyMsg.ShaAsked(SHA)), pressed(REFLOG, 'y', CopyMsg.ShaAsked.class));
         assertEquals(List.of(new CopyMsg.ShaAsked(logged)), pressed(LOG, 'y', CopyMsg.ShaAsked.class));
+    }
+
+    @Test
+    void nMakesABranchAtTheEntryGResetsToItAndSpaceChecksItOut() throws Exception {
+        assertEquals(
+                List.of(new NewBranchMsg.RequestedAtEntry(ENTRY)),
+                pressed(REFLOG, 'n', NewBranchMsg.RequestedAtEntry.class));
+        assertEquals(List.of(new ResetMsg.Requested(SHA)), pressed(REFLOG, 'g', ResetMsg.Requested.class));
+        assertEquals(
+                List.of(new CheckoutMsg.CommitRequested(SHA)), pressed(REFLOG, ' ', CheckoutMsg.CommitRequested.class));
     }
 
     @Test
