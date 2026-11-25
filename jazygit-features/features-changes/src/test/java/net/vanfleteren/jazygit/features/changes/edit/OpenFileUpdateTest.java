@@ -10,9 +10,14 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.git.StubGit;
+import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
+import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.HiddenHunks.Ranges;
+import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
@@ -30,6 +35,7 @@ import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.launch.ProgramFailure;
 import net.vanfleteren.jazygit.kernel.state.launch.ProgramLauncher;
+import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
 import org.junit.jupiter.api.Test;
 
@@ -109,6 +115,51 @@ class OpenFileUpdateTest {
         assertEquals(
                 Option.of(new EditPopup("src/A.java", 1, List.of(Tuple.of('c', CODE), Tuple.of('1', NVIM)))),
                 next.model().popup());
+    }
+
+    @Test
+    void aFileInConflictIsReadForItsFirstConflictBeforeItOpens() {
+        Next next = Update.update(inConflict(model(NVIM)), new EditMsg.Requested("a.txt"));
+
+        assertEquals(List.of(new ReadFirstConflictCmd("a.txt")), next.cmds());
+    }
+
+    @Test
+    void aFileInConflictOpensAtItsFirstConflict() {
+        Next next = Update.update(model(NVIM), new EditMsg.FirstConflictRead("a.txt", Option.of(7)));
+
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 7)), next.cmds());
+    }
+
+    @Test
+    void aFileInConflictWithoutMarkersLeftOpensAtItsStart() {
+        Next next = Update.update(model(NVIM), new EditMsg.FirstConflictRead("a.txt", Option.none()));
+
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 1)), next.cmds());
+    }
+
+    @Test
+    void gitsEditorOpensAFileInConflictAtItsStartAsItTakesNoLine() {
+        Next next = Update.update(model(), new EditMsg.FirstConflictRead("a.txt", Option.of(7)));
+
+        assertEquals(List.of(new EditCmd(List.of("a.txt"))), next.cmds());
+    }
+
+    @Test
+    void aFileOpensAtTheLineItIsAskedTo() {
+        Next next = Update.update(model(NVIM), new EditMsg.RequestedAt("a.txt", 9));
+
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), next.cmds());
+    }
+
+    /**
+     * {@code model} with {@code a.txt} in conflict.
+     */
+    private static Model inConflict(Model model) {
+        RepoStatus status = new RepoStatus(
+                Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+                List.of(FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED))));
+        return Update.update(model, new LoadMsg.StatusLoaded(status)).model();
     }
 
     @Test

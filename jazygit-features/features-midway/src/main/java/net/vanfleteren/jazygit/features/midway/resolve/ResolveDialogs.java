@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.midway.resolve;
 import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.process.CommandLine;
 import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
@@ -15,6 +16,7 @@ import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
+import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
 
 /**
  * The choices for resolving a file in conflict, and the question staging asks of files with conflict markers left in
@@ -23,8 +25,8 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
 public final class ResolveDialogs {
 
     /**
-     * How to resolve the file of the popup: keep one side, or edit it; each choice tells what it does and the command
-     * it runs (ADR 200).
+     * How to resolve the file of the popup: keep one side, edit it, or hand it to git's merge tool or to mergiraf when
+     * there are (ADR 201); each choice tells what it does and the command it runs (ADR 200).
      */
     public static final ChoiceDialog.Spec<ResolvePopup> RESOLVE = new ChoiceDialog.Spec<>(
                     "resolve",
@@ -57,11 +59,39 @@ public final class ResolveDialogs {
                                             Conflict.Version.THEIRS))
                                     .withCommand(popup -> keepCommand(popup, Conflict.Version.THEIRS)),
                             new Choice<ResolvePopup>('e', "midway.dialog.resolve.edit", ResolveMsg.EditChosen::new)
-                                    .withDetails("midway.dialog.resolve.edit.details")
-                                    .withCommand(ResolveDialogs::editCommand)),
+                                    .withDetails(ResolveDialogs::editDetails)
+                                    .withCommand(ResolveDialogs::editCommand),
+                            new Choice<ResolvePopup>(
+                                            'g', "midway.dialog.resolve.mergeTool", ResolveMsg.MergeToolChosen::new)
+                                    .shownWhen((model, popup) -> popup.tools()
+                                            .mergesWithTool(
+                                                    popup.file().conflict().get()))
+                                    .withDetails("midway.dialog.resolve.mergeTool.details")
+                                    .withCommand(popup -> CommandLine.format(
+                                            popup.tools().mergeTool(popup.file().path()))),
+                            new Choice<ResolvePopup>(
+                                            'm', "midway.dialog.resolve.mergiraf", ResolveMsg.MergirafChosen::new)
+                                    .shownWhen((model, popup) -> popup.tools()
+                                            .solvesWithMergiraf(
+                                                    popup.file().conflict().get()))
+                                    .withDetails(ResolveDialogs::mergirafDetails)
+                                    .withCommand(popup -> ConflictTools.mergiraf(
+                                                    popup.file().path(), popup.rewrites())
+                                            .map(CommandLine::format)
+                                            .mkString(" && "))),
                     // Wide enough for what a choice does to take two lines or so, and its command one.
                     72)
             .inline();
+
+    /**
+     * Asks whether to solve a file with mergiraf though it was edited since git wrote its conflict, which writing it
+     * again loses (ADR 201).
+     */
+    public static final ConfirmDialog.Spec<SolveOverEditsPopup> SOLVE_OVER_EDITS = ConfirmDialog.Spec.confirming(
+            "solve-over-edits",
+            SolveOverEditsPopup.class,
+            popup -> Messages.get("midway.dialog.solveOverEdits.title", popup.path()),
+            popup -> Messages.get("midway.dialog.solveOverEdits.message", popup.path()));
 
     /**
      * What to do with files asked to be staged that still have conflict markers: resolve the one file, edit it, or
@@ -119,15 +149,40 @@ public final class ResolveDialogs {
     }
 
     /**
+     * What solving the file of {@code popup} with mergiraf does: from the file as it is when it has its bases; from
+     * the conflict written again otherwise, which loses what was edited of it, and says so (ADR 201).
+     */
+    private static String mergirafDetails(ResolvePopup popup) {
+        return switch (popup.written()) {
+            case WITH_BASE -> Messages.get("midway.dialog.resolve.mergiraf.details.withBase");
+            case AS_WRITTEN -> Messages.get("midway.dialog.resolve.mergiraf.details");
+            case EDITED -> Messages.get("midway.dialog.resolve.mergiraf.details.edited");
+        };
+    }
+
+    /**
+     * What editing the file of {@code popup} does: an editor set opens it at its first conflict, once that was read;
+     * git's editor, which takes no line, at its start, and the dialog says where the conflict is (ADR 201).
+     */
+    private static String editDetails(ResolvePopup popup) {
+        return popup.firstConflict()
+                .map(line -> popup.editor() instanceof FileEditor.GitEditor
+                        ? Messages.get("midway.dialog.resolve.edit.details.gitEditor", line)
+                        : Messages.get("midway.dialog.resolve.edit.details.atConflict", line))
+                .getOrElse(() -> Messages.get("midway.dialog.resolve.edit.details"));
+    }
+
+    /**
      * What editing the file of {@code popup} runs: the command of the one editor set, a choice of those set, or
      * git's editor, as {@code e} opens it (ADR 145).
      */
     private static String editCommand(ResolvePopup popup) {
         String path = CommandLine.format(List.of(popup.file().path()));
         return switch (popup.editor()) {
-            // As e opens it, at its first line; the worktree is where the command runs.
+            // As e opens it, at its first conflict; the worktree is where the command runs.
             case FileEditor.One(EditorProgram editor) ->
-                CommandLine.format(editor.fileCommandLine(".", popup.file().path(), 1)
+                CommandLine.format(editor.fileCommandLine(
+                                ".", popup.file().path(), popup.firstConflict().getOrElse(1))
                         .getOrElse(() -> List.of(editor.name(), popup.file().path())));
             case FileEditor.Several _ -> Messages.get("midway.dialog.resolve.edit.command.chosen", path);
             case FileEditor.GitEditor _ -> Messages.get("midway.dialog.resolve.edit.command", path);
@@ -179,6 +234,7 @@ public final class ResolveDialogs {
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
                 PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(RESOLVE, dispatch)),
-                PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(MARKERS_LEFT, dispatch)));
+                PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(MARKERS_LEFT, dispatch)),
+                PopupSlot.returningTo(FilesPanel.PANE, new ConfirmDialog<>(SOLVE_OVER_EDITS, dispatch)));
     }
 }

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.edit;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -32,6 +33,18 @@ public sealed interface EditMsg extends Msg {
      * The user asked to open the file the cursor {@code at} of a rich diff is in, at the line it is on, in an editor.
      */
     record AtCursor(DiffCursorAt at) implements EditMsg {}
+
+    /**
+     * The user asked to open the file at {@code path}, relative to the working tree, in an editor, at {@code line}, as
+     * the resolve dialog does at the first conflict it read (ADR 201).
+     */
+    record RequestedAt(String path, int line) implements EditMsg {}
+
+    /**
+     * The file in conflict at {@code path}, asked to be opened, was read: its first conflict starts at {@code line},
+     * if it has markers left (ADR 201).
+     */
+    record FirstConflictRead(String path, Option<Integer> line) implements EditMsg {}
 
     /**
      * The user chose {@code editor} in the menu of the editors that open files.

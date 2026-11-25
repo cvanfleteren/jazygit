@@ -2,9 +2,13 @@
 app leaves them stopped; the conflicts are resolved with git, or in the app a file at a time (ADR 198), and the
 operation continued, skipped or aborted from the app (M)."""
 
+import shutil
 import subprocess
 
 import pytest
+
+# The dev shell has mergiraf; where it is not installed, the tests that need it are skipped (ADR 201).
+needs_mergiraf = pytest.mark.skipif(shutil.which("mergiraf") is None, reason="mergiraf is not installed")
 
 
 def diverged(repo):
@@ -572,3 +576,164 @@ def test_continuing_with_conflict_markers_staged_says_it_commits_them(repo, jazy
 
     ui.app.wait_for("Continue, with conflict markers in 1 file")
     ui.app.wait_for("one.txt still has conflict markers")
+
+
+def python_conflicts(repo):
+    """Main and feature that each added an import to imports.py, which mergiraf puts together, and changed the same
+    line of value.py, which it cannot; main checked out."""
+    repo.commit("Add the modules", **{"imports.py": "import a\n\n\ndef f():\n    return 1\n",
+                                       "value.py": "def f():\n    return 1\n"})
+    repo("switch", "--create", "feature")
+    repo.commit("Change them on feature", **{"imports.py": "import a\nimport b\n\n\ndef f():\n    return 1\n",
+                                              "value.py": "def f():\n    return 3\n"})
+    repo("switch", "main")
+    repo.commit("Change them on main", **{"imports.py": "import a\nimport c\n\n\ndef f():\n    return 1\n",
+                                           "value.py": "def f():\n    return 2\n"})
+
+
+def test_the_merge_tool_takes_a_file_in_conflict_and_git_stages_it(repo, jazygit):
+    diverged(repo)
+    repo("config", "merge.tool", "theirs")
+    repo("config", "mergetool.theirs.cmd", 'cp "$REMOTE" "$MERGED"')
+    repo("config", "mergetool.theirs.trustExitCode", "true")
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    ui.files.select("one.txt")
+
+    ui.app.press("enter")
+    ui.app.wait_for("g  Merge it in git's merge tool")
+    ui.app.wait_for("git -c mergetool.keepBackup=false mergetool -- one.txt")
+    ui.app.press("escape")
+    ui.changing_repo("one.txt merged in the merge tool", lambda: (
+        ui.app.press("enter"), ui.app.wait_for("g  Merge it in git's merge tool"), ui.app.press("g")))
+
+    # In a rebase, the merge tool's REMOTE is the commit being rebased.
+    assert repo.read("one.txt") == "feature\n"
+    assert repo.conflicts() == []
+    assert not (repo.path / "one.txt.orig").exists()
+
+
+@needs_mergiraf
+def test_mergiraf_solves_what_it_can_and_leaves_the_file_for_the_user_to_stage(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    ui.files.select("imports.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.press("m")
+    ui.app.wait_for("imports.py has no conflict markers left: space stages it")
+
+    assert repo.read("imports.py") == "import a\nimport c\nimport b\n\n\ndef f():\n    return 1\n"
+    assert repo.conflicts() == ["imports.py", "value.py"]
+    assert not (repo.path / "imports.py.orig").exists()
+
+
+@needs_mergiraf
+def test_what_mergiraf_cannot_solve_is_left_in_conflict(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    ui.files.select("value.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.press("m")
+
+    ui.app.wait_for("value.py still has 1 conflict, the first at line 2")
+    assert repo.conflicts() == ["imports.py", "value.py"]
+
+
+def test_a_file_in_conflict_opens_in_the_editor_set_at_its_first_conflict(repo, env, jazygit):
+    from test_editors import file_editors, opened
+    repo.commit("Add three", **{"three.txt": "a\nb\nc\n"})
+    repo("switch", "--create", "feature")
+    repo.commit("Change c on feature", **{"three.txt": "a\nb\nfeature\n"})
+    repo("switch", "main")
+    repo.commit("Change c on main", **{"three.txt": "a\nb\nmain\n"})
+    repo("switch", "feature")
+    file_editors(env, ("Marker", "opened", None))
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+
+    ui.files.edit("three.txt")
+
+    assert opened(ui, repo.path / "opened") == f"{repo.path / 'three.txt'}:3"
+
+
+@needs_mergiraf
+def test_with_mergiraf_as_gits_merge_driver_u_brings_back_what_it_made_of_the_file(repo, jazygit):
+    repo("config", "merge.mergiraf.name", "mergiraf")
+    repo("config", "merge.mergiraf.driver", "mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L")
+    repo.commit("Merge Python with mergiraf", **{".gitattributes": "*.py merge=mergiraf\n"})
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    # The driver solved imports.py; only value.py is left in conflict.
+    assert repo.conflicts() == ["value.py"]
+    ui.files.resolve("value.py", "o")
+    assert repo.conflicts() == []
+
+    ui.files.restore("value.py")
+
+    # git checkout -m merges the file again, through the driver: what comes back is the conflict as the merge stopped
+    # with it, with mergiraf's own labels, not git's.
+    assert repo.conflicts() == ["value.py"]
+    assert "<<<<<<< ours" in repo.read("value.py")
+
+
+@needs_mergiraf
+def test_mergiraf_asks_before_it_loses_edits_made_to_the_file_and_leaves_them_when_told_not_to(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    edited = repo.read("imports.py").replace("return 1", "return 9")
+    repo.write("imports.py", edited)
+    ui.files.select("imports.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.wait_for("your edits to it")
+    ui.app.press("m")
+    ui.app.wait_for("Solving with mergiraf starts again from the conflict")
+    ui.app.press("escape")
+
+    ui.caught_up()
+    assert repo.read("imports.py") == edited
+
+
+@needs_mergiraf
+def test_mergiraf_solves_an_edited_file_once_told_to(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    repo.write("imports.py", repo.read("imports.py").replace("return 1", "return 9"))
+    ui.files.select("imports.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.press("m")
+    ui.confirm("Solve imports.py with mergiraf?")
+    ui.app.wait_for("imports.py has no conflict markers left: space stages it")
+
+    assert repo.read("imports.py") == "import a\nimport c\nimport b\n\n\ndef f():\n    return 1\n"
+
+
+@needs_mergiraf
+def test_mergiraf_reads_a_file_with_its_bases_as_it_is_keeping_its_edits(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    repo("checkout", "--conflict=diff3", "--", "imports.py")
+    repo.write("imports.py", repo.read("imports.py").replace("return 1", "return 9"))
+    ui.files.select("imports.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.wait_for("with what you edited")
+    ui.app.press("m")
+    ui.app.wait_for("imports.py has no conflict markers left: space stages it")
+
+    assert "Solving with mergiraf starts again" not in ui.app.text()
+    assert repo.read("imports.py") == "import a\nimport c\nimport b\n\n\ndef f():\n    return 9\n"
