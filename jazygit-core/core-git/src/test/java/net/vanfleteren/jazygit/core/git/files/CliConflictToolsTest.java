@@ -98,6 +98,42 @@ class CliConflictToolsTest {
     }
 
     @Test
+    void aFileCheckedOutWithCrlfAsGitWroteItIsAsWritten() throws Exception {
+        assertEquals(ConflictFile.AS_WRITTEN, conflictIn(repo.resolve("crlf"), "core.autocrlf", "true", "line\n"));
+    }
+
+    @Test
+    void aFileThatIsNotUtf8AsGitWroteItIsAsWritten() throws Exception {
+        assertEquals(
+                ConflictFile.AS_WRITTEN, conflictIn(repo.resolve("latin1"), "core.autocrlf", "false", "caf\u00e9\n"));
+    }
+
+    @Test
+    void aFileAddedOnBothSidesAsGitWroteItIsAsWritten() throws Exception {
+        Path added = repo.resolve("added");
+        Files.createDirectories(added);
+        gitIn(added, "init", "-q", "-b", "main");
+        gitIn(added, "config", "user.email", "t@t");
+        gitIn(added, "config", "user.name", "t");
+        Files.writeString(added.resolve("base.txt"), "base\n");
+        gitIn(added, "add", ".");
+        gitIn(added, "commit", "-qm", "base");
+        gitIn(added, "switch", "-qc", "feature");
+        Files.writeString(added.resolve("new.txt"), "feature\n");
+        gitIn(added, "add", ".");
+        gitIn(added, "commit", "-qm", "feature");
+        gitIn(added, "switch", "-q", "main");
+        Files.writeString(added.resolve("new.txt"), "main\n");
+        gitIn(added, "add", ".");
+        gitIn(added, "commit", "-qm", "main");
+        gitAnyExitIn(added, "merge", "feature");
+
+        assertEquals(
+                ConflictFile.AS_WRITTEN,
+                new CliIndex(added).conflictFile("new.txt").get());
+    }
+
+    @Test
     void aFileMergedByHandIsEdited() throws Exception {
         write("value.py", "def f():\n    return 23\n");
 
@@ -171,12 +207,57 @@ class CliConflictToolsTest {
         }
     }
 
+    /**
+     * How the file git leaves in conflict stands, in a repository at {@code at} with {@code key} set to {@code value}
+     * before anything is written, whose sides each add a line to {@code content}, written as ISO-8859-1.
+     */
+    private ConflictFile conflictIn(Path at, String key, String value, String content) throws Exception {
+        Files.createDirectories(at);
+        gitIn(at, "init", "-q", "-b", "main");
+        gitIn(at, "config", "user.email", "t@t");
+        gitIn(at, "config", "user.name", "t");
+        gitIn(at, "config", key, value);
+        java.nio.charset.Charset latin1 = java.nio.charset.StandardCharsets.ISO_8859_1;
+        Files.writeString(at.resolve("f.txt"), content, latin1);
+        gitIn(at, "add", ".");
+        gitIn(at, "commit", "-qm", "base");
+        gitIn(at, "switch", "-qc", "feature");
+        Files.writeString(at.resolve("f.txt"), content + "feature\n", latin1);
+        gitIn(at, "commit", "-qam", "feature");
+        gitIn(at, "switch", "-q", "main");
+        Files.writeString(at.resolve("f.txt"), content + "main\n", latin1);
+        gitIn(at, "commit", "-qam", "main");
+        gitAnyExitIn(at, "merge", "feature");
+        return new CliIndex(at).conflictFile("f.txt").get();
+    }
+
     private void write(String name, String content) throws Exception {
         Files.writeString(repo.resolve(name), content);
     }
 
     private String read(String name) throws Exception {
         return Files.readString(repo.resolve(name));
+    }
+
+    private void gitAnyExitIn(Path at, String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        new ProcessExecutor()
+                .command(command)
+                .directory(at.toFile())
+                .readOutput(true)
+                .execute();
+    }
+
+    private void gitIn(Path at, String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        new ProcessExecutor()
+                .command(command)
+                .directory(at.toFile())
+                .readOutput(true)
+                .exitValueNormal()
+                .execute();
     }
 
     private void gitAnyExit(String... args) throws Exception {

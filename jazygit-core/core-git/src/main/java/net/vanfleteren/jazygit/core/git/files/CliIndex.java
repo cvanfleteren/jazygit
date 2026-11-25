@@ -7,6 +7,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -164,15 +165,17 @@ public final class CliIndex implements Index {
     /**
      * The file at {@code path} against the conflict {@code git merge-file -p} writes of its stages in the index,
      * which is what {@code git checkout --merge} writes, made in a directory of its own so the working tree is left as
-     * it is. A file with no base, added on both sides, is merged from an empty one.
+     * it is. A file with no base, added on both sides, is merged from an empty one. The file is read as git's output
+     * is, bytes that are not UTF-8 replaced, so a file in another encoding compares as it is.
      */
     @Override
     public Either<GitError, ConflictFile> conflictFile(String path) {
         Path root = worktree.toAbsolutePath().normalize();
         return inside(root, path)
                 .<GitError>mapLeft(refused -> refused)
-                .flatMap(file -> Try.of(() -> Files.readString(file)).toEither().mapLeft(failure ->
-                        (GitError) new GitError.Unreadable(path, String.valueOf(failure))))
+                .flatMap(file -> Try.of(() -> new String(Files.readAllBytes(file), StandardCharsets.UTF_8))
+                        .toEither()
+                        .mapLeft(failure -> (GitError) new GitError.Unreadable(path, String.valueOf(failure))))
                 .flatMap(working -> written(path).map(conflict -> ConflictFile.of(working, conflict)));
     }
 

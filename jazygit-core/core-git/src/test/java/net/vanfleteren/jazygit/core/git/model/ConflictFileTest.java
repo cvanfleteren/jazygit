@@ -21,6 +21,11 @@ class ConflictFileTest {
     }
 
     @Test
+    void lineEndingsAreNotEdits() {
+        assertEquals(ConflictFile.AS_WRITTEN, ConflictFile.of(WRITTEN.replace("\n", "\r\n"), WRITTEN));
+    }
+
+    @Test
     void aFileWithABlockMergedByHandIsEdited() {
         String halfMerged = "a\nmain and feature\nb\n<<<<<<< HEAD\nx\n=======\ny\n>>>>>>> 1234567 (Change one)\n";
 

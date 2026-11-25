@@ -53,8 +53,13 @@ public enum ConflictFile {
                         .exists(line -> line.startsWith(BASE)));
     }
 
+    /**
+     * The lines of {@code content} without the labels of their markers, nor the carriage return a checkout with CRLF
+     * line endings ends them with, which the index does not have.
+     */
     private static List<String> unlabelled(String content) {
         return List.of(content.split("\n", -1))
+                .map(line -> line.endsWith("\r") ? line.substring(0, line.length() - 1) : line)
                 .map(line -> line.startsWith(OURS) || line.startsWith(BASE) || line.startsWith(THEIRS)
                         ? line.substring(0, OURS.length() - 1)
                         : line);
