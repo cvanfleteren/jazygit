@@ -8,6 +8,7 @@ import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
+import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.EditorFailed;
@@ -17,6 +18,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError.TempFileFailed;
 import net.vanfleteren.jazygit.core.git.process.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
+import net.vanfleteren.jazygit.core.process.CommandLine;
 import net.vanfleteren.jazygit.core.process.Exec;
 import net.vanfleteren.jazygit.core.process.ExecFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
@@ -50,6 +52,30 @@ public final class CliEditor implements Editor {
     @Override
     public Either<GitFailure, List<ExecutedCommand>> edit(List<String> files) {
         return editor(worktree).flatMap(editor -> open(worktree, editor, files));
+    }
+
+    /**
+     * Runs {@link ConflictTools#mergeTool} on {@code path} on the terminal, with the user's environment, so git finds
+     * the tool as it does outside the app.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> mergeTool(String path, ConflictTools tools) {
+        List<String> commandLine = tools.mergeTool(path);
+        return Exec.interactive(worktree, commandLine)
+                .mapLeft(failure -> failed(commandLine, mergeToolError(CommandLine.format(commandLine), failure)))
+                .map(List::of);
+    }
+
+    private static GitError mergeToolError(String program, ExecFailure failure) {
+        return switch (failure) {
+            case ExecFailure.NotStarted(var cause) -> new GitError.ProgramNotStarted(program, cause);
+            case ExecFailure.NonZero(int exitCode, var stderr, var stdout) ->
+                new GitError.ProgramFailed(program, exitCode);
+            // It gets as long as the user takes, and its output goes to the terminal.
+            case ExecFailure.Interrupted _ -> new Interrupted(program);
+            case ExecFailure.TimedOut _ -> new Interrupted(program);
+            case ExecFailure.TooMuchOutput _ -> new Interrupted(program);
+        };
     }
 
     /**

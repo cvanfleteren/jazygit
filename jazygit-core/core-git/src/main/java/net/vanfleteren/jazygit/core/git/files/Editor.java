@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.git.files;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
@@ -35,4 +36,12 @@ public interface Editor {
      * the terminal, which the caller must have handed over. Fails as {@link #editMessage} does.
      */
     Either<GitFailure, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text);
+
+    /**
+     * Hands the file in conflict at {@code path} to git's merge tool, {@code git mergetool}, as {@code tools} says to
+     * run it (ADR 201), and waits until it is done. It runs on the terminal, which the caller must have handed over.
+     * Git stages the file when it takes it as resolved. Fails with a {@link GitError.ProgramFailed} when the merge
+     * failed or was not confirmed.
+     */
+    Either<GitFailure, List<ExecutedCommand>> mergeTool(String path, ConflictTools tools);
 }

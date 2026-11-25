@@ -99,6 +99,10 @@ public final class ErrorText {
                 Messages.get("git.editorNotStarted", editor, reason(cause));
             case GitError.EditorFailed(String editor, int exitCode) ->
                 Messages.get("git.editorFailed", editor, String.valueOf(exitCode));
+            case GitError.ProgramNotStarted(String program, var cause) ->
+                Messages.get("git.programNotStarted", program, reason(cause));
+            case GitError.ProgramFailed(String program, int exitCode) ->
+                Messages.get("git.programFailed", program, String.valueOf(exitCode));
         };
     }
 

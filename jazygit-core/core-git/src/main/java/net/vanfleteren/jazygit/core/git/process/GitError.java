@@ -235,4 +235,20 @@ public sealed interface GitError {
      * @param editor the editor as git names it
      */
     record EditorFailed(String editor, int exitCode) implements GitError {}
+
+    /**
+     * A program the app hands a file to, other than git and the editor, could not be started, as mergiraf when it is
+     * not installed (ADR 201).
+     *
+     * @param program the command line it was run as
+     */
+    record ProgramNotStarted(String program, IOException cause) implements GitError {}
+
+    /**
+     * A program the app hands a file to, other than the editor, exited with a code that is not one of those it means
+     * to (ADR 201): {@code git mergetool} when the merge failed or was not confirmed, mergiraf when it broke.
+     *
+     * @param program the command line it was run as
+     */
+    record ProgramFailed(String program, int exitCode) implements GitError {}
 }

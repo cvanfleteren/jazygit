@@ -1,25 +1,40 @@
 package net.vanfleteren.jazygit.core.git.files;
 
 import static net.vanfleteren.jazygit.core.git.process.GitCommand.git;
+import static net.vanfleteren.jazygit.core.git.process.GitCommand.reading;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitError.RefusedPath;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
+import net.vanfleteren.jazygit.core.process.CommandLine;
+import net.vanfleteren.jazygit.core.process.Exec;
+import net.vanfleteren.jazygit.core.process.ExecFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 
 /**
  * The {@link Index} of a repository, the staging area, changed through the git command line tool.
  */
 public final class CliIndex implements Index {
+
+    // What a read of the index or the config may take.
+    private static final Duration TIMEOUT = Duration.ofSeconds(10);
+    // What mergiraf may take to merge one file.
+    private static final Duration SOLVE_TIMEOUT = Duration.ofMinutes(2);
+    private static final String MERGIRAF = "mergiraf";
+    // What mergiraf solve exits with when it left conflicts in the file.
+    private static final int CONFLICTS_LEFT = 2;
 
     private final Path worktree;
 
@@ -103,6 +118,83 @@ public final class CliIndex implements Index {
                 .map(MarkedFile::blockStarts)
                 .filter(lines -> !lines.isEmpty())
                 .map(lines -> new MarkedFile(path, lines))));
+    }
+
+    /**
+     * {@code git ls-files --unmerged -- <paths>}: those of them that have more than one stage in the index.
+     */
+    @Override
+    public Either<GitError, List<String>> unmerged(List<String> paths) {
+        return paths.isEmpty()
+                ? Either.right(List.empty())
+                : GitProcess.read(
+                        worktree,
+                        reading(List.of("ls-files", "--unmerged", "-z", "--").appendAll(paths))
+                                .withLiteralPaths()
+                                .withTimeout(TIMEOUT),
+                        raw -> Either.right(List.of(raw.split("\0"))
+                                .filter(entry -> entry.contains("\t"))
+                                .map(entry -> entry.substring(entry.indexOf('\t') + 1))
+                                .distinct()));
+    }
+
+    /**
+     * {@code git config --get merge.tool} and {@code git config --get mergetool.keepBackup}, which fail when they are
+     * not set, and {@code mergiraf --version}, which fails when it does not run.
+     */
+    @Override
+    public Either<GitError, ConflictTools> tools() {
+        return Either.right(new ConflictTools(
+                configured("merge.tool"),
+                configured("mergetool.keepBackup"),
+                Exec.run(worktree, List.of(MERGIRAF, "--version"), HashMap.empty(), TIMEOUT)
+                        .isRight()));
+    }
+
+    private boolean configured(String key) {
+        return GitProcess.read(
+                        worktree,
+                        reading("config", "--get", key).withTimeout(TIMEOUT),
+                        raw -> Either.right(!raw.isBlank()))
+                .getOrElse(false);
+    }
+
+    /**
+     * {@code git checkout --conflict=diff3 -- <path>}, then {@code mergiraf solve --keep-backup=false <path>}, as
+     * {@link ConflictTools#mergiraf} says. Mergiraf exits with 2 when it left conflicts, which is what it does, not a
+     * failure.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> solve(String path) {
+        List<List<String>> steps = ConflictTools.mergiraf(path);
+        return GitFailure.sequence(
+                () -> GitProcess.log(worktree, git(steps.head().tail()).withLiteralPaths()),
+                () -> mergiraf(steps.get(1)));
+    }
+
+    private Either<GitFailure, List<ExecutedCommand>> mergiraf(List<String> commandLine) {
+        List<ExecutedCommand> ran = List.of(new ExecutedCommand(commandLine));
+        return Exec.run(worktree, commandLine, HashMap.empty(), SOLVE_TIMEOUT)
+                .fold(failure -> solved(commandLine, ran, failure), output -> Either.right(ran));
+    }
+
+    /**
+     * What mergiraf failing with {@code failure} means: conflicts left, which is no failure, or one.
+     */
+    private static Either<GitFailure, List<ExecutedCommand>> solved(
+            List<String> commandLine, List<ExecutedCommand> ran, ExecFailure failure) {
+        String program = CommandLine.format(commandLine);
+        return switch (failure) {
+            case ExecFailure.NonZero(int exitCode, var stderr, var stdout) ->
+                exitCode == CONFLICTS_LEFT
+                        ? Either.right(ran)
+                        : Either.left(new GitFailure(new GitError.ProgramFailed(program, exitCode), ran));
+            case ExecFailure.NotStarted(var cause) ->
+                Either.left(new GitFailure(new GitError.ProgramNotStarted(program, cause), ran));
+            case ExecFailure.TimedOut _ -> Either.left(new GitFailure(new GitError.Interrupted(MERGIRAF), ran));
+            case ExecFailure.Interrupted _ -> Either.left(new GitFailure(new GitError.Interrupted(MERGIRAF), ran));
+            case ExecFailure.TooMuchOutput _ -> Either.left(new GitFailure(new GitError.Interrupted(MERGIRAF), ran));
+        };
     }
 
     /**

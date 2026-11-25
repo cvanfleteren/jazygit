@@ -1,0 +1,151 @@
+package net.vanfleteren.jazygit.core.git.files;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.vavr.collection.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.core.git.model.ConflictTools;
+import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.zeroturnaround.exec.ProcessExecutor;
+
+/**
+ * Handing a file in conflict to git's merge tool or to mergiraf (ADR 201): against a merge of {@code feature} into
+ * {@code main} that stopped on {@code imports.py}, where each added an import mergiraf can put together, and on
+ * {@code value.py}, where each changed the same line, which it cannot.
+ */
+class CliConflictToolsTest {
+
+    @TempDir
+    Path repo;
+
+    private CliIndex index;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        git("init", "-q", "-b", "main");
+        git("config", "user.email", "t@t");
+        git("config", "user.name", "t");
+        write("imports.py", "import a\n\n\ndef f():\n    return 1\n");
+        write("value.py", "def f():\n    return 1\n");
+        git("add", ".");
+        git("commit", "-qm", "base");
+        git("switch", "-qc", "feature");
+        write("imports.py", "import a\nimport b\n\n\ndef f():\n    return 1\n");
+        write("value.py", "def f():\n    return 3\n");
+        git("commit", "-qam", "feature");
+        git("switch", "-q", "main");
+        write("imports.py", "import a\nimport c\n\n\ndef f():\n    return 1\n");
+        write("value.py", "def f():\n    return 2\n");
+        git("commit", "-qam", "main");
+        gitAnyExit("merge", "feature");
+        index = new CliIndex(repo);
+    }
+
+    @Test
+    void theFilesInConflictAreThoseUnmerged() {
+        assertEquals(
+                List.of("imports.py", "value.py"),
+                index.unmerged(List.of("imports.py", "value.py", "other.py")).get());
+    }
+
+    @Test
+    void theToolsAreWhatTheConfigSetsAndWhetherMergirafRuns() throws Exception {
+        assertEquals(new ConflictTools(false, false, true), index.tools().get());
+
+        git("config", "merge.tool", "mine");
+        git("config", "mergetool.keepBackup", "true");
+
+        assertEquals(new ConflictTools(true, true, true), index.tools().get());
+    }
+
+    @Test
+    void mergirafSolvesWhatItCanInPlaceAndStagesNothing() throws Exception {
+        List<String> ran = index.solve("imports.py").get().map(ExecutedCommand::line);
+
+        assertEquals("import a\nimport c\nimport b\n\n\ndef f():\n    return 1\n", read("imports.py"));
+        assertEquals(
+                List.of("git checkout --conflict=diff3 -- imports.py", "mergiraf solve --keep-backup=false imports.py"),
+                ran);
+        assertEquals(
+                List.of("imports.py"), index.unmerged(List.of("imports.py")).get());
+        assertFalse(Files.exists(repo.resolve("imports.py.orig")));
+    }
+
+    @Test
+    void conflictsMergirafLeavesAreNoFailure() throws Exception {
+        assertTrue(index.solve("value.py").isRight());
+
+        assertEquals(1, index.markers(List.of("value.py")).get().size());
+        assertFalse(Files.exists(repo.resolve("value.py.orig")));
+    }
+
+    @Test
+    void theMergeToolTakesTheFileAndGitStagesItWithoutABackup() throws Exception {
+        git("config", "merge.tool", "theirs");
+        git("config", "mergetool.theirs.cmd", "cp \"$REMOTE\" \"$MERGED\"");
+        git("config", "mergetool.theirs.trustExitCode", "true");
+
+        List<String> ran = new CliEditor(repo)
+                .mergeTool("value.py", index.tools().get())
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertEquals("def f():\n    return 3\n", read("value.py"));
+        assertEquals(List.of("git -c mergetool.keepBackup=false mergetool -- value.py"), ran);
+        assertEquals(List.empty(), index.unmerged(List.of("value.py")).get());
+        assertFalse(Files.exists(repo.resolve("value.py.orig")));
+    }
+
+    @Test
+    void aMergeToolThatFailsSaysSo() throws Exception {
+        git("config", "merge.tool", "broken");
+        git("config", "mergetool.broken.cmd", "false");
+        git("config", "mergetool.broken.trustExitCode", "true");
+
+        GitError error = new CliEditor(repo)
+                .mergeTool("value.py", index.tools().get())
+                .getLeft()
+                .error();
+
+        assertTrue(error instanceof GitError.ProgramFailed, error.toString());
+        assertEquals(List.of("value.py"), index.unmerged(List.of("value.py")).get());
+    }
+
+    private void write(String name, String content) throws Exception {
+        Files.writeString(repo.resolve(name), content);
+    }
+
+    private String read(String name) throws Exception {
+        return Files.readString(repo.resolve(name));
+    }
+
+    private void gitAnyExit(String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        new ProcessExecutor()
+                .command(command)
+                .directory(repo.toFile())
+                .readOutput(true)
+                .execute();
+    }
+
+    private String git(String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of("git"));
+        command.addAll(java.util.List.of(args));
+        return new ProcessExecutor()
+                .command(command)
+                .directory(repo.toFile())
+                .readOutput(true)
+                .redirectErrorStream(true)
+                .exitValueNormal()
+                .execute()
+                .outputUTF8();
+    }
+}
