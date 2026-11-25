@@ -572,3 +572,105 @@ def test_continuing_with_conflict_markers_staged_says_it_commits_them(repo, jazy
 
     ui.app.wait_for("Continue, with conflict markers in 1 file")
     ui.app.wait_for("one.txt still has conflict markers")
+
+
+def python_conflicts(repo):
+    """Main and feature that each added an import to imports.py, which mergiraf puts together, and changed the same
+    line of value.py, which it cannot; main checked out."""
+    repo.commit("Add the modules", **{"imports.py": "import a\n\n\ndef f():\n    return 1\n",
+                                       "value.py": "def f():\n    return 1\n"})
+    repo("switch", "--create", "feature")
+    repo.commit("Change them on feature", **{"imports.py": "import a\nimport b\n\n\ndef f():\n    return 1\n",
+                                              "value.py": "def f():\n    return 3\n"})
+    repo("switch", "main")
+    repo.commit("Change them on main", **{"imports.py": "import a\nimport c\n\n\ndef f():\n    return 1\n",
+                                           "value.py": "def f():\n    return 2\n"})
+
+
+def test_the_merge_tool_takes_a_file_in_conflict_and_git_stages_it(repo, jazygit):
+    diverged(repo)
+    repo("config", "merge.tool", "theirs")
+    repo("config", "mergetool.theirs.cmd", 'cp "$REMOTE" "$MERGED"')
+    repo("config", "mergetool.theirs.trustExitCode", "true")
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    ui.files.select("one.txt")
+
+    ui.app.press("enter")
+    ui.app.wait_for("g  Merge it in git's merge tool")
+    ui.app.wait_for("git -c mergetool.keepBackup=false mergetool -- one.txt")
+    ui.app.press("escape")
+    ui.changing_repo("one.txt merged in the merge tool", lambda: (
+        ui.app.press("enter"), ui.app.wait_for("g  Merge it in git's merge tool"), ui.app.press("g")))
+
+    # In a rebase, the merge tool's REMOTE is the commit being rebased.
+    assert repo.read("one.txt") == "feature\n"
+    assert repo.conflicts() == []
+    assert not (repo.path / "one.txt.orig").exists()
+
+
+def test_mergiraf_solves_what_it_can_and_leaves_the_file_for_the_user_to_stage(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    ui.files.select("imports.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.press("m")
+    ui.app.wait_for("imports.py has no conflict markers left: space stages it")
+
+    assert repo.read("imports.py") == "import a\nimport c\nimport b\n\n\ndef f():\n    return 1\n"
+    assert repo.conflicts() == ["imports.py", "value.py"]
+    assert not (repo.path / "imports.py.orig").exists()
+
+
+def test_what_mergiraf_cannot_solve_is_left_in_conflict(repo, jazygit):
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    ui.files.select("value.py")
+
+    ui.app.press("enter")
+    ui.app.wait_for("m  Solve it with mergiraf")
+    ui.app.press("m")
+
+    ui.app.wait_for("value.py still has 1 conflict, the first at line 2")
+    assert repo.conflicts() == ["imports.py", "value.py"]
+
+
+def test_a_file_in_conflict_opens_in_the_editor_set_at_its_first_conflict(repo, env, jazygit):
+    from test_editors import file_editors, opened
+    repo.commit("Add three", **{"three.txt": "a\nb\nc\n"})
+    repo("switch", "--create", "feature")
+    repo.commit("Change c on feature", **{"three.txt": "a\nb\nfeature\n"})
+    repo("switch", "main")
+    repo.commit("Change c on main", **{"three.txt": "a\nb\nmain\n"})
+    repo("switch", "feature")
+    file_editors(env, ("Marker", "opened", None))
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+
+    ui.files.edit("three.txt")
+
+    assert opened(ui, repo.path / "opened") == f"{repo.path / 'three.txt'}:3"
+
+
+def test_with_mergiraf_as_gits_merge_driver_u_brings_back_what_it_made_of_the_file(repo, jazygit):
+    repo("config", "merge.mergiraf.name", "mergiraf")
+    repo("config", "merge.mergiraf.driver", "mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L")
+    repo.commit("Merge Python with mergiraf", **{".gitattributes": "*.py merge=mergiraf\n"})
+    python_conflicts(repo)
+    ui = jazygit()
+    ui.branches.merge("feature")
+    # The driver solved imports.py; only value.py is left in conflict.
+    assert repo.conflicts() == ["value.py"]
+    ui.files.resolve("value.py", "o")
+    assert repo.conflicts() == []
+
+    ui.files.restore("value.py")
+
+    # git checkout -m merges the file again, through the driver: what comes back is the conflict as the merge stopped
+    # with it, with mergiraf's own labels, not git's.
+    assert repo.conflicts() == ["value.py"]
+    assert "<<<<<<< ours" in repo.read("value.py")
