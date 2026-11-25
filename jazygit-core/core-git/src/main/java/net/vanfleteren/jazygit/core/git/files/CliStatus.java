@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.core.git.history.CliInProgress;
+import net.vanfleteren.jazygit.core.git.history.CliPlan;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
@@ -55,7 +56,10 @@ public final class CliStatus implements Status {
                                 .withTimeout(TIMEOUT),
                         CliStatus::parse)
                 .map(status -> status.withInProgress(CliInProgress.read(markers)))
-                .map(status -> status.inProgress().isDefined() ? status.withResolved(resolved(status)) : status);
+                .map(status -> status.inProgress()
+                        .map(inProgress -> status.withResolved(resolved(status))
+                                .withPlan(CliPlan.read(worktree, markers, inProgress, status.headCommit())))
+                        .getOrElse(status));
     }
 
     /**

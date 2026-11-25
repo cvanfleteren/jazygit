@@ -36,9 +36,13 @@ still to come, and `head`, where it started). Each line of those is a command an
    - A merge is one step, and a rebase of the apply backend (`rebase-apply`) keeps no list of its steps: no plan, and
      what ADR 197 shows.
    - Each step is its command and the rest of its line: the commit and its subject, as git wrote them, or what an
-     `exec`, `label`, `reset` or `merge` does. No `git log` is run for the subjects of the steps: git writes them.
-     Not: reading them again with `git log --no-walk`, which a line without one, edited by hand, would need; that shows
-     its commit alone.
+     `exec`, `label`, `reset` or `merge` does. A command written short (`f`, `x`) is named in full, and the options
+     of a `fixup` are left out.
+   - The commits of the steps are read with one `git log --no-walk`, for the content panel to show them (3), and
+     `Repo.commit` finds them there as it finds those of the log. A line written by hand may have no subject; it takes
+     its commit's. A sequence abbreviates its commits (`pick a01227b feat 1`), which `git rev-parse` gives in full,
+     as the app hands git only full ones (ADR 40); a commit git does not find leaves the step without one, shown as
+     it was written.
 2. **The commits pane lists the plan above the log**, newest on top, as the log is: the last step to come at the top,
    down to the next one, then the step it stopped at, then the log of HEAD, whose commits made since the base are
    marked done with a `✓`. They are the commits listed above the base, which are not matched to the steps; nor do they
@@ -77,8 +81,9 @@ still to come, and `head`, where it started). Each line of those is a command an
 - The commit whose conflicts are resolved is in view, and a highlight away from its diff. The rows above the log move
   the log down while an operation is in progress; the highlight starts on the top row, as before.
 - A step's tag and its subject are what git wrote: a todo edited by hand shows what it was edited to.
-- The status of a sequence of cherry-picks runs one more git process, `rev-list --count`, and a single cherry-pick or
-  revert one, `log -1`, with each status while it is in progress; a rebase none.
+- Each status read while a rebase, cherry-pick or revert is stopped runs one more git process, the `log --no-walk` of
+  its steps' commits; a sequence of cherry-picks or reverts also `rev-list --count`, and `rev-parse` for its
+  abbreviated commits. A merge, and a repository in the middle of nothing, none.
 - The layout of the left column takes the height of the repository panel from the model (`LeftPanes.statusRows`):
   the borders the user dragged stay where they are, and the last pane gives up the row.
 - The ✓ marks follow the log: a base that is not in the log as read marks none.

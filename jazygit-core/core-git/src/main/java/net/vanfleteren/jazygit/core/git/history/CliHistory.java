@@ -340,6 +340,13 @@ public final class CliHistory implements History {
     }
 
     /**
+     * The commits {@code shas}, as {@code git log --no-walk} lists them: those git does not find left out.
+     */
+    static Either<GitError, List<Commit>> listed(Path worktree, List<Sha> shas) {
+        return read(worktree, shas.map(Sha::value).prepend("--no-walk"), List.empty(), shas.size());
+    }
+
+    /**
      * The newest commits {@code revisions} select, at most {@code max}, newest first, laid out by
      * {@link CommitGraph#arrange}.
      */

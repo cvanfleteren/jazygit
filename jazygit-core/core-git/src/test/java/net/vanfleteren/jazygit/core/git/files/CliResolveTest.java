@@ -123,6 +123,24 @@ class CliResolveTest {
     }
 
     @Test
+    void theStatusHasTheStepsOfTheRebase() throws Exception {
+        CliStatus status = new CliStatus(repo, CliInProgress.markers(repo).get(), Option.none());
+
+        assertEquals(
+                Option.of(new net.vanfleteren.jazygit.core.repo.Plan(
+                        new net.vanfleteren.jazygit.core.repo.Sha(
+                                git("rev-parse", "main").strip()),
+                        net.vanfleteren.jazygit.core.repo.Plan.Step.pick(
+                                new net.vanfleteren.jazygit.core.repo.Sha(
+                                        git("rev-parse", "feature").strip()),
+                                "feature"),
+                        List.empty(),
+                        1,
+                        1)),
+                status.read().get().plan().map(net.vanfleteren.jazygit.core.repo.Plan::steps));
+    }
+
+    @Test
     void aConflictBroughtBackIsNoLongerResolved() throws Exception {
         CliStatus status = new CliStatus(repo, CliInProgress.markers(repo).get(), Option.none());
         index.keep("both.txt", BOTH, Conflict.Version.THEIRS);
