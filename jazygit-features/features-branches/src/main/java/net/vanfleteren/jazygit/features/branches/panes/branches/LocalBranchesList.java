@@ -246,6 +246,26 @@ class LocalBranchesList implements BranchesTabList {
         return after.contains(name) || added.size() != 1 ? name : added.head();
     }
 
+    /**
+     * {@code branches}, with the one this worktree rebases, if any, as the checked out one: it is the one worked on
+     * here, drawn as checked out, and the selection goes to it as to the branch checked out, as when the app switches
+     * to a worktree that stopped rebasing it (ADR 197). Only the list takes it so; the repository does not.
+     */
+    static List<Branch> workedOnHere(List<Branch> branches, Option<BranchName> rebased) {
+        return branches.map(branch -> rebased.contains(branch.name()) && !branch.current()
+                ? new Branch(
+                        branch.name(),
+                        true,
+                        branch.tip(),
+                        branch.tipTime(),
+                        branch.created(),
+                        branch.hasRemote(),
+                        branch.isDefault(),
+                        branch.tracking(),
+                        branch.worktree())
+                : branch);
+    }
+
     private static Option<BranchName> current(List<BranchNode> nodes) {
         return branches(nodes).find(Branch::current).map(Branch::name);
     }
@@ -313,7 +333,7 @@ class LocalBranchesList implements BranchesTabList {
         Loadable<List<BranchNode>> read = model.repo()
                 .branches()
                 .map(branches -> BranchNode.of(
-                        branches,
+                        workedOnHere(branches, Branches.rebasedHere(model)),
                         grouping,
                         model.repoView().branches().grouped(),
                         model.repoView().branches().closedGroups()))

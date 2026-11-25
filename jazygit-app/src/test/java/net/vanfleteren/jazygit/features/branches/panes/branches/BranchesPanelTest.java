@@ -126,6 +126,22 @@ class BranchesPanelTest {
     }
 
     @Test
+    void onceTheBranchShownIsOneRebasedHereItIsHighlightedAsACheckedOutOneWouldBe() throws Exception {
+        // ADR 197: as when switching to the worktree that stopped rebasing it, whose HEAD is detached meanwhile.
+        Model branches =
+                with(before, List.of(FEATURE, Fixtures.branch(new BranchName("main"), false, new Sha("1")), OLD));
+        Model rebasing = Update.update(
+                        branches,
+                        new LoadMsg.StatusLoaded(new RepoStatus(
+                                new Head.Detached(new Sha("1")),
+                                List.empty(),
+                                Option.of(new InProgress.Rebasing(Option.of(FEATURE.name()), new Sha("1"), 1, 2)))))
+                .model();
+
+        assertEquals(selecting("feature"), highlightedAfterMovingTo(2, rebasing));
+    }
+
+    @Test
     void aDetachedHeadIsListedFirstAndHighlightedOnceDetachedWithoutALog() throws Exception {
         Sha at = new Sha("89eeda75aaaaaaaa");
         Model detached = detachedAt(at);
