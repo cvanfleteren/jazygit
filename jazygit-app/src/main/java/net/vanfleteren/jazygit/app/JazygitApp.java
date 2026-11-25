@@ -454,7 +454,7 @@ public class JazygitApp extends ToolkitApp {
      * sent or painted with (ADR 191).
      */
     private static List<Sharp> sharpPictures(Model model) {
-        return Features.ALL.flatMap(feature -> feature.picturing().apply(model)).flatMap(Picture::sharp);
+        return Features.FILLS.all(KernelSlots.PICTURING, model).flatMap(Picture::sharp);
     }
 
     /**

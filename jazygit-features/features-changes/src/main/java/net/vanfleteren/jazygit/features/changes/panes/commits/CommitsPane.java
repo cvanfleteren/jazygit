@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.changes.panes.commits;
 
 import net.vanfleteren.jazygit.kernel.state.view.TabId;
-import net.vanfleteren.jazygit.kernel.ui.PaneKey;
+import net.vanfleteren.jazygit.kernel.ui.Slot;
 import net.vanfleteren.jazygit.kernel.ui.tabs.PaneTab;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PaneLine;
 
@@ -14,26 +14,25 @@ public final class CommitsPane {
     /**
      * The line above the list to type in, while it is open.
      */
-    public static final PaneKey<PaneLine> LINE = PaneKey.of("changes.panes.commits.line", PaneLine.class);
+    public static final Slot<PaneLine> LINE = Slot.of("changes.panes.commits.line", PaneLine.class);
 
     /**
      * What is listed in place of the log of HEAD.
      */
-    public static final PaneKey<CommitsListing> LISTING =
-            PaneKey.of("changes.panes.commits.listing", CommitsListing.class);
+    public static final Slot<CommitsListing> LISTING = Slot.of("changes.panes.commits.listing", CommitsListing.class);
 
     /**
      * What is listed above the log of HEAD, as the steps of an operation that stopped (ADR 199). Not above what a
      * feature lists in its place.
      */
-    public static final PaneKey<CommitsAbove> ABOVE = PaneKey.of("changes.panes.commits.above", CommitsAbove.class);
+    public static final Slot<CommitsAbove> ABOVE = Slot.of("changes.panes.commits.above", CommitsAbove.class);
 
     /**
      * The tabs the features add after the log, in the order of the features (ADR 185).
      */
     @SuppressWarnings("unchecked")
-    public static final PaneKey<PaneTab<?>> TABS =
-            PaneKey.of("changes.panes.commits.tabs", (Class<PaneTab<?>>) (Class<?>) PaneTab.class);
+    public static final Slot<PaneTab<?>> TABS =
+            Slot.of("changes.panes.commits.tabs", (Class<PaneTab<?>>) (Class<?>) PaneTab.class);
 
     /**
      * The pane's own first tab: the log of HEAD, or what is listed in its place.

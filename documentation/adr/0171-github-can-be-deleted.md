@@ -90,3 +90,6 @@ Amended by ADR 173: an architecture test, and the app's tests run without GitHub
 
 Amended by ADR 177: a forge tells which remotes are its own, and the kernel switches on the forge of the
 home, or asks the user which it is.
+
+Amended by ADR 202: a feature says it spins and which times its popups show by filling `KernelSlots.SPINNING` and
+`KernelSlots.CLOCKING`; `Feature.spinning` and `Feature.clocking` are gone.

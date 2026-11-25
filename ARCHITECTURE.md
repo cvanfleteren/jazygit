@@ -157,11 +157,13 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   reads in its part. A pane lives in the group that owns most of what it shows, in its `panes` package, as
   `changes.panes.commits`; the app gives it to `LeftColumn` as a `LeftPane`, and its id is a `PaneId` constant. The
   search of the commits is the first that moved.
-- **A pane declares keys the features fill** (ADR 172): a pane in a group names no feature; it declares `PaneKey`s
+- **A pane declares slots the features fill** (ADR 172, 202): a pane in a group names no feature; it declares `Slot`s
   beside itself, as `CommitsPane.LINE` and `CommitsPane.LISTING`, or `BranchBadges.KEY` and `BranchGroups.KEY` of the
   branches pane, which a `Feature` fills with `filling`, and the app gives it the `Fills` of its features
   (`Features.FILLS`). A pane asks for the first feature that gives anything (`Fills.of`), or for all of them in
-  their order (`Fills.all`), as the branches pane joins the badges and the groups of every feature.
+  their order (`Fills.all`), as the branches pane joins the badges and the groups of every feature. A filler gives an
+  `Iterable`, an `Option` or a `List`. The kernel declares its own slots in `KernelSlots`: whether a view spins, the
+  times a popup shows and the pictures a view may draw, which the app asks of `Features.FILLS`.
 - **The kernel names no forge** (ADR 167, 169, 171): GitHub's state, its stores, its screen, its stack and its
   review threads are `features-github`'s. The kernel composes what the features state the branches are built on
   (`BranchBases`, from each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as
@@ -173,16 +175,16 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   part states for the changes open through `Part.remarking` (`StatedRemarks`); GitHub's `github.remarks` part reads
   the review threads of a pull request when its files open (`KernelEvent.ChangesOpened`) and states them. The keys of
   a diff with remarks are on `Scopes.REMARKED_DIFF`, which the feature that states them binds.
-- **A feature is on or off for a repository** (ADR 171): besides its actions, content and settings, a `Feature`
-  declares what it builds to run against when a repository opens (`running`, a `Contribution` of services to the
-  `Env`), its spinners and clocks (`spinning`, `clocking`), and whether it applies (`applying`, a detection run when
-  the repository opens). `Feature.gated` keeps what a feature that is off would show or run out (`Model.on`,
-  `FeatureSwitches`; keys through `Keymap.owned`, screens through `Screen.feature`, legends through
+- **A feature is on or off for a repository** (ADR 171): besides its actions, content and settings, a `Feature` declares
+  what it builds to run against when a repository opens (`running`, a `Contribution` of services to the `Env`), its
+  spinners and clocks (filling `KernelSlots.SPINNING` and `CLOCKING`, ADR 202), and whether it applies (`applying`, a
+  detection run when the repository opens). `Feature.gated` keeps what a feature that is off would show or run out
+  (`Model.on`, `FeatureSwitches`; keys through `Keymap.owned`, screens through `Screen.feature`, legends through
   `Legend.feature`), but for its section of the settings panel. A forge's detection tells which remotes are its own
   (`FeatureMsg.Claimed`, a `ForgeClaim`); once every forge told, the kernel switches on the forge of the home of the
-  pull requests, or asks the user which it is (`kernel.state.forge`: `ForgeDecision`, `ForgeUpdate`,
-  `ForgeChoicePopup`, kept in git's `jazygit.forgeHome`), and keeps the home in the model (`ForgeHome.of`) (ADR 177).
-  GitHub reads its pull requests once it is switched on (`KernelEvent.Switched`).
+  pull requests, or asks the user which it is (`kernel.state.forge`: `ForgeDecision`, `ForgeUpdate`, `ForgeChoicePopup`,
+  kept in git's `jazygit.forgeHome`), and keeps the home in the model (`ForgeHome.of`) (ADR 177). GitHub reads its pull
+  requests once it is switched on (`KernelEvent.Switched`).
 - **Each forge has its own pull-request dialogs, and binds the keys the other does** (ADR 175): features that are on
   or off may bind one key in a scope, once each; it sends a `FeatureMsg.FirstOn`, which runs what the first of them
   that is on sends, and the help lists it once.

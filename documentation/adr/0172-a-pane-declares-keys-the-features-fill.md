@@ -47,3 +47,6 @@ pane that lives in its group cannot declare such a field: `Feature` is in the ke
 - What the search shows through the pane is tested without the pane (`CommitSearchShownTest`), and the pane with keys
   any feature could fill (`CommitsPaneKeysTest`); the tests that type a search in the pane stay in `jazygit-app`,
   which has the features' fills and the standard keymap.
+
+Amended by ADR 202: `PaneKey` is `Slot`, as the kernel declares slots too (`KernelSlots`), and a filler gives an
+`Iterable`, so one may give several.
