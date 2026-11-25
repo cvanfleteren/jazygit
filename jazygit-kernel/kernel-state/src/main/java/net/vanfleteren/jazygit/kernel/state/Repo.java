@@ -71,11 +71,13 @@ public record Repo(
     /**
      * The files the files pane lists for the working tree: its changed files, and, when {@code all} of them are
      * listed, each of its other files as one without changes (ADR 108). Those are loading until all files are read
-     * once, so that the tree starts from all of them.
+     * once, so that the tree starts from all of them. While an operation is in progress, a file resolved since it
+     * stopped is listed too, as one without changes, when it was resolved to what HEAD has: git lists no change for
+     * it, but it can still be brought back into conflict (ADR 198).
      */
     public Loadable<List<FileEntry>> workingFiles(boolean all) {
         if (!all) {
-            return status.map(RepoStatus::files);
+            return status.map(Repo::withResolved);
         }
         return switch (allFiles) {
             case Loadable.Loaded<List<String>>(List<String> paths) ->
@@ -88,6 +90,20 @@ public record Repo(
             case Loadable.Loading<List<String>>() -> Loadable.loading();
             case Loadable.Failed<List<String>>(Failure failure) -> new Loadable.Failed<>(failure);
         };
+    }
+
+    /**
+     * The changed files of {@code read}, and after them each file resolved since the operation in progress stopped
+     * that is not among them.
+     */
+    private static List<FileEntry> withResolved(RepoStatus read) {
+        Set<String> changed = read.files().map(FileEntry::path).toSet();
+        return read.inProgress().isEmpty()
+                ? read.files()
+                : read.files()
+                        .appendAll(read.resolved()
+                                .filter(path -> !changed.contains(path))
+                                .map(FileEntry::unchanged));
     }
 
     /**

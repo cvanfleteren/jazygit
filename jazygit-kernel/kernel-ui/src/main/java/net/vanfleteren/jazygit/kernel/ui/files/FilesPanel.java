@@ -213,9 +213,14 @@ public class FilesPanel {
      */
     private StyledElement<?> drawEntry(FileTree.File<FileEntry> file) {
         FileEntry entry = file.entry();
-        // A file resolved since the operation stopped says so before its name (ADR 198).
+        // A file resolved since the operation stopped says so after its name (ADR 198); one resolved to what HEAD
+        // has, without changes, is dimmed, as it is listed only to be found again.
         if (resolved.contains(entry.path()) && entry.conflict().isEmpty()) {
-            return Toolkit.row(plainEntry(file), Toolkit.text(" ✓").addClass(Theme.Classes.STAGED));
+            return entry.changed()
+                    ? Toolkit.row(plainEntry(file), Toolkit.text(" ✓").addClass(Theme.Classes.STAGED))
+                    : Toolkit.row(
+                            Toolkit.text("   " + file.name()).dim(),
+                            Toolkit.text(" ✓").addClass(Theme.Classes.STAGED).dim());
         }
         return plainEntry(file);
     }
@@ -429,12 +434,13 @@ public class FilesPanel {
 
     /**
      * The message to send when the node highlighted in the tree of the working tree is not the one the content panel
-     * shows: its diff, or, among all files, the file or the directory without changes (ADR 108).
+     * shows: its diff, or the file or the directory without changes, among all files (ADR 108) or resolved (ADR 198).
      */
     private Option<Msg> workingSelectionChange(Model model) {
         RepoView view = model.repoView();
         Option<FileTree<FileEntry>> selected = workingTree(view).selected();
-        if (selected.exists(node -> view.files().shown().all() && !hasChanges(node))) {
+        // Among the changed files, a node without changes is a file resolved to what HEAD has (ADR 198).
+        if (selected.exists(node -> !hasChanges(node))) {
             return unchangedSelection(selected.get())
                     .filter(msg -> !shows(view.files().unchanged(), msg));
         }

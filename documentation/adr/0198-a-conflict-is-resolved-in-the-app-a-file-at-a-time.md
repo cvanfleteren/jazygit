@@ -56,6 +56,13 @@ not when a merge is committed.
    - The title of the files pane says how far it is: `Files · 2 of 4 resolved`. It is the kernel's files pane that
      says it, from the status, as it lists the conflicts already; no feature fills it.
    - A resolved file is marked on its row in the files pane, with a `✓` after its path.
+   - A resolved file stays listed with the changed files while the operation goes on, though git lists no change for
+     it: kept on HEAD's side, it is as HEAD has it. It is listed after them as a file without changes, as among all
+     files (ADR 108), dimmed, with its `✓`: highlighted, it shows its content; staging or discarding it says it has
+     no changes; `u` brings its conflict back. Without it, the file `u` is most wanted on, a wrong pick of HEAD's
+     side, was found only by listing all files (`a`). So the pane lists as many files as its title counts. Not: a
+     group of resolved files of its own, which the tree has no place for yet. Once the operation goes on to its next
+     commit, git forgets what was resolved, and the rows go.
 6. **Continuing with markers left is warned of.** The `M` dialog's continue says which staged files still have
    conflict markers, read when the dialog opens, and continuing then commits them.
 
@@ -64,6 +71,8 @@ not when a merge is committed.
 - A conflict is resolved without leaving the app when one side of the whole file is right. Merging the two inside a
   file is still done in an editor (`e`), or, later, in the app, block by block.
 - `features-midway` is one more module in the build, and the text of `M` moved bundle.
+- While an operation is in progress the files pane is no longer exactly `git status`: it also lists the files
+  resolved back to HEAD, dimmed.
 - Reading the resolved files runs one more git process with each status, only while an operation is in progress.
 - After a merge is committed, git keeps the resolve-undo of its files until the index is next rewritten; it is only
   read while an operation is in progress, so it shows nothing then.

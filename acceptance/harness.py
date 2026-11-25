@@ -229,6 +229,13 @@ class Git:
 
         return " ".join(read(name) for name in ("REBASE_HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD"))
 
+    def resolved(self) -> list:
+        """The paths whose conflicts were resolved since the operation in progress stopped, as git keeps what they were
+        in the index; none when no operation is in progress (ADR 198)."""
+        if self.in_progress() is None:
+            return []
+        return sorted({line.split("\t", 1)[1] for line in self("ls-files", "--resolve-undo").splitlines()})
+
     def conflicts(self) -> list:
         """The paths that still have conflicts, until they are staged."""
         return sorted(self("diff", "--name-only", "--diff-filter=U").splitlines())

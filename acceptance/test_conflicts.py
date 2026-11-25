@@ -471,6 +471,22 @@ def test_a_resolved_conflict_is_brought_back(repo, jazygit):
     assert "<<<<<<< " in repo.read("one.txt")
 
 
+def test_a_conflict_resolved_to_heads_side_stays_listed_and_is_brought_back(repo, jazygit):
+    diverged(repo)
+    ui = jazygit()
+    ui.branches.rebase_onto("main")
+    # In a rebase, HEAD's side is main's: once kept, git lists no change for the file.
+    ui.files.keep("one.txt", "ours")
+    assert repo.status() == {}
+
+    # It stays listed among the changed files, so it is found without listing all files (ADR 198).
+    ui.app.wait_for("one.txt ✓")
+    ui.files.restore("one.txt")
+
+    assert repo.conflicts() == ["one.txt"]
+    assert "<<<<<<< " in repo.read("one.txt")
+
+
 def test_staging_a_file_with_conflict_markers_asks_first(repo, jazygit):
     diverged(repo)
     ui = jazygit()

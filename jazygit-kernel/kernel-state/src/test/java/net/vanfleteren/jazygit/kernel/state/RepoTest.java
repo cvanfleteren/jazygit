@@ -7,8 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.git.model.ChangeType;
+import net.vanfleteren.jazygit.core.git.model.Conflict;
+import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Stash;
 import org.junit.jupiter.api.Test;
@@ -74,5 +79,36 @@ class RepoTest {
         assertFalse(firstRead().withCommits(Loadable.loading()).firstRead());
         assertFalse(firstRead().withStashes(Loadable.loading()).firstRead());
         assertFalse(firstRead().withWorktrees(Loadable.loading()).firstRead());
+    }
+
+    private static final FileEntry CONFLICTED =
+            FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+    private static final FileEntry CHANGED = new FileEntry("b.txt", ChangeType.MODIFIED, true, false);
+
+    private static Repo stopped(Option<InProgress> inProgress, List<String> resolved) {
+        return Repo.LOADING.withStatus(
+                new Loadable.Loaded<>(new RepoStatus(new Head.Detached(new Sha("1111")), List.of(CONFLICTED, CHANGED))
+                        .withInProgress(inProgress)
+                        .withResolved(resolved)));
+    }
+
+    private static final Option<InProgress> REBASING =
+            Option.of(new InProgress.Rebasing(Option.of(new BranchName("feature")), new Sha("aaaa"), 1, 2));
+
+    @Test
+    void aFileResolvedToHeadIsListedWithTheChangedFilesWithoutChangesOfItsOwn() {
+        // b.txt was resolved to a change, c.txt back to what HEAD has: git lists only b.txt as changed (ADR 198).
+        Repo repo = stopped(REBASING, List.of("b.txt", "c.txt"));
+
+        assertEquals(
+                new Loadable.Loaded<>(List.of(CONFLICTED, CHANGED, FileEntry.unchanged("c.txt"))),
+                repo.workingFiles(false));
+    }
+
+    @Test
+    void aFileResolvedIsListedOnlyWhileTheOperationIsInProgress() {
+        Repo repo = stopped(Option.none(), List.of("c.txt"));
+
+        assertEquals(new Loadable.Loaded<>(List.of(CONFLICTED, CHANGED)), repo.workingFiles(false));
     }
 }

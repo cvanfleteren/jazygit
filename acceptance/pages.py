@@ -246,8 +246,9 @@ class FilesPane:
     def shows_changes(self) -> bool:
         rows = self.app.pane_text("Files").splitlines()
         status = self.repo.status()
+        # A file resolved to HEAD's side has no change, but stays listed while the operation goes on (ADR 198).
         return (all(self._shows(rows, path, code) for path, code in status.items())
-                and bool(status or not "".join(rows).strip()))
+                and bool(status or self.repo.resolved() or not "".join(rows).strip()))
 
     @staticmethod
     def _shows(rows: list, path: str, code: str) -> bool:

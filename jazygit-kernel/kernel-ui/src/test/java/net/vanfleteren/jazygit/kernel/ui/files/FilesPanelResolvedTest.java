@@ -50,6 +50,15 @@ class FilesPanelResolvedTest {
     }
 
     @Test
+    void aFileResolvedToWhatHeadHasStaysListedAsResolved() throws Exception {
+        // d.txt was resolved back to HEAD's side: git lists no change for it, the pane still does (ADR 198).
+        String screen = render(stopped(List.of("b.txt", "d.txt")));
+
+        assertTrue(screen.contains("Files · 2 of 3 resolved"), screen);
+        assertTrue(screen.contains("d.txt ✓"), screen);
+    }
+
+    @Test
     void beforeAnyIsResolvedTheTitleSaysNothingOfIt() throws Exception {
         String screen = render(stopped(List.empty()));
 
