@@ -49,8 +49,9 @@ final class BuildsText {
     private static final int TREND = 10;
     // A trend smaller than this is no change.
     private static final Duration STEADY = Duration.ofSeconds(10);
-    private static final String EIGHTHS = " ▁▂▃▄▅▆▇█";
     private static final String SPARKS = "▁▂▃▄▅▆▇█";
+    // The left column of a braille cell filled from the bottom, none to four dots high: a bar of the chart.
+    private static final String DOTS = " ⡀⡄⡆⡇";
     // What marks the build picked in the list, whose jobs show on one time line (ADR 133).
     private static final String PICKED = "▸";
     // What marks a run of the branch among those of every branch.
@@ -483,16 +484,27 @@ final class BuildsText {
          * next once there is room for one.
          */
         private List<Span> cell(Build build, Option<Duration> bar, int row, long top, boolean medianRow, int each) {
-            int eighths = bar.map(took -> (int) Math.round(took.toSeconds() * CHART_ROWS * 8.0 / top) - row * 8)
+            // Prototype: a bar is a column of braille dots, four to a row, in the colour of its height: green low,
+            // yellow in the middle, red at the top, like a heat meter.
+            int quarters = bar.map(took -> (int) Math.round(took.toSeconds() * CHART_ROWS * 4.0 / top) - row * 4)
+                    .map(left -> Math.clamp(left, 0, 4))
                     .getOrElse(0);
             boolean clipped = row == CHART_ROWS - 1 && bar.exists(took -> took.toSeconds() > top);
-            String block =
-                    clipped ? "▲" : eighths >= 8 ? "█" : eighths > 0 ? String.valueOf(EIGHTHS.charAt(eighths)) : " ";
+            String block = clipped ? "⡇" : quarters > 0 ? String.valueOf(DOTS.charAt(quarters)) : " ";
             int wide = each > 2 ? each - 1 : each;
-            Span drawn = block.equals(" ") && medianRow
-                    ? dim("┄".repeat(wide))
-                    : span(block.repeat(wide), style(build.outcome()));
+            Span drawn = block.equals(" ")
+                    ? (medianRow ? dim("┄".repeat(wide)) : Span.raw(" ".repeat(wide)))
+                    : span(block.repeat(wide), heat(row));
             return each > 2 ? List.of(drawn, medianRow ? dim("┄") : Span.raw(" ")) : List.of(drawn);
+        }
+
+        /**
+         * The colour of the dots in {@code row} of the chart: the lower third green, the middle yellow, the top red.
+         */
+        private String heat(int row) {
+            return row < CHART_ROWS * 3 / 8
+                    ? Theme.Classes.CHECKS_PASSED
+                    : row < CHART_ROWS * 6 / 8 ? Theme.Classes.CHECKS_RUNNING : Theme.Classes.CHECKS_FAILED;
         }
 
         /**

@@ -116,8 +116,8 @@ class BuildsTextTest {
         List<String> chart = lines.drop(5).take(8);
 
         assertTrue(chart.head().startsWith("   8m┤"), chart.mkString("\n"));
-        assertTrue(chart.head().contains("▲"), chart.mkString("\n"));
-        assertTrue(chart.last().startsWith("     │" + "█".repeat(20)), chart.mkString("\n"));
+        assertTrue(chart.head().contains("⡇"), chart.mkString("\n"));
+        assertTrue(chart.last().startsWith("     │" + "⡇".repeat(20)), chart.mkString("\n"));
         assertTrue(lines.exists(line -> line.startsWith("     └┴") && line.contains("┴")), lines.mkString("\n"));
         assertTrue(lines.exists(line -> line.trim().matches("13 Nov +14 Nov")), lines.mkString("\n"));
         assertTrue(lines.exists(line -> line.trim().equals("✗")), lines.mkString("\n"));
@@ -533,7 +533,7 @@ class BuildsTextTest {
         assertEquals("Publish · push · last 20 of 30 builds · 13 Nov – 14 Nov", lines.get(2));
         // 73 columns for 20 builds: three each, a bar of two and a column between them.
         String bottom = lines.drop(5).take(8).last();
-        assertTrue(bottom.startsWith("     │" + "██ ".repeat(20)), bottom);
+        assertTrue(bottom.startsWith("     │" + "⡇⡇ ".repeat(20)), bottom);
     }
 
     @Test
@@ -546,6 +546,6 @@ class BuildsTextTest {
                 .take(8)
                 .last();
 
-        assertTrue(bottom.startsWith("     │████ ████ ████ "), bottom);
+        assertTrue(bottom.startsWith("     │⡇⡇⡇⡇ ⡇⡇⡇⡇ ⡇⡇⡇⡇ "), bottom);
     }
 }
